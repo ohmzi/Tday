@@ -11,6 +11,7 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
@@ -393,6 +394,22 @@ internal fun shouldShowTodayEarlierExpandedCelebration(
  * against the real key instead of a second, test-local copy of it.
  */
 internal const val EARLIER_SECTION_KEY = "earlier"
+
+/**
+ * How long `onTimelineSectionHeaderToggle`'s exit-before-expand beat holds
+ * Earlier closed before actually expanding it -- see
+ * [decideSectionHeaderToggleAction]'s [SectionHeaderToggleAction.DEFER_EARLIER_EXPAND].
+ *
+ * Deliberately [TdayFeedItemMotion.FadeOutMillis], not a number of its own:
+ * that is exactly how long the inline illustration's own exit
+ * (`fadeOut` + `shrinkVertically` on the `AnimatedVisibility` around
+ * [com.ohmz.tday.compose.core.ui.TdayEmptyState] below) takes to actually
+ * finish leaving. Earlier's rows must never start animating in before that
+ * exit has genuinely completed -- pinned here as a named value, rather than
+ * the two spots re-typing [TdayFeedItemMotion.FadeOutMillis] and trusting
+ * them to agree, so a change to one is a change to both.
+ */
+internal val EarlierExpandDeferMillis: Long = TdayFeedItemMotion.FadeOutMillis.toLong()
 
 /**
  * "Zero active/pending items for this screen's own scope" -- generalizes
@@ -1491,7 +1508,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // is still on screen.
                     earlierExpandPending = true
                     screenScope.launch {
-                        delay(TdayFeedItemMotion.FadeOutMillis.toLong())
+                        delay(EarlierExpandDeferMillis)
                         collapsedSectionKeys = collapsedSectionKeys - key
                         earlierExpandPending = false
                     }
@@ -1777,7 +1794,24 @@ fun TodoListScreen( // skipcq: KT-R1006
                             AnimatedVisibility(
                                 visible = showEarlierIllustration ||
                                         showEarlierExpandedCelebration,
+                                // Fade AND expand: the mirror of exit's fade +
+                                // shrink below, so the scene's arrival reads
+                                // as the same one motion running backwards
+                                // instead of an alpha fade over a size that
+                                // has already snapped to full height. Before
+                                // this, `enter` was fade-only -- the Box's
+                                // `heightIn(min = gapHeight)` claimed its
+                                // ~34%-of-screen slot on the very first frame,
+                                // shoving Earlier's header (and everything
+                                // `displacedFeedItemMotion` moves under it)
+                                // down in one jump while only the alpha eased
+                                // in on top of that jump.
                                 enter = fadeIn(
+                                    animationSpec = tween(
+                                        durationMillis = TdayFeedItemMotion.FadeInMillis,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                                ) + expandVertically(
                                     animationSpec = tween(
                                         durationMillis = TdayFeedItemMotion.FadeInMillis,
                                         easing = FastOutSlowInEasing,
@@ -1826,6 +1860,24 @@ fun TodoListScreen( // skipcq: KT-R1006
                                         // finished sliding up into place.
                                         celebrationStartDelayMillis =
                                             TdayFeedItemMotion.CelebrationStartDelayMillis,
+                                        // This scene already sits inside the
+                                        // `AnimatedVisibility` above, which
+                                        // owns its fade + size now. Running
+                                        // `TdayEmptyState`'s own 520ms rise on
+                                        // top of that too is a second,
+                                        // uncoordinated animation racing the
+                                        // first one -- the double-animation
+                                        // stutter this hand-off cannot have.
+                                        // The celebrating case is the one
+                                        // exception: `celebrationStartDelayMillis`
+                                        // (plus `TdayEmptyState`'s own lead)
+                                        // holds this rise back well past the
+                                        // 190ms the wrapper above takes to
+                                        // finish its own fade, so the two
+                                        // never actually overlap there and the
+                                        // confetti-leads-the-scene choreography
+                                        // is worth keeping.
+                                        animateAppearance = celebrateEmptyState,
                                     )
                                 }
                             }

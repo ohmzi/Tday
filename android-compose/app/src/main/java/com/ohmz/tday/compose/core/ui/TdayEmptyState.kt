@@ -86,6 +86,23 @@ import kotlinx.coroutines.delay
  *   row vacated, passes the time its own feed takes to move out of the way:
  *   the reference experience is the overlay's, and there the paper is the only
  *   thing on screen that travels.
+ * @param animateAppearance whether this scene runs its own rise-and-fade at
+ *   all. True for every caller except the Overdue/Earlier hand-off inline
+ *   scene (`TodoListScreen`'s `showEarlierIllustration`/
+ *   `showEarlierExpandedCelebration`), which already sits inside its own
+ *   `AnimatedVisibility` keyed to that hand-off's collapse state — that
+ *   wrapper's `fadeIn`/`expandVertically` is the entrance there, and letting
+ *   this composable *also* run its 520ms rise on top of it is two
+ *   independently-timed animations racing over the same pixels: the outer
+ *   fade reads as finished at 190ms while this one is still only a third of
+ *   the way through its own curve, alpha visibly stepping rather than
+ *   settling. False skips straight to the settled state (same as
+ *   [rememberTdayMotionEnabled] being off) so the outer wrapper is the only
+ *   thing animating the hand-off's plain (non-celebrating) appearance. The
+ *   celebrating case still passes true: [celebrationStartDelayMillis]
+ *   already holds this rise back well past the outer wrapper's own short
+ *   fade, so the two never overlap there and the confetti-leads-the-scene
+ *   choreography stays intact.
  */
 @Composable
 fun TdayEmptyState(
@@ -97,14 +114,15 @@ fun TdayEmptyState(
     action: (@Composable () -> Unit)? = null,
     celebrate: Boolean = false,
     celebrationStartDelayMillis: Long = 0L,
+    animateAppearance: Boolean = true,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val motion = rememberEmptySceneMotion()
-    val motionEnabled = rememberTdayMotionEnabled()
+    val motionEnabled = rememberTdayMotionEnabled() && animateAppearance
 
     // 0 is off-screen-ish and invisible, 1 is the finished state. Held at 1 from
-    // the start when the platform has animations off, so the scene is drawn, not
-    // faded to nothing.
+    // the start when the platform has animations off (or a host wrapper owns
+    // the appearance itself), so the scene is drawn, not faded to nothing.
     val appear = remember { Animatable(if (motionEnabled) 0f else 1f) }
     LaunchedEffect(Unit) {
         if (!motionEnabled) return@LaunchedEffect
