@@ -23,6 +23,23 @@ import androidx.compose.ui.unit.IntOffset
  *    nothing here and costs elsewhere: search swaps the whole feed body out in
  *    one go, and an item that fades would fade the entire screen in and out on
  *    every open and close of the field.
+ *
+ *    That "only moved by one [jump]" is load-bearing, not incidental: [Placement]
+ *    is a tween that chases wherever an item's target offset lands *this frame*,
+ *    which reads as smooth precisely because a plain add/remove moves that
+ *    target exactly once and then holds it still. An item whose neighbor is
+ *    instead resizing itself frame-by-frame — an `AnimatedVisibility` running
+ *    `expandVertically`/`shrinkVertically`, say — keeps moving that target for
+ *    the whole of the resize, and [PlacementMillis] outlasting that resize (see
+ *    [TdayFeedItemMotionTest]'s "an item leaves faster than it arrives") means
+ *    the displaced neighbor never catches up before the target has already
+ *    stopped: it lags behind the resizing item's real, already-smooth bounds
+ *    for the whole transition, long enough to visibly overlap whatever sits on
+ *    the far side of it. `TodoListScreen`'s Earlier header is the one caller
+ *    that hits this (`earlierHeaderSkipsPlacementSpec`, next to the inline
+ *    "today-earlier-empty-scene" item its own doc points at) — it drops
+ *    [Placement] entirely rather than re-time it, because nothing else ever
+ *    legitimately moves that header while that item exists.
  * 2. **The celebration waits for the move, it does not race it.** The scene's
  *    host passes [PlacementMillis] as `TdayEmptyState`'s
  *    `celebrationStartDelayMillis`, so the burst begins on the frame the feed
