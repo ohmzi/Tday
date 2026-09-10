@@ -4,6 +4,8 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTodoDateSectionId } from "@/lib/todoToastNavigation";
 import type { TimelineSection } from "@/lib/timeline/buildTimelineSections";
+import { useFadeUnmount } from "@/hooks/useFadeUnmount";
+import { OVERDUE_ROWS_FADE_MS } from "@/features/todayTodos/lib/todayEarlierIllustration";
 import { useTimelineOverSection } from "./TimelineDndContext";
 import {
   headerActiveClass,
@@ -51,6 +53,15 @@ export default function TimelineSectionDroppable({
   const isActive = overSectionKey === section.key;
   const isEmpty = section.todos.length === 0;
   const showBody = !section.collapsible || !collapsed;
+
+  // Only the collapsible bucket (Overdue/Earlier) ever toggles `showBody`; every
+  // other section always passes `expanded: true` here — a permanent no-op for
+  // this hook (`mounted` starts and stays `true`, nothing ever fades) — so
+  // `bodyMounted`/the fade classes below are gated on `section.collapsible`
+  // and every other section renders exactly as it always has, untouched. See
+  // `useFadeUnmount`'s own doc comment.
+  const bodyMounted = useFadeUnmount(showBody, OVERDUE_ROWS_FADE_MS);
+  const showCollapsibleBody = section.collapsible ? bodyMounted : showBody;
 
   const { setNodeRef } = useDroppable({
     id: `section:${section.key}`,
@@ -106,13 +117,24 @@ export default function TimelineSectionDroppable({
         </div>
       )}
 
-      {showBody &&
+      {showCollapsibleBody &&
         (isEmpty ? (
           // Native shows empty dates as just the header — only reveal the
           // dashed drop slot while a drag is actively hovering this bucket.
           isActive ? <TimelineDropPlaceholder active /> : null
         ) : (
-          <div className="space-y-0 border-b border-border/60 pb-1">
+          <div
+            className={cn(
+              "space-y-0 border-b border-border/60 pb-1",
+              // Only the collapsible bucket fades — see `bodyMounted` above.
+              section.collapsible && (showBody ? "tday-rows-enter" : "tday-rows-exit"),
+            )}
+            style={
+              section.collapsible
+                ? { animationDuration: `${OVERDUE_ROWS_FADE_MS}ms` }
+                : undefined
+            }
+          >
             {children}
             {isActive && <TimelineDropPlaceholder active />}
           </div>
