@@ -76,7 +76,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Same pin, same repository variable, same rationale as ios-testflight.yml — and that
       # sameness is the point. A test run that compiled under a different Swift version than the
@@ -154,7 +154,7 @@ jobs:
       # in Release, and one polluting the other's entry is not a debugging session anyone wants.
       - name: Restore the Swift Package Manager cache
         id: spm-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ios-swiftUI/.spm-cache
           key: spm-tests-${{ runner.os }}-${{ hashFiles('ios-swiftUI/TdayApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'ios-swiftUI/Package.resolved') }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -224,7 +224,7 @@ jobs:
       # run a fresh sentry-cocoa clone.
       - name: Save the Swift Package Manager cache
         if: steps.compile.outcome == 'success'
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ios-swiftUI/.spm-cache
           key: ${{ steps.spm-cache.outputs.cache-primary-key }}
