@@ -1,10 +1,11 @@
 {
-  "version": "0.7.21",
-  "publishedAt": "2026-09-10T14:35:46-04:00",
+  "version": "0.7.22",
+  "publishedAt": "2026-09-12T18:23:55-04:00",
   "notes": [
-    "Drop Earlier header's placementSpec during the illustration hand-off",
-    "Stop the Overdue illustration overlay from centering over its own header"
+    "Stop one spurious stat from failing the snapshot-replacement probe",
+    "Document that the iOS suite must run signed",
+    "Stop asserting ICU's exact timestamp spelling"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.21",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.20..v0.7.21"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.22",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.21..v0.7.22"
 }
