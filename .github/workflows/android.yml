@@ -51,7 +51,7 @@ jobs:
       android: ${{ steps.filter.outputs.android }}
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The filter is a base..head diff and needs both endpoints present.
           fetch-depth: 0
@@ -130,7 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # No `local.properties` is committed (it is gitignored, and it holds a machine-specific
       # `sdk.dir` plus optional local secrets). AGP resolves the SDK from `sdk.dir` first and
@@ -142,7 +142,7 @@ jobs:
       # `cache: gradle` here rather than `gradle/actions/setup-gradle`: this action is already
       # SHA-pinned in this repo, so the dependency cache costs no new supply-chain surface.
       - name: Set up JDK 21
-        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: 21
@@ -217,7 +217,7 @@ jobs:
       # A failed Gradle test task prints the failing test names but not the assertion detail.
       - name: Upload test report
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: android-unit-test-report
           path: |
