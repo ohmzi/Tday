@@ -96,8 +96,21 @@ class WidgetSnapshotIoTest {
         val observedMissing = AtomicBoolean(false)
         val stop = AtomicBoolean(false)
         val prober = Thread {
+            // Consecutive misses, not a single one. The defect this guards — delete-then-write —
+            // leaves the path absent for the whole of `writeBytes` (open, write, close: tens of
+            // microseconds), which this tight `stat` loop samples many times over. One isolated
+            // false from `exists()` is a different thing: `rename(2)` over an existing name is
+            // atomic on every filesystem this runs on, and a lone miss was still observed once on
+            // ext4 (Linux 6.11) with the rename-based write in place and 13 clean runs either side
+            // of it. Requiring a short run of misses keeps the assertion strict against the real
+            // window while not failing a release on one spurious sample.
+            var missingStreak = 0
             while (!stop.get()) {
-                if (!target.exists()) observedMissing.set(true)
+                if (target.exists()) {
+                    missingStreak = 0
+                } else if (++missingStreak >= MISSING_PROBES_TO_FAIL) {
+                    observedMissing.set(true)
+                }
             }
         }
         prober.start()
@@ -198,6 +211,9 @@ class WidgetSnapshotIoTest {
 
     private companion object {
         const val WRITE_ITERATIONS = 200
+
+        /** See the prober in `the snapshot file is never absent while it is being replaced`. */
+        const val MISSING_PROBES_TO_FAIL = 3
         const val WRITER_THREADS = 4
         const val PAYLOAD_REPEAT = 400
         const val LOCK_THREADS = 6
