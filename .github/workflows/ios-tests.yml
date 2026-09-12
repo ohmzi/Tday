@@ -167,8 +167,35 @@ jobs:
       # The release lane needs the .p8 because `-allowProvisioningUpdates` has to authenticate to
       # the Developer portal to mint the five App Store distribution profiles. A simulator build
       # resolves none of that: the iphonesimulator SDK requires no provisioning profile and no
-      # distribution identity, so `CODE_SIGNING_ALLOWED=NO` lets the whole signing machinery sit
-      # this one out. Nothing here can reach Apple, mint a certificate, or spend a build number.
+      # distribution identity. Nothing here can reach Apple, mint a certificate, or spend a build
+      # number.
+      #
+      # BUT IT IS SIGNED ANYWAY — AD HOC — AND THAT IS LOAD-BEARING.
+      #
+      # The obvious way to say "no credentials" is `CODE_SIGNING_ALLOWED=NO`, and that is what this
+      # step did from the day it was written until this comment replaced it. It is wrong, because
+      # switching signing off does not just skip a signature: it drops `Tday/Tday.entitlements` on
+      # the floor, and two of this suite's assertions are really assertions about entitlements.
+      #
+      #   * Keychain. An unsigned simulator binary has no `application-identifier`, so it has no
+      #     default keychain access group, so every `SecItemAdd` returns errSecMissingEntitlement.
+      #     `SecureStore.saveData` logs that and moves on (deliberately — see the comment there),
+      #     and the paired `load` then returns nil. `ServerURLPersistenceTests` reads that nil as a
+      #     persistence bug and fails six times over.
+      #   * App Groups. Without `com.apple.security.application-groups`, CoreSimulator never
+      #     creates the group container, so `containerURL(forSecurityApplicationGroupIdentifier:)`
+      #     is nil and the three `TodayTasksWidgetSnapshotStoreTests` that reach for the snapshot
+      #     file on disk fail their `XCTUnwrap`.
+      #
+      # Ad-hoc (`CODE_SIGN_IDENTITY=-`) is the setting that gets the entitlements applied without
+      # needing an identity in a keychain: for the iphonesimulator SDK, Xcode synthesises the
+      # entitlements and signs locally, and CoreSimulator honours the group container the same way
+      # it does for a developer pressing cmd-U. `CODE_SIGN_STYLE=Manual` with an empty
+      # `PROVISIONING_PROFILE_SPECIFIER` keeps automatic signing from trying to resolve a profile
+      # for `DEVELOPMENT_TEAM` against a portal this job cannot and must not reach, while the team
+      # itself stays set so `application-identifier` keeps the same `JUFACN2FS3.` prefix a local
+      # run produces. `CODE_SIGNING_REQUIRED=NO` stays as a backstop: if some future embedded
+      # target cannot be ad-hoc signed, it should degrade rather than fail the compile.
       #
       # This is compiled Debug, not Release. The scheme's TestAction is `buildConfiguration =
       # "Debug"`, so Debug is what a developer's `cmd-U` compiles and what these assertions were
@@ -187,9 +214,10 @@ jobs:
             -clonedSourcePackagesDirPath ios-swiftUI/.spm-cache \
             -derivedDataPath "${RUNNER_TEMP}/DerivedData" \
             -resultBundlePath "${RUNNER_TEMP}/compile.xcresult" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            CODE_SIGNING_REQUIRED=NO
 
       # After the compile rather than after the tests: the packages that were resolved are valid
       # whatever the assertions go on to say, and a red test suite should not also cost the next
