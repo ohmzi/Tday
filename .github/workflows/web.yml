@@ -1,0 +1,234 @@
+name: Web
+
+# WHY THIS IS ITS OWN WORKFLOW, AND NOT A JOB IN pr-gate.yml
+#
+# The same reasoning `android.yml` sets out, and for a suite that was even less covered.
+# `pr-gate.yml` fires on `pull_request: branches: [master]` only, and it is the ONLY workflow
+# that has ever run `npm run lint` or `npm run test` — so the 714-test vitest suite ran exactly
+# once a week, on the single develop -> master release merge, after every web change in it had
+# already landed on `develop`. A web-only pull request was gated by nothing at all.
+#
+# Type-checking was worse than ungated: it never ran in CI in any form. `npm run build`
+# (`tsc -b && vite build`) appears exactly once in this repository — `Dockerfile.backend:17`,
+# inside the Docker stage of `release.yml`, which runs *after* the GitHub release is published.
+# A type error could reach a cut release and only surface while building the image for it.
+#
+# Widening pr-gate's trigger to `develop` is deliberately NOT done here, for the two reasons
+# `android.yml:10-16` already gives: its `hook-check` job runs on `macos-latest` at 10x the
+# Linux rate, and its `check-source-branch` job asserts `head_ref == 'develop'`, which is
+# correct for a PR into master and false for every PR into develop.
+#
+# So web gets the trigger it needs on its own, exactly as Android did.
+on:
+  pull_request:
+    branches: [master, develop]
+  # Present so the pipeline can be exercised without opening a PR. GitHub only registers a
+  # `workflow_dispatch` trigger once the workflow file exists on the default branch (`master`),
+  # so this is inert until this lands there.
+  workflow_dispatch:
+    inputs:
+      force:
+        description: >-
+          Run the checks even when the change filter says no web-relevant file changed.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# A superseded PR revision has nothing to say.
+concurrency:
+  group: web-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Everything that can say "no" happens here, before a dependency install is spun up — the
+  # same shape as `android.yml`'s `changes` job. This job always runs, so the workflow always
+  # reports a conclusion and stays usable as a required status check; only the job below skips.
+  changes:
+    name: Web files changed?
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          # The filter is a base..head diff and needs both endpoints present.
+          fetch-depth: 0
+
+      # WHAT COUNTS AS A WEB CHANGE
+      #
+      #   tday-web/**    the app, its tests, its lockfile and its build config
+      #   version.json   `scripts/version.mjs sync` mirrors it into tday-web/package.json, and
+      #                  vite.config.ts injects the result as `__APP_VERSION__` — a version
+      #                  edit really can reach a test that asserts on what the app reports
+      #   this workflow  a change to the gate is a change worth running the gate on
+      #
+      # Markdown under those trees is excluded: prose does not reach the bundle.
+      - name: Decide whether to run the web checks
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FORCE: ${{ inputs.force }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+
+          run_checks() {
+            echo "web=true" >> "$GITHUB_OUTPUT"
+            echo "$1"
+            echo "Web checks: **running** — $1" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            if [ "$FORCE" = "true" ]; then
+              run_checks "manual run with force enabled."
+            fi
+            run_checks "manual run outside a pull request — no base to diff against."
+          fi
+
+          # Failing toward running the checks is the cheap direction. Failing the other way
+          # silently drops the only web gate there is.
+          if ! CHANGED=$(git diff --name-only "${BASE_SHA}...${HEAD_SHA}" 2>&1); then
+            echo "Could not diff ${BASE_SHA}...${HEAD_SHA}:"
+            printf '%s\n' "$CHANGED" | sed 's/^/  /'
+            run_checks "the change filter could not resolve the diff."
+          fi
+
+          RELEVANT=$(printf '%s\n' "$CHANGED" | grep -E \
+            '^(tday-web/|version\.json$|\.github/workflows/web\.yml$)' \
+            | grep -vE '\.md$' || true)
+
+          if [ -n "$RELEVANT" ]; then
+            echo "Web-relevant files changed:"
+            printf '%s\n' "$RELEVANT" | sed 's/^/  /'
+            run_checks "$(printf '%s\n' "$RELEVANT" | wc -l | tr -d ' ') web-relevant file(s) changed."
+          fi
+
+          echo "web=false" >> "$GITHUB_OUTPUT"
+          echo "No web-relevant file changed — skipping the web checks."
+          {
+            echo "Web checks: **skipped** — no file under \`tday-web/\` or \`version.json\`"
+            echo "changed in this pull request."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  checks:
+    name: Lint, types and tests
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tday-web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: tday-web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # eslint currently reports 0 errors and 3 `react-hooks/exhaustive-deps` warnings on a
+      # clean develop. Warnings do not fail the run, so this starts green and stays honest —
+      # unlike `:app:lintDebug` on the Android side, which is left out of that workflow
+      # precisely because it would paint every PR red for pre-existing findings.
+      - name: Lint
+        run: npm run lint
+
+      # WHY THIS STEP EXISTS AT ALL
+      #
+      # `tsc` has never run in CI. `npm run build` (`tsc -b && vite build`) appears exactly
+      # once in the repository — `Dockerfile.backend:17` — and that runs inside `release.yml`'s
+      # Docker stage, after the GitHub release is already published. Until this step, a type
+      # error could reach a cut release and surface only while building the image for it.
+      #
+      # WHY A `typecheck` SCRIPT RATHER THAN `npx tsc` INLINE
+      #
+      # `npm run` resolves `node_modules/.bin` deterministically; `npx` falls back to fetching
+      # from the registry when it cannot resolve locally, and the name `tsc` belongs to an
+      # unrelated squatted package that prints a banner and exits 0 — a failure mode that
+      # would present as a permanently green gate checking nothing. `npx tsc` does resolve
+      # correctly in this repo today (verified: `npx tsc --version` -> 5.9.3, the local
+      # binary), so this is defence in depth rather than a bug being worked around. The
+      # script also gives a developer the same one command CI runs.
+      #
+      # Plain `tsc --noEmit` rather than `tsc -b`: `tday-web/tsconfig.json` is a single
+      # non-composite project that already sets `"noEmit": true` (forced by
+      # `allowImportingTsExtensions`), so build mode buys nothing and would write a
+      # `tsconfig.tsbuildinfo` whose staleness could let it skip work. `npm run build` keeps
+      # `tsc -b` because it is genuinely building.
+      #
+      # WHAT THIS DOES NOT COVER: `tsconfig.json` is `include: ["src"]`, so `tests/`,
+      # `vite.config.ts` and `vitest.config.ts` are NOT type-checked by this step. eslint is
+      # what currently covers `tests/`. Widening the include is its own PR — it surfaces
+      # pre-existing errors in test files and would paint this gate red on arrival.
+      - name: Type-check
+        run: npm run typecheck
+
+      # TZ=UTC matches `pr-gate.yml:79`. Several suites assert on formatted dates, and a
+      # runner in another zone would fail them for a reason that has nothing to do with the
+      # change under test.
+      #
+      # The JSON reporter is here only to produce a machine-readable count for the step below;
+      # the default reporter still prints to the log. `--outputFile.json=` rather than a bare
+      # `--outputFile=`: with more than one reporter configured, the per-reporter form is the
+      # documented way to say which one the path belongs to.
+      #
+      # JSON rather than JUnit: vitest's JUnit output carries a `tests=` attribute on BOTH
+      # `<testsuites>` and each `<testsuite>`, so `android.yml`'s grep-and-sum idiom would
+      # double-count it. The JSON report states the totals once.
+      - name: Run tests
+        run: npm run test -- --reporter=default --reporter=json --outputFile.json="$RUNNER_TEMP/web-test-results.json"
+        env:
+          TZ: UTC
+
+      # Vitest prints a green summary whether it ran 715 tests or zero, so without this there
+      # is no way to tell a real run from one whose `include` glob quietly stopped matching.
+      # `vitest.config.ts` scopes tests to `tests/**/*.test.{ts,tsx}` — one rename away from
+      # matching nothing and reporting success, which is the exact failure `android.yml:177-186`
+      # guards against on the other side of the repo.
+      - name: Summarise the test results
+        if: always()
+        run: |
+          set -uo pipefail
+          FILE="$RUNNER_TEMP/web-test-results.json"
+
+          if [ ! -f "$FILE" ]; then
+            echo "::error::No JSON report was produced at ${FILE} — the test run did not complete."
+            exit 1
+          fi
+
+          # The trailing newline matters. GitHub runs this step under `bash -e`, and `read`
+          # returns non-zero when it hits EOF before a delimiter — so without it, a perfectly
+          # green test run would kill the step on the `read` itself.
+          read -r TOTAL PASSED FAILED PENDING SUITES < <(FILE="$FILE" node -e '
+            const r = require(process.env.FILE);
+            process.stdout.write([
+              r.numTotalTests, r.numPassedTests, r.numFailedTests,
+              r.numPendingTests, r.numTotalTestSuites,
+            ].join(" ") + "\n");
+          ')
+
+          echo "${SUITES} suite(s), ${TOTAL} test(s): ${PASSED} passed, ${FAILED} failed, ${PENDING} pending."
+
+          if [ "${TOTAL:-0}" -eq 0 ]; then
+            echo "::error::Vitest reported 0 tests. The include glob in vitest.config.ts matched nothing."
+            exit 1
+          fi
+
+          {
+            echo "### Web tests"
+            echo ""
+            echo "| Suites | Tests | Passed | Failed | Pending |"
+            echo "|---:|---:|---:|---:|---:|"
+            echo "| ${SUITES} | ${TOTAL} | ${PASSED} | ${FAILED} | ${PENDING} |"
+          } >> "$GITHUB_STEP_SUMMARY"
