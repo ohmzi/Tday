@@ -361,6 +361,22 @@ Use backtick-quoted descriptive names: `should <expected behavior> when <conditi
 xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'
 ```
 
+The suite has to run **signed**, including on a simulator. `ServerURLPersistenceTests` and the
+on-disk half of the widget snapshot tests are assertions about entitlements as much as about code:
+the test bundle is app-hosted, so it inherits `Tday/Tday.entitlements` from `Tday.app`, and without
+them the keychain has no default access group (`SecItemAdd` returns errSecMissingEntitlement, which
+`SecureStore` logs and swallows) and `containerURL(forSecurityApplicationGroupIdentifier:)` is nil.
+Both failures read as persistence bugs rather than as a missing entitlement, so `CODE_SIGNING_ALLOWED=NO`
+turns ten tests red without saying why. Ad-hoc signing (`CODE_SIGN_IDENTITY="-"`) applies the
+entitlements and needs no identity, profile, or Apple credentials; `.github/workflows/ios-tests.yml`
+runs that way.
+
+Assertions that compare a whole formatted date or time string are also a standing hazard. The app
+formats through `setLocalizedDateFormatFromTemplate`, so the exact output belongs to ICU and changes
+with the OS — en_US has already moved to a narrow no-break space (U+202F) before AM/PM and to a
+literal "at" in `MMMd jmm`. Assert the contract the code actually promises rather than the spelling
+of the separator.
+
 ### Test Locations
 
 ```text
