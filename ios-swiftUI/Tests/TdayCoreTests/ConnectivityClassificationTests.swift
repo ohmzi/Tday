@@ -407,7 +407,11 @@ final class ConnectivityClassificationTests: XCTestCase {
         )
         XCTAssertEqual(synced.title, "Server sync")
         XCTAssertEqual(synced.statusText, "Synced")
-        XCTAssertEqual(synced.lastSyncedText(now: now, calendar: calendar), "2:30 PM")
+        assertTimeOnlyTimestamp(
+            synced.lastSyncedText(now: now, calendar: calendar),
+            hourAndMinute: "2:30",
+            dayMarker: "Jun"
+        )
         XCTAssertNil(synced.lastAttemptText(now: now, calendar: calendar))
 
         let neverSynced = MobileSyncStatus(dataMode: .server)
@@ -422,7 +426,11 @@ final class ConnectivityClassificationTests: XCTestCase {
         )
         XCTAssertEqual(offline.statusText, "Offline. Changes will sync when connection returns.")
         XCTAssertEqual(offline.pendingText, "2 changes waiting")
-        XCTAssertEqual(offline.lastAttemptText(now: now, calendar: calendar), "Jun 1, 9:15 AM")
+        assertDatedTimestamp(
+            offline.lastAttemptText(now: now, calendar: calendar),
+            day: "Jun 1",
+            hourAndMinute: "9:15"
+        )
 
         let syncing = MobileSyncStatus(dataMode: .server, isManualSyncing: true)
         XCTAssertEqual(syncing.statusText, "Syncing now")
@@ -463,6 +471,68 @@ final class ConnectivityClassificationTests: XCTestCase {
         XCTAssertEqual(localStatus.pendingMutationCount, 0)
         XCTAssertEqual(localStatus.lastSuccessfulSyncEpochMs, 0)
         XCTAssertEqual(localStatus.lastSyncAttemptEpochMs, 0)
+    }
+
+    // The two assertions below deliberately do not compare against a whole formatted string.
+    //
+    // `MobileSyncStatus.timestampText` asks ICU for the pattern via
+    // `setLocalizedDateFormatFromTemplate`, which is the right call — it is what keeps the label
+    // correct in every locale the app ships — but it also means the exact output is ICU's to
+    // change, and ICU changes it. Two such changes have already broken this test: en_US now puts
+    // U+202F NARROW NO-BREAK SPACE before the day period rather than U+0020 ("2:30\u{202F}PM"),
+    // and "MMMd jmm" now resolves with a literal "at" ("Jun 1 at 9:15 AM", not "Jun 1, 9:15 AM").
+    // Neither is a regression in the app, and pinning `dateFormat` to spell either of them out
+    // would trade a brittle test for a broken translation.
+    //
+    // What the app actually promises is narrower than a format string, and it is what these check:
+    // a timestamp from today is the time alone, and one from another day carries the date too.
+
+    private func assertTimeOnlyTimestamp(
+        _ text: String?,
+        hourAndMinute: String,
+        dayMarker: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        guard let text else {
+            return XCTFail("Expected a timestamp, got nil.", file: file, line: line)
+        }
+        XCTAssertTrue(
+            text.contains(hourAndMinute),
+            "Expected \(text) to state the time \(hourAndMinute).",
+            file: file,
+            line: line
+        )
+        XCTAssertFalse(
+            text.contains(dayMarker),
+            "A same-day timestamp should be the time alone, but \(text) also names the date.",
+            file: file,
+            line: line
+        )
+    }
+
+    private func assertDatedTimestamp(
+        _ text: String?,
+        day: String,
+        hourAndMinute: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        guard let text else {
+            return XCTFail("Expected a timestamp, got nil.", file: file, line: line)
+        }
+        XCTAssertTrue(
+            text.contains(day),
+            "Expected \(text) to name the day \(day).",
+            file: file,
+            line: line
+        )
+        XCTAssertTrue(
+            text.contains(hourAndMinute),
+            "Expected \(text) to state the time \(hourAndMinute).",
+            file: file,
+            line: line
+        )
     }
 
     private func date(
