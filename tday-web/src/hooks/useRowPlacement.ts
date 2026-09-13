@@ -26,7 +26,8 @@ import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
  * (`taskCompletionTiming.ts`). And it reads the reduce-motion preference at the instant
  * it would arm an animation rather than subscribing to it: the DOM is already at its
  * finished layout when this runs, so switching the trip off leaves the destination
- * drawn, which is the fifth idiom rule kept for free.
+ * drawn, which is the fifth idiom rule kept for free. It also never animates a child the
+ * viewport places instead of the container — see the `position` guard below.
  */
 
 /** Where a child sits inside its container. Relative, so page scroll cancels out. */
@@ -125,6 +126,28 @@ export function useRowPlacement<T extends HTMLElement = HTMLElement>(): RefObjec
       const dx = from.x - to.x;
       const dy = from.y - to.y;
       if (Math.abs(dx) < MIN_TRAVEL_PX && Math.abs(dy) < MIN_TRAVEL_PX) continue;
+
+      // A child the VIEWPORT places rather than this container has no slot to travel
+      // between. Anything `fixed`, and a `sticky` header while it is stuck, holds its
+      // screen position while the container scrolls underneath it — so the offset
+      // recorded during render and the one read here differ by however far the page
+      // scrolled in between, which is not a move. Ordinary rather than exotic on the
+      // columns this hook is attached to: each one opens with a docked header
+      // (`RootFeedHeroHeader`, `NativePageHeader`) and ends in a scroll-driven pager,
+      // so a commit that straddles a scroll is the normal case, and the failure is a
+      // page header flying half the screen on someone else's re-render.
+      //
+      // Asked here and not in the render-phase pass above, which is deliberately a pure
+      // layout read: `getComputedStyle` on every child of every feed on every render
+      // would turn it into a style recalc. By this line layout has already been forced
+      // and only the few children that report travel are asked at all.
+      //
+      // A sticky child that is NOT currently stuck is skipped too, and that is the
+      // conservative half of the trade rather than an oversight: no feed here has a
+      // sticky row, and a sticky row that genuinely travelled would be rarer than the
+      // docked header that only looked like it did.
+      const { position } = getComputedStyle(child);
+      if (position === "sticky" || position === "fixed") continue;
 
       // Not every environment has the Web Animations API — jsdom has no `animate` at
       // all — and a feed that cannot animate its placements must still show them

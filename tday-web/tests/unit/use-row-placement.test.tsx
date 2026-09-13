@@ -125,11 +125,14 @@ function Column({
   gap = 0,
   heights = {},
   hidden = false,
+  docked = {},
 }: {
   ids: string[];
   gap?: number;
   heights?: Record<string, number>;
   hidden?: boolean;
+  /** Children the viewport places rather than the column: a docked header, a watermark. */
+  docked?: Record<string, "sticky" | "fixed">;
 }) {
   const placementRef = useRowPlacement<HTMLDivElement>();
   return (
@@ -142,7 +145,16 @@ function Column({
       {...(hidden ? { "data-hidden": true } : null)}
     >
       {ids.map((id) => (
-        <div key={id} data-id={id} data-height={heights[id] ?? ROW_HEIGHT} />
+        <div
+          key={id}
+          data-id={id}
+          data-height={heights[id] ?? ROW_HEIGHT}
+          // The fake layout above is deliberately left ignorant of this: a docked child
+          // measures as having moved exactly like an in-flow one, which is the whole
+          // situation — the hook has to decide on the child's own positioning, not on
+          // the distance it appears to have covered.
+          style={docked[id] ? { position: docked[id] } : undefined}
+        />
       ))}
     </div>
   );
@@ -298,6 +310,25 @@ describe("useRowPlacement", () => {
     rerender(<Column ids={["a", "b", "c"]} />);
 
     expect(calls).toHaveLength(0);
+  });
+
+  it("leaves the children the viewport places where the viewport put them", () => {
+    // A page column starts with a docked header and often carries a fixed watermark, and
+    // both report an offset inside the container that is really the scroll position. Let
+    // a commit straddle a scroll — routine on a screen that pages in more rows as you
+    // reach the bottom — and the difference reads as travel nothing performed. The cost
+    // of believing it is a page header sliding half the screen on someone else's
+    // re-render, which is why this is decided on how the child is positioned rather than
+    // on how far it seems to have gone: here both fakes move exactly as far as the row
+    // that genuinely did.
+    const docked = { header: "sticky", watermark: "fixed" } as const;
+    const { rerender } = render(<Column ids={["a", "header", "watermark", "b"]} docked={docked} />);
+
+    rerender(<Column ids={["header", "watermark", "b"]} docked={docked} />);
+
+    expect(callFor("header")).toBeUndefined();
+    expect(callFor("watermark")).toBeUndefined();
+    expect(travelOf(callFor("b")!)).toBe(`translate(0px, ${ROW_HEIGHT}px)`);
   });
 
   it("never measures a container it does not have yet", () => {
