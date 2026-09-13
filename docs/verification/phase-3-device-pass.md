@@ -187,12 +187,13 @@ cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme"
 - [ ] **PR 15b · android · Create sheet rises with the keyboard** — Today, tap **+** to open the
       create sheet; the keyboard is down and the sheet is sitting at roughly half the screen.
       Do:     tap the task-title field.
-      Watch:  the sheet's top edge and the keyboard's top edge climb together for the whole of the
-              keyboard's ~250 ms, one dp of sheet per dp of keyboard, arriving at ~85 % of the
-              screen on the same frame the keys land.
-      Fails:  the sheet is already at 85 % on the first frame any keyboard is visible and then
-              holds still while the keys are still sliding up; or it starts late and is still
-              growing after the keyboard has landed.
+      Watch:  the sheet's top edge and the keyboard's top edge climb together dp for dp from the
+              first frame of inset, and the sheet reaches its ~85 % ceiling no earlier than about
+              two thirds of the way through the keyboard's ~250 ms. It stops there while the keys
+              finish the last of their travel — that is the cap, not a stall.
+      Fails:  the sheet is already at 85 % on the first frame any keyboard is visible; or it is at
+              85 % before the keyboard is halfway up; or it starts late and is still growing after
+              the keyboard has landed.
 
 - [ ] **PR 15b · android · Create sheet comes back down with the keyboard** — same sheet, keyboard
       up, sheet at its tall ~85 % height.
