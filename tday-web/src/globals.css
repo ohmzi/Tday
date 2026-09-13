@@ -643,18 +643,34 @@
    whatever is inside it": `height` cannot be animated away from `auto`, and a
    measured pixel height would want re-measuring every time the copy inside
    rewraps. Same track the completed row closes on its way out
-   (`TodoItemContainer`), down to the pair of declarations the child needs while
-   it runs: a grid item that is not a scroll container keeps its own content
-   height as the track's floor, so without them the track would have nothing to
-   shrink to. They are scoped to the exit rather than left on, so the resting
-   scene clips nothing. */
+   (`TodoItemContainer`). */
 .tday-empty-slot {
   display: grid;
   grid-template-rows: 1fr;
   transition: grid-template-rows var(--tday-duration-enter) var(--tday-empty-sink-ease);
 }
 
-.tday-empty-exit > * {
+/* The track closing, kept a separate class from the ink sinking below because
+   the two do not always go together. A hand-off that starts inside the
+   celebration window never hands the slot over: the scene is still on screen
+   when the beat ends (`shouldShowTodayEmptyIllustration`'s last line), so a
+   track that had closed under it would have to open again the frame the class
+   came off — 42vh taken out from under Earlier's rows and then put straight
+   back under them, a bounce for a scene that never left. The ink still fades on
+   that path, on this rung and this curve; only the geometry is withheld, which
+   is what leaves that beat exactly as still as it was before the slot could
+   move at all. `earlierHandoffVacatesSlot` (`todayEarlierIllustration.ts`) is
+   the one place that asks which of the two a hand-off is.
+
+   The child's two declarations are scoped to the closing rather than left on: a
+   grid item that is not a scroll container keeps its own content height as the
+   track's floor, so without them the track would have nothing to shrink to —
+   and left on, they would clip the resting scene. */
+.tday-empty-slot-closing {
+  grid-template-rows: 0fr;
+}
+
+.tday-empty-slot-closing > * {
   overflow: hidden;
   min-height: 0;
 }
@@ -670,7 +686,9 @@
 /* The exit mirror of `.tday-empty-enter`, played only during an "Earlier"
    hand-off (requirement 3 of the Earlier section — Today originally, since
    generalized to every other scope with its own Earlier bucket). Only ever
-   applied to a `.tday-empty-slot`, which is what lets it close the track.
+   applied to a `.tday-empty-slot`, which carries the track this rides over —
+   closed by `.tday-empty-slot-closing` above on the hand-offs that actually
+   vacate it.
 
    `--tday-duration-enter` is the rung `TODAY_EARLIER_EXIT_MS`
    (`todayEarlierIllustration.ts`) sits on, and that constant argues the choice:
@@ -684,7 +702,6 @@
   animation-duration: var(--tday-duration-enter);
   animation-timing-function: var(--tday-empty-sink-ease);
   animation-fill-mode: both;
-  grid-template-rows: 0fr;
 }
 
 @keyframes tday-empty-sink {
@@ -741,7 +758,8 @@
      it with no trip to carry it would take the scene off the screen and leave
      the rest of that beat holding nothing, which is the destination of the
      hand-off and not the destination of this scene. */
-  .tday-empty-exit { animation: none; grid-template-rows: 1fr; }
+  .tday-empty-exit { animation: none; }
+  .tday-empty-slot-closing { grid-template-rows: 1fr; }
   /* `useFadeUnmount` itself skips its own delay under reduced motion (see its
      own doc comment), so these never actually get applied for long — this is
      just the same belt-and-braces as the pair above. */
