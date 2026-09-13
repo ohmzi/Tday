@@ -8,10 +8,10 @@ import {
 /**
  * The in-flight half of checking a task off, held outside every component that could unmount.
  *
- * Ticking a task acknowledges it instantly and commits it 780ms later, at the end of the staged
- * check-off sequence (see `taskCompletionTiming.ts`). The row is not entitled to those 780ms: a
- * filter flips, a section collapses, a parent re-keys its children, the user navigates — any of
- * those unmounts it mid-sequence. While the phase and its timers lived in the row's own
+ * Ticking a task acknowledges it instantly and commits it just under a second later, at the end
+ * of the staged check-off sequence (see `taskCompletionTiming.ts`). The row is not entitled to
+ * that window: a filter flips, a section collapses, a parent re-keys its children, the user
+ * navigates — any of those unmounts it mid-sequence. While the phase and its timers lived in the row's own
  * `useState` + `useRef<number[]>`, React's unmount cleanup cleared them, and with the last timer
  * went the commit: nothing pruned, no toast, no request. The user ticked a task, watched it go
  * green, and got it back. That is data loss, not a dropped frame.

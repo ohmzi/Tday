@@ -3,11 +3,16 @@
 /**
  * Ticking a task plays the same staged sequence the native apps do, on the same clock: green
  * check, then the title strike sweeps in while the notes get a plain line-through, then the row
- * fades and leaves the list. The timings come from `@/lib/taskCompletionTiming`, which mirrors the
- * native TASK_COMPLETION_* constants (160 / 360 / 260ms).
+ * fades and collapses its box out of the list. The timings come from `@/lib/taskCompletionTiming`,
+ * whose first two legs mirror the native TASK_COMPLETION_* constants (160 / 360ms).
  *
- * These tests also pin that the sequence runs on its OWN timers and is not gated on the undo
- * toast: the toast lives 5s, the animation finishes in 780ms, and the rows below close up then.
+ * The last leg is the one web does not share: the native lists animate a removal themselves, so on
+ * web the row's own collapse IS the removal and the prune has to wait for it. That is what these
+ * tests hold — the box closes while the row is still there, and the rows below travel rather than
+ * jump into a gap.
+ *
+ * They also pin that the sequence runs on its OWN timers and is not gated on the undo toast: the
+ * toast lives 5s and the animation is done in well under a second.
  */
 
 import type { ReactNode } from "react";
@@ -18,9 +23,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TodoItemType } from "@/types";
 import {
   TASK_COMPLETION_CHECK_TO_STRIKE_MS,
+  TASK_COMPLETION_COLLAPSE_MS,
   TASK_COMPLETION_STRIKE_TO_FADE_MS,
   TASK_COMPLETION_TOTAL_MS,
 } from "@/lib/taskCompletionTiming";
+import { getTodoFocusElementId } from "@/lib/todoToastNavigation";
+import { installReducedMotion } from "../setup/reduced-motion";
 
 const patchMock = vi.fn();
 
@@ -100,6 +108,18 @@ function renderRow() {
   return queryClient;
 }
 
+/**
+ * The row's own box — the element that carries the collapse. Read back out of the document by id
+ * rather than from a render result, because what is being asserted is what the DOM was handed.
+ */
+function row(): HTMLElement {
+  const element = document.getElementById(getTodoFocusElementId(TODO.id));
+  if (!element) throw new Error("the row is not on screen");
+  return element;
+}
+
+const REAL_MATCH_MEDIA = window.matchMedia;
+
 describe("ticking a task row's checkbox", () => {
   beforeEach(() => {
     patchMock.mockReset();
@@ -108,6 +128,7 @@ describe("ticking a task row's checkbox", () => {
   });
 
   afterEach(() => {
+    window.matchMedia = REAL_MATCH_MEDIA;
     vi.useRealTimers();
     // This config has no globals-based auto cleanup, so a second render would otherwise find
     // two checkboxes in the same container.
@@ -128,22 +149,32 @@ describe("ticking a task row's checkbox", () => {
     expect(title().className).not.toContain("task-strike");
     expect(queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])).toHaveLength(2);
 
+    expect(row().style.gridTemplateRows).toBe("");
+
     // 2. Strike sweeps in. The title uses the swept rule, not a plain line-through — notes keep
-    //    the plain one, exactly as the native rows split it.
+    //    the plain one, exactly as the native rows split it. The box is still at full height:
+    //    this beat is the user reading their own edit, and closing up under them would take the
+    //    strike off the screen before it has been seen.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(TASK_COMPLETION_CHECK_TO_STRIKE_MS + 10);
     });
     expect(title().className).toContain("task-strike");
     expect(title().className).not.toContain("line-through");
+    expect(row().style.gridTemplateRows).toBe("");
     expect(queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])).toHaveLength(2);
 
-    // 3. Fading, still holding its place in the list.
+    // 3. Fading AND closing: the ink goes on the Change rung, the box on Emphasis, both declared
+    //    in one transition so they read as a single departure. The row still holds its key in the
+    //    caches — what is shrinking is the space it takes, so the rows below travel into it.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(TASK_COMPLETION_STRIKE_TO_FADE_MS);
     });
+    expect(row().style.opacity).toBe("0");
+    expect(row().style.gridTemplateRows).toBe("0fr");
+    expect(row().style.transition).toContain("grid-template-rows");
     expect(queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])).toHaveLength(2);
 
-    // 4. Gone at ~780ms, and the rows below close up.
+    // 4. Gone once the box is shut, and the rows below close up.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(TASK_COMPLETION_TOTAL_MS);
     });
@@ -168,6 +199,55 @@ describe("ticking a task row's checkbox", () => {
     });
 
     expect(TASK_COMPLETION_TOTAL_MS).toBeLessThan(5000);
+    expect(queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])).toHaveLength(1);
+  });
+
+  /**
+   * The prune is what actually takes the row out of the list, and web has nothing else that
+   * animates a removal — so a prune that lands while the box is still closing is the jump the
+   * collapse exists to remove, arriving a frame from the end instead of at the start.
+   *
+   * Checked against the rung rather than by advancing the clock to a point inside the last leg:
+   * the gap between a sequence that waits for the fade and one that waits for the collapse is
+   * 60ms, `shouldAdvanceTime` lets real time move the fake clock as well, and a probe that narrow
+   * would pass or fail on how busy the machine is. This is not the sum compared back to itself —
+   * building the total out of the fade, which is what it used to be, fails here.
+   */
+  it("gives the collapse a leg of its own before the row is pruned", () => {
+    const lastLeg =
+      TASK_COMPLETION_TOTAL_MS -
+      TASK_COMPLETION_CHECK_TO_STRIKE_MS -
+      TASK_COMPLETION_STRIKE_TO_FADE_MS;
+
+    expect(lastLeg).toBeGreaterThanOrEqual(TASK_COMPLETION_COLLAPSE_MS);
+  });
+
+  /**
+   * Reduced motion removes the trip, never the destination (docs/motion.md, fifth idiom rule). A
+   * row held at the start of its collapse would be a finished task still occupying a full-height
+   * box — which is not "no animation", it is the bug with the animation switched off.
+   */
+  it("draws the finished frame outright under reduced motion", async () => {
+    installReducedMotion(true);
+    const queryClient = renderRow();
+
+    await act(async () => {
+      screen.getByRole("checkbox").click();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(
+        TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS + 10,
+      );
+    });
+
+    expect(row().style.gridTemplateRows).toBe("0fr");
+    expect(row().style.opacity).toBe("0");
+    expect(row().style.transition).toBe("");
+
+    // And the completion still lands: the preference silences the motion, not the work.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(TASK_COMPLETION_TOTAL_MS);
+    });
     expect(queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])).toHaveLength(1);
   });
 
