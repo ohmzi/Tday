@@ -212,3 +212,28 @@ spends TF2 — see `README.md`, "iOS: three cycles, for the whole programme".
       Also:   with Settings → Developer options → Animator duration scale set to Off, the preview
               appears already lifted and the row is already dimmed. A card drawn flat and small
               under the finger would be the fifth idiom rule broken the usual way round.
+
+- [ ] **PR 49 · web · The calendar form arrives once, in its own shape** — the calendar, on a phone
+      and on a desktop browser, with the network throttled (DevTools → Network → Slow 3G) and the
+      cache disabled, because the placeholder this is about only exists on the first open of a
+      session. Hard-reload before each attempt; the second open renders the body synchronously and
+      shows nothing.
+      Do:     tap an empty slot to open the new-task form, on a phone first and then on a desktop
+              window comfortably wider than 640px. Then open an existing task for editing on both.
+              Repeat each one once more without reloading, to see the warm path.
+      Watch:  on desktop, a centred modal card — the real one, with the Cancel / New task / Save
+              header already in it — and skeleton rows filling the body underneath while the chunk
+              lands. On a phone, the bottom sheet, same story. The surface slides in ONCE and then
+              stands still: the skeleton rows are replaced by the title field, the notes area and
+              the Schedule / Details rows without the card moving, resizing or re-entering. The
+              "Schedule" and "Details" titles are already the real words before the body arrives
+              and do not change when it does. On the warm second open the form is simply there.
+      Fails:  a bottom sheet sliding up from the bottom of a desktop window for a form that then
+              appears as a centred modal — the first defect, and the most visible of the two. And
+              the second: the sheet arriving, settling, then being swapped for a sheet that plays
+              the same entrance again, which on Slow 3G reads as the form flickering or bouncing
+              once before it is usable. Also a fail: the card visibly jumping in height as the
+              skeleton rows give way to real ones, which would mean the placeholder is not built
+              from the chrome the body lands into.
+      Also:   with reduce-motion on, the surface is simply present rather than sliding, and the
+              handover is still invisible — a finished form is the finished state either way.

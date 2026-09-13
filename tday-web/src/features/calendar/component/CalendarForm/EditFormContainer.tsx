@@ -1,11 +1,9 @@
-import React, { lazy, Suspense } from "react";
+import React from "react";
 import { TodoItemType } from "@/types";
-import DrawerPlaceholder from "../LoadingPlaceholders/DrawerPlaceholder";
+import EditDrawer from "./Form/DrawerForm/EditDrawer";
+import EditModal from "./Form/ModalForm/EditModal";
 import useWindowSize from "@/hooks/useWindowSize";
 import { useCalendarTaskFormState } from "@/features/calendar/hooks/useCalendarTaskFormState";
-
-const EditDrawer = lazy(() => import("./Form/DrawerForm/EditDrawer"));
-const EditModal = lazy(() => import("./Form/ModalForm/EditModal"));
 
 type EditCalendarFormContainerProps = {
   todo: TodoItemType;
@@ -13,6 +11,12 @@ type EditCalendarFormContainerProps = {
   setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
+// Both shells are imported outright. They used to be `lazy()` behind a Suspense
+// boundary here, which put the code split around the surface and left the
+// fallback with an impossible job: be a drawer and a modal at once, and then
+// get out of the way of a sheet that animates itself in. It could do neither.
+// The split now sits inside both shells, around the body that actually carries
+// the weight — see `Form/LazyCalendarTaskFormBody`.
 const EditCalendarFormContainer = ({
   todo,
   displayForm,
@@ -33,24 +37,20 @@ const EditCalendarFormContainer = ({
     listID: todo.listID,
   });
 
-  return (
-    <Suspense fallback={<DrawerPlaceholder />}>
-      {isDesktop ? (
-        <EditModal
-          todo={todo}
-          displayForm={displayForm}
-          setDisplayForm={setDisplayForm}
-          form={form}
-        />
-      ) : (
-        <EditDrawer
-          todo={todo}
-          displayForm={displayForm}
-          setDisplayForm={setDisplayForm}
-          form={form}
-        />
-      )}
-    </Suspense>
+  return isDesktop ? (
+    <EditModal
+      todo={todo}
+      displayForm={displayForm}
+      setDisplayForm={setDisplayForm}
+      form={form}
+    />
+  ) : (
+    <EditDrawer
+      todo={todo}
+      displayForm={displayForm}
+      setDisplayForm={setDisplayForm}
+      form={form}
+    />
   );
 };
 

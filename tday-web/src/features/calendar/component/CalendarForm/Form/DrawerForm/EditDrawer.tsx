@@ -8,7 +8,9 @@ import { useEditCalendarTodo } from "@/features/calendar/query/update-calendar-t
 import ConfirmEditAllDrawer from "@/features/calendar/component/ConfirmationModals/ConfirmEditAllDrawer";
 import ConfirmCancelEditDrawer from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEditDrawer";
 import type { CalendarTaskFormState } from "@/features/calendar/hooks/useCalendarTaskFormState";
-import CalendarTaskFormBody from "../CalendarTaskFormBody";
+// The body is the lazy half of this screen; the sheet around it is not. See
+// LazyCalendarTaskFormBody for why the split moved in here.
+import CalendarTaskFormBody from "../LazyCalendarTaskFormBody";
 
 type EditCalendarFormProps = {
   todo: TodoItemType;

@@ -145,7 +145,7 @@ describe("the calendar's delete dialog answers the tap that opened it", () => {
     const card = placeholder();
     expect(card).not.toBeNull();
     // A line, a sentence and two buttons — the shape of the confirm dialog it
-    // is standing in for, not of the edit form `ModalPlaceholder` answers for.
+    // is standing in for, not of the edit form `FormBodyPlaceholder` answers for.
     expect(card!.querySelectorAll(".animate-pulse")).toHaveLength(4);
   });
 

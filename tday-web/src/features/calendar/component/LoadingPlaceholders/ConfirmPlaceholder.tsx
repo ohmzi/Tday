@@ -13,10 +13,16 @@ import { Modal, ModalContent, ModalFooter, ModalHeader, ModalOverlay } from "@/c
  * it is exactly the window where an unanswered tap costs most: a cold cache or
  * a bad connection, where the user's next move is to press it again.
  *
- * Not `ModalPlaceholder` beside this file, which stands in for the edit form —
- * six fields and a notes box. A confirm dialog is a line, a sentence and two
- * buttons, and a placeholder of the wrong shape would resize the card under the
- * content it is waiting for.
+ * Not `FormBodyPlaceholder` beside this file, which stands in for the edit
+ * form — six fields and a notes box. A confirm dialog is a line, a sentence and
+ * two buttons, and a placeholder of the wrong shape would resize the card under
+ * the content it is waiting for.
+ *
+ * This file still draws a whole surface where that one draws only a body, and
+ * the difference is which half is lazy. The edit form's sheet is eager and only
+ * its body is waited for, so the sheet is there to be filled in. Both delete
+ * dialogs are lazy in one piece — there is no card on screen yet — so standing
+ * one up is the only way to answer the tap at all.
  *
  * Built from the Modal primitives rather than a portal of its own so that the
  * scrim, the card, the enter, the exit and the click-to-dismiss are the same
