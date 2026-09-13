@@ -538,27 +538,183 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 21 — the web calendar swipe tracks the finger
 
-- [ ] `web-calendar-swipe-is-untracked` — pointerdown records x, pointerup jumps; nothing moves under the finger · web · Sev 3 · M · Gate V+D
+- [x] `web-calendar-swipe-is-untracked` — pointerdown records x, pointerup jumps; nothing moves under the finger · web · Sev 3 · M · Gate V+D
+  - The grid now carries the finger's translation, written straight onto the DOM rather than
+    through React state, and the app's own clocks run only for what happens after the finger
+    leaves. Android's Phase 3 rows state the rule this was fixed to: a finger and a clock of the
+    app's own are two clocks, and only one of them belongs to the app.
+  - A release that turns the page hands over to the slide the incoming page already arrives on —
+    Emphasis, on the Gesture curve, which is why a release can hand over to it at all — and the
+    grid's own offset is dropped with the element that carried it. A release that turns nothing
+    glides home on Quick, the rung the floor's refusal answers on, so the two compose as one
+    answer when a back swipe is declined at the floor.
+  - Past the threshold the grid gives instead of tracking, and in a refused direction it gives
+    from the first pixel and reaches half a threshold at most. Web keeps ONE page in the DOM —
+    the thing that lets `AnimatedHeight` measure a single height for a card whose four pages are
+    four heights — so past the threshold there is no neighbour to uncover, and a grid that
+    travelled a third of the card would be promising one.
+  - The drag is written to a CHILD of the element that slides, which is structural rather than
+    tidy: a filling CSS animation outranks an inline style, so a page that arrived on
+    `cal-native-slide-from-*` holds its own `transform` at `translateX(0)` for as long as it
+    lives. Written there, the drag would have been ignored on every page but the first the card
+    ever drew — the same "one element, one `animation`" rule the refusal wrapper above it is
+    built on, read on the property next door.
+  - Reduced motion keeps the tracking and loses the trip home. The preference is about motion the
+    app plays, not about the movement a finger is making, and the fifth idiom rule is kept the
+    usual way: the destination is drawn in the frame the finger leaves.
+  - No literal is added: the return names `var(--tday-duration-quick)` and
+    `var(--tday-ease-gesture)`, and every distance in the gesture is a multiple of the swipe
+    threshold it already had. The three web ceilings are untouched at 58 / 3 / 10.
+  - Two things fall out of the gesture rather than out of the row, and both are kept: the axis
+    locks at the same 8px the calendar row's swipe locks at, because the grid sits directly above
+    a scrolling task list, and a gesture that ends vertically now turns no page at all.
+  - Pointer capture moved from the way down to the axis lock, which is what lets the gesture
+    begin on a day cell. The pager used to refuse any press that landed on a button, and in month
+    view the grid is seven columns of day-cell buttons with 8px between its rows and nothing
+    between its columns — so the tracking existed almost nowhere a thumb goes. The reason it
+    refused is real but narrower than the refusal was: capture retargets the click that follows a
+    press, so it is taken at the instant the axis says "x" and not before. Before the lock the
+    press is still a candidate tap; after it, the cell's click is one the user no longer means.
+  - A second finger arriving mid-drag now takes the page over instead of ending the gesture
+    under it. The button bail used to clear the tracking refs and return, after which the first
+    finger's move, release and lost capture all failed the pointer-id guard and the grid stayed
+    parked at its dragged offset for good — selecting a date does not re-key the pager, so
+    nothing came along to replace the element holding it.
+  - The weekday row is out of the pager and out of the track: AGENTS.md's Calendar UX Contract
+    says in so many words that the month title and weekday row do not slide with the date grid,
+    and the labels come from today and the locale rather than the selected date, so every page
+    drew the same seven letters. Sliding them was pointless at 17px on a page turn; carrying
+    them under the thumb for 96px made it a breach. It stays inside the height box, because the
+    row comes and goes with the view and a row outside the measurement would take its height out
+    of the card in one frame while the rest of the change eased.
+  - What a release hands over is a cut, and it is argued at the call site rather than fixed.
+    Web keeps one page in the DOM, so the content the drag has carried to -80px *is* the outgoing
+    month; the arriving one must finish at 0, and a continuation from -80px could only reach 0 by
+    travelling right — which is the movement an undecided release makes and the one a user reads
+    as a refusal. Direction is the half that carries meaning, so the arrival keeps it and pays a
+    frame for it. The device row gained a `Judge:` line for it rather than a `Fails:` one,
+    because it is a trade to be looked at, not a bug to be spotted.
 
 ### PR 25a — the calendar grid height animates across month lengths
 
-- [ ] `web-calendar-grid-height-snaps-mid-slide` — 35-vs-42-day months and view switches change height in one frame · web · Sev 3 · M · Gate V+D
+- [x] `web-calendar-grid-height-snaps-mid-slide` — 35-vs-42-day months and view switches change height in one frame · web · Sev 3 · M · Gate V+D
 
 ### PR 25b — calendar row removal and the highlight ring
 
-- [ ] `web-calendar-row-removal-height-snap` — ticking fades ink but holds height to t=960 ms · web · Sev 2 · S · Gate V+D
-- [ ] `web-calendar-highlight-ring-cuts` — `box-shadow` missing from the inline transition whitelist · web · Sev 2 · XS · Gate V
+- [x] `web-calendar-row-removal-height-snap` — ticking fades ink but holds height to t=960 ms · web · Sev 2 · S · Gate V+D
+  - **Already closed on `develop` when this PR opened.** 867c7903 put all five web row types on
+    `taskCompletionTiming` and gave the calendar row the same 1fr→0fr track the scheduled row
+    closes; abfe8c3b pinned it with `calendar-row-complete-interaction.test.tsx`. The `t=960` in
+    the row is the hand-written clock that commit deleted — the ink now leaves at 520 over 260 and
+    the box shuts behind it over 320, so the prune is at 840. Nothing to redo in code. The `D` half
+    of the gate was still outstanding, because neither of those commits wrote a device row; that is
+    what this one adds.
+- [x] `web-calendar-highlight-ring-cuts` — `box-shadow` missing from the inline transition whitelist · web · Sev 2 · XS · Gate V
+  - The row is the whitelist and the whitelist is fixed. What the fix does **not** buy is the
+    phone. Below `sm` the ring is the only way the mark is drawn, and below `sm` the row sits in an
+    `overflow-hidden` wrapper whose clip box is exactly the ring element's border box — so a 2px
+    outset ring is cut away everywhere but the four rounded corners, and what fades there is
+    slivers. That is a second, pre-existing defect, in a wrapper this row does not own; it is filed
+    under **PR 25d**. The two are independent: reverting this transition would leave even the
+    corners cutting.
 
 ### PR 25c — three small calendar and dialog cuts
 
-- [ ] `web-calendar-back-swipe-at-floor-is-silent` — rejected swipe at the earliest month produces no feedback at all · web · Sev 2 · S · Gate V
-- [ ] `web-calendar-drag-overlay-drops-with-no-animation` — `dropAnimation={null}`; card vanishes at release · web · Sev 2 · XS · Gate V+D
-- [ ] `web-delete-dialog-has-no-fallback` — first Delete tap renders literally nothing until the chunk lands · web · Sev 2 · XS · Gate V
+- [x] `web-calendar-back-swipe-at-floor-is-silent` — rejected swipe at the earliest month produces no feedback at all · web · Sev 2 · S · Gate V
+  - The card resists 8px and comes back, on Quick with the Gesture curve the paging slide already
+    uses — short enough that it cannot be read as a page turn that started and changed its mind.
+    The answer is given at the refusal rather than at the gesture: `animateToDate` now reports
+    whether the page turned, so the arrow keys get the same answer the swipe does and the floor
+    rule stays in one place.
+  - Reduced motion gets nothing, deliberately. A refusal ends where it began, so the fifth idiom
+    rule's "keep the destination" has no destination to keep; the flag is not raised at all in that
+    case. The still signal there is the previous chevron, `disabled` at the floor.
+  - Android does not share this row: its `HorizontalPager` gets the platform's stretch overscroll
+    at page 0. iOS does — `CalendarPagingScrollView.swift:37` sets `bounces = false` — and is not
+    fixed here, there being no Swift toolchain on this machine. Filed under **PR 26**.
+- [x] `web-calendar-drag-overlay-drops-with-no-animation` — `dropAnimation={null}`; card vanishes at release · web · Sev 2 · XS · Gate V+D
+  - Emphasis on the Enter curve, only those two values named; dnd-kit keeps its own keyframes and
+    the side effect that hides the row underneath.
+  - What the library decides, and therefore what the fix does not reach: dnd-kit measures the
+    draggable's node at the drop and declines to animate if it has gone. A card released over
+    nothing or back on its own day flies home; one dropped on another day flies to where its row
+    was, and if the optimistic update has already removed that row there is no landing to play.
+    The first case is the one the old code punished hardest — changing your mind deleted the card
+    you were holding.
+  - The two sibling drag contexts (`TimelineDndContext`, `TodayBucketDnd`) carry the identical
+    `dropAnimation={null}` and are left for their own rows, which is why the config sits in the
+    calendar's `lib/`.
+- [x] `web-delete-dialog-has-no-fallback` — first Delete tap renders literally nothing until the chunk lands · web · Sev 2 · XS · Gate V
+  - Both boundaries render unconditionally, so the import starts at row mount rather than at the
+    tap; what is left is a cold cache or a bad connection. The fallback is gated on the open flag —
+    ungated it would flash a modal over the calendar on first paint, once per row.
+  - Built from the Modal primitives, so the scrim, the card and the click-to-dismiss are the real
+    dialog's. Known cost: a chunk that lands mid-enter makes the real dialog play that enter again
+    from the start. Removing it means hoisting the modal shell out of the lazy chunk so only the
+    body swaps — a change to both dialogs and their boundary, not a rider on a fallback.
+  - `ModalPlaceholder` is still unimported: it is the edit form's shape, and PR 49 owns it.
+    PR 49 has since deleted it rather than wiring it up — see there for why the edit form stopped
+    needing a surface-shaped fallback at all. The known cost above is unchanged and still open:
+    it is the same hoist, on the confirm dialogs, and nothing in PR 49 reached them.
+
+### PR 25d — the highlight ring is clipped away by the row's own collapse wrapper
+
+- [ ] *new, not one of the 109* — below `sm` the ring is drawn outset on a child whose border box **is** the wrapper's clip box, so the mark a deep link leaves on a row is ~95 % invisible on a phone · web · Sev 2 · S · Gate V+D
+  - Found while fixing `web-calendar-highlight-ring-cuts`, which now fades a ring almost nobody can
+    see. Identical in all three row types carrying
+    `highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0"` —
+    `CalendarClient.tsx:799`, `TodoItemContainer.tsx:390`, `FloaterItemContainer.tsx:298` — because
+    all three sit in the same `grid-rows-[1fr] overflow-hidden sm:overflow-visible` wrapper, which
+    predates the programme (09225a04).
+  - Not the one-line `inset-ring` swap it looks like, which is why it is `S`. The wrapper's clip is
+    load-bearing — it is what lets the 1fr track actually close below `sm` — and `sm:ring-0` means
+    whatever lands has to leave the desktop tint byte-identical. Three shapes are open: an inset
+    ring, the ring moved onto the wrapper, or the clip applied only while `removing`, which is the
+    trade `TodoItemContainer.tsx:374` already argues for the foreground child's own `overflow` and
+    for exactly this reason. Whichever wins, it is one change in three files or it is a fourth way
+    these rows differ from each other.
 
 ### PR 49 — the drawer placeholder matches the surface it precedes
 
-- [ ] `web-drawer-placeholder-wrong-shape-on-desktop` — bottom-sheet skeleton for a desktop modal; `ModalPlaceholder` has zero importers · web · Sev 3 · XS · Gate V
-- [ ] `web-drawer-placeholder-double-arrival` — static placeholder at final geometry, then vaul slides the real sheet into it · web · Sev 3 · S · Gate V+D
+- [x] `web-drawer-placeholder-wrong-shape-on-desktop` — bottom-sheet skeleton for a desktop modal; `ModalPlaceholder` has zero importers · web · Sev 3 · XS · Gate V
+- [x] `web-drawer-placeholder-double-arrival` — static placeholder at final geometry, then vaul slides the real sheet into it · web · Sev 3 · S · Gate V+D
+  - **Both rows, one cause: the code split sat around the surface.** `EditFormContainer` and
+    `CreateFormContainer` each lazily imported a drawer AND a modal behind a single Suspense
+    fallback, so the fallback had to *be* a surface. It could not be the right one — one
+    `DrawerPlaceholder` answered for both branches, so a tap above 640px put a bottom sheet on
+    screen for an arriving centred modal — and it could not hand over, because being replaced is
+    the only thing a fallback does. A finished sheet removed while vaul slides an identical sheet
+    into the same place is one tap and two arrivals.
+  - So wiring `ModalPlaceholder` up fixes neither. It was written to be the desktop half of that
+    pair and never imported — the missing half, not dead code, which `ConfirmPlaceholder`'s own
+    doc comment already names as "the edit form" — but a matched pair of impersonations still has
+    to get out of the way twice. The split moves **inside** the sheet instead: both shells are
+    imported outright and only `CalendarTaskFormBody` is lazy, waited for from within the sheet
+    that is already on screen. The surface the user sees is the real one, so it is the right shape
+    on both breakpoints without anybody choosing, and it mounts once and slides in once while its
+    contents are swapped underneath.
+  - This is the shape `TaskFormSheet` already uses — an eager `AppBottomSheet` around a suspended
+    `TodoFormContainer` — so it is one fewer way to spell this, not a new one. It also puts the
+    boundary where the weight is: the shells are chrome plus a mutation hook and `rrule` was
+    already eager in the containers through `useCalendarTaskFormState`, while the body's subtree
+    is the chrono title field, the TipTap notes editor and the selector overlays. The build still
+    emits `CalendarTaskFormBody` as its own chunk, with `NotesField`'s 311kB behind it.
+  - `DrawerPlaceholder` and `ModalPlaceholder` are both gone, replaced by one `FormBodyPlaceholder`
+    built from the `sheet-chrome` cards and rows the real body lands into — the reason
+    `ConfirmPlaceholder` gives next door, that the radii and row heights should be the ones the
+    content arrives at rather than a second set tuned to look like them.
+  - **No transition on the swap, deliberately.** `lazy` renders an already-resolved module without
+    suspending, so on every open after the first the placeholder never appears at all; a fade
+    declared there would animate the body over a sheet that is itself still arriving — paying on
+    the common path to smooth the rare one. No new motion literals either: the budget is unchanged.
+  - The gate needed building, not just running. `calendar-form-shell-resize` waits for a shell and
+    then reads the fields, which the old eager body satisfied exactly as well — so it is green on
+    the defect and is evidence for neither row. `tests/unit/calendar-form-placeholder.test.tsx`
+    is the one that can tell them apart: it holds the body's chunk open on a gate and asserts what
+    the document contains while it is in flight (a modal shell at 900px with the one `aria-busy`
+    node *inside* it, no drawer and no portal beside it), then opens the gate and asserts the shell
+    node is the same object afterwards — identity being the only thing a second arrival cannot
+    fake. All three cases fail on `bd0cefbb^` and pass on the fix.
 
 ### PR 50 — the nested confirm drawer’s double scrim
 
@@ -566,28 +722,302 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 20 — velocity and rubber-banding on the web swipe
 
-- [ ] `web-swipe-velocity-rubberband` — position-only commit, hard clamp, browser-default `ease` · web · Impact O3 · M · Gate V+D
+- [x] `web-swipe-velocity-rubberband` — position-only commit, hard clamp, browser-default `ease` · web · Impact O3 · M · Gate V+D
+  - Three defects, one cause: every swipe on web read the last frame of a gesture as though it
+    were the end of one. `src/lib/swipeGesture.ts` is the answer to all three, and it holds the
+    gesture rather than any surface — it takes numbers and gives numbers back, so the four call
+    sites keep their own thresholds and their own reasons, and the maths is argued in
+    `tests/unit/swipe-gesture.test.ts` instead of inferred from what a jsdom row ended up at.
+  - **A release is a projection, not a position.** `projectedRest` carries the surface on at the
+    speed it was let go at and asks which resting place *that* lands nearer. One rule, not two:
+    a 40px flick commits because it was still travelling, and a 120px drag already being walked
+    back does not, because it was not. Both were wrong under the old rule, and wrong in the same
+    way. The horizon is `Quick` rather than a constant of its own — that rung is the app
+    answering a finger that is on it, and this is the same question one frame after it left.
+  - **A limit gives.** The row's clamp was `Math.min(0, Math.max(-actionsWidth, …))`, so 100px of
+    finger bought nothing at all: the app declining to admit the gesture happened. `rubberBand`
+    is the pager's own curve from PR 21, hoisted rather than copied, and a row spends an eighth
+    of its actions on it — about 26px. Half a threshold, which is what the pager grants a refused
+    direction, would be 52px here and reads as a fourth action arriving rather than as a limit.
+  - **The settle names rungs.** `transform 220ms ease` was the browser default curve on a number
+    between two rungs, written out in all three row components. A row goes home on Quick and
+    opens on Emphasis, both on the Gesture curve — the same pair the calendar's pager already
+    answers a refused swipe and a turned page with, and the same intent Android and iOS spend the
+    Gesture spring on at their own row releases. Geometry puts the arrival on Emphasis by the
+    second idiom rule; the first rule makes the trip home the shorter of the two.
+  - One hook for three rows. The scheduled, calendar and Anytime rows carried three copies of one
+    gesture with the same 210px of actions and the same 8px lock, and being copies they had three
+    different sets of bugs: only the calendar's had an exit for a touch the platform takes away.
+    `useCalendarRowSwipe` is now `src/hooks/useSwipeRow`, and the other two rows get that exit,
+    the projection and the give by moving onto it rather than by having them written out again.
+  - The hook owns the whole `transition` whitelist for the same reason. Three rows drawing the
+    same three properties had drifted into three lists, and only the calendar's named
+    `box-shadow` — which is how Tailwind draws the deep-link ring under `sm`, so the other two
+    faded the tint and cut the ring. `web-calendar-highlight-ring-cuts` was fixed in one row in
+    PR 25b; this is the same fix reaching the two it named.
+  - Reduced motion: the settle becomes `transform 0s` and the row is drawn at the resting place
+    the release chose. The tracking stays — a finger is not a motion the app plays — which is the
+    same cut PR 21 made on the pager.
+  - `web.cssMsLiteral` drops 10 → 5: three `transform 220ms ease` and the two surviving
+    `background-color 150ms ease` beside them. The other two web ceilings are untouched at
+    58 / 3. Two numbers are added and neither is a rung: a 100ms velocity window (Android's
+    `VelocityTracker` horizon) and a one-frame floor under it, both measurement constants rather
+    than motions anybody watches, argued where they are declared and listed in `docs/motion.md`.
 
 ### PR 52 — web drag lift and drop
 
 - ↳ part 1 of 2 of `drag-lift-and-drop` — `dropAnimation={null}` on both dnd contexts; static overlay. Box lives under **PR 53**.
+  - The overlay was not only landing-less, it was `opacity-70`. That is the same 70 % the row left
+    behind carries, so one word was doing two opposite jobs: the hole in the list and the card in
+    the hand looked alike, and the card in the hand looked disabled. The card is opaque now and the
+    row keeps the dim, because a hole is what that row actually is.
+  - The row left behind kept its value and lost its cut, the same move PR 53 makes on Android: it
+    blinked to 70 % on the frame the press fired while the card above it rose over Emphasis, which
+    is two events for one gesture. `DRAG_VACATED_TRANSITION` is a `transition` shorthand rather
+    than a `transition-opacity duration-emphasis` utility because both rows already hand the DOM
+    an inline `style` — dnd-kit writes its own `transform` shorthand into the timeline row's for
+    the whole drag, and an inline shorthand outranks any class the row could carry, so the utility
+    would have declared a transition that never ran.
+  - `.tday-drag-lift` (`globals.css`) declares the **lifted** state and the keyframe holds the
+    resting one, which is what the fifth idiom rule buys here: a reduced-motion reader gets a card
+    that is already up rather than one pinned to the first frame of a rise. Its `box-shadow: none`
+    is a `from` with no `to`, so each of the three overlays keeps its own elevation and this only
+    decides that the shadow arrives instead of being there.
+  - The landing left `features/calendar/lib`. Two contexts had `dropAnimation={null}` and the third
+    had a landing PR 25c gave it, which is exactly the shape a per-screen decision leaves; it is
+    `src/lib/dragLiftMotion.ts` now, with the lift beside it, and the three overlays spend it.
+  - No ceiling moves. The lift adds no duration, curve or `ms` literal on either client: it names
+    `--tday-duration-emphasis` and `--tday-ease-enter`, and its scale is `calc(2 - var(--tday-press-card))`
+    rather than a tenth press literal on top of the nine `docs/motion.md` counts.
 
 ### PR 53 — Android drag lift and drop
 
-- [ ] `drag-lift-and-drop` — A dragged row reads as disabled rather than held: Android only dims it to 70%, and both web drag contexts disable the drop animation outright · and+web · Impact O3 · M · Gate V + D — **final part (2 of 2)**; PR 52 carried the rest
+- [x] `drag-lift-and-drop` — A dragged row reads as disabled rather than held: Android only dims it to 70%, and both web drag contexts disable the drop animation outright · and+web · Impact O3 · M · Gate V + D — **final part (2 of 2)**; PR 52 carried the rest
+  - **The row's `* 0.7f` is not the whole affordance, and it is not the lift.** Both Android screens
+    already draw a preview card that follows the finger (`TimelineTaskDragPreview`,
+    `CalendarTaskDragPreview`) while the row stays in the list; the row's dim is the hole and iOS
+    says the same thing on the same row (`CalendarScreen.swift:581`). What was missing is the card:
+    it was composed straight into 12dp and its final size, so a pick-up had no frame that said the
+    app had taken the task — and it was drawn at `alpha = 0.88f`, which is the fade the brief is
+    about, one element further in than the row.
+  - So the fix is on the preview: opaque, rising from flat to 12dp and from the row's size to
+    `2f - PressScales.Card`, on Emphasis over Enter. `TdayDragLift` holds that once for both
+    screens and web derives the identical scale from the identical token, which is the two clients
+    saying one thing rather than two.
+  - The row's dim keeps its value and loses its cut: it now travels on the rise's own rung, so a
+    long press is one event instead of a card appearing whole beside a row that blinked. Web's two
+    rows say the same thing the same way under PR 52; iOS's row is still a cut and is not in this
+    box's scope.
+  - `0.7f` is three clients wide and is **not** promoted, because the vocabulary has no alpha
+    family to promote it into — `MotionTokens` carries durations, delays, easings, springs and
+    press scales. It is named at `TdayDragLift.VacatedAlpha` with the iOS site quoted beside it, so
+    the next reader can see it was considered. Whether the vocabulary should grow that family is a
+    question for a PR that may edit `MotionTokens.kt`; this one may not.
+  - No Android ceiling moves: tween 29, spring 10, pressScale 31. The new spec reads
+    `Durations.Emphasis` and `Easings.Enter` through the wrapper, and `1.03f` is never written.
 
 ### PR 54 — the web press affordance stops losing to `transition-colors`
 
 - ↳ part 2 of 3 of `press-affordance-unification` — `:where()` at 0,0,0 loses to `transition-colors` at 0,1,0 on every shadcn Button. Box lives under **PR 9a/9b**.
+  - **The specificity reading was the wrong diagnosis, and it matters because it points at the
+    wrong fix.** Both rules are layered, and a layer outranks specificity outright: measured in
+    Chromium, an 0,3,4 selector written inside `@layer base` still loses to `transition-colors` at
+    0,1,0 in `@layer utilities`. Escalating would not have worked; the whole class of fix is dead.
+  - What the defect actually looked like, before, on a shadcn Button: the squash was not missing —
+    `scale: 0.985`, `translate: 0 1.5px` and the shadow all landed, because no utility competes for
+    those — but the utility had replaced `transition-property`, so all three arrived in ONE FRAME
+    and left in one, under a ripple that still took its 340 ms because no class can reach a pseudo.
+    Half an affordance reads worse than none: a jolt under a slow bloom.
+  - The same override took the reduced-motion floor with it. `@media (prefers-reduced-motion:
+    reduce) { transition-duration: 0ms }` sat in `base`, so every element carrying any
+    `transition-*` at all went on animating under it — a shadcn Button at 150 ms, a
+    `transition-all duration-300` button at 300.
+  - The fix is `@layer tday-press`, opened after `@import "tailwindcss"` so it sorts after
+    `utilities`, holding the smallest set that has to win: which properties transition, what curve
+    they take, the reduced-motion floor, and the pressed shadow — whose `!important` comes OUT,
+    the layer doing that work now.
+  - **What deliberately did not move up.** The pressed scale, so that the 17 call sites pressing to
+    their own depth still win: the onboarding wizard's step chip at `[0.97]` (which is
+    `--tday-press-card`), eight sheet buttons at `[0.99]`, and eight small round icon buttons — the
+    task FAB among them — at `scale-95`. Verified in Chromium that all three depths still do. Six
+    further sites say `[0.985]`, which is `--tday-press-row` written out rather than a depth of
+    their own; retiring those six literals is a separate row. And the press LENGTH, so that the dozen
+    pressables carrying a `duration-200` of their own keep it — bringing those onto the ladder is a
+    call-site migration with its own row, not a silent retiming to be taken for free here. A site
+    that says nothing still gets Quick from `base`; a bare `transition-*` rides Tailwind's
+    un-overridden 150, which is the same rung, so both land in the same place.
+  - **The property list displaces `transition-all` too, and no closed list is a superset of `all`.**
+    It IS a superset of the two named utilities — `transition-colors` adds
+    outline-color/text-decoration-color/fill/stroke, `transition-transform` adds transform/rotate,
+    so displacing either costs the call site nothing. `transition-all` is on 19 class strings and
+    the list has to be checked against them one at a time: on all but one the properties actually in
+    flight (translate, scale, background-color, color, opacity, box-shadow) are already in it. The
+    exception is the dock tab, `RootDock.tsx:185`, `sm:min-w-[104px]` when selected against
+    `sm:min-w-12` when not — measured in Chromium against the compiled stylesheet, it went from
+    easing over 200 ms to reaching 104 px in the first frame, beside an indicator pill that is a
+    `pointer-events-none` div this selector does not match and so still glides for 300 ms. That is
+    this unit's own defect shape relocated, and it would have taken the written argument at
+    `RootDock.tsx:101` — the re-measure timed against "the tab width transition (200ms)" — with it.
+    `min-width` is therefore in the list, and it has to be there rather than at the call site: a
+    `transition-[min-width]` on the button is displaced by this same declaration, and the
+    `!important` that would beat it is the escalation the layer exists to retire. `width` and
+    `height` stay out — nothing pressable animates them, and `sm:min-w-*` appears on exactly one
+    element in `src`. The tab's curve does change, from Tailwind's default ease to
+    `--tday-ease-gesture`, which is the vocabulary's press curve and the same one its colours
+    already took after this PR.
+  - Two literals retired and the ceiling lowered with them: `web.cssMsLiteral` 5 → 3. The press ran
+    on a hand-written 180 (now `Quick`: the app answering a finger, and the number every bare
+    `transition-*` already rides) and the ripple on 340 (now `Emphasis`: it changes size, and 320 is
+    that motion to within a frame). The 340–420 ms band in `docs/motion.md` loses its web member.
+  - `tests/guardrails/press-affordance-cascade.test.ts` is the gate. It reads the stylesheet rather
+    than a rendered className, for the reason `toast-action-specificity` gives next door: the class
+    was present and correct the whole time. It fails on `ce071f30` on three counts — no layer, an
+    `!important` in the affordance, and the pressed scale written out rather than read from the
+    token — and a fourth case holds `min-width` in the property list, which is the one declaration
+    here whose removal has no local symptom: the tab that needs it cannot ask for it from below.
 
 ### PR 55 — the web route hand-over
 
 - ↳ part 1 of 2 of `route-change-handover` — `.tday-route-fade` 140 → 200 ms; adopt React Router `viewTransition`. Box lives under **PR 31**.
+  - **The 140 came with a written argument and half of it survives, so the half that survives is
+    restated at the call site rather than deleted.** `globals.css` said the route fade is short
+    because "this sits between a tap and the screen the user asked for, and anything longer reads
+    as lag", and against the long end — `Scene`, or Android's own 360 — that is still exactly
+    right. What it could not defend was 140 in particular. It named no rung, so nothing downstream
+    could tell a decision from a number somebody liked; and the lag it was written against is the
+    wait in front of the destination, not the length of the fade — the arriving screen is laid out
+    and hit-testable from its first frame, so this animation never sits between a tap and its
+    answer. A thing arriving with no reason to be another length is `Enter`. `docs/motion.md`'s
+    `Scene` bullet pointed at that argument and now says which rung it points AT.
+  - **The view transition is not a second fade, it is the half `RouteFade` could not afford.**
+    That component's standing argument is that only the arriving screen fades because fading the
+    leaving one means holding its whole tree mounted — live queries, realtime subscriptions and
+    focus effects running in duplicate for those milliseconds. A view transition hands the leaving
+    screen back as a flat snapshot, which is the one thing that argument was missing, at none of
+    its cost. So the two paths COMPOSE rather than switch: `.tday-route-fade` fades the arrival on
+    every browser, and where `document.startViewTransition` exists the snapshot fades out over the
+    top of it. Nothing detects which path it is on and there is no branch in the markup — a
+    browser without view transitions sees exactly what it saw before, at 200 ms.
+  - Composing is what shapes the three UA overrides, and none of them has a local symptom if it is
+    deleted — the transition still runs and still looks like a route change. `new` must NOT animate:
+    it renders the arriving screen live, so `.tday-route-fade` is already fading up inside it and
+    the UA's own opacity curve on top of that is a fade of a fade. `old` is therefore the half that
+    moves, so it needs `z-index`, because the UA paints `new` last and an opaque `new` hides the
+    outgoing half completely. And the blend must be `normal`: `plus-lighter` is what keeps the UA's
+    symmetric crossfade from dipping, and over two layers each opaque at one end it blows the screen
+    out to white. What is left is a fade THROUGH the constant background — which is the fade
+    `RouteFade` already describes, now with the outgoing screen in it.
+  - The opt-in is asked by `src/lib/routeHandover.ts` and wired in `src/lib/navigation.tsx`, the
+    app's one navigation chokepoint (39 importers). Three call sites inside the shell were routing
+    around it and now go through `useRouter().push`: the guide's "try it" (`GuideScreen.tsx`) and
+    the release toast (`ReleaseUpdateAnnouncer.tsx`), both of which were hand-building
+    `/${locale}/app/...` that `localizePath` already builds. What is left on raw `react-router-dom`
+    is outside the shell — the landing, 404, route-error and blog pages — plus ONE deliberate
+    exception, argued at its call site: Settings' locale switch. That is the one pathname change
+    here where the screen being left is not being left, and `changeLanguage` has already started
+    re-rendering it, so the snapshot a transition would take is of a tree mid-swap.
+  - The question it asks about the destination is the same one `RouteFade` asks — **pathname**, not
+    the full location — because a view transition snapshots the whole document, so one started for a
+    task-focus query param would crossfade a page with itself, which is the flash `RouteFade`
+    already declines to draw. A `to` that is only a query string or only a fragment needs its own
+    guard rather than falling out of that comparison: it splits to the EMPTY string, not to the path
+    it was clicked on, so the comparison alone would call it a different page. `back()` gets no
+    opt-in and cannot have one: `navigate(-1)` takes a delta rather than a destination, and the
+    browser's own back button never comes through this module, so a POP keeps the path that exists
+    everywhere.
+  - **Reduced motion is answered in the opt-in, not only in the stylesheet, because the CSS lands
+    too late to be the whole answer.** `globals.css` can pin the finished frame; it cannot stop
+    React Router taking the opt-in's slower path, which does not commit the new route in the
+    navigation at all — it parks it in `pendingState`, picks it up two effect passes later and
+    applies it inside the `startViewTransition` callback. Left to CSS alone, a user who asked for
+    less motion would pay that deferral to be shown nothing. The stylesheet override stays as
+    defence in depth for a call site that passes `viewTransition` directly.
+  - Reduced motion: `.tday-route-fade` is off as before, and the outgoing snapshot is taken off
+    outright rather than merely un-animated — an un-animated `old` is opaque and on top, and would
+    hold the screen the user just left for the frame the transition takes to end. The destination is
+    the whole of the finished state at a route change.
+  - One literal retired and the ceiling lowered with it: `web.cssMsLiteral` 3 → 2. The keyframe was
+    renamed with it, `fade-in` → `tday-route-fade-in`, so the pair reads as a pair and matches the
+    prefix every other keyframe in the file carries.
+  - `tests/guardrails/route-handover.test.ts` is the gate, and it is in two halves because the two
+    halves are testable in different ways. The CSS half reads the stylesheet rather than a render for
+    a reason jsdom makes unavoidable: there are no view transitions to start there, so a rendered
+    assertion could only ever see the path that was already present. The navigation half calls
+    `startsRouteHandover` and asserts what it RETURNS — which is why the function sits in its own
+    module instead of staying private to `navigation.tsx`. Grepping the source for the guards, which
+    is what an earlier draft did, stayed green on an implementation with the empty-path guard moved
+    below the `return` and on one whose split let `#anchor` through: both are the self-crossfade the
+    unit exists to prevent, and both have their own case now. It fails on `6774e5c2` on the rung and
+    on all three overrides being absent.
 
 ### PR 26 — two iOS feed cuts
 
-- [ ] `ios-today-block-removal-is-a-cut` — `.animation` inside the `if`; ~72 pt of layout vanishes in one frame · ios · Sev 3 · S · Gate G+TF
-- [ ] `ios-calendar-day-swap-stacks-rows` — both days' rows play insert and removal over the same pixels · ios · Sev 3 · S · Gate TF
+- [x] `ios-today-block-removal-is-a-cut` — `.animation` inside the `if`; ~72 pt of layout vanishes in one frame · ios · Sev 3 · S · Gate G+TF
+  - **The modifier was inside the thing it was for.** `ScheduledTaskHomeScreen.swift` wrote
+    `.animation(.spring(0.34/0.9), value: viewModel.todayTodos.map(\.id))` on the `VStack` *inside*
+    `if !viewModel.todayTodos.isEmpty { … }`. A modifier written inside a branch is part of that
+    branch: the update that empties `todayTodos` takes the modifier out of the tree in the same pass
+    it takes the rows out, so at the moment the removal is decided there is no transaction open. The
+    block cuts, the rows' own `.transition` legs cut with it — a `.transition` outside a transaction
+    is inert — and the ~72 pt the block held closes in one frame. It animated everything that
+    happened *within* the block perfectly well, which is why it reads correct and why review has
+    walked past it: it did half its job, and the half it did is the half anyone looks at.
+  - The fix is position, not duration: a `Group` around the `if`, with the `.animation` on the
+    `Group`. That is the only place that spans both states of the branch. The block then leaves on
+    `TdayFeedItemMotion.row` — a feed's departure rung, because the block is what this feed adds and
+    removes alongside its rows — while the board and the lists below travel up into its space on
+    `placement`. Two beats, 150 then 320, in that order.
+  - The rows joined `TdayFeedItemMotion` while the file was open, which is PR 47's split reaching its
+    third feed: arrival on Enter, departure on Quick, travel on Emphasis, all on Standard. Reduced
+    motion is refused at both mechanisms separately for the reason `row(reduceMotion:)` gives —
+    `nil` to the `.animation(_:value:)` for the travel, `.identity` for the legs.
+  - **Gate G is rule D of `motion-reachability-ios.test.ts`**, and it is a new rule rather than a case
+    added to rule A. Rule A asks whether a transaction exists *somewhere in the type*; it could not
+    ask where the modifier is written, and on both of these sites it saw a gate that appears in an
+    `.animation(value:)` and said nothing. Rule D reads the branches enclosing each
+    `.animation(_:value:)` line and fails when one of them is gated on the state that modifier
+    animates. It has no allowlist and is not meant to grow one: a branch that should cut wants no
+    animation at all. Verified red on `94097db4` on exactly these two sites and nothing else in the
+    tree, green after.
+- [x] `ios-calendar-day-swap-stacks-rows` — both days' rows play insert and removal over the same pixels · ios · Sev 3 · S · Gate G+TF
+  - The calendar's day list had the same misplaced `.animation` as the row above and is fixed the same
+    way, but that is not this row: hoisting it makes the swap animate, and a swap that animates as it
+    stood is worse than one that cuts. `pendingItems` is keyed by task id, and two days share no task,
+    so a day change is one `ForEach` diff in which every row of the outgoing day is removed and every
+    row of the incoming day is inserted — concurrently, in one slot, over the same pixels. Both legs
+    also carried `.move(edge: .top)`, so both days slid down from the top through each other.
+  - **Identity first.** `.id(selectedDayStart)` on the day's `VStack` makes a day change one view
+    replaced rather than N removals interleaved with M insertions. That is what gives the swap two
+    things to sequence; without it there is nothing to hold an order between. The day is normalised
+    to `startOfDay` because `isSelectedDay` already throws the time away, and an identity that did
+    not would replace a day with itself.
+  - **Then ordering.** `calendarDayListTransition()` is asymmetric and *sequential*, which is where it
+    parts company with `TdayFeedItemMotion.row`: a row's arrival and departure are concurrent on
+    purpose, because they happen to different rows in different places while the feed stays the same
+    feed. A day swap is one list replacing another in the same slot. So the outgoing day leaves on
+    `Durations.departure` and the incoming day is delayed by exactly that before it arrives on
+    `Durations.arrival` — the delay is that constant and not a number of its own, because what it has
+    to match is that leg. No `.move`: the rows are not travelling anywhere, the day under them
+    changed. The card's height crosses on `placement`, the rung a box changing size answers to.
+  - The transaction is keyed on `pendingDayAnimationKey`, which carries the day as well as the row
+    ids. The ids alone would open it for every swap that exists today, but the `.id()` is the thing
+    being animated and a transaction should be keyed to what it carries, not to a property of the
+    data that happens to imply it.
+  - The empty day gets the same ordered transition. A day with nothing on it is still a day arriving,
+    and has no more business being drawn over the day it replaced than a populated one does.
+  - **Rule D resolves one hop**, which is what puts this row behind gate G rather than behind TF
+    alone. The rule was red here before the fix only because the site wrote `value:
+    pendingItems.map(\.id)` inline; naming that expression `pendingDayAnimationKey` would have made
+    the identical defect invisible to a purely textual match, and a gate that a rename can switch off
+    is not a gate on this row at all. So the rule expands a bare identifier in `value:` through the
+    type's own computed `var`s before asking what the expression reads — one hop, no transitive
+    closure, because a key assembled out of the branch's state is the shape that exists and chasing
+    further would pull half a screen's properties into every expression. Re-verified by putting the
+    `.animation` back inside the `if` in the shape the screen now ships: red, naming the state and the
+    property it travelled through.
+  - iOS `spring` ceiling 108 → 104, closing the unit: the two screens each carried the same
+    `0.34/0.9` spring, two counted literals apiece, and `Gesture` is 0.34/**0.82** — an orphan pair,
+    not a near-miss of a token that a migration could have absorbed.
 
 ## Phase 8 — accessibility
 

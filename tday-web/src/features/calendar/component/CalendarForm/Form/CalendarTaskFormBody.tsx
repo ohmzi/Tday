@@ -26,7 +26,7 @@ import NotesField from "@/components/todo/component/NotesField/NotesField";
 
 type DateRange = { from: Date; to: Date };
 
-type CalendarTaskFormBodyProps = {
+export type CalendarTaskFormBodyProps = {
   titleRef: RefObject<HTMLDivElement | null>;
   title: string;
   setTitle: Dispatch<SetStateAction<string>>;

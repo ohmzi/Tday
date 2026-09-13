@@ -27,14 +27,29 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, createEvent, fireEvent, render } from "@testing-library/react";
 import { useCalendarPagerSwipe } from "@/features/calendar/lib/useCalendarPagerSwipe";
-import { useCalendarRowSwipe } from "@/features/calendar/lib/useCalendarRowSwipe";
+import { useSwipeRow } from "@/hooks/useSwipeRow";
 
 /** Mirrors `swipeThreshold` in CalendarClient.tsx. */
 const SWIPE_THRESHOLD = 48;
 /** Mirrors `ACTIONS_WIDTH` in CalendarTaskRow. */
 const ACTIONS_WIDTH = 210;
+
+/**
+ * The two settles, spelled exactly as `swipeGesture.ts` spells them. A row going
+ * home is Quick; one finishing the trip the release paid for is Emphasis — the
+ * arguments for both are written there. Both ride the Gesture curve, which is
+ * what web spends where the native clients spend the Gesture spring.
+ */
+const SETTLE_HOME = "transform var(--tday-duration-quick) var(--tday-ease-gesture)";
+const SETTLE_OPEN = "transform var(--tday-duration-emphasis) var(--tday-ease-gesture)";
+
+/**
+ * The transform clause of the row's whitelist. The rest of the list is the
+ * highlight's tint and ring, which are not this file's subject.
+ */
+const settleOf = (row: HTMLElement) => row.style.transition.split(",")[0].trim();
 
 afterEach(cleanup);
 
@@ -51,14 +66,24 @@ function installCaptureSpies(element: HTMLElement) {
 }
 
 function PagerHarness({ onNavigate }: { onNavigate: (offset: -1 | 1) => void }) {
-  const swipeHandlers = useCalendarPagerSwipe(SWIPE_THRESHOLD, onNavigate);
+  const { trackRef, swipeHandlers } = useCalendarPagerSwipe(SWIPE_THRESHOLD, onNavigate, true);
   return (
     <div data-testid="card" {...swipeHandlers}>
-      {/* A day cell: the card bails out of tracking on any press that lands on
-          a button, because capture would otherwise steal the button's click. */}
-      <button type="button" data-testid="day">
-        7
-      </button>
+      {/* The card's two elements, in the order the real one has them: the
+          handlers and the capture on the outer, the drag on the inner. What the
+          page does under the finger is `calendar-pager-tracks-finger.test.tsx`;
+          what this file is about is how the gesture ends. */}
+      <div ref={trackRef}>
+        {/* A day cell, because in month view that is what the thumb lands on:
+            the grid is seven columns of buttons with 8px between its rows and
+            nothing between its columns. The card tracks the press anyway and
+            settles the tap-or-swipe question on the axis lock, which is also
+            where it takes capture — capture retargets the click that follows a
+            press, so taking it earlier would cost the cell its tap. */}
+        <button type="button" data-testid="day">
+          7
+        </button>
+      </div>
     </div>
   );
 }
@@ -75,15 +100,25 @@ describe("calendar page swipe — pointer capture and cancel", () => {
     const { card, onNavigate } = renderPager();
 
     fireEvent.pointerDown(card, { pointerId: 1, clientX: 300 });
+    // The move is not scenery: the release is gated on a locked horizontal axis,
+    // and on a device a finger cannot reach 49px away without having passed the
+    // 8px that locks one. A down-then-up 49px apart is a thing no pointer stream
+    // contains, and asserting on it would be asserting on a gesture nobody makes.
+    fireEvent.pointerMove(card, { pointerId: 1, clientX: 300 - SWIPE_THRESHOLD - 1 });
     fireEvent.pointerUp(card, { pointerId: 1, clientX: 300 - SWIPE_THRESHOLD - 1 });
 
     expect(onNavigate).toHaveBeenCalledWith(1);
   });
 
-  it("takes pointer capture on the way down and hands it back on the way up", () => {
+  it("takes pointer capture when the axis locks horizontal, and hands it back on the way up", () => {
     const { card, setPointerCapture, releasePointerCapture } = renderPager();
 
     fireEvent.pointerDown(card, { pointerId: 4, clientX: 300 });
+    // Nothing is claimed on the way down: until the axis locks, the press is
+    // still a candidate tap, and a tap must reach whatever it landed on.
+    expect(setPointerCapture).not.toHaveBeenCalled();
+
+    fireEvent.pointerMove(card, { pointerId: 4, clientX: 280 });
     // Capture is what makes a release past the card's edge arrive here at all,
     // instead of being delivered to whatever is under the finger and lost.
     expect(setPointerCapture).toHaveBeenCalledWith(4);
@@ -96,6 +131,7 @@ describe("calendar page swipe — pointer capture and cancel", () => {
     const { card, onNavigate, releasePointerCapture } = renderPager();
 
     fireEvent.pointerDown(card, { pointerId: 2, clientX: 300 });
+    fireEvent.pointerMove(card, { pointerId: 2, clientX: 260 });
     // The platform taking the pointer away is not a decision the user made, so
     // it commits nothing even though the cancel lands a page-width away.
     fireEvent.pointerCancel(card, { pointerId: 2, clientX: 40 });
@@ -125,6 +161,7 @@ describe("calendar page swipe — pointer capture and cancel", () => {
     const { card, onNavigate } = renderPager();
 
     fireEvent.pointerDown(card, { pointerId: 1, clientX: 300 });
+    fireEvent.pointerMove(card, { pointerId: 1, clientX: 400 });
     // A second finger landing and lifting mid-gesture must not commit — nor end
     // — the gesture the first one is still making.
     fireEvent.pointerUp(card, { pointerId: 9, clientX: 100 });
@@ -134,16 +171,33 @@ describe("calendar page swipe — pointer capture and cancel", () => {
     expect(onNavigate).toHaveBeenCalledWith(-1);
   });
 
-  it("never captures a press that lands on a day cell, and never pages from one", () => {
+  it("a press that settles into a tap on a day cell claims nothing and pages nothing", () => {
     const { day, onNavigate, setPointerCapture } = renderPager();
 
     fireEvent.pointerDown(day, { pointerId: 1, clientX: 300 });
-    // Capture retargets the click that follows a press, so taking it here would
-    // cost the day cell its own tap.
-    expect(setPointerCapture).not.toHaveBeenCalled();
+    fireEvent.pointerMove(day, { pointerId: 1, clientX: 303 });
+    fireEvent.pointerUp(day, { pointerId: 1, clientX: 303 });
 
-    fireEvent.pointerUp(day, { pointerId: 1, clientX: 100 });
+    // Capture retargets the click that follows a press, so a cell that was only
+    // ever tapped must reach its release with the card having claimed nothing.
+    expect(setPointerCapture).not.toHaveBeenCalled();
     expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it("a swipe that begins on a day cell is still a swipe", () => {
+    const { day, onNavigate, setPointerCapture } = renderPager();
+
+    // The case the pager exists for on a phone: in month view the grid is seven
+    // columns of day cells, so a gesture that refused to begin on one would be a
+    // gesture almost no thumb could start. The axis lock is what tells the two
+    // apart, and taking capture there is what costs the cell the tap it no
+    // longer means.
+    fireEvent.pointerDown(day, { pointerId: 1, clientX: 300 });
+    fireEvent.pointerMove(day, { pointerId: 1, clientX: 300 - SWIPE_THRESHOLD - 1 });
+    expect(setPointerCapture).toHaveBeenCalledWith(1);
+
+    fireEvent.pointerUp(day, { pointerId: 1, clientX: 300 - SWIPE_THRESHOLD - 1 });
+    expect(onNavigate).toHaveBeenCalledWith(1);
   });
 
   it("losing capture without a cancel — the capturing node replaced mid-gesture — also resets", () => {
@@ -161,18 +215,18 @@ describe("calendar page swipe — pointer capture and cancel", () => {
 });
 
 function RowHarness({ onOpen }: { onOpen: () => void }) {
-  const { swipeX, swiping, swipeHandlers } = useCalendarRowSwipe(ACTIONS_WIDTH, onOpen);
+  const { swipeX, transition, swipeHandlers } = useSwipeRow({
+    actionsWidth: ACTIONS_WIDTH,
+    onOpen,
+  });
   return (
     <div
       data-testid="row"
       {...swipeHandlers}
-      // The real row's style, verbatim: `swiping` is what switches the
-      // transition off so the row can track the finger, which is exactly what a
-      // cancelled gesture used to leave switched off forever.
-      style={{
-        transform: `translateX(${swipeX}px)`,
-        transition: swiping ? "none" : "transform 220ms ease",
-      }}
+      // The real row's style, verbatim: the hook owns the whole whitelist, and
+      // the `none` it returns while a finger is down is exactly what a cancelled
+      // gesture used to leave switched off forever.
+      style={{ transform: `translateX(${swipeX}px)`, transition }}
     />
   );
 }
@@ -185,6 +239,32 @@ function renderRow() {
 
 function touch(clientX: number, clientY = 0) {
   return { touches: [{ clientX, clientY }] };
+}
+
+/**
+ * One touch event at a time the test chose, for every gesture here that ends in
+ * a lift.
+ *
+ * A release is now decided on where the finger was *going*, so a lift with no
+ * timestamps of its own is a lift decided by whatever the machine was doing that
+ * second: jsdom stamps everything fired in one tick from `performance.now()`, so
+ * a busy runner can put a whole gesture 20ms wide where a quiet one puts it
+ * inside a fraction of a millisecond, and the sampler reads the first as a flick
+ * and the second as nothing at all. `swipe-row-release.test.tsx` and
+ * `calendar-pager-tracks-finger.test.tsx` carry the same helper for the same
+ * reason. `timeStamp` is readonly on the prototype, so it is defined on the
+ * instance; React copies it across, except for a stamp of exactly zero, which it
+ * replaces with the wall clock — hence stamps starting at 1000.
+ */
+function at(
+  row: HTMLElement,
+  kind: "touchStart" | "touchMove" | "touchEnd",
+  t: number,
+  init?: ReturnType<typeof touch>,
+) {
+  const event = createEvent[kind](row, init);
+  Object.defineProperty(event, "timeStamp", { value: t });
+  fireEvent(row, event);
 }
 
 describe("calendar row swipe — a cancelled touch is an exit, not a freeze", () => {
@@ -211,17 +291,21 @@ describe("calendar row swipe — a cancelled touch is an exit, not a freeze", ()
     // at -100px with `transition: none` — visibly stuck, not slow.
     fireEvent.touchCancel(row);
 
-    expect(row.style.transition).toBe("transform 220ms ease");
+    expect(settleOf(row)).toBe(SETTLE_HOME);
     expect(row.style.transform).toBe("translateX(0px)");
   });
 
   it("cancelling a gesture that began on an open row returns it to open, not closed", () => {
     const { row } = renderRow();
 
-    // Open it for real first: a drag past half the actions width, then a lift.
-    fireEvent.touchStart(row, touch(300, 50));
-    fireEvent.touchMove(row, touch(300 - ACTIONS_WIDTH / 2 - 10, 50));
-    fireEvent.touchEnd(row);
+    // Open it for real first: a drag past half the actions width, held still for
+    // longer than the sampler's window, then a lift. The hold is what makes this
+    // a statement about position rather than about speed — every older reading
+    // has dropped out of the window, so the release carries no velocity and the
+    // row opens on the 10px it is past halfway by and nothing else.
+    at(row, "touchStart", 1000, touch(300, 50));
+    at(row, "touchMove", 1016, touch(300 - ACTIONS_WIDTH / 2 - 10, 50));
+    at(row, "touchEnd", 1200);
     expect(row.style.transform).toBe(`translateX(-${ACTIONS_WIDTH}px)`);
 
     // Now a second gesture that starts closing it and is cancelled part-way. A
@@ -234,7 +318,9 @@ describe("calendar row swipe — a cancelled touch is an exit, not a freeze", ()
     fireEvent.touchCancel(row);
 
     expect(row.style.transform).toBe(`translateX(-${ACTIONS_WIDTH}px)`);
-    expect(row.style.transition).toBe("transform 220ms ease");
+    // Open is where this cancelled gesture found the row, and a row sitting at
+    // its open resting place settles on the longer of the two.
+    expect(settleOf(row)).toBe(SETTLE_OPEN);
   });
 
   it("a pointercancel resets the row just as a touchcancel does", () => {
@@ -248,20 +334,24 @@ describe("calendar row swipe — a cancelled touch is an exit, not a freeze", ()
     // deliver either, and the reset is idempotent so both is fine too.
     fireEvent.pointerCancel(row, { pointerId: 1 });
 
-    expect(row.style.transition).toBe("transform 220ms ease");
+    expect(settleOf(row)).toBe(SETTLE_HOME);
     expect(row.style.transform).toBe("translateX(0px)");
   });
 
   it("a lift still settles to the nearer edge", () => {
     const { row } = renderRow();
 
-    // Short of halfway: the row closes again.
-    fireEvent.touchStart(row, touch(300, 50));
-    fireEvent.touchMove(row, touch(300 - ACTIONS_WIDTH / 2 + 10, 50));
-    fireEvent.touchEnd(row);
+    // Short of halfway, and stopped before lifting: the row closes again. The
+    // hold is the whole of what makes this the nearer *edge* and not the nearer
+    // projection — a finger still travelling at 10px short of the mark is a
+    // flick and commits, which is `swipe-row-release.test.tsx`'s subject, not
+    // this file's.
+    at(row, "touchStart", 1000, touch(300, 50));
+    at(row, "touchMove", 1016, touch(300 - ACTIONS_WIDTH / 2 + 10, 50));
+    at(row, "touchEnd", 1200);
 
     expect(row.style.transform).toBe("translateX(0px)");
-    expect(row.style.transition).toBe("transform 220ms ease");
+    expect(settleOf(row)).toBe(SETTLE_HOME);
   });
 
   it("a vertical drag never moves the row and never claims the open slot", () => {
@@ -276,6 +366,6 @@ describe("calendar row swipe — a cancelled touch is an exit, not a freeze", ()
     // And the scroll the platform is about to take over ends the gesture
     // cleanly rather than leaving the transition off.
     fireEvent.touchCancel(row);
-    expect(row.style.transition).toBe("transform 220ms ease");
+    expect(settleOf(row)).toBe(SETTLE_HOME);
   });
 });

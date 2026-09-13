@@ -189,6 +189,10 @@ struct CalendarScreen: View {
     @State private var viewModel: CalendarViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
+    /// Gates the day list's own motion — see `pendingDayAnimationKey`'s
+    /// `.animation(_:value:)`, `calendarDayListTransition()` and
+    /// `TdayFeedItemMotion.row(reduceMotion:)`.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let calendarAccentColor = Color.tdayCalendarPurple
 
     @State private var selectedDate = Date()
@@ -250,6 +254,30 @@ struct CalendarScreen: View {
         searchedItems
             .filter { todo in todo.due.map(isSelectedDay) ?? false }
             .sorted(by: { ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture) })
+    }
+
+    /// The day the list below is showing, normalised.
+    ///
+    /// `selectedDate` carries a time of day, and `isSelectedDay` already throws it
+    /// away when it filters. The list's identity has to throw it away too, or a
+    /// reselection of the same date at a different hour would replace a day with
+    /// itself and play the swap over rows that never changed.
+    private var selectedDayStart: Date {
+        Calendar.current.startOfDay(for: selectedDate)
+    }
+
+    /// What opens the day list's transaction: the day it is showing, and the rows
+    /// in it.
+    ///
+    /// The day is in the key because `.id(selectedDayStart)` is what actually
+    /// changes on a swap, and a transaction has to be keyed to the thing it is
+    /// carrying. The row ids alone would cover every swap that exists today — a
+    /// task has one due date, so two days never hold the same row — but that is a
+    /// property of the data rather than of this line, and it is not the property
+    /// the `.id()` depends on.
+    private var pendingDayAnimationKey: String {
+        let rowIDs = pendingItems.map(\.id).joined(separator: "|")
+        return "\(selectedDayStart.timeIntervalSinceReferenceDate)::\(rowIDs)"
     }
 
     private var pendingItemsByDay: [Date: [TodoItem]] {
@@ -561,73 +589,135 @@ struct CalendarScreen: View {
         }
     }
 
-    @ViewBuilder
     private var pendingTaskRows: some View {
-        if !pendingItems.isEmpty {
-            VStack(spacing: CalendarTaskListMetrics.rowSpacing) {
-                ForEach(pendingItems) { todo in
-                    CalendarPendingTaskRow(
-                        todo: todo,
-                        list: todo.listId.flatMap { listId in
-                            viewModel.lists.first(where: { $0.id == listId })
-                        },
-                        onComplete: {
-                            if openSwipeTaskID == todo.id {
-                                openSwipeTaskID = nil
-                            }
-                            Task { await viewModel.complete(todo) }
-                        }
-                    )
-                    .opacity(draggedTodo?.id == todo.id ? 0.7 : 1)
-                    .background(colors.background)
-                    .modifier(
-                        CalendarInAppDragModifier(
-                            enabled: calendarTaskRescheduleEnabled,
+        // The transaction, hung on the `Group` and NOT inside the `if`. A modifier
+        // written inside the branch is part of that branch, so the update that
+        // empties the day takes it out of the tree in the same pass it takes the
+        // rows out — nothing is open at the moment the removal is decided, and the
+        // list, the `.id()` swap below and the rows' own `.transition` legs are all
+        // inert. Out here it outlives both states of the branch, which is the only
+        // position from which it can animate either.
+        Group {
+            if !pendingItems.isEmpty {
+                VStack(spacing: CalendarTaskListMetrics.rowSpacing) {
+                    ForEach(pendingItems) { todo in
+                        CalendarPendingTaskRow(
                             todo: todo,
-                            onStart: beginInAppDrag,
-                            onMove: updateInAppDrag,
-                            onEnd: finishInAppDrag,
-                            onCancel: cancelInAppDrag
+                            list: todo.listId.flatMap { listId in
+                                viewModel.lists.first(where: { $0.id == listId })
+                            },
+                            onComplete: {
+                                if openSwipeTaskID == todo.id {
+                                    openSwipeTaskID = nil
+                                }
+                                Task { await viewModel.complete(todo) }
+                            }
                         )
-                    )
-                    .todoTrailingSwipeActions(
-                        rowID: todo.id,
-                        openRowID: $openSwipeTaskID,
-                        onEdit: {
-                            editingTodo = todo
-                        },
-                        onCopy: {
-                            viewModel.copyToClipboard(todo)
-                        },
-                        onDelete: {
-                            Task { await viewModel.delete(todo) }
-                        }
-                    )
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                        .opacity(draggedTodo?.id == todo.id ? 0.7 : 1)
+                        .background(colors.background)
+                        .modifier(
+                            CalendarInAppDragModifier(
+                                enabled: calendarTaskRescheduleEnabled,
+                                todo: todo,
+                                onStart: beginInAppDrag,
+                                onMove: updateInAppDrag,
+                                onEnd: finishInAppDrag,
+                                onCancel: cancelInAppDrag
+                            )
+                        )
+                        .todoTrailingSwipeActions(
+                            rowID: todo.id,
+                            openRowID: $openSwipeTaskID,
+                            onEdit: {
+                                editingTodo = todo
+                            },
+                            onCopy: {
+                                viewModel.copyToClipboard(todo)
+                            },
+                            onDelete: {
+                                Task { await viewModel.delete(todo) }
+                            }
+                        )
+                        // Edits to the day being shown: one row added, one
+                        // completed away, the rest travelling. These are feed
+                        // items, and the `ForEach`'s `id` keeps them addressable
+                        // across such an edit.
+                        .transition(TdayFeedItemMotion.row(reduceMotion: reduceMotion))
+                    }
                 }
+                // Identity, and the half the rungs alone could not fix. Without
+                // it a day swap is not one event: the `ForEach` sees the outgoing
+                // day's ids leave and the incoming day's ids arrive as one diff,
+                // so every row of both days transitions at once over the same
+                // pixels and the result is illegible. With it there are exactly
+                // two views to sequence — the day that is going and the day that
+                // is coming — which is what `calendarDayListTransition()` needs
+                // in order to sequence anything at all.
+                .id(selectedDayStart)
+                .transition(calendarDayListTransition())
+            } else {
+                // Deliberately not gated on `viewModel.isLoading`. Nothing on this
+                // screen loads on appear: `CalendarViewModel.init` hydrates from the
+                // cache synchronously, so `items` is the truth from the first frame
+                // and the flag is raised by exactly one thing — `refresh()`, a
+                // user-initiated force sync over a cache that is already populated.
+                // A sync in flight therefore never makes the day's emptiness less
+                // true, and the gate was not withholding a premature answer but
+                // hiding a correct one: the scene blanked for the whole round trip
+                // and left the card sitting over nothing but the watermark.
+                //
+                // The web twin never had the gate: `CalendarClient.tsx` picks the
+                // day's empty panel on `selectedDayTasks.length` alone and puts the
+                // fetch on a small spinner badge in the corner instead, so the panel
+                // stays put across a refetch. This now matches it.
+                // The same swap, ordered the same way: a day with nothing on it is
+                // still a day arriving, and it has no more business being drawn
+                // over the day it replaced than a populated one does.
+                calendarDayEmptyState
+                    .padding(.vertical, 16)
+                    .transition(calendarDayListTransition())
             }
-            .animation(
-                .spring(response: 0.34, dampingFraction: 0.9),
-                value: pendingItems.map(\.id)
-            )
-        } else {
-            // Deliberately not gated on `viewModel.isLoading`. Nothing on this
-            // screen loads on appear: `CalendarViewModel.init` hydrates from the
-            // cache synchronously, so `items` is the truth from the first frame
-            // and the flag is raised by exactly one thing — `refresh()`, a
-            // user-initiated force sync over a cache that is already populated.
-            // A sync in flight therefore never makes the day's emptiness less
-            // true, and the gate was not withholding a premature answer but
-            // hiding a correct one: the scene blanked for the whole round trip
-            // and left the card sitting over nothing but the watermark.
-            //
-            // The web twin never had the gate: `CalendarClient.tsx` picks the
-            // day's empty panel on `selectedDayTasks.length` alone and puts the
-            // fetch on a small spinner badge in the corner instead, so the panel
-            // stays put across a refetch. This now matches it.
-            calendarDayEmptyState
-                .padding(.vertical, 16)
         }
+        .animation(
+            reduceMotion ? nil : TdayFeedItemMotion.placement,
+            value: pendingDayAnimationKey
+        )
+    }
+
+    /// The transition a whole day's list is swapped on — ordering, which is the
+    /// other half of what the `.id()` above buys.
+    ///
+    /// Deliberately not `TdayFeedItemMotion.row`. A row's arrival and departure are
+    /// concurrent on purpose: they happen to different rows, in different places,
+    /// while the feed stays the same feed. A day swap is the opposite — one list
+    /// replaces another in the same slot, so the two occupy the same pixels for
+    /// the whole of it, and played together they read as one stack of rows nobody
+    /// can parse rather than as two days. So they are sequenced: the day that is
+    /// going leaves on the feed's departure rung, and the day that is arriving
+    /// waits exactly that long before it starts. At no frame is there more than
+    /// one day on screen. The delay is `Durations.departure` itself rather than a
+    /// number of its own, because what it has to match is that leg and nothing
+    /// else — write 0.15 here and the two drift apart the first time the rung moves.
+    ///
+    /// And no `.move(edge:)`: the rows are not travelling anywhere, the day
+    /// underneath them changed. Sliding both days down from the top through each
+    /// other was the other half of the mush.
+    ///
+    /// `reduceMotion` collapses it to `.identity` — the finished state drawn
+    /// directly, which at a day swap is the new day, already there. The travel is
+    /// refused separately, on the `.animation(_:value:)` above; see
+    /// `TdayFeedItemMotion.row(reduceMotion:)` for why a transition cannot turn off
+    /// a transaction it did not open.
+    private func calendarDayListTransition() -> AnyTransition {
+        guard !reduceMotion else {
+            return .identity
+        }
+        return .asymmetric(
+            insertion: AnyTransition.opacity.animation(
+                TdayFeedItemMotion.arrival.delay(TdayFeedItemMotion.Durations.departure)
+            ),
+            removal: AnyTransition.opacity.animation(TdayFeedItemMotion.departure)
+        )
     }
 
     /// The day's list has nothing in it. Under a search that means nothing on
