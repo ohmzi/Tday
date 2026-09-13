@@ -2,9 +2,11 @@ package com.ohmz.tday.compose.ui.component
 
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -58,6 +60,8 @@ import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.ui.TdayHaptics
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayRootFeedAccent
@@ -303,6 +307,34 @@ fun RootFeedDock(
                     )
             )
 
+            // The tab's tint, the create button's accent and the feed body underneath
+            // both of them are one handover: a finger lands on a tab and three surfaces
+            // answer it. This was the surface answering on its own clock — a written 180
+            // that is not a rung and sits between two that are — while the other two run
+            // on Quick. Quick is right on its own terms too: a control answering a finger
+            // that is on it. Nothing here travels, so this is not Emphasis; and it is not
+            // Change either, which is the user's own edit replayed for them to watch, not
+            // a control repainting itself under the press that asked for it. Standard is
+            // the curve because a colour crossing between two accents has no arriving or
+            // leaving half to favour, which is the same call TdayApp's crossfades make.
+            //
+            // One spec, hoisted out of the loop: the tab going grey and the tab taking the
+            // accent are one event seen from both ends, and a spec each is an invitation
+            // to retime half of it.
+            //
+            // With motion off the tint snaps, in the same frame the create button's does,
+            // so a tab is drawn already wearing its finished colour rather than parked
+            // between the two — docs/motion.md's fifth idiom rule.
+            val motionEnabled = rememberTdayMotionEnabled()
+            val contentColorSpec: AnimationSpec<Color> = if (motionEnabled) {
+                tween(
+                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    easing = TdayMotionTokens.Easings.Standard,
+                )
+            } else {
+                snap()
+            }
+
             RootFeedTabs.forEachIndexed { index, tab ->
                 val selected = tab == activeTab
                 val interactionSource = interactionSources[index]
@@ -362,7 +394,7 @@ fun RootFeedDock(
                 }
                 val animatedContentColor by animateColorAsState(
                     targetValue = contentColor,
-                    animationSpec = tween(durationMillis = 180),
+                    animationSpec = contentColorSpec,
                     label = "rootFeedDockContentColor",
                 )
 
