@@ -451,6 +451,38 @@ internal fun nonEarlierSectionsEmpty(sections: List<TodoSection>): Boolean =
     sections.none { section -> section.key != EARLIER_SECTION_KEY && section.items.isNotEmpty() }
 
 /**
+ * The task a live reschedule drag is actually carrying, or null when the id in
+ * hand no longer names a row on screen.
+ *
+ * Searches [earlierItems] as well as [items] because in Today mode those are
+ * two disjoint arrays, not one: [TodoListUiState.earlierItems] deliberately
+ * keeps overdue tasks OUT of `items` so the empty-state gate can stay a plain
+ * "pending today" count (see [nonEarlierSectionsEmpty]). Every Earlier row is
+ * still a real, long-pressable, draggable row, so an `items`-only lookup
+ * answered null for exactly the rows this screen most needs to move -- the
+ * overdue ones -- and a drag that starts on Earlier read as no drag at all:
+ * no dragged task to test drop-eligibility against, therefore no registered
+ * drop targets, therefore a gesture that went nowhere and died on release.
+ * Every other mode leaves `earlierItems` empty, so the extra scan costs them
+ * nothing and changes nothing.
+ *
+ * One function for both readers (the liveness flag that restores empty drop
+ * buckets, and the dragged-task lookup the drop-eligibility test runs on) so
+ * the two can never disagree about whether a drag is live -- they used to
+ * match on different fields, `id` alone against `id`-or-`canonicalId`, which
+ * is a disagreement waiting to happen for a recurring occurrence.
+ */
+internal fun draggedTimelineTodo(
+    draggedTodoId: String?,
+    items: List<TodoItem>,
+    earlierItems: List<TodoItem>,
+): TodoItem? {
+    val targetId = draggedTodoId ?: return null
+    return (items.asSequence() + earlierItems.asSequence())
+        .firstOrNull { todo -> todo.id == targetId || todo.canonicalId == targetId }
+}
+
+/**
  * Whether [sectionedTimelineContent]'s Earlier header should skip
  * `animateItem`'s `placementSpec` for this frame -- true exactly when [section]
  * is Earlier's own and [earlierIllustrationPresent] says the inline
@@ -811,9 +843,17 @@ fun TodoListScreen( // skipcq: KT-R1006
     // is rememberSaveable, so a rotation mid-drag persists it while the gesture
     // that would clear it is gone — and the scaffold would then be stuck on
     // screen at rest, which is the very thing this is meant to remove.
+    // Resolved against the search-filtered `timelineItems` rather than raw
+    // `uiState.items` -- a row the query has hidden cannot be under a thumb --
+    // but against `uiState.earlierItems` unfiltered, the same way the Earlier
+    // section itself is built below: Earlier's rows are on screen, and
+    // draggable, whether or not a scoped search is narrowing the day.
     val timelineDragActive = canRescheduleTasks &&
-            draggedScheduledTodoId != null &&
-            timelineItems.any { it.id == draggedScheduledTodoId }
+            draggedTimelineTodo(
+                draggedTodoId = draggedScheduledTodoId,
+                items = timelineItems,
+                earlierItems = uiState.earlierItems,
+            ) != null
     val timelineSections = remember(
         uiState.mode,
         timelineItems,
@@ -1218,11 +1258,14 @@ fun TodoListScreen( // skipcq: KT-R1006
     val editTargetTodo = remember(editTargetTodoId, uiState.items) {
         editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
     }
-    val draggedScheduledTodo = remember(draggedScheduledTodoId, uiState.items) {
-        draggedScheduledTodoId?.let { targetId ->
-            uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
+    val draggedScheduledTodo =
+        remember(draggedScheduledTodoId, uiState.items, uiState.earlierItems) {
+            draggedTimelineTodo(
+                draggedTodoId = draggedScheduledTodoId,
+                items = uiState.items,
+                earlierItems = uiState.earlierItems,
+            )
         }
-    }
     val requestTaskReschedule: (TodoItem, LocalDate) -> Unit =
         requestTaskReschedule@{ todo, targetDate ->
         draggedScheduledTodoId = null
@@ -4770,10 +4813,23 @@ internal fun buildTimelineSections(
     // there is still a backlog collapsed underneath. That is requirement 2:
     // the "day is empty" illustration cares about pending-today only, and
     // Earlier staying reachable while it shows is requirement 3.
+    //
+    // The "nothing in the day, so no headers" rule above describes the screen
+    // at REST. A drag is not rest: the task in hand has to have somewhere to
+    // land, and for Today the only somewheres are exactly these three buckets.
+    // Hiding them because they are empty is self-defeating -- an empty bucket
+    // is precisely the one a task is being dragged INTO -- and it is what left
+    // an Earlier row with no drop target at all on a day whose pending list had
+    // just been emptied: pick the row up, and there was nothing on screen that
+    // could catch it. So a live drag restores all three for its duration, the
+    // same exception, for the same reason, that the general rule below already
+    // makes for every other scope's empty date buckets. Both restores are keyed
+    // on the one `isDragActive` flag, so the buckets appear and leave together
+    // with the gesture rather than on any state of their own.
     if (mode == TodoListMode.TODAY) {
         val timeOfDaySections = sections.filterNot { section -> section.key == EARLIER_SECTION_KEY }
         val earlierSection = sections.firstOrNull { section -> section.key == EARLIER_SECTION_KEY }
-        val visibleTimeOfDay = if (timeOfDaySections.any { it.items.isNotEmpty() }) {
+        val visibleTimeOfDay = if (isDragActive || timeOfDaySections.any { it.items.isNotEmpty() }) {
             timeOfDaySections
         } else {
             emptyList()
