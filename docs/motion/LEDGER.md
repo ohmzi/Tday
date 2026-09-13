@@ -301,7 +301,18 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 18 — the rest of web’s dead motion code
 
-- [ ] `web-dead-motion-code` — Delete six dead motion artefacts that account for 5 of web's ~14 durations and 2 of its 10 easing curves · web · Impact O3 · S · Gate G — **final part (2 of 2)**; PR G7 carried the rest
+- [x] `web-dead-motion-code` — Delete six dead motion artefacts that account for 5 of web's ~14 durations and 2 of its 10 easing curves · web · Impact O3 · S · Gate G — **final part (2 of 2)**; PR G7 carried the rest
+  - citation corrected: the remaining artefacts were not in `globals.css`, which PR G7 left clean.
+    They were eleven `.tsx` files no module imports — grouped as six components: the pre-dock
+    sidebar (`SidebarContainer.tsx` + `ui/SidebarToggle.tsx`), `app/skeletons.tsx`,
+    `ui/eyeToggle.tsx`, `calendar/CompleteButton.tsx`, the two `CreateTodoBtn.tsx` twins, and the
+    four orphaned task-form dropdown menus. Rule E in `motion-reachability-web.test.ts` is what
+    names them, and it fails on all eleven without the deletion.
+  - the easing half of the claim holds exactly: web had 10 curves, PR G7 took `linear` with
+    `.animate-scroll-left` and this takes `ease-in`, which lived only in `CompleteButton.tsx`.
+    The duration half does not — `200`, `300` and `500` all survive at live sites. What is true
+    is that no duration and no curve is spent in an unimported module any more, which is what
+    Phase 4 needs before it tries to converge them.
 
 ## Phase 3 — what the user touches daily
 
