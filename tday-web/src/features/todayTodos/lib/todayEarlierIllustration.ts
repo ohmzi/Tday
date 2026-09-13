@@ -1,4 +1,5 @@
 import { DURATION_MS } from "@/lib/motion";
+import type { EarlierHandoff } from "./useEarlierExpandHandoff";
 
 /**
  * The "Earlier" bucket (overdue tasks tucked under an otherwise-empty or
@@ -57,17 +58,19 @@ export const TODAY_EARLIER_EXIT_MS = DURATION_MS.enter;
 
 /**
  * The Overdue/Earlier ROWS' own fade duration — deliberately a separate,
- * shorter number from `TODAY_EARLIER_EXIT_MS` above. That constant times the
- * illustration's own exit AND the hand-off delay before these rows are
- * revealed AT ALL (requirement 3's ordering guarantee); this one only times
- * how long the rows themselves take to fade once whether-and-when has already
- * been decided elsewhere — a purely presentational polish on top, read by
- * `useFadeUnmount` (`src/hooks/useFadeUnmount.ts`, shared by
- * `TodayEarlierSection` and `TimelineSectionDroppable`) and by the CSS
- * `.tday-rows-enter`/`.tday-rows-exit` pair (globals.css) it hands the
- * duration to via `animationDuration`, so the fade and the moment the DOM
- * node actually goes away line up exactly, the same one-number-read-twice
- * approach as `TODAY_EARLIER_EXIT_MS` itself.
+ * longer number from `TODAY_EARLIER_EXIT_MS` above, which is the scene's exit
+ * and not this one.
+ *
+ * It is read in three places that have to agree exactly, all of them one
+ * departure seen from a different side: `useFadeUnmount`
+ * (`src/hooks/useFadeUnmount.ts`, shared by `TodayEarlierSection` and
+ * `TimelineSectionDroppable`) keeps the collapsing body in the DOM for it, the
+ * CSS `.tday-rows-enter`/`.tday-rows-exit` pair (globals.css) is handed it via
+ * `animationDuration` so the fade ends on the frame the node goes away, and
+ * `useEarlierExpandHandoff` holds the scene off the slot for it on a collapse
+ * so the scene arrives as those rows leave rather than on top of them. Same
+ * one-number-read-N-times approach as `TODAY_EARLIER_EXIT_MS` itself: a
+ * sequence tuned by three numbers that look close is a sequence that drifts.
  */
 export const OVERDUE_ROWS_FADE_MS = 260;
 
@@ -90,7 +93,7 @@ export function shouldShowTodayEmptyIllustration({
   showEmpty,
   hasEarlierItems,
   earlierExpanded,
-  earlierHandoffPending,
+  earlierHandoff,
   celebrate,
 }: {
   /** Zero current (non-Earlier) tasks for this scope, not loading, not mid-search. */
@@ -99,8 +102,8 @@ export function shouldShowTodayEmptyIllustration({
   hasEarlierItems: boolean;
   /** Earlier is expanded (its rows are visible) rather than collapsed. */
   earlierExpanded: boolean;
-  /** Requirement 3's two-phase hand-off is mid-exit (see `useEarlierExpandHandoff`). */
-  earlierHandoffPending: boolean;
+  /** Which half of the swap is mid-exit, if either (see `useEarlierExpandHandoff`). */
+  earlierHandoff: EarlierHandoff;
   /** A completion (this tab's or a remote one) just emptied this scope's current tasks. */
   celebrate: boolean;
 }): boolean {
@@ -110,12 +113,18 @@ export function shouldShowTodayEmptyIllustration({
   // empty scene, exactly as it worked before this feature existed.
   if (!hasEarlierItems) return true;
 
-  // Requirement 3: still exiting. Stays on screen (playing `.tday-empty-exit`)
-  // until the hand-off's own timer actually flips `earlierExpanded`.
-  if (earlierHandoffPending) return true;
+  // A collapse hands the slot the other way round, so it is the one state
+  // `earlierExpanded` cannot be read for: that flag has already gone false —
+  // it is what arms the rows' own fade — while the rows are still on screen
+  // playing it. The scene waits them out rather than landing on a body that is
+  // still leaving, which is the pile-up this hand-off exists to undo.
+  if (earlierHandoff === "rows-leaving") return false;
 
   // Requirement 2: collapsed — the illustration owns the slot, Earlier's
-  // header sits reachable right underneath it.
+  // header sits reachable right underneath it. Requirement 3's expand beat is
+  // the same answer for the same reason and needs no branch of its own: the
+  // hand-off holds `earlierExpanded` false until the scene's exit has played,
+  // so the scene is still the occupant and still draws itself, mid-exit.
   if (!earlierExpanded) return true;
 
   // Requirement 3: expanded — Earlier's own rows own the slot instead of the
@@ -151,13 +160,13 @@ export function shouldShowTodayEmptyIllustration({
  * paint. This is only about whether the page under it moves.
  */
 export function earlierHandoffVacatesSlot({
-  earlierHandoffPending,
+  earlierHandoff,
   celebrate,
 }: {
-  /** Requirement 3's two-phase hand-off is mid-exit (see `useEarlierExpandHandoff`). */
-  earlierHandoffPending: boolean;
+  /** Which half of the swap is mid-exit, if either (see `useEarlierExpandHandoff`). */
+  earlierHandoff: EarlierHandoff;
   /** A completion (this tab's or a remote one) just emptied this scope's current tasks. */
   celebrate: boolean;
 }): boolean {
-  return earlierHandoffPending && !celebrate;
+  return earlierHandoff === "scene-leaving" && !celebrate;
 }

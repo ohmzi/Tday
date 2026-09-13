@@ -22,7 +22,7 @@ import { useTodayBuckets } from "../lib/useTodayBuckets";
 import { useTimelineSections } from "../lib/useTimelineSections";
 import { useTimelineEmptyState } from "../lib/useTimelineEmptyState";
 import { isTimelineScope } from "../lib/timelineScopeHelpers";
-import { TODAY_EARLIER_EXIT_MS } from "../lib/todayEarlierIllustration";
+import { OVERDUE_ROWS_FADE_MS, TODAY_EARLIER_EXIT_MS } from "../lib/todayEarlierIllustration";
 import { useRowPlacement } from "@/hooks/useRowPlacement";
 import { DELAY_MS } from "@/lib/motion";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
@@ -104,10 +104,10 @@ const AllTasksTimelineContainer = ({
   // `useEarlierExpandHandoff`'s own doc comment.
   const {
     expanded: earlierExpanded,
-    handoffPending: earlierHandoffPending,
+    handoff: earlierHandoff,
     toggle: toggleEarlierExpanded,
     setExpandedImmediately: setEarlierExpandedImmediately,
-  } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS);
+  } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS, OVERDUE_ROWS_FADE_MS);
   // Empty date buckets are drop targets and nothing else, so they exist only for
   // the length of a drag.
   const [dragActive, setDragActive] = useState(false);
@@ -189,6 +189,7 @@ const AllTasksTimelineContainer = ({
     isDayDone,
     celebrate,
     showEmptyIllustration,
+    earlierSlotChangesHands,
     showTodayEarlierSection,
   } = useTimelineEmptyState({
     scope,
@@ -197,7 +198,7 @@ const AllTasksTimelineContainer = ({
     todoLoading,
     isSearching,
     earlierExpanded,
-    earlierHandoffPending,
+    earlierHandoff,
     todayHasEarlierItems,
   });
 
@@ -286,8 +287,8 @@ const AllTasksTimelineContainer = ({
               `showEmptyIllustration` (not `showEmpty` directly): identical to
               `showEmpty` everywhere except a scope with a non-empty, expanded
               Earlier bucket — see `shouldShowTodayEmptyIllustration`. The
-              wrapper div only ever carries the exit animation while
-              `earlierHandoffPending` is genuinely true, so it is inert outside
+              wrapper div only ever carries the exit animation while the scene
+              is the half of the swap that is leaving, so it is inert outside
               an Earlier hand-off.
 
               Rendered BEFORE the Earlier-holding blocks below (Today's own
@@ -311,7 +312,7 @@ const AllTasksTimelineContainer = ({
               // is added on top of the wait — travel, then burst, then scene, which is
               // what `TdayFeedItemMotion.CelebrationStartDelayMillis` buys on Android.
               celebrationStartDelayMs={DELAY_MS.placementLead}
-              earlierHandoffPending={earlierHandoffPending}
+              earlierHandoff={earlierHandoff}
               locale={locale}
               emptyTitle={emptyTitle}
               emptyBody={emptyBody}
@@ -328,18 +329,20 @@ const AllTasksTimelineContainer = ({
               // A live query outranks a shut bucket: these screens open with
               // Earlier closed, and a task the search turns up in there must not
               // stay hidden behind its header. Native makes the same call.
-              // `!earlierHandoffPending`: mid hand-off, Earlier's own rows stay
-              // hidden until the illustration above has actually finished
-              // exiting — same requirement-3 sequencing Today's own Earlier
-              // section observes.
-              earlierExpanded={(earlierExpanded && !earlierHandoffPending) || isSearching}
-              // Passes `showEmptyIllustration` through exactly like Today's own
-              // `TodayEarlierSection` does below: when the illustration
-              // currently owns the slot, expanding Earlier hands off through
-              // it first (requirement 3) instead of the plain immediate toggle
-              // this used to always be — see `useEarlierExpandHandoff`'s own
-              // doc comment for why a single boolean is enough to cover both.
-              onToggleEarlier={() => toggleEarlierExpanded(showEmptyIllustration)}
+              // `earlierExpanded` alone is the whole sequencing signal: the
+              // hand-off holds it false until the illustration above has
+              // finished exiting, and on the way back it goes false first and
+              // the rows linger on their own fade (`useFadeUnmount`) — so
+              // there is no second flag to read here.
+              earlierExpanded={earlierExpanded || isSearching}
+              // Passes `earlierSlotChangesHands` through exactly like Today's
+              // own `TodayEarlierSection` does below: when the scene and
+              // Earlier's rows are trading the slot, the tap is sequenced —
+              // whichever way it goes — instead of being the plain immediate
+              // toggle this used to always be on the way back. See
+              // `useEarlierExpandHandoff`'s own doc comment for why one
+              // boolean covers both directions.
+              onToggleEarlier={() => toggleEarlierExpanded(earlierSlotChangesHands)}
               onDragActiveChange={setDragActive}
             />
           )}
@@ -359,8 +362,8 @@ const AllTasksTimelineContainer = ({
             <TodayEarlierSection
               todos={earlierItems}
               label={appDict("overdue")}
-              expanded={earlierExpanded && !earlierHandoffPending}
-              onToggle={() => toggleEarlierExpanded(showEmptyIllustration)}
+              expanded={earlierExpanded}
+              onToggle={() => toggleEarlierExpanded(earlierSlotChangesHands)}
               highlightedTodoId={focusedTaskId}
             />
           )}

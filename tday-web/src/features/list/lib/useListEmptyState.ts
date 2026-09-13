@@ -2,6 +2,7 @@ import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transit
 import { taskJustCompleted } from "@/lib/task-completion-signal";
 import { useEarlierExpandHandoff } from "@/features/todayTodos/lib/useEarlierExpandHandoff";
 import {
+  OVERDUE_ROWS_FADE_MS,
   TODAY_EARLIER_EXIT_MS,
   shouldShowTodayEmptyIllustration,
 } from "@/features/todayTodos/lib/todayEarlierIllustration";
@@ -39,9 +40,9 @@ export function useListEmptyState({
 }) {
   const {
     expanded: earlierExpanded,
-    handoffPending: earlierHandoffPending,
+    handoff: earlierHandoff,
     toggle: toggleEarlierExpanded,
-  } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS);
+  } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS, OVERDUE_ROWS_FADE_MS);
 
   // Remote sibling of `taskJustCompleted()` below — fires for a completion on
   // another device or by a collaborator, not just this tab's own tap.
@@ -67,13 +68,20 @@ export function useListEmptyState({
     showEmpty,
     hasEarlierItems,
     earlierExpanded,
-    earlierHandoffPending,
+    earlierHandoff,
     celebrate,
   });
 
+  // What a tap on Earlier's header does to the SLOT — the argument
+  // `useEarlierExpandHandoff` sequences on, and the same expression
+  // `useTimelineEmptyState` derives for the scoped screens; see its own
+  // comment for why one boolean covers both directions of the swap.
+  const earlierSlotChangesHands = showEmpty && hasEarlierItems;
+
   return {
     earlierExpanded,
-    earlierHandoffPending,
+    earlierHandoff,
+    earlierSlotChangesHands,
     toggleEarlierExpanded,
     celebrate,
     showEmptyIllustration,

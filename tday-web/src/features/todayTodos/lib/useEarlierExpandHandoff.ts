@@ -2,30 +2,57 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 /**
- * The single collapse/expand state machine backing every scope's "Earlier"
- * bucket. Every call site passes its own scope's `showEmptyIllustration` —
- * "is the empty-state illustration currently on screen" — as the `toggle`
- * argument below, so an expand engages the extra requirement-3 hand-off
- * exactly when there is an illustration to hand off from, and stays the
- * plain immediate toggle it always was otherwise (a scope with no Earlier
- * bucket, or one whose illustration isn't showing right now, always passes
- * `false`).
+ * Which side of the swap is on screen and leaving, while a tap plays out.
  *
- * `handoffPending` is true for exactly the window between that tap and the
- * moment `expanded` actually flips. It is driven by `exitMs` — the SAME rung
- * the illustration's own exit is drawn on, ink and slot together (see
- * `TODAY_EARLIER_EXIT_MS` / `.tday-empty-slot` / `.tday-empty-exit` in
- * globals.css) — so the visual exit and the hand-off are sequenced by
- * construction: one number, read twice, not two guesses tuned to land close
- * together.
- *
- * Under reduced motion there is no such window: the hand-off collapses to the
- * plain immediate toggle and `handoffPending` never goes true at all. See the
- * expand branch for why that is the only honest reading of the preference.
+ * Named for whoever is LEAVING rather than for the direction of the tap,
+ * because that is the question every consumer actually asks: who still owns
+ * the slot right now, and what is drawing its departure on it. `"idle"` covers
+ * both settled states — the scene owning the slot, and Earlier's rows owning
+ * it — since neither of them is a beat anybody is sequencing against.
  */
-export function useEarlierExpandHandoff(exitMs: number) {
+export type EarlierHandoff = "idle" | "scene-leaving" | "rows-leaving";
+
+/**
+ * The single collapse/expand state machine backing every scope's "Earlier"
+ * bucket. Every call site passes its own scope's `earlierSlotChangesHands` —
+ * "does this tap swap who owns the empty-state slot" — as the `toggle`
+ * argument below, so a tap engages a hand-off exactly when there is something
+ * to sequence, and stays the plain immediate toggle it always was otherwise (a
+ * scope with no Earlier bucket, or one whose screen has current tasks on it,
+ * always passes `false`).
+ *
+ * Both directions are sequenced, and they are not the same beat. An expand has
+ * the scene leaving and Earlier's rows waiting for the slot; a collapse has
+ * Earlier's rows leaving and the scene waiting for it. Which is why `expanded`
+ * flips at opposite ends of the two:
+ *
+ * - **Expanding** holds `expanded` false for `sceneExitMs`. The scene is still
+ *   the thing on screen, so the flag that says "the rows have the slot" must
+ *   not go true until its exit has actually played.
+ * - **Collapsing** flips `expanded` false immediately, because that flag is
+ *   what starts the rows' own fade (`useFadeUnmount` /`.tday-rows-exit`); what
+ *   waits here is the scene, held off for `rowsExitMs` by `"rows-leaving"`
+ *   rather than landing on top of a body that is still on its way out.
+ *
+ * Collapsing used to be the immediate branch, which cost a tap two jumps: the
+ * scene remounted into an already-open track and claimed its 42vh in one
+ * frame, while the rows it landed on held their own height behind it for the
+ * whole of their fade. Sequencing it spends the same beat the rows were
+ * already fading for, and gets a swap instead of a pile-up.
+ *
+ * The two durations are the two exits, and each is the SAME number the thing
+ * it waits on is drawn with — `TODAY_EARLIER_EXIT_MS` for `.tday-empty-exit`,
+ * `OVERDUE_ROWS_FADE_MS` for `.tday-rows-exit` and the `useFadeUnmount` that
+ * keeps those rows in the DOM. One number read twice on each side, not two
+ * guesses tuned to land close together.
+ *
+ * Under reduced motion there is no beat at all: both directions collapse to
+ * the plain immediate toggle and `handoff` never leaves `"idle"`. See the
+ * sequenced branch for why that is the only honest reading of the preference.
+ */
+export function useEarlierExpandHandoff(sceneExitMs: number, rowsExitMs: number) {
   const [expanded, setExpandedState] = useState(false);
-  const [handoffPending, setHandoffPending] = useState(false);
+  const [handoff, setHandoff] = useState<EarlierHandoff>("idle");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Subscribed rather than read at tap time: the preference decides what this
   // hook's own returned `toggle` will do, so a mid-session flip has to reach
@@ -45,50 +72,63 @@ export function useEarlierExpandHandoff(exitMs: number) {
   useEffect(() => clearPending, [clearPending]);
 
   /**
-   * @param illustrationShowing whether the empty-state illustration is
-   *   currently occupying the slot Earlier's rows are about to take. Only
-   *   matters for an *expand* (`!expanded`); a collapse is always immediate.
+   * @param slotChangesHands whether this tap actually swaps who occupies the
+   *   slot Earlier's rows and the empty-state scene share. False whenever
+   *   there is no scene in the swap at all — a screen with current tasks on
+   *   it — in which case there is nothing to sequence and this is the plain
+   *   toggle it always was.
    */
   const toggle = useCallback(
-    (illustrationShowing: boolean) => {
-      // A tap landing inside an already-running hand-off: ignored rather than
-      // starting a second one or racing the one in flight — the exact race
-      // the Android review caught from a second tap during the exit beat.
-      if (handoffPending) return;
+    (slotChangesHands: boolean) => {
+      // A tap landing inside a running beat: ignored rather than starting a
+      // second one or racing the one in flight — the exact race the Android
+      // review caught from a second tap during the exit beat.
+      if (handoff !== "idle") return;
 
-      if (!expanded && illustrationShowing && !reducedMotion) {
-        // Requirement 3: hide the illustration first (it starts exiting the
-        // instant `handoffPending` flips true — see
-        // `shouldShowTodayEmptyIllustration`) and only reveal Earlier's rows
-        // once that exit has actually finished playing.
-        //
-        // `!reducedMotion` is load-bearing, not defensive. `.tday-empty-exit`
-        // is `animation: none` under the preference (globals.css), so there is
-        // nothing left for this timer to wait for: the beat it holds open stops
-        // being a sequenced exit and becomes `exitMs` of a static illustration
-        // followed by the whole screen changing in one frame — the half-drawn
-        // pause rule 5 of `docs/motion.md` exists to forbid, arrived at from
-        // the other side. Removing the trip has to remove the wait with it.
-        setHandoffPending(true);
+      if (slotChangesHands && !reducedMotion) {
+        // `!reducedMotion` is load-bearing, not defensive. Both exits are
+        // `animation: none` under the preference (globals.css), so there is
+        // nothing left for either timer to wait for: the beat stops being a
+        // sequenced exit and becomes a static picture followed by the whole
+        // screen changing in one frame — the half-drawn pause rule 5 of
+        // `docs/motion.md` exists to forbid, arrived at from the other side.
+        // Removing the trip has to remove the wait with it.
         clearPending();
+
+        if (!expanded) {
+          // Expanding: hide the scene first (it starts exiting the instant
+          // `handoff` flips — see `shouldShowTodayEmptyIllustration`) and only
+          // reveal Earlier's rows once that exit has actually finished.
+          setHandoff("scene-leaving");
+          timeoutRef.current = setTimeout(() => {
+            setExpandedState(true);
+            setHandoff("idle");
+            timeoutRef.current = null;
+          }, sceneExitMs);
+          return;
+        }
+
+        // Collapsing: the rows are the ones leaving, so `expanded` goes false
+        // now — it is what arms their fade — and the scene is what waits.
+        setExpandedState(false);
+        setHandoff("rows-leaving");
         timeoutRef.current = setTimeout(() => {
-          setExpandedState(true);
-          setHandoffPending(false);
+          setHandoff("idle");
           timeoutRef.current = null;
-        }, exitMs);
+        }, rowsExitMs);
         return;
       }
 
-      // Collapsing, expanding with no illustration to hand off from, or any
-      // toggle at all under reduced motion: immediate. Also defensively clears
-      // any stale pending flag/timer — the exact class of bug the iOS review
-      // found, where a hand-off flag set on expand was never cleared back to
-      // false on the paths that should have reset it.
+      // Nothing swaps (a screen with tasks on it), or any toggle at all under
+      // reduced motion: immediate. Also defensively clears any stale beat —
+      // the exact class of bug the iOS review found, where a hand-off flag set
+      // on expand was never cleared back on the paths that should have reset
+      // it.
       clearPending();
-      setHandoffPending(false);
+      setHandoff("idle");
       setExpandedState((value) => !value);
     },
-    [clearPending, expanded, exitMs, handoffPending, reducedMotion],
+    [clearPending, expanded, handoff, reducedMotion, rowsExitMs, sceneExitMs],
   );
 
   /** Expands or collapses immediately, bypassing the hand-off entirely — for
@@ -97,11 +137,11 @@ export function useEarlierExpandHandoff(exitMs: number) {
   const setExpandedImmediately = useCallback(
     (value: boolean) => {
       clearPending();
-      setHandoffPending(false);
+      setHandoff("idle");
       setExpandedState(value);
     },
     [clearPending],
   );
 
-  return { expanded, handoffPending, toggle, setExpandedImmediately };
+  return { expanded, handoff, toggle, setExpandedImmediately };
 }
