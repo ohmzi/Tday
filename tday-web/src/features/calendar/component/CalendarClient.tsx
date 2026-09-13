@@ -49,6 +49,7 @@ import { useEditCalendarTodo } from "../query/update-calendar-todo";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { moveTodoToDay } from "@/lib/moveTodoToDay";
 import type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
+import AnimatedHeight from "@/components/ui/AnimatedHeight";
 import { useModalPresence } from "@/components/ui/Modal";
 import ConfirmRescheduleRecurring, {
   type PendingReschedule,
@@ -213,7 +214,7 @@ function CalendarNavButton({
   );
 }
 
-function CalendarModeCard({
+export function CalendarModeCard({
   view,
   selectedDate,
   tasksByDay,
@@ -245,7 +246,7 @@ function CalendarModeCard({
 
   return (
     <section className="rounded-[24px] border border-white/70 bg-card/94 p-4 shadow-[0_18px_42px_-34px_hsl(var(--shadow)/0.62)] dark:border-white/10 sm:p-5">
-      <div className="mb-4 flex items-center gap-2 sm:gap-3">
+      <div className="mb-3 flex items-center gap-2 sm:gap-3">
         <CalendarNavButton
           label={appDict("previous")}
           direction="previous"
@@ -264,36 +265,70 @@ function CalendarModeCard({
         />
       </div>
 
-      <div
-        key={animationKey}
-        className={cn(
-          "touch-pan-y",
-          slideDirection === "left" && "cal-native-slide-from-left",
-          slideDirection === "right" && "cal-native-slide-from-right",
-        )}
-        {...swipeHandlers}
-      >
-        {view === "month" && (
-          <MonthCalendarGrid
-            selectedDate={selectedDate}
-            tasksByDay={tasksByDay}
-            onSelectDate={onSelectDate}
-          />
-        )}
-        {view === "week" && (
-          <WeekCalendarStrip
-            selectedDate={selectedDate}
-            tasksByDay={tasksByDay}
-            onSelectDate={onSelectDate}
-          />
-        )}
-        {view === "day" && (
-          <DayCalendarSummary
-            selectedDate={selectedDate}
-            taskCount={tasksByDay.get(dayKey(selectedDate))?.length ?? 0}
-          />
-        )}
-      </div>
+      {/* Only the pager is inside the box, which is what keeps the header
+          anchored while the card resizes: the month title and the chevrons sit
+          above it and never move. The card's height is whatever this pager
+          currently needs, and the four things it can hold are four different
+          heights — a 35-day month, a 42-day month, a week strip, a day
+          summary — so every page change and every view change used to resize
+          the card in the frame the slide began, under content that was still
+          travelling. `AnimatedHeight` rather than a height animator of this
+          screen's own: it already measures with a `ResizeObserver`, which is
+          the only thing that sees all three ways this content changes size
+          (the swapped page, a locale whose weekday labels wrap, a font that
+          finally loads), and it is already on the rung a change of size takes,
+          which is the rung the slide beside it now runs on too.
+
+          That box clips, and nothing on this path clipped before it, so the
+          bleed: `-mx-4 px-4` walks the clip edges out to the card's padding
+          edge and puts the content back exactly where it was, which leaves the
+          sides 16px of room for what day cells paint outside themselves
+          without taking a pixel off the grid. Taking it off the grid would be
+          the wrong trade twice over — a month cell is a fixed `w-[2.9rem]` in
+          a seventh of the card, so a narrower card is one that hangs FURTHER
+          past its last column, not less. */}
+      <AnimatedHeight className="-mx-4 px-4 sm:-mx-5 sm:px-5">
+        <div
+          key={animationKey}
+          className={cn(
+            // Top and bottom cannot be bought by bleeding the way the sides
+            // are: the box is sized to this content, so vertical padding on the
+            // box would come straight out of the height the observer measured.
+            // 4px above for the drag-over ring, which reaches that far out on
+            // every side (`ring-2` plus `ring-offset-2`) and in week view sits
+            // flush against the top of the box; 6px below for the selected
+            // day's glow, the deeper of the two down there (12px down, 24px of
+            // blur, 18px pulled back in). The 4px comes off the header's margin
+            // above rather than being added, so the gap the eye sees is the one
+            // that was always there.
+            "touch-pan-y pt-1 pb-1.5",
+            slideDirection === "left" && "cal-native-slide-from-left",
+            slideDirection === "right" && "cal-native-slide-from-right",
+          )}
+          {...swipeHandlers}
+        >
+          {view === "month" && (
+            <MonthCalendarGrid
+              selectedDate={selectedDate}
+              tasksByDay={tasksByDay}
+              onSelectDate={onSelectDate}
+            />
+          )}
+          {view === "week" && (
+            <WeekCalendarStrip
+              selectedDate={selectedDate}
+              tasksByDay={tasksByDay}
+              onSelectDate={onSelectDate}
+            />
+          )}
+          {view === "day" && (
+            <DayCalendarSummary
+              selectedDate={selectedDate}
+              taskCount={tasksByDay.get(dayKey(selectedDate))?.length ?? 0}
+            />
+          )}
+        </div>
+      </AnimatedHeight>
     </section>
   );
 }
