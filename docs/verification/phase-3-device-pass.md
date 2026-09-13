@@ -183,3 +183,24 @@ cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme"
               whole point of this row, and it is the harder of the two windows to hit. If the row had
               already returned to closed before the flick began, the run does not count: the flick
               then opens the row and nothing shuts it on the old code either.
+
+- [ ] **PR 15b · android · Create sheet rises with the keyboard** — Today, tap **+** to open the
+      create sheet; the keyboard is down and the sheet is sitting at roughly half the screen.
+      Do:     tap the task-title field.
+      Watch:  the sheet's top edge and the keyboard's top edge climb together dp for dp from the
+              first frame of inset, and the sheet reaches its ~85 % ceiling no earlier than about
+              two thirds of the way through the keyboard's ~250 ms. It stops there while the keys
+              finish the last of their travel — that is the cap, not a stall.
+      Fails:  the sheet is already at 85 % on the first frame any keyboard is visible; or it is at
+              85 % before the keyboard is halfway up; or it starts late and is still growing after
+              the keyboard has landed.
+
+- [ ] **PR 15b · android · Create sheet comes back down with the keyboard** — same sheet, keyboard
+      up, sheet at its tall ~85 % height.
+      Do:     press the keyboard's Done key (the sheet stays open, only the keyboard leaves).
+      Watch:  the sheet's top edge travels back down over the keyboard's own ~250 ms retraction and
+              is at its resting half-screen height within a frame or two of the keys clearing the
+              screen.
+      Fails:  the sheet holds at 85 % for the whole retraction and collapses on one frame once the
+              keyboard has gone; or it is still shrinking noticeably after the keyboard is fully
+              away; or it jumps back UP on the frame the keys finish leaving before settling down.
