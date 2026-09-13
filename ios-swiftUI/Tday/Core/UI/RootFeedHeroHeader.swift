@@ -66,6 +66,10 @@ enum RootFeedHeroHeaderMetrics {
     static var refreshPillRestingTop: CGFloat {
         heroTitleCenterY - (TdayRefreshIndicatorMetrics.containerHeight / 2)
     }
+    /// Slower and more damped than Settle (0.40/0.86), which is the nearest
+    /// token. Left alone: the pill's travel is driven by the pull fraction
+    /// below and this spring only catches the release, so the extra damping is
+    /// what keeps it from overshooting the title it is hovering in front of.
     static let refreshPillMotion = Animation.spring(response: 0.42, dampingFraction: 0.9)
 
     /// Fraction of the pull over which the pill completes its travel. It leads
@@ -118,6 +122,10 @@ enum RootFeedHeroHeaderMetrics {
     static let searchCollapseEnd: CGFloat = 0.50
     static let titleTravelEnd: CGFloat = 0.55
 
+    /// Two hundredths off Snappy (0.28/0.86), same damping. Left alone rather than
+    /// rounded onto the token: this morph runs alongside the collapse fractions
+    /// above, which were fitted against it, and a token layer that lands by
+    /// nudging call sites two hundredths is not a zero-pixel token layer.
     static let searchMorph = Animation.spring(response: 0.30, dampingFraction: 0.86)
 
     static func collapseProgress(forScrollOffset offset: CGFloat) -> CGFloat {
