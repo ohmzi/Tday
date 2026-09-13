@@ -1002,3 +1002,29 @@
 @media (prefers-reduced-motion: reduce) {
   .tday-route-fade { animation: none; }
 }
+
+/* ── A sheet leaving ──
+   vaul animates its own sheet and scrim from a stylesheet it injects at import:
+   half a second in, half a second out. The way in keeps that. It is a library
+   default rather than a decision made here — the standing `docs/motion.md`
+   gives Compose's `StiffnessMediumLow` — and the same 0.5s is written inline
+   onto the sheet as the transition a released drag settles on, so retiming the
+   arrival without the drag would split a dragged close from a tapped one.
+
+   The way out is a decision. A sheet leaves by travelling out through the bottom
+   edge, which is position changing, which is Emphasis by the geometry rule; that
+   it is shorter than the enter it undoes is rule 1 rather than a coincidence.
+   `DRAWER_EXIT_MS` in `components/ui/drawer.tsx` names the same rung, because a
+   caller has to hold the subtree in the DOM for exactly as long as this plays,
+   and the calendar's form sheet spent a release waiting out the modal's number
+   instead — taken away halfway down, with the confirm sheet stacked on it going
+   in the same frame.
+
+   Specific enough to outrank the injected rules without `!important`: vaul sets
+   the duration on `[data-vaul-drawer]` and on
+   `[data-vaul-overlay][data-vaul-snap-points]`, and each selector below carries
+   one attribute more than the rule it is overriding. */
+[data-vaul-drawer][data-vaul-drawer-direction][data-state="closed"],
+[data-vaul-overlay][data-vaul-snap-points][data-state="closed"] {
+  animation-duration: var(--tday-duration-emphasis);
+}

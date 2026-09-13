@@ -58,6 +58,7 @@ import {
 import { useNavigationRefusal } from "../lib/useNavigationRefusal";
 import ConfirmPlaceholder from "./LoadingPlaceholders/ConfirmPlaceholder";
 import { useModalPresence } from "@/components/ui/Modal";
+import { useDrawerPresence } from "@/components/ui/drawer";
 import ConfirmRescheduleRecurring, {
   type PendingReschedule,
 } from "./ConfirmationModals/ConfirmRescheduleRecurring";
@@ -610,7 +611,12 @@ export function CalendarTaskRow({
   // Mounted while the form is open AND for its exit. `{displayForm && …}` handed the form the
   // very flag it was gated on, so it was unmounted on the frame that flag went false and its
   // close animation had nowhere to play. Still lazy: the row mounts nothing until first open.
-  const editFormPresent = useModalPresence(displayForm);
+  //
+  // The drawer's clock, not the modal's, even though this one flag gates both shells: the
+  // modal's exit is the shorter of the two, so it finishes inside this window and then waits
+  // out the rest rendering nothing, while the reverse — a drawer held for the modal's 200 ms —
+  // took a sheet away mid-slide, and the confirm sheet stacked on it with it.
+  const editFormPresent = useDrawerPresence(displayForm);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   // The Suspense fallbacks below are gated on these, not on the flags themselves, for the
@@ -1044,8 +1050,8 @@ export default function CalendarClient() {
   const [mounted, setMounted] = useState(false);
   const [calendarRange, setCalendarRange] = useDateRange();
   const [showCreateForm, setShowCreateForm] = useState(false);
-  // Same shape as the edit form above: gated on presence, not on the raw flag it passes down.
-  const createFormPresent = useModalPresence(showCreateForm);
+  // Same shape as the edit form above, down to which surface's exit the window is cut to.
+  const createFormPresent = useDrawerPresence(showCreateForm);
   const [selectDateRange, setSelectDateRange] = useState<{
     start: Date;
     end: Date;
