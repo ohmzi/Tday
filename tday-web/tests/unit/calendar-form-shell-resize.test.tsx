@@ -161,6 +161,17 @@ function notesInput() {
   return screen.getByTestId("notes-input") as HTMLTextAreaElement;
 }
 
+// Both shells mount behind an animated portal -- the drawer through vaul, the modal
+// through Radix -- so the element these helpers wait for appears a few effect ticks
+// after render rather than synchronously. Testing Library's default findBy timeout is
+// 1000 ms, which is enough on a warm laptop and not enough on a contended CI runner:
+// this file failed once in CI at 1063 ms with "Unable to find an element by:
+// [data-testid=\"shell-drawer\"]" while passing locally, both alone and in the full
+// suite. The wait is not what the test is measuring -- it asserts which shell renders
+// and that the typed values survive the swap -- so the budget is raised rather than
+// the assertion weakened.
+const SHELL_MOUNT_TIMEOUT = { timeout: 5000 };
+
 describe("calendar form shell swap at 640 px", () => {
   afterEach(() => {
     cleanup();
@@ -178,12 +189,12 @@ describe("calendar form shell swap at 640 px", () => {
       />,
     );
 
-    await screen.findByTestId("shell-drawer");
+    await screen.findByTestId("shell-drawer", {}, SHELL_MOUNT_TIMEOUT);
     fireEvent.change(titleInput(), { target: { value: "Dentist, bring referral" } });
     fireEvent.change(notesInput(), { target: { value: "ask about the night guard" } });
 
     await resizeTo(900);
-    await screen.findByTestId("shell-modal");
+    await screen.findByTestId("shell-modal", {}, SHELL_MOUNT_TIMEOUT);
 
     expect(screen.queryByTestId("shell-drawer")).toBeNull();
     expect(titleInput().value).toBe("Dentist, bring referral");
@@ -202,11 +213,11 @@ describe("calendar form shell swap at 640 px", () => {
       />,
     );
 
-    await screen.findByTestId("shell-modal");
+    await screen.findByTestId("shell-modal", {}, SHELL_MOUNT_TIMEOUT);
     fireEvent.change(titleInput(), { target: { value: "Collect the parcel" } });
 
     await resizeTo(375);
-    await screen.findByTestId("shell-drawer");
+    await screen.findByTestId("shell-drawer", {}, SHELL_MOUNT_TIMEOUT);
 
     expect(screen.queryByTestId("shell-modal")).toBeNull();
     expect(titleInput().value).toBe("Collect the parcel");
@@ -219,13 +230,13 @@ describe("calendar form shell swap at 640 px", () => {
       <EditCalendarFormContainer todo={todo} displayForm setDisplayForm={vi.fn()} />,
     );
 
-    await screen.findByTestId("shell-drawer");
+    await screen.findByTestId("shell-drawer", {}, SHELL_MOUNT_TIMEOUT);
     // The edit form opens seeded from the todo; the user rewrites the title.
     expect(titleInput().value).toBe("Renew passport");
     fireEvent.change(titleInput(), { target: { value: "Renew passport — photos first" } });
 
     await resizeTo(900);
-    await screen.findByTestId("shell-modal");
+    await screen.findByTestId("shell-modal", {}, SHELL_MOUNT_TIMEOUT);
 
     expect(titleInput().value).toBe("Renew passport — photos first");
   });
