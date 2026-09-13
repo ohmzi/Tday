@@ -24,7 +24,10 @@ struct AppRootView: View {
     // Optional biometric gate, default OFF. When disabled every member below is inert.
     @State private var appLock = AppLockController()
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The app's one motion gate — see `TdayMotionEnvironment.swift`. Every
+    /// `.animation` below passes its spec through it, so Reduce Motion refuses the
+    /// trip in one place rather than at each of them.
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     init(container: AppContainer) {
         self.container = container
@@ -133,7 +136,7 @@ struct AppRootView: View {
                         // cuts to the arriving feed finished rather than holding it
                         // half-faded (`docs/motion.md`'s fifth idiom rule).
                         .animation(
-                            reduceMotion ? nil : TdayMotion.standard(duration: TdayMotion.Durations.quick),
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)),
                             value: rootFeedTab
                         )
                         // The dock and the create button used to be nothing but the `if`
@@ -159,7 +162,7 @@ struct AppRootView: View {
                         // Reduce Motion passes nil, so the controls are taken away and put
                         // back finished (`docs/motion.md`'s fifth idiom rule).
                         .animation(
-                            reduceMotion ? nil : TdayMotion.settle,
+                            tdayAnimation(TdayMotion.settle),
                             value: rootControlsVisible
                         )
                         // The other way these controls come and go: `isWorkspaceAvailable` in
@@ -340,7 +343,7 @@ struct AppRootView: View {
                     // drawn unlocked and in focus, finished, rather than held mid-blur
                     // (`docs/motion.md`'s fifth idiom rule).
                     .animation(
-                        reduceMotion ? nil : TdayMotion.standard(duration: TdayMotion.Durations.quick),
+                        tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)),
                         value: showOnboardingOverlay
                     )
                 }

@@ -15,7 +15,7 @@ struct CompletedScreen: View {
     @Environment(\.dismiss) private var dismiss
     /// Gates the history's own motion — see `completedTimelineAnimationKey`'s
     /// `.animation(_:value:)` and `completedRowTransition`.
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.tdayAnimation) private var tdayAnimation
     @State private var editingItem: CompletedItem?
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var collapsedSectionIDs: Set<String> = []
@@ -308,7 +308,7 @@ struct CompletedScreen: View {
             // their own legs (`completedRowTransition`); this is what carries
             // everything a search narrowing the list merely moves.
             .animation(
-                reduceMotion ? nil : TdayFeedItemMotion.placement,
+                tdayAnimation(TdayFeedItemMotion.placement),
                 value: completedTimelineAnimationKey
             )
 
@@ -476,7 +476,7 @@ struct CompletedScreen: View {
     /// a visible change, made on purpose, and the reason `docs/motion.md` no longer
     /// files that 0.1 under sequencing constants nobody watches.
     private func completedRowTransition() -> AnyTransition {
-        TdayFeedItemMotion.row(reduceMotion: reduceMotion)
+        TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled)
     }
 
     private func completedTimelineRow(_ item: CompletedItem) -> some View {

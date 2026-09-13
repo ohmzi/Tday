@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import path from "path";
 import { describe, it, expect } from "vitest";
 
@@ -26,6 +26,8 @@ import { describe, it, expect } from "vitest";
 const ROOT = path.resolve(__dirname, "..", "..");
 const SRC = path.join(ROOT, "src");
 const GLOBALS_CSS = path.join(SRC, "globals.css");
+const IOS_SRC = path.resolve(ROOT, "..", "ios-swiftUI", "Tday");
+const IOS_GATE = path.join(IOS_SRC, "UI", "Theme", "TdayMotionEnvironment.swift");
 
 /** Blanks comments, preserving length, so prose about a defect never reads as one. */
 function stripComments(css: string): string {
@@ -139,5 +141,69 @@ describe("reduced motion C — every stylesheet answers the question", () => {
       violations.push(path.relative(ROOT, file));
     }
     expect(violations).toEqual([]);
+  });
+});
+
+describe("reduced motion D — one module owns the iOS accessibility read", () => {
+  /**
+   * The iOS half of rule B, and it was filed for the same reason: seven views
+   * each read `accessibilityReduceMotion` and each spelled `reduceMotion ? nil :
+   * x` in their own hand, so the app's answer lived in seven places and could be
+   * forgotten in an eighth with nothing to notice. `TdayMotionEnvironment.swift`
+   * is where the setting is read now, and `\.tdayAnimation` is what every
+   * animated surface asks.
+   *
+   * A static read of source text rather than a compile, because there is no Swift
+   * toolchain on this machine — the same reason the `motion-reachability-ios`
+   * suite next door reads text. What it can still see is a second answer being
+   * minted, which is the whole defect.
+   */
+  const swiftFiles = (dir: string): string[] => {
+    const found: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      const full = path.join(dir, entry);
+      if (statSync(full).isDirectory()) found.push(...swiftFiles(full));
+      else if (entry.endsWith(".swift")) found.push(full);
+    }
+    return found;
+  };
+
+  /** Blanks comments, preserving length, so prose naming the key never reads as a read. */
+  const stripSwiftComments = (source: string): string =>
+    source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (match) => " ".repeat(match.length));
+
+  /**
+   * The one read outside a `View`. `TodoListViewModel.hydrateFromExternalCacheChange`
+   * opens the feed's travel from a cache notification, where there is no environment
+   * to read and no view to read it in — its own comment says so. It is listed here
+   * rather than pattern-matched because "is this a View" is not a question a text
+   * scan should be answering.
+   */
+  const UIKIT_READ_ALLOWED = path.join(IOS_SRC, "Feature", "Todos", "TodoListViewModel.swift");
+
+  it("still sees the module it is about", () => {
+    // A renamed or relocated gate would turn this rule into one that passes by
+    // finding nothing, which is the quiet way a ratchet stops being one.
+    expect(existsSync(IOS_GATE), "TdayMotionEnvironment.swift has moved — fix IOS_GATE").toBe(true);
+    expect(
+      stripSwiftComments(readFileSync(IOS_GATE, "utf-8")),
+      "the gate no longer reads the setting it exists to read",
+    ).toMatch(/accessibilityReduceMotion/);
+    expect(swiftFiles(IOS_SRC).length, "iOS .swift files").toBeGreaterThan(80);
+  });
+
+  it("nothing outside it reads the accessibility setting for itself", () => {
+    const offenders: string[] = [];
+    for (const file of swiftFiles(IOS_SRC)) {
+      if (file === IOS_GATE) continue;
+      const source = stripSwiftComments(readFileSync(file, "utf-8"));
+      if (/accessibilityReduceMotion/.test(source)) {
+        offenders.push(`${path.relative(ROOT, file)} (read \\.tdayAnimation instead)`);
+      }
+      if (file !== UIKIT_READ_ALLOWED && /UIAccessibility\.isReduceMotionEnabled/.test(source)) {
+        offenders.push(`${path.relative(ROOT, file)} (read \\.tdayAnimation instead)`);
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

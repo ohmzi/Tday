@@ -74,8 +74,9 @@ struct ScheduledTaskHomeScreen: View {
     /// Gates the today block's own motion — see the `.animation(_:value:)` that
     /// carries it and `TdayFeedItemMotion.row(reduceMotion:)`. The travel and the
     /// row legs are refused separately because they come from two different
-    /// mechanisms; that method says why.
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// mechanisms; that method says why. The transition takes the boolean because
+    /// it cannot take a nil animation — `TdayMotionResolution.isEnabled` says why.
+    @Environment(\.tdayAnimation) private var tdayAnimation
     @FocusState private var searchFieldFocused: Bool
 
     @State private var searchExpanded = false
@@ -250,7 +251,7 @@ struct ScheduledTaskHomeScreen: View {
                                         VStack(spacing: 0) {
                                             ForEach(viewModel.todayTodos) { todo in
                                                 scheduledTaskHomeTodayTaskRow(todo)
-                                                    .transition(TdayFeedItemMotion.row(reduceMotion: reduceMotion))
+                                                    .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
                                             }
                                         }
                                         // The block is what a feed adds and removes
@@ -259,11 +260,11 @@ struct ScheduledTaskHomeScreen: View {
                                         // travel below — an exit that outlasts the
                                         // arrival it undoes is the thing the rung
                                         // split exists to prevent.
-                                        .transition(TdayFeedItemMotion.row(reduceMotion: reduceMotion))
+                                        .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
                                     }
                                 }
                                 .animation(
-                                    reduceMotion ? nil : TdayFeedItemMotion.placement,
+                                    tdayAnimation(TdayFeedItemMotion.placement),
                                     value: viewModel.todayTodos.map(\.id)
                                 )
 

@@ -495,7 +495,7 @@ struct TodoListScreen: View {
     /// `.animation(_:value:)` and `timelineRowTransition`. The travel and the
     /// row legs are refused separately because they come from two different
     /// mechanisms; `TdayFeedItemMotion.row(reduceMotion:)` says why.
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.tdayAnimation) private var tdayAnimation
     @FocusState private var floaterTaskHomeSearchFieldFocused: Bool
     @FocusState private var listSearchFieldFocused: Bool
     @State private var showingCreateTask = false
@@ -2886,7 +2886,7 @@ struct TodoListScreen: View {
                 // to the drag placeholder's spring, so the three events were timed
                 // against two clocks that never agreed.
                 .animation(
-                    reduceMotion ? nil : TdayFeedItemMotion.placement,
+                    tdayAnimation(TdayFeedItemMotion.placement),
                     value: timelineItemAnimationKey
                 )
 
@@ -3415,7 +3415,7 @@ struct TodoListScreen: View {
     }
 
     private func timelineRowTransition() -> AnyTransition {
-        TdayFeedItemMotion.row(reduceMotion: reduceMotion)
+        TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled)
     }
 
     /// The drop placeholder's own transition, split out from

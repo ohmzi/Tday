@@ -64,3 +64,21 @@ the TF1 build, and Phase 8's own rows, land here alongside these.
               different file but looks like this row passing.
       Also:   with Reduce Motion on, the row is gone and the gap is closed on the next frame, and
               the day is still this day.
+
+- [ ] **PR 35a · ios · Reduce Motion lands without a relaunch** — any screen with a feed on it
+      (the Scheduled task home, or a list), with at least three tasks so a completion has rows to
+      move. The whole point of the row is that the app is never restarted: `tdayResolvedMotion()`
+      exists to make the setting live, and a relaunch would pass even if it did nothing.
+      Do:     with the app open and the feed on screen, pull down Control Centre or switch to
+              Settings → Accessibility → Motion, turn **Reduce Motion** on, and come straight back.
+              Complete a task. Then turn it off the same way, come back, and complete another.
+      Watch:  the first completion has no travel and no fade — the row is gone and the gap is closed
+              on the next frame. The second is the full choreography again. Neither needs the app
+              killed, backgrounded past a relaunch, or navigated away from and back.
+      Fails:  the first completion still animating, which is the defect this row exists for: the
+              answer was read once at mount and the subtree was never invalidated. Also a fail: the
+              feed animating again only after you navigate away and return.
+      Also:   the same flip on the Calendar screen's month grid, which is the one surface built from
+              hand-made `UIHostingController` pages. Swap to another day with Reduce Motion on: the
+              new day is simply there. A hosted page inherits none of the app's environment, so this
+              is the fallback being exercised rather than the override.
