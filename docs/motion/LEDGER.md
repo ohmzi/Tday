@@ -240,10 +240,11 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 16 — three iOS orphaned transitions, one line each
 
-- [ ] `ios-settings-dayahead-overlay-snap` — Day Ahead selector has a `.transition` with no `.animation(value:)` · ios · Sev 3 · XS · Gate G+X
-- [ ] `ios-orphaned-transition-day-ahead` — The Day Ahead selector declares a .transition with no animating ancestor, so it hard-cuts one row away from two siblings that spring · ios · Impact O3 · XS · Gate G+X
+- [x] `ios-settings-dayahead-overlay-snap` — Day Ahead selector has a `.transition` with no `.animation(value:)` · ios · Sev 3 · XS · Gate G+X
+- [x] `ios-orphaned-transition-day-ahead` — The Day Ahead selector declares a .transition with no animating ancestor, so it hard-cuts one row away from two siblings that spring · ios · Impact O3 · XS · Gate G+X
   - **Duplicate of `ios-settings-dayahead-overlay-snap` (§2.2).** No conflict to resolve — the two filings are a byte-identical one-line insert between `SettingsScreen.swift:274` and `:275`. Ticks with its twin.
-- [ ] `ios-onboarding-security-questions-cut` — neither security-questions flag is in the wizard's `.animation` list · ios · Sev 3 · XS · Gate G+X
+- [x] `ios-onboarding-security-questions-cut` — neither security-questions flag is in the wizard's `.animation` list · ios · Sev 3 · XS · Gate G+X
+  - Both flags added to the list at `OnboardingWizardOverlay.swift:119-126`: `isChoosingSecurityQuestions` on the panel spring, `isLoadingSecurityQuestions` on the loading ease. Guarded by `motion-reachability-ios.test.ts` rule B, which fails if either is dropped again.
 - [ ] `ios-security-questions-exits-animate-by-accident` — two of three exits animate only by coincidence · ios · Sev 2 · XS · Gate TF
 
 ### PR 44 — the iOS create-sheet selector overlay
@@ -511,7 +512,8 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 48 — iOS swipe-to-complete becomes reachable
 
-- [ ] `ios-swipe-to-complete-unreachable` — `standardModeContent` is dead; the only `.swipeActions` in the app is unreachable · ios · Impact O4 · M · Gate X
+- [x] `ios-swipe-to-complete-unreachable` — `standardModeContent` is dead; the only `.swipeActions` in the app is unreachable · ios · Impact O4 · M · Gate X
+  - **Closed by removal, not by revival.** `isTodayMode` and `isMinimalTimelineMode` cover all seven `TodoListMode` cases, so `modeContent`'s fallback, `standardModeContent`, and `todoRow` behind it were deleted along with the `.swipeActions(edge: .leading)` nobody could reach. The live row (`minimalTimelineRow`) completes by tap and carries a hand-rolled pan-gesture trailing swipe, not SwiftUI's `.swipeActions` — so putting a leading Complete back is a new gesture on `TodoTrailingSwipeActionsModifier` and belongs in its own device-gated PR, not in a guardrail PR that cannot compile Swift. `motion-reachability-ios.test.ts` rule C now fails on any view reachable only through an enum-exhausted branch.
 
 ### PR 37 — VoiceOver actions on iOS rows
 

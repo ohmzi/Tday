@@ -1263,16 +1263,13 @@ struct TodoListScreen: View {
         Task { await viewModel.bulkMove(targets, toListId: listID) }
     }
 
+    /// Every `TodoListMode` renders the same drop-capable minimal timeline —
+    /// Today included, so tasks can be dragged between the Morning / Afternoon /
+    /// Tonight buckets. `isTodayMode` and `isMinimalTimelineMode` cover all seven
+    /// cases between them, so the second layout this used to fall back to could
+    /// never be reached; it is gone rather than left looking like a default.
     private var modeContent: AnyView {
-        if isTodayMode {
-            // Today reuses the drop-capable minimal-timeline content so tasks can
-            // be dragged between the Morning / Afternoon / Tonight buckets.
-            return AnyView(minimalTimelineModeContent)
-        }
-        if isMinimalTimelineMode {
-            return AnyView(minimalTimelineModeContent)
-        }
-        return AnyView(standardModeContent)
+        AnyView(minimalTimelineModeContent)
     }
 
     var body: some View {
@@ -1495,6 +1492,7 @@ struct TodoListScreen: View {
                     .zIndex(31)
             }
         }
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: activeBulkSelector)
     }
 
     private var screenWithNavigationChrome: some View {
@@ -2702,181 +2700,6 @@ struct TodoListScreen: View {
         }
     }
 
-    private var standardModeContent: some View {
-        List {
-            if let errorMessage = viewModel.errorMessage {
-                Section {
-                    ErrorRetryView(message: errorMessage) {
-                        Task { await viewModel.refresh() }
-                    }
-                    .listRowBackground(colors.background)
-                }
-            }
-            ForEach(groupedSections) { section in
-                let isDropEligibleSection = draggedTodo.map { canDropTodo($0, into: section) } ?? false
-                let isActiveDropSection = activeDropSectionId == section.id && isDropEligibleSection
-                Section {
-                    ForEach(section.items) { todo in
-                        todoRow(todo, in: section)
-                            .todoInAppDropTargetFrame(
-                                targetID: "standard-row-\(section.id)-\(todo.id)",
-                                section: section,
-                                enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && isDropEligibleSection
-                            )
-                            .listRowBackground(todo.id == highlightedTodoId ? colors.surfaceVariant : colors.surface)
-                    }
-                    if viewModel.mode.supportsTaskReschedule,
-                       isActiveDropSection,
-                       section.targetDate != nil {
-                        TodoDropPlaceholder(isActive: isActiveDropSection)
-                            .todoInAppDropTargetFrame(
-                                targetID: "standard-placeholder-\(section.id)",
-                                section: section,
-                                enabled: isDropEligibleSection
-                            )
-                            .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 6, trailing: 20))
-                            .listRowBackground(colors.surface)
-                            .transition(timelineRowTransition())
-                            .scheduledTodoDropTarget(
-                                section: section,
-                                draggedTodo: draggedTodo,
-                                resolveTodo: resolveTodoForDrop,
-                                onMove: { todo, targetDate in
-                                    requestReschedule(todo, to: targetDate)
-                                },
-                                canMoveTodo: canDropTodo,
-                                onSectionChange: { sectionId in
-                                    setActiveDropSection(sectionId)
-                                }
-                            )
-                    }
-                    if viewModel.mode.supportsTaskReschedule, !section.items.isEmpty {
-                        Color.clear
-                            .frame(height: 8)
-                            .todoInAppDropTargetFrame(
-                                targetID: "standard-spacer-\(section.id)",
-                                section: section,
-                                enabled: isDropEligibleSection
-                            )
-                            .listRowInsets(EdgeInsets())
-                            .scheduledTodoDropTarget(
-                                section: section,
-                                draggedTodo: draggedTodo,
-                                resolveTodo: resolveTodoForDrop,
-                                onMove: { todo, targetDate in
-                                    requestReschedule(todo, to: targetDate)
-                                },
-                                canMoveTodo: canDropTodo,
-                                onSectionChange: { sectionId in
-                                    setActiveDropSection(sectionId)
-                                }
-                            )
-                    }
-                } header: {
-                    if section.title.isEmpty {
-                        EmptyView()
-                    } else {
-                        Text(section.title)
-                            .foregroundStyle(isActiveDropSection ? colors.error : colors.onSurfaceVariant)
-                            .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .todoInAppDropTargetFrame(
-                                targetID: "standard-header-\(section.id)",
-                                section: section,
-                                enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && isDropEligibleSection
-                            )
-                            .timelinePinnedSectionHeaderBackground()
-                            .scheduledTodoDropTarget(
-                                section: section,
-                                draggedTodo: draggedTodo,
-                                resolveTodo: resolveTodoForDrop,
-                                onMove: { todo, targetDate in
-                                    requestReschedule(todo, to: targetDate)
-                                },
-                                canMoveTodo: canDropTodo,
-                                onSectionChange: { sectionId in
-                                    setActiveDropSection(sectionId)
-                                }
-                            )
-                    }
-                }
-            }
-        }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .background(colors.background)
-        .disableVerticalScrollBounce()
-        .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)
-        .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
-    }
-
-    private var todayModeContent: some View {
-        ZStack {
-            List {
-                timelineHeroTitleRow
-
-                if let errorMessage = viewModel.errorMessage {
-                    Section {
-                        ErrorRetryView(message: errorMessage) {
-                            Task { await viewModel.refresh() }
-                        }
-                        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 18, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(colors.background)
-                        .listRowSeparator(.hidden)
-                    }
-                }
-
-                ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
-                    Section {
-                        if !section.items.isEmpty {
-                            ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
-                                minimalTimelineRow(todo, in: section)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                                    .listRowBackground(colors.background)
-                                    .listRowSeparator(.hidden)
-                                if shouldShowDateDivider(after: itemIndex, inSectionAt: index, sections: groupedSections) {
-                                    TimelineRowDivider()
-                                }
-                            }
-                        }
-                    } header: {
-                        TimelineSectionHeader(
-                            title: section.title,
-                            isActiveDropTarget: activeDropSectionId == section.id
-                        )
-                        .padding(.top, index == 0 ? 0 : TodoTimelineMetrics.sectionTopSpacing)
-                        .timelinePinnedSectionHeaderBackground()
-                        .listRowInsets(
-                            EdgeInsets(
-                                top: 0,
-                                leading: 0,
-                                bottom: 0,
-                                trailing: 0
-                            )
-                        )
-                        .listRowSeparator(.hidden)
-                    }
-                }
-
-                Color.clear
-                    .frame(height: TodoTimelineMetrics.timelineBottomSpacerHeight)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(colors.background)
-                    .listRowSeparator(.hidden)
-                    .disableVerticalScrollBounce()
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(colors.background)
-            .contentMargins(.top, 0, for: .scrollContent)
-            .listRowSpacing(0)
-            .listSectionSpacing(0)
-            .environment(\.defaultMinListRowHeight, 1)
-            .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
-
-        }
-    }
-
     /// Shown in place of the timeline when a search matches nothing. The screen's
     /// own empty scene carries it, so a screen has one no-results treatment and
     /// not two — with the way out of the query that does not need the keyboard
@@ -3081,97 +2904,6 @@ struct TodoListScreen: View {
                 }
             }
         }
-    }
-
-    private func todoRow(
-        _ todo: TodoItem,
-        in section: TodoTimelineSection
-    ) -> some View {
-        let completionPhase = completionPhases[todo.id]
-        let isCompleting = completionPhase != nil
-        let isFading = completionPhase == .fading
-        let rowContent = VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(priorityColor(todo.priority))
-                    .frame(width: 10, height: 10)
-                Text(todo.title)
-                    .font(.tdayRounded(size: 15, weight: .bold))
-                    .foregroundStyle(colors.onSurface)
-                Spacer()
-                if todo.pinned {
-                    Image(systemName: "pin.fill")
-                        .foregroundStyle(colors.tertiary)
-                }
-            }
-            if let due = todo.due {
-                HStack(spacing: 6) {
-                    Text(due.formatted(.dateTime.month(.abbreviated).day().year().hour().minute().locale(AppLocale.current)))
-                        .font(.tdayRounded(size: 12, weight: .semibold))
-                        .foregroundStyle(colors.onSurfaceVariant)
-                }
-            }
-            let flattenedDescription = flattenNotesToPlainText(todo.description)
-            if !flattenedDescription.isEmpty {
-                Text(flattenedDescription)
-                    .font(.tdayRounded(size: 12, weight: .semibold))
-                    .foregroundStyle(colors.onSurfaceVariant)
-            }
-        }
-        .opacity(isFading ? 0 : 1)
-        .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
-        .offset(y: isFading ? -10 : 0)
-        .animation(.easeInOut(duration: 0.26), value: isFading)
-        .opacity(draggedTodo?.id == todo.id ? 0.7 : 1)
-        .allowsHitTesting(!isCompleting)
-        .todoTrailingSwipeActions(
-            rowID: todo.id,
-            openRowID: $openSwipeTaskID,
-            enabled: !isCompleting && !isViewerList,
-            extraAction: promoteOrFloatSwipeAction(for: todo),
-            onEdit: {
-                editingTodo = todo
-            },
-            onCopy: {
-                viewModel.copyToClipboard(todo)
-            },
-            onDelete: {
-                Task { await viewModel.delete(todo) }
-            }
-        )
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button {
-                completeTodoWithoutReflow(todo)
-            } label: {
-                Label("Complete", systemImage: "checkmark")
-            }
-            .tint(.green)
-        }
-
-        return rowContent
-            .transition(.opacity.combined(with: .scale(scale: 0.985)))
-            .scheduledTodoDropTarget(
-                section: section,
-                draggedTodo: draggedTodo,
-                resolveTodo: resolveTodoForDrop,
-                onMove: { droppedTodo, targetDate in
-                    requestReschedule(droppedTodo, to: targetDate)
-                },
-                canMoveTodo: canDropTodo,
-                onSectionChange: { sectionId in
-                    setActiveDropSection(sectionId)
-                }
-            )
-            .modifier(
-                TodoInAppDragModifier(
-                    enabled: viewModel.mode.supportsTaskReschedule && !isViewerList,
-                    todo: todo,
-                    onStart: beginInAppDrag,
-                    onMove: updateInAppDrag,
-                    onEnd: finishInAppDrag,
-                    onCancel: cancelInAppDrag
-                )
-            )
     }
 
     /// Dim factor for a "resting" floater row: 1 = normal, lower = faded/dormant.

@@ -118,8 +118,10 @@ struct OnboardingWizardOverlay: View {
         }
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: step)
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isCreatingAccount)
+        .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isChoosingSecurityQuestions)
         .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isShowingForgotPassword)
         .animation(.easeInOut(duration: 0.2), value: isConnecting)
+        .animation(.easeInOut(duration: 0.2), value: isLoadingSecurityQuestions)
         .animation(.easeInOut(duration: 0.2), value: authViewModel.isLoading)
         .animation(.easeInOut(duration: 0.2), value: isCompletingAuthentication)
         .alert("Save server URL?", isPresented: serverURLSavePromptBinding) {
