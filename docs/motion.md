@@ -78,7 +78,7 @@ vocabulary stops being one.
 | `Enter` | `200` | `0.2` | `var(--tday-duration-enter)` | One element arrives, or a control changes state under its own steam — and nothing argues for another length |
 | `Change` | `260` | `0.26` | `var(--tday-duration-change)` | The user's own edit is replayed back to them **in place**; they are meant to watch it finish |
 | `Emphasis` | `320` | `0.32` | `var(--tday-duration-emphasis)` | Position or size changes: a row takes a new slot, a sheet arrives, a strikethrough sweeps across |
-| `Scene` | `520` | `0.52` | `var(--tday-duration-scene)` | A full-bleed illustration rises into an empty feed, or sinks out of one |
+| `Scene` | `520` | `0.52` | `var(--tday-duration-scene)` | A full-bleed illustration rises into an empty feed. The arrival, and not the way back out — see the bullet below |
 
 Five rungs, deliberately. Rungs closer together than about two frames at 60 Hz
 cannot be told apart by eye, which means a guardrail cannot tell a correct
@@ -123,10 +123,16 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1558`,
   `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:286`,
   `tday-web/src/globals.css:570`.
-- **`Scene` (520).** 2 Android, 1 iOS, 2 web — four of the five are the
-  empty-state illustration arriving or leaving, on all three clients. It is
-  **not** for route or tab handovers: `globals.css` argues in place for why
-  anything longer there reads as a stall. Anchors:
+- **`Scene` (520).** 2 Android, 1 iOS, 2 web at the census. This rung is the
+  empty-state illustration **arriving**: all three clients name their site for
+  the enter (`EnterMillis`, `EmptyStateEnter.duration`, `.tday-empty-enter`).
+  It is **not** the way back out. There is one exit that mirrors that arrival
+  anywhere in the tree — web's, played during an "Earlier" hand-off — and it is
+  deliberately not on this rung: an exit that hands a slot to an arrival answers
+  to that arrival's length, not to the length of the scene it undoes, and
+  `todayEarlierIllustration.ts` writes the argument out where the constant is.
+  Nor is this rung for route or tab handovers: `globals.css` argues in place for
+  why anything longer there reads as a stall. Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:372`,
   `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:272`,
   `tday-web/src/globals.css:608`.
@@ -198,7 +204,7 @@ against `animation-core`'s bytecode rather than assumed.
   web today.
 - **`Scene`.** `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:375`, and three
   declarations on web — `.tday-empty-enter` at `tday-web/src/globals.css:608`,
-  `.tday-surface-enter` at `:724` and `.tday-surface-exit` at `:730`. iOS
+  `.tday-surface-enter` at `:789` and `.tday-surface-exit` at `:795`. iOS
   expresses the same arrival with `.easeOut` and is not on this curve yet.
 - **`Gesture`.** Four sites, all web: `tday-web/src/globals.css:249` and `:271`
   (press feedback), `tday-web/src/features/calendar/style/calendar-styles.css:24`
@@ -346,7 +352,7 @@ because the user cannot tell it from a broken render. Android reads
   than at `0f` with the animation skipped.
 - iOS: `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:112` sets `entered = true`
   and returns before the `withAnimation` block.
-- Web: `tday-web/src/globals.css:674` switches the scene's animations off and
+- Web: `tday-web/src/globals.css:744` switches the scene's animations off and
   pins the sparkle to `opacity: 1`, with the reason in the block.
 - Web, the JS half: CSS cannot see a `setTimeout`, so a sequence gated in
   JavaScript has to ask the same question. `tday-web/src/lib/prefersReducedMotion.ts`
@@ -370,7 +376,7 @@ change pixels or destroy an argument that is worth more than the tidiness.
 | The 340–420 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/TdayApp.kt:119` (360, nav fade-in); `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5757` (420); `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:214` and `:452` (340 ms hand-off sleeps); `tday-web/src/globals.css:249` (340 ms ripple) | Five values, no two of them the same motion, and nothing that would still be true if they were merged. A rung here would sit one frame from `Emphasis` and could not be told from it by eye — exactly the case the five-rung ladder exists to refuse |
 | The 600–620 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5761` (620); `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:136` (0.62 flash delay) | Both are legs of the search-result reveal, timed against the legs either side of them rather than against a ladder. They are longer than `Scene`, which is the app's longest *motion* — these are waits |
 | iOS sub-frame sequencing constants | `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:133` (0.08 s pre-scroll delay); `ios-swiftUI/Tday/Feature/Completed/CompletedScreen.swift:468` (0.1 s) | Below the two-frame floor the ladder is built on. They order events; they are not motions anybody watches |
-| `cubic-bezier(0.3, 0, 0.4, 1)` | `tday-web/src/globals.css:667` (`--tday-empty-sink-ease`, ridden by `.tday-empty-exit` and by the `.tday-empty-slot` track it closes) | The empty scene *sinking*. Deliberately not `Scene`'s curve read backwards — the exit is played only during an "Earlier" hand-off and is tuned against that hand-off's own timing. Named as a property rather than written twice: the ink and the slot under it have to leave on one curve or they read as two departures |
+| `cubic-bezier(0.3, 0, 0.4, 1)` | `tday-web/src/globals.css:683` (`--tday-empty-sink-ease`, ridden by `.tday-empty-exit` and by the `.tday-empty-slot` track it closes) | The empty scene *sinking*. Deliberately not `Scene`'s curve read backwards — the exit is played only during an "Earlier" hand-off and is tuned against that hand-off's own timing. Named as a property rather than written twice: the ink and the slot under it have to leave on one curve or they read as two departures |
 | `cubic-bezier(0.25, 1, 0.5, 1)` | `tday-web/src/components/app/RootDock.tsx:122` | The dock's sliding indicator pill. A hard-out curve with no counterpart on Android or iOS, which express the dock with springs |
 | `cubic-bezier(0.22, 0.61, 0.36, 1)` | `tday-web/src/components/onboarding/OnboardingWizard.tsx:723` | An inline height transition on the wizard. One site, one client, and a height animation is the one place a curve's tail is load-bearing against layout |
 | `SettleSpring` (0.9 damping, `StiffnessMediumLow`) | `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayHeroTitleHeader.kt:210` | Pinned to the iOS UIView spring its doc comment names, not to the vocabulary's `Settle`. Moving it onto the token would undo the cross-platform match the comment argues for — the opposite of what a token layer is for |
