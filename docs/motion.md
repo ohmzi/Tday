@@ -106,8 +106,10 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   clients. Anchors: `tday-web/src/components/settings/SettingsPage.tsx:287`,
   `ios-swiftUI/Tday/Feature/Onboarding/OnboardingWizardOverlay.swift:123`.
 - **`Change` (260).** 3 Android tweens, 8 iOS `.easeInOut(duration: 0.26)`, and
-  4 on web (two named constants and two CSS animations) — fifteen sites across
-  all three clients, with the weight on iOS. If the thing changes *where* or
+  2 on web, both named constants — thirteen sites across all three clients, with
+  the weight on iOS. It was fifteen until the calendar's two paging animations
+  moved to `Emphasis`: a page turn moves the grid, and moving is geometry.
+  If the thing changes *where* or
   *how big* it is, that is `Emphasis`, not this; one Android site already
   disagrees, running a *placement* on 260 at
   `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:3159`,
