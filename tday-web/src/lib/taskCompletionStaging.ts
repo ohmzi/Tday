@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 import {
   TASK_COMPLETION_CHECK_TO_STRIKE_MS,
   TASK_COMPLETION_STRIKE_TO_FADE_MS,
@@ -70,14 +71,23 @@ export function getTaskCompletionPhase(id: string): TaskCompletionPhase | null {
 export function stageTaskCompletion(id: string, commit: () => void): void {
   if (staged.has(id)) return;
 
+  const removeAt = TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS;
+  // The last leg of the sequence is the collapse, and with reduce-motion on there is no collapse:
+  // the row is handed its finished frame — no ink, no box — the instant the phase flips. Waiting
+  // out a trip nobody is taking is `docs/motion.md`'s fifth idiom rule broken from the other side,
+  // and the reader made to sit through the pause would be the one who asked for less motion, not
+  // more. So the commit follows the frame instead of the animation that is switched off.
+  //
+  // Read here rather than subscribed, because this is the moment the timers arm and a `setTimeout`
+  // cannot change its mind afterwards. A preference that flips mid-sequence is the row's problem —
+  // it has the hook, and drawing the finished frame is all that is left to get right by then.
+  const commitAt = prefersReducedMotion() ? removeAt : TASK_COMPLETION_TOTAL_MS;
+
   const entry: StagedCompletion = { phase: "checked", timers: [] };
   staged.set(id, entry);
   entry.timers.push(
     window.setTimeout(() => advanceTo(id, "struck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS),
-    window.setTimeout(
-      () => advanceTo(id, "removing"),
-      TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS,
-    ),
+    window.setTimeout(() => advanceTo(id, "removing"), removeAt),
     window.setTimeout(() => {
       // The entry goes before the commit runs, so the sequence cannot outlive itself. It matters
       // for Undo: committing stages the row out of the caches and raises the undo toast, and Undo
@@ -92,7 +102,7 @@ export function stageTaskCompletion(id: string, commit: () => void): void {
         // about — faded to nothing, with no way back.
         emit();
       }
-    }, TASK_COMPLETION_TOTAL_MS),
+    }, commitAt),
   );
   emit();
 }

@@ -118,6 +118,21 @@ function row(): HTMLElement {
   return element;
 }
 
+/**
+ * The grid item inside that box — the one holding the row's content, found through the checkbox
+ * rather than by class so it survives a restyle.
+ *
+ * It gets its own assertions because a grid item's automatic minimum size is its own content: the
+ * track above can be told to run to 0fr all it likes and the box will not close until this element
+ * is allowed to be smaller than the row it holds.
+ */
+function foreground(): HTMLElement {
+  const checkbox = screen.getByRole("checkbox");
+  const item = Array.from(row().children).find((child) => child.contains(checkbox));
+  if (!item) throw new Error("the row's foreground is not on screen");
+  return item as HTMLElement;
+}
+
 const REAL_MATCH_MEDIA = window.matchMedia;
 
 describe("ticking a task row's checkbox", () => {
@@ -149,7 +164,16 @@ describe("ticking a task row's checkbox", () => {
     expect(title().className).not.toContain("task-strike");
     expect(queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])).toHaveLength(2);
 
+    // The track is the whole height animation: `gridTemplateRows` is an inert property on
+    // anything that is not a grid, so a later tidy-up that drops these two classes from a row
+    // which visibly stacks nothing would leave the collapse silently doing nothing at all.
+    expect(row().className).toContain("grid-rows-[1fr]");
+    expect(row().className).toMatch(/(^|\s)grid(\s|$)/);
     expect(row().style.gridTemplateRows).toBe("");
+    // Nothing is clipped or unclamped while the row is staying: that would cost it the focus ring
+    // and the hover actions, which sit proud of its box.
+    expect(foreground().style.overflow).toBe("");
+    expect(foreground().style.minHeight).toBe("");
 
     // 2. Strike sweeps in. The title uses the swept rule, not a plain line-through — notes keep
     //    the plain one, exactly as the native rows split it. The box is still at full height:
@@ -172,6 +196,9 @@ describe("ticking a task row's checkbox", () => {
     expect(row().style.opacity).toBe("0");
     expect(row().style.gridTemplateRows).toBe("0fr");
     expect(row().style.transition).toContain("grid-template-rows");
+    // And the content is let go of, so the track has room to close under it.
+    expect(foreground().style.overflow).toBe("hidden");
+    expect(foreground().style.minHeight).toBe("0px");
     expect(queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])).toHaveLength(2);
 
     // 4. Gone once the box is shut, and the rows below close up.
@@ -223,11 +250,17 @@ describe("ticking a task row's checkbox", () => {
   });
 
   /**
-   * Reduced motion removes the trip, never the destination (docs/motion.md, fifth idiom rule). A
-   * row held at the start of its collapse would be a finished task still occupying a full-height
-   * box — which is not "no animation", it is the bug with the animation switched off.
+   * Reduced motion removes the trip, never the destination — and it has to remove the WAIT for the
+   * trip with it (docs/motion.md, fifth idiom rule, which names this as the rule broken from the
+   * other side). The last leg exists to let the box finish closing; with the collapse switched off
+   * there is no box left to close, so holding the prune back would be a third of a second of
+   * nothing between the row going and the undo toast arriving — spent by the one reader who asked
+   * for less motion, not more.
+   *
+   * The contrast is beat 3 of the first test above, which finds the row still in the caches at
+   * exactly this instant.
    */
-  it("draws the finished frame outright under reduced motion", async () => {
+  it("prunes as soon as the frame is finished under reduced motion", async () => {
     installReducedMotion(true);
     const queryClient = renderRow();
 
@@ -240,11 +273,45 @@ describe("ticking a task row's checkbox", () => {
       );
     });
 
+    expect(queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])?.map((t) => t.id)).toEqual([
+      "todo-2",
+    ]);
+  });
+
+  /**
+   * The preference can also arrive mid-sequence — a battery saver trips, or the reader reaches for
+   * the setting because of what they just saw. The timers are already armed by then and cannot be
+   * told, but the row can: it subscribes rather than reading once, so what is left to get right is
+   * the frame, and the frame it must draw is the finished one.
+   *
+   * This is the branch that survives the cut above, and the only place the row's own reduced-motion
+   * style is reachable.
+   */
+  it("drops the transition when the preference flips mid-sequence", async () => {
+    const reduced = installReducedMotion(false);
+    const queryClient = renderRow();
+
+    await act(async () => {
+      screen.getByRole("checkbox").click();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(
+        TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS + 10,
+      );
+    });
+    expect(row().style.transition).toContain("grid-template-rows");
+
+    await act(async () => {
+      reduced.set(true);
+    });
+
+    // Destination without the trip: an empty box and no ink, arrived at rather than travelled to.
+    expect(row().style.transition).toBe("");
     expect(row().style.gridTemplateRows).toBe("0fr");
     expect(row().style.opacity).toBe("0");
-    expect(row().style.transition).toBe("");
 
-    // And the completion still lands: the preference silences the motion, not the work.
+    // And the completion still lands on the clock it was armed with: the preference silences the
+    // motion, not the work.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(TASK_COMPLETION_TOTAL_MS);
     });

@@ -108,14 +108,19 @@ export default function FloaterItemContainer({
       return;
     }
     if (completing) return;
+    const removeAt = TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS;
     setCompletePhase("checked");
     completeTimers.current.push(
       window.setTimeout(() => setCompletePhase("struck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS),
+      window.setTimeout(() => setCompletePhase("removing"), removeAt),
+      // The scheduled row's staging module makes the same cut and argues it there: the last leg
+      // waits for the collapse, so with reduce-motion on there is nothing left to wait for.
+      // `reduceMotion` is this render's value, which is the answer at the instant a tap arms these
+      // timers — the same question `prefersReducedMotion()` asks on the other row.
       window.setTimeout(
-        () => setCompletePhase("removing"),
-        TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS,
+        () => completeMutateFn(floater),
+        reduceMotion ? removeAt : TASK_COMPLETION_TOTAL_MS,
       ),
-      window.setTimeout(() => completeMutateFn(floater), TASK_COMPLETION_TOTAL_MS),
     );
   };
 
