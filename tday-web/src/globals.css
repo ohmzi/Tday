@@ -288,19 +288,6 @@
     }
   }
 
-  @keyframes scroll-left {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-100%);
-    }
-  }
-
-  .animate-scroll-left {
-    animation: scroll-left 30s infinite linear;
-  }
-
   :root {
     /*
      * Toast action ("Undo") colour. Mirrors the iOS snackbar accent exactly —
@@ -514,22 +501,6 @@
     background-clip: content-box;
   }
 }
-/* ── Task completion animation ── */
-@keyframes task-complete-out {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-}
-
-.animate-task-complete {
-  animation: task-complete-out 280ms ease-out forwards;
-}
-
 /*
  * Title strike: the font's own `line-through`, so it crosses the text on every
  * line of a wrapped title. A single swept rule could not — it was one absolutely
@@ -566,25 +537,6 @@
   .task-strike {
     animation: none;
   }
-}
-
-/* ── View Transitions (Chrome 111+) ── */
-@view-transition {
-  navigation: auto;
-}
-
-::view-transition-old(root) {
-  animation: 180ms ease-out both fade-out;
-}
-::view-transition-new(root) {
-  animation: 180ms ease-in both fade-in;
-}
-
-@keyframes fade-out {
-  to { opacity: 0; }
-}
-@keyframes fade-in {
-  from { opacity: 0; }
 }
 
 /* https://www.joshwcomeau.com/css/designing-shadows/ */
@@ -703,6 +655,10 @@
    Screens share a toolbar row, so nothing in the bar moves between routes; the
    fade is what turns a one-frame swap into a handover. Short: this sits between
    a tap and the screen the user asked for, and anything longer reads as lag. */
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
 .tday-route-fade {
   animation: 140ms ease-out both fade-in;
 }
