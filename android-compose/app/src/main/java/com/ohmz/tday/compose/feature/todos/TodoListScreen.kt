@@ -8,6 +8,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -1189,6 +1190,28 @@ fun TodoListScreen( // skipcq: KT-R1006
             !uiState.isLoading &&
             !suppressInitialTodayTimeline &&
             !scopedSearchActive
+    // The scene's own visibility, and the transition that plays it, hoisted out of the
+    // `item {}` that draws it.
+    //
+    // It has to live up here because `earlierIllustrationPresent` above is implied by
+    // `showEarlierIllustration`: completing the last task in scope turns both true on the
+    // same frame, so the item is created at the exact moment the scene should be appearing.
+    // An `AnimatedVisibility(visible = …)` inside it would therefore enter composition with
+    // initialState == targetState and skip its enter outright — the 190 ms fade + expand
+    // below was never once seen, and 34 % of the screen claimed its slot in one jump,
+    // shoving Earlier's header down with it. A transition state remembered out here
+    // outlives the item's mount, so it still holds the "not visible yet" the enter needs
+    // to animate from.
+    //
+    // Seeded from the live value rather than from `false`, deliberately: seeding false
+    // would also animate the scene in on every cold entry into an already-finished Today,
+    // which is motion nobody asked for. Keyed by scope for the same reason — arriving at a
+    // mode or list that is already empty is a cold entry too, not a transition.
+    val earlierSceneVisible = showEarlierIllustration || showEarlierExpandedCelebration
+    val earlierSceneTransition = remember(uiState.mode, uiState.listId) {
+        MutableTransitionState(earlierSceneVisible)
+    }
+    earlierSceneTransition.targetState = earlierSceneVisible
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -1898,8 +1921,12 @@ fun TodoListScreen( // skipcq: KT-R1006
                             contentType = "today-earlier-empty-scene",
                         ) {
                             AnimatedVisibility(
-                                visible = showEarlierIllustration ||
-                                        showEarlierExpandedCelebration,
+                                // `earlierSceneTransition`, not a plain `visible =`: this
+                                // item is mounted by a guard that the visibility implies,
+                                // so a boolean here would arrive already true and the
+                                // enter below would never play. See where the state is
+                                // remembered, above the guard, for the whole story.
+                                visibleState = earlierSceneTransition,
                                 // Fade AND expand: the mirror of exit's fade +
                                 // shrink below, so the scene's arrival reads
                                 // as the same one motion running backwards
