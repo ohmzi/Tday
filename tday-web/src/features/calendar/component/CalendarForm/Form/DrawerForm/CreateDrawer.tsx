@@ -1,21 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Options, RRule } from "rrule";
-import { TodoItemType } from "@/types";
+import { RRule } from "rrule";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { SheetHeader } from "@/components/ui/sheet-chrome";
 import { useCreateCalendarTodo } from "@/features/calendar/query/create-calendar-todo";
 import ConfirmCancelEditDrawer from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEditDrawer";
-import deriveRepeatType from "@/lib/deriveRepeatType";
+import type { CalendarTaskFormState } from "@/features/calendar/hooks/useCalendarTaskFormState";
 import CalendarTaskFormBody from "../CalendarTaskFormBody";
-
-type DrawerDateRange = { from: Date; to: Date };
 
 type CreateCalendarFormProps = {
   start: Date;
   end: Date;
   displayForm: boolean;
   setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
+  /** Owned by CreateFormContainer so it outlives the 640 px modal/drawer swap. */
+  form: CalendarTaskFormState;
 };
 
 export default function CreateCalendarDrawer({
@@ -23,18 +22,30 @@ export default function CreateCalendarDrawer({
   end,
   displayForm,
   setDisplayForm,
+  form,
 }: CreateCalendarFormProps) {
+  // The slot dates only seed the draft, and that now happens in CreateFormContainer;
+  // the drawer reads the seeded range back out of `form`.
   void start;
+  void end;
   const { t: appDict } = useTranslation("app");
   const titleRef = useRef<HTMLDivElement | null>(null);
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<TodoItemType["priority"]>("Low");
-  const [dateRange, setDateRange] = useState<DrawerDateRange>({ from: end, to: end });
-  const [rruleOptions, setRruleOptions] = useState<Partial<Options> | null>(null);
-  const [listID, setListID] = useState<string | null>(null);
-  const derivedRepeatType = deriveRepeatType({ rruleOptions });
+  const {
+    title,
+    setTitle,
+    description,
+    setDescription,
+    priority,
+    setPriority,
+    dateRange,
+    setDateRange,
+    rruleOptions,
+    setRruleOptions,
+    listID,
+    setListID,
+    derivedRepeatType,
+  } = form;
 
   const [cancelEditDialogOpen, setCancelEditDialogOpen] = useState(false);
   const { createCalendarTodo, createTodoStatus } = useCreateCalendarTodo();
