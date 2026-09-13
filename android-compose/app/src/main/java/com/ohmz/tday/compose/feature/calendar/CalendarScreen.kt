@@ -102,8 +102,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
@@ -116,6 +114,7 @@ import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
@@ -412,7 +411,7 @@ fun CalendarScreen(
         activeDropDateIso = null
         calendarDropTargetBounds.clear()
         if (calendarTaskAlreadyDueOnDate(todo, targetDate, zoneId)) return
-        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+        TdayHaptics.dragDrop(view)
         TdayTelemetry.addBreadcrumb(
             "calendar.drag_reschedule",
             data = mapOf(
@@ -936,7 +935,7 @@ private fun CalendarCreateTaskFab(
     val view = LocalView.current
     FloatingActionButton(
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         modifier = Modifier.size(TdayDimens.FabSize),
@@ -1668,7 +1667,7 @@ private fun CalendarBarButton(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -1741,7 +1740,7 @@ private fun CalendarTodayButton(
             }
             .animateContentSize(),
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -2417,7 +2416,7 @@ private fun CalendarTodoRow(
                     revealProgress = actionRevealProgress,
                     revealDelay = 0.62f,
                     onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        TdayHaptics.buttonPress(view)
                         closeSwipeSlot()
                         onInfo()
                     },
@@ -2431,7 +2430,7 @@ private fun CalendarTodoRow(
                     revealProgress = actionRevealProgress,
                     revealDelay = 0.40f,
                     onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        TdayHaptics.buttonPress(view)
                         closeSwipeSlot()
                         runCatching {
                             clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
@@ -2451,7 +2450,7 @@ private fun CalendarTodoRow(
                     revealProgress = actionRevealProgress,
                     revealDelay = 0.04f,
                     onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        TdayHaptics.destructive(view)
                         closeSwipeSlot()
                         onDelete()
                     },
@@ -2475,10 +2474,7 @@ private fun CalendarTodoRow(
                                         dragPointerPosition = startPosition
                                         onDragStart(startPosition)
                                         onDragMove(startPosition)
-                                        ViewCompat.performHapticFeedback(
-                                            view,
-                                            HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                        )
+                                        TdayHaptics.dragPickUp(view)
                                     },
                                     onDrag = { change, dragAmount ->
                                         change.consume()
@@ -2579,7 +2575,7 @@ private fun CalendarTodoRow(
                         },
                         enabled = !pendingCompletion,
                         onClick = {
-                            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                            TdayHaptics.completion(view)
                             taskCompletionSound.play()
                             closeSwipeSlot()
                             localChecked = true
@@ -2756,7 +2752,7 @@ private fun CalendarCompletedTodoRow(
                     },
                     enabled = !pendingUncomplete,
                     onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        TdayHaptics.toggle(view, on = false)
                         pendingUncomplete = true
                         coroutineScope.launch {
                             delay(180)
