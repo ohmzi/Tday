@@ -5,6 +5,7 @@ import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { taskJustCompleted } from "@/lib/task-completion-signal";
 import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
+import { useRowPlacement } from "@/hooks/useRowPlacement";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { sortFloatersByPriority } from "@/lib/floater/buildFloaterSections";
@@ -39,6 +40,7 @@ export default function NativeFloaterTaskHomeDashboard() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [createListOpen, setCreateListOpen] = useState(false);
+  const placementRef = useRowPlacement<HTMLDivElement>();
   const floaterAccent = nativeScreenAccentColors.floater;
 
   const listCounts = useMemo(() => {
@@ -87,7 +89,16 @@ export default function NativeFloaterTaskHomeDashboard() {
   return (
     <>
       <ScreenWatermark icon={Leaf} color={floaterAccent} />
-      <div className="flex w-full flex-col gap-4 sm:gap-5">
+      {/* The same travel the scheduled task home's column got, for the worse version of
+          its problem. Ticking the last Anytime task swaps a one-row feed for the
+          `min-h-[42vh]` empty state, so the lists below drop by most of a screen — and
+          they did it in the frame the confetti fired, which put the biggest uncued jump
+          in the app underneath the one moment nobody is looking at the layout. Now the
+          tiles glide down over the burst and the scene comes up behind them — the delay
+          that already holds a celebrating scene back (`.tday-empty-enter-celebrating`)
+          is the same length as this travel, so the illustration starts rising as the
+          last tile lands, which is the order Android spells out as `PlacementLead`. */}
+      <div ref={placementRef} className="flex w-full flex-col gap-4 sm:gap-5">
         <RootFeedHeroHeader
           title={appDict("floater")}
           mark="floaterLeaf"
