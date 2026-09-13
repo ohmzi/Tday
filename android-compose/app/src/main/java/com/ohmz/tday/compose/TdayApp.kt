@@ -2,10 +2,13 @@ package com.ohmz.tday.compose
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -71,9 +74,11 @@ import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.SnackbarEvent
 import com.ohmz.tday.compose.core.ui.SnackbarKind
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdayToastData
 import com.ohmz.tday.compose.core.ui.TdayToastHost
 import com.ohmz.tday.compose.core.ui.TdayToastKind
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
@@ -1100,38 +1105,93 @@ private fun RootFeedContent(
         return
     }
     Box(modifier = Modifier.fillMaxSize()) {
-        when (rootFeedTab) {
-            RootFeedTab.SCHEDULED_TASK_HOME -> ScheduledTaskHomeFeed(
-                appUiState = appUiState,
-                appViewModel = appViewModel,
-                navController = navController,
-                onChangeRootFeedTab = onChangeRootFeedTab,
-                rootCreateTaskRequestKey = rootCreateTaskRequestKey,
-                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
-                scrollToTopRequestKey = scheduledScrollToTopRequestKey,
-                onRootDockCollapsedChange = onRootDockCollapsedChange,
-                onRootControlsVisibleChange = onRootControlsVisibleChange,
-            )
+        // The dock's selector springs across to the tab that was tapped, and the feed under
+        // it used to change on the next frame: one gesture running at two speeds, so the
+        // body read as a cut rather than as the thing the pill was carrying. Nothing here
+        // travels — the arriving feed is drawn in the slot the leaving one had — so by the
+        // geometry rule this is not Emphasis, and a tab handover is the Quick rung the
+        // vocabulary already names for it. Shorter than the selector's spring on purpose:
+        // the body is following a control rather than being one, and a surface that is
+        // still resolving after the control it answers has landed reads as lag. iOS makes
+        // the same swap on the same rung and the same curve.
+        Crossfade(
+            targetState = rootFeedTab,
+            // Crossfade's own wrapper would size to its content; the feeds were direct
+            // children of the box above until now and are measured against the screen.
+            modifier = Modifier.fillMaxSize(),
+            // Both halves run on one clock, so neither the Enter nor the Exit curve
+            // describes it; Standard is the curve for when nothing argues otherwise. With
+            // motion off the swap snaps, which draws the arriving feed finished rather than
+            // holding it half-faded (docs/motion.md's fifth idiom rule).
+            animationSpec = if (rememberTdayMotionEnabled()) {
+                tween(
+                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    easing = TdayMotionTokens.Easings.Standard,
+                )
+            } else {
+                snap()
+            },
+            label = "rootFeedTabSwap",
+        ) { tab ->
+            // Both feeds are composed for the length of the fade and only one of them is the
+            // tab that was asked for. A create-task request landing inside that window — the
+            // widget's `tday://todos/create?target=floater` switches tab and then asks for
+            // the sheet — belongs to the arriving feed alone: handing the live key to the
+            // copy on its way out would open a sheet nobody asked for and consume the
+            // request the arriving feed is waiting for. 0 is the same "nothing pending"
+            // sentinel `consumeRootCreateTaskRequest` writes back.
+            val createTaskRequestKey = if (tab == rootFeedTab) rootCreateTaskRequestKey else 0
 
-            RootFeedTab.FLOATER_TASK_HOME -> FloaterTaskHomeFeed(
-                appUiState = appUiState,
-                navController = navController,
-                onChangeRootFeedTab = onChangeRootFeedTab,
-                rootCreateTaskRequestKey = rootCreateTaskRequestKey,
-                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
-                scrollToTopRequestKey = floaterScrollToTopRequestKey,
-                onRootDockCollapsedChange = onRootDockCollapsedChange,
-                onRootControlsVisibleChange = onRootControlsVisibleChange,
-            )
+            when (tab) {
+                RootFeedTab.SCHEDULED_TASK_HOME -> ScheduledTaskHomeFeed(
+                    appUiState = appUiState,
+                    appViewModel = appViewModel,
+                    navController = navController,
+                    onChangeRootFeedTab = onChangeRootFeedTab,
+                    rootCreateTaskRequestKey = createTaskRequestKey,
+                    onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                    scrollToTopRequestKey = scheduledScrollToTopRequestKey,
+                    onRootDockCollapsedChange = onRootDockCollapsedChange,
+                    onRootControlsVisibleChange = onRootControlsVisibleChange,
+                )
+
+                RootFeedTab.FLOATER_TASK_HOME -> FloaterTaskHomeFeed(
+                    appUiState = appUiState,
+                    navController = navController,
+                    onChangeRootFeedTab = onChangeRootFeedTab,
+                    rootCreateTaskRequestKey = createTaskRequestKey,
+                    onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                    scrollToTopRequestKey = floaterScrollToTopRequestKey,
+                    onRootDockCollapsedChange = onRootDockCollapsedChange,
+                    onRootControlsVisibleChange = onRootControlsVisibleChange,
+                )
+            }
         }
 
         if (rootControlsVisible) {
-            val rootCreateTaskButtonColor =
-                if (rootFeedTab == RootFeedTab.FLOATER_TASK_HOME) {
+            // The dock's own tint already crosses between the two accents when the tab
+            // changes; the create button was the last surface still cutting, so a swap left a
+            // blue-to-green jump in the corner of an otherwise continuous handover. The accent
+            // is part of that one handover rather than a second event, so it rides the body's
+            // rung and curve — iOS gets the same thing for free, because its create button and
+            // dock sit inside the transaction its tab switch already runs in. With motion off
+            // it snaps: the button is drawn in the arriving tab's accent, finished.
+            val rootCreateTaskButtonColor by animateColorAsState(
+                targetValue = if (rootFeedTab == RootFeedTab.FLOATER_TASK_HOME) {
                     TdayFloaterAccent
                 } else {
                     TdayTodayBlue
-                }
+                },
+                animationSpec = if (rememberTdayMotionEnabled()) {
+                    tween(
+                        durationMillis = TdayMotionTokens.Durations.Quick,
+                        easing = TdayMotionTokens.Easings.Standard,
+                    )
+                } else {
+                    snap()
+                },
+                label = "rootCreateTaskAccent",
+            )
 
             RootFeedDock(
                 activeTab = rootFeedTab,

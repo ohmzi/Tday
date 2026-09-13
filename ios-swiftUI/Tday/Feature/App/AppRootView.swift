@@ -24,6 +24,7 @@ struct AppRootView: View {
     // Optional biometric gate, default OFF. When disabled every member below is inert.
     @State private var appLock = AppLockController()
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(container: AppContainer) {
         self.container = container
@@ -66,6 +67,7 @@ struct AppRootView: View {
                                 ) { route in
                                     handleRoute(route)
                                 }
+                                .transition(.opacity)
                             case .floaterTaskHome:
                                 TodoListScreen(
                                     container: container,
@@ -93,12 +95,35 @@ struct AppRootView: View {
                                     },
                                     summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
                                 )
+                                .transition(.opacity)
                             }
 
                             if appViewModel.isWorkspaceAvailable, rootControlsVisible {
                                 rootFloatingControls
                             }
                         }
+                        // The dock's pill slides to the tab that was tapped and the feed under
+                        // it changed on the next frame: one gesture running at two speeds. The
+                        // two transitions above are inert without a transaction, and this is
+                        // it. Nothing in the body travels — the arriving feed is drawn in the
+                        // slot the leaving one had — so by the geometry rule this is not
+                        // Emphasis, and a tab handover is the Quick rung the vocabulary
+                        // already names for it. Quick also keeps the fade inside the 180 ms
+                        // `presentPendingRootCreateTaskIfReady` waits out, so a deep link that
+                        // switches tab and then asks for a create sheet still finds one feed
+                        // on screen. The floating controls are in the transaction too, which
+                        // crosses their accent over with the body instead of snapping it; the
+                        // pill is a `UISegmentedControl`, so its own indicator stays on
+                        // UIKit's timing rather than this one. Android crossfades the same
+                        // swap on the same rung and curve, and drives its own create button's
+                        // accent across on that rung too so the corner doesn't cut while the
+                        // body fades. Reduce Motion passes no animation at all: the swap
+                        // cuts to the arriving feed finished rather than holding it
+                        // half-faded (`docs/motion.md`'s fifth idiom rule).
+                        .animation(
+                            reduceMotion ? nil : TdayMotion.standard(duration: TdayMotion.Durations.quick),
+                            value: rootFeedTab
+                        )
                     }
                     .blur(radius: showOnboardingOverlay ? 6 : 0)
                     .scaleEffect(showOnboardingOverlay ? 0.992 : 1)
