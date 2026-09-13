@@ -72,7 +72,7 @@ object TaskSwipeMotion {
  * zero twice running would animate once.
  */
 @Stable
-internal class TaskSwipeRelease(  // skipcq
+internal class TaskSwipeRelease(  // skipcq: KT-W1058
     val fromPx: Float,
     val toPx: Float,
     val initialVelocityPxPerSecond: Float,

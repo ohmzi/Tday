@@ -154,6 +154,11 @@ cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme"
               for the whole gesture; the hint's 150 ms return never runs.
       Fails:  the row is yanked back to zero under the thumb part-way through the drag, so the swipe
               has to be started again from closed.
+      Valid:  only if the thumb lands while the row is still visibly held out at the peek offset. The
+              window is 150 ms from your own tap and human reaction to the peek is ~200-250 ms, so
+              expect to miss it more often than not. If the row has already snapped back to closed
+              before the thumb lands, the hold is over and the run does not count — the drag then
+              starts from zero and tracks correctly on the old code too. Retry until one lands.
 
 - [ ] **PR 19 · android · Calendar task row tracks the finger** — Calendar tab, a day with at least
       one task, that day's task list on screen.
@@ -174,3 +179,7 @@ cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme"
               150 ms return leg never runs, even though no finger is on the row when it would have.
       Fails:  the row opens and is then slammed shut roughly 150 ms later with nothing touching it,
               and the next tap closes an already-closed row instead of firing a fresh peek.
+      Valid:  only if the flick both starts AND ends while the peek is still visibly out — that is the
+              whole point of this row, and it is the harder of the two windows to hit. If the row had
+              already returned to closed before the flick began, the run does not count: the flick
+              then opens the row and nothing shuts it on the old code either.
