@@ -211,6 +211,7 @@ fun CreateTaskBottomSheet(
     initialTitle: String? = null,
     initialNotes: String? = null,
     presentImmediately: Boolean = false,
+    dismissEnabled: Boolean = true,
     onParseTaskTitleNlp: (suspend (
         title: String,
         referenceDueEpochMs: Long,
@@ -354,13 +355,30 @@ fun CreateTaskBottomSheet(
     // Every way out of this sheet goes through `startDismiss`: the scrim, the close
     // button, the host Dialog's back press and outside tap, and so — one step later — each
     // caller's own onDismiss. See [SheetDismissState] for why it is two steps.
+    //
+    // The keyboard leaves with the caller's onDismiss, at the END of the exit, and not at
+    // the start of it. Hiding it first collapses `WindowInsets.ime` while the slide is
+    // still playing: `reserveKeyboardLayout` below follows the insets down, the Surface's
+    // modifier chain hard-swaps from a fixed 85 % of the screen to the wrap-content branch
+    // mid-slide, and because `slideOutVertically` offsets by the height it measured, the
+    // card's top edge collapses about a third of a screen on one frame while it is still
+    // on its way out. That is `and-create-sheet-ime-height-snap` (PR 15b) escaping the
+    // opening and getting into the exit; leaving the IME alone until the Dialog goes keeps
+    // it in the one place PR 15b will fix it.
     val sheetDismiss = rememberSheetDismissState(
         presentImmediately = presentImmediately,
-        onDismissed = onDismiss,
+        onDismissed = {
+            dismissKeyboard()
+            onDismiss()
+        },
     )
+    // [dismissEnabled] is the host's veto — the widget create surface withdraws it while a
+    // submit is in flight. A refused gesture must not reach `start()`, because `start()`
+    // latches: a dismissal that the sheet accepts and the host then drops can never be
+    // retried, and it leaves the user looking at a bare full-screen scrim with no sheet in
+    // it. Refusing the gesture keeps the sheet on screen and every later tap a fresh try.
     val startDismiss = {
-        dismissKeyboard()
-        sheetDismiss.start()
+        if (dismissEnabled) sheetDismiss.start()
     }
 
     val noListLabel = stringResource(R.string.create_task_no_list)

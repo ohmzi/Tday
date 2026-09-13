@@ -393,6 +393,14 @@ Restore it from git history rather than adjusting the number.
     seven in screens; `WidgetCreateTaskActivity.kt:171` is an eighth the row does not count (its host
     is an Activity, not a composition flag) and it is carried by the same change, as is the create-LIST
     sheet named alongside it in `RULE_B_PENDING_FIX`, now empty.
+  - Still cutting after this, and not part of this row: the CONFIRM path. Tapping Create or Save runs
+    the caller's `onCreateTask`/`onUpdateTask`, and every one of them clears the composition flag on
+    the same frame — `CalendarScreen.kt:874` and `:926`, `ScheduledTaskHomeScreen.kt:818`, `:847` and
+    `:868` (create-list), `TodoListScreen.kt:2391` and `:2497`, `CompletedScreen.kt:456`. This row's
+    text is `sheetVisible` never set false, which is what was fixed; but confirming is the commonest
+    way a user leaves this sheet, so the sheet still cuts more often than it slides. It belongs to
+    **PR 41b / `sheet-presentation-unification`**, which unifies the sheet chrome and is the place to
+    route submit through `startDismiss` as well.
 - [x] `and-sheet-scrim-ripple-on-dismiss` — full-screen Material ripple on a dismiss tap · and · Sev 2 · XS · Gate D
 
 ### PR 15b — the create sheet’s IME height stops leaping
