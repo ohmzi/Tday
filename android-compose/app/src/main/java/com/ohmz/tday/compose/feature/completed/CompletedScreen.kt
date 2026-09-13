@@ -85,6 +85,8 @@ import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
+import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
@@ -102,7 +104,6 @@ import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -116,6 +117,7 @@ private val CompletedTimelineSectionTopSpacing = 6.dp
 private val CompletedTimelineHeaderBodySpacing = 2.dp
 private val CompletedTimelineCollapsedSectionSpacing = 4.dp
 private val CompletedSwipeRowHeight = 56.dp
+
 /**
  * The check-off's beats, run backwards — the same four every task row in every
  * client plays, only in the direction that puts a task back.
@@ -129,6 +131,12 @@ private val CompletedSwipeRowHeight = 56.dp
  * The first two are gaps rather than motions — nobody watches the wait between
  * the tick clearing and the rule lifting — which is why they stay plain numbers
  * while the fade, which somebody does watch, reads its rung.
+ *
+ * All three legs go through [scaledDelay] rather than `delay`: each gap is only
+ * here to let the beat before it land, and those beats are already on the
+ * animator's clock. Backwards makes no difference to that — the argument is
+ * written out once, against `TASK_COMPLETION_CHECK_TO_STRIKE_MS` in
+ * `TodoListScreen.kt`.
  */
 private const val COMPLETED_RESTORE_UNCHECK_TO_UNSTRIKE_MS = 160L
 private const val COMPLETED_RESTORE_UNSTRIKE_TO_FADE_MS = 360L
@@ -621,6 +629,10 @@ private fun CompletedSwipeRow(
         rememberTaskStrikeProgress(showStrikethrough, "completedRestoreTitleStrike")
     var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
     val restoreMotionEnabled = rememberTdayMotionEnabled()
+    // The number behind that switch, for this row's waits rather than its specs:
+    // the hint's two holds and the three legs of the restore are gaps between
+    // animations Compose is already scaling. See [scaledDelay].
+    val restoreMotionScale = rememberTdayMotionScale()
     // The two beats this row cut straight to. The tint answers the finger, so it is
     // Quick; the title colour travels with the rule crossing it, so Emphasis — and
     // Emphasis is also what the rule itself runs on, which is the point: a colour
@@ -781,7 +793,7 @@ private fun CompletedSwipeRow(
                             } else if (!swipeRevealState.isHinting && !isRestoring) {
                                 claimSwipeSlot()
                                 coroutineScope.launch {
-                                    swipeRevealState.playHint()
+                                    swipeRevealState.playHint(restoreMotionScale)
                                     if (latestOpenSwipeTaskId.value == item.id && !swipeRevealState.isOpenOrDragging) {
                                         onOpenSwipeTaskIdChange(null)
                                     }
@@ -812,11 +824,20 @@ private fun CompletedSwipeRow(
                                 closeSwipeSlot()
                                 coroutineScope.launch {
                                     restorePhase = CompletedRestorePhase.Unchecked
-                                    delay(COMPLETED_RESTORE_UNCHECK_TO_UNSTRIKE_MS)
+                                    scaledDelay(
+                                        COMPLETED_RESTORE_UNCHECK_TO_UNSTRIKE_MS,
+                                        restoreMotionScale,
+                                    )
                                     restorePhase = CompletedRestorePhase.Unstruck
-                                    delay(COMPLETED_RESTORE_UNSTRIKE_TO_FADE_MS)
+                                    scaledDelay(
+                                        COMPLETED_RESTORE_UNSTRIKE_TO_FADE_MS,
+                                        restoreMotionScale,
+                                    )
                                     restorePhase = CompletedRestorePhase.Fading
-                                    delay(COMPLETED_RESTORE_FADE_MS)
+                                    scaledDelay(
+                                        COMPLETED_RESTORE_FADE_MS,
+                                        restoreMotionScale,
+                                    )
                                     onUncomplete()
                                 }
                             },

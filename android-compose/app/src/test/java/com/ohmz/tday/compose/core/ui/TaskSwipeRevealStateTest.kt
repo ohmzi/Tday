@@ -34,6 +34,9 @@ class TaskSwipeRevealStateTest {
     private val revealWidthPx = 256f
     private val hintOffsetPx = 42f
 
+    /** The animator scale on a device nobody has touched the slider on. */
+    private val unscaled = 1f
+
     private fun state() = TaskSwipeRevealState(
         revealWidthPx = revealWidthPx,
         hintOffsetPx = hintOffsetPx,
@@ -210,7 +213,7 @@ class TaskSwipeRevealStateTest {
         val state = state()
         state.dragBy(-30f)
 
-        state.playHint()
+        state.playHint(unscaled)
 
         assertEquals(-30f, state.offsetX, 0f)
         assertFalse(state.isHinting)
@@ -221,7 +224,7 @@ class TaskSwipeRevealStateTest {
     @Test
     fun `a hint in flight abandons the row to a finger that arrives`() = runTest {
         val state = state()
-        val hint = launch { state.playHint() }
+        val hint = launch { state.playHint(unscaled) }
         advanceTimeBy(50)
         runCurrent()
         assertTrue(state.isHinting)
@@ -245,7 +248,7 @@ class TaskSwipeRevealStateTest {
     @Test
     fun `a hint left alone holds the row out and then returns it`() = runTest {
         val state = state()
-        val hint = launch { state.playHint() }
+        val hint = launch { state.playHint(unscaled) }
         advanceTimeBy(50)
         runCurrent()
 
@@ -266,7 +269,7 @@ class TaskSwipeRevealStateTest {
     @Test
     fun `a flick that lands and lifts inside the hold leaves the row it opened open`() = runTest {
         val state = state()
-        val hint = launch { state.playHint() }
+        val hint = launch { state.playHint(unscaled) }
         advanceTimeBy(50)
         runCurrent()
         assertTrue(state.isHinting)
@@ -292,14 +295,67 @@ class TaskSwipeRevealStateTest {
         assertTrue(state.isOpenOrDragging)
     }
 
+    // ---- the hint is on the animator's clock -----------------------------------------
+
+    @Test
+    fun `a hint does not play at all with animations off`() = runTest {
+        val state = state()
+
+        state.playHint(0f)
+
+        // Not "plays instantly": the row is never written at all. The hint is made
+        // entirely of movement, so with the springs collapsed to a frame the only
+        // thing left to show is a 42 px flick out and back inside that frame.
+        assertEquals(0f, state.offsetX, 0f)
+        assertEquals(0f, state.restOffsetX, 0f)
+        assertNull(state.release)
+        assertFalse(state.isHinting)
+    }
+
+    @Test
+    fun `a scale the setting should never hold still cannot flick the row`() = runTest {
+        val state = state()
+
+        // `Settings.Global` is a float anything holding WRITE_SECURE_SETTINGS can put
+        // a number in, and NaN fails every comparison it is put through — including
+        // the one that would otherwise have let it through as "not zero".
+        state.playHint(Float.NaN)
+
+        assertNull(state.release)
+        assertFalse(state.isHinting)
+    }
+
+    @Test
+    fun `a hint at double speed holds twice as long`() = runTest {
+        val state = state()
+        val hint = launch { state.playHint(2f) }
+        runCurrent()
+
+        assertEquals(-hintOffsetPx, state.restOffsetX, 0f)
+
+        // At 1x the row would be on its way back by now; at 2x the springs either
+        // side of this hold take twice as long too, so the hold has to stretch with
+        // them or the return leg fires over an outbound spring still travelling.
+        advanceTimeBy(200)
+        runCurrent()
+        assertEquals(-hintOffsetPx, state.restOffsetX, 0f)
+
+        advanceTimeBy(150)
+        runCurrent()
+        assertEquals(0f, state.restOffsetX, 0f)
+
+        hint.join()
+        assertFalse(state.isHinting)
+    }
+
     @Test
     fun `a second hint cannot start while the first is still running`() = runTest {
         val state = state()
-        val first = launch { state.playHint() }
+        val first = launch { state.playHint(unscaled) }
         advanceTimeBy(50)
         runCurrent()
 
-        state.playHint()
+        state.playHint(unscaled)
         assertEquals(-hintOffsetPx, state.restOffsetX, 0f)
 
         first.join()

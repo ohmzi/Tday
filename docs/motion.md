@@ -361,9 +361,18 @@ Both halves, side by side:
 Reduced motion removes the trip, never the destination. A scene held at the
 start of its fade looks half-drawn — which is worse than no animation at all,
 because the user cannot tell it from a broken render. Android reads
-`ANIMATOR_DURATION_SCALE` through `rememberTdayMotionEnabled()`
-(`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayMotion.kt:19`); web uses
-`prefers-reduced-motion`.
+`ANIMATOR_DURATION_SCALE` through
+`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayMotion.kt`;
+web uses `prefers-reduced-motion`.
+
+Android's half of that file answers in two shapes, because the setting is a
+**scale** and not a switch — the user is offered 0x, 0.5x, 1x, 2x, 5x and 10x.
+`rememberTdayMotionEnabled()` is the boolean, for the call sites that can only
+choose between a `tween` and a `snap`; `rememberTdayMotionScale()` is the number
+underneath it, published live by `ProvideTdayMotionScale` in `TdayTheme` — one
+`ContentObserver` for the whole app, so that a user who flips the setting from
+the quick settings tile is not left looking at the answer this app read at
+mount.
 
 - Android: `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:126` seeds the
   appearance `Animatable` at `1f` — fully arrived — when motion is off, rather
@@ -381,6 +390,50 @@ because the user cannot tell it from a broken render. Android reads
   trip and keeps the wait, which is the rule broken from the other side:
   `useEarlierExpandHandoff` therefore takes its immediate branch rather than
   holding the finished state behind 520 ms of a scene that cannot animate.
+- Android, the coroutine half: the same hole, one platform over. Compose already
+  scales the animations themselves — an `animateTo` runs against a
+  `MotionDurationScale` in its coroutine context — but `delay()` is outside that
+  clock, so at 0x a choreography's gaps outlive the motion they were covering and
+  at 2x they fire with it still half-played. `scaledDelay(millis, scale)` in
+  `TdayMotion.kt` closes it. The test for whether a wait belongs to it is whether
+  the wait would still make sense with the screen frozen; the ones that would not,
+  and now go through it, are:
+  - The staged check-off, and the restore that plays it backwards — the app's
+    most-performed interaction, on all four screens that own a task row
+    (`TodoListScreen.kt`, `CalendarScreen.kt` twice, `ScheduledTaskHomeScreen.kt`,
+    `CompletedScreen.kt`). All three legs, not just the last: at 0x the tint is a
+    `snap()`, `rememberTaskStrikeProgress` hands back its finished progress and the
+    fade is a `tween` Compose collapses to a frame, so the row is finished on frame
+    one and every millisecond of the 780 is a wait in front of a destination already
+    drawn. Web cuts this shallower — `taskCompletionStaging.ts` keeps the first two
+    legs — because `prefers-reduced-motion: reduce` is a request for less movement
+    while an animator scale of 0 is the platform stating that animations land in one
+    frame, and because a *scale* also has to be right at 2x, where a fixed 160 would
+    start the strike over a tint still crossfading.
+  - The swipe hint (`TaskSwipeRevealState.playHint`), which is two gaps between two
+    springs. It takes the scale as a parameter rather than reading it, because it is
+    not a composable; at 0x it does not play at all, since a gesture that ends where
+    it started has no finished state to draw and a 42 dp flick inside one frame is a
+    flicker rather than a suggestion.
+  - The search-result path in `TodoListScreen.kt`: the flash hold, the gap between
+    its two pulses, the settle before a result is scrolled to — and in
+    `ScheduledTaskHomeScreen.kt` the wait before the search surface is torn down
+    behind a push that is still running.
+  - `EarlierExpandDeferMillis` — Android's twin of `useEarlierExpandHandoff` above —
+    and the hero header's focus hand-off in `RootFeedHeroHeader.kt`.
+  - The celebration lead in `TdayEmptyState.kt` and `TdayConfetti.kt`, which is
+    already dead at 0x behind a `motionEnabled` guard but was not stretching at 2x
+    with the burst it is timed against.
+
+  It is deliberately **not** for a wait that would still make sense with the screen
+  frozen, and the ones left on a plain `delay()` are all of that kind: keystroke
+  debounces, the pull-to-refresh spinner's minimum visible time, the undo window,
+  a toast's reading time, network backoff, a clock ticking to the next minute, the
+  root dock's dwell before it folds itself away. Scaling those takes away time the
+  user needs rather than time they spend watching. One is a judgement rather than a
+  class: `CREDENTIAL_PROMPT_SETTLE_DELAY_MS` in `OnboardingWizardOverlay.kt` waits
+  out a *system* credential dialog, which Compose is not animating and this app
+  cannot observe — scaling our side of a hand-off we do not own would be guessing.
 
 ---
 
