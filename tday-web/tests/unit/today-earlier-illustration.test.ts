@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   OVERDUE_ROWS_FADE_MS,
   TODAY_EARLIER_EXIT_MS,
+  earlierIsExpanding,
   earlierSlotChangesHands,
   emptySceneIsLeaving,
   shouldShowTodayEmptyIllustration,
@@ -295,6 +296,33 @@ describe("emptySceneIsLeaving", () => {
     expect(emptySceneIsLeaving({ earlierHandoff: "scene-leaving" })).toBe(true);
     for (const earlierHandoff of ["idle", "rows-leaving"] as EarlierHandoff[]) {
       expect(emptySceneIsLeaving({ earlierHandoff })).toBe(false);
+    }
+  });
+});
+
+/**
+ * The same beat the header reads, from the other end. Asserted against the
+ * states rather than against `emptySceneIsLeaving` — comparing a derivation
+ * back to the thing it derives from would pass whatever both changed to — and
+ * the pairing below is what pins that the two stay one answer.
+ */
+describe("earlierIsExpanding", () => {
+  it("is true only while the bucket is on its way open", () => {
+    expect(earlierIsExpanding({ earlierHandoff: "scene-leaving" })).toBe(true);
+    for (const earlierHandoff of ["idle", "rows-leaving"] as EarlierHandoff[]) {
+      expect(earlierIsExpanding({ earlierHandoff })).toBe(false);
+    }
+  });
+
+  it("answers on every state exactly as the scene's own departure does", () => {
+    // One moment with two names: the scene only ever leaves this slot to hand
+    // it to Earlier's rows. If a later beat ever separates them, this is where
+    // it has to be argued rather than discovered by a chevron pointing the
+    // wrong way.
+    for (const earlierHandoff of HANDOFFS) {
+      expect(earlierIsExpanding({ earlierHandoff })).toBe(
+        emptySceneIsLeaving({ earlierHandoff }),
+      );
     }
   });
 });

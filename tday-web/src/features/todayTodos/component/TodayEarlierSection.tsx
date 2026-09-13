@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TodoGroup from "@/components/todo/component/TodoGroup";
 import { headerToBodyGap, sectionTopGapFilled } from "@/components/todo/dnd/timelineDndClasses";
@@ -28,12 +28,20 @@ export default function TodayEarlierSection({
   todos,
   label,
   expanded,
+  expanding = false,
   onToggle,
   highlightedTodoId,
 }: {
   todos: TodoItemType[];
   label: string;
   expanded: boolean;
+  /**
+   * A tap has opened this bucket and the hand-off has not finished handing the
+   * slot over yet, so `expanded` is still false — see `earlierIsExpanding`.
+   * Only the chevron reads it: everything else here is about the rows, which
+   * genuinely are not there yet.
+   */
+  expanding?: boolean;
   onToggle: () => void;
   highlightedTodoId?: string | null;
 }) {
@@ -50,11 +58,18 @@ export default function TodayEarlierSection({
         onClick={onToggle}
         className={cn(headerToBodyGap, "flex w-full items-center gap-2")}
       >
-        {expanded ? (
-          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        )}
+        {/* One glyph that turns, not two that swap: a swap has no frames to
+            animate, and the turn is what answers the finger while the hand-off
+            plays out above. `Quick`, because that is the rung for the app
+            replying to a tap that is still on it. `expanding` is what makes it
+            a reply at all — on the way open the slot above has to be handed
+            over first, and `expanded` does not go true until it has. */}
+        <ChevronRight
+          className={cn(
+            "h-4 w-4 text-muted-foreground transition-transform duration-quick ease-out motion-reduce:transition-none",
+            (expanded || expanding) && "rotate-90",
+          )}
+        />
         {/* Same translated `app.overdue` string the caller feeds
             `buildTimelineSections`'s own Earlier bucket label for
             All/Priority/List, so every scope's collapsible bucket reads the

@@ -22,7 +22,11 @@ import { useTodayBuckets } from "../lib/useTodayBuckets";
 import { useTimelineSections } from "../lib/useTimelineSections";
 import { useTimelineEmptyState } from "../lib/useTimelineEmptyState";
 import { isTimelineScope } from "../lib/timelineScopeHelpers";
-import { OVERDUE_ROWS_FADE_MS, TODAY_EARLIER_EXIT_MS } from "../lib/todayEarlierIllustration";
+import {
+  earlierIsExpanding,
+  OVERDUE_ROWS_FADE_MS,
+  TODAY_EARLIER_EXIT_MS,
+} from "../lib/todayEarlierIllustration";
 import { useRowPlacement } from "@/hooks/useRowPlacement";
 import { DELAY_MS } from "@/lib/motion";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
@@ -337,6 +341,11 @@ const AllTasksTimelineContainer = ({
               // the rows linger on their own fade (`useFadeUnmount`) — so
               // there is no second flag to read here.
               earlierExpanded={earlierExpanded || isSearching}
+              // The one thing `earlierExpanded` cannot say, and the header is
+              // the only part of the screen that needs it: on the way open
+              // that flag is false for the whole hand-off, so the chevron
+              // would sit there looking untapped. See `earlierIsExpanding`.
+              earlierExpanding={earlierIsExpanding({ earlierHandoff })}
               // Passes `earlierSlotChangesHands` through exactly like Today's
               // own `TodayEarlierSection` does below: when the scene and
               // Earlier's rows are trading the slot, the tap is sequenced —
@@ -365,6 +374,7 @@ const AllTasksTimelineContainer = ({
               todos={earlierItems}
               label={appDict("overdue")}
               expanded={earlierExpanded}
+              expanding={earlierIsExpanding({ earlierHandoff })}
               onToggle={() => toggleEarlierExpanded(earlierSlotChangesHands)}
               highlightedTodoId={focusedTaskId}
             />
