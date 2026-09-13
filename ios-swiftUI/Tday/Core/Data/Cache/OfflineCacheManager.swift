@@ -5,16 +5,58 @@ extension Notification.Name {
     static let offlineCacheDidChange = Notification.Name("tday.offline-cache.did-change")
 }
 
+/// Serialises sync so two callers can never interleave a load / transform / save.
+///
+/// This used to be `while locked { await Task.yield() }`. A yield loop does not
+/// really suspend: the waiter stays runnable and keeps a cooperative-pool thread
+/// hot for as long as the lock is held — and the lock is held across a sequential
+/// replay of up to 100 pending mutations, i.e. a long time. With the pool sized to
+/// the core count and the sync's own concurrent requests already in flight, the
+/// spinners were competing with the very work they were waiting on. Waiters now
+/// park on a continuation and cost nothing while queued; the lock is handed
+/// straight to the next one in FIFO order.
+///
+/// Deliberately not cancellable, which matches the spin it replaces: a cancelled
+/// waiter still takes its turn rather than abandoning a half-written cache.
 actor AsyncLock {
     private var locked = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    /// How many callers are currently parked waiting for the lock. Additive and
+    /// read-only — no caller of `withLock` is affected by it. It exists so tests
+    /// can wait until a waiter has definitely queued before enqueueing the next
+    /// one, which is what makes the FIFO assertion deterministic instead of a
+    /// race against the scheduler.
+    var waiterCount: Int {
+        waiters.count
+    }
 
     func withLock<T>(_ operation: () async throws -> T) async rethrows -> T {
-        while locked {
-            await Task.yield()
-        }
-        locked = true
-        defer { locked = false }
+        await acquire()
+        defer { release() }
         return try await operation()
+    }
+
+    private func acquire() async {
+        guard locked else {
+            locked = true
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    private func release() {
+        if waiters.isEmpty {
+            locked = false
+        } else {
+            // Ownership passes straight to the next waiter, so `locked` stays
+            // true. Clearing it first and then resuming would open a window in
+            // which a brand-new caller sees an unlocked lock and proceeds
+            // alongside the waiter that was just handed ownership.
+            waiters.removeFirst().resume()
+        }
     }
 }
 
