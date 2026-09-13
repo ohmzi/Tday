@@ -125,3 +125,61 @@ cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme"
       Fails:  the card slides away and leaves an empty scrim over a request that is still running;
               or nothing happens at the time and the sheet then leaves by itself once the request
               finally gives up, which is the same tap arriving late.
+
+- [ ] **PR 19 · android · Swipe row tracks the finger** — Today, any task row, list scrolled so the
+      row sits mid-screen.
+      Do:     drag the row left at a steady speed to about half the reveal width, then stop the thumb
+              dead without lifting it.
+      Watch:  the row's right edge stays under the thumb for the whole drag and comes to rest in the
+              same frame the thumb does — no 141 ms of catch-up after the finger stops — and the
+              action pills behind it brighten in step with the drag rather than a beat behind it.
+      Fails:  a visible gap opens between the thumb and the row edge while dragging, or the row keeps
+              creeping left for a fifth of a second after the thumb has stopped.
+
+- [ ] **PR 19 · android · Swipe release settles on the iOS spring** — Today, any task row, dragged
+      left just past a third of the reveal width and held there.
+      Do:     lift the thumb (repeat once more by flicking the row left hard from nearly closed, which
+              takes the velocity path into the same spring).
+      Watch:  the row carries on from the exact pixel the thumb left it and reaches fully open in
+              roughly 300 ms, overshooting once by a hair and settling — `dampingRatio 0.82`,
+              `stiffness 340`, which is iOS's release spring.
+      Fails:  the row jumps sideways at the instant of lift-off before it starts moving; or it snaps
+              open in one frame; or it is still wobbling half a second later.
+
+- [ ] **PR 19 · android · Swipe hint yields to a live finger** — Today, a closed task row, nothing
+      else open.
+      Do:     tap the row to fire the peek hint and, without waiting for the peek to return, put the
+              thumb straight back on it and drag left.
+      Watch:  the drag picks the row up from wherever the peek had it and tracks the thumb from there
+              for the whole gesture; the hint's 150 ms return never runs.
+      Fails:  the row is yanked back to zero under the thumb part-way through the drag, so the swipe
+              has to be started again from closed.
+      Valid:  only if the thumb lands while the row is still visibly held out at the peek offset. The
+              window is 150 ms from your own tap and human reaction to the peek is ~200-250 ms, so
+              expect to miss it more often than not. If the row has already snapped back to closed
+              before the thumb lands, the hold is over and the run does not count — the drag then
+              starts from zero and tracks correctly on the old code too. Retry until one lands.
+
+- [ ] **PR 19 · android · Calendar task row tracks the finger** — Calendar tab, a day with at least
+      one task, that day's task list on screen.
+      Do:     drag a task row left at a steady speed to about half the reveal width, stop the thumb
+              dead without lifting, then lift (repeat by tapping a closed row to fire the peek hint
+              and putting the thumb straight back on it mid-peek).
+      Watch:  the Calendar row behaves exactly as the Today row in the first three checks — welded to
+              the thumb with no 141 ms of catch-up, releasing from the pixel the thumb left and open
+              in roughly 300 ms, and abandoning the peek's 150 ms return the moment the thumb lands.
+      Fails:  the Calendar row lags the thumb, or is yanked back to zero under it mid-drag, while the
+              Today row does neither — the Calendar tab is still running its own copy of the old spring.
+
+- [ ] **PR 19 · android · Swipe hint yields to a flick that has already ended** — Today, a closed task
+      row, nothing else open.
+      Do:     tap the row to fire the peek hint and, while the peek is still out (inside 150 ms), flick
+              it left hard and take the thumb straight off the glass.
+      Watch:  the row opens on the flick and STAYS open with its action pills revealed; the hint's
+              150 ms return leg never runs, even though no finger is on the row when it would have.
+      Fails:  the row opens and is then slammed shut roughly 150 ms later with nothing touching it,
+              and the next tap closes an already-closed row instead of firing a fresh peek.
+      Valid:  only if the flick both starts AND ends while the peek is still visibly out — that is the
+              whole point of this row, and it is the harder of the two windows to hit. If the row had
+              already returned to closed before the flick began, the run does not count: the flick
+              then opens the row and nothing shuts it on the old code either.
