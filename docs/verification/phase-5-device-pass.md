@@ -114,3 +114,13 @@ Rows from Android and web PRs of Phases 5 and 6 belong in this file too, alongsi
               absolute check, not a comparison: the depth went 0.95 → 0.94, which is half a point
               and is not what you are looking for — you are looking for a press that reads as a
               press at all.
+
+- [ ] **PR 10 · ios · The list sheets confirm too** — root feed, header showing the ⊕ create-list
+      circle; for the repeat path, a list you own, opened, with its ⋯ button in the top bar.
+      Do:     tap ⊕, type a name, tap the green ✓ (repeat from ⋯ › List settings: change the name,
+              tap the green ✓).
+      Watch:  the same two beats the new-task sheet gives — a light tap as the ✓ goes down, then one
+              rounded success pulse as the list appears (or as the renamed list comes back).
+      Fails:  only the light tap, with no pulse behind it. Creating a list would then feel weaker
+              than creating a task, which is the same event, and saving settings weaker than saving
+              a task.

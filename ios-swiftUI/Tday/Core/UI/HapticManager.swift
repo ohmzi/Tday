@@ -55,6 +55,7 @@ enum HapticManager {
     /// the ones that are. (Android: `CLOCK_TICK`.)
     static func buttonPress() {
         let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
         generator.impactOccurred(intensity: 0.6)
     }
 
@@ -71,7 +72,8 @@ enum HapticManager {
     }
 
     /// A two-state control flipped, and `on` says which way: restoring a task that was
-    /// already complete, a switch row.
+    /// already complete. Not the settings switches — those are SwiftUI `Toggle`s, which
+    /// bring UIKit's own switch feedback, so routing them through here would double it.
     ///
     /// `.rigid` against `.soft` — iOS ships no directional pair, so this is the nearest
     /// thing to one: two textures at the same energy, one crisp and one dull. Turning
@@ -142,6 +144,7 @@ enum HapticManager {
     /// `CONTEXT_CLICK`, the constant for "a context surface appeared".)
     static func reveal() {
         let generator = UIImpactFeedbackGenerator(style: .rigid)
+        generator.prepare()
         generator.impactOccurred(intensity: 0.7)
     }
 }
