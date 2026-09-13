@@ -151,7 +151,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 1 — staged completion survives an unmount
 
-- [ ] `web-staged-completion-dropped-on-unmount` — staged completion silently DROPPED if the row unmounts inside its 780 ms window · web · Sev 3 · M · Gate V
+- [x] `web-staged-completion-dropped-on-unmount` — staged completion silently DROPPED if the row unmounts inside its 780 ms window · web · Sev 3 · M · Gate V
 
 ### PR 2 — the calendar form shell keeps what was typed across 640 px
 
