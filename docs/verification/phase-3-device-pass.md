@@ -71,3 +71,57 @@ cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme"
       Do:     select two tasks and delete them through the bulk bar's Delete → confirm; then open the list's ⋯ menu → Delete → Cancel, and finally ⋯ → Delete → confirm.
       Watch:  every button that only opens a prompt is the plain light click, and the heavier LONG_PRESS thud lands exactly twice across the whole run — on the two confirms that actually destroyed something, and never on the prompt you cancelled.
       Fails:  the thud fires on the Delete that merely opens the prompt, so cancelling felt like a deletion; or the confirm that removes the two tasks, or the whole list, feels like any other button.
+
+- [ ] **PR 15a · and · The create sheet plays its exit from every dismiss path** — Today, tap `+` to
+      open the create sheet and type a word so the keyboard is up.
+      Do:     tap the scrim well above the card (repeat from: the ✕ in the sheet header; the system
+              Back gesture; and once more for the edit sheet opened from a task, and for the New List
+              sheet on the lists row).
+      Watch:  the card SLIDES down off the bottom edge while fading, over 320 ms, on every one of those
+              paths — the dim scrim is still there behind it until the card has finished leaving, and
+              the keyboard stays up until the card has gone, dropping after it rather than before it.
+      Fails:  the sheet disappears on a single frame on any path, or one path slides and another cuts;
+              or the scrim disappears first and the card is left sliding over the live screen; or the
+              keyboard drops first and the card's top edge jumps down a third of the screen part-way
+              through the slide (`and-create-sheet-ime-height-snap` getting into the exit).
+
+- [ ] **PR 15a · and · The card is still readable the whole way out** — open the edit sheet on a task
+      that has a title, notes, a due date and a repeat set, so the card is full.
+      Do:     tap the ✕ and watch the card, not the screen behind it.
+      Watch:  title, notes and the date rows stay drawn and legible for the whole 320 ms slide; they
+              fade with the card, at the card's opacity, and are still there as it clears the edge.
+      Fails:  the card empties, blanks or collapses on the frame the slide starts, so what slides away
+              is an empty rectangle — the exit playing over nothing.
+
+- [ ] **PR 15a · and · A scrim dismiss draws no ripple** — create sheet open over Today, dark theme,
+      where a ripple against the dim scrim is easiest to see.
+      Do:     press and HOLD a finger on the scrim a good distance above the card for a full second,
+              then release.
+      Watch:  nothing lights under the finger for the whole second it is held — a Material ripple
+              reaches full radius in ~300 ms, so a second is three times over — the scrim stays one
+              flat dim, and the sheet starts its 320 ms slide out on release.
+      Fails:  a circular ripple spreads out from the finger across the whole window, or the scrim
+              brightens as a full-screen button would while held.
+
+- [ ] **PR 15a · and · The widget's create sheet leaves before its window does** — a Today widget on
+      the home screen, no app task open. This is the only create surface whose host is an Activity
+      rather than a composition flag, so its exit is two animations in sequence and nothing in CI
+      can see either.
+      Do:     tap the widget's `+`, type a title, then tap the scrim above the card (repeat once
+              tapping the green Create instead, and once with the header X).
+      Watch:  the card slides down off the bottom edge over 320 ms, and only once it is gone does
+              the whole window fade out over ~90 ms. The dim behind the card does not outlive the
+              card by more than a blink.
+      Fails:  the card vanishes on one frame and only the window fade is left; or a bare dim scrim
+              with no card in it sits on screen after the card has gone, which is the mirror image
+              of the first row's failure — scrim outliving card instead of card outliving scrim.
+
+- [ ] **PR 15a · and · A submit in flight refuses the dismiss instead of half-playing it** — the
+      widget create sheet with a title typed, airplane mode ON so the submit hangs instead of
+      returning.
+      Do:     tap Create, then immediately tap the scrim (repeat with the header X).
+      Watch:  nothing moves. The sheet stays fully drawn, does not start its 320 ms slide, and the
+              tap is refused outright rather than queued.
+      Fails:  the card slides away and leaves an empty scrim over a request that is still running;
+              or nothing happens at the time and the sheet then leaves by itself once the request
+              finally gives up, which is the same tap arriving late.

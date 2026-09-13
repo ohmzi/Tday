@@ -349,26 +349,19 @@ describeAndroid("Rule A — AnimatedVisibility content survives its own exit", (
 // ---------------------------------------------------------------------------
 
 /**
- * Two sheets drive an `AnimatedVisibility` from a local `var` that is set true once and
- * never set false, so the exit half of the spec is dead code: the host `Dialog` is torn
- * down on dismiss and the sheet is cut, not slid. Both are known, filed, and their fix is
- * a different unit of work — `and-create-sheet-dismiss-cut` (Sev 4, seven call sites) has
- * to route every dismissal through the flag before the exit can play, which is PR 15a, not
- * this guardrail's PR.
+ * Two sheets used to drive an `AnimatedVisibility` from a local `var` that was set true
+ * once and never set false, so the exit half of the spec was dead code: the host `Dialog`
+ * was torn down on dismiss and the sheet was cut, not slid. Both were exempted here BY
+ * NAME while their fix — `and-create-sheet-dismiss-cut`, PR 15a — was a different unit of
+ * work, and the exemption was self-closing: the test below asserts each listed site still
+ * has the defect, so an entry cannot outlive the bug.
  *
- * They are exempted here BY NAME, with the ledger row that removes them, and the exemption
- * is self-closing: the test below asserts each listed site still has the defect, so the
- * entry cannot outlive the bug. Fix the site and this suite fails until the name is
- * deleted from the list.
+ * PR 15a landed and the list is empty. Both sheets now start the exit and hand control
+ * back to the caller only once the transition has settled, so neither has a write-once
+ * flag left to exempt. The list stays because the mechanism is the point: a future
+ * exemption is an entry plus the ledger row that deletes it again, never a rule turned off.
  */
-const RULE_B_PENDING_FIX = [
-  // ledger: and-create-sheet-dismiss-cut (PR 15a) — 7 call sites hand the sheet an
-  // onDismiss that closes the Dialog outright; the flag has to be threaded first.
-  "android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/CreateTaskBottomSheet.kt",
-  // ledger: and-create-sheet-dismiss-cut (PR 15a) — the create-LIST sheet is the same
-  // component shape and the same fix; it rides along with the row above.
-  "android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt",
-];
+const RULE_B_PENDING_FIX: string[] = [];
 
 function writeOnceVisibilityFlags(file: string): string[] {
   const source = readSource(file);
