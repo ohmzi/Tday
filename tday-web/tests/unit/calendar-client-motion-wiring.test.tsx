@@ -5,7 +5,7 @@
  *
  * Two of this screen's motion fixes are each covered at both ends and nowhere in
  * the middle: `useNavigationRefusal` is tested as a hook and `CalendarModeCard`
- * is tested with `refusedBack` handed in by a test, while `calendarDropAnimation`
+ * is tested with `refusedBack` handed in by a test, while `dragOverlayDropAnimation`
  * is tested as a pure config function. Between them sits the only code that
  * makes either one a feature — the `if (animateToDate(…)) return;
  * refuseNavigation();` in `navigatePeriod`, the `refusedBack={refusedBack}` it
@@ -31,7 +31,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DURATION_MS } from "@/lib/motion";
-import { calendarDropAnimation } from "@/features/calendar/lib/dragOverlayDrop";
+import { dragOverlayDropAnimation } from "@/lib/dragLiftMotion";
 import { installReducedMotion } from "../setup/reduced-motion";
 
 vi.mock("@/lib/api-client", () => ({
@@ -137,12 +137,12 @@ describe("CalendarClient wires its own motion up", () => {
   it("hands the drag overlay a landing rather than a cut", () => {
     // `dropAnimation={null}` is not "no animation" but "no landing": dnd-kit
     // removes the overlay on the frame of the release. The config's own content
-    // is asserted in calendar-drop-animation.test.ts; what is asserted here is
+    // is asserted in drag-lift-motion.test.ts; what is asserted here is
     // that this screen is the one asking for it.
     renderCalendar();
 
     expect(dropAnimations.length).toBeGreaterThan(0);
-    expect(dropAnimations[dropAnimations.length - 1]).toEqual(calendarDropAnimation(false));
+    expect(dropAnimations[dropAnimations.length - 1]).toEqual(dragOverlayDropAnimation(false));
     expect(dropAnimations[dropAnimations.length - 1]).not.toBeNull();
   });
 });

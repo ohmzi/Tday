@@ -17,6 +17,8 @@ import { TodoItemType } from "@/types";
 import { useTimelineReschedule } from "./useTimelineReschedule";
 import { overlayCardClass } from "./timelineDndClasses";
 import { hapticDragStart, hapticDragOver, hapticDrop } from "@/lib/haptics";
+import { dragOverlayDropAnimation } from "@/lib/dragLiftMotion";
+import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 export type TimelineDraggableData = {
   todo: TodoItemType;
@@ -49,6 +51,10 @@ export default function TimelineDndContext({
   children: React.ReactNode;
 }) {
   const reschedule = useTimelineReschedule(timeZone);
+  // Read here rather than inside the drop config so the overlay follows a
+  // preference the user flips mid-session: a value captured once would leave a
+  // landing running that the OS has just asked to stop.
+  const reduceMotion = usePrefersReducedMotion();
   const [activeTodo, setActiveTodo] = useState<TodoItemType | null>(null);
   const [overSectionKey, setOverSectionKey] = useState<string | null>(null);
 
@@ -127,7 +133,7 @@ export default function TimelineDndContext({
       <OverSectionContext.Provider value={overSectionKey}>
         {children}
       </OverSectionContext.Provider>
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={dragOverlayDropAnimation(reduceMotion)}>
         {activeTodo ? (
           <div className={overlayCardClass}>
             <p className="line-clamp-1 text-[0.98rem] font-black leading-5 text-foreground">

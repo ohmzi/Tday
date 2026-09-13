@@ -50,7 +50,7 @@ import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { moveTodoToDay } from "@/lib/moveTodoToDay";
 import type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
 import AnimatedHeight from "@/components/ui/AnimatedHeight";
-import { calendarDropAnimation } from "../lib/dragOverlayDrop";
+import { DRAG_LIFT_CLASS, dragOverlayDropAnimation } from "@/lib/dragLiftMotion";
 import { useNavigationRefusal } from "../lib/useNavigationRefusal";
 import ConfirmPlaceholder from "./LoadingPlaceholders/ConfirmPlaceholder";
 import { useModalPresence } from "@/components/ui/Modal";
@@ -1421,9 +1421,17 @@ export default function CalendarClient() {
           )}
         </section>
       </div>
-        <DragOverlay dropAnimation={calendarDropAnimation(reduceMotion)}>
+        <DragOverlay dropAnimation={dragOverlayDropAnimation(reduceMotion)}>
+          {/* Opaque and lifted, not faded: the 70% this card used to carry is the
+              word the vacated row keeps, and a thing the finger is holding reads
+              as disabled at that opacity. `DRAG_LIFT_CLASS` argues it. */}
           {activeTodo ? (
-            <div className="pointer-events-none w-[min(20rem,80vw)] rounded-[20px] border border-white/70 bg-card px-4 py-3 opacity-70 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.6)] dark:border-white/10">
+            <div
+              className={cn(
+                "pointer-events-none w-[min(20rem,80vw)] rounded-[20px] border border-white/70 bg-card px-4 py-3 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.6)] dark:border-white/10",
+                DRAG_LIFT_CLASS,
+              )}
+            >
               <p className="line-clamp-1 text-[0.98rem] font-black leading-5 text-foreground">
                 {activeTodo.title}
               </p>
