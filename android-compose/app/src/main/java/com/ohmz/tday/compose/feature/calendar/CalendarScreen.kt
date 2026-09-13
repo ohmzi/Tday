@@ -1042,7 +1042,6 @@ private fun CalendarWeekCard(
     val colorScheme = MaterialTheme.colorScheme
     val minWeekStart = remember(minNavigableMonth) { startOfWeek(minNavigableMonth.atDay(1)) }
     val weekStart = remember(selectedDate) { startOfWeek(selectedDate) }
-    val coroutineScope = rememberCoroutineScope()
     val selectedDayOffset = remember(selectedDate) {
         (selectedDate.dayOfWeek.value % 7).toLong()
     }
@@ -1057,12 +1056,15 @@ private fun CalendarWeekCard(
     fun requestPage(offset: Int) {
         val targetIndex = (currentPage + offset).coerceIn(0, CalendarWeekPagerPageCount - 1)
         if (targetIndex == currentPage || !isPagingAtRest) return
-        coroutineScope.launch {
-            scrollRequest = CalendarPagerScrollRequest(
-                id = System.nanoTime().toInt(),
-                page = targetIndex,
-            )
-        }
+        // Written straight through rather than from a `coroutineScope.launch`. The launch bought
+        // nothing — this is a plain state write, not suspending work — and it cost the guard two
+        // lines above its meaning: the check read `isPagingAtRest` in the click's frame while the
+        // write landed on a later dispatch, so two taps inside one frame both passed a guard
+        // neither had yet closed. Writing here makes the read and the write the same moment.
+        scrollRequest = CalendarPagerScrollRequest(
+            id = System.nanoTime().toInt(),
+            page = targetIndex,
+        )
     }
 
     // The date a Today jump is carrying while its sweep is in the air. The week
@@ -1456,7 +1458,6 @@ private fun CalendarDayCard(
     onSelectDate: (LocalDate) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val coroutineScope = rememberCoroutineScope()
     val minDate = remember(minNavigableMonth) { minNavigableMonth.atDay(1) }
     val currentPage = remember(minDate, selectedDate) {
         ChronoUnit.DAYS.between(minDate, selectedDate)
@@ -1469,12 +1470,11 @@ private fun CalendarDayCard(
     fun requestPage(offset: Int) {
         val targetIndex = (currentPage + offset).coerceIn(0, CalendarDayPagerPageCount - 1)
         if (targetIndex == currentPage || !isPagingAtRest) return
-        coroutineScope.launch {
-            scrollRequest = CalendarPagerScrollRequest(
-                id = System.nanoTime().toInt(),
-                page = targetIndex,
-            )
-        }
+        // Same synchronous write as the week card above, for the same reason.
+        scrollRequest = CalendarPagerScrollRequest(
+            id = System.nanoTime().toInt(),
+            page = targetIndex,
+        )
     }
 
     fun dateForPage(page: Int): LocalDate {
@@ -1807,7 +1807,6 @@ private fun CalendarMonthCard(
     resolveTodo: (String) -> TodoItem?,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val coroutineScope = rememberCoroutineScope()
     val currentPage = remember(minNavigableMonth, visibleMonth) {
         ChronoUnit.MONTHS.between(minNavigableMonth, visibleMonth)
             .toInt()
@@ -1819,12 +1818,11 @@ private fun CalendarMonthCard(
     fun requestPage(offset: Int) {
         val targetIndex = (currentPage + offset).coerceIn(0, CalendarMonthPagerPageCount - 1)
         if (targetIndex == currentPage || !isPagingAtRest) return
-        coroutineScope.launch {
-            scrollRequest = CalendarPagerScrollRequest(
-                id = System.nanoTime().toInt(),
-                page = targetIndex,
-            )
-        }
+        // Same synchronous write as the week card above, for the same reason.
+        scrollRequest = CalendarPagerScrollRequest(
+            id = System.nanoTime().toInt(),
+            page = targetIndex,
+        )
     }
 
     fun monthForPage(page: Int): YearMonth {
