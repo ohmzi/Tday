@@ -7,12 +7,13 @@
 
 :root {
   --tday-duration-quick: 150ms;
-  --tday-duration-enter: 190ms;
+  --tday-duration-enter: 200ms;
   --tday-duration-change: 260ms;
   --tday-duration-emphasis: 320ms;
   --tday-duration-scene: 520ms;
-  --tday-duration-placement-lead: 320ms;
-  --tday-duration-celebration-lead: 320ms;
+
+  --tday-delay-placement-lead: 320ms;
+  --tday-delay-celebration-lead: 320ms;
 
   --tday-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --tday-ease-enter: cubic-bezier(0, 0, 0.2, 1);

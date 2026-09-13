@@ -7,10 +7,13 @@
 
 export const DURATIONS = {
   quick: 150,
-  enter: 190,
+  enter: 200,
   change: 260,
   emphasis: 320,
   scene: 520,
+} as const;
+
+export const DELAYS = {
   placementLead: 320,
   celebrationLead: 320,
 } as const;
@@ -24,7 +27,7 @@ export const EASINGS = {
 } as const;
 
 export const SPRINGS = {
-  snappy: { response: 0.3, damping: 0.86, stiffness: 440 },
+  snappy: { response: 0.28, damping: 0.86, stiffness: 504 },
   gesture: { response: 0.34, damping: 0.82, stiffness: 340 },
   settle: { response: 0.4, damping: 0.86, stiffness: 250 },
 } as const;

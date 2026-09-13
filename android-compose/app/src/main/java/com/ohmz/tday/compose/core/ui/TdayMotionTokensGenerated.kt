@@ -11,10 +11,13 @@ object TdayMotionTokensGenerated {
 
     object Durations {
         const val Quick: Int = 150
-        const val Enter: Int = 190
+        const val Enter: Int = 200
         const val Change: Int = 260
         const val Emphasis: Int = 320
         const val Scene: Int = 520
+    }
+
+    object Delays {
         const val PlacementLead: Int = 320
         const val CelebrationLead: Int = 320
     }
@@ -44,7 +47,7 @@ object TdayMotionTokensGenerated {
 
     object Springs {
         const val SnappyDamping: Float = 0.86f
-        const val SnappyStiffness: Float = 440f
+        const val SnappyStiffness: Float = 504f
         const val GestureDamping: Float = 0.82f
         const val GestureStiffness: Float = 340f
         const val SettleDamping: Float = 0.86f

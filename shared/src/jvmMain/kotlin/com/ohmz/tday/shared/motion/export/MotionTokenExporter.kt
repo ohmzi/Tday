@@ -55,7 +55,11 @@ object MotionTokenExporter {
         appendLine("object TdayMotionTokensGenerated {")
         appendLine()
         appendLine("    object Durations {")
-        MotionTokens.allDurations.forEach { appendLine("        const val ${it.name}: Int = ${it.ms}") }
+        MotionTokens.durations.forEach { appendLine("        const val ${it.name}: Int = ${it.ms}") }
+        appendLine("    }")
+        appendLine()
+        appendLine("    object Delays {")
+        MotionTokens.delays.forEach { appendLine("        const val ${it.name}: Int = ${it.ms}") }
         appendLine("    }")
         appendLine()
         appendLine("    object Easings {")
@@ -95,8 +99,25 @@ object MotionTokenExporter {
         appendLine()
         appendLine("enum TdayMotionGenerated {")
         appendLine()
+        appendLine("    /// Control points in CSS order, named rather than positional: SwiftUI takes")
+        appendLine("    /// them as `Animation.timingCurve(x1, y1, x2, y2, duration:)`, and a bare")
+        appendLine("    /// four-element array is the one place in this vocabulary where two of them")
+        appendLine("    /// could be transposed with no compile error and no failing test.")
+        appendLine("    struct Bezier {")
+        appendLine("        let x1: Double")
+        appendLine("        let y1: Double")
+        appendLine("        let x2: Double")
+        appendLine("        let y2: Double")
+        appendLine("    }")
+        appendLine()
         appendLine("    enum Durations {")
-        MotionTokens.allDurations.forEach {
+        MotionTokens.durations.forEach {
+            appendLine("        static let ${camel(it.name)}: TimeInterval = ${seconds(it.ms)}")
+        }
+        appendLine("    }")
+        appendLine()
+        appendLine("    enum Delays {")
+        MotionTokens.delays.forEach {
             appendLine("        static let ${camel(it.name)}: TimeInterval = ${seconds(it.ms)}")
         }
         appendLine("    }")
@@ -104,8 +125,8 @@ object MotionTokenExporter {
         appendLine("    enum Easings {")
         MotionTokens.easings.forEach {
             appendLine(
-                "        static let ${camel(it.name)}: [Double] = [" +
-                    "${d(it.x1)}, ${d(it.y1)}, ${d(it.x2)}, ${d(it.y2)}]",
+                "        static let ${camel(it.name)} = Bezier(" +
+                    "x1: ${d(it.x1)}, y1: ${d(it.y1)}, x2: ${d(it.x2)}, y2: ${d(it.y2)})",
             )
         }
         appendLine("    }")
@@ -135,7 +156,9 @@ object MotionTokenExporter {
         appendLine("   `duration-*` and `ease-*` utilities through the `@theme inline` block. */")
         appendLine()
         appendLine(":root {")
-        MotionTokens.allDurations.forEach { appendLine("  --tday-duration-${kebab(it.name)}: ${it.ms}ms;") }
+        MotionTokens.durations.forEach { appendLine("  --tday-duration-${kebab(it.name)}: ${it.ms}ms;") }
+        appendLine()
+        MotionTokens.delays.forEach { appendLine("  --tday-delay-${kebab(it.name)}: ${it.ms}ms;") }
         appendLine()
         MotionTokens.easings.forEach {
             appendLine(
@@ -157,7 +180,11 @@ object MotionTokenExporter {
         appendLine("// the normative table and the idiom rules live in docs/motion.md.")
         appendLine()
         appendLine("export const DURATIONS = {")
-        MotionTokens.allDurations.forEach { appendLine("  ${camel(it.name)}: ${it.ms},") }
+        MotionTokens.durations.forEach { appendLine("  ${camel(it.name)}: ${it.ms},") }
+        appendLine("} as const;")
+        appendLine()
+        appendLine("export const DELAYS = {")
+        MotionTokens.delays.forEach { appendLine("  ${camel(it.name)}: ${it.ms},") }
         appendLine("} as const;")
         appendLine()
         appendLine("export const EASINGS = {")
@@ -188,9 +215,18 @@ object MotionTokenExporter {
      * these strings are compared byte-for-byte by the drift gate, so a CI box in
      * a different locale must produce the same file this one does.
      */
-    private fun d(value: Double): String =
-        java.math.BigDecimal(value).setScale(4, java.math.RoundingMode.HALF_UP)
-            .stripTrailingZeros().toPlainString()
+    private const val DECIMALS = 4
+
+    private fun d(value: Double): String {
+        val exact = java.math.BigDecimal(value)
+        val rounded = exact.setScale(DECIMALS, java.math.RoundingMode.HALF_UP)
+        // Rounding a token away silently is how two clients end up a pixel apart
+        // with every gate green, so refuse rather than truncate.
+        require(rounded.compareTo(exact.setScale(DECIMALS + 2, java.math.RoundingMode.HALF_UP)) == 0) {
+            "$value needs more than $DECIMALS decimal places — widen DECIMALS rather than round it away"
+        }
+        return rounded.stripTrailingZeros().toPlainString()
+    }
 
     private fun f(value: Double): String = "${d(value)}f"
 
