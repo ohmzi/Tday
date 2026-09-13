@@ -145,6 +145,7 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
@@ -285,7 +286,14 @@ fun ScheduledTaskHomeScreen(
         searchImeWasVisible = false
         searchResultOpening = false
     }
-    val searchCloseMotionScale = rememberTdayMotionScale()
+    // The SYSTEM scale and not the app's: what this is timed against is the route
+    // handover in `TdayApp`, a `fadeIn(tween(NAV_FADE_IN_DURATION_MS))` that reads
+    // nothing of the preference and so keeps running at the device's scale whatever
+    // the in-app switch says. Handed the app's scale, the switch would zero the wait
+    // and leave the transition — the motion kept, the wait removed, which is the one
+    // way round `docs/motion.md`'s fifth rule nobody looks for. Moves to
+    // `rememberTdayMotionScale` on the day that transition is gated.
+    val searchCloseMotionScale = rememberSystemMotionScale()
     val openTaskFromSearch: (String) -> Unit = openTask@{ todoId ->
         if (searchResultOpening) return@openTask
         searchResultOpening = true
@@ -295,8 +303,8 @@ fun ScheduledTaskHomeScreen(
         searchResultScope.launch {
             // Scaled, because what it is waiting out is the push onto the task:
             // tearing the search surface down underneath a transition that is
-            // still running is the jump this wait exists to hide, and with
-            // animations off there is no transition left to hide behind.
+            // still running is the jump this wait exists to hide, and with the
+            // device's animations off there is no transition left to hide behind.
             scaledDelay(SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS, searchCloseMotionScale)
             closeSearch()
         }
@@ -1571,31 +1579,44 @@ private fun ScheduledTaskHomeTodayTaskRow(
         state = swipeRevealState,
         label = "scheduledTaskHomeTodaySwipeOffset",
     )
+    // The beats this row cut straight to. The tint answers the finger, so it is
+    // Quick; the title colour travels with the rule crossing it, so it is Emphasis
+    // and not a rung of its own; the fade below carries the row off.
+    val motionEnabled = rememberTdayMotionEnabled()
+    // Gated like the beats in front of it. The last leg of the check-off is timed
+    // against this fade, so a fade still running while its own wait had been zeroed
+    // would pull the row out of the list at full opacity — exactly the pop that leg
+    // exists to prevent.
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
-        animationSpec = tween(
-            durationMillis = SCHEDULED_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = TdayMotionTokens.Easings.Standard,
-        ),
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = SCHEDULED_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "scheduledTaskHomeTodayCompletionAlpha",
     )
     val completionOffsetY by animateDpAsState(
         targetValue = if (completionFading) (-10).dp else 0.dp,
-        animationSpec = tween(
-            durationMillis = SCHEDULED_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = TdayMotionTokens.Easings.Standard,
-        ),
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = SCHEDULED_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "scheduledTaskHomeTodayCompletionOffsetY",
     )
     val titleStrikeProgress =
         rememberTaskStrikeProgress(localStruck, "scheduledTaskHomeTodayTitleStrike")
-    // The two beats this row cut straight to. The tint answers the finger, so it
-    // is Quick; the title colour travels with the rule crossing it, so it is
-    // Emphasis and not a rung of its own.
-    val motionEnabled = rememberTdayMotionEnabled()
     // The number behind that switch, for this row's waits rather than its specs:
     // the hint's two holds and the three legs of the check-off are gaps between
-    // animations Compose is already scaling. See [scaledDelay].
+    // beats this row gates on [motionEnabled], which is what makes the app's own
+    // scale the right clock for them. See [scaledDelay].
     val rowMotionScale = rememberTdayMotionScale()
     val toggleTint by animateColorAsState(
         targetValue = if (localChecked) {

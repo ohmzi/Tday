@@ -176,6 +176,7 @@ import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
@@ -935,11 +936,16 @@ fun TodoListScreen( // skipcq: KT-R1006
         onDispose { onRootControlsVisibleChange(true) }
     }
     val density = LocalDensity.current
-    // Read once for the whole screen, because every wait it feeds below — the two
-    // search-result holds, the two settles before a result is scrolled to, and the
-    // Earlier hand-off — is covering an animation Compose is already scaling for us.
-    // See [scaledDelay].
-    val motionScale = rememberTdayMotionScale()
+    // Read once for the whole screen, and read as the SYSTEM scale, because every
+    // wait it feeds below covers an animation the in-app switch does not reach: the
+    // two settles wait out the route handover in `TdayApp` and the `animateScrollTo`
+    // that follows it, the two holds wait out `SwipeTaskRow`'s highlight pulses, and
+    // the Earlier hand-off waits out `TdayFeedItemMotion.FadeOut` through
+    // `animateItem`. All four are plain Compose animations on the device's clock. A
+    // wait zeroed while the motion it covers plays on is the fifth idiom rule broken
+    // the other way about — see [effectiveMotionScale]. Each moves back to
+    // `rememberTdayMotionScale` as its animation is gated.
+    val motionScale = rememberSystemMotionScale()
     val heroCollapse = rememberLazyListHeroTitleCollapse(
         listState = listState,
         enabled = usesTodayStyle && !usesRootFeedChrome,
@@ -1657,10 +1663,12 @@ fun TodoListScreen( // skipcq: KT-R1006
                     earlierExpandPending = true
                     screenScope.launch {
                         // Scaled, because what it is holding for is that exit: with
-                        // animations off the scene is gone on the first frame and this
-                        // would be 150 ms of an Earlier header that answered a tap by
-                        // doing nothing. Web's `useEarlierExpandHandoff` takes its
-                        // immediate branch for the same reason.
+                        // the device's animations off the scene is gone on the first
+                        // frame and this would be 150 ms of an Earlier header that
+                        // answered a tap by doing nothing. The device's and not the
+                        // app's, because that exit is `animateItem`'s ungated
+                        // fade; see [motionScale]. Web's `useEarlierExpandHandoff`
+                        // takes its immediate branch for the same reason.
                         scaledDelay(EarlierExpandDeferMillis, motionScale)
                         collapsedSectionKeys = collapsedSectionKeys - key
                         earlierExpandPending = false
@@ -5524,13 +5532,19 @@ private const val SEARCH_RESULT_FLASH_PULSE_GAP_MS = 150L
  *
  * Every leg of this sequence is handed to [scaledDelay] rather than to `delay`, and
  * that is the whole of what the row has to get right under the animator scale. The
- * three beats the gaps separate are each already on that clock — the tint crossfade
- * is a `snap()` when motion is off, `rememberTaskStrikeProgress` hands back its
- * finished progress, and the fade below is a `tween` Compose collapses to one frame
- * — so at 0x the row is drawn ticked, struck and gone on the first frame and the
- * only thing left to remove is the 780 ms the user would otherwise spend in front of
- * it. That is `docs/motion.md`'s fifth idiom rule read from the other side, and it
- * lands on the app's most-performed interaction.
+ * three beats the gaps separate are each gated on the same answer the gaps are — the
+ * tint crossfade is a `snap()` when motion is off, `rememberTaskStrikeProgress` hands
+ * back its finished progress, and `completionAlpha` snaps rather than fading — so the
+ * row is drawn ticked, struck and gone on the first frame and the only thing left to
+ * remove is the 780 ms the user would otherwise spend in front of it. That is
+ * `docs/motion.md`'s fifth idiom rule read from the other side, and it lands on the
+ * app's most-performed interaction.
+ *
+ * All three being gated is also what lets the gaps take the app's scale rather than
+ * the device's. The fade was a bare `tween` until the in-app switch existed, and the
+ * two would have come apart the moment it did: the row pulled out of the list at full
+ * opacity, by a wait of nothing, while the fade meant to carry it off ran on.
+ * [effectiveMotionScale] has the general shape of that trap.
  *
  * Android cuts deeper here than web does — `taskCompletionStaging.ts` keeps these
  * first two legs and drops only the last — because the two preferences are not the
@@ -5769,33 +5783,54 @@ private fun SwipeTaskRow(
         label = "swipeTaskOffset",
     )
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
+    // The beats the row used to cut straight to. Tint and title colour are one
+    // event each and travel with the glyph and the rule they belong to; the rule
+    // itself is `taskStrikethrough`, which argues the mechanism where it lives;
+    // the fade below is the last of them. Under reduced motion every one of these
+    // is handed its finished value rather than the first frame of a trip nobody is
+    // taking.
+    val motionEnabled = rememberTdayMotionEnabled()
+    // Gated like the two beats in front of it, and read alongside them rather than
+    // left to Compose. The three legs of the check-off are timed against these
+    // specs, so a fade that kept running while its own wait was zeroed would pull
+    // the row out of the list at full opacity — the pop the last leg exists to
+    // prevent. See [TASK_COMPLETION_CHECK_TO_STRIKE_MS].
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
-        animationSpec = tween(
-            durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
-            easing = TdayMotionTokens.Easings.Standard,
-        ),
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "swipeTaskCompletionAlpha",
     )
     val completionOffsetY by animateDpAsState(
         targetValue = if (completionFading) (-10).dp else 0.dp,
-        animationSpec = tween(
-            durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
-            easing = TdayMotionTokens.Easings.Standard,
-        ),
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "swipeTaskCompletionOffsetY",
     )
-    // The three beats the row used to cut straight to. Tint and title colour are
-    // one event each and travel with the glyph and the rule they belong to; the
-    // rule itself is `taskStrikethrough`, which argues the mechanism where it
-    // lives. Under reduced motion every one of these is handed its finished
-    // value rather than the first frame of a trip nobody is taking.
-    val motionEnabled = rememberTdayMotionEnabled()
-    // The scale behind that switch, for this row's waits: the gap between the
-    // flash's two pulses, the hint's hold, and the three legs of the check-off.
-    // Every one of them is a gap between animations rather than a spec handed to
-    // one, which is the line [scaledDelay] draws.
+    // The scale behind that switch, for this row's waits: the hint's hold and the
+    // three legs of the check-off. Every one of them is a gap between animations
+    // rather than a spec handed to one, which is the line [scaledDelay] draws — and
+    // every one of them sits between beats this row gates on [motionEnabled], which
+    // is what makes the app's scale the right clock for them.
     val rowMotionScale = rememberTdayMotionScale()
+    // The flash is the exception, so it gets its own number. Its two pulses are
+    // ungated `tween`s below, which means they keep playing at the device's scale
+    // with the in-app switch on; a gap between them timed on the app's scale would
+    // close while the first pulse was still climbing. Free per row — both scales come
+    // down a composition local. See [effectiveMotionScale].
+    val rowFlashMotionScale = rememberSystemMotionScale()
     val toggleTint by animateColorAsState(
         targetValue = if (selectionActive) {
             if (selected) colorScheme.primary else colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
@@ -5922,7 +5957,7 @@ private fun SwipeTaskRow(
                 animationSpec = tween(durationMillis = 620, easing = FastOutSlowInEasing),
             )
             if (pulseIndex < 1) {
-                scaledDelay(SEARCH_RESULT_FLASH_PULSE_GAP_MS, rowMotionScale)
+                scaledDelay(SEARCH_RESULT_FLASH_PULSE_GAP_MS, rowFlashMotionScale)
             }
         }
     }

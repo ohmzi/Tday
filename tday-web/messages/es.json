@@ -1019,7 +1019,7 @@
         "title": "Reducir el movimiento",
         "summary": "Desactiva las animaciones de T'Day sin cambiar el resto del teléfono.",
         "keywords": "movimiento, animación, animaciones, reducir, accesibilidad, quieto, transiciones, mareo",
-        "body": "Ajustes incluye un interruptor «Reducir el movimiento». Con él activado, T'Day deja de animar: las filas, las hojas y las pantallas van directas a su destino, y cada espera que cubría una animación desaparece con ella, así que la app se vuelve más rápida, no más lenta. Nada más cambia: las mismas pantallas en el mismo orden, solo que ya han llegado.",
+        "body": "Ajustes incluye un interruptor «Reducir el movimiento». Con él activado, T'Day deja de reproducir las animaciones que escribe por su cuenta: una tarea se marca, se tacha y desaparece de una vez en lugar de en tres tiempos, el aviso de deslizamiento y el confeti no aparecen, y la ilustración del día vacío simplemente está ahí en vez de subir a su sitio. Cada espera que solo estaba ahí para cubrir una de ellas desaparece con ella, así que la app se vuelve más rápida, no más lenta. El deslizamiento entre pantallas y las hojas que suben son animaciones de Android y no de T'Day, así que esas siguen la configuración de animaciones de tu teléfono.",
         "tip": "Solo quita movimiento. Si la propia opción de animaciones de Android ya está desactivada, T'Day ya está quieto y el interruptor lo dice en vez de ofrecerse a deshacerlo."
       },
       "floaters-vs-todos": {

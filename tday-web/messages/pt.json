@@ -1019,7 +1019,7 @@
         "title": "Reduzir o movimento",
         "summary": "Desative as animações do T'Day sem mudar o resto do telefone.",
         "keywords": "movimento, animação, animações, reduzir, acessibilidade, parado, transições, tontura",
-        "body": "As configurações têm um botão Reduzir o movimento. Com ele ligado, o T'Day para de animar: linhas, folhas e telas vão direto para onde estavam indo, e cada espera que cobria uma animação vai junto — então o app fica mais rápido, não mais lento. Nada mais muda: as mesmas telas na mesma ordem, só que já chegaram.",
+        "body": "As configurações têm um botão Reduzir o movimento. Com ele ligado, o T'Day para de tocar as animações que ele mesmo escreve: uma tarefa é marcada, riscada e sai de uma vez só em vez de em três tempos, a dica de deslizar e o confete não aparecem, e a ilustração do dia vazio simplesmente está lá em vez de subir até o lugar. Cada espera que existia só para cobrir uma delas vai junto — então o app fica mais rápido, não mais lento. Deslizar entre telas e as folhas que sobem são animações do Android e não do T'Day: essas continuam seguindo a configuração de animações do seu telefone.",
         "tip": "Ele só tira movimento. Se a própria opção de animações do Android já estiver desligada, o T'Day já está parado e o botão diz isso em vez de oferecer desfazer."
       },
       "floaters-vs-todos": {

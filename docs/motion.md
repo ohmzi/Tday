@@ -388,6 +388,18 @@ many builds. The Settings row reads the system half on its own
 removed animations the switch cannot change anything, and a control that cannot
 act must say so rather than claim the app is still moving.
 
+Having two answers means having two **clocks**, and a `scaledDelay` has to be
+handed the right one. The device's scale is also Compose's own
+`MotionDurationScale`, so every ungated `tween` obeys it whether or not anybody
+wrote code for it; the in-app switch reaches only what asks. A wait therefore
+runs on the clock of the motion it is covering — `rememberTdayMotionScale()`
+where that motion is gated on the preference, `rememberSystemMotionScale()`
+where it is a Compose animation nobody has gated yet. Getting that backwards
+breaks the fifth idiom rule from the side nobody watches: the motion is kept and
+the wait is removed, so the app tears a surface out from under a transition that
+is still running. Where the choice is available, gating the covered animation is
+the better half of the fix — the run then has one clock instead of two.
+
 - Android: `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:126` seeds the
   appearance `Animatable` at `1f` — fully arrived — when motion is off, rather
   than at `0f` with the animation skipped.

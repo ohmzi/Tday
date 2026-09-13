@@ -1019,7 +1019,7 @@
         "title": "Bewegung reduzieren",
         "summary": "Schalte die Animationen von T'Day aus, ohne den Rest des Telefons zu ändern.",
         "keywords": "bewegung, animation, animationen, reduzieren, barrierefreiheit, still, übergänge, schwindel",
-        "body": "In den Einstellungen gibt es einen Schalter „Bewegung reduzieren“. Ist er an, animiert T'Day nichts mehr: Zeilen, Blätter und Bildschirme sind sofort dort, wo sie hinwollten, und jede Wartezeit, die eine Animation überbrückt hat, entfällt mit ihr – die App wird dadurch schneller, nicht langsamer. Sonst ändert sich nichts: dieselben Bildschirme in derselben Reihenfolge, nur schon angekommen.",
+        "body": "In den Einstellungen gibt es einen Schalter „Bewegung reduzieren“. Ist er an, spielt T'Day die Animationen, die es selbst schreibt, nicht mehr ab: Eine Aufgabe wird abgehakt, durchgestrichen und verschwindet auf einmal statt in drei Schritten, der Wischhinweis und das Konfetti bleiben aus, und die Illustration für den leeren Tag ist einfach da, statt hereinzufahren. Jede Wartezeit, die nur eine davon überbrückt hat, entfällt mit ihr – die App wird dadurch schneller, nicht langsamer. Das Gleiten zwischen Bildschirmen und die aufsteigenden Blätter sind Animationen von Android und nicht von T'Day; die richten sich weiterhin nach der Animationseinstellung deines Telefons.",
         "tip": "Er nimmt Bewegung nur weg. Sind Animationen in den Android-Einstellungen bereits aus, ist T'Day schon still – und der Schalter sagt das, statt anzubieten, es rückgängig zu machen."
       },
       "floaters-vs-todos": {

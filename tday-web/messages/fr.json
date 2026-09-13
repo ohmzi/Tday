@@ -1019,7 +1019,7 @@
         "title": "Réduire les animations",
         "summary": "Désactivez les animations de T'Day sans toucher au reste du téléphone.",
         "keywords": "mouvement, animation, animations, réduire, accessibilité, immobile, transitions, vertige",
-        "body": "Les réglages contiennent un interrupteur « Réduire les animations ». Activé, T'Day n'anime plus rien : les lignes, les feuilles et les écrans arrivent directement à destination, et chaque attente qui couvrait une animation disparaît avec elle — l'app devient donc plus rapide, pas plus lente. Rien d'autre ne change : les mêmes écrans dans le même ordre, simplement déjà arrivés.",
+        "body": "Les réglages contiennent un interrupteur « Réduire les animations ». Activé, T'Day cesse de jouer les animations qu'il écrit lui-même : une tâche se coche, se barre et s'en va d'un coup au lieu de le faire en trois temps, l'indice de balayage et les confettis ne se montrent plus, et l'illustration du jour vide est simplement là au lieu de monter en place. Chaque attente qui n'était là que pour couvrir l'une d'elles disparaît avec elle — l'app devient donc plus rapide, pas plus lente. Le glissement entre écrans et les feuilles qui montent sont des animations d'Android et non de T'Day : celles-là continuent de suivre le réglage d'animation de votre téléphone.",
         "tip": "Il ne fait que retirer du mouvement. Si le réglage d'animation d'Android est déjà désactivé, T'Day est déjà immobile et l'interrupteur le dit au lieu de proposer d'annuler."
       },
       "floaters-vs-todos": {
