@@ -154,7 +154,7 @@ jobs:
 
       # WHY THESE TWO TASKS
       #
-      # `:app:testDebugUnitTest` is the whole point — 240 JVM tests that nothing in CI has ever
+      # `:app:testDebugUnitTest` is the whole point — 365 JVM tests that nothing in CI had ever
       # run, including PR #85's versionCode guards and PR #89's bulk-selection tests. It already
       # depends on `:app:compileDebugKotlin`, so naming that separately would be redundant.
       #
@@ -176,7 +176,7 @@ jobs:
         run: ./gradlew :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin --no-daemon
 
       # Gradle prints nothing on a green test task, so without this there is no way to tell a
-      # run that executed 240 tests from one that executed none — a source-set path that
+      # run that executed 365 tests from one that executed none — a source-set path that
       # quietly stopped matching would look exactly like success.
       - name: Summarise the test results
         if: always()

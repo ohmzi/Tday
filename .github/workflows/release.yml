@@ -75,7 +75,7 @@ jobs:
       # root build (`:android-compose:app:assembleRelease`), so this tests the same build that
       # ships; and the root build is already configured in this job for the two Gradle steps
       # above, so this reuses it instead of standing up a second Gradle root. Both roots run
-      # the same 240 tests.
+      # the same 365 tests.
       #
       # The SDK comes from the runner's ANDROID_HOME — no `local.properties` exists in CI.
       - name: Run Android unit tests
