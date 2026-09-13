@@ -379,10 +379,10 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 19 — the Android swipe row tracks the finger
 
-- [ ] `and-swipe-row-lags-finger` — one `StiffnessLow` spring drives drag *and* settle; rows trail the thumb ~141 ms · and · Sev 4 · S · Gate J+D
-- [ ] `android-swipe-reveal-tracks-finger` — Swipe-to-reveal is spring-chased during the drag instead of tracking the finger 1:1, so every task row visibly trails the thumb · and · Impact O4 · S · Gate J+D
+- [x] `and-swipe-row-lags-finger` — one `StiffnessLow` spring drives drag *and* settle; rows trail the thumb ~141 ms · and · Sev 4 · S · Gate J+D
+- [x] `android-swipe-reveal-tracks-finger` — Swipe-to-reveal is spring-chased during the drag instead of tracking the finger 1:1, so every task row visibly trails the thumb · and · Impact O4 · S · Gate J+D
   - **Duplicate of `and-swipe-row-lags-finger` (§2.2).** Same file (`TaskSwipeRevealState.kt:96-100`), same fix, but the two filings disagreed on the release spring — `0.82f/340f` against `0.85f/StiffnessMedium` (1500f), a 4.4× stiffness gap. §2.2 settles it at `dampingRatio = 0.82f, stiffness = 340f`, because 340f is iOS's `SwipeActions.swift:368` release spec converted and `StiffnessMedium` is a Compose default nobody chose. Ticks with its twin.
-- [ ] `and-swipe-hint-stomps-live-drag` — `playHint()` yanks a row to zero under a live finger · and · Sev 2 · XS · Gate J
+- [x] `and-swipe-hint-stomps-live-drag` — `playHint()` yanks a row to zero under a live finger · and · Sev 2 · XS · Gate J
 
 ### PR 15a — the Android create sheet actually plays its exit
 
