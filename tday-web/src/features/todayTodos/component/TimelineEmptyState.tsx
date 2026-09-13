@@ -20,6 +20,7 @@ export default function TimelineEmptyState({
   accentColor,
   isDayDone,
   celebrate,
+  celebrationStartDelayMs = 0,
   earlierHandoffPending,
   locale,
   emptyTitle,
@@ -32,6 +33,14 @@ export default function TimelineEmptyState({
   isDayDone: boolean;
   /** A completion (this tab's or a remote one) just emptied the scope. */
   celebrate: boolean;
+  /**
+   * How long the celebration waits for the page to settle before any of it plays
+   * (see `EmptyState`'s own doc). `AllTasksTimelineContainer` passes the travel its
+   * own children take to reach their new slots, because this scene claims its 42vh
+   * out of the page they sit in; `ListContainer` omits it, because nothing on a list
+   * screen moves when this mounts.
+   */
+  celebrationStartDelayMs?: number;
   /** Requirement 3's two-phase hand-off is mid-exit (see `useEarlierExpandHandoff`). */
   earlierHandoffPending: boolean;
   locale: string;
@@ -64,6 +73,7 @@ export default function TimelineEmptyState({
             : appDict(emptyBody)
         }
         celebrate={celebrate}
+        celebrationStartDelayMs={celebrationStartDelayMs}
       />
     </div>
   );

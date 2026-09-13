@@ -150,13 +150,24 @@ own. `CelebrationLead` is an independent literal that happens to equal 320 today
 — welding it to `Emphasis` would let a later PR that retimes row placement
 silently retime the confetti on all three clients.
 
-- **`PlacementLead`.** One site, Android only:
-  `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:76`. See the open question
-  below.
+- **`PlacementLead`.** Three sites on two clients, all of them a feed that draws
+  the empty state *inline* and therefore moves its own layout when that scene
+  arrives. Android spends it inside the feed's motion spec
+  (`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:76`);
+  web spends it at the two screens with the same shape, as `EmptyState`'s
+  `celebrationStartDelayMs` —
+  `tday-web/src/features/todayTodos/component/AllTasksTimelineContainer.tsx:313`
+  and
+  `tday-web/src/features/floater/component/NativeFloaterTaskHomeDashboard.tsx:218`.
+  The overlay callers on both clients pass nothing, because nothing behind the
+  overlay moves. See the open question below.
 - **`CelebrationLead`.** One site per client:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:388`,
   `ios-swiftUI/Tday/Core/UI/TdayConfetti.swift:160`,
-  `tday-web/src/globals.css:615`.
+  `tday-web/src/globals.css:623`. Web's is the one that shows the two delays
+  adding: `.tday-empty-enter-celebrating` is
+  `calc(var(--tday-celebration-start, 0s) + var(--tday-delay-celebration-lead))`,
+  where the first term is whatever `PlacementLead` the host handed over.
 
 ## Easings
 
@@ -187,7 +198,7 @@ against `animation-core`'s bytecode rather than assumed.
   web today.
 - **`Scene`.** `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:375`, and three
   declarations on web — `.tday-empty-enter` at `tday-web/src/globals.css:608`,
-  `.tday-surface-enter` at `:713` and `.tday-surface-exit` at `:719`. iOS
+  `.tday-surface-enter` at `:724` and `.tday-surface-exit` at `:730`. iOS
   expresses the same arrival with `.easeOut` and is not on this curve yet.
 - **`Gesture`.** Four sites, all web: `tday-web/src/globals.css:249` and `:271`
   (press feedback), `tday-web/src/features/calendar/style/calendar-styles.css:24`
@@ -387,13 +398,16 @@ different from the token they would move to; only the 5 `.easeIn` sites are a
 near-match. That is why this PR migrates none of them, and why whoever does must
 treat it as a visual change with a visual review, not as a refactor.
 
-**`PlacementLead` exists on Android only.** It has one consumer
-(`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:76`) and no counterpart on
-iOS or web: on the list-detail screens the empty state is a full-screen overlay
-and nothing on the page moves, so there is no placement to lead. It is in the
-vocabulary ahead of two of its three clients, on the argument that the inline
-layout iOS and web share will need it when they animate row placement. Until
-they do, it is a token with a single caller.
+**`PlacementLead` has no iOS caller.** It went in ahead of two of its three
+clients, on the argument that the inline layout iOS and web share would need it
+the day either one animated row placement. Web now does
+(`useRowPlacement`), and spends it at both of its inline hosts — the Delays
+section lists them — so half of that bet is settled. iOS is the other half: its
+rows travel on SwiftUI's implicit layout animation, which nothing there can
+currently ask the length of, so the inline empty state has no travel it can name
+to wait for. Until it can, this token has two clients and not three. Overlay
+callers on every client are not the gap: nothing behind an overlay moves, so
+there is no placement to lead in the first place.
 
 ---
 

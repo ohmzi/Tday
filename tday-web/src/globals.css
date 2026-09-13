@@ -610,9 +610,19 @@
 
 /* The burst leads; the scene follows through it. Without the wait the
    illustration is already sitting there when the first piece of paper clears
-   it, and the confetti reads as decoration on a static page. */
+   it, and the confetti reads as decoration on a static page.
+
+   `--tday-celebration-start` is how long the WHOLE celebration waited before
+   any of it played, set by a feed that draws this scene inline and has to move
+   its own rows out of the way first (`EmptyState`'s `celebrationStartDelayMs`).
+   It is added to the lead rather than spent out of it — `MotionTokens.kt` calls
+   the two "added, never traded" — because a lead the travel eats into is not a
+   lead: the paper would be crossing a screen that is still sliding. Unset, and
+   therefore zero, for the overlay callers, where nothing but the paper moves. */
 .tday-empty-enter-celebrating {
-  animation-delay: 320ms;
+  animation-delay: calc(
+    var(--tday-celebration-start, 0s) + var(--tday-delay-celebration-lead)
+  );
 }
 
 @keyframes tday-empty-rise {
