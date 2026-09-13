@@ -161,6 +161,9 @@ private enum EmptyStateIllustrationLayout {
     static let minimumRemainder: CGFloat = 240
 }
 
+/// Snappy's response (0.28) with two hundredths more damping. Left off the token
+/// for the damping alone: the placeholder is opening a gap under a row the finger
+/// is still holding, and Snappy's 0.86 lets that gap overshoot visibly.
 private let todoDropPlaceholderAnimation = Animation.spring(response: 0.28, dampingFraction: 0.88, blendDuration: 0.02)
 
 private func isTodoRootDaytime(_ date: Date) -> Bool {
@@ -1015,6 +1018,11 @@ struct TodoListScreen: View {
     /// `withAnimation` anyway, both for symmetry with the exit branch and as
     /// a live seam if a future visible property ever needs to ride along
     /// with this flag on the way back in.
+    ///
+    /// None of the three is a rung and none is moved onto one. This is a sequence
+    /// whose legs are timed against each other, so putting any single leg on its
+    /// nearest token (Enter 0.20, Emphasis 0.32) would retime the hand-off, not
+    /// just that leg.
     private enum EarlierIllustrationHandoff {
         static let exitDuration: Double = 0.22
         /// The section toggle's own spring (`response: 0.28,
