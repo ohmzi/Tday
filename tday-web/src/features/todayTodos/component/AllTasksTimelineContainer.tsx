@@ -23,6 +23,7 @@ import { useTimelineSections } from "../lib/useTimelineSections";
 import { useTimelineEmptyState } from "../lib/useTimelineEmptyState";
 import { isTimelineScope } from "../lib/timelineScopeHelpers";
 import { TODAY_EARLIER_EXIT_MS } from "../lib/todayEarlierIllustration";
+import { useRowPlacement } from "@/hooks/useRowPlacement";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import TaskSelectionProvider from "@/providers/TaskSelectionProvider";
 import BulkSelectButton from "@/components/todo/bulk/BulkSelectButton";
@@ -110,6 +111,7 @@ const AllTasksTimelineContainer = ({
   // the length of a drag.
   const [dragActive, setDragActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const placementRef = useRowPlacement<HTMLDivElement>();
   const { icon: ScopeIcon, emptyTitle, emptyBody, heading: scopeHeading } = SCOPE_CONFIG[scope];
   const pageHeading = getPageHeading(scope, scopeHeading, appDict);
   const barSlots = useNativePageBarSlots();
@@ -208,7 +210,15 @@ const AllTasksTimelineContainer = ({
       useReorderTodo={useReorderTodo}
     >
       <TaskSelectionProvider rows={selectableTodos}>
-        <div className="mb-20">
+        {/* The page's children travel when one of them takes a new slot. The empty
+            state is why: it is `min-h-[42vh]`, so the frame that prunes the last row
+            also hands that block of the screen to a scene that was not there before —
+            and everything under it (the Earlier bucket, the no-results state, the
+            pager) was put in its new place in that same frame, which is the one moment
+            on this screen with no motion of any kind to read it by. The scene's own
+            arrival is unchanged and stays on the Scene rung; this is the Emphasis one
+            the geometry asks for, because a slot is a position. */}
+        <div ref={placementRef} className="mb-20">
           <ScreenWatermark icon={ScopeIcon} />
           {/* The search field is this page's pinned bar, so the header below
               renders only the block that scrolls away and docks its title into
