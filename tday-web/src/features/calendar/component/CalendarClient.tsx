@@ -20,11 +20,11 @@ import {
 } from "date-fns";
 import { TodoItemType } from "@/types";
 import { useDateRange } from "../hooks/useDateRange";
+import { useCalendarPagerSwipe } from "../lib/useCalendarPagerSwipe";
+import { useCalendarRowSwipe } from "../lib/useCalendarRowSwipe";
 import { useCalendarTodo } from "../query/get-calendar-todo";
 import {
   lazy,
-  type PointerEvent as ReactPointerEvent,
-  type TouchEvent as ReactTouchEvent,
   Suspense,
   useCallback,
   useEffect,
@@ -224,31 +224,7 @@ function CalendarModeCard({
   onNavigate: (offset: -1 | 1) => void;
   onSelectDate: (date: Date) => void;
 }) {
-  const touchStartX = useRef<number | null>(null);
-  const swipeTrackingRef = useRef(false);
-
-  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLElement;
-    if (target.closest("button")) {
-      swipeTrackingRef.current = false;
-      touchStartX.current = null;
-      return;
-    }
-    swipeTrackingRef.current = true;
-    touchStartX.current = event.clientX;
-  };
-
-  const handlePointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!swipeTrackingRef.current) return;
-    const startX = touchStartX.current;
-    touchStartX.current = null;
-    swipeTrackingRef.current = false;
-    if (startX == null) return;
-
-    const delta = event.clientX - startX;
-    if (Math.abs(delta) < swipeThreshold) return;
-    onNavigate(delta < 0 ? 1 : -1);
-  };
+  const swipeHandlers = useCalendarPagerSwipe(swipeThreshold, onNavigate);
 
   const { t: appDict } = useTranslation("app");
   const dfLocale = activeDfLocale();
@@ -287,8 +263,7 @@ function CalendarModeCard({
           slideDirection === "left" && "cal-native-slide-from-left",
           slideDirection === "right" && "cal-native-slide-from-right",
         )}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
+        {...swipeHandlers}
       >
         {view === "month" && (
           <MonthCalendarGrid
@@ -532,12 +507,13 @@ function CalendarTaskRow({
   // home row exactly (same slide distance, same pills) so the calendar
   // matches it.
   const ACTIONS_WIDTH = 210;
-  const [swipeX, setSwipeX] = useState(0);
-  const [swiping, setSwiping] = useState(false);
-  const swipeTouch = useRef<
-    { x: number; y: number; startX: number; axis: "x" | "y" | null } | null
-  >(null);
-  const closeSwipe = () => setSwipeX(0);
+  const announceSwipeOpen = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("tday-calendar-swipe-open", { detail: todo.id }));
+  }, [todo.id]);
+  const { swipeX, swiping, closeSwipe, swipeHandlers } = useCalendarRowSwipe(
+    ACTIONS_WIDTH,
+    announceSwipeOpen,
+  );
 
   /** Copies the task's title/notes/due/priority to the clipboard as plain text. */
   const handleCopy = async () => {
@@ -571,12 +547,12 @@ function CalendarTaskRow({
   useEffect(() => {
     const onOpen = (event: Event) => {
       const id = (event as CustomEvent<string>).detail;
-      if (id !== todo.id) setSwipeX(0);
+      if (id !== todo.id) closeSwipe();
     };
     window.addEventListener("tday-calendar-swipe-open", onOpen as EventListener);
     return () =>
       window.removeEventListener("tday-calendar-swipe-open", onOpen as EventListener);
-  }, [todo.id]);
+  }, [closeSwipe, todo.id]);
 
   useEffect(() => {
     if (!highlighted || !itemElement) return;
@@ -610,38 +586,6 @@ function CalendarTaskRow({
       setDeleteAllDialogOpen(true);
     } else {
       setDeleteDialogOpen(true);
-    }
-  };
-
-  const handleTouchStart = (event: ReactTouchEvent) => {
-    const touch = event.touches[0];
-    swipeTouch.current = { x: touch.clientX, y: touch.clientY, startX: swipeX, axis: null };
-    setSwiping(true);
-  };
-  const handleTouchMove = (event: ReactTouchEvent) => {
-    const data = swipeTouch.current;
-    if (!data) return;
-    const touch = event.touches[0];
-    const dx = touch.clientX - data.x;
-    const dy = touch.clientY - data.y;
-    if (data.axis === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-      data.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-      if (data.axis === "x") {
-        window.dispatchEvent(
-          new CustomEvent("tday-calendar-swipe-open", { detail: todo.id }),
-        );
-      }
-    }
-    if (data.axis === "x") {
-      setSwipeX(Math.min(0, Math.max(-ACTIONS_WIDTH, data.startX + dx)));
-    }
-  };
-  const handleTouchEnd = () => {
-    const data = swipeTouch.current;
-    setSwiping(false);
-    swipeTouch.current = null;
-    if (data?.axis === "x") {
-      setSwipeX((prev) => (prev < -ACTIONS_WIDTH / 2 ? -ACTIONS_WIDTH : 0));
     }
   };
 
@@ -747,9 +691,7 @@ function CalendarTaskRow({
           onClick={() => {
             if (swipeX !== 0) closeSwipe();
           }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          {...swipeHandlers}
           style={{
             transform: `translateX(${swipeX}px)`,
             transition: swiping

@@ -171,8 +171,8 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 5 — pointer capture on the web calendar and row swipes
 
-- [ ] `web-calendar-swipe-lost-off-element` — no pointer capture, no `pointercancel`; release off-element leaves refs dirty · web · Sev 3 · XS · Gate V
-- [ ] `web-calendar-row-touch-cancel-freezes-swipe` — cancelled touch strands a row half-swiped with transitions off · web · Sev 3 · XS · Gate V
+- [x] `web-calendar-swipe-lost-off-element` — no pointer capture, no `pointercancel`; release off-element leaves refs dirty · web · Sev 3 · XS · Gate V
+- [x] `web-calendar-row-touch-cancel-freezes-swipe` — cancelled touch strands a row half-swiped with transitions off · web · Sev 3 · XS · Gate V
 
 ### PR 6 — Today drag targets survive an emptied section
 
