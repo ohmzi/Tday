@@ -82,7 +82,9 @@ const RAW_HAPTIC_MARKERS = [
 
 /** Names declared on `object TdayHaptics`, in declaration order. */
 function declaredVocabulary(source: string): string[] {
-  return [...source.matchAll(/^ {4}fun\s+([A-Za-z][A-Za-z0-9]*)\s*\(/gm)].map((m) => m[1]);
+  return [...source.matchAll(/^ {4}fun\s+([A-Za-z][A-Za-z0-9]*)\s*\(/gm)].map(
+    (m) => m[1],
+  );
 }
 
 /** The `HapticFeedbackConstantsCompat` constants one vocabulary function resolves to. */
@@ -92,7 +94,9 @@ function constantsFor(source: string, name: string): string[] {
   const rest = source.slice(start + 1);
   const nextFun = rest.search(/^ {4}fun\s+/m);
   const body = nextFun === -1 ? rest : rest.slice(0, nextFun);
-  return [...body.matchAll(/HapticFeedbackConstantsCompat\.([A-Z_]+)/g)].map((m) => m[1]);
+  return [...body.matchAll(/HapticFeedbackConstantsCompat\.([A-Z_]+)/g)].map(
+    (m) => m[1],
+  );
 }
 
 describeAndroid("Android haptic vocabulary", () => {
@@ -120,9 +124,7 @@ describeAndroid("Android haptic vocabulary", () => {
 
     expect(
       violations,
-      "Call sites must name the event, not the waveform. Use TdayHaptics.<event>(view) " +
-        "from core/ui/TdayHaptics.kt — add a name there if none of them fits:\n" +
-        violations.join("\n"),
+      `Call sites must name the event, not the waveform. Use TdayHaptics.<event>(view) from core/ui/TdayHaptics.kt — add a name there if none of them fits:\n${violations.join("\n")}`,
     ).toEqual([]);
   });
 
@@ -131,7 +133,9 @@ describeAndroid("Android haptic vocabulary", () => {
     expect(names.length).toBeGreaterThan(0);
 
     const callers = CALLER_KT.map(readSource).join("\n");
-    const unused = names.filter((name) => !callers.includes(`TdayHaptics.${name}(`));
+    const unused = names.filter(
+      (name) => !callers.includes(`TdayHaptics.${name}(`),
+    );
 
     expect(
       unused,
@@ -144,18 +148,24 @@ describeAndroid("Android haptic vocabulary", () => {
   it("keeps a tap, a completion and a deletion feeling different from each other", () => {
     const source = readSource(VOCABULARY_FILE);
     const distinct = ["buttonPress", "completion", "destructive"];
-    const resolved = distinct.map((name) => ({ name, constants: constantsFor(source, name) }));
+    const resolved = distinct.map((name) => ({
+      name,
+      constants: constantsFor(source, name),
+    }));
 
     for (const { name, constants } of resolved) {
-      expect(constants.length, `${name}() must resolve to a concrete constant`).toBeGreaterThan(0);
+      expect(
+        constants.length,
+        `${name}() must resolve to a concrete constant`,
+      ).toBeGreaterThan(0);
     }
 
     const flat = resolved.flatMap(({ constants }) => constants);
     expect(
       new Set(flat).size,
-      "Tapping a button, finishing a task and deleting one are three different events and " +
-        "must not collapse back onto one constant: " +
-        resolved.map(({ name, constants }) => `${name}=${constants.join("/")}`).join(", "),
+      `Tapping a button, finishing a task and deleting one are three different events and must not collapse back onto one constant: ${resolved
+        .map(({ name, constants }) => `${name}=${constants.join("/")}`)
+        .join(", ")}`,
     ).toBe(flat.length);
   });
 });
