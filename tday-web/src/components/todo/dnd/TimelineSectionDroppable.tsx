@@ -1,6 +1,6 @@
 import React from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getTodoDateSectionId } from "@/lib/todoToastNavigation";
 import type { TimelineSection } from "@/lib/timeline/buildTimelineSections";
@@ -40,12 +40,19 @@ export default function TimelineSectionDroppable({
   section,
   focusedDateKey,
   collapsed = false,
+  expanding = false,
   onToggleCollapse,
   children,
 }: {
   section: TimelineSection;
   focusedDateKey?: string | null;
   collapsed?: boolean;
+  /**
+   * A tap has opened this bucket and the hand-off has not handed the slot over
+   * yet, so `collapsed` is still true — see `earlierIsExpanding`. Only the
+   * chevron reads it; the body genuinely is not there yet.
+   */
+  expanding?: boolean;
   onToggleCollapse?: () => void;
   children: React.ReactNode;
 }) {
@@ -101,11 +108,18 @@ export default function TimelineSectionDroppable({
           onClick={onToggleCollapse}
           className={cn(headerToBodyGap, "flex w-full items-center gap-2")}
         >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          )}
+          {/* One glyph that turns, not two that swap — the same header motion
+              `TodayEarlierSection` draws, for the same reason: a swap has no
+              frames to animate, and on the way open `collapsed` stays true for
+              the whole hand-off, so without `expanding` the tap gets no reply
+              until the beat above it has finished. `Quick` is the rung for the
+              app answering a finger. */}
+          <ChevronRight
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform duration-quick ease-out motion-reduce:transition-none",
+              (!collapsed || expanding) && "rotate-90",
+            )}
+          />
           <h3 className={headingClass}>{section.label}</h3>
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
             {section.todos.length}

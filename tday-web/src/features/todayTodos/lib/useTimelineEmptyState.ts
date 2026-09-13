@@ -2,8 +2,12 @@ import { useMemo } from "react";
 import { isSameDay } from "date-fns";
 import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
 import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
-import { taskJustCompleted } from "@/lib/task-completion-signal";
-import { shouldShowTodayEmptyIllustration } from "./todayEarlierIllustration";
+import { useTaskJustCompleted } from "@/lib/task-completion-signal";
+import {
+  earlierSlotChangesHands,
+  shouldShowTodayEmptyIllustration,
+} from "./todayEarlierIllustration";
+import { useCelebrationSceneExit, type EarlierHandoff } from "./useEarlierExpandHandoff";
 import { isTimelineScope, splitEarlierItems } from "./timelineScopeHelpers";
 import type { TimelineItem, TimelineScope } from "../component/AllTasksTimelineContainer";
 
@@ -43,7 +47,8 @@ export function useTimelineEmptyState({
   todoLoading,
   isSearching,
   earlierExpanded,
-  earlierHandoffPending,
+  earlierHandoff,
+  beginSceneExit,
   todayHasEarlierItems,
 }: {
   scope: TimelineScope;
@@ -52,7 +57,9 @@ export function useTimelineEmptyState({
   todoLoading: boolean;
   isSearching: boolean;
   earlierExpanded: boolean;
-  earlierHandoffPending: boolean;
+  earlierHandoff: EarlierHandoff;
+  /** `useEarlierExpandHandoff`'s own `beginSceneExit` — see `useCelebrationSceneExit`. */
+  beginSceneExit: () => void;
   /** Today's own separately-fetched Earlier signal — see `useTodayEarlierBucket`. Unused for every other scope. */
   todayHasEarlierItems: boolean;
 }) {
@@ -117,7 +124,16 @@ export function useTimelineEmptyState({
   // list. Hoisted (rather than inlined on `<EmptyState celebrate>`) so
   // Today's own illustration/Earlier hand-off reads the exact same signal —
   // see `shouldShowTodayEmptyIllustration`.
-  const celebrate = taskJustCompleted() || remoteEmptied;
+  const celebrate = useTaskJustCompleted() || remoteEmptied;
+  // The window has an end now, so the scene it holds gets to leave over one.
+  // The only screen shape where the end takes anything off the slot is this
+  // one: empty scope, Earlier open, the scene sitting above its rows purely on
+  // the strength of the celebration.
+  const sceneHeldForExit = useCelebrationSceneExit({
+    celebrate,
+    sceneLeavesWithTheWindow: showEmpty && hasEarlierItems && earlierExpanded,
+    beginSceneExit,
+  });
   // Requirements 1-3: who owns the empty-state slot once `showEmpty` is true.
   // Degenerates to plain `showEmpty` whenever `hasEarlierItems` is false (any
   // scope with no Earlier bucket, or none of Today/All/Priority holding
@@ -128,7 +144,17 @@ export function useTimelineEmptyState({
     showEmpty,
     hasEarlierItems,
     earlierExpanded,
-    earlierHandoffPending,
+    earlierHandoff,
+    celebrate,
+    sceneHeldForExit,
+  });
+  // What a tap on Earlier's header does to the SLOT — the argument
+  // `useEarlierExpandHandoff` sequences on, derived here from the same three
+  // signals the block above reads so the two answers cannot drift. See its own
+  // doc comment for why one boolean covers both directions of the swap.
+  const slotChangesHands = earlierSlotChangesHands({
+    showEmpty,
+    hasEarlierItems,
     celebrate,
   });
   // Today's own "Earlier" bucket (requirement 2): always reachable at the
@@ -150,6 +176,7 @@ export function useTimelineEmptyState({
     isDayDone,
     celebrate,
     showEmptyIllustration,
+    earlierSlotChangesHands: slotChangesHands,
     showTodayEarlierSection,
   };
 }

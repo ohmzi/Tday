@@ -2,25 +2,30 @@ import type { ElementType } from "react";
 import { CheckCheck } from "lucide-react";
 import EmptyState from "@/components/app/EmptyState";
 import { cn } from "@/lib/utils";
-import { TODAY_EARLIER_EXIT_MS } from "../lib/todayEarlierIllustration";
+import { emptySceneIsLeaving } from "../lib/todayEarlierIllustration";
+import type { EarlierHandoff } from "../lib/useEarlierExpandHandoff";
 
 /**
  * The native-style centered empty message `AllTasksTimelineContainer` shows
  * once a scope has zero tasks (Day Done: "finished everything" earns a calm
  * payoff state instead of the generic no-tasks message).
  *
- * The wrapper div only ever carries the exit animation while
- * `earlierHandoffPending` is genuinely true — mid requirement-3 hand-off, on
- * whichever scope's own Earlier bucket is mid-exit right now (see
- * `shouldShowTodayEmptyIllustration`'s own doc comment); it is inert
- * everywhere else.
+ * The wrapper is the scene's SLOT and not just a box around it: the hand-off
+ * closes its track as well as fading its ink, so the 42vh this claims is given
+ * back over that beat rather than in the frame that ends it (see
+ * `.tday-empty-slot` in globals.css). Two class names and one question
+ * (`emptySceneIsLeaving`) — the stylesheet wants them apart because the ink is
+ * an animation and the track is a transition on a grid, but they go on
+ * together or not at all. Outside a departure neither is on, the track is open,
+ * and there is nothing for the transition to run on.
  */
 export default function TimelineEmptyState({
   icon,
   accentColor,
   isDayDone,
   celebrate,
-  earlierHandoffPending,
+  celebrationStartDelayMs = 0,
+  earlierHandoff,
   locale,
   emptyTitle,
   emptyBody,
@@ -32,39 +37,58 @@ export default function TimelineEmptyState({
   isDayDone: boolean;
   /** A completion (this tab's or a remote one) just emptied the scope. */
   celebrate: boolean;
-  /** Requirement 3's two-phase hand-off is mid-exit (see `useEarlierExpandHandoff`). */
-  earlierHandoffPending: boolean;
+  /**
+   * How long the celebration waits for the page to settle before any of it plays
+   * (see `EmptyState`'s own doc). `AllTasksTimelineContainer` passes the travel its
+   * own children take to reach their new slots, because this scene claims its 42vh
+   * out of the page they sit in; `ListContainer` omits it, because nothing on a list
+   * screen moves when this mounts.
+   */
+  celebrationStartDelayMs?: number;
+  /** Which half of the swap is mid-exit, if either (see `useEarlierExpandHandoff`). */
+  earlierHandoff: EarlierHandoff;
   locale: string;
   emptyTitle: string;
   emptyBody: string;
   appDict: (key: string) => string;
 }) {
+  // One question, asked once and spent on both class names — see this
+  // component's own doc comment for why the stylesheet still wants two.
+  const leaving = emptySceneIsLeaving({ earlierHandoff });
+
   return (
     <div
-      className={cn(earlierHandoffPending && "tday-empty-exit")}
-      style={
-        earlierHandoffPending
-          ? { animationDuration: `${TODAY_EARLIER_EXIT_MS}ms` }
-          : undefined
-      }
+      className={cn(
+        "tday-empty-slot",
+        leaving && "tday-empty-exit",
+        leaving && "tday-empty-slot-closing",
+      )}
     >
-      <EmptyState
-        // Day Done keeps its own glyph and its date line: it is a payoff,
-        // not an absence, and the scope's own icon would undersell it.
-        icon={isDayDone ? CheckCheck : icon}
-        accentColor={accentColor}
-        title={isDayDone ? appDict("allDoneToday") : appDict(emptyTitle)}
-        description={
-          isDayDone
-            ? new Intl.DateTimeFormat(locale, {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              }).format(new Date())
-            : appDict(emptyBody)
-        }
-        celebrate={celebrate}
-      />
+      {/* The track the grid above closes. It is the one that takes the clip
+          while the track is closing — a grid item that is not a scroll container
+          keeps its own content height as the track's floor (see globals.css) —
+          so it has to be a box of this component's own rather than the
+          scene's. */}
+      <div>
+        <EmptyState
+          // Day Done keeps its own glyph and its date line: it is a payoff,
+          // not an absence, and the scope's own icon would undersell it.
+          icon={isDayDone ? CheckCheck : icon}
+          accentColor={accentColor}
+          title={isDayDone ? appDict("allDoneToday") : appDict(emptyTitle)}
+          description={
+            isDayDone
+              ? new Intl.DateTimeFormat(locale, {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                }).format(new Date())
+              : appDict(emptyBody)
+          }
+          celebrate={celebrate}
+          celebrationStartDelayMs={celebrationStartDelayMs}
+        />
+      </div>
     </div>
   );
 }

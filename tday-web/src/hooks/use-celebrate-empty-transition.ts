@@ -1,5 +1,9 @@
 import { useRef } from "react";
-import { wasDeletedLocallyJustNow } from "@/lib/task-completion-signal";
+import {
+  CELEBRATION_WINDOW_MS,
+  useCelebrationWindowExpiry,
+  wasDeletedLocallyJustNow,
+} from "@/lib/task-completion-signal";
 
 /**
  * Remote sibling of `markTaskCompleted`/`taskJustCompleted`
@@ -48,7 +52,10 @@ import { wasDeletedLocallyJustNow } from "@/lib/task-completion-signal";
  * container mounts, so a list that emptied while its screen was not mounted
  * does not hand back a stale celebration when the user opens it again.
  */
-export function useCelebrateEmptyTransition(isEmpty: boolean, windowMs = 4000): boolean {
+export function useCelebrateEmptyTransition(
+  isEmpty: boolean,
+  windowMs = CELEBRATION_WINDOW_MS,
+): boolean {
   const wasEmptyRef = useRef(isEmpty);
   const emptiedAtRef = useRef(0);
 
@@ -58,6 +65,14 @@ export function useCelebrateEmptyTransition(isEmpty: boolean, windowMs = 4000): 
     }
     wasEmptyRef.current = isEmpty;
   }
+
+  // The other half of the same window as `useTaskJustCompleted`'s, and it needs
+  // the same clock for the same reason: a comparison against `Date.now()` in a
+  // render body ends when somebody else happens to render, which is not an
+  // ending anybody designed. Handed the ref's current value rather than a piece
+  // of state — the assignment above has already happened by the time the effect
+  // inside reads its argument.
+  useCelebrationWindowExpiry(emptiedAtRef.current, windowMs);
 
   return emptiedAtRef.current !== 0 && Date.now() - emptiedAtRef.current < windowMs;
 }
