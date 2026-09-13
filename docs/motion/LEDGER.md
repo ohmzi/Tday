@@ -249,10 +249,34 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 44 — the iOS create-sheet selector overlay
 
-- [ ] `ios-selector-overlay-unanimated` — create-sheet selector overlay: no transition, no animation, six open sites · ios · Sev 3 · S · Gate G+TF
-- [ ] `ios-selector-pops-while-card-slides` — card slides ~300 pt down as the unanimated selector pops over it · ios · Sev 2 · XS · Gate TF
-- [ ] `ios-sheet-dismiss-keyboard-lingers` — only scrim-tap resigns first responder; X and confirm leave the keyboard · ios · Sev 3 · XS · Gate TF
-- [ ] `ios-uiscreen-main-keyboard-probe` — deprecated scene-unaware `UIScreen.main.bounds.maxY` · ios · Sev 1 · XS · Gate X
+- [x] `ios-selector-overlay-unanimated` — create-sheet selector overlay: no transition, no animation, six open sites · ios · Sev 3 · S · Gate G+TF
+  - **The count in the row is wrong and the fix is bigger than it.** `CreateTaskSheet.swift`
+    has *five* sites that open the overlay (`:239` and `:240` for date and time, `:259` list,
+    `:276` priority, `:292` repeat) and *eight* that close it — seven picker dismissals plus
+    the one where turning Schedule off pulls a schedule-only picker out from under the user.
+    All thirteen were bare assignments and all thirteen now go through one
+    `setActiveSelector(_:)`, which carries `TdayCenteredSelectorMotion` (`TdaySheetChrome.swift`,
+    derived from the bottom sheet's own block). Guarded by `motion-reachability-ios.test.ts`
+    rule A, which reports the overlay's `.transition` at `:182` the moment the funnel is
+    bypassed.
+- [x] `ios-selector-pops-while-card-slides` — card slides ~300 pt down as the unanimated selector pops over it · ios · Sev 2 · XS · Gate TF
+  - The ~300 pt is the keyboard inset unwinding: opening a selector resigns first responder, so
+    `TdayBottomSheetPresentationHost` animates the card back down over the keyboard's own
+    ~0.25 s. That slide is correct and stays. What the selector takes from the spec is the
+    *scrim* pair — `.easeOut(0.22)` in, `.easeIn(0.2)` out — rather than the card spring: it
+    arrives where it already is, and 0.22 s of the same curve family lands with the settle
+    instead of over it. Eye-check only; no gate can see two clocks agree.
+- [x] `ios-sheet-dismiss-keyboard-lingers` — only scrim-tap resigns first responder; X and confirm leave the keyboard · ios · Sev 3 · XS · Gate TF
+  - Fixed one level up from the row: the resign moved out of `dismissSheet()` into
+    `TdayBottomSheetPresentationHost.animateOut()`, the funnel every dismissal of every sheet
+    using this chrome reaches. Confirm also resigns before its `await` (`CreateTaskSheet.swift:499`),
+    because waiting for the dismissal there leaves the keyboard up for the whole save.
+- [x] `ios-uiscreen-main-keyboard-probe` — deprecated scene-unaware `UIScreen.main.bounds.maxY` · ios · Sev 1 · XS · Gate X
+  - Citation `TdaySheetChrome.swift:500` was correct. Replaced by `TdayKeyboardFrameProbe` in
+    the same file, which takes the bottom edge from the app's own window scene; the
+    hidden-keyboard test is now a pure function with xctest coverage
+    (`TdaySheetChromeMotionTests.swift`). The app's seven other `UIScreen.main` reads are
+    sizing calls, not this row.
 
 ### PR 45 — iOS empty states that blank or cut
 
