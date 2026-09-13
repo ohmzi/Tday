@@ -1,9 +1,12 @@
 package com.ohmz.tday.compose.core.ui
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -229,10 +232,94 @@ enum class RootFeedHeroMark {
     FloaterLeaf,
 }
 
+/**
+ * How long the time-of-day mark may be stale for. Not a motion value and not on the
+ * ladder: nothing moves when it fires. It is a plain minute because that is the
+ * period iOS gives the `TimelineView` it reads the same glyph off.
+ */
+private const val MARK_CLOCK_TICK_MS = 60_000L
+
+/**
+ * Whether the wall clock says it is daytime right now. Read at each tick rather than
+ * once, which is the whole of the fix below.
+ *
+ * @return Whether the current hour falls in the daytime band the sun glyph covers.
+ */
+private fun isDaytimeNow(): Boolean =
+    Calendar.getInstance().get(Calendar.HOUR_OF_DAY) in 6..17
+
+/**
+ * Whether the time-of-day mark should be drawing a sun or a moon, re-read as the
+ * clock moves.
+ *
+ * The hour used to be sampled inside a keyless `remember`, which on a header that is
+ * never torn down means once per process: a session opened in the afternoon kept the
+ * sun up all evening. iOS reads the same glyph off
+ * `TimelineView(.periodic(from: .now, by: 60))`, so this polls on the same cadence
+ * from the same unaligned start and lands on the same minute.
+ *
+ * Nothing here animates, and nothing should. The glyph turns over once a day while
+ * nobody is watching the header, and a crossfade would be a motion whose only effect
+ * is to point at a change that carries nothing.
+ *
+ * @param active Whether this header's mark is the time-of-day one at all.
+ * @return Whether the current hour is a daytime one.
+ */
 @Composable
-private fun rememberRootFeedIsDaytime(): Boolean {
-    val hour = remember { Calendar.getInstance().get(Calendar.HOUR_OF_DAY) }
-    return hour in 6..17
+private fun rememberRootFeedIsDaytime(active: Boolean): Boolean {
+    var isDaytime by remember { mutableStateOf(isDaytimeNow()) }
+    LaunchedEffect(active) {
+        if (!active) return@LaunchedEffect
+        while (true) {
+            delay(MARK_CLOCK_TICK_MS)
+            isDaytime = isDaytimeNow()
+        }
+    }
+    return isDaytime
+}
+
+/**
+ * A tween on [durationMillis] and the unmarked curve, or no tween at all where the
+ * platform has animation switched off.
+ *
+ * Every motion in this header is a state change rather than a gesture, so they share
+ * one curve and differ only in rung. The reduced-motion branch snaps to the target
+ * rather than skipping the write: a control left half-faded, or a capsule left at a
+ * width between its two, reads as a broken render and not as deliberate stillness
+ * (`docs/motion.md`'s fifth idiom rule).
+ *
+ * @param durationMillis The rung this motion runs on.
+ * @return The spec to hand an `animate*AsState`.
+ */
+@Composable
+private fun headerMotionSpec(durationMillis: Int): AnimationSpec<Float> =
+    if (rememberTdayMotionEnabled()) {
+        tween(durationMillis = durationMillis, easing = TdayMotionTokens.Easings.Standard)
+    } else {
+        snap()
+    }
+
+/**
+ * How visible a toolbar control is while the search field has the row.
+ *
+ * [TdayMotionTokens.Durations.Quick]: these controls are not the motion — the capsule
+ * growing past them is — and something leaving that nobody is meant to watch go is
+ * what that rung is for. iOS gets the same fades for free from the
+ * `withAnimation(searchMorph)` its tap is wrapped in, so they ride that spring
+ * instead; Compose has to name a spec per site, and naming the rung here says what
+ * the fade is for rather than restating the capsule's timing.
+ *
+ * @param visible Whether the control should currently be on screen.
+ * @return Its alpha this frame.
+ */
+@Composable
+private fun searchClearAlpha(visible: Boolean): Float {
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = headerMotionSpec(TdayMotionTokens.Durations.Quick),
+        label = "searchClearAlpha",
+    )
+    return alpha
 }
 
 /**
@@ -330,6 +417,7 @@ fun RootFeedHeroHeader(
             onClick = onScrollToTop,
         )
 
+        val actionsAlpha = searchClearAlpha(visible = !searchExpanded)
         Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -337,7 +425,7 @@ fun RootFeedHeroHeader(
                     x = -metrics.HorizontalPadding,
                     y = metrics.CompactRowCenterY - (metrics.BarButtonSize / 2),
                 )
-                .graphicsLayer { alpha = if (searchExpanded) 0f else 1f },
+                .graphicsLayer { alpha = actionsAlpha },
             horizontalArrangement = Arrangement.spacedBy(metrics.BarButtonSpacing),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -426,7 +514,8 @@ private fun BoxScope.HeroMark(
     val collapse = metrics.stagger(progress, metrics.MarkCollapseEnd)
     val box = metrics.lerp(metrics.HeroMarkBox, metrics.CompactMarkBox, collapse)
     val centerY = metrics.lerp(metrics.HeroMarkCenterY, metrics.CompactRowCenterY, collapse)
-    val isDaytime = rememberRootFeedIsDaytime()
+    val isDaytime = rememberRootFeedIsDaytime(active = mark == RootFeedHeroMark.TimeOfDay)
+    val markAlpha = searchClearAlpha(visible)
 
     val icon: ImageVector = when (mark) {
         RootFeedHeroMark.TimeOfDay -> if (isDaytime) {
@@ -457,7 +546,7 @@ private fun BoxScope.HeroMark(
             .align(Alignment.TopStart)
             .offset(x = metrics.MarkLeading, y = centerY - (box / 2))
             .size(box)
-            .graphicsLayer { alpha = if (visible) 1f else 0f },
+            .graphicsLayer { alpha = markAlpha },
     )
 }
 
@@ -503,12 +592,21 @@ private fun BoxScope.HeroTitle(
     // it sits clear of the toolbar row, so there is nothing to hide it for. It
     // fades as it docks — where it WOULD collide with the expanded field — and
     // goes entirely once a query starts and the results take the screen over.
-    val titleAlpha = when {
-        !searchExpanded -> 1f
-        searchHasQuery -> 0f
-        else -> 1f - drop
-    }
-    val visible = titleAlpha > 0.01f
+    val openAlpha = if (searchHasQuery) 0f else 1f - drop
+    // Only the open/close STEP is played back, on the same rung as the mark and the
+    // two round buttons the field clears out alongside it. `1f - drop` is
+    // scroll-derived and has to stay on the finger: a tween over a value the fold
+    // rewrites every frame never arrives at the value it was handed, it only trails
+    // it by its own length. So the gate is what animates and the fold is multiplied
+    // through it — the same split web makes, and the one iOS gets for free, since
+    // its `withAnimation(searchMorph)` wraps the `searchExpanded` mutation alone and
+    // the scroll that drives `drop` happens outside that transaction.
+    val searchGate = searchClearAlpha(visible = !searchExpanded)
+    val titleAlpha = openAlpha + ((1f - openAlpha) * searchGate)
+    // Hit testing follows the settled state rather than this frame's alpha: a title
+    // that is on its way out should not still be taking the tap that scrolls the
+    // feed to the top for the length of the fade.
+    val visible = !searchExpanded || openAlpha > 0.01f
 
     Box(
         modifier = Modifier
@@ -565,18 +663,43 @@ private fun BoxScope.SearchField(
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
 
+    // The open is a morph and not a swap: the capsule travels out of the folded
+    // button to the full-width field instead of arriving there in one frame.
+    // [TdayMotionTokens.Durations.Emphasis], because what changes is where it is and
+    // how big it is — geometry rather than importance decides that rung
+    // (`docs/motion.md`'s second idiom rule).
+    //
+    // The FRACTION is what animates; the geometry is lerped from it. Animating
+    // `fieldWidth` and `leadingX` themselves would look like the same thing and is
+    // not: both are also scroll-derived, since `restingWidth` is recomputed on every
+    // frame of the fold, and an `animateDpAsState` on them would put the whole fold a
+    // tween behind the finger. This way the scroll path stays instant and only the
+    // open moves.
+    val openFraction by animateFloatAsState(
+        targetValue = if (searchExpanded) 1f else 0f,
+        animationSpec = headerMotionSpec(TdayMotionTokens.Durations.Emphasis),
+        label = "searchOpenFraction",
+    )
+
     val collapse = metrics.stagger(progress, metrics.SearchCollapseEnd)
     val trailingX = width - metrics.SearchTrailingInset
     val heroWidth = maxOf(metrics.BarButtonSize, trailingX - metrics.HeroSearchLeading)
     val restingWidth = metrics.lerp(heroWidth, metrics.BarButtonSize, collapse)
-    val fieldWidth = if (searchExpanded) {
-        maxOf(metrics.BarButtonSize, width - (metrics.HorizontalPadding * 2))
-    } else {
-        restingWidth
-    }
-    val leadingX = if (searchExpanded) metrics.HorizontalPadding else trailingX - restingWidth
+    val expandedWidth = maxOf(metrics.BarButtonSize, width - (metrics.HorizontalPadding * 2))
+    val fieldWidth = metrics.lerp(restingWidth, expandedWidth, openFraction)
+    val leadingX = metrics.lerp(
+        trailingX - restingWidth,
+        metrics.HorizontalPadding,
+        openFraction,
+    )
+    // The label answers to the folded width alone. Fading it out again on the way
+    // open would be a second departure over the top of the one the resting overlay
+    // is already playing.
     val labelAlpha = ((restingWidth - metrics.SearchLabelFadeStart) /
         (metrics.SearchLabelFadeEnd - metrics.SearchLabelFadeStart)).coerceIn(0f, 1f)
+    // One value rather than two animations: the two overlays have to sum to 1 through
+    // the whole crossfade, or the card's own fill shows through the middle of it.
+    val restingAlpha = searchClearAlpha(visible = !searchExpanded)
     val capsuleShape = RoundedCornerShape(metrics.BarButtonSize / 2)
 
     Card(
@@ -606,7 +729,7 @@ private fun BoxScope.SearchField(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(start = metrics.SearchLeadingPadding)
-                    .graphicsLayer { alpha = if (searchExpanded) 0f else 1f },
+                    .graphicsLayer { alpha = restingAlpha },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(modifier = Modifier.size(metrics.SearchIconSlot), contentAlignment = Alignment.Center) {
@@ -650,7 +773,7 @@ private fun BoxScope.SearchField(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 14.dp)
-                    .graphicsLayer { alpha = if (searchExpanded) 1f else 0f },
+                    .graphicsLayer { alpha = 1f - restingAlpha },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {

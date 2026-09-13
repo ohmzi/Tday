@@ -2,6 +2,7 @@ import clsx from "clsx";
 import React, { useEffect, useRef, useState } from "react";
 import { RefreshCcw } from "lucide-react";
 import { hapticSuccess } from "@/lib/haptics";
+import { DURATION_MS } from "@/lib/motion";
 
 export default function TodoCheckbox({
   complete,
@@ -25,9 +26,12 @@ export default function TodoCheckbox({
     unpopAudio.current = new Audio("/task-uncomplete.wav");
   }, []);
 
+  // The pop goes out as long as it came in. Quick is the rung for the app answering a finger
+  // that is still on the control (`docs/motion.md`), and the number is read from the vocabulary
+  // rather than typed here so the hold and the transition below cannot drift apart.
   useEffect(() => {
     if (expand) {
-      const timeout = setTimeout(() => setExpand(false), 150);
+      const timeout = setTimeout(() => setExpand(false), DURATION_MS.quick);
       return () => clearTimeout(timeout);
     }
   }, [complete, expand]);
@@ -56,13 +60,29 @@ export default function TodoCheckbox({
 
       {variant === "outline-solid" ? (
         <div
-          onMouseDown={(e) => {
+          // Pointer, not mouse, for the pop. This is the most-tapped control in the app and the
+          // squash was armed from `onMouseDown`, an event a touch browser either synthesises
+          // several hundred milliseconds late — after the tap has already been dispatched — or
+          // never sends at all. The phone got the sound, the haptic and the strike, and the one
+          // piece of feedback that belongs to the finger itself was the piece it did not get.
+          onPointerDown={(e) => {
             e.stopPropagation();
             setExpand(true);
           }}
+          // `mousedown` stays stopped as well, and for a different reason: the rows this
+          // checkbox sits in are dnd-kit draggables whose `MouseSensor` activates on `mousedown`,
+          // not on `pointerdown`. `TaskActionButtons.tsx` writes that lesson up at length — a
+          // click with a few pixels of travel in it gets read as a drag-start and swallowed.
+          // Arming the pop from the pointer is about when the squash is drawn; this is about
+          // whether the tap survives at all, so one does not replace the other.
+          onMouseDown={(e) => e.stopPropagation()}
           className={clsx(
             "relative group w-5 h-5 rounded-full flex items-center justify-center border-[2.23px]",
-            "hover:cursor-pointer transition-all duration-200 ease-out",
+            // One transition for the squash and the fill, on one curve, because they are one
+            // event: the tick landing under the finger. Quick and the Gesture curve are what
+            // `docs/motion.md` names for press feedback — the same pair `globals.css` gives
+            // every other pressable surface.
+            "hover:cursor-pointer transition-all duration-quick ease-gesture",
             // Empty outline when incomplete; solid green fill + white check when complete.
             checked
               ? "border-accent-lime bg-accent-lime"
@@ -82,10 +102,12 @@ export default function TodoCheckbox({
         <div className="relative group">
           <RefreshCcw
             strokeWidth={2.35}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
               e.stopPropagation();
               setExpand(true);
             }}
+            // The drag-sensor guard the outline variant carries, for the same reason.
+            onMouseDown={(e) => e.stopPropagation()}
             className={clsx(
               "group w-[1.35rem] h-[1.35rem] flex items-center justify-center",
               checked ? "text-accent-lime" : "text-foreground",
@@ -95,7 +117,7 @@ export default function TodoCheckbox({
 
           <Icon
             className={clsx(
-              "pointer-events-none absolute bottom-1/2 translate-y-1/2 right-1/2 translate-x-1/2 transition-transform duration-200 ease-out",
+              "pointer-events-none absolute bottom-1/2 translate-y-1/2 right-1/2 translate-x-1/2 transition-transform duration-quick ease-gesture",
               "stroke-3 w-5 h-5",
               expand && "scale-125",
               checked ? "block text-accent-lime" : "hidden group-hover:block text-foreground",

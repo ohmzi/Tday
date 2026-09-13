@@ -1,12 +1,14 @@
 package com.ohmz.tday.compose.feature.calendar
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -96,7 +98,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -115,11 +117,15 @@ import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.taskCopyText
+import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
@@ -183,7 +189,14 @@ private val CalendarTaskListSameDateSpacing = 2.dp
 private val CalendarTaskRowHeight = 56.dp
 private const val CALENDAR_TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160L
 private const val CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
-private const val CALENDAR_TASK_COMPLETION_FADE_MS = 260L
+
+/**
+ * The ink leaving, and the wait before the row is handed to the list — one
+ * number because they are one motion, read from the rung rather than typed.
+ * Change, because the row's content goes where it stands. See the identically
+ * shaped constants in `TodoListScreen.kt` and `ScheduledTaskHomeScreen.kt`.
+ */
+private val CALENDAR_TASK_COMPLETION_FADE_MS = TdayMotionTokens.Durations.Change.toLong()
 private val CalendarTaskDragDueTimeFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).withZone(ZoneId.systemDefault())
 // Internal rather than private because `CalendarPageSelection.kt` owns the page
@@ -2342,7 +2355,7 @@ private fun CalendarTodoRow(
         targetValue = if (completionFading) 0f else 1f,
         animationSpec = tween(
             durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
+            easing = TdayMotionTokens.Easings.Standard,
         ),
         label = "calendarTaskCompletionAlpha",
     )
@@ -2350,14 +2363,48 @@ private fun CalendarTodoRow(
         targetValue = if (completionFading) (-10).dp else 0.dp,
         animationSpec = tween(
             durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
+            easing = TdayMotionTokens.Easings.Standard,
         ),
         label = "calendarTaskCompletionOffsetY",
     )
-    val titleStrikeProgress by animateFloatAsState(
-        targetValue = if (localStruck) 1f else 0f,
-        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
-        label = "calendarTaskTitleStrikeProgress",
+    // This used to be computed and never read — a 320ms animation nothing drew,
+    // left behind when the swept rule came out of the row. It is back on the
+    // screen now, through the modifier every task row shares.
+    val titleStrikeProgress = rememberTaskStrikeProgress(localStruck, "calendarTaskTitleStrike")
+    var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
+    var noteLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
+    val motionEnabled = rememberTdayMotionEnabled()
+    val toggleTint by animateColorAsState(
+        targetValue = if (localChecked) {
+            TdayTaskCompleteAccent
+        } else {
+            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "calendarTaskToggleTint",
+    )
+    val titleColor by animateColorAsState(
+        targetValue = if (localStruck) {
+            colorScheme.onSurface.copy(alpha = 0.78f)
+        } else {
+            colorScheme.onSurface
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Emphasis,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "calendarTaskTitleColor",
     )
     val dueText = todo.due
         ?.let {
@@ -2550,11 +2597,7 @@ private fun CalendarTodoRow(
                         } else {
                             stringResource(R.string.label_mark_complete)
                         },
-                        tint = if (localChecked) {
-                            TdayTaskCompleteAccent
-                        } else {
-                            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                        },
+                        tint = toggleTint,
                         enabled = !pendingCompletion,
                         onClick = {
                             TdayHaptics.completion(view)
@@ -2579,22 +2622,20 @@ private fun CalendarTodoRow(
                     ) {
                         Text(
                             text = todo.title,
-                            color = if (localStruck) {
-                                colorScheme.onSurface.copy(alpha = 0.78f)
-                            } else {
-                                colorScheme.onSurface
-                            },
+                            // One rule per line, swept — the same modifier the task list's
+                            // own row draws, which is why a two-line title here crosses
+                            // out both lines rather than the gap between them.
+                            modifier = Modifier.taskStrikethrough(
+                                progress = titleStrikeProgress,
+                                layout = titleLayoutResult,
+                                color = titleColor,
+                                thickness = TdayDimens.BorderWidthThick,
+                            ),
+                            color = titleColor,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
-                            // Real per-line strikethrough crosses out every line of a
-                            // wrapped title instead of one rule down the middle, the same
-                            // as the task list's own row.
-                            textDecoration = if (localStruck) {
-                                TextDecoration.LineThrough
-                            } else {
-                                TextDecoration.None
-                            },
                             maxLines = 2,
+                            onTextLayout = { titleLayoutResult = it },
                         )
                         dueText?.let { text ->
                             Text(
@@ -2604,13 +2645,19 @@ private fun CalendarTodoRow(
                             )
                         }
                         flattenNotesToPlainText(todo.description).takeIf { it.isNotBlank() }?.let { note ->
+                            val noteColor = colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                             Text(
                                 text = note,
-                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                // Struck alongside the title, on the title's own sweep.
+                                modifier = Modifier.taskStrikethrough(
+                                    progress = titleStrikeProgress,
+                                    layout = noteLayoutResult,
+                                    color = noteColor,
+                                    thickness = TdayDimens.BorderWidthThick,
+                                ),
+                                color = noteColor,
                                 style = MaterialTheme.typography.bodySmall,
-                                // Struck alongside the title so the whole task
-                                // reads as done during the completion animation.
-                                textDecoration = if (localStruck) TextDecoration.LineThrough else null,
+                                onTextLayout = { noteLayoutResult = it },
                             )
                         }
                     }
@@ -2670,7 +2717,7 @@ private fun CalendarCompletedTodoRow(
         targetValue = if (fading) 0f else 1f,
         animationSpec = tween(
             durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
+            easing = TdayMotionTokens.Easings.Standard,
         ),
         label = "calendarCompletedRestoreAlpha",
     )
@@ -2678,9 +2725,49 @@ private fun CalendarCompletedTodoRow(
         targetValue = if (fading) (-10).dp else 0.dp,
         animationSpec = tween(
             durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
+            easing = TdayMotionTokens.Easings.Standard,
         ),
         label = "calendarCompletedRestoreOffsetY",
+    )
+    // Un-completing is the check-off played backwards, and the rule retracts the
+    // way it swept. `animateFloatAsState` starts AT its target, so a row that was
+    // already complete when the screen opened is simply drawn struck — the sweep
+    // only ever plays for the tap that asked for it.
+    val titleStrikeProgress =
+        rememberTaskStrikeProgress(showStrikethrough, "calendarCompletedTitleStrike")
+    var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
+    val restoreMotionEnabled = rememberTdayMotionEnabled()
+    val restoreToggleTint by animateColorAsState(
+        targetValue = if (showCompletedState) {
+            TdayTaskCompleteAccent
+        } else {
+            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+        },
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "calendarCompletedToggleTint",
+    )
+    val restoreTitleColor by animateColorAsState(
+        targetValue = if (showStrikethrough) {
+            colorScheme.onSurface.copy(alpha = 0.78f)
+        } else {
+            colorScheme.onSurface
+        },
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Emphasis,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "calendarCompletedTitleColor",
     )
     val dueText = item.due
         ?.let {
@@ -2727,19 +2814,19 @@ private fun CalendarCompletedTodoRow(
                         ImageVector.vectorResource(R.drawable.ic_lucide_circle)
                     },
                     contentDescription = stringResource(R.string.label_undo_complete),
-                    tint = if (showCompletedState) {
-                        TdayTaskCompleteAccent
-                    } else {
-                        colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                    },
+                    tint = restoreToggleTint,
                     enabled = !pendingUncomplete,
                     onClick = {
                         TdayHaptics.toggle(view, on = false)
                         pendingUncomplete = true
+                        // The check-off's own beats, run backwards. This row used to
+                        // keep a third set — 180 / 180 — so undoing a completion took
+                        // a different length of time from making one, on the same
+                        // screen, through the same control.
                         coroutineScope.launch {
-                            delay(180)
+                            delay(CALENDAR_TASK_COMPLETION_CHECK_TO_STRIKE_MS)
                             unstruck = true
-                            delay(180)
+                            delay(CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS)
                             fading = true
                             delay(CALENDAR_TASK_COMPLETION_FADE_MS)
                             onUndoComplete()
@@ -2754,19 +2841,17 @@ private fun CalendarCompletedTodoRow(
                 ) {
                     Text(
                         text = item.title,
-                        color = if (showStrikethrough) {
-                            colorScheme.onSurface.copy(alpha = 0.78f)
-                        } else {
-                            colorScheme.onSurface
-                        },
+                        modifier = Modifier.taskStrikethrough(
+                            progress = titleStrikeProgress,
+                            layout = titleLayoutResult,
+                            color = restoreTitleColor,
+                            thickness = TdayDimens.BorderWidthThick,
+                        ),
+                        color = restoreTitleColor,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
-                        textDecoration = if (showStrikethrough) {
-                            TextDecoration.LineThrough
-                        } else {
-                            TextDecoration.None
-                        },
                         maxLines = 2,
+                        onTextLayout = { titleLayoutResult = it },
                     )
                     dueText?.let { text ->
                         Text(
@@ -2914,12 +2999,28 @@ private fun CalendarCompletionToggleIcon(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(24.dp),
-        )
+        // Crossed over rather than swapped, for the reason the task list's own
+        // toggle gives: here the glyph is the whole control, so a one-frame swap
+        // is the control hard-cutting.
+        Crossfade(
+            targetState = imageVector,
+            animationSpec = if (rememberTdayMotionEnabled()) {
+                tween(
+                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    easing = TdayMotionTokens.Easings.Standard,
+                )
+            } else {
+                snap()
+            },
+            label = "calendarCompletionToggleGlyph",
+        ) { glyph ->
+            Icon(
+                imageVector = glyph,
+                contentDescription = contentDescription.takeIf { glyph == imageVector },
+                tint = tint,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }
 

@@ -13,6 +13,9 @@ struct CompletedScreen: View {
     @State private var viewModel: CompletedViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
+    /// Gates the history's own motion — see `completedTimelineAnimationKey`'s
+    /// `.animation(_:value:)` and `completedRowTransition`.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var editingItem: CompletedItem?
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var collapsedSectionIDs: Set<String> = []
@@ -125,10 +128,10 @@ struct CompletedScreen: View {
 
     /// The scene's exit. The same 0.22s ease-in as the timeline's illustration
     /// exit (`TodoListScreen.EarlierIllustrationHandoff.exitDuration`), so the
-    /// two screens' empty scenes leave the same way, and a touch inside the
-    /// 0.24s the history's own rows arrive on (`completedTimelineAnimationKey`)
-    /// so the scene is out of the way rather than dissolving over the rows it
-    /// was standing in for.
+    /// two screens' empty scenes leave the same way, and shorter than the travel
+    /// the rows taking its place ride (`TdayFeedItemMotion.placement`, on
+    /// `completedTimelineAnimationKey`) so the scene is out of the way rather than
+    /// dissolving over the rows it was standing in for.
     private enum CompletedEmptyStateExit {
         static let duration: Double = 0.22
     }
@@ -301,7 +304,13 @@ struct CompletedScreen: View {
             .listSectionSpacing(0)
             .environment(\.defaultMinListRowHeight, 1)
             .disableVerticalScrollBounce()
-            .animation(.easeInOut(duration: 0.24), value: completedTimelineAnimationKey)
+            // The history's travel. Rows that arrive and leave override this from
+            // their own legs (`completedRowTransition`); this is what carries
+            // everything a search narrowing the list merely moves.
+            .animation(
+                reduceMotion ? nil : TdayFeedItemMotion.placement,
+                value: completedTimelineAnimationKey
+            )
 
         }
     }
@@ -459,14 +468,15 @@ struct CompletedScreen: View {
         return !Calendar.current.isDate(currentDate, inSameDayAs: nextDate)
     }
 
+    /// The history's rows are the same three events as the timeline's, so they run
+    /// the same three specs. This screen already had the asymmetry — it just had it
+    /// in numbers of its own (0.16 in, 0.1 out) that no other feed shared, and that
+    /// sat under a 0.24s travel nothing else shared either. Both legs also leave
+    /// `.easeOut` for the feed's one curve, and the removal lengthens 0.1 -> Quick:
+    /// a visible change, made on purpose, and the reason `docs/motion.md` no longer
+    /// files that 0.1 under sequencing constants nobody watches.
     private func completedRowTransition() -> AnyTransition {
-        let insertion = AnyTransition.opacity
-            .combined(with: .move(edge: .top))
-            .animation(.easeOut(duration: 0.16))
-        let removal = AnyTransition.opacity
-            .combined(with: .move(edge: .top))
-            .animation(.easeOut(duration: 0.1))
-        return .asymmetric(insertion: insertion, removal: removal)
+        TdayFeedItemMotion.row(reduceMotion: reduceMotion)
     }
 
     private func completedTimelineRow(_ item: CompletedItem) -> some View {
@@ -596,7 +606,7 @@ private struct CompletedTimelineRow: View {
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
-        .animation(.easeInOut(duration: 0.26), value: isFading)
+        .animation(TdayMotion.standard(duration: TdayMotion.Durations.change), value: isFading)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .allowsHitTesting(!isRestoring)
         .todoTrailingSwipeActions(
@@ -620,16 +630,20 @@ private struct CompletedTimelineRow: View {
         }
 
         HapticManager.toggle(on: false)
+        // The check-off's own beats, run backwards. This row kept a third set —
+        // 180 / 180 — so undoing a completion took a different length of time from
+        // making one. The offsets and the rungs are now the ones every task row in
+        // every client plays; only the direction differs.
         Task { @MainActor in
-            withAnimation(.easeInOut(duration: 0.16)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
                 restorePhase = .unchecked
             }
-            try? await Task.sleep(nanoseconds: 180_000_000)
-            withAnimation(.easeInOut(duration: 0.16)) {
+            try? await Task.sleep(nanoseconds: 160_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)) {
                 restorePhase = .unstruck
             }
-            try? await Task.sleep(nanoseconds: 180_000_000)
-            withAnimation(.easeInOut(duration: 0.26)) {
+            try? await Task.sleep(nanoseconds: 360_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)) {
                 restorePhase = .fading
             }
             try? await Task.sleep(nanoseconds: 260_000_000)
