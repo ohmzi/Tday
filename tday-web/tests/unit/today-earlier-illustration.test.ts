@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   OVERDUE_ROWS_FADE_MS,
   TODAY_EARLIER_EXIT_MS,
+  earlierHandoffVacatesSlot,
   shouldShowTodayEmptyIllustration,
 } from "@/features/todayTodos/lib/todayEarlierIllustration";
 
@@ -160,6 +161,57 @@ describe("shouldShowTodayEmptyIllustration", () => {
         }),
       ).toBe(true);
     });
+  });
+});
+
+/**
+ * The geometry half of the hand-off, which is a different question from the ink
+ * half: whether the beat actually gives the slot up. Worth its own coverage
+ * because the answer is invisible in the happy path — the scene unmounts either
+ * way — and only shows up on the path where it stays.
+ */
+describe("earlierHandoffVacatesSlot", () => {
+  it("is false whenever no hand-off is in flight", () => {
+    for (const celebrate of [false, true]) {
+      expect(earlierHandoffVacatesSlot({ earlierHandoffPending: false, celebrate })).toBe(
+        false,
+      );
+    }
+  });
+
+  it("vacates on the ordinary hand-off: the rows are taking the slot", () => {
+    expect(
+      earlierHandoffVacatesSlot({ earlierHandoffPending: true, celebrate: false }),
+    ).toBe(true);
+  });
+
+  it("keeps the slot for a hand-off that starts inside the celebration window", () => {
+    // The scene is still on screen when this beat ends, so closing the track
+    // under it would only mean opening it again a frame later — 42vh out from
+    // under Earlier's freshly-arrived rows and straight back under them.
+    expect(
+      earlierHandoffVacatesSlot({ earlierHandoffPending: true, celebrate: true }),
+    ).toBe(false);
+  });
+
+  it("answers the same question the branch it mirrors answers", () => {
+    // The anti-drift assertion. `shouldShowTodayEmptyIllustration`'s expanded
+    // branch decides whether the scene survives the hand-off; this decides
+    // whether the slot under it closes. They are the same decision read one beat
+    // apart, so a condition added to that branch and not to this one should fail
+    // here rather than in front of a user.
+    for (const celebrate of [false, true]) {
+      const sceneSurvivesTheHandoff = shouldShowTodayEmptyIllustration({
+        showEmpty: true,
+        hasEarlierItems: true,
+        earlierExpanded: true,
+        earlierHandoffPending: false,
+        celebrate,
+      });
+      expect(earlierHandoffVacatesSlot({ earlierHandoffPending: true, celebrate })).toBe(
+        !sceneSurvivesTheHandoff,
+      );
+    }
   });
 });
 

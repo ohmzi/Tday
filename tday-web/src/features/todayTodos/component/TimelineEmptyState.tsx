@@ -2,20 +2,21 @@ import type { ElementType } from "react";
 import { CheckCheck } from "lucide-react";
 import EmptyState from "@/components/app/EmptyState";
 import { cn } from "@/lib/utils";
+import { earlierHandoffVacatesSlot } from "../lib/todayEarlierIllustration";
 
 /**
  * The native-style centered empty message `AllTasksTimelineContainer` shows
  * once a scope has zero tasks (Day Done: "finished everything" earns a calm
  * payoff state instead of the generic no-tasks message).
  *
- * The wrapper is the scene's SLOT and not just a box around it: the exit class
+ * The wrapper is the scene's SLOT and not just a box around it: the hand-off
  * closes its track as well as fading its ink, so the 42vh this claims is given
- * back over the hand-off rather than in the frame that ends it (see
- * `.tday-empty-slot` in globals.css). It only ever carries that class while
- * `earlierHandoffPending` is genuinely true — mid requirement-3 hand-off, on
- * whichever scope's own Earlier bucket is mid-exit right now (see
- * `shouldShowTodayEmptyIllustration`'s own doc comment). Everywhere else the
- * track is open and there is nothing for the transition to run on.
+ * back over that beat rather than in the frame that ends it (see
+ * `.tday-empty-slot` in globals.css). Two classes and not one, because the two
+ * halves do not always both apply — the ink fades for every hand-off, and the
+ * track closes only for the ones that actually hand the slot over
+ * (`earlierHandoffVacatesSlot`). Outside a hand-off neither is on, the track is
+ * open, and there is nothing for the transition to run on.
  */
 export default function TimelineEmptyState({
   icon,
@@ -33,7 +34,12 @@ export default function TimelineEmptyState({
   accentColor: string;
   /** Scope is Today and the day's pending tasks were just finished. */
   isDayDone: boolean;
-  /** A completion (this tab's or a remote one) just emptied the scope. */
+  /**
+   * A completion (this tab's or a remote one) just emptied the scope. Read
+   * twice here: the scene celebrates, and a hand-off that starts inside that
+   * window keeps the slot rather than closing it — see
+   * `earlierHandoffVacatesSlot`.
+   */
   celebrate: boolean;
   /**
    * How long the celebration waits for the page to settle before any of it plays
@@ -51,7 +57,14 @@ export default function TimelineEmptyState({
   appDict: (key: string) => string;
 }) {
   return (
-    <div className={cn("tday-empty-slot", earlierHandoffPending && "tday-empty-exit")}>
+    <div
+      className={cn(
+        "tday-empty-slot",
+        earlierHandoffPending && "tday-empty-exit",
+        earlierHandoffVacatesSlot({ earlierHandoffPending, celebrate }) &&
+          "tday-empty-slot-closing",
+      )}
+    >
       {/* The track the grid above closes. It is the one that takes the clip
           while the exit runs — a grid item that is not a scroll container keeps
           its own content height as the track's floor (see globals.css) — so it

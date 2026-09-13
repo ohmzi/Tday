@@ -125,5 +125,39 @@ export function shouldShowTodayEmptyIllustration({
   // open. Scoped to `celebrate`'s own window, so this hands the slot back to
   // Earlier's rows the instant that window closes, same as if no completion
   // had just happened here.
+  //
+  // `earlierHandoffVacatesSlot` below is this same branch, asked one beat
+  // early: anything that joins this condition has to join that one too, and
+  // the test pairing them is what says so.
   return celebrate;
+}
+
+/**
+ * Whether the hand-off in flight is handing the SLOT over, as opposed to only
+ * fading the ink sitting on it.
+ *
+ * They are usually the same thing and once were: the illustration exits, the
+ * 42vh it held closes under the fade, Earlier's rows land in the space
+ * (`.tday-empty-slot` / `.tday-empty-exit` in globals.css). Not on the
+ * celebrating path. A tap that lands inside requirement 1's window hands
+ * nothing over — `shouldShowTodayEmptyIllustration`'s last line keeps the scene
+ * on screen for the rest of that window, above Earlier's rows rather than
+ * instead of them — so the track it holds must not close, or the beat ends by
+ * taking 42vh out from under those rows and then giving it straight back.
+ *
+ * The ink is left alone here on purpose: the fade-then-snap that path plays is
+ * a known defect with a row of its own
+ * (`web-illustration-pops-back-inside-celebrate-window`), and it is a defect in
+ * paint. This is only about whether the page under it moves.
+ */
+export function earlierHandoffVacatesSlot({
+  earlierHandoffPending,
+  celebrate,
+}: {
+  /** Requirement 3's two-phase hand-off is mid-exit (see `useEarlierExpandHandoff`). */
+  earlierHandoffPending: boolean;
+  /** A completion (this tab's or a remote one) just emptied this scope's current tasks. */
+  celebrate: boolean;
+}): boolean {
+  return earlierHandoffPending && !celebrate;
 }
