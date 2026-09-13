@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -405,8 +406,11 @@ fun CreateTaskBottomSheet(
     val sheetTonalElevation = TdaySheetDefaults.tonalElevation()
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val density = LocalDensity.current
-    val keyboardVisible = WindowInsets.ime.getBottom(density) > 0
-    val reserveKeyboardLayout = keyboardVisible
+    // The live inset, not a crossing. The platform animates this up and down over roughly
+    // 250 ms and republishes it every frame, so reading the dp here is what puts the sheet
+    // on the keyboard's own clock instead of on a threshold.
+    val imeHeight = with(density) { WindowInsets.ime.getBottom(this).toDp() }
+    val keyboardVisible = imeHeight > 0.dp
     val maxSheetHeight = screenHeight * CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION
     val usesTallCreateModal = !isEditMode && showScheduleControls
     val usesFloaterCreateModal = !isEditMode && !showScheduleControls
@@ -428,12 +432,51 @@ fun CreateTaskBottomSheet(
     // that used to wrap this had a target it could never move away from and never ran a
     // single frame. It read as motion in review for exactly as long as it was dead.
     //
-    // The sheet does still jump when the IME opens, but not here: the modifier chain
-    // below swaps whole branches on `reserveKeyboardLayout`, which is a hard cut no tween
-    // on this value could soften. That is `and-create-sheet-ime-height-snap`, tracked
-    // separately, and it needs the branch swap animated rather than the constant.
+    // It is no longer a destination either. The chain below used to swap whole branches on
+    // "is the IME visible", which sent the sheet here in the one frame the keyboard's first
+    // pixel appeared; this is now the ceiling that growth stops at, and the growth itself
+    // comes from the live inset. See [CreateSheetImeHeight].
     val keyboardSheetHeight = (screenHeight * CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION)
         .coerceAtMost(maxSheetHeight)
+    // The least its own branch below will accept — a floor under the resting height, not
+    // the resting height itself. Three of the four branches wrap their content, so they
+    // stand taller than this whenever the form is taller than the fraction.
+    val restingSheetMinHeight = when {
+        usesTallCreateModal || usesFloaterCreateModal -> floaterCreateSheetHeight
+        usesScheduledEditModal -> editSheetHeight
+        usesFloaterEditModal -> floaterEditSheetHeight
+        else -> 0.dp
+    }
+    // Where the sheet actually stood the last time the keyboard was down. Climbing from
+    // the branch minimum instead would spend the first (measured − minimum) dp of keyboard
+    // travel below a sheet that is already taller than that, so the sheet would sit still
+    // for that part of the rise and only then start tracking — the late start the device
+    // row is hunting for.
+    var restingSheetHeight by remember { mutableStateOf(0.dp) }
+    val keyboardFloorHeight = CreateSheetImeHeight.sheetHeightFor(
+        restingHeight = maxOf(restingSheetHeight, restingSheetMinHeight),
+        imeHeight = imeHeight,
+        keyboardHeight = keyboardSheetHeight,
+    )
+    // A content tween belongs in the height chain only while the keyboard is still. With
+    // the inset moving, the sheet is held to it exactly (below), and `animateContentSize`
+    // left in the chain would keep chasing a height it is never allowed to report —
+    // drifting hundreds of dp behind it, because a tween restarts from zero velocity every
+    // time its target moves and so covers under 1 % of the gap per frame. On the frame the
+    // keyboard finally reaches zero and the pin comes off, that stale value is what the
+    // sheet would snap to. Taking the node out for the duration means it is rebuilt at the
+    // size the sheet is actually at, and content changes still animate with the keyboard
+    // down, which is the only time they are visible anyway.
+    val sheetContentSizeAnimation = if (keyboardVisible) {
+        Modifier
+    } else {
+        Modifier.animateContentSize(
+            animationSpec = tween(
+                durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                easing = FastOutSlowInEasing,
+            ),
+        )
+    }
 
     fun submitTask() {
         val due =
@@ -536,49 +579,47 @@ fun CreateTaskBottomSheet(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
+                        // Read with the keyboard down only, so what it records is the
+                        // height the climb has to start from and never a height the climb
+                        // itself produced.
+                        .onSizeChanged { size ->
+                            if (!keyboardVisible) {
+                                restingSheetHeight = with(density) { size.height.toDp() }
+                            }
+                        }
+                        // While the inset is anywhere but zero, the keyboard owns the
+                        // height and the sheet is held to it EXACTLY, outside the branch
+                        // below rather than instead of it. An exact height is clamped in
+                        // both directions, so the sheet follows the inset down as
+                        // faithfully as it follows it up. A `heightIn(min = ...)` floor
+                        // here would only clamp upward — on the way down the branch's own
+                        // animated size sits above the falling floor, inside the range,
+                        // and is reported verbatim, which hands the whole retraction to a
+                        // 320 ms tween racing the keyboard's ~250 ms.
                         .then(
-                            if (reserveKeyboardLayout) {
-                                Modifier.height(keyboardSheetHeight)
-                            } else if (usesTallCreateModal) {
+                            if (keyboardVisible) {
+                                Modifier.height(keyboardFloorHeight)
+                            } else {
+                                Modifier
+                            },
+                        )
+                        .then(
+                            if (usesTallCreateModal) {
                                 // Wrap content (like the floater create sheet) so the
                                 // bottom padding under the last row matches; a fixed
                                 // height left extra space below Repeat.
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(min = floaterCreateSheetHeight, max = maxSheetHeight)
                             } else if (usesScheduledEditModal) {
                                 Modifier.height(editSheetHeight)
                             } else if (usesFloaterCreateModal) {
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(min = floaterCreateSheetHeight, max = maxSheetHeight)
                             } else if (usesFloaterEditModal) {
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(min = floaterEditSheetHeight, max = maxSheetHeight)
                             } else {
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(max = maxSheetHeight)
                             },
                         )

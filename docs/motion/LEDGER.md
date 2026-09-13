@@ -405,7 +405,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 15b — the create sheet’s IME height stops leaping
 
-- [ ] `and-create-sheet-ime-height-snap` — boolean IME threshold swaps the whole modifier chain; leaps to 85 % of screen · and · Sev 3 · M · Gate J+D
+- [x] `and-create-sheet-ime-height-snap` — boolean IME threshold swaps the whole modifier chain; leaps to 85 % of screen · and · Sev 3 · M · Gate J+D
 
 ### PR 11 — Android’s semantic haptic vocabulary
 
