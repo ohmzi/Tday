@@ -11,6 +11,10 @@
  * is identical either way. What can be checked is the decision — that a drop
  * animation exists at all, that it is spelled with the vocabulary rather than
  * with a number, and that the preference turns it off rather than shortening it.
+ *
+ * That leaves the config right and the overlay possibly not asking for it, which
+ * is a green suite and a cut drop. `calendar-client-motion-wiring.test.tsx`
+ * closes that half by reading the prop off the overlay the screen renders.
  */
 
 import { describe, expect, it } from "vitest";

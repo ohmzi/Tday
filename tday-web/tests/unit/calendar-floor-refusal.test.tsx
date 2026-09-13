@@ -21,7 +21,11 @@
  *
  * `CalendarModeCard` is exported for tests like this one; rendering
  * `CalendarClient` to reach it would put four queries, a drag context and a
- * task list between the test and the one wrapper it is about.
+ * task list between the test and the one wrapper it is about. The cost of that
+ * choice is that `refusedBack` arrives here from a test rather than from the
+ * screen, so the seam between the two is somebody else's job:
+ * `calendar-client-motion-wiring.test.tsx` renders the whole screen and presses
+ * the arrow key for exactly that reason.
  */
 
 import { cleanup, fireEvent, render } from "@testing-library/react";
