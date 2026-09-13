@@ -337,6 +337,15 @@ because the user cannot tell it from a broken render. Android reads
   and returns before the `withAnimation` block.
 - Web: `tday-web/src/globals.css:674` switches the scene's animations off and
   pins the sparkle to `opacity: 1`, with the reason in the block.
+- Web, the JS half: CSS cannot see a `setTimeout`, so a sequence gated in
+  JavaScript has to ask the same question. `tday-web/src/lib/prefersReducedMotion.ts`
+  is the one place that asks it — `prefersReducedMotion()` for a timer at the
+  instant it arms, `usePrefersReducedMotion()` for a component whose output
+  depends on the preference and must follow it when it changes. Turning an
+  animation off without telling the timer that was waiting for it removes the
+  trip and keeps the wait, which is the rule broken from the other side:
+  `useEarlierExpandHandoff` therefore takes its immediate branch rather than
+  holding the finished state behind 520 ms of a scene that cannot animate.
 
 ---
 

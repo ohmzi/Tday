@@ -2,6 +2,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useEarlierExpandHandoff } from "@/features/todayTodos/lib/useEarlierExpandHandoff";
+import { installReducedMotion } from "../setup/reduced-motion";
 
 const EXIT_MS = 520;
 
@@ -165,6 +166,77 @@ describe("useEarlierExpandHandoff", () => {
     // error, so simply not throwing here is the assertion.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(EXIT_MS + 10);
+    });
+  });
+
+  describe("under prefers-reduced-motion", () => {
+    const REAL_MATCH_MEDIA = window.matchMedia;
+
+    afterEach(() => {
+      window.matchMedia = REAL_MATCH_MEDIA;
+    });
+
+    it("expands on the same tap — no dead wait in front of an illustration that cannot animate", () => {
+      installReducedMotion(true);
+      const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+
+      act(() => {
+        result.current.toggle(true);
+      });
+
+      // The bug this replaced: `handoffPending` went true, `.tday-empty-exit`
+      // was `animation: none`, and the reader got EXIT_MS of a static picture
+      // followed by the whole screen changing at once.
+      expect(result.current.expanded).toBe(true);
+      expect(result.current.handoffPending).toBe(false);
+    });
+
+    it("arms no timer at all — nothing is left to fire later and undo the expand", async () => {
+      installReducedMotion(true);
+      const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+
+      act(() => {
+        result.current.toggle(true);
+      });
+      expect(result.current.expanded).toBe(true);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(EXIT_MS + 10);
+      });
+      expect(result.current.expanded).toBe(true);
+      expect(result.current.handoffPending).toBe(false);
+    });
+
+    it("still collapses on the next tap — the preference removes the beat, not the toggle", () => {
+      installReducedMotion(true);
+      const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+
+      act(() => {
+        result.current.toggle(true);
+      });
+      act(() => {
+        result.current.toggle(true);
+      });
+      expect(result.current.expanded).toBe(false);
+      expect(result.current.handoffPending).toBe(false);
+    });
+
+    it("a mid-session flip reaches the toggle the header is already holding", () => {
+      const media = installReducedMotion(false);
+      const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+
+      // The preference arrives after mount — an OS battery-saver, or the user
+      // changing their mind — so a `matchMedia` read once at mount would still
+      // be answering "motion is fine" here.
+      act(() => {
+        media.set(true);
+      });
+      act(() => {
+        result.current.toggle(true);
+      });
+
+      expect(result.current.expanded).toBe(true);
+      expect(result.current.handoffPending).toBe(false);
     });
   });
 

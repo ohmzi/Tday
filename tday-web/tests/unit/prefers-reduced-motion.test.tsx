@@ -5,61 +5,22 @@ import {
   prefersReducedMotion,
   usePrefersReducedMotion,
 } from "@/lib/prefersReducedMotion";
+import { installReducedMotion } from "../setup/reduced-motion";
 
-/**
- * A `MediaQueryList` that can actually change its mind, which is the half of
- * this module jsdom's own `matchMedia` cannot exercise: its lists are frozen at
- * `matches: false` for their lifetime, so a stub that only reports a fixed value
- * would test the read and silently skip the subscription.
- *
- * Only the members the module touches are implemented. Everything else on
- * `MediaQueryList` is cast away rather than stubbed, so a future reader can see
- * at a glance exactly how much surface the helper depends on.
- */
-function installMatchMedia(initial: boolean) {
-  const listeners = new Set<() => void>();
-  const list = {
-    matches: initial,
-    media: "(prefers-reduced-motion: reduce)",
-    addEventListener: (_: string, listener: () => void) => {
-      listeners.add(listener);
-    },
-    removeEventListener: (_: string, listener: () => void) => {
-      listeners.delete(listener);
-    },
-  };
-
-  window.matchMedia = ((query: string) =>
-    query.includes("prefers-reduced-motion")
-      ? list
-      : { matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {} }) as unknown as typeof window.matchMedia;
-
-  return {
-    set(next: boolean) {
-      list.matches = next;
-      listeners.forEach((listener) => listener());
-    },
-    /** How many subscribers are attached — the cleanup assertion reads this. */
-    get listenerCount() {
-      return listeners.size;
-    },
-  };
-}
-
-const originalMatchMedia = window.matchMedia;
+const REAL_MATCH_MEDIA = window.matchMedia;
 
 afterEach(() => {
-  window.matchMedia = originalMatchMedia;
+  window.matchMedia = REAL_MATCH_MEDIA;
 });
 
 describe("prefersReducedMotion", () => {
   it("reports the query's current answer", () => {
-    installMatchMedia(true);
+    installReducedMotion(true);
     expect(prefersReducedMotion()).toBe(true);
   });
 
   it("reports false when the user has not asked for reduced motion", () => {
-    installMatchMedia(false);
+    installReducedMotion(false);
     expect(prefersReducedMotion()).toBe(false);
   });
 
@@ -74,13 +35,13 @@ describe("prefersReducedMotion", () => {
 
 describe("usePrefersReducedMotion", () => {
   it("has the real answer on the FIRST render, not one frame later", () => {
-    installMatchMedia(true);
+    installReducedMotion(true);
     const { result } = renderHook(() => usePrefersReducedMotion());
     expect(result.current).toBe(true);
   });
 
   it("re-renders when the preference flips mid-session", () => {
-    const media = installMatchMedia(false);
+    const media = installReducedMotion(false);
     const { result } = renderHook(() => usePrefersReducedMotion());
     expect(result.current).toBe(false);
 
@@ -99,7 +60,7 @@ describe("usePrefersReducedMotion", () => {
   });
 
   it("detaches its listener on unmount", () => {
-    const media = installMatchMedia(false);
+    const media = installReducedMotion(false);
     const { unmount } = renderHook(() => usePrefersReducedMotion());
     expect(media.listenerCount).toBe(1);
 
