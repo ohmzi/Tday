@@ -127,7 +127,6 @@ struct AppRootView: View {
                     }
                     .blur(radius: showOnboardingOverlay ? 6 : 0)
                     .scaleEffect(showOnboardingOverlay ? 0.992 : 1)
-                    .animation(.easeInOut(duration: 0.22), value: showOnboardingOverlay)
                     .navigationBarBackButtonHidden(true)
                     .toolbar(.hidden, for: .navigationBar)
                     .navigationDestination(for: AppRoute.self) { route in
@@ -221,6 +220,7 @@ struct AppRootView: View {
                                         appViewModel.clearPendingApprovalNotice()
                                     }
                                 )
+                                .transition(.opacity)
                             }
                         }
 
@@ -245,6 +245,38 @@ struct AppRootView: View {
                             )
                         }
                     }
+                    // Locking and unlocking the app is one event with several surfaces in it:
+                    // the app behind goes out of focus and shrinks a thousandth, the wizard
+                    // covers it, and the floating controls that only exist for a real
+                    // workspace come and go underneath. The blur and the scale were already
+                    // animated, on a 220 ms of their own; the wizard carried no `.transition`
+                    // at all, so it cut in over a backdrop that was still resolving. They need
+                    // one transaction between them, and a transaction reaches a `.transition`
+                    // only from a modifier applied OUTSIDE the `.overlay` that inserts it —
+                    // which is why this sits below the overlay rather than beside the blur it
+                    // also drives. Absorbing that 220 is the point: three surfaces of one
+                    // event cannot keep separate clocks, and the odd duration was never in the
+                    // vocabulary to be kept. The wizard is drawn where it will stay and the
+                    // controls fade in place, so nothing in the handover travels; the 0.992 is
+                    // the blur's other half and not a geometry change — eight thousandths is a
+                    // focus cue, too small to read as a move, and it answers to the rung the
+                    // blur it accompanies is on. So by the geometry rule this is not Emphasis,
+                    // and a whole-screen handover is the Quick rung the vocabulary names for
+                    // it — the rung the tab swap above already runs on. Standard is the curve
+                    // because a crossfade runs both halves off one clock and neither Enter nor
+                    // Exit describes that, and one animation covers both directions because
+                    // the way in and the way out are the same handover reversed. Android times
+                    // the same moment on this rung and curve; its third surface is a crossfade
+                    // rather than a fade-in, because it draws an inert placeholder feed under
+                    // the wizard where this one draws the real screens, and it has no scale
+                    // because its backdrop cue is a 14 dp blur that carries the focus change
+                    // on its own. Reduce Motion passes no animation: the app is drawn unlocked
+                    // and in focus, finished, rather than held mid-blur (`docs/motion.md`'s
+                    // fifth idiom rule).
+                    .animation(
+                        reduceMotion ? nil : TdayMotion.standard(duration: TdayMotion.Durations.quick),
+                        value: showOnboardingOverlay
+                    )
                 }
                 .navigationInteractivePopGesture()
                 // The snackbar overlays the NavigationStack itself, not the
