@@ -46,6 +46,11 @@ const pagerOf = (container: HTMLElement) =>
   container.querySelector<HTMLElement>(".touch-pan-y")!;
 /** The element the finger moves, which is the pager's own child. */
 const trackOf = (container: HTMLElement) => pagerOf(container).firstElementChild as HTMLElement;
+/** A day cell, which in month view is where nearly every thumb actually lands. */
+const dayCellOf = (container: HTMLElement) => trackOf(container).querySelector("button")!;
+/** S M T W T F S — the first seven-column grid on the page, and a header. */
+const weekdayRowOf = (container: HTMLElement) =>
+  container.querySelector<HTMLElement>(".grid.grid-cols-7")!;
 
 /** How far the page has actually travelled, in px. */
 function offsetOf(container: HTMLElement): number {
@@ -111,6 +116,41 @@ describe("the calendar page follows the finger", () => {
     expect(pagerOf(container).classList.contains("cal-native-slide-from-right")).toBe(true);
     expect(pagerOf(container).style.transform).toBe("");
     expect(trackOf(container).style.transform).toBe("translateX(-32px)");
+  });
+
+  it("starts the drag wherever the thumb lands, day cells included", () => {
+    // The whole gesture is worth nothing if it can only be started in the 8px
+    // gaps between rows: a month grid is seven columns of day-cell buttons with
+    // no horizontal gap at all, so that is where a thumb goes down. Tap or
+    // swipe is settled by where the finger goes afterwards, which is the only
+    // place a pager can settle it and still be draggable across its own cells.
+    const { container } = renderCard();
+    const cell = dayCellOf(container);
+
+    fireEvent.pointerDown(cell, { pointerId: 1, clientX: 300, clientY: 200 });
+    fireEvent.pointerMove(cell, { pointerId: 1, clientX: 268, clientY: 200 });
+
+    expect(trackOf(container).style.transform).toBe("translateX(-32px)");
+  });
+
+  it("leaves the weekday row behind when the grid moves", () => {
+    // AGENTS.md's Calendar UX Contract: in month view the month title and the
+    // weekday row do not slide with the date grid. The labels are derived from
+    // today and the locale rather than from the selected date, so every page
+    // draws the same seven letters — carrying them under the thumb says nothing
+    // and then says it backwards.
+    const { container } = renderCard();
+    const weekdays = weekdayRowOf(container);
+    expect(weekdays.children).toHaveLength(7);
+    // Outside the pager, which is the element that carries the page turn, and
+    // therefore outside the track inside it that carries the drag.
+    expect(pagerOf(container).contains(weekdays)).toBe(false);
+
+    press(container, 300);
+    move(container, 268);
+
+    expect(trackOf(container).style.transform).toBe("translateX(-32px)");
+    expect(weekdays.style.transform).toBe("");
   });
 
   it("gives rather than tracks once the swipe has passed the threshold", () => {
@@ -187,6 +227,35 @@ describe("the calendar page follows the finger", () => {
     expect(offsetOf(container)).toBeLessThan(0);
 
     fireEvent.pointerCancel(pagerOf(container), { pointerId: 1, clientX: 150 });
+
+    expect(onNavigate).not.toHaveBeenCalled();
+    expect(trackOf(container).style.transform).toBe("");
+    expect(trackOf(container).style.transition).toBe(RETURN_TRANSITION);
+  });
+
+  it("hands the page to a second finger rather than stranding it", () => {
+    // Two thumbs on a phone, which is all this takes. The page is taken over
+    // rather than abandoned: an arrival that merely ended the gesture underneath
+    // it would leave the grid parked where that gesture had dragged it with
+    // nothing left listening to put it back — and nothing would come along
+    // later, because selecting a date does not re-key the pager and so never
+    // replaces the element holding the offset.
+    const { container, onNavigate } = renderCard();
+
+    press(container, 300);
+    move(container, 268);
+    expect(offsetOf(container)).toBe(-32);
+
+    const cell = dayCellOf(container);
+    fireEvent.pointerDown(cell, { pointerId: 2, clientX: 268, clientY: 200 });
+    // Everything the first finger does from here belongs to a gesture that is
+    // no longer the page's: its capture goes, then its move, then its release.
+    fireEvent.lostPointerCapture(pagerOf(container), { pointerId: 1 });
+    move(container, 200);
+    lift(container, 200);
+    expect(offsetOf(container)).toBe(-32);
+
+    fireEvent.pointerUp(cell, { pointerId: 2, clientX: 268, clientY: 200 });
 
     expect(onNavigate).not.toHaveBeenCalled();
     expect(trackOf(container).style.transform).toBe("");

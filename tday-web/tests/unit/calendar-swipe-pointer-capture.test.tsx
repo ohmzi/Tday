@@ -59,8 +59,12 @@ function PagerHarness({ onNavigate }: { onNavigate: (offset: -1 | 1) => void }) 
           page does under the finger is `calendar-pager-tracks-finger.test.tsx`;
           what this file is about is how the gesture ends. */}
       <div ref={trackRef}>
-        {/* A day cell: the card bails out of tracking on any press that lands on
-            a button, because capture would otherwise steal the button's click. */}
+        {/* A day cell, because in month view that is what the thumb lands on:
+            the grid is seven columns of buttons with 8px between its rows and
+            nothing between its columns. The card tracks the press anyway and
+            settles the tap-or-swipe question on the axis lock, which is also
+            where it takes capture — capture retargets the click that follows a
+            press, so taking it earlier would cost the cell its tap. */}
         <button type="button" data-testid="day">
           7
         </button>
@@ -86,10 +90,15 @@ describe("calendar page swipe — pointer capture and cancel", () => {
     expect(onNavigate).toHaveBeenCalledWith(1);
   });
 
-  it("takes pointer capture on the way down and hands it back on the way up", () => {
+  it("takes pointer capture when the axis locks horizontal, and hands it back on the way up", () => {
     const { card, setPointerCapture, releasePointerCapture } = renderPager();
 
     fireEvent.pointerDown(card, { pointerId: 4, clientX: 300 });
+    // Nothing is claimed on the way down: until the axis locks, the press is
+    // still a candidate tap, and a tap must reach whatever it landed on.
+    expect(setPointerCapture).not.toHaveBeenCalled();
+
+    fireEvent.pointerMove(card, { pointerId: 4, clientX: 280 });
     // Capture is what makes a release past the card's edge arrive here at all,
     // instead of being delivered to whatever is under the finger and lost.
     expect(setPointerCapture).toHaveBeenCalledWith(4);
@@ -102,6 +111,7 @@ describe("calendar page swipe — pointer capture and cancel", () => {
     const { card, onNavigate, releasePointerCapture } = renderPager();
 
     fireEvent.pointerDown(card, { pointerId: 2, clientX: 300 });
+    fireEvent.pointerMove(card, { pointerId: 2, clientX: 260 });
     // The platform taking the pointer away is not a decision the user made, so
     // it commits nothing even though the cancel lands a page-width away.
     fireEvent.pointerCancel(card, { pointerId: 2, clientX: 40 });
@@ -140,16 +150,33 @@ describe("calendar page swipe — pointer capture and cancel", () => {
     expect(onNavigate).toHaveBeenCalledWith(-1);
   });
 
-  it("never captures a press that lands on a day cell, and never pages from one", () => {
+  it("a press that settles into a tap on a day cell claims nothing and pages nothing", () => {
     const { day, onNavigate, setPointerCapture } = renderPager();
 
     fireEvent.pointerDown(day, { pointerId: 1, clientX: 300 });
-    // Capture retargets the click that follows a press, so taking it here would
-    // cost the day cell its own tap.
-    expect(setPointerCapture).not.toHaveBeenCalled();
+    fireEvent.pointerMove(day, { pointerId: 1, clientX: 303 });
+    fireEvent.pointerUp(day, { pointerId: 1, clientX: 303 });
 
-    fireEvent.pointerUp(day, { pointerId: 1, clientX: 100 });
+    // Capture retargets the click that follows a press, so a cell that was only
+    // ever tapped must reach its release with the card having claimed nothing.
+    expect(setPointerCapture).not.toHaveBeenCalled();
     expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it("a swipe that begins on a day cell is still a swipe", () => {
+    const { day, onNavigate, setPointerCapture } = renderPager();
+
+    // The case the pager exists for on a phone: in month view the grid is seven
+    // columns of day cells, so a gesture that refused to begin on one would be a
+    // gesture almost no thumb could start. The axis lock is what tells the two
+    // apart, and taking capture there is what costs the cell the tap it no
+    // longer means.
+    fireEvent.pointerDown(day, { pointerId: 1, clientX: 300 });
+    fireEvent.pointerMove(day, { pointerId: 1, clientX: 300 - SWIPE_THRESHOLD - 1 });
+    expect(setPointerCapture).toHaveBeenCalledWith(1);
+
+    fireEvent.pointerUp(day, { pointerId: 1, clientX: 300 - SWIPE_THRESHOLD - 1 });
+    expect(onNavigate).toHaveBeenCalledWith(1);
   });
 
   it("losing capture without a cancel — the capturing node replaced mid-gesture — also resets", () => {

@@ -568,6 +568,32 @@ Restore it from git history rather than adjusting the number.
   - Two things fall out of the gesture rather than out of the row, and both are kept: the axis
     locks at the same 8px the calendar row's swipe locks at, because the grid sits directly above
     a scrolling task list, and a gesture that ends vertically now turns no page at all.
+  - Pointer capture moved from the way down to the axis lock, which is what lets the gesture
+    begin on a day cell. The pager used to refuse any press that landed on a button, and in month
+    view the grid is seven columns of day-cell buttons with 8px between its rows and nothing
+    between its columns — so the tracking existed almost nowhere a thumb goes. The reason it
+    refused is real but narrower than the refusal was: capture retargets the click that follows a
+    press, so it is taken at the instant the axis says "x" and not before. Before the lock the
+    press is still a candidate tap; after it, the cell's click is one the user no longer means.
+  - A second finger arriving mid-drag now takes the page over instead of ending the gesture
+    under it. The button bail used to clear the tracking refs and return, after which the first
+    finger's move, release and lost capture all failed the pointer-id guard and the grid stayed
+    parked at its dragged offset for good — selecting a date does not re-key the pager, so
+    nothing came along to replace the element holding it.
+  - The weekday row is out of the pager and out of the track: AGENTS.md's Calendar UX Contract
+    says in so many words that the month title and weekday row do not slide with the date grid,
+    and the labels come from today and the locale rather than the selected date, so every page
+    drew the same seven letters. Sliding them was pointless at 17px on a page turn; carrying
+    them under the thumb for 96px made it a breach. It stays inside the height box, because the
+    row comes and goes with the view and a row outside the measurement would take its height out
+    of the card in one frame while the rest of the change eased.
+  - What a release hands over is a cut, and it is argued at the call site rather than fixed.
+    Web keeps one page in the DOM, so the content the drag has carried to -80px *is* the outgoing
+    month; the arriving one must finish at 0, and a continuation from -80px could only reach 0 by
+    travelling right — which is the movement an undecided release makes and the one a user reads
+    as a refusal. Direction is the half that carries meaning, so the arrival keeps it and pays a
+    frame for it. The device row gained a `Judge:` line for it rather than a `Fails:` one,
+    because it is a trade to be looked at, not a bug to be spotted.
 
 ### PR 25a — the calendar grid height animates across month lengths
 
