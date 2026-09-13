@@ -215,6 +215,44 @@ private enum TdayBottomSheetMotion {
     static let cardOut = Animation.easeIn(duration: exitDuration)
 }
 
+/// The one presentation spec for the centred selector overlay — the picker the
+/// create/edit sheet layers over its own card for List, Priority, Repeat, Due
+/// date and Due time.
+///
+/// Derived from `TdayBottomSheetMotion` above rather than chosen again, because
+/// the two are on screen together: the selector opens over a sheet that is
+/// often still settling, and a second set of numbers would read as two
+/// different surfaces arguing over one square of glass.
+///
+/// It takes the *scrim* curves and not the card spring, and that is the whole
+/// decision. `cardIn` is a spring tuned for a card travelling a full screen
+/// height; this overlay travels nowhere — it arrives where it already is,
+/// fading and scaling by 3 %, which is the motion `scrimIn`/`scrimOut`
+/// describe. The 0.22 s ease-out also lands within 30 ms of the keyboard's own
+/// ~0.25 s dismissal, and opening a selector dismisses the keyboard: the sheet
+/// card slides back down by the keyboard's height at the same moment the picker
+/// arrives, so sharing that curve is what makes the two read as one move rather
+/// than a pop over a slide.
+enum TdayCenteredSelectorMotion {
+    /// The same shape the three Settings selectors carry, so the two families
+    /// of centred picker enter and leave identically.
+    static let transition: AnyTransition = .opacity.combined(with: .scale(scale: 0.97))
+
+    static let presentation: Animation = TdayBottomSheetMotion.scrimIn
+    static let dismissal: Animation = TdayBottomSheetMotion.scrimOut
+
+    /// The curve for a state change that opens (`presenting: true`) or closes
+    /// the overlay.
+    ///
+    /// Callers wrap the mutation in `withAnimation(_:)` with this rather than
+    /// hanging an `.animation(_:value:)` off the body, because the entrance and
+    /// the exit want different curves and one `.animation(_:value:)` applies
+    /// one curve in both directions.
+    static func animation(presenting: Bool) -> Animation {
+        presenting ? presentation : dismissal
+    }
+}
+
 /// Applies a state change with SwiftUI animations suppressed, so a
 /// `fullScreenCover` driven by that state appears/disappears with no
 /// container transition of its own.
@@ -450,13 +488,6 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
 
     private func dismissSheet() {
         HapticManager.sheetDismiss()
-        // Drop the keyboard first so it doesn't linger during the dismiss.
-        UIApplication.shared.sendAction(
-            #selector(UIResponder.resignFirstResponder),
-            to: nil,
-            from: nil,
-            for: nil
-        )
         // Routed through `dismiss()` rather than animating here, so a scrim tap
         // takes exactly the same path as a `dismiss()` from inside the sheet:
         // the presenting modifier intercepts it and drives `animateOut()`.
@@ -466,6 +497,20 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
     /// Fades the scrim out where it stands and slides only the card away, then
     /// lets the presenting modifier remove the (by then invisible) cover.
     private func animateOut() {
+        // Drop the keyboard here, not at the gesture that asked for the
+        // dismissal, because this is the one funnel every dismissal reaches:
+        // the scrim tap, the header's X, a confirm that ends in `dismiss()`
+        // and the caller clearing its own binding all arrive as a bumped
+        // `dismissRequestID`. It used to live in `dismissSheet()`, which is
+        // the scrim tap alone — so every other way out of a sheet with a
+        // focused field slid the card down from behind a keyboard that was
+        // still standing, and left it standing after the sheet had gone.
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
         withAnimation(TdayBottomSheetMotion.scrimOut) {
             isScrimVisible = false
         }
@@ -497,13 +542,55 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
         guard let endFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
             return
         }
-        let screenMaxY = UIScreen.main.bounds.maxY
-        let isHidden = endFrame.minY >= screenMaxY
         let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double ?? 0.25
+        let visible = TdayKeyboardFrameProbe.visibleFrame(
+            endFrame: endFrame,
+            screenMaxY: TdayKeyboardFrameProbe.activeScreenMaxY()
+        )
 
         withAnimation(.easeOut(duration: duration)) {
-            keyboardFrame = isHidden ? nil : endFrame
+            keyboardFrame = visible
         }
+    }
+}
+
+/// Where the keyboard is, relative to the screen the sheet is actually on.
+///
+/// Split out of the host because it is two decisions, and neither of them needs
+/// a view to be tested. The one it replaces was `UIScreen.main.bounds.maxY`,
+/// which is deprecated and, before that, a guess: it answers "the device's
+/// built-in screen", which stops being the same question as "the screen this
+/// window is on" the moment there is an external display, a CarPlay scene or a
+/// second window under Stage Manager. The keyboard's end frame is reported in
+/// the coordinates of the screen it actually appeared on, so a sheet anywhere
+/// else compared that frame against the wrong bottom edge and read a visible
+/// keyboard as hidden — and then sat with the field it was raised for behind
+/// the keyboard covering it.
+enum TdayKeyboardFrameProbe {
+    /// The bottom edge of the screen the app is showing on, or nil when no
+    /// window scene is attached — the app is in the background, or this is a
+    /// test host with no UI.
+    static func activeScreenMaxY() -> CGFloat? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let scene = scenes.first { $0.activationState == .foregroundActive }
+            ?? scenes.first { $0.activationState != .unattached }
+            ?? scenes.first
+        return scene?.screen.bounds.maxY
+    }
+
+    /// The keyboard frame the sheet should inset for, or nil when the keyboard
+    /// is offscreen — which is how both `keyboardWillHide` and a
+    /// `keyboardWillChangeFrame` that parks the keyboard below the screen
+    /// report themselves.
+    ///
+    /// A nil `screenMaxY` means no window scene answered, and therefore that
+    /// there is no keyboard to inset for either: the sheet sits at rest rather
+    /// than moving for a frame nothing can be measured against.
+    static func visibleFrame(endFrame: CGRect, screenMaxY: CGFloat?) -> CGRect? {
+        guard let screenMaxY, endFrame.minY < screenMaxY else {
+            return nil
+        }
+        return endFrame
     }
 }
 

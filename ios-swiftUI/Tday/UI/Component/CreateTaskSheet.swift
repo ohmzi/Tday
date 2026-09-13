@@ -179,6 +179,7 @@ struct CreateTaskSheet: View {
         .overlay {
             if let activeSelector {
                 selectorOverlay(for: activeSelector)
+                    .transition(TdayCenteredSelectorMotion.transition)
             }
         }
         .task {
@@ -191,23 +192,14 @@ struct CreateTaskSheet: View {
         .onChange(of: activeSelector) { _, selector in
             if selector != nil {
                 focusedInputField = nil
-                // Clearing focusedInputField only dismisses the Title field —
-                // Notes is a UITextView (UIViewRepresentable) that never
-                // registers a @FocusState anchor, so it needs an explicit
-                // resign broadcast to give up the keyboard.
-                UIApplication.shared.sendAction(
-                    #selector(UIResponder.resignFirstResponder),
-                    to: nil,
-                    from: nil,
-                    for: nil
-                )
+                createTaskSheetResignKeyboard()
             }
         }
         .onChange(of: scheduleEnabled) { _, isEnabled in
             if !isEnabled {
                 repeatRule = nil
                 if activeSelector == .date || activeSelector == .time || activeSelector == .recurrence {
-                    activeSelector = nil
+                    setActiveSelector(nil)
                 }
             }
         }
@@ -244,8 +236,8 @@ struct CreateTaskSheet: View {
 
                         CreateTaskSheetDueRow(
                             dueDate: $dueDate,
-                            onDateTap: { activeSelector = .date },
-                            onTimeTap: { activeSelector = .time }
+                            onDateTap: { setActiveSelector(.date) },
+                            onTimeTap: { setActiveSelector(.time) }
                         )
                         .transition(.opacity.combined(with: .move(edge: .top)))
                     }
@@ -264,7 +256,7 @@ struct CreateTaskSheet: View {
                                 .foregroundStyle(createTaskSheetListSwatchColor(list.color))
                         )
                     },
-                    onTap: { activeSelector = .list }
+                    onTap: { setActiveSelector(.list) }
                 )
 
                 TdaySheetDivider()
@@ -281,7 +273,7 @@ struct CreateTaskSheet: View {
                             .frame(width: 16, height: 16)
                             .foregroundStyle(createTaskSheetPrioritySwatchColor(priority))
                     ),
-                    onTap: { activeSelector = .priority }
+                    onTap: { setActiveSelector(.priority) }
                 )
 
                 if showScheduleControls {
@@ -297,7 +289,7 @@ struct CreateTaskSheet: View {
                         ),
                         onTap: {
                             guard scheduleEnabled else { return }
-                            activeSelector = .recurrence
+                            setActiveSelector(.recurrence)
                         }
                     )
                 }
@@ -494,6 +486,17 @@ struct CreateTaskSheet: View {
 
     private func submit() async {
         HapticManager.sheetConfirm()
+        // Up front rather than on the way out: `onSubmit` is awaited below, so
+        // leaving the keyboard to the sheet's own dismissal keeps it standing
+        // over the card for the whole save. The dismissal resigns too (see
+        // `TdayBottomSheetPresentationHost.animateOut`), which is what covers
+        // the header's X; this is the confirm path's head start on a slow
+        // network. Focus is cleared first, in the order the selector path and
+        // the Title field's own submit already use: the broadcast resigns the
+        // responder, and a `@FocusState` still naming a field is SwiftUI's
+        // standing instruction to put it back.
+        focusedInputField = nil
+        createTaskSheetResignKeyboard()
         isSubmitting = true
         let payload = CreateTaskPayload(
             title: effectiveTitle(),
@@ -509,13 +512,31 @@ struct CreateTaskSheet: View {
         dismiss()
     }
 
+    /// The one place `activeSelector` moves.
+    ///
+    /// Five trigger rows open this overlay and eight paths close it, and every
+    /// one of them used to be a bare assignment — so the picker appeared and
+    /// vanished in a single frame, with no `.transition` on it and nothing to
+    /// start one if there had been. Routing all thirteen through here is what
+    /// makes it one spec rather than thirteen chances to disagree.
+    ///
+    /// The transaction comes from the mutation rather than from an
+    /// `.animation(_:value:)` on the body because the entrance and the exit
+    /// want different curves, and one `.animation(_:value:)` applies one curve
+    /// in both directions.
+    private func setActiveSelector(_ selector: CreateTaskSheetSelector?) {
+        withAnimation(TdayCenteredSelectorMotion.animation(presenting: selector != nil)) {
+            activeSelector = selector
+        }
+    }
+
     @ViewBuilder
     private func selectorOverlay(for selector: CreateTaskSheetSelector) -> some View {
         ZStack {
             colors.bottomSheetScrim
                 .ignoresSafeArea()
                 .onTapGesture {
-                    activeSelector = nil
+                    setActiveSelector(nil)
                 }
 
             TdayCenteredSelectorCard(title: selector.title) {
@@ -527,7 +548,7 @@ struct CreateTaskSheet: View {
                         selected: selectedListID == nil
                     ) {
                         selectedListID = nil
-                        activeSelector = nil
+                        setActiveSelector(nil)
                     }
 
                     ForEach(lists) { list in
@@ -538,7 +559,7 @@ struct CreateTaskSheet: View {
                             selected: selectedListID == list.id
                         ) {
                             selectedListID = list.id
-                            activeSelector = nil
+                            setActiveSelector(nil)
                         }
                     }
 
@@ -553,7 +574,7 @@ struct CreateTaskSheet: View {
                             selected: TaskPriorityDisplay.canonicalValue(priority) == option.value
                         ) {
                             priority = option.value
-                            activeSelector = nil
+                            setActiveSelector(nil)
                         }
                     }
 
@@ -568,18 +589,18 @@ struct CreateTaskSheet: View {
                             selected: repeatRule == option.value
                         ) {
                             repeatRule = option.value
-                            activeSelector = nil
+                            setActiveSelector(nil)
                         }
                     }
 
                 case .date:
                     CreateTaskSheetDateSelectorContent(dueDate: userPickedDueDateBinding) {
-                        activeSelector = nil
+                        setActiveSelector(nil)
                     }
 
                 case .time:
                     CreateTaskSheetTimeSelectorContent(dueDate: userPickedDueDateBinding) {
-                        activeSelector = nil
+                        setActiveSelector(nil)
                     }
                 }
             }
@@ -735,12 +756,7 @@ private struct CreateTaskSheetTextField: View {
         .submitLabel(.done)
         .onSubmit {
             focusedInputField.wrappedValue = nil
-            UIApplication.shared.sendAction(
-                #selector(UIResponder.resignFirstResponder),
-                to: nil,
-                from: nil,
-                for: nil
-            )
+            createTaskSheetResignKeyboard()
         }
         .textInputAutocapitalization(.sentences)
         .font(.tdayRounded(size: 18, weight: .heavy))
@@ -1024,6 +1040,23 @@ private struct CreateTaskSheetSelectorTriggerRow: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
     }
+}
+
+/// Broadcasts a resign to whatever is holding first responder in this sheet.
+///
+/// Clearing `focusedInputField` only dismisses the Title field — Notes is a
+/// UITextView behind a `UIViewRepresentable` that never registers a
+/// `@FocusState` anchor, so it needs an explicit resign broadcast to give up
+/// the keyboard. Every path here that means "the keyboard is done" goes through
+/// this rather than restating the four-argument `sendAction`, which is how one
+/// of them came to be missing it in the first place.
+private func createTaskSheetResignKeyboard() {
+    UIApplication.shared.sendAction(
+        #selector(UIResponder.resignFirstResponder),
+        to: nil,
+        from: nil,
+        for: nil
+    )
 }
 
 private func createTaskSheetListSwatchColor(_ raw: String?) -> Color {

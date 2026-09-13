@@ -401,7 +401,7 @@ ios-swiftUI/Tests/
 └── TdayCoreTests/
 ```
 
-Current XCTest coverage includes API model contracts, cache mapper date parsing, completed-sync merging, connectivity classification, realtime client behavior, server URL persistence, system credential login handling, Today/Floater widget snapshot schema/status/cap storage, and widget create deep-link routing.
+Current XCTest coverage includes API model contracts, cache mapper date parsing, completed-sync merging, connectivity classification, realtime client behavior, server URL persistence, system credential login handling, Today/Floater widget snapshot schema/status/cap storage, widget create deep-link routing, and the bottom-sheet chrome's motion spec and keyboard-frame probe.
 
 ### What Should Be Tested (iOS)
 
