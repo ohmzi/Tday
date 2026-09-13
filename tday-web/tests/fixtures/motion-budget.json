@@ -34,8 +34,8 @@
   },
   "web": {
     "_source": "tday-web/src, *.ts *.tsx *.css",
-    "_durationUtility": "Tailwind duration-<n> utilities. 52 of these are duration-200, which is already the Enter rung numerically — they are counted anyway, because a utility that happens to equal a token is not the same thing as a site that names one.",
-    "durationUtility": 73,
+    "_durationUtility": "Tailwind duration-<n> utilities. Most are duration-200, which is already the Enter rung numerically — they are counted anyway, because a utility that happens to equal a token is not the same thing as a site that names one. 73 when the token layer landed; three came off in Phase 6 when the hero header's two sibling controls moved onto duration-quick and its title stopped declaring a transition the rAF was overwriting.",
+    "durationUtility": 70,
     "_rawCubicBezier": "cubic-bezier( written out at a call site. All three survivors are deliberate orphans with no token and no second site: globals.css (0.3,0,0.4,1), RootDock.tsx (0.25,1,0.5,1), AnimatedHeight.tsx (0.22,0.61,0.36,1), the wizard's own height curve promoted with the primitive that now holds it. Cited by curve and not by line: a line number recorded in a fixture is stale the moment anything above it moves, and one of these three moved twice while this PR was being written. With the Gesture curve named, those three orphans ARE the count — the ceiling and the list are the same three sites, so a fourth is always new.",
     "rawCubicBezier": 3,
     "_cssMsLiteral": "a bare <n>ms in CSS or in an inline style string. 19 when the token layer landed; two came off in Phase 5, one of them the inline `height 280ms` the onboarding wizard animated with, which moved to the Emphasis rung when `AnimatedHeight` became a primitive.",
