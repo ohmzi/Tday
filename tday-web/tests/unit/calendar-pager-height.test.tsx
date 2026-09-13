@@ -87,6 +87,7 @@ function renderCard(props: { animationKey: number; view?: "month" | "week" | "da
       slideDirection="right"
       animationKey={props.animationKey}
       canGoPrevious
+      refusedBack={false}
       onNavigate={vi.fn()}
       onSelectDate={vi.fn()}
     />,
@@ -129,6 +130,7 @@ describe("the calendar card's height follows the page it is showing", () => {
         slideDirection="right"
         animationKey={1}
         canGoPrevious
+      refusedBack={false}
         onNavigate={vi.fn()}
         onSelectDate={vi.fn()}
       />,
@@ -203,6 +205,7 @@ describe("the calendar card's height follows the page it is showing", () => {
         slideDirection="left"
         animationKey={1}
         canGoPrevious
+      refusedBack={false}
         onNavigate={vi.fn()}
         onSelectDate={vi.fn()}
       />,

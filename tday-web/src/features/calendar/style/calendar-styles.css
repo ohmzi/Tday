@@ -48,3 +48,61 @@
     animation: none;
   }
 }
+
+/* ── The floor answering back ──
+   Navigation cannot go before the current month (AGENTS.md's Calendar UX
+   Contract), and a back swipe at that floor used to produce nothing whatever:
+   no travel, no resistance, no edge. A gesture the app received, measured and
+   then dropped in silence is indistinguishable from one it never got — which
+   is the single reading a user must never be left to choose between.
+
+   The native clients do not all have this gap. Android pages with a
+   `HorizontalPager`, so page 0 gets the platform's own stretch overscroll for
+   free; web pages by measuring a pointer delta across a grid that is not a
+   scroller, so there is no edge for a platform to answer on its behalf. This
+   is web's spelling of that edge. iOS turns `bounces` off
+   (`CalendarPagingScrollView.swift:37`) and is therefore silent in the same
+   way, which is a UIKit change with no toolchain on this machine to prove it
+   and is filed rather than guessed at here.
+
+   Quick, because the rung's own description is the app answering a finger that
+   is on it — and because the answer has to be unmistakably shorter than the
+   Emphasis a real page turn takes, or a refusal reads as a page turn that
+   started and thought better of it. 8px travel for the same reason: the swipe
+   threshold is 48px, so the answer moves a sixth of the gesture that asked for
+   it and can never be read as the beginning of one. It is also the distance
+   the app's surfaces already nudge by. */
+@keyframes cal-native-page-refuse {
+  from {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(8px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* On a wrapper of its own rather than on the pager, and that is structural
+   rather than tidy: the pager carries the slide, `animation` is one property,
+   and a refusal declared on the same element would supersede the slide while
+   it played and re-add it on the way out — replaying a page turn nobody
+   asked for. */
+.cal-native-page-refused {
+  animation: cal-native-page-refuse var(--tday-duration-quick) var(--tday-ease-gesture);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The fifth idiom rule drops the trip and keeps the destination, and a
+     refusal is the one motion in the app with no destination to keep: it ends
+     where it began, because nothing happened. There is no finished state to
+     draw still, so the class is never applied at all — `CalendarClient` does
+     not raise the flag while the preference is on, which also keeps the DOM
+     from holding a state no `animationend` would ever come to clear. The still
+     answer this screen already carries is the previous chevron, `disabled` at
+     the floor and visibly so. */
+  .cal-native-page-refused {
+    animation: none;
+  }
+}

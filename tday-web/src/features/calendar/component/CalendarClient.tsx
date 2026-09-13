@@ -50,6 +50,7 @@ import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { moveTodoToDay } from "@/lib/moveTodoToDay";
 import type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
 import AnimatedHeight from "@/components/ui/AnimatedHeight";
+import { useNavigationRefusal } from "../lib/useNavigationRefusal";
 import { useModalPresence } from "@/components/ui/Modal";
 import ConfirmRescheduleRecurring, {
   type PendingReschedule,
@@ -221,6 +222,7 @@ export function CalendarModeCard({
   slideDirection,
   animationKey,
   canGoPrevious,
+  refusedBack,
   onNavigate,
   onSelectDate,
 }: {
@@ -230,6 +232,8 @@ export function CalendarModeCard({
   slideDirection: SlideDirection | null;
   animationKey: number;
   canGoPrevious: boolean;
+  /** A back navigation the floor turned down, being answered right now. */
+  refusedBack: boolean;
   onNavigate: (offset: -1 | 1) => void;
   onSelectDate: (date: Date) => void;
 }) {
@@ -287,48 +291,56 @@ export function CalendarModeCard({
           the wrong trade twice over — a month cell is a fixed `w-[2.9rem]` in
           a seventh of the card, so a narrower card is one that hangs FURTHER
           past its last column, not less. */}
-      <AnimatedHeight className="-mx-4 px-4 sm:-mx-5 sm:px-5">
-        <div
-          key={animationKey}
-          className={cn(
-            // Top and bottom cannot be bought by bleeding the way the sides
-            // are: the box is sized to this content, so vertical padding on the
-            // box would come straight out of the height the observer measured.
-            // 4px above for the drag-over ring, which reaches that far out on
-            // every side (`ring-2` plus `ring-offset-2`) and in week view sits
-            // flush against the top of the box; 6px below for the selected
-            // day's glow, the deeper of the two down there (12px down, 24px of
-            // blur, 18px pulled back in). The 4px comes off the header's margin
-            // above rather than being added, so the gap the eye sees is the one
-            // that was always there.
-            "touch-pan-y pt-1 pb-1.5",
-            slideDirection === "left" && "cal-native-slide-from-left",
-            slideDirection === "right" && "cal-native-slide-from-right",
-          )}
-          {...swipeHandlers}
-        >
-          {view === "month" && (
-            <MonthCalendarGrid
-              selectedDate={selectedDate}
-              tasksByDay={tasksByDay}
-              onSelectDate={onSelectDate}
-            />
-          )}
-          {view === "week" && (
-            <WeekCalendarStrip
-              selectedDate={selectedDate}
-              tasksByDay={tasksByDay}
-              onSelectDate={onSelectDate}
-            />
-          )}
-          {view === "day" && (
-            <DayCalendarSummary
-              selectedDate={selectedDate}
-              taskCount={tasksByDay.get(dayKey(selectedDate))?.length ?? 0}
-            />
-          )}
-        </div>
-      </AnimatedHeight>
+      {/* A wrapper that exists to hold one animation. The refusal cannot live
+          on the pager below, which already owns an `animation` for the slide
+          and would replay it on the way back out (`calendar-styles.css` argues
+          that where the rule is), and it cannot live on the card above, which
+          would tug the month title and the chevrons along with it and read as
+          the card coming loose rather than as the page declining to turn. */}
+      <div className={cn(refusedBack && "cal-native-page-refused")}>
+        <AnimatedHeight className="-mx-4 px-4 sm:-mx-5 sm:px-5">
+          <div
+            key={animationKey}
+            className={cn(
+              // Top and bottom cannot be bought by bleeding the way the sides
+              // are: the box is sized to this content, so vertical padding on the
+              // box would come straight out of the height the observer measured.
+              // 4px above for the drag-over ring, which reaches that far out on
+              // every side (`ring-2` plus `ring-offset-2`) and in week view sits
+              // flush against the top of the box; 6px below for the selected
+              // day's glow, the deeper of the two down there (12px down, 24px of
+              // blur, 18px pulled back in). The 4px comes off the header's margin
+              // above rather than being added, so the gap the eye sees is the one
+              // that was always there.
+              "touch-pan-y pt-1 pb-1.5",
+              slideDirection === "left" && "cal-native-slide-from-left",
+              slideDirection === "right" && "cal-native-slide-from-right",
+            )}
+            {...swipeHandlers}
+          >
+            {view === "month" && (
+              <MonthCalendarGrid
+                selectedDate={selectedDate}
+                tasksByDay={tasksByDay}
+                onSelectDate={onSelectDate}
+              />
+            )}
+            {view === "week" && (
+              <WeekCalendarStrip
+                selectedDate={selectedDate}
+                tasksByDay={tasksByDay}
+                onSelectDate={onSelectDate}
+              />
+            )}
+            {view === "day" && (
+              <DayCalendarSummary
+                selectedDate={selectedDate}
+                taskCount={tasksByDay.get(dayKey(selectedDate))?.length ?? 0}
+              />
+            )}
+          </div>
+        </AnimatedHeight>
+      </div>
     </section>
   );
 }
@@ -963,6 +975,9 @@ export default function CalendarClient() {
   const [view, setView] = useState<CalendarViewMode>("month");
   const [slideDirection, setSlideDirection] = useState<SlideDirection | null>(null);
   const [animKey, setAnimKey] = useState(0);
+  // The floor's answer to a back navigation it turned down: the hook holds both
+  // the flag the card draws from and the clock it comes down on.
+  const { refusing: refusedBack, refuse: refuseNavigation } = useNavigationRefusal();
   const selectedDateRef = useRef<Date>(selectedDate);
   const viewRef = useRef<CalendarViewMode>(view);
   selectedDateRef.current = selectedDate;
@@ -1111,12 +1126,20 @@ export default function CalendarClient() {
     setSelectedDate(date);
   }, [minimumMonth]);
 
+  /**
+   * Turns the card to `date`, if it is allowed to go there.
+   *
+   * @returns Whether the page actually turned. Callers that offer the user a
+   *   gesture read it: the floor rule lives here, and a second copy of it at
+   *   the call site is a second copy that can drift out of step with this one.
+   */
   const animateToDate = useCallback((date: Date, direction: SlideDirection) => {
-    if (!canNavigateTo(date, minimumMonth)) return;
-    if (isSameDay(date, selectedDateRef.current)) return;
+    if (!canNavigateTo(date, minimumMonth)) return false;
+    if (isSameDay(date, selectedDateRef.current)) return false;
     setSlideDirection(direction);
     setAnimKey((key) => key + 1);
     setSelectedDate(date);
+    return true;
   }, [minimumMonth]);
 
   const handleSelectSearchResult = useCallback(
@@ -1136,8 +1159,16 @@ export default function CalendarClient() {
     const currentDate = selectedDateRef.current;
     const currentView = viewRef.current;
     const nextDate = periodDate(currentDate, currentView, offset);
-    animateToDate(nextDate, offset > 0 ? "right" : "left");
-  }, [animateToDate]);
+    if (animateToDate(nextDate, offset > 0 ? "right" : "left")) return;
+
+    // Nothing moved, and the user asked for something. Every way of asking
+    // arrives here — the swipe, the arrow keys, and the chevron that is
+    // `disabled` at the floor precisely because this is where the rule is
+    // enforced — so the answer is given once, at the refusal, rather than at
+    // each gesture that can run into it. It travels the one way because only
+    // the floor ever refuses: the calendar has no ceiling.
+    refuseNavigation();
+  }, [animateToDate, refuseNavigation]);
 
   const jumpToToday = useCallback(() => {
     const today = new Date();
@@ -1265,6 +1296,7 @@ export default function CalendarClient() {
           slideDirection={slideDirection}
           animationKey={animKey}
           canGoPrevious={canGoPrevious}
+          refusedBack={refusedBack}
           onNavigate={navigatePeriod}
           onSelectDate={selectDate}
         />
