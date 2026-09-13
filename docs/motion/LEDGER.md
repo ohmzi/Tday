@@ -386,8 +386,14 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 15a — the Android create sheet actually plays its exit
 
-- [ ] `and-create-sheet-dismiss-cut` — `sheetVisible` never set false; 320 ms exit is dead code, 7 call sites · and · Sev 4 · M · Gate G+D
-- [ ] `and-sheet-scrim-ripple-on-dismiss` — full-screen Material ripple on a dismiss tap · and · Sev 2 · XS · Gate D
+- [x] `and-create-sheet-dismiss-cut` — `sheetVisible` never set false; 320 ms exit is dead code, 7 call sites · and · Sev 4 · M · Gate G+D
+  - Fixed in the component rather than at the call sites, so all of them route through one path:
+    every dismiss affordance starts the exit, and the caller's `onDismiss` — which is what removes
+    the host `Dialog` — is called only once the transition has settled. The seven call sites are the
+    seven in screens; `WidgetCreateTaskActivity.kt:171` is an eighth the row does not count (its host
+    is an Activity, not a composition flag) and it is carried by the same change, as is the create-LIST
+    sheet named alongside it in `RULE_B_PENDING_FIX`, now empty.
+- [x] `and-sheet-scrim-ripple-on-dismiss` — full-screen Material ripple on a dismiss tap · and · Sev 2 · XS · Gate D
 
 ### PR 15b — the create sheet’s IME height stops leaping
 

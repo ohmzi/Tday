@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -54,9 +55,11 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -133,6 +136,67 @@ private const val CREATE_TASK_SHEET_FLOATER_EDIT_HEIGHT_FRACTION = 0.54f
 private const val CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION = 0.86f
 private const val CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.85f
 private const val CREATE_TASK_SHEET_MOTION_MS = 320
+
+/**
+ * The dismissal half of a sheet that is an `AnimatedVisibility` inside a [Dialog].
+ *
+ * Every dismiss affordance used to call the caller's `onDismiss` directly: the scrim tap,
+ * the close button, and the host `Dialog`'s own back/outside-tap request. Each caller's
+ * `onDismiss` flips the state that composes the sheet at all — `showCreateTaskSheet = false`,
+ * `editTargetTodoId = null`, `finish()` for the widget — so the whole `Dialog` left the
+ * composition on the frame of the tap and the exit spec never animated a single frame. The
+ * sheet was cut, not slid, from all seven call sites, and the flag driving `visible` was set
+ * true once and never set false, which is exactly what Rule B of the Android
+ * motion-reachability guardrail reports.
+ *
+ * So dismissal is two steps and every path takes both. [start] flips the transition's target
+ * to false and the exit plays; the caller is told only once the transition has settled on
+ * "gone", which is the first moment it is safe to tear the composition down. Because the
+ * sheet's own state outlives the tap, its content is still composed — and still readable —
+ * for the whole slide out.
+ *
+ * Waiting on the transition rather than on a `delay(320)` also keeps the handoff honest when
+ * the system animation scale is 0: the transition settles on the next frame and the sheet
+ * closes immediately, instead of stranding a sheet-less scrim on screen for 320 ms.
+ */
+@Stable
+internal class SheetDismissState(internal val transition: MutableTransitionState<Boolean>) {
+    /** True once a dismissal has been asked for. The exit may still be playing. */
+    var dismissing: Boolean by mutableStateOf(false)
+        private set
+
+    /** The exit has finished and the sheet is off screen; the host can go away now. */
+    val gone: Boolean
+        get() = dismissing && transition.isIdle && !transition.currentState
+
+    /** Start the exit. Repeat taps during the slide out are ignored, not queued. */
+    fun start() {
+        if (dismissing) return
+        dismissing = true
+        transition.targetState = false
+    }
+}
+
+/**
+ * Remembers a [SheetDismissState], runs the sheet's enter, and calls [onDismissed] exactly
+ * once — after the exit has finished.
+ *
+ * [presentImmediately] is for a host that is itself the sheet (the widget create activity):
+ * it opens already showing it, so there is nothing to slide in.
+ */
+@Composable
+internal fun rememberSheetDismissState(
+    presentImmediately: Boolean = false,
+    onDismissed: () -> Unit,
+): SheetDismissState {
+    val state = remember { SheetDismissState(MutableTransitionState(presentImmediately)) }
+    LaunchedEffect(Unit) { state.transition.targetState = true }
+    val currentOnDismissed by rememberUpdatedState(onDismissed)
+    LaunchedEffect(state.gone) {
+        if (state.gone) currentOnDismissed()
+    }
+    return state
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -287,7 +351,17 @@ fun CreateTaskBottomSheet(
     }
     var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
-    var sheetVisible by remember { mutableStateOf(presentImmediately) }
+    // Every way out of this sheet goes through `startDismiss`: the scrim, the close
+    // button, the host Dialog's back press and outside tap, and so — one step later — each
+    // caller's own onDismiss. See [SheetDismissState] for why it is two steps.
+    val sheetDismiss = rememberSheetDismissState(
+        presentImmediately = presentImmediately,
+        onDismissed = onDismiss,
+    )
+    val startDismiss = {
+        dismissKeyboard()
+        sheetDismiss.start()
+    }
 
     val noListLabel = stringResource(R.string.create_task_no_list)
     val priorityOptions = remember { PRIORITY_OPTIONS_LOW_TO_HIGH }
@@ -343,12 +417,6 @@ fun CreateTaskBottomSheet(
     val keyboardSheetHeight = (screenHeight * CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION)
         .coerceAtMost(maxSheetHeight)
 
-    LaunchedEffect(presentImmediately) {
-        if (!presentImmediately) {
-            sheetVisible = true
-        }
-    }
-
     fun submitTask() {
         val due =
             if (scheduleEnabled && showScheduleControls) {
@@ -401,7 +469,7 @@ fun CreateTaskBottomSheet(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = startDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false,
@@ -417,14 +485,18 @@ fun CreateTaskBottomSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(sheetScrimColor)
-                    .clickable {
-                        dismissKeyboard()
-                        onDismiss()
-                    },
+                    // No indication: a dismiss tap on the scrim is a gesture at the sheet,
+                    // not a press of a full-screen button, and the default ripple draws
+                    // itself across the entire window on the way out.
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = startDismiss,
+                    ),
             )
 
             AnimatedVisibility(
-                visible = sheetVisible,
+                visibleState = sheetDismiss.transition,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth(),
@@ -518,10 +590,7 @@ fun CreateTaskBottomSheet(
                                 ),
                                 leftIcon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                                 leftContentDescription = stringResource(R.string.action_close),
-                                onLeftClick = {
-                                    dismissKeyboard()
-                                    onDismiss()
-                                },
+                                onLeftClick = startDismiss,
                                 confirmContentDescription = stringResource(
                                     if (isEditMode) {
                                         R.string.action_save_task
