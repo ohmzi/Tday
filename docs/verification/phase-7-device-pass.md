@@ -17,6 +17,29 @@ spends TF2 — see `README.md`, "iOS: three cycles, for the whole programme".
 
 ## Web
 
+- [ ] **PR 21 · web · The month is under the thumb, not behind it** — the calendar on a phone,
+      Month view, standing on any month but the current one, so both directions are live.
+      Do:     drag the grid sideways slowly and hold there; carry on past the 48px threshold and
+              keep going, a whole card width if you can; then let go. Repeat, releasing well short
+              of the threshold. Then drag, release short, and catch the grid again before it has
+              finished coming home.
+      Watch:  the grid is under the thumb from the first pixel, one for one, until the threshold.
+              Past that it keeps answering but gives — a card width of thumb buys about 96px of
+              grid and no more. Released past the threshold, the grid's own offset is dropped and
+              the next month slides in over 320 ms: one movement, not a glide home followed by a
+              page turn. Released short, it glides back over 150 ms and the month does not change.
+              The re-grab is the third thing to look for: the grid should carry on from exactly
+              where your thumb caught it, never jump back out to where you let it go.
+      Fails:  nothing moving until the release, which is the defect — the whole gesture was a
+              measurement before it was a movement. Also a fail: the month title or the chevrons
+              travelling with the grid; the grid left sitting out of place after any release; a
+              release past the threshold playing both a glide home and a page turn; or the grid
+              tracking sideways while you scroll the task list below it, which the axis lock is
+              there to prevent — start a scroll from inside the grid to check that one.
+      Also:   with reduce-motion on, the tracking stays and the trip home goes: the grid still
+              follows the thumb, and lands in the frame you lift it. The page turn itself is a cut
+              under that preference, as it already was.
+
 - [ ] **PR 25a · web · The card resizes with the page instead of under it** — the calendar on a
       phone, Month view, sitting on a month whose neighbour has a different number of weeks (a
       35-day month next to a 42-day one — February against March in most years).
@@ -51,10 +74,16 @@ spends TF2 — see `README.md`, "iOS: three cycles, for the whole programme".
               it started, with the month title and the chevrons not moving at all. Then swipe
               forward and back once to feel the difference: a real page turn is more than twice as
               long and actually changes the month.
+      Note:   since PR 21 the grid also gives under the thumb on the way there — about 24px at the
+              very most, half of what it takes to turn a page, however far backwards you drag. That
+              is the same refusal said twice, and the 8px answer is played on top of the grid coming
+              home from it; the two are one movement to the eye. The keyboard gets the 8px alone,
+              which is what it is for.
       Fails:  nothing happens at all, which is the defect. Also a fail: a resist long or far enough
-              to read as a page beginning to turn; the whole card, title included, moving with it;
-              or the grid landing anywhere but where it started. With reduce-motion on, nothing
-              happening is the correct answer — a refusal has no finished state to draw.
+              to read as a page beginning to turn; the grid tracking the backwards drag one for one
+              the way a forward drag does; the whole card, title included, moving with it; or the
+              grid landing anywhere but where it started. With reduce-motion on, nothing happening
+              after the release is the correct answer — a refusal has no finished state to draw.
 
 - [ ] **PR 25c · web · The dragged card lands instead of vanishing** — the calendar on a phone,
       Month view, a day with at least one task so there is a row to pick up.
