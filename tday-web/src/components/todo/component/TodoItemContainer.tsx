@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { Checkbox } from "@/components/ui/checkbox";
 import clsx from "clsx";
@@ -29,6 +29,7 @@ import { useTaskSelection } from "@/providers/TaskSelectionProvider";
 import { hapticTick } from "@/lib/haptics";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { useSwipeRow } from "@/hooks/useSwipeRow";
 import { buildTaskShareText } from "@/lib/listShareText";
 
 
@@ -108,50 +109,18 @@ export const TodoItemCard = ({
   // ~250ms press with <5px movement, which a swipe exceeds; vertical
   // scroll/drag is preserved via axis-locking and touch-action: pan-y.
   const ACTIONS_WIDTH = 210;
-  const [swipeX, setSwipeX] = useState(0);
-  const [swiping, setSwiping] = useState(false);
-  const swipeTouch = useRef<
-    { x: number; y: number; startX: number; axis: "x" | "y" | null } | null
-  >(null);
-
-  const closeSwipe = () => setSwipeX(0);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const announceSwipeOpen = useCallback(() => {
+    // Claim the row: tell any other open row to close so only one is open.
+    window.dispatchEvent(new CustomEvent("tday-swipe-open", { detail: todoItem.id }));
+  }, [todoItem.id]);
+  const { swipeX, transition: swipeTransition, closeSwipe, swipeHandlers } = useSwipeRow({
+    actionsWidth: ACTIONS_WIDTH,
+    onOpen: announceSwipeOpen,
     // While selecting, the row's only gesture is the tap that picks it — the
     // swipe would otherwise reveal Edit/Delete for a single task in the middle
     // of choosing several.
-    if (readOnly || selecting) return;
-    const t = e.touches[0];
-    swipeTouch.current = { x: t.clientX, y: t.clientY, startX: swipeX, axis: null };
-    setSwiping(true);
-  };
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const data = swipeTouch.current;
-    if (!data) return;
-    const t = e.touches[0];
-    const dx = t.clientX - data.x;
-    const dy = t.clientY - data.y;
-    if (data.axis === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-      data.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-      // Claim the row: tell any other open row to close so only one is open.
-      if (data.axis === "x") {
-        window.dispatchEvent(
-          new CustomEvent("tday-swipe-open", { detail: todoItem.id }),
-        );
-      }
-    }
-    if (data.axis === "x") {
-      setSwipeX(Math.min(0, Math.max(-ACTIONS_WIDTH, data.startX + dx)));
-    }
-  };
-  const handleTouchEnd = () => {
-    const data = swipeTouch.current;
-    setSwiping(false);
-    swipeTouch.current = null;
-    if (data?.axis === "x") {
-      setSwipeX((prev) => (prev < -ACTIONS_WIDTH / 2 ? -ACTIONS_WIDTH : 0));
-    }
-  };
+    disabled: readOnly || selecting,
+  });
 
   const setCombinedRef = (node: HTMLDivElement | null) => {
     setItemElement(node);
@@ -190,20 +159,20 @@ export const TodoItemCard = ({
   // never starts with a stray Edit/Delete pair showing.
   useEffect(() => {
     if (selecting) {
-      setSwipeX(0);
+      closeSwipe();
       setShowHandle(false);
     }
-  }, [selecting]);
+  }, [closeSwipe, selecting]);
 
   // Close this row's swipe actions when another row is swiped open.
   useEffect(() => {
     const onOpen = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;
-      if (id !== todoItem.id) setSwipeX(0);
+      if (id !== todoItem.id) closeSwipe();
     };
     window.addEventListener("tday-swipe-open", onOpen as EventListener);
     return () => window.removeEventListener("tday-swipe-open", onOpen as EventListener);
-  }, [todoItem.id]);
+  }, [closeSwipe, todoItem.id]);
 
   useEffect(() => {
     if (!displayForm) {
@@ -362,14 +331,13 @@ export const TodoItemCard = ({
             }
             if (swipeX !== 0) closeSwipe();
           }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          {...swipeHandlers}
           style={{
             transform: `translateX(${swipeX}px)`,
-            transition: swiping
-              ? "none"
-              : "transform 220ms ease, background-color 150ms ease",
+            // Settle, tint and ring all come from `useSwipeRow`: three rows drawing the same
+            // three properties wrote out three lists that had drifted apart, and only one of
+            // them named the ring at all.
+            transition: swipeTransition,
             touchAction: "pan-y",
             // A grid item's automatic minimum size is its own content, so the track above can
             // only close once this one is allowed to be smaller than the row it holds. Applied

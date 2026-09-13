@@ -682,7 +682,47 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 20 — velocity and rubber-banding on the web swipe
 
-- [ ] `web-swipe-velocity-rubberband` — position-only commit, hard clamp, browser-default `ease` · web · Impact O3 · M · Gate V+D
+- [x] `web-swipe-velocity-rubberband` — position-only commit, hard clamp, browser-default `ease` · web · Impact O3 · M · Gate V+D
+  - Three defects, one cause: every swipe on web read the last frame of a gesture as though it
+    were the end of one. `src/lib/swipeGesture.ts` is the answer to all three, and it holds the
+    gesture rather than any surface — it takes numbers and gives numbers back, so the four call
+    sites keep their own thresholds and their own reasons, and the maths is argued in
+    `tests/unit/swipe-gesture.test.ts` instead of inferred from what a jsdom row ended up at.
+  - **A release is a projection, not a position.** `projectedRest` carries the surface on at the
+    speed it was let go at and asks which resting place *that* lands nearer. One rule, not two:
+    a 40px flick commits because it was still travelling, and a 120px drag already being walked
+    back does not, because it was not. Both were wrong under the old rule, and wrong in the same
+    way. The horizon is `Quick` rather than a constant of its own — that rung is the app
+    answering a finger that is on it, and this is the same question one frame after it left.
+  - **A limit gives.** The row's clamp was `Math.min(0, Math.max(-actionsWidth, …))`, so 100px of
+    finger bought nothing at all: the app declining to admit the gesture happened. `rubberBand`
+    is the pager's own curve from PR 21, hoisted rather than copied, and a row spends an eighth
+    of its actions on it — about 26px. Half a threshold, which is what the pager grants a refused
+    direction, would be 52px here and reads as a fourth action arriving rather than as a limit.
+  - **The settle names rungs.** `transform 220ms ease` was the browser default curve on a number
+    between two rungs, written out in all three row components. A row goes home on Quick and
+    opens on Emphasis, both on the Gesture curve — the same pair the calendar's pager already
+    answers a refused swipe and a turned page with, and the same intent Android and iOS spend the
+    Gesture spring on at their own row releases. Geometry puts the arrival on Emphasis by the
+    second idiom rule; the first rule makes the trip home the shorter of the two.
+  - One hook for three rows. The scheduled, calendar and Anytime rows carried three copies of one
+    gesture with the same 210px of actions and the same 8px lock, and being copies they had three
+    different sets of bugs: only the calendar's had an exit for a touch the platform takes away.
+    `useCalendarRowSwipe` is now `src/hooks/useSwipeRow`, and the other two rows get that exit,
+    the projection and the give by moving onto it rather than by having them written out again.
+  - The hook owns the whole `transition` whitelist for the same reason. Three rows drawing the
+    same three properties had drifted into three lists, and only the calendar's named
+    `box-shadow` — which is how Tailwind draws the deep-link ring under `sm`, so the other two
+    faded the tint and cut the ring. `web-calendar-highlight-ring-cuts` was fixed in one row in
+    PR 25b; this is the same fix reaching the two it named.
+  - Reduced motion: the settle becomes `transform 0s` and the row is drawn at the resting place
+    the release chose. The tracking stays — a finger is not a motion the app plays — which is the
+    same cut PR 21 made on the pager.
+  - `web.cssMsLiteral` drops 10 → 5: three `transform 220ms ease` and the two surviving
+    `background-color 150ms ease` beside them. The other two web ceilings are untouched at
+    58 / 3. Two numbers are added and neither is a rung: a 100ms velocity window (Android's
+    `VelocityTracker` horizon) and a one-frame floor under it, both measurement constants rather
+    than motions anybody watches, argued where they are declared and listed in `docs/motion.md`.
 
 ### PR 52 — web drag lift and drop
 

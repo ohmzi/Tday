@@ -1,5 +1,13 @@
 import { useCallback, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
+import {
+  AXIS_SLOP_PX,
+  createSwipeSampler,
+  projectedRest,
+  rubberBand,
+  SWIPE_SETTLE_HOME,
+  type SwipeSampler,
+} from "@/lib/swipeGesture";
 
 /** What one gesture has to remember about itself. */
 type PagerGesture = {
@@ -10,18 +18,9 @@ type PagerGesture = {
   startOffset: number;
   /** Locked once the finger has moved far enough to say what it meant. */
   axis: "x" | "y" | null;
+  /** This gesture's readings, and only this gesture's. */
+  sampler: SwipeSampler;
 };
-
-/**
- * Below this, a move is a hand steadying rather than a gesture starting.
- *
- * The same 8px the calendar row's swipe locks its own axis at, and the two
- * gestures are an inch apart on the same screen: the grid sits directly above a
- * scrolling task list, so a finger that means to scroll very often lands on the
- * pager first. Sharing the number is not tidiness — a pager that claimed the
- * axis sooner than the row below it would take swipes the row was about to get.
- */
-const AXIS_SLOP_PX = 8;
 
 /**
  * How much further the page can be pulled once the swipe has already passed the
@@ -39,18 +38,6 @@ const AXIS_SLOP_PX = 8;
  */
 const OVERDRAG_GIVE = 1;
 const REFUSED_GIVE = 0.5;
-
-/**
- * The page going home from wherever the finger left it.
- *
- * Quick, because this is the tail of a gesture rather than a page turn: the rung
- * is the app answering a finger that was on it, and the same one the floor's
- * refusal answers on — the two play together when a back swipe is declined at
- * the floor, and one clock is what keeps that reading as a single answer. The
- * Gesture curve for the reason it carries in `docs/motion.md`: web has no spring
- * runtime, and a surface continuing after a release is exactly what it names.
- */
-const RETURN_TRANSITION = "transform var(--tday-duration-quick) var(--tday-ease-gesture)";
 
 /**
  * Where the page actually is at this instant, mid-return or at rest.
@@ -98,8 +85,7 @@ function pageFollow(offset: number, threshold: number, refused: boolean): number
   const distance = Math.abs(offset);
   const tracked = refused ? 0 : Math.min(distance, threshold);
   const give = threshold * (refused ? REFUSED_GIVE : OVERDRAG_GIVE);
-  const stretched = give * (1 - Math.exp(-(distance - tracked) / give));
-  return Math.sign(offset) * (tracked + stretched);
+  return Math.sign(offset) * (tracked + rubberBand(distance - tracked, give));
 }
 
 /**
@@ -119,7 +105,8 @@ function pageFollow(offset: number, threshold: number, refused: boolean): number
  * why a release can hand over to it at all — and the grid's own offset is simply
  * dropped, because the element carrying it is replaced by the page that
  * displaced it. A swipe that did not turn the page has nothing to hand over to,
- * so it glides home on [RETURN_TRANSITION].
+ * so it glides home on [SWIPE_SETTLE_HOME], the same settle the three task
+ * rows below the card go home on.
  *
  * The drag is written to a child of the element that slides, and that is
  * structural rather than tidy — the same rule the refusal wrapper above it is
@@ -215,7 +202,7 @@ export function useCalendarPagerSwipe<T extends HTMLElement = HTMLDivElement>(
     // A page nothing moved has nothing to put back, and a tap on the grid — the
     // commonest gesture this card gets — should leave no declaration behind it.
     if (!track || track.style.transform === "") return;
-    track.style.transition = glide && !prefersReducedMotion() ? RETURN_TRANSITION : "none";
+    track.style.transition = glide && !prefersReducedMotion() ? SWIPE_SETTLE_HOME : "none";
     track.style.transform = "";
   }, []);
 
@@ -274,11 +261,14 @@ export function useCalendarPagerSwipe<T extends HTMLElement = HTMLDivElement>(
       // strand the page cannot come out of, because selecting a date does not
       // re-key the pager and so never replaces the element holding the offset.
       endGesture();
+      const sampler = createSwipeSampler();
+      sampler.sample(event.clientX, event.timeStamp);
       gestureRef.current = {
         x: event.clientX,
         y: event.clientY,
         startOffset,
         axis: null,
+        sampler,
       };
       pointerIdRef.current = event.pointerId;
       // A page that is still on its way home is pinned where this finger found
@@ -315,6 +305,7 @@ export function useCalendarPagerSwipe<T extends HTMLElement = HTMLDivElement>(
       // pointer's and refused a page of its own.
       if (gesture.axis === "y") return;
 
+      gesture.sampler.sample(event.clientX, event.timeStamp);
       const pulled = gesture.startOffset + dx;
       holdAt(pageFollow(pulled, threshold, pulled > 0 && !canGoBack));
     },
@@ -330,9 +321,15 @@ export function useCalendarPagerSwipe<T extends HTMLElement = HTMLDivElement>(
       endGesture();
       if (!gesture) return;
 
-      const delta = event.clientX - gesture.x;
-      const direction: -1 | 1 = delta < 0 ? 1 : -1;
-      const decided = gesture.axis !== "y" && Math.abs(delta) >= threshold;
+      // Where the finger was going, not where it stopped. A short flick was the
+      // gesture this pager refused hardest — it is how most people turn a page
+      // that is a whole grid wide — and a long drag already being walked back is
+      // the one it used to turn anyway. Both are the same mistake: the last pixel
+      // of a gesture is the part that says least about it.
+      const velocity = gesture.sampler.release(event.clientX, event.timeStamp);
+      const projected = projectedRest(event.clientX - gesture.x, velocity);
+      const direction: -1 | 1 = projected < 0 ? 1 : -1;
+      const decided = gesture.axis !== "y" && Math.abs(projected) >= threshold;
       // What the screen will do with a decided swipe, worked out here only to
       // know whether this element is about to be replaced. The floor rule itself
       // stays where it is enforced: a refused swipe is still reported, because

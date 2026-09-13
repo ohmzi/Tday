@@ -23,7 +23,7 @@
  * stylesheet's own rungs are read in `calendar-floor-refusal.test.tsx`.
  */
 
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, createEvent, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CalendarModeCard } from "@/features/calendar/component/CalendarClient";
 import { installReducedMotion } from "../setup/reduced-motion";
@@ -31,7 +31,7 @@ import { installReducedMotion } from "../setup/reduced-motion";
 /** Mirrors `swipeThreshold` in CalendarClient.tsx. */
 const SWIPE_THRESHOLD = 48;
 
-/** The page going home, spelled exactly as `useCalendarPagerSwipe` spells it. */
+/** The page going home — `SWIPE_SETTLE_HOME`, spelled exactly as the module has it. */
 const RETURN_TRANSITION = "transform var(--tday-duration-quick) var(--tday-ease-gesture)";
 
 const originalMatchMedia = window.matchMedia;
@@ -87,6 +87,26 @@ function move(container: HTMLElement, clientX: number, clientY = 200) {
 
 function lift(container: HTMLElement, clientX: number, clientY = 200) {
   fireEvent.pointerUp(pagerOf(container), { pointerId: 1, clientX, clientY });
+}
+
+/**
+ * One pointer event at a time the test chose, which is the only way to put a
+ * speed on a gesture here: everything fired in a single tick carries jsdom's own
+ * stamps, a fraction of a millisecond apart, and the sampler reads a gap that
+ * short as no evidence at all. `timeStamp` is readonly on the prototype, so it
+ * is defined on the instance — React's synthetic event copies it across, except
+ * for a stamp of exactly zero, which it replaces with the wall clock.
+ */
+function at(
+  container: HTMLElement,
+  kind: "pointerDown" | "pointerMove" | "pointerUp",
+  clientX: number,
+  t: number,
+) {
+  const pager = pagerOf(container);
+  const event = createEvent[kind](pager, { pointerId: 1, clientX, clientY: 200 });
+  Object.defineProperty(event, "timeStamp", { value: t });
+  fireEvent(pager, event);
 }
 
 describe("the calendar page follows the finger", () => {
@@ -274,6 +294,35 @@ describe("the calendar page follows the finger", () => {
 
     lift(container, 200, 320);
     expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it("turns the page on a flick that never reached the threshold", () => {
+    // How most people turn a page that is a whole grid wide: a short, fast
+    // throw. 28px is well short of the 48 the old rule demanded, and the page
+    // turns anyway, because the finger was plainly still going when it left.
+    const { container, onNavigate } = renderCard();
+
+    at(container, "pointerDown", 300, 1000);
+    at(container, "pointerMove", 272, 1020);
+    expect(Math.abs(offsetOf(container))).toBeLessThan(SWIPE_THRESHOLD);
+    at(container, "pointerUp", 272, 1020);
+
+    expect(onNavigate).toHaveBeenCalledWith(1);
+  });
+
+  it("refuses a long drag that was already being walked back", () => {
+    // The same mistake from the other side. The finger is 60px from where it
+    // started — past the threshold — but spent the last 60ms travelling the
+    // other way, which is a gesture that changed its mind before it ended.
+    const { container, onNavigate } = renderCard();
+
+    at(container, "pointerDown", 300, 1000);
+    at(container, "pointerMove", 200, 1400);
+    at(container, "pointerMove", 240, 1440);
+    at(container, "pointerUp", 240, 1460);
+
+    expect(onNavigate).not.toHaveBeenCalled();
+    expect(trackOf(container).style.transition).toBe(RETURN_TRANSITION);
   });
 
   it("keeps the tracking under reduced motion and drops the trip home", () => {
