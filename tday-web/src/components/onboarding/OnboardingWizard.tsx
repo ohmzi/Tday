@@ -21,6 +21,7 @@ import { getErrorMessage } from "@/lib/error-message";
 import { getAppMode, setAppMode } from "@/lib/local/appMode";
 import { createClientCredentialEnvelope } from "@/lib/security/clientCredentialEnvelope";
 import PendingApprovalScreen from "@/components/auth/PendingApprovalScreen";
+import AnimatedHeight from "@/components/ui/AnimatedHeight";
 import {
   clearPendingApproval,
   getPendingApproval,
@@ -696,35 +697,6 @@ export default function OnboardingWizard({
         }}
       />
     </main>
-  );
-}
-
-// Smoothly animates its own height as the content inside changes (mode switches and
-// the staged forgot-password steps), so the dialog grows/shrinks instead of snapping.
-function AnimatedHeight({ children }: { children: React.ReactNode }) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [height, setHeight] = React.useState<number | undefined>(undefined);
-
-  React.useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const update = () => setHeight(el.scrollHeight);
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      className="overflow-hidden"
-      style={{
-        height: height != null ? `${height}px` : undefined,
-        transition: "height 280ms cubic-bezier(0.22, 0.61, 0.36, 1)",
-      }}
-    >
-      <div ref={ref}>{children}</div>
-    </div>
   );
 }
 
