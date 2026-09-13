@@ -50,7 +50,11 @@ import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { moveTodoToDay } from "@/lib/moveTodoToDay";
 import type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
 import AnimatedHeight from "@/components/ui/AnimatedHeight";
-import { DRAG_LIFT_CLASS, dragOverlayDropAnimation } from "@/lib/dragLiftMotion";
+import {
+  DRAG_LIFT_CLASS,
+  DRAG_VACATED_TRANSITION,
+  dragOverlayDropAnimation,
+} from "@/lib/dragLiftMotion";
 import { useNavigationRefusal } from "../lib/useNavigationRefusal";
 import ConfirmPlaceholder from "./LoadingPlaceholders/ConfirmPlaceholder";
 import { useModalPresence } from "@/components/ui/Modal";
@@ -756,7 +760,7 @@ export function CalendarTaskRow({
                 gridTemplateRows: "0fr",
                 transition: reduceMotion ? undefined : TASK_COMPLETION_REMOVING_TRANSITION,
               }
-            : undefined
+            : { transition: reduceMotion ? undefined : DRAG_VACATED_TRANSITION }
         }
         className={cn(
           // The 1fr track is the scheduled row's collapse (TodoItemCard), which argues the
@@ -765,6 +769,9 @@ export function CalendarTaskRow({
           // size it. Without this the calendar row faded out and left a full-height gap for
           // the rows below to jump through.
           "group relative grid max-w-full grid-rows-[1fr] overflow-hidden sm:overflow-visible",
+          // The hole the card came out of, on the lift's own rung via the style
+          // above rather than cutting on the frame the press fires; both halves of
+          // the pick-up are argued in `dragLiftMotion.ts`.
           isDragging && "opacity-70",
         )}
       >

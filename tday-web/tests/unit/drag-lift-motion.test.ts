@@ -17,7 +17,10 @@
  *
  * The lift half is therefore a static read of `globals.css` and of the three
  * overlays, the same way `motion-reachability-web.test.ts` reads them: the
- * defect is in what the source declares, not in what a render produces.
+ * defect is in what the source declares, not in what a render produces. Where a
+ * class is exported rather than written inline it is read as the value and not
+ * as the text — a source regex only ever sees one of the literals a class string
+ * happens to be spelled across.
  * `calendar-client-motion-wiring.test.tsx` closes the remaining gap — a correct
  * config that no overlay asks for — by reading the prop off the real screen.
  */
@@ -26,7 +29,12 @@ import { readFileSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { DURATION_MS, EASE } from "@/lib/motion";
-import { DRAG_LIFT_CLASS, dragOverlayDropAnimation } from "@/lib/dragLiftMotion";
+import {
+  DRAG_LIFT_CLASS,
+  DRAG_VACATED_TRANSITION,
+  dragOverlayDropAnimation,
+} from "@/lib/dragLiftMotion";
+import { overlayCardClass } from "@/components/todo/dnd/timelineDndClasses";
 
 const SRC = path.resolve(__dirname, "..", "..", "src");
 const read = (...parts: string[]) => readFileSync(path.join(SRC, ...parts), "utf-8");
@@ -83,20 +91,54 @@ describe("a dragged card lifts", () => {
     // A card the finger is holding at 70% reads as disabled. Transparency on
     // these screens is the vacated row's word and stays there; see
     // `timelineDndClasses.ts`, which argues the swap where it made it.
-    const overlays = [
-      read("components", "todo", "dnd", "timelineDndClasses.ts"),
-      read("features", "calendar", "component", "CalendarClient.tsx"),
-    ];
-    for (const source of overlays) {
-      expect(source).toContain("DRAG_LIFT_CLASS");
-      expect(source).not.toMatch(/pointer-events-none[^"]*\bopacity-70\b/);
-    }
+    //
+    // Asserted against the RESOLVED class and not against the file's text. The
+    // shared class is spelled across two string literals, so a regex anchored on
+    // `pointer-events-none` and bounded by the closing quote could only ever see
+    // the first of them — `opacity-70` put back in the second half passed, which
+    // is a check that cannot fail for two of the three overlays. Reading the
+    // exported value is immune to how the string is spelled and covers both dnd
+    // contexts at once.
+    expect(overlayCardClass).toContain(DRAG_LIFT_CLASS);
+    expect(overlayCardClass).not.toMatch(/\bopacity-\d/);
+
+    // The calendar builds its own card inline, so it is read where it is drawn —
+    // the whole `<DragOverlay>` block rather than one quoted literal inside it.
+    const overlayJsx = read("features", "calendar", "component", "CalendarClient.tsx")
+      .match(/<DragOverlay[\s\S]*?<\/DragOverlay>/)?.[0] ?? "";
+    expect(overlayJsx).toContain("activeTodo");
+    expect(overlayJsx).toContain("DRAG_LIFT_CLASS");
+    expect(overlayJsx).not.toMatch(/\bopacity-\d/);
+
     // The two `@dnd-kit` contexts share one card class, so naming it once is
     // naming it for both; the calendar draws its own and is checked above.
     for (const context of ["TimelineDndContext.tsx", "TodayBucketDnd.tsx"]) {
       expect(read("components", "todo", "dnd", context)).toContain("overlayCardClass");
     }
     expect(DRAG_LIFT_CLASS).toBe("tday-drag-lift");
+  });
+
+  it("empties the row it came out of on the same rung, rather than cutting", () => {
+    // The other half of one gesture. Android moved the vacated row onto the
+    // rise's own spec in the same unit; web left it a hard toggle, so a long
+    // press was still a card rising beside a row that blinked. Same rung, same
+    // curve, both named rather than spelled out.
+    expect(DRAG_VACATED_TRANSITION).toContain("var(--tday-duration-emphasis)");
+    expect(DRAG_VACATED_TRANSITION).toContain("var(--tday-ease-enter)");
+    expect(DRAG_VACATED_TRANSITION).toMatch(/^opacity /);
+
+    // And it has to ride the inline style. dnd-kit writes its own `transform`
+    // shorthand into the timeline row's `style` for the whole drag, and an
+    // inline shorthand outranks any utility the row could carry — so a row that
+    // reached for `transition-opacity` here would be declaring a transition that
+    // never runs. Both rows spend the constant; neither spells a utility.
+    for (const row of [
+      read("components", "todo", "component", "TodoItemContainer.tsx"),
+      read("features", "calendar", "component", "CalendarClient.tsx"),
+    ]) {
+      expect(row).toContain("DRAG_VACATED_TRANSITION");
+      expect(row).not.toMatch(/transition-opacity duration-/);
+    }
   });
 });
 

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { Checkbox } from "@/components/ui/checkbox";
 import clsx from "clsx";
+import { DRAG_VACATED_TRANSITION } from "@/lib/dragLiftMotion";
 import { TASK_COMPLETION_REMOVING_TRANSITION } from "@/lib/taskCompletionTiming";
 import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
 import {
@@ -204,7 +205,19 @@ export const TodoItemCard = ({
                 gridTemplateRows: "0fr",
                 transition: reduceMotion ? undefined : TASK_COMPLETION_REMOVING_TRANSITION,
               }
-            : style
+            : {
+                ...style,
+                // The vacated dim below travels rather than cuts, and it has to be
+                // composed onto dnd-kit's own transition instead of added as a
+                // `transition-opacity` utility: dnd-kit puts a `transform` shorthand
+                // in this same inline style for the whole drag, and an inline
+                // shorthand outranks any class the row could carry, so the utility
+                // would silently never run. Reduced motion drops the trip and keeps
+                // the 70 %, which is the hole itself.
+                transition: reduceMotion
+                  ? style?.transition
+                  : [style?.transition, DRAG_VACATED_TRANSITION].filter(Boolean).join(", "),
+              }
         }
         {...containerProps}
         className={clsx(
@@ -216,6 +229,9 @@ export const TodoItemCard = ({
           // re-measured every time the title rewraps. Same trick the settings editors' `Collapse`
           // uses. The swipe actions sit out of flow and so never size the track.
           "group relative grid max-w-full grid-rows-[1fr] overflow-hidden sm:overflow-visible",
+          // The hole the card came out of. Value and reasoning in
+          // `dragLiftMotion.ts`, which owns both halves of the pick-up; the clock
+          // that carries it there is on the style above.
           dragging && "opacity-70",
         )}
       >
