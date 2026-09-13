@@ -202,4 +202,4 @@ cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme"
               screen.
       Fails:  the sheet holds at 85 % for the whole retraction and collapses on one frame once the
               keyboard has gone; or it is still shrinking noticeably after the keyboard is fully
-              away.
+              away; or it jumps back UP on the frame the keys finish leaving before settling down.
