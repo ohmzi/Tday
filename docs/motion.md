@@ -207,8 +207,8 @@ against `animation-core`'s bytecode rather than assumed.
   `.tday-surface-enter` at `:789` and `.tday-surface-exit` at `:795`. iOS
   expresses the same arrival with `.easeOut` and is not on this curve yet.
 - **`Gesture`.** Four sites, all web: `tday-web/src/globals.css:249` and `:271`
-  (press feedback), `tday-web/src/features/calendar/style/calendar-styles.css:24`
-  and `:28` (calendar paging). Android and iOS express the same intent with the
+  (press feedback), `tday-web/src/features/calendar/style/calendar-styles.css:32`
+  and `:36` (calendar paging). Android and iOS express the same intent with the
   **Gesture spring**, which is a different thing under a shared name.
 
 > **Migrating an iOS easing site onto a token is a visible change.** SwiftUI's

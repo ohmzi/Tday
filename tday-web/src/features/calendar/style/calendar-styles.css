@@ -20,10 +20,31 @@
   }
 }
 
+/* One page turn, one clock.
+   A page change moves the grid sideways and resizes the card under it — a
+   35-day month, a 42-day month, a week strip and a day summary are four
+   different heights — and both halves change geometry, which is `Emphasis` by
+   the second idiom rule in `docs/motion.md`. The slide used to run on a
+   hand-written 260 while the height box in `CalendarClient.tsx` runs on the
+   rung, so the card went on growing for 60ms after the grid had already
+   landed: one page turn arriving as two events. */
 .cal-native-slide-from-left {
-  animation: cal-native-slide-in-left 260ms var(--tday-ease-gesture) both;
+  animation: cal-native-slide-in-left var(--tday-duration-emphasis) var(--tday-ease-gesture) both;
 }
 
 .cal-native-slide-from-right {
-  animation: cal-native-slide-in-right 260ms var(--tday-ease-gesture) both;
+  animation: cal-native-slide-in-right var(--tday-duration-emphasis) var(--tday-ease-gesture) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Drawn where it lands, with no trip to get there. `both` already holds the
+     end state, so switching the animation off costs nothing but the travel —
+     and the height box gives the same answer through
+     `motion-reduce:transition-none`. Half a page turn honouring the preference
+     would be worse than neither half doing so: the card would resize at once
+     under content that was still sliding. */
+  .cal-native-slide-from-left,
+  .cal-native-slide-from-right {
+    animation: none;
+  }
 }
