@@ -14,6 +14,8 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -1186,6 +1188,8 @@ private fun RootFeedContent(
     onRootControlsVisibleChange: (Boolean) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
+        val motionEnabled = rememberTdayMotionEnabled()
+
         // The dock's selector springs across to the tab that was tapped, and the feed under
         // it used to change on the next frame: one gesture running at two speeds, so the
         // body read as a cut rather than as the thing the pill was carrying. Nothing here
@@ -1204,7 +1208,7 @@ private fun RootFeedContent(
             // describes it; Standard is the curve for when nothing argues otherwise. With
             // motion off the swap snaps, which draws the arriving feed finished rather than
             // holding it half-faded (docs/motion.md's fifth idiom rule).
-            animationSpec = if (rememberTdayMotionEnabled()) {
+            animationSpec = if (motionEnabled) {
                 tween(
                     durationMillis = TdayMotionTokens.Durations.Quick,
                     easing = TdayMotionTokens.Easings.Standard,
@@ -1249,50 +1253,113 @@ private fun RootFeedContent(
             }
         }
 
-        if (rootControlsVisible) {
-            // The dock's own tint already crosses between the two accents when the tab
-            // changes; the create button was the last surface still cutting, so a swap left a
-            // blue-to-green jump in the corner of an otherwise continuous handover. The accent
-            // is part of that one handover rather than a second event, so it rides the body's
-            // rung and curve — iOS gets the same thing for free, because its create button and
-            // dock sit inside the transaction its tab switch already runs in. With motion off
-            // it snaps: the button is drawn in the arriving tab's accent, finished.
-            val rootCreateTaskButtonColor by animateColorAsState(
-                targetValue = if (rootFeedTab == RootFeedTab.FLOATER_TASK_HOME) {
-                    TdayFloaterAccent
-                } else {
-                    TdayTodayBlue
-                },
-                animationSpec = if (rememberTdayMotionEnabled()) {
-                    tween(
-                        durationMillis = TdayMotionTokens.Durations.Quick,
-                        easing = TdayMotionTokens.Easings.Standard,
-                    )
-                } else {
-                    snap()
-                },
-                label = "rootCreateTaskAccent",
-            )
+        // The dock's own tint already crosses between the two accents when the tab
+        // changes; the create button was the last surface still cutting, so a swap left a
+        // blue-to-green jump in the corner of an otherwise continuous handover. The accent
+        // is part of that one handover rather than a second event, so it rides the body's
+        // rung and curve — iOS gets the same thing for free, because its create button and
+        // dock sit inside the transaction its tab switch already runs in. With motion off
+        // it snaps: the button is drawn in the arriving tab's accent, finished.
+        //
+        // Hoisted out of the visibility gate below so the accent is not re-seeded every
+        // time the search field gives the controls their row back: a button that ducks in
+        // already wearing the tab's colour is one event, and one that ducks in blue and
+        // then turns green is two.
+        val rootCreateTaskButtonColor by animateColorAsState(
+            targetValue = if (rootFeedTab == RootFeedTab.FLOATER_TASK_HOME) {
+                TdayFloaterAccent
+            } else {
+                TdayTodayBlue
+            },
+            animationSpec = if (motionEnabled) {
+                tween(
+                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    easing = TdayMotionTokens.Easings.Standard,
+                )
+            } else {
+                snap()
+            },
+            label = "rootCreateTaskAccent",
+        )
 
+        // The dock and the create button used to be a bare `if`, so opening search took
+        // them off the screen in the frame the field expanded into — a hole where the
+        // chrome had been, and then the chrome back in it. They duck instead: straight
+        // down and out through the bottom edge, and back up the same way.
+        //
+        // Travel, so Emphasis by the geometry rule — and the Settle spring is the rung's
+        // spelling here, the token whose own doc string names a dock and a bar. A tween
+        // would have to pick a curve for weight that is leaving under its own momentum
+        // and coming back to rest; that is the question springs answer. The same spec
+        // drives both directions because the exit IS the enter played backwards, and
+        // giving it a length of its own would read as two different gestures rather than
+        // one control getting out of the way. Equal also satisfies the first idiom rule,
+        // which only forbids an exit that outlasts its arrival.
+        //
+        // The fade is not decoration. `slideOutVertically { it }` offsets by the height it
+        // measured, which clears the control's own box but not the gesture-bar strip
+        // underneath it, so opacity is what guarantees the thing is gone rather than
+        // parked below the navigation bar. iOS combines the same two for the same reason;
+        // web spells the spring as the Gesture easing, having no spring runtime.
+        //
+        // With motion off, neither transition is passed at all: the controls are taken
+        // away and put back finished, which is the fifth idiom rule. AnimatedVisibility
+        // also plays no enter for a `visible` that was already true on the first
+        // composition, so a cold start draws the chrome in its slot rather than flying it
+        // in from nowhere — the same call the onboarding wizard above makes.
+        val duckEnter = if (motionEnabled) {
+            slideInVertically(
+                animationSpec = TdayMotionTokens.Springs.settle(),
+                initialOffsetY = { fullHeight -> fullHeight },
+            ) + fadeIn(animationSpec = TdayMotionTokens.Springs.settle())
+        } else {
+            EnterTransition.None
+        }
+        val duckExit = if (motionEnabled) {
+            slideOutVertically(
+                animationSpec = TdayMotionTokens.Springs.settle(),
+                targetOffsetY = { fullHeight -> fullHeight },
+            ) + fadeOut(animationSpec = TdayMotionTokens.Springs.settle())
+        } else {
+            ExitTransition.None
+        }
+
+        // Two wrappers rather than one around both: the dock and the button are anchored
+        // to opposite corners, and `Modifier.align` is a BoxScope call that the content
+        // scope inside an AnimatedVisibility does not offer.
+        AnimatedVisibility(
+            visible = rootControlsVisible,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .zIndex(8f),
+            enter = duckEnter,
+            exit = duckExit,
+            label = "rootFeedDockDuck",
+        ) {
             RootFeedDock(
                 activeTab = rootFeedTab,
                 collapsed = rootDockCollapsed,
                 onTabSelected = onSelectRootFeedTab,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .zIndex(8f),
             )
+        }
+        AnimatedVisibility(
+            visible = rootControlsVisible,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .zIndex(8f),
+            enter = duckEnter,
+            exit = duckExit,
+            label = "rootCreateTaskButtonDuck",
+        ) {
             RootCreateTaskButton(
                 onClick = onRequestCreateTask,
                 backgroundColor = rootCreateTaskButtonColor,
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
                     .navigationBarsPadding()
                     .padding(
                         end = TdayDimens.ContentPaddingHorizontal,
                         bottom = TdayDimens.ContentPaddingHorizontal,
-                    )
-                    .zIndex(8f),
+                    ),
             )
         }
     }

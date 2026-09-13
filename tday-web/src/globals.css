@@ -831,6 +831,69 @@
   .tday-surface-exit { animation: none; }
 }
 
+/* ── The bottom chrome ducking ──
+   The dock and the create button leave by travelling straight down and out
+   through the bottom edge, and come back the same way. They used to be
+   `{flag && <Control />}` and nothing else, so a screen that took the slot —
+   selection mode, the More sheet — arrived over a hole that appeared on the
+   frame before it.
+
+   Not the `.tday-surface-*` pair above, though the shape of the problem is the
+   same, and the difference is the vocabulary working rather than a second
+   opinion about the same motion. A surface arrives OVER content that stays put
+   and nudges 8px to say which way it came from: nothing about it changes where
+   it lives, which is the Change rung. These two leave the layout entirely, and
+   position changing is Emphasis by the geometry rule. Android and iOS spend the
+   Settle spring here — the token whose own doc string says "a dock, a bar" —
+   and web has no spring runtime, so the weight is spelled as the Gesture
+   easing, which is the stand-in `docs/motion.md` names for those springs.
+
+   The travel is a percentage of the control's own box so the dock (64px tall)
+   and the button (56px) each clear their own height plus the 18px + safe-area
+   they sit above, with no second number to keep in step with the layout. The
+   fade is not decoration: the strip below the safe-area inset is still screen
+   on a device with a home indicator, so opacity is what guarantees the control
+   is gone rather than parked in it — and iOS needs exactly the same guarantee
+   from the same `.combined(with: .opacity)`.
+
+   The duration is read from the same token the `useDuckPresence` timer reads,
+   which is what keeps the node in the DOM long enough for the exit to play. Not
+   the `SURFACE_TRANSITION_MS` trick of handing the number in through an inline
+   style: there is only one rung involved and both halves can name it, so there
+   is nothing for a fixture to carry. */
+.tday-duck-enter {
+  animation-name: tday-duck-in;
+  animation-duration: var(--tday-duration-emphasis);
+  animation-timing-function: var(--tday-ease-gesture);
+  animation-fill-mode: both;
+}
+
+.tday-duck-exit {
+  animation-name: tday-duck-out;
+  animation-duration: var(--tday-duration-emphasis);
+  animation-timing-function: var(--tday-ease-gesture);
+  animation-fill-mode: both;
+}
+
+@keyframes tday-duck-in {
+  from { opacity: 0; transform: translateY(150%); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes tday-duck-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(150%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The trip goes, the destination stays: a control that cannot duck is drawn
+     in its slot, and one that cannot duck out is taken away at once —
+     `useDuckPresence` drops its linger here for that reason, so the exit class
+     is barely applied at all. */
+  .tday-duck-enter { animation: none; }
+  .tday-duck-exit { animation: none; }
+}
+
 /* ── Route change ──
    Screens share a toolbar row, so nothing in the bar moves between routes; the
    fade is what turns a one-frame swap into a handover. Short: this sits between
