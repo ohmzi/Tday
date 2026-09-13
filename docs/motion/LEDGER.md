@@ -542,18 +542,49 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 25a — the calendar grid height animates across month lengths
 
-- [ ] `web-calendar-grid-height-snaps-mid-slide` — 35-vs-42-day months and view switches change height in one frame · web · Sev 3 · M · Gate V+D
+- [x] `web-calendar-grid-height-snaps-mid-slide` — 35-vs-42-day months and view switches change height in one frame · web · Sev 3 · M · Gate V+D
 
 ### PR 25b — calendar row removal and the highlight ring
 
-- [ ] `web-calendar-row-removal-height-snap` — ticking fades ink but holds height to t=960 ms · web · Sev 2 · S · Gate V+D
-- [ ] `web-calendar-highlight-ring-cuts` — `box-shadow` missing from the inline transition whitelist · web · Sev 2 · XS · Gate V
+- [x] `web-calendar-row-removal-height-snap` — ticking fades ink but holds height to t=960 ms · web · Sev 2 · S · Gate V+D
+  - **Already closed on `develop` when this PR opened.** 867c7903 put all five web row types on
+    `taskCompletionTiming` and gave the calendar row the same 1fr→0fr track the scheduled row
+    closes; abfe8c3b pinned it with `calendar-row-complete-interaction.test.tsx`. The `t=960` in
+    the row is the hand-written clock that commit deleted — the ink now leaves at 520 over 260 and
+    the box shuts behind it over 320, so the prune is at 840. Nothing to redo in code. The `D` half
+    of the gate was still outstanding, because neither of those commits wrote a device row; that is
+    what this one adds.
+- [x] `web-calendar-highlight-ring-cuts` — `box-shadow` missing from the inline transition whitelist · web · Sev 2 · XS · Gate V
+  - The row is the whitelist and the whitelist is fixed. What the fix does **not** buy is the
+    phone. Below `sm` the ring is the only way the mark is drawn, and below `sm` the row sits in an
+    `overflow-hidden` wrapper whose clip box is exactly the ring element's border box — so a 2px
+    outset ring is cut away everywhere but the four rounded corners, and what fades there is
+    slivers. That is a second, pre-existing defect, in a wrapper this row does not own; it is filed
+    under **PR 25d**. The two are independent: reverting this transition would leave even the
+    corners cutting.
 
 ### PR 25c — three small calendar and dialog cuts
 
 - [ ] `web-calendar-back-swipe-at-floor-is-silent` — rejected swipe at the earliest month produces no feedback at all · web · Sev 2 · S · Gate V
 - [ ] `web-calendar-drag-overlay-drops-with-no-animation` — `dropAnimation={null}`; card vanishes at release · web · Sev 2 · XS · Gate V+D
 - [ ] `web-delete-dialog-has-no-fallback` — first Delete tap renders literally nothing until the chunk lands · web · Sev 2 · XS · Gate V
+
+### PR 25d — the highlight ring is clipped away by the row's own collapse wrapper
+
+- [ ] *new, not one of the 109* — below `sm` the ring is drawn outset on a child whose border box **is** the wrapper's clip box, so the mark a deep link leaves on a row is ~95 % invisible on a phone · web · Sev 2 · S · Gate V+D
+  - Found while fixing `web-calendar-highlight-ring-cuts`, which now fades a ring almost nobody can
+    see. Identical in all three row types carrying
+    `highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0"` —
+    `CalendarClient.tsx:799`, `TodoItemContainer.tsx:390`, `FloaterItemContainer.tsx:298` — because
+    all three sit in the same `grid-rows-[1fr] overflow-hidden sm:overflow-visible` wrapper, which
+    predates the programme (09225a04).
+  - Not the one-line `inset-ring` swap it looks like, which is why it is `S`. The wrapper's clip is
+    load-bearing — it is what lets the 1fr track actually close below `sm` — and `sm:ring-0` means
+    whatever lands has to leave the desktop tint byte-identical. Three shapes are open: an inset
+    ring, the ring moved onto the wrapper, or the clip applied only while `removing`, which is the
+    trade `TodoItemContainer.tsx:374` already argues for the foreground child's own `overflow` and
+    for exactly this reason. Whichever wins, it is one change in three files or it is a fourth way
+    these rows differ from each other.
 
 ### PR 49 — the drawer placeholder matches the surface it precedes
 

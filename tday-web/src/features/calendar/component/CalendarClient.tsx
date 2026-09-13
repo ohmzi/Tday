@@ -771,9 +771,24 @@ export function CalendarTaskRow({
           {...swipeHandlers}
           style={{
             transform: `translateX(${swipeX}px)`,
+            // A transition list is a whitelist, and `box-shadow` was not on it. The highlight
+            // a deep link or a search result leaves on this row is drawn two ways by the
+            // className below — a ring under `sm`, which Tailwind draws as a box-shadow, and a
+            // tint above it — so the same arrival faded in on a desktop and cut in one frame on
+            // a phone, which is the half nobody is looking at when they change this line.
+            // Both are the app acknowledging a jump the user just made somewhere else, so both
+            // take Quick, and they take the same curve because two spellings of one signal that
+            // land differently are two signals.
+            //
+            // The swipe's own travel keeps the 220ms it was written with: it is geometry under
+            // a finger, it has no rung, and it is the same number the two sibling rows carry —
+            // retiming it is the swipe rows' call to make in all three at once, not a
+            // whitelist fix's to make in one.
             transition: swiping
               ? "none"
-              : "transform 220ms ease, background-color 150ms ease",
+              : "transform 220ms ease, " +
+                "background-color var(--tday-duration-quick) var(--tday-ease-standard), " +
+                "box-shadow var(--tday-duration-quick) var(--tday-ease-standard)",
             touchAction: "pan-y",
             // Lets the grid item shrink past its own content while the track closes.
             ...(removing ? { overflow: "hidden", minHeight: 0 } : null),
