@@ -307,7 +307,7 @@ struct ManageMembersSheet: View {
         action: @escaping () -> Void
     ) -> some View {
         Button {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            HapticManager.buttonPress()
             action()
         } label: {
             HStack(spacing: 12) {

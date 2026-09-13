@@ -311,7 +311,7 @@ struct ScheduledTaskHomeScreen: View {
                                     Spacer(minLength: 12)
 
                                     TaskFloatingActionButton {
-                                        HapticManager.buttonTap()
+                                        HapticManager.buttonPress()
                                         closeSearch()
                                         showingCreateTask = true
                                     }
@@ -732,7 +732,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
             openSwipeTaskID = nil
         }
 
-        HapticManager.taskCompleted()
+        HapticManager.completion()
         SoundManager.taskCompleted()
         withAnimation(.easeInOut(duration: 0.18)) {
             completionPhase = .checked

@@ -485,7 +485,7 @@ struct CreateTaskSheet: View {
     }
 
     private func submit() async {
-        HapticManager.sheetConfirm()
+        HapticManager.completion()
         // Up front rather than on the way out: `onSubmit` is awaited below, so
         // leaving the keyboard to the sheet's own dismissal keeps it standing
         // over the card for the whole save. The dismissal resigns too (see
@@ -878,7 +878,7 @@ private struct CreateTaskSheetDateTimeControl: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Button(action: { HapticManager.gentleTap(); onDateTap() }) {
+            Button(action: { HapticManager.buttonPress(); onDateTap() }) {
                 Text(dateText)
                     .frame(width: 113, height: 38)
                     .contentShape(Rectangle())
@@ -891,7 +891,7 @@ private struct CreateTaskSheetDateTimeControl: View {
                 .fill(colors.onSurfaceVariant.opacity(0.2))
                 .frame(width: 1, height: 22)
 
-            Button(action: { HapticManager.gentleTap(); onTimeTap() }) {
+            Button(action: { HapticManager.buttonPress(); onTimeTap() }) {
                 Text(timeText)
                     .frame(width: 92, height: 38)
                     .contentShape(Rectangle())
@@ -931,7 +931,7 @@ private struct CreateTaskSheetDateSelectorContent: View {
                 .tint(colors.primary)
                 .padding(.horizontal, 12)
 
-            CreateTaskSheetSelectorDoneButton(action: { HapticManager.gentleTap(); onDone() })
+            CreateTaskSheetSelectorDoneButton(action: { HapticManager.buttonPress(); onDone() })
         }
     }
 }
@@ -952,7 +952,7 @@ private struct CreateTaskSheetTimeSelectorContent: View {
                 .clipped()
                 .padding(.horizontal, 12)
 
-            CreateTaskSheetSelectorDoneButton(action: { HapticManager.gentleTap(); onDone() })
+            CreateTaskSheetSelectorDoneButton(action: { HapticManager.buttonPress(); onDone() })
         }
     }
 }

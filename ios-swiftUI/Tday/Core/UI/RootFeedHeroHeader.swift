@@ -358,7 +358,7 @@ struct RootFeedHeroHeader: View {
     }
 
     private func handleScrollToTop() {
-        HapticManager.gentleTap()
+        HapticManager.buttonPress()
         onScrollToTop()
     }
 
@@ -406,7 +406,7 @@ struct RootFeedHeroHeader: View {
 
         return HStack(spacing: Metrics.barButtonSpacing) {
             RootFeedHeaderCircleButton(icon: "NavListPlus") {
-                HapticManager.buttonTap()
+                HapticManager.buttonPress()
                 onCreateList()
             }
             .accessibilityLabel("Create list")
@@ -446,7 +446,7 @@ struct RootFeedHeroHeader: View {
             }
         } else {
             RootFeedHeaderCircleButton(icon: "NavEllipsis") {
-                HapticManager.gentleTap()
+                HapticManager.buttonPress()
                 onOpenSettings()
             }
         }
@@ -516,7 +516,7 @@ struct RootFeedHeroHeader: View {
 
     private func searchRestingContent(labelOpacity: CGFloat, labelWidth: CGFloat) -> some View {
         Button {
-            HapticManager.buttonTap()
+            HapticManager.buttonPress()
             withAnimation(Metrics.searchMorph) {
                 searchExpanded = true
             }
@@ -582,7 +582,7 @@ struct RootFeedHeroHeader: View {
                 .disabled(!searchExpanded)
 
             Button {
-                HapticManager.sheetDismiss()
+                HapticManager.buttonPress()
                 onSearchClose()
             } label: {
                 Image("NavClose")
@@ -861,10 +861,10 @@ struct TdaySearchCapsule: View {
             if showsTrailingButton {
                 Button {
                     if let onClose {
-                        HapticManager.sheetDismiss()
+                        HapticManager.buttonPress()
                         onClose()
                     } else {
-                        HapticManager.gentleTap()
+                        HapticManager.buttonPress()
                         text = ""
                     }
                 } label: {
