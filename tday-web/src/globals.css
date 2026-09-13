@@ -1112,18 +1112,88 @@
 
 /* ── Route change ──
    Screens share a toolbar row, so nothing in the bar moves between routes; the
-   fade is what turns a one-frame swap into a handover. Short: this sits between
-   a tap and the screen the user asked for, and anything longer reads as lag. */
-@keyframes fade-in {
+   fade is what turns a one-frame swap into a handover.
+
+   `Enter`, and it was a hand-written 140 until PR 55. Half of that number's
+   argument survives the move and is restated here: this is not `Scene`, and it is
+   not Android's 360 either — a route change that can be watched is a route change
+   that reads as a stall. What the 140 could not defend was 140 in particular. It
+   named no rung, and the lag it was written against is the wait in front of the
+   destination rather than the length of the fade: the arriving screen is laid out
+   and hit-testable from the first frame, so this animation never sits between a
+   tap and its answer. A thing arriving with no reason to be another length is
+   `Enter`, which is what the normative table says and what the other client in
+   this row is being brought to.
+
+   Two paths, because only one of them exists everywhere:
+
+     Everywhere — the arriving screen fades up out of the background and the
+     leaving one is simply gone. `RouteFade` argues why its tree is not held
+     mounted for an exit, and that argument still stands.
+
+     Where `document.startViewTransition` exists — `lib/navigation.tsx` asks for
+     one, and the leaving screen comes back as a SNAPSHOT laid over the top. That
+     is the outgoing half of the handover at none of the cost of the live tree
+     `RouteFade` refused to pay for it: no duplicate queries, no second set of
+     subscriptions, a flat image the compositor owns.
+
+   The two COMPOSE rather than switch, which is the whole reason the overrides
+   below are shaped the way they are. Nothing has to detect which path it is on,
+   and nothing has to be turned off halfway — a browser without view transitions
+   runs exactly the first path and sees no difference. */
+@keyframes tday-route-fade-in {
   from { opacity: 0; }
 }
 
+@keyframes tday-route-fade-out {
+  to { opacity: 0; }
+}
+
 .tday-route-fade {
-  animation: 140ms ease-out both fade-in;
+  animation: var(--tday-duration-enter) var(--tday-ease-enter) both tday-route-fade-in;
+}
+
+/* Three things the UA default has to be talked out of, none of which has a local
+   symptom if it is deleted — the transition keeps running and keeps looking like
+   a route change, just a wrong one.
+
+   `new` must not animate. It renders the arriving screen LIVE, `.tday-route-fade`
+   is already fading up inside it, and a second opacity curve over that one is a
+   fade of a fade — the double-dip this pairing exists to avoid.
+
+   `old` is therefore the half that moves, so it has to be on top: the UA paints
+   `new` last, and an opaque `new` over a fading `old` hides the outgoing half
+   completely.
+
+   And the blend has to be `normal`. `plus-lighter` is what keeps the UA's own
+   symmetric crossfade from dipping through the background in the middle; over two
+   layers that are each opaque at the ends it blows the whole screen out to white.
+
+   What is left is a fade THROUGH the background rather than a straight crossfade —
+   the new content reaches half opacity a beat after the old has left half of its
+   own — which is the same fade `RouteFade` already describes on the path without
+   snapshots, now with the outgoing screen in it. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+  animation: var(--tday-duration-enter) var(--tday-ease-exit) both tday-route-fade-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tday-route-fade { animation: none; }
+  /* The destination is the whole of the finished state at a route change, so the
+     outgoing snapshot is not merely un-animated — an un-animated `old` is opaque
+     and on top, and would hold the screen the user just left for the frame it
+     takes the transition to end. Taken off outright instead. */
+  ::view-transition-old(root) { animation: none; opacity: 0; }
 }
 
 /* ── A sheet leaving ──
