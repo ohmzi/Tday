@@ -405,8 +405,11 @@ fun CreateTaskBottomSheet(
     val sheetTonalElevation = TdaySheetDefaults.tonalElevation()
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val density = LocalDensity.current
-    val keyboardVisible = WindowInsets.ime.getBottom(density) > 0
-    val reserveKeyboardLayout = keyboardVisible
+    // The live inset, not a crossing. The platform animates this up and down over roughly
+    // 250 ms and republishes it every frame, so reading the dp here is what puts the sheet
+    // on the keyboard's own clock instead of on a threshold.
+    val imeHeight = with(density) { WindowInsets.ime.getBottom(this).toDp() }
+    val keyboardVisible = imeHeight > 0.dp
     val maxSheetHeight = screenHeight * CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION
     val usesTallCreateModal = !isEditMode && showScheduleControls
     val usesFloaterCreateModal = !isEditMode && !showScheduleControls
@@ -428,12 +431,25 @@ fun CreateTaskBottomSheet(
     // that used to wrap this had a target it could never move away from and never ran a
     // single frame. It read as motion in review for exactly as long as it was dead.
     //
-    // The sheet does still jump when the IME opens, but not here: the modifier chain
-    // below swaps whole branches on `reserveKeyboardLayout`, which is a hard cut no tween
-    // on this value could soften. That is `and-create-sheet-ime-height-snap`, tracked
-    // separately, and it needs the branch swap animated rather than the constant.
+    // It is no longer a destination either. The chain below used to swap whole branches on
+    // "is the IME visible", which sent the sheet here in the one frame the keyboard's first
+    // pixel appeared; this is now the ceiling that growth stops at, and the growth itself
+    // comes from the live inset. See [CreateSheetImeHeight].
     val keyboardSheetHeight = (screenHeight * CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION)
         .coerceAtMost(maxSheetHeight)
+    // What the sheet stands at with the keyboard down — the minimum its own branch below
+    // asks for. The keyboard raises this floor a dp at a time rather than replacing it.
+    val restingSheetMinHeight = when {
+        usesTallCreateModal || usesFloaterCreateModal -> floaterCreateSheetHeight
+        usesScheduledEditModal -> editSheetHeight
+        usesFloaterEditModal -> floaterEditSheetHeight
+        else -> 0.dp
+    }
+    val keyboardFloorHeight = CreateSheetImeHeight.sheetHeightFor(
+        restingHeight = restingSheetMinHeight,
+        imeHeight = imeHeight,
+        keyboardHeight = keyboardSheetHeight,
+    )
 
     fun submitTask() {
         val due =
@@ -536,10 +552,17 @@ fun CreateTaskBottomSheet(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
+                        // The keyboard's floor, applied OUTSIDE the branch below rather
+                        // than instead of it. Every modal keeps its own sizing, and the
+                        // live inset raises the bottom of the range it may size within —
+                        // so the sheet grows a dp per dp of keyboard instead of taking the
+                        // whole trip on the frame the inset first goes non-zero. Outside
+                        // `animateContentSize` on purpose: a floor that rises here clamps
+                        // the animated size up immediately, where a floor inside it would
+                        // hand the keyboard's travel to a second 320 ms tween to chase.
+                        .heightIn(min = keyboardFloorHeight, max = maxSheetHeight)
                         .then(
-                            if (reserveKeyboardLayout) {
-                                Modifier.height(keyboardSheetHeight)
-                            } else if (usesTallCreateModal) {
+                            if (usesTallCreateModal) {
                                 // Wrap content (like the floater create sheet) so the
                                 // bottom padding under the last row matches; a fixed
                                 // height left extra space below Repeat.
