@@ -95,7 +95,7 @@ structural and content-free:
 | Local Mode | `local_mode.enter`, `local_mode.sync_noop` | No local task/list/floater content, no server upload side effect |
 | Floater / Anytime tasks | `task.create`, `task.update`, `task.complete`, `task.delete`, `todo_list.load` with `mode=floater`, `widget_create_floater.submit` on widget submit failure | No floater title, description, list ID, or local cache record |
 | Floater and scheduled lists | `list.create`, `list.update`, `list.delete` with `kind=floater` or `kind=scheduled` | Only `has_color`, `has_icon`, and scoped-list booleans |
-| Offline sync replay | `sync.replay`, `sync.manual`, `server.probe` | Counts, phase, and result class only; never pending mutation payloads |
+| Offline sync replay | `sync.replay`, `sync.replay_rate_limited`, `sync.manual`, `server.probe` | Counts, phase, and result class only; never pending mutation payloads |
 | Credential manager / password autofill | `credential.request`, `credential.result`, `credential.save`, `credential.clear` | No email, password, server URL, credential ID, or host entered by the user |
 | Mobile probe and version gate | `server.probe`, `update.check` | Phase/status/scope only; no raw server URL |
 | Update install flow | `update.check` | Release/version comparison only; no user identifiers |

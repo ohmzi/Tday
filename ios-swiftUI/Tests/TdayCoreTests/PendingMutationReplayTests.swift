@@ -8,9 +8,16 @@ import XCTest
 
 /// `SyncManager.applyPendingMutations` replays the offline queue one mutation at a
 /// time against the server, and what it does with a failure decides whether work
-/// survives. `pendingMutationReplayOutcome` is that decision and
+/// survives. `pendingMutationReplayOutcome` is that decision,
 /// `applyPendingMutationReplayOutcome` is its effect on the queue that gets written
-/// back to the cache.
+/// back to the cache, and `runPendingMutationReplay` is the loop that sequences the
+/// two — the loop the app actually runs, with only the per-mutation network push
+/// behind a closure.
+///
+/// The last part matters: the "…afterwards" section below exercises the two helpers
+/// directly, but the loop tests drive `runPendingMutationReplay` itself, so reverting
+/// the production control flow breaks them. A test that rebuilt the loop locally
+/// would pass against a replay with no 429 handling at all.
 ///
 /// The case these tests exist for is 429. The replay used to treat a rate limit as
 /// an ordinary per-item failure: it re-queued that one mutation and carried on,
@@ -126,62 +133,150 @@ final class PendingMutationReplayTests: XCTestCase {
         XCTAssertTrue(remaining.isEmpty)
     }
 
-    /// The whole point, in the shape the replay loop actually runs: two mutations
-    /// go through, the third draws a 429, and nothing after it is attempted — but
-    /// nothing after it is lost either.
-    func testARateLimitMidReplayLeavesEveryUnsentMutationQueued() {
+    // MARK: - The loop the replay actually runs
+
+    /// The whole point, driven through `runPendingMutationReplay` — the same
+    /// function `SyncManager.applyPendingMutations` calls, with only the network
+    /// push stubbed. Two mutations go through, the third draws a 429, nothing after
+    /// it is attempted, and nothing after it is lost. Revert the 429 handling and
+    /// this fails: without it a 429 is `keepAndContinue`, so `apply` would be called
+    /// for all six and only the six failures would be queued.
+    @MainActor
+    func testARateLimitMidReplayLeavesEveryUnsentMutationQueued() async {
         let ordered = orderedMutations(count: 6)
         let firstRateLimitedIndex = 2
-        var remaining: [PendingMutationRecord] = []
         var attempted: [String] = []
 
-        for index in ordered.indices {
-            attempted.append(ordered[index].mutationId)
-            guard index >= firstRateLimitedIndex else {
-                continue
-            }
-            let outcome = pendingMutationReplayOutcome(for: apiError(429))
-            if applyPendingMutationReplayOutcome(outcome, at: index, of: ordered, keeping: &remaining) {
-                break
+        let replay = await runPendingMutationReplay(ordered) { index, mutation in
+            attempted.append(mutation.mutationId)
+            if index >= firstRateLimitedIndex {
+                throw APIError(message: "Rate limited", statusCode: 429)
             }
         }
 
         XCTAssertEqual(attempted, ["m0", "m1", "m2"], "the replay should stop at the first 429")
+        XCTAssertTrue(replay.stoppedOnRateLimit, "the caller needs to know the stop was a rate limit")
         XCTAssertEqual(
-            remaining.map(\.mutationId),
+            replay.remaining.map(\.mutationId),
             ["m2", "m3", "m4", "m5"],
             "the rate-limited mutation and every later one must stay queued for the next sync"
         )
         XCTAssertEqual(
-            Set(remaining.map(\.mutationId)).count,
-            remaining.count,
+            Set(replay.remaining.map(\.mutationId)).count,
+            replay.remaining.count,
             "nothing should be queued twice"
         )
+    }
+
+    /// A staged delete is re-queued without ever being handed to `apply`, and a later
+    /// 429 must not queue it a second time — the stop slices from the failing index,
+    /// so the earlier keeps have to survive alongside it.
+    @MainActor
+    func testStagedMutationsAreNeverSentAndSurviveARateLimitLaterInTheReplay() async {
+        var ordered = orderedMutations(count: 4)
+        ordered[0] = stagedMutation(id: "staged", timestampEpochMs: -1)
+        var attempted: [String] = []
+
+        let replay = await runPendingMutationReplay(ordered) { index, mutation in
+            attempted.append(mutation.mutationId)
+            if index == 2 {
+                throw APIError(message: "Rate limited", statusCode: 429)
+            }
+        }
+
+        XCTAssertEqual(attempted, ["m1", "m2"], "a staged mutation must never reach the server")
+        XCTAssertTrue(replay.stoppedOnRateLimit)
+        XCTAssertEqual(replay.remaining.map(\.mutationId), ["staged", "m2", "m3"])
+    }
+
+    /// The two continuing outcomes, through the same loop: a 400 drops its mutation,
+    /// an unclassified error keeps only itself, and neither stops the replay.
+    @MainActor
+    func testDroppedAndKeptFailuresBothLetTheReplayFinish() async {
+        let ordered = orderedMutations(count: 4)
+        var attempted: [String] = []
+
+        let replay = await runPendingMutationReplay(ordered) { index, mutation in
+            attempted.append(mutation.mutationId)
+            if index == 1 {
+                throw APIError(message: "Bad request", statusCode: 400)
+            }
+            if index == 2 {
+                throw SampleFailure.boom
+            }
+        }
+
+        XCTAssertEqual(attempted, ["m0", "m1", "m2", "m3"], "neither failure should stop the replay")
+        XCTAssertFalse(replay.stoppedOnRateLimit)
+        XCTAssertEqual(replay.remaining.map(\.mutationId), ["m2"])
+    }
+
+    /// A clean pass leaves nothing queued, so the success path cannot silently
+    /// re-queue work the server already accepted.
+    @MainActor
+    func testAReplayWithNoFailuresEmptiesTheQueue() async {
+        let ordered = orderedMutations(count: 3)
+
+        let replay = await runPendingMutationReplay(ordered) { _, _ in }
+
+        XCTAssertTrue(replay.remaining.isEmpty)
+        XCTAssertFalse(replay.stoppedOnRateLimit)
+    }
+
+    /// Connectivity still stops the replay, but it is not a rate limit — the caller
+    /// keys the "skip the rest of the cycle" back-off off this flag, and a dropped
+    /// connection has its own handling further up.
+    @MainActor
+    func testAConnectivityStopIsNotReportedAsARateLimit() async {
+        let ordered = orderedMutations(count: 4)
+
+        let replay = await runPendingMutationReplay(ordered) { index, _ in
+            if index == 1 {
+                throw URLError(.notConnectedToInternet)
+            }
+        }
+
+        XCTAssertFalse(replay.stoppedOnRateLimit)
+        XCTAssertEqual(replay.remaining.map(\.mutationId), ["m1", "m2", "m3"])
     }
 
     // MARK: - Fixtures
 
     private func orderedMutations(count: Int) -> [PendingMutationRecord] {
         (0 ..< count).map { index in
-            PendingMutationRecord(
-                mutationId: "m\(index)",
-                kind: .completeTodo,
-                targetId: "todo-\(index)",
-                timestampEpochMs: Int64(index),
-                title: nil,
-                description: nil,
-                priority: nil,
-                dueEpochMs: nil,
-                rrule: nil,
-                listId: nil,
-                pinned: nil,
-                completed: true,
-                instanceDateEpochMs: nil,
-                name: nil,
-                color: nil,
-                iconKey: nil
-            )
+            mutation(id: "m\(index)", targetId: "todo-\(index)", timestampEpochMs: Int64(index))
         }
+    }
+
+    private func stagedMutation(id: String, timestampEpochMs: Int64) -> PendingMutationRecord {
+        mutation(id: id, targetId: "list-\(id)", timestampEpochMs: timestampEpochMs, staged: true)
+    }
+
+    private func mutation(
+        id: String,
+        targetId: String,
+        timestampEpochMs: Int64,
+        staged: Bool = false
+    ) -> PendingMutationRecord {
+        PendingMutationRecord(
+            mutationId: id,
+            kind: .completeTodo,
+            targetId: targetId,
+            timestampEpochMs: timestampEpochMs,
+            title: nil,
+            description: nil,
+            priority: nil,
+            dueEpochMs: nil,
+            rrule: nil,
+            listId: nil,
+            pinned: nil,
+            completed: true,
+            instanceDateEpochMs: nil,
+            name: nil,
+            color: nil,
+            iconKey: nil,
+            staged: staged
+        )
     }
 
     private func apiError(_ statusCode: Int?, message: String = "Rate limited") -> APIError {

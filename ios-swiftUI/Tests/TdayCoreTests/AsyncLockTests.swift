@@ -12,14 +12,28 @@ import XCTest
 /// `while locked { await Task.yield() }`, which never really suspends; it now parks
 /// each waiter on a continuation and hands ownership straight to the next one.
 ///
-/// The rewrite is only safe if three things hold, and none of them are visible by
-/// reading a call site, so they are asserted here:
-///  - waiters are served in FIFO order, so a queued sync cannot be starved;
-///  - exactly one caller is ever inside the lock, including across the hand-off —
-///    releasing by clearing the flag and *then* resuming would let a brand-new
-///    caller slip in alongside the waiter that was just handed ownership;
-///  - a throwing operation still releases, because every real call site is
-///    `try await`.
+/// Two of the four tests below pin behaviour the continuation version introduces;
+/// the other two characterise behaviour the spin loop already had, and are here so a
+/// future rewrite cannot quietly lose it. Worth being precise about which is which:
+///
+/// NEW with this rewrite — a spin loop cannot satisfy these:
+///  - waiters are served in FIFO order, so a queued sync cannot be starved.
+///    `testWaitersAreHandedTheLockInFIFOOrder` also depends on `waiterCount`
+///    reaching 1, 2, 3… as each caller parks, which a spin loop never does: it
+///    enqueues nothing, so that count would stay 0 and the test would hang rather
+///    than fail — and it does not compile against the spin version at all, because
+///    `waiterCount` does not exist there;
+///  - ownership passes straight from the releasing holder to the next waiter with
+///    `locked` never cleared. Clearing the flag and *then* resuming would let a
+///    brand-new caller slip in alongside the waiter that was just handed ownership,
+///    which is what the 32-caller exclusion test would catch.
+///
+/// PRESERVED from the spin loop — these passed before and must keep passing:
+///  - only one caller is ever inside the lock (the spin's `while locked` test and
+///    its `locked = true` ran in one uninterrupted actor job, so it was mutually
+///    exclusive too);
+///  - a throwing operation still releases and still hands the lock on, because every
+///    real call site is `try await` (the spin version released in the same `defer`).
 final class AsyncLockTests: XCTestCase {
     func testWaitersAreHandedTheLockInFIFOOrder() async {
         let lock = AsyncLock()
