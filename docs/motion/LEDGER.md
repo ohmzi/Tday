@@ -155,7 +155,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 2 — the calendar form shell keeps what was typed across 640 px
 
-- [ ] `web-form-shell-swaps-on-resize` — crossing 640 px with a calendar form open discards everything typed · web · Sev 2 · S · Gate V
+- [x] `web-form-shell-swaps-on-resize` — crossing 640 px with a calendar form open discards everything typed · web · Sev 2 · S · Gate V
 
 ### PR 3 — calendar pager flags, Android and iOS
 

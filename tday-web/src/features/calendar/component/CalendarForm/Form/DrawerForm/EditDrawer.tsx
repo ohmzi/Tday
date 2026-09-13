@@ -7,21 +7,22 @@ import { SheetHeader } from "@/components/ui/sheet-chrome";
 import { useEditCalendarTodo } from "@/features/calendar/query/update-calendar-todo";
 import ConfirmEditAllDrawer from "@/features/calendar/component/ConfirmationModals/ConfirmEditAllDrawer";
 import ConfirmCancelEditDrawer from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEditDrawer";
-import deriveRepeatType from "@/lib/deriveRepeatType";
+import type { CalendarTaskFormState } from "@/features/calendar/hooks/useCalendarTaskFormState";
 import CalendarTaskFormBody from "../CalendarTaskFormBody";
-
-type DrawerDateRange = { from: Date; to: Date };
 
 type EditCalendarFormProps = {
   todo: TodoItemType;
   displayForm: boolean;
   setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
+  /** Owned by EditFormContainer so it outlives the 640 px modal/drawer swap. */
+  form: CalendarTaskFormState;
 };
 
 export default function EditCalendarDrawer({
   todo,
   displayForm,
   setDisplayForm,
+  form,
 }: EditCalendarFormProps) {
   const { t: appDict } = useTranslation("app");
   const titleRef = useRef<HTMLDivElement | null>(null);
@@ -32,18 +33,21 @@ export default function EditCalendarDrawer({
   const [cancelEditDialogOpen, setCancelEditDialogOpen] = useState(false);
   const [editAllDialogOpen, setEditAllDialogOpen] = useState(false);
 
-  const [title, setTitle] = useState(todo.title);
-  const [description, setDescription] = useState(todo.description ?? "");
-  const [priority, setPriority] = useState(todo.priority);
-  const [dateRange, setDateRange] = useState<DrawerDateRange>({
-    from: todo.due,
-    to: todo.due,
-  });
-  const [rruleOptions, setRruleOptions] = useState(
-    todo?.rrule ? RRule.parseString(todo.rrule) : null,
-  );
-  const [listID, setListID] = useState<string | null>(todo.listID ?? null);
-  const derivedRepeatType = deriveRepeatType({ rruleOptions });
+  const {
+    title,
+    setTitle,
+    description,
+    setDescription,
+    priority,
+    setPriority,
+    dateRange,
+    setDateRange,
+    rruleOptions,
+    setRruleOptions,
+    listID,
+    setListID,
+    derivedRepeatType,
+  } = form;
 
   const hasUnsavedChanges = useMemo(() => {
     const rruleString = rruleOptions ? RRule.optionsToString(rruleOptions) : null;
