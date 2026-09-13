@@ -272,6 +272,7 @@ struct SettingsScreen: View {
             await viewModel.refreshVersionInfo()
         }
         .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingReminderSelector)
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingDayAheadSelector)
         .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingLanguageSelector)
         .animation(.spring(response: 0.28, dampingFraction: 0.9), value: profileEditor)
     }
