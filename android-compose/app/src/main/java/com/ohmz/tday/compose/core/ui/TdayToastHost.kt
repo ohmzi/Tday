@@ -109,6 +109,19 @@ fun TdayToastHost(
         onDismiss()
     }
 
+    // `toast` is already null on the frame `visible` flips false, and AnimatedVisibility
+    // keeps its content composed for the whole exit — that is the only reason an exit can
+    // be seen at all. So a content lambda that reads `toast` empties the card on exactly
+    // the frame the 140 ms fade and 180 ms slide begin, and both play over nothing. Hold
+    // the toast that is on screen and draw that instead: it is the thing leaving.
+    //
+    // The write sits above the AnimatedVisibility so it happens before the only place that
+    // reads it composes; nothing already composed sees the value change under it.
+    val onScreenToast = remember { mutableStateOf<TdayToastData?>(null) }
+    if (toast != null) {
+        onScreenToast.value = toast
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -137,12 +150,16 @@ fun TdayToastHost(
                 targetOffsetY = { it / 4 },
             ),
         ) {
-            val visibleToast = toast ?: return@AnimatedVisibility
-            TdayToastCard(
-                toast = visibleToast,
-                onDismiss = onDismiss,
-                hazeState = hazeState,
-            )
+            // Null only before the very first toast of the session, a state in which
+            // `visible` is false and there is nothing to draw or to animate out anyway.
+            val visibleToast = onScreenToast.value
+            if (visibleToast != null) {
+                TdayToastCard(
+                    toast = visibleToast,
+                    onDismiss = onDismiss,
+                    hazeState = hazeState,
+                )
+            }
         }
     }
 }
