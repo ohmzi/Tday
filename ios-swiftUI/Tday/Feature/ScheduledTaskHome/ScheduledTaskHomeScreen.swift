@@ -660,7 +660,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
-        .animation(.easeInOut(duration: 0.26), value: isFading)
+        .animation(TdayMotion.standard(duration: TdayMotion.Durations.change), value: isFading)
         .allowsHitTesting(!isCompleting)
     }
 
@@ -700,7 +700,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
                         // per-line strikethrough (not the title's animated
                         // sweep) because notes wrap to several lines.
                         .strikethrough(showStrikethrough, color: colors.onSurfaceVariant)
-                        .animation(.easeInOut(duration: 0.32), value: showStrikethrough)
+                        .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: showStrikethrough)
                 }
             }
 
@@ -734,23 +734,25 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
 
         HapticManager.completion()
         SoundManager.taskCompleted()
-        withAnimation(.easeInOut(duration: 0.18)) {
+        withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
             completionPhase = .checked
         }
 
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 160_000_000)
-            withAnimation(.easeInOut(duration: 0.22)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)) {
                 completionPhase = .struck
             }
             try? await Task.sleep(nanoseconds: 360_000_000)
-            withAnimation(.easeInOut(duration: 0.26)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)) {
                 completionPhase = .fading
             }
             try? await Task.sleep(nanoseconds: 260_000_000)
             await onComplete()
             if completionPhase == .fading {
-                withAnimation(.easeInOut(duration: 0.16)) {
+                // Putting the row back is an exit undoing nothing anybody watched:
+                // Quick, which is also where the tick that started this came in.
+                withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
                     completionPhase = .active
                 }
             }
@@ -785,7 +787,7 @@ private struct ScheduledTaskHomeTodayTaskTitle: View {
                 }
                 .allowsHitTesting(false)
             }
-            .animation(.easeInOut(duration: 0.32), value: isCompleted)
+            .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: isCompleted)
     }
 }
 

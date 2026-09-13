@@ -283,7 +283,7 @@ struct TodoTimelineTaskTitle: View {
             // out, instead of a single rule drawn across the middle of the block.
             .strikethrough(isCompleted, color: strikeColor)
             .lineLimit(lineLimit)
-            .animation(.easeInOut(duration: 0.32), value: isCompleted)
+            .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: isCompleted)
     }
 }
 
@@ -2989,7 +2989,7 @@ struct TodoListScreen: View {
                             // Struck alongside the title so the whole task reads
                             // as done during the completion animation.
                             .strikethrough(showStrikethrough, color: colors.onSurfaceVariant)
-                            .animation(.easeInOut(duration: 0.32), value: showStrikethrough)
+                            .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: showStrikethrough)
                     }
                 }
 
@@ -3026,7 +3026,7 @@ struct TodoListScreen: View {
         .opacity((isFading ? 0 : (draggedTodo?.id == todo.id ? 0.7 : 1)) * restingRowOpacity(for: todo))
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
-        .animation(.easeInOut(duration: 0.26), value: isFading)
+        .animation(TdayMotion.standard(duration: TdayMotion.Durations.change), value: isFading)
         .allowsHitTesting(!isCompleting)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .modifier(TimelineTaskFlashHighlight(active: flashHighlight))
@@ -3101,16 +3101,16 @@ struct TodoListScreen: View {
         }
         HapticManager.completion()
         SoundManager.taskCompleted()
-        withAnimation(.easeInOut(duration: 0.16)) {
+        withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
             completionPhases[todo.id] = .checked
         }
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 160_000_000)
-            withAnimation(.easeInOut(duration: 0.22)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)) {
                 completionPhases[todo.id] = .struck
             }
             try? await Task.sleep(nanoseconds: 360_000_000)
-            withAnimation(.easeInOut(duration: 0.26)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)) {
                 completionPhases[todo.id] = .fading
             }
             try? await Task.sleep(nanoseconds: 260_000_000)

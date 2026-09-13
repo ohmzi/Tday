@@ -596,7 +596,7 @@ private struct CompletedTimelineRow: View {
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
-        .animation(.easeInOut(duration: 0.26), value: isFading)
+        .animation(TdayMotion.standard(duration: TdayMotion.Durations.change), value: isFading)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .allowsHitTesting(!isRestoring)
         .todoTrailingSwipeActions(
@@ -620,16 +620,20 @@ private struct CompletedTimelineRow: View {
         }
 
         HapticManager.toggle(on: false)
+        // The check-off's own beats, run backwards. This row kept a third set —
+        // 180 / 180 — so undoing a completion took a different length of time from
+        // making one. The offsets and the rungs are now the ones every task row in
+        // every client plays; only the direction differs.
         Task { @MainActor in
-            withAnimation(.easeInOut(duration: 0.16)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
                 restorePhase = .unchecked
             }
-            try? await Task.sleep(nanoseconds: 180_000_000)
-            withAnimation(.easeInOut(duration: 0.16)) {
+            try? await Task.sleep(nanoseconds: 160_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)) {
                 restorePhase = .unstruck
             }
-            try? await Task.sleep(nanoseconds: 180_000_000)
-            withAnimation(.easeInOut(duration: 0.26)) {
+            try? await Task.sleep(nanoseconds: 360_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)) {
                 restorePhase = .fading
             }
             try? await Task.sleep(nanoseconds: 260_000_000)
