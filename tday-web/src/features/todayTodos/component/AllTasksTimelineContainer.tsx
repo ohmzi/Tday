@@ -24,6 +24,7 @@ import { useTimelineEmptyState } from "../lib/useTimelineEmptyState";
 import { isTimelineScope } from "../lib/timelineScopeHelpers";
 import { TODAY_EARLIER_EXIT_MS } from "../lib/todayEarlierIllustration";
 import { useRowPlacement } from "@/hooks/useRowPlacement";
+import { DELAY_MS } from "@/lib/motion";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import TaskSelectionProvider from "@/providers/TaskSelectionProvider";
 import BulkSelectButton from "@/components/todo/bulk/BulkSelectButton";
@@ -304,6 +305,12 @@ const AllTasksTimelineContainer = ({
               accentColor={timelineScopeAccentColors[scope]}
               isDayDone={isDayDone}
               celebrate={celebrate}
+              // The scene is drawn inline, so mounting it is what moves everything
+              // below into a new slot (the travel the wrapper above owns). The burst
+              // waits that out rather than firing across it, and the scene's own lead
+              // is added on top of the wait — travel, then burst, then scene, which is
+              // what `TdayFeedItemMotion.CelebrationStartDelayMillis` buys on Android.
+              celebrationStartDelayMs={DELAY_MS.placementLead}
               earlierHandoffPending={earlierHandoffPending}
               locale={locale}
               emptyTitle={emptyTitle}

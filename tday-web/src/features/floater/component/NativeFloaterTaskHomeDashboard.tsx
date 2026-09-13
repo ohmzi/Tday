@@ -6,6 +6,7 @@ import EmptyState from "@/components/app/EmptyState";
 import { taskJustCompleted } from "@/lib/task-completion-signal";
 import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
 import { useRowPlacement } from "@/hooks/useRowPlacement";
+import { DELAY_MS } from "@/lib/motion";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { sortFloatersByPriority } from "@/lib/floater/buildFloaterSections";
@@ -94,10 +95,8 @@ export default function NativeFloaterTaskHomeDashboard() {
           `min-h-[42vh]` empty state, so the lists below drop by most of a screen — and
           they did it in the frame the confetti fired, which put the biggest uncued jump
           in the app underneath the one moment nobody is looking at the layout. Now the
-          tiles glide down over the burst and the scene comes up behind them — the delay
-          that already holds a celebrating scene back (`.tday-empty-enter-celebrating`)
-          is the same length as this travel, so the illustration starts rising as the
-          last tile lands, which is the order Android spells out as `PlacementLead`. */}
+          tiles glide down first and the celebration waits for them; see the empty
+          state's own `celebrationStartDelayMs` below for the ordering. */}
       <div ref={placementRef} className="flex w-full flex-col gap-4 sm:gap-5">
         <RootFeedHeroHeader
           title={appDict("floater")}
@@ -208,6 +207,15 @@ export default function NativeFloaterTaskHomeDashboard() {
             // Whether that tick happened here, on another device, or from a
             // collaborator on a shared list.
             celebrate={taskJustCompleted() || remoteEmptied}
+            // This scene is drawn INLINE: mounting it is what pushes the tiles
+            // above down, so the travel and the burst would otherwise be the
+            // same beat. `PlacementLead` is the token for exactly that wait —
+            // it is `Emphasis` by construction, so it cannot drift away from
+            // the placement it is here to outlast — and holding the whole
+            // celebration back by it leaves the confetti's own lead intact:
+            // travel, then burst, then scene. The same order Android gets from
+            // `TdayFeedItemMotion.CelebrationStartDelayMillis`.
+            celebrationStartDelayMs={DELAY_MS.placementLead}
           />
         ) : null}
 

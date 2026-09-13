@@ -20,13 +20,13 @@ import { DURATION_MS, EASE } from "@/lib/motion";
  * rung that moves in `MotionTokens.kt` moves on both clients at once.
  *
  * One constant is deliberately not mirrored. `CelebrationStartDelayMillis` is how long
- * a feed that hosts its empty state inline holds the burst back. Web already spends that
- * lead, from the other side and in exactly one place: `.tday-empty-enter-celebrating`
- * (`globals.css`) delays the empty state's own arrival so the confetti leads it. That
- * site is still a raw `animation-delay` the budget ratchet counts rather than the
- * `--tday-delay-celebration-lead` custom property, and tokenising it is owed by whoever
- * next takes the empty-state scene — but it is one owner, and a copy here would make it
- * two with nothing asking either of them.
+ * a feed that hosts its empty state inline holds the burst back, and Android derives it
+ * from `PlacementMillis` because it exists to outlast exactly that travel. Web has the
+ * same wait — `AllTasksTimelineContainer` and `NativeFloaterTaskHomeDashboard` hand it
+ * to `EmptyState` as `celebrationStartDelayMs` — but spells it `DELAY_MS.placementLead`,
+ * which is the vocabulary's own name for it and is `Emphasis` by construction upstream.
+ * A constant here would be a third spelling of one number, and the one most likely to be
+ * retimed alone.
  */
 
 /**

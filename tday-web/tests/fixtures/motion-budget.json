@@ -39,6 +39,6 @@
     "_rawCubicBezier": "cubic-bezier( written out at a call site. All three survivors are deliberate orphans with no token and no second site: globals.css (0.3,0,0.4,1), RootDock.tsx (0.25,1,0.5,1), OnboardingWizard.tsx (0.22,0.61,0.36,1). Cited by curve and not by line: a line number recorded in a fixture is stale the moment anything above it moves, and one of these three moved twice while this PR was being written. With the Gesture curve named, those three orphans ARE the count — the ceiling and the list are the same three sites, so a fourth is always new.",
     "rawCubicBezier": 3,
     "_cssMsLiteral": "a bare <n>ms in CSS or in an inline style string.",
-    "cssMsLiteral": 19
+    "cssMsLiteral": 18
   }
 }

@@ -20,8 +20,21 @@ import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
  *   celebration still belongs to the list it happened on. Arrives as anything
  *   CSS accepts (a hex, or an `hsl(var(--x))`), so it is handed to the canvas as
  *   a fill string rather than parsed.
+ * @param startDelayMs how long the burst is held back after it is mounted. Zero
+ *   where this plays over a page that is standing still; a feed that draws the
+ *   empty state inline hands over the time its own rows take to reach their new
+ *   slots, so the paper is never thrown across a screen that is still sliding.
+ *   Held here rather than by mounting the canvas late: the pieces are rolled and
+ *   the canvas is sized while the feed travels, so the first frame of the burst
+ *   is a frame of confetti rather than a frame of layout.
  */
-export default function Confetti({ accentColor }: { accentColor: string }) {
+export default function Confetti({
+  accentColor,
+  startDelayMs = 0,
+}: {
+  accentColor: string;
+  startDelayMs?: number;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -36,7 +49,7 @@ export default function Confetti({ accentColor }: { accentColor: string }) {
 
     const palette = [...PALETTE, accentColor];
     const pieces = fan();
-    const start = performance.now();
+    const start = performance.now() + startDelayMs;
     let frame = 0;
 
     const resize = () => {
@@ -56,6 +69,12 @@ export default function Confetti({ accentColor }: { accentColor: string }) {
 
     const draw = (now: number) => {
       const t = (now - start) / FLIGHT_MS;
+      // Still waiting for the feed to settle. Nothing is cleared because nothing
+      // has been drawn yet, and the canvas is transparent until it has.
+      if (t < 0) {
+        frame = requestAnimationFrame(draw);
+        return;
+      }
       context.clearRect(0, 0, box.width, box.height);
       if (t >= 1) return;
 
@@ -111,7 +130,7 @@ export default function Confetti({ accentColor }: { accentColor: string }) {
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [accentColor]);
+  }, [accentColor, startDelayMs]);
 
   return (
     <canvas
