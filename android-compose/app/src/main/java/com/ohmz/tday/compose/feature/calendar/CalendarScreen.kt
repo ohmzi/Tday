@@ -59,7 +59,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -117,7 +116,9 @@ import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
+import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
@@ -2305,20 +2306,15 @@ private fun CalendarTodoRow(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val taskCompletionSound = rememberTaskCompletionSound()
-    val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     // Edit + Copy + Delete: matches the 3-pill width used elsewhere (see
     // SwipeTaskRow.revealWidth).
-    val actionRevealPx = with(density) { 256.dp.toPx() }
-    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
-    val maxElasticDragPx = actionRevealPx * 1.14f
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = 256.dp)
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
     val copyContext = LocalContext.current
     val copiedMessage = stringResource(R.string.task_copied_toast)
     val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
-    var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
-    var swipeHinting by remember(todo.id) { mutableStateOf(false) }
     var localChecked by remember(todo.id) { mutableStateOf(false) }
     var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
@@ -2333,14 +2329,13 @@ private fun CalendarTodoRow(
     }
 
     fun closeSwipeSlot() {
-        targetOffsetX = 0f
+        swipeRevealState.close()
         if (latestOpenSwipeTaskId.value == todo.id) {
             onOpenSwipeTaskIdChange(null)
         }
     }
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = targetOffsetX,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+    val animatedOffsetX by animateTaskSwipeOffsetAsState(
+        state = swipeRevealState,
         label = "calendarTaskSwipeOffset",
     )
     val completionAlpha by animateFloatAsState(
@@ -2376,11 +2371,10 @@ private fun CalendarTodoRow(
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
     val rowShape = RoundedCornerShape(16.dp)
     val foregroundColor = colorScheme.background
-    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
+    val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     LaunchedEffect(openSwipeTaskId, todo.id) {
-        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && targetOffsetX != 0f) {
-            targetOffsetX = 0f
-            swipeHinting = false
+        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
+            swipeRevealState.close()
         }
     }
 
@@ -2500,26 +2494,17 @@ private fun CalendarTodoRow(
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
-                            if (delta < 0f || targetOffsetX != 0f) {
+                            if (delta < 0f || swipeRevealState.isOpenOrDragging) {
                                 claimSwipeSlot()
                             }
-                            targetOffsetX = (targetOffsetX + delta).coerceIn(
-                                -maxElasticDragPx,
-                                0f,
-                            )
-                            if (targetOffsetX == 0f && latestOpenSwipeTaskId.value == todo.id) {
+                            swipeRevealState.dragBy(delta)
+                            if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
                                 onOpenSwipeTaskIdChange(null)
                             }
                         },
                         onDragStopped = { velocity ->
-                            val flingOpen = velocity < -1450f
-                            val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
-                            targetOffsetX = if (flingOpen || dragOpen) {
-                                -actionRevealPx
-                            } else {
-                                0f
-                            }
-                            if (targetOffsetX != 0f) {
+                            swipeRevealState.settle(velocity)
+                            if (swipeRevealState.isOpenOrDragging) {
                                 claimSwipeSlot()
                             } else if (latestOpenSwipeTaskId.value == todo.id) {
                                 onOpenSwipeTaskIdChange(null)
@@ -2530,18 +2515,15 @@ private fun CalendarTodoRow(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                     ) {
-                        if (targetOffsetX != 0f) {
+                        if (swipeRevealState.isOpenOrDragging) {
                             closeSwipeSlot()
-                        } else if (!swipeHinting && !pendingCompletion) {
-                            swipeHinting = true
+                        } else if (!swipeRevealState.isHinting && !pendingCompletion) {
                             claimSwipeSlot()
                             coroutineScope.launch {
-                                targetOffsetX = -swipeHintOffsetPx
-                                delay(150)
-                                targetOffsetX = 0f
-                                delay(360)
-                                swipeHinting = false
-                                if (latestOpenSwipeTaskId.value == todo.id && targetOffsetX == 0f) {
+                                swipeRevealState.playHint()
+                                if (latestOpenSwipeTaskId.value == todo.id &&
+                                    !swipeRevealState.isOpenOrDragging
+                                ) {
                                     onOpenSwipeTaskIdChange(null)
                                 }
                             }
