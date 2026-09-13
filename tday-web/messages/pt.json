@@ -796,6 +796,14 @@
       "title": "Flutuantes em repouso",
       "toggle": "Desbotar tarefas Anytime intocadas"
     },
+    "sound": {
+      "title": "Som",
+      "toggle": "Reproduzir um som ao concluir uma tarefa"
+    },
+    "haptics": {
+      "title": "Vibração",
+      "toggle": "Vibrar ao tocar e arrastar"
+    },
     "workspace": {
       "title": "Espaço de trabalho",
       "localTitle": "Espaço local",
@@ -999,6 +1007,13 @@
         "summary": "Arraste as tarefas para a ordem que quiser.",
         "keywords": "arrastar, reordenar, mover, ordenar, ordem, organizar",
         "body": "As suas listas mantêm a ordem que lhes dá. Arraste uma tarefa para cima ou para baixo para organizar o seu dia tal como pensa nele."
+      },
+      "sound-and-vibration": {
+        "title": "Som e vibração",
+        "summary": "Desligue o som de conclusão, a vibração ou ambos.",
+        "keywords": "som, silêncio, silenciar, áudio, volume, vibração, vibrar, háptica, zumbido, acessibilidade",
+        "body": "Concluir uma tarefa toca um som curto e, no telemóvel, a app responde aos seus toques e arrastos com uma pequena vibração. As Definições têm um interruptor para cada um — desligue um e tudo o resto fica igual.",
+        "tip": "Os interruptores pertencem a este navegador e não à sua conta, por isso um portátil silencioso e um telemóvel que vibra podem ter cada um a sua própria resposta."
       },
       "floaters-vs-todos": {
         "title": "Flutuantes vs tarefas agendadas",

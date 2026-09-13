@@ -796,6 +796,14 @@
       "title": "Flotantes en reposo",
       "toggle": "Atenuar tareas de Anytime sin tocar"
     },
+    "sound": {
+      "title": "Sonido",
+      "toggle": "Reproducir un sonido al completar una tarea"
+    },
+    "haptics": {
+      "title": "Vibración",
+      "toggle": "Vibrar al tocar y arrastrar"
+    },
     "workspace": {
       "title": "Espacio de trabajo",
       "localTitle": "Espacio local",
@@ -999,6 +1007,13 @@
         "summary": "Arrastra las tareas al orden que quieras.",
         "keywords": "arrastrar, reordenar, mover, ordenar, orden, organizar",
         "body": "Tus listas conservan el orden que les des. Arrastra una tarea arriba o abajo para organizar tu día tal como lo piensas."
+      },
+      "sound-and-vibration": {
+        "title": "Sonido y vibración",
+        "summary": "Desactiva el sonido de finalización, la vibración o ambos.",
+        "keywords": "sonido, silencio, silenciar, audio, volumen, vibración, vibrar, háptica, zumbido, accesibilidad",
+        "body": "Al completar una tarea suena un pop corto y, en el teléfono, la app responde a tus toques y arrastres con una pequeña vibración. Ajustes tiene un interruptor para cada uno: desactiva el que quieras y todo lo demás sigue igual.",
+        "tip": "Los interruptores pertenecen a este navegador y no a tu cuenta, así que un portátil en silencio y un teléfono que vibra pueden tener cada uno su propia respuesta."
       },
       "floaters-vs-todos": {
         "title": "Flotantes frente a tareas con fecha",
