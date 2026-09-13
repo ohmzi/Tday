@@ -796,6 +796,14 @@
       "title": "Resting floaters",
       "toggle": "Fade untouched Anytime tasks"
     },
+    "sound": {
+      "title": "Sound",
+      "toggle": "Play a sound when a task is completed"
+    },
+    "haptics": {
+      "title": "Vibration",
+      "toggle": "Vibrate on taps and drags"
+    },
     "workspace": {
       "title": "Workspace",
       "localTitle": "Local workspace",
@@ -999,6 +1007,13 @@
         "summary": "Drag tasks into the order you want.",
         "keywords": "drag, reorder, move, sort, order, arrange",
         "body": "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
+      },
+      "sound-and-vibration": {
+        "title": "Sound and vibration",
+        "summary": "Turn off the completion pop, the buzz, or both.",
+        "keywords": "sound, mute, silent, silence, audio, volume, vibration, vibrate, haptics, buzz, quiet, feedback, accessibility",
+        "body": "Ticking a task off plays a short pop, and on a phone the app answers your taps and drags with a small vibration. Settings has a switch for each one — turn either off and everything else stays exactly as it was.",
+        "tip": "The switches belong to this browser rather than to your account, so a quiet laptop and a buzzing phone can each have their own answer."
       },
       "floaters-vs-todos": {
         "title": "Floaters vs dated tasks",

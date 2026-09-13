@@ -796,6 +796,14 @@
       "title": "Floater berehat",
       "toggle": "Pudarkan tugasan Anytime yang tidak disentuh"
     },
+    "sound": {
+      "title": "Bunyi",
+      "toggle": "Mainkan bunyi apabila tugasan selesai"
+    },
+    "haptics": {
+      "title": "Getaran",
+      "toggle": "Bergetar semasa ketik dan seret"
+    },
     "workspace": {
       "title": "Ruang kerja",
       "localTitle": "Ruang kerja setempat",
@@ -999,6 +1007,13 @@
         "summary": "Seret tugasan ke susunan yang anda mahu.",
         "keywords": "seret, susun semula, alih, isih, susunan, atur",
         "body": "Senarai anda mengekalkan susunan yang anda berikan. Seret tugasan ke atas atau ke bawah untuk mengatur hari anda mengikut cara anda memikirkannya."
+      },
+      "sound-and-vibration": {
+        "title": "Bunyi dan getaran",
+        "summary": "Matikan bunyi siap, getaran, atau kedua-duanya.",
+        "keywords": "bunyi, senyap, audio, kelantangan, getaran, bergetar, haptik, maklum balas, kebolehaksesan",
+        "body": "Menanda tugasan sebagai selesai memainkan bunyi pop yang pendek, dan pada telefon apl membalas ketikan serta seretan anda dengan getaran kecil. Tetapan mempunyai suis untuk setiap satu — matikan mana-mana satu dan yang lain kekal sama.",
+        "tip": "Suis ini milik pelayar ini dan bukan akaun anda, jadi komputer riba yang senyap dan telefon yang bergetar boleh mempunyai jawapan masing-masing."
       },
       "floaters-vs-todos": {
         "title": "Floater vs tugasan berjadual",

@@ -796,6 +796,14 @@
       "title": "Floater a riposo",
       "toggle": "Sbiadisci le attività Anytime intatte"
     },
+    "sound": {
+      "title": "Suono",
+      "toggle": "Riproduci un suono al completamento di un'attività"
+    },
+    "haptics": {
+      "title": "Vibrazione",
+      "toggle": "Vibra ai tocchi e ai trascinamenti"
+    },
     "workspace": {
       "title": "Spazio di lavoro",
       "localTitle": "Spazio locale",
@@ -999,6 +1007,13 @@
         "summary": "Trascina le attività nell'ordine che preferisci.",
         "keywords": "trascina, riordina, sposta, ordina, ordine, disponi",
         "body": "I tuoi elenchi mantengono l'ordine che imposti. Trascina un'attività in alto o in basso per organizzare la giornata nel modo in cui la pensi."
+      },
+      "sound-and-vibration": {
+        "title": "Suono e vibrazione",
+        "summary": "Disattiva il suono di completamento, la vibrazione o entrambi.",
+        "keywords": "suono, silenzio, muto, audio, volume, vibrazione, vibrare, aptica, ronzio, accessibilità",
+        "body": "Quando completi un'attività parte un breve suono e, sul telefono, l'app risponde ai tuoi tocchi e trascinamenti con una piccola vibrazione. Nelle Impostazioni c'è un interruttore per ciascuno: disattivane uno e tutto il resto resta com'era.",
+        "tip": "Gli interruttori appartengono a questo browser e non al tuo account, così un portatile silenzioso e un telefono che vibra possono avere ciascuno la propria risposta."
       },
       "floaters-vs-todos": {
         "title": "Floater e attività con data",

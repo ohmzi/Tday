@@ -796,6 +796,14 @@
       "title": "Flottants au repos",
       "toggle": "Estomper les tâches Anytime intactes"
     },
+    "sound": {
+      "title": "Son",
+      "toggle": "Jouer un son quand une tâche est terminée"
+    },
+    "haptics": {
+      "title": "Vibration",
+      "toggle": "Vibrer aux appuis et aux glissements"
+    },
     "workspace": {
       "title": "Espace de travail",
       "localTitle": "Espace local",
@@ -999,6 +1007,13 @@
         "summary": "Faites glisser les tâches dans l'ordre que vous voulez.",
         "keywords": "glisser, réorganiser, déplacer, trier, ordre, arranger",
         "body": "Vos listes conservent l'ordre que vous leur donnez. Faites glisser une tâche vers le haut ou le bas pour organiser votre journée comme vous la concevez."
+      },
+      "sound-and-vibration": {
+        "title": "Son et vibration",
+        "summary": "Coupez le son de fin, la vibration, ou les deux.",
+        "keywords": "son, silence, muet, audio, volume, vibration, vibrer, haptique, retour, accessibilité",
+        "body": "Cocher une tâche joue un petit son et, sur téléphone, l'app répond à tes appuis et à tes glissements par une légère vibration. Les Paramètres proposent un interrupteur pour chacun : désactive celui que tu veux, tout le reste ne bouge pas.",
+        "tip": "Les interrupteurs appartiennent à ce navigateur et non à ton compte : un ordinateur silencieux et un téléphone qui vibre peuvent chacun avoir leur propre réponse."
       },
       "floaters-vs-todos": {
         "title": "Floaters et tâches datées",

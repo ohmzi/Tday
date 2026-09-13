@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { RETURNING_BROWSER_STORAGE_KEY } from "@/lib/security/returningBrowser";
+import { HAPTICS_STORAGE_KEY } from "@/lib/feedbackPreferences";
 
 function createWrapper() {
   const queryClient = new QueryClient();
@@ -203,6 +204,9 @@ describe("AuthProvider", () => {
     });
 
     window.localStorage.setItem("menu-state", "open");
+    // An accessibility choice, not session state: signing out is not a request to
+    // start buzzing again.
+    window.localStorage.setItem(HAPTICS_STORAGE_KEY, "0");
     window.sessionStorage.setItem("draft", "cached");
 
     await act(async () => {
@@ -210,6 +214,7 @@ describe("AuthProvider", () => {
     });
 
     expect(window.localStorage.getItem(RETURNING_BROWSER_STORAGE_KEY)).toBe("1");
+    expect(window.localStorage.getItem(HAPTICS_STORAGE_KEY)).toBe("0");
     expect(window.localStorage.getItem("menu-state")).toBeNull();
     expect(window.sessionStorage.getItem("draft")).toBeNull();
     expect(result.current.authState).toBe("unauthenticated");

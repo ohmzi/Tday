@@ -93,6 +93,35 @@ object GuideCatalog {
             setOf(WEB, ANDROID, IOS), badge = GuideBadge.PRO_TIP,
             body = listOf(para(GuideTopicIds.DRAG_REORDER)),
         ),
+        topic(
+            // Last in Gestures because it is what the section's other topics feel
+            // like: the pop and the buzz are the app answering a finger, so a
+            // reader arrives here having just met the taps and drags being
+            // answered.
+            //
+            // WEB only, and that is the whole point of the topic. Android's
+            // TaskCompletionSound refuses to play unless the ringer is in
+            // RINGER_MODE_NORMAL, iOS's SoundManager runs on an .ambient session
+            // the silent switch silences, and native haptics go through
+            // performHapticFeedback / UIFeedbackGenerator, which the OS mutes with
+            // its own touch-feedback setting. The phone carries all three
+            // switches; a browser is handed none of them, so web is the only
+            // client with rows of its own to document.
+            //
+            // "waves" rather than a new glyph: a sound and a vibration are both a
+            // wave, it is already in the covered set, and a fresh glyph would mean
+            // an Android vector drawable plus an iOS imageset for a topic neither
+            // platform shows. The precedent is written up in Widgets & surfaces,
+            // where "layout-grid" covers three unrelated topics.
+            GuideTopicIds.SOUND_AND_VIBRATION, GuideSectionId.GESTURES, "waves",
+            setOf(WEB), sinceVersion = "0.7.23",
+            body = listOf(
+                para(GuideTopicIds.SOUND_AND_VIBRATION),
+                tip(GuideTopicIds.SOUND_AND_VIBRATION),
+            ),
+            deepLink = GuideDeepLink(web = "settings"),
+            helpAnchors = listOf("settings-feature-toggle"),
+        ),
 
         // ── Organizing ───────────────────────────────────────────────────
         topic(
