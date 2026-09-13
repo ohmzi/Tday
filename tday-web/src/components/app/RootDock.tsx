@@ -2,6 +2,7 @@ import { Home, Leaf, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { usePathname, useRouter } from "@/lib/navigation";
 import { hapticTick } from "@/lib/haptics";
+import { scrollTo } from "@/lib/scroll";
 import { useRef, useEffect, useState, useCallback } from "react";
 import {
   nativeAppContentClassName,
@@ -34,7 +35,7 @@ const dockTabs: Array<{
 // Scrolls the currently-visible screen's scroll container back to the top.
 function scrollActiveScreenToTop() {
   const container = document.querySelector<HTMLElement>(`[${nativeAppScrollAttribute}]`);
-  container?.scrollTo({ top: 0, behavior: "smooth" });
+  scrollTo(container, { top: 0 });
 }
 
 function activeDockTab(pathname: string): DockTab {
