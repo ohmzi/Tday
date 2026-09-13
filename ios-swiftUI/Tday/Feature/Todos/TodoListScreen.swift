@@ -364,7 +364,7 @@ private struct FloaterTaskHomeSearchResultsCard: View {
                             .padding(.vertical, 9)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                HapticManager.gentleTap()
+                                HapticManager.buttonPress()
                                 onOpenTodo(todo)
                             }
                         }
@@ -1122,7 +1122,7 @@ struct TodoListScreen: View {
     }
 
     private func enterSelectionMode() {
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         // Nothing may be half-open underneath the mode.
         openSwipeTaskID = nil
         selectedTodoIDs = []
@@ -1145,7 +1145,7 @@ struct TodoListScreen: View {
     private func toggleSelection(of todo: TodoItem) {
         if selectedTodoIDs.contains(todo.id) {
             selectedTodoIDs.remove(todo.id)
-            HapticManager.gentleTap()
+            HapticManager.selection()
             return
         }
         // At the cap a further tap is refused in place. The bar already says the
@@ -1153,11 +1153,11 @@ struct TodoListScreen: View {
         // already on screen would only talk over it.
         guard !isSelectionAtCap else { return }
         selectedTodoIDs.insert(todo.id)
-        HapticManager.gentleTap()
+        HapticManager.selection()
     }
 
     private func toggleSelectAll() {
-        HapticManager.buttonTap()
+        HapticManager.selection()
         if selectionAllSelected {
             selectedTodoIDs = []
             return
@@ -1189,7 +1189,7 @@ struct TodoListScreen: View {
     private func performBulkComplete() {
         let targets = effectiveBulkTodos(for: .complete)
         guard !targets.isEmpty else { return }
-        HapticManager.taskCompleted()
+        HapticManager.completion()
         exitSelectionMode()
         Task { await viewModel.bulkComplete(targets) }
     }
@@ -1198,7 +1198,7 @@ struct TodoListScreen: View {
     /// undo toast that follows is the second guard, not a substitute for this.
     private func requestBulkDelete() {
         guard !effectiveBulkTodos(for: .delete).isEmpty else { return }
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
             showingBulkDeleteConfirmation = true
         }
@@ -1211,7 +1211,7 @@ struct TodoListScreen: View {
             exitSelectionMode()
             return
         }
-        HapticManager.sheetConfirm()
+        HapticManager.destructive()
         exitSelectionMode()
         Task { await viewModel.bulkDelete(targets) }
     }
@@ -1258,7 +1258,7 @@ struct TodoListScreen: View {
             exitSelectionMode()
             return
         }
-        HapticManager.sheetConfirm()
+        HapticManager.completion()
         exitSelectionMode()
         Task { await viewModel.bulkMove(targets, toListId: listID) }
     }
@@ -1765,7 +1765,7 @@ struct TodoListScreen: View {
                     suppressDayDoneFeedbackOnReturn = false
                     return
                 }
-                HapticManager.taskCompleted()
+                HapticManager.completion()
                 SoundManager.taskCompleted()
             }
             .transition(emptyStateIllustrationTransition)
@@ -1975,7 +1975,7 @@ struct TodoListScreen: View {
 
             if !isViewerList {
                 TaskFloatingActionButton(fillColor: modeAccentColor) {
-                    HapticManager.buttonTap()
+                    HapticManager.buttonPress()
                     showingCreateTask = true
                 }
                 .padding(.trailing, 18)
@@ -2012,7 +2012,7 @@ struct TodoListScreen: View {
                 tint: nil,
                 isEnabled: editableCount > 0
             ) {
-                HapticManager.buttonTap()
+                HapticManager.buttonPress()
                 activeBulkSelector = .priority
             }
             bulkActionButton(
@@ -2021,7 +2021,7 @@ struct TodoListScreen: View {
                 tint: nil,
                 isEnabled: editableCount > 0
             ) {
-                HapticManager.buttonTap()
+                HapticManager.buttonPress()
                 activeBulkSelector = .list
             }
             bulkActionButton(
@@ -2367,7 +2367,7 @@ struct TodoListScreen: View {
             return
         }
 
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.dragDrop()
         if todo.isRecurring {
             pendingRescheduleDrop = TodoRescheduleDrop(todo: todo, targetDate: targetDay, targetHour: nil)
         } else {
@@ -2409,7 +2409,7 @@ struct TodoListScreen: View {
             return
         }
 
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.dragDrop()
         if todo.isRecurring {
             pendingRescheduleDrop = TodoRescheduleDrop(todo: todo, targetDate: nil, targetHour: hour)
         } else {
@@ -2460,7 +2460,7 @@ struct TodoListScreen: View {
     private func beginInAppDrag(_ todo: TodoItem, at location: CGPoint) {
         openSwipeTaskID = nil
         if draggedTodo?.id != todo.id {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            HapticManager.dragPickUp()
         }
         draggedTodo = todo
         TodoTaskDragSession.shared.todo = todo
@@ -2551,7 +2551,7 @@ struct TodoListScreen: View {
     }
 
     private func openListSearch() {
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             listSearchExpanded = true
         }
@@ -2560,7 +2560,7 @@ struct TodoListScreen: View {
     /// Leaving the search drops the query with it, so the list is whole again
     /// the next time the bar is opened — the same bargain web's close makes.
     private func closeListSearch() {
-        HapticManager.sheetDismiss()
+        HapticManager.buttonPress()
         listSearchFieldFocused = false
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             listSearchExpanded = false
@@ -2712,7 +2712,7 @@ struct TodoListScreen: View {
             description: L("Try a different word, or clear the search."),
             action: AnyView(
                 Button {
-                    HapticManager.gentleTap()
+                    HapticManager.buttonPress()
                     listSearchQuery = ""
                     listSearchFieldFocused = true
                 } label: {
@@ -3091,7 +3091,7 @@ struct TodoListScreen: View {
         if openSwipeTaskID == todo.id {
             openSwipeTaskID = nil
         }
-        HapticManager.taskCompleted()
+        HapticManager.completion()
         SoundManager.taskCompleted()
         withAnimation(.easeInOut(duration: 0.16)) {
             completionPhases[todo.id] = .checked
@@ -4929,7 +4929,7 @@ private struct ListSettingsSheet: View {
                         HStack(spacing: 10) {
                             if let onMembersRequest {
                                 Button {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    HapticManager.buttonPress()
                                     onMembersRequest()
                                 } label: {
                                     ListSettingsSheetActionTileLabel(
@@ -4996,6 +4996,10 @@ private struct ListSettingsSheet: View {
 
     private func submit() {
         guard canSave else { return }
+        // The landing, not the press: the header's ✓ gives the control tap every
+        // button gives, and the save that goes through earns the success pulse —
+        // the same order `CreateTaskSheet.submit` uses.
+        HapticManager.completion()
         onSubmit(trimmedName, color, iconKey)
         dismiss()
     }
@@ -5052,7 +5056,7 @@ private struct ListSettingsSheetDeleteButton: View {
 
     var body: some View {
         Button(role: .destructive) {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            HapticManager.destructive()
             action()
         } label: {
             HStack(spacing: 12) {
@@ -5116,7 +5120,7 @@ private struct ScheduledDragModifier: ViewModifier {
     func body(content: Content) -> some View {
         if enabled {
             content.onDrag {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                HapticManager.dragPickUp()
                 onDragStart()
                 TodoTaskDragSession.shared.todo = todo
                 TodoTaskDragSession.shared.handledDropSignature = nil

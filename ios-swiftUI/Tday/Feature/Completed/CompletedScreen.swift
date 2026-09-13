@@ -334,7 +334,7 @@ struct CompletedScreen: View {
             description: L("Try a different word, or clear the search."),
             action: AnyView(
                 Button {
-                    HapticManager.gentleTap()
+                    HapticManager.buttonPress()
                     searchQuery = ""
                     searchFieldFocused = true
                 } label: {
@@ -348,7 +348,7 @@ struct CompletedScreen: View {
     }
 
     private func openSearch() {
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = true
         }
@@ -357,7 +357,7 @@ struct CompletedScreen: View {
     /// Leaving the search drops the query with it, so the history is whole again
     /// the next time the bar is opened — the same bargain web's close makes.
     private func closeSearch() {
-        HapticManager.sheetDismiss()
+        HapticManager.buttonPress()
         searchFieldFocused = false
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = false
@@ -619,7 +619,7 @@ private struct CompletedTimelineRow: View {
             openSwipeTaskID = nil
         }
 
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.toggle(on: false)
         Task { @MainActor in
             withAnimation(.easeInOut(duration: 0.16)) {
                 restorePhase = .unchecked
