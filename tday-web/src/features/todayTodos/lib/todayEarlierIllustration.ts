@@ -32,10 +32,28 @@ import { DURATION_MS } from "@/lib/motion";
  * the same value the same way). Both spellings resolve to the one generated
  * token, so the timer and the exit it is waiting for cannot drift apart.
  *
- * `Scene`, which is what the 520 this held by hand always was: the exit mirrors
- * `.tday-empty-enter`'s own arrival rather than inventing an unrelated number.
+ * `Enter`, and it used to be `Scene` — 520, on the reasoning that an exit
+ * should mirror the entrance it undoes. That is the one thing this exit does
+ * not do. It is not the scene being taken back; it is the slot being cleared
+ * for Earlier's rows, and it spent every one of those 520ms holding content the
+ * user had just asked for behind an illustration they had just dismissed.
+ *
+ * Two rules pick the rung and they meet on this one. Geometry says `Emphasis`,
+ * because the slot is a size and the exit now closes it (`docs/motion.md`'s
+ * second idiom rule). The first idiom rule says an exit is never longer than
+ * the enter it undoes, and a hand-off answers to the enter it hands over to as
+ * well — `OVERDUE_ROWS_FADE_MS` below, the 260 Earlier's own rows fade in on —
+ * for the reason that rule gives: a departure that outlasts the arrival it is
+ * making room for reads as the app hesitating. That rules out 320, and it rules
+ * out 260 too, since matching the arrival exactly would make the two read as a
+ * swap between equals rather than as one thing leaving before another lands.
+ * The rung below is `Enter`. iOS reaches the same asymmetry from the other end
+ * and off the ladder — `EarlierIllustrationHandoff.exitDuration` 0.22 against
+ * `enterDuration` 0.30 (`TodoListScreen.swift`), kept off its rungs because it
+ * times a sequence leg there; web's legs land on rungs, so this one takes the
+ * rung under the arrival it leads.
  */
-export const TODAY_EARLIER_EXIT_MS = DURATION_MS.scene;
+export const TODAY_EARLIER_EXIT_MS = DURATION_MS.enter;
 
 /**
  * The Overdue/Earlier ROWS' own fade duration — deliberately a separate,
