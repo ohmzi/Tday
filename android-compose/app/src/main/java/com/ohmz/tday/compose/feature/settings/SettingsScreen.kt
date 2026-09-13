@@ -1930,14 +1930,34 @@ private fun ReduceMotionRow() {
             }
             Switch(
                 checked = enabled || systemReduced,
+                // `enabled` as well as the wrapper, because the wrapper only stops
+                // fingers: it is a transparent `clickable` laid over the row, and
+                // TalkBack does not go through the overlay — it activates the
+                // toggle's own semantics node underneath. Without this, the one
+                // control on the screen that cannot change anything is the one a
+                // screen-reader user can still write to, and the row would go on
+                // drawing `on` while a preference they never chose waited to take
+                // effect the moment Android's animations came back. Passing it here
+                // removes the action from the node rather than hiding it, which is
+                // the same argument the doc above makes for not drawing this row
+                // live.
+                enabled = !systemReduced,
                 onCheckedChange = {
                     enabled = it
                     store.setEnabled(it)
                 },
+                // The disabled colours restate the checked ones so the dimming stays
+                // [SettingsSilencedWhen]'s single 0.45, and this row reads as the
+                // silenced neighbours do. Material's own disabled palette on top of
+                // that alpha would wash the track out until "on" stopped being
+                // legible — and "on" is the whole thing this row has to say.
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
                     checkedTrackColor = colorScheme.secondary,
                     checkedBorderColor = Color.Transparent,
+                    disabledCheckedThumbColor = Color.White,
+                    disabledCheckedTrackColor = colorScheme.secondary,
+                    disabledCheckedBorderColor = Color.Transparent,
                 ),
             )
         }

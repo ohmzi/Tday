@@ -45,6 +45,17 @@ import kotlin.math.roundToLong
  */
 val LocalTdayMotionScale = compositionLocalOf<Float?> { null }
 
+/**
+ * The device's half of that number, published alongside it.
+ *
+ * A second local and not a second read. The observer behind it is one registration
+ * for the whole app, and a feed that asked per row would be a subscription leak
+ * dressed up as a preference — so both halves travel down the same way. They were the
+ * same number by construction until the in-app switch existed; now a wait has to be
+ * able to say which of the two it is timed against. See [effectiveMotionScale].
+ */
+val LocalTdaySystemMotionScale = compositionLocalOf<Float?> { null }
+
 /** What the platform reports when nobody has moved the slider, and our fallback. */
 private const val UNSCALED = 1f
 
@@ -81,22 +92,57 @@ private fun readAnimatorScale(resolver: ContentResolver): Float =
  * obeys whether or not anybody wrote code for it. [reduceInApp] cannot be: that
  * context belongs to the composition and no composable can substitute one for its own
  * subtree. So the in-app switch reaches exactly the motion that *asks* — anything
- * built on [rememberTdayMotionEnabled], [rememberTdayMotionScale] or [scaledDelay] —
- * and an animation that leaves its timing to Compose keeps animating at the device's
- * scale. Which is to say: on Android, honouring the preference is a thing a call site
- * does, not a thing it gets. The site-by-site migration is the `reduced-motion-coverage`
- * item in `docs/motion/LEDGER.md`; this function is what it migrates onto.
+ * built on [rememberTdayMotionEnabled] or [rememberTdayMotionScale] — and an
+ * animation that leaves its timing to Compose keeps animating at the device's scale.
+ * The site-by-site migration is the `reduced-motion-coverage` item in
+ * `docs/motion/LEDGER.md`; this function is what it migrates onto.
+ *
+ * For an animation that is a coverage gap. For a *wait* it is a correctness hazard,
+ * and that is the half to read this doc for. Before this function the two numbers
+ * were the same by construction, so any [scaledDelay] was in step with whatever it
+ * was covering whichever one it was handed. Now they can differ, and a wait given the
+ * wrong one breaks `docs/motion.md`'s fifth idiom rule from the side nobody watches:
+ * the motion is kept and the wait is removed, so the app tears a surface out from
+ * under a transition that is still running — which is the jump the wait existed to
+ * hide. The rule at a call site is therefore not "take the app's scale", it is:
+ *
+ * > A wait runs on the clock of the motion it is covering. [rememberTdayMotionScale]
+ * > when that motion is gated on the preference, [rememberSystemMotionScale] when it
+ * > is a Compose animation nobody has gated yet.
+ *
+ * Every site on the second of those names the un-gated animation it is waiting for,
+ * so whoever migrates that animation is told, at the wait, that the wait moves with
+ * it.
  */
 internal fun effectiveMotionScale(systemScale: Float, reduceInApp: Boolean): Float =
     if (reduceInApp) REDUCED else systemScale
 
 /**
- * The platform's half of the answer, live.
+ * The clock Compose is running animations on.
  *
- * Public for the one caller that has to tell the two halves apart: the Settings row
- * that owns the in-app switch, which has to say "Android has already done this"
- * instead of offering a switch that cannot change anything. Everything else wants
- * [rememberTdayMotionScale], which is the composed number.
+ * The device's answer with the in-app switch left out of it. Two callers want exactly
+ * that and nothing else: a wait covering an animation the switch does not reach (see
+ * [effectiveMotionScale]), and the Settings row that owns the switch, which has to
+ * say "Android has already done this" rather than offer a control that cannot change
+ * anything. Everything gated on the preference wants [rememberTdayMotionScale].
+ *
+ * Reads the local rather than the setting, which makes it as cheap per *row* as
+ * [rememberTdayMotionEnabled] — the registration behind it is
+ * [ProvideTdayMotionScale]'s. `null` means no provider upstream, and the fallback is
+ * a one-shot read for the same reason [rememberTdayMotionScale]'s is: a surface that
+ * escaped the provider should still obey the setting, and gives up only noticing it
+ * change.
+ */
+@Composable
+fun rememberSystemMotionScale(): Float {
+    val provided = LocalTdaySystemMotionScale.current
+    if (provided != null) return provided
+    val context = LocalContext.current.applicationContext
+    return remember(context) { readAnimatorScale(context.contentResolver) }
+}
+
+/**
+ * The platform's half of the answer, live — the one read the locals are fed from.
  *
  * The observer is what turns a change in the setting into a recomposition. Compose's
  * own `MotionDurationScale` re-reads the setting on every animation frame and so
@@ -106,13 +152,13 @@ internal fun effectiveMotionScale(systemScale: Float, reduceInApp: Boolean): Flo
  * animations off from the quick settings tile while the app is open would go on
  * seeing the animated build until they navigated away.
  *
- * Call it once per screen at most. [rememberTdayMotionEnabled] is read per *row* in a
- * feed, and a `ContentObserver` per visible row would be a subscription leak dressed
- * up as a preference — which is why the app-wide registration is [ProvideTdayMotionScale]'s
- * job and the rows read a composition local instead.
+ * Private, and called exactly once. A `ContentObserver` per visible row would be a
+ * subscription leak dressed up as a preference, which is why the app-wide
+ * registration is [ProvideTdayMotionScale]'s job and every reader downstream is
+ * handed a composition local instead.
  */
 @Composable
-fun rememberSystemMotionScale(): Float {
+private fun rememberObservedSystemMotionScale(): Float {
     val resolver = LocalContext.current.contentResolver
     var scale by remember(resolver) { mutableFloatStateOf(readAnimatorScale(resolver)) }
     DisposableEffect(resolver) {
@@ -166,8 +212,13 @@ private fun rememberInAppReduceMotion(): Boolean {
  */
 @Composable
 fun ProvideTdayMotionScale(content: @Composable () -> Unit) {
-    val scale = effectiveMotionScale(rememberSystemMotionScale(), rememberInAppReduceMotion())
-    CompositionLocalProvider(LocalTdayMotionScale provides scale, content = content)
+    val systemScale = rememberObservedSystemMotionScale()
+    val scale = effectiveMotionScale(systemScale, rememberInAppReduceMotion())
+    CompositionLocalProvider(
+        LocalTdaySystemMotionScale provides systemScale,
+        LocalTdayMotionScale provides scale,
+        content = content,
+    )
 }
 
 /**
@@ -226,7 +277,10 @@ fun rememberTdayMotionEnabled(): Boolean = rememberTdayMotionScale() != 0f
  * beat of choreography and an unexpected wait costs the user the app.
  *
  * @param millis How long the wait is at 1x.
- * @param scale The animator duration scale, from [rememberTdayMotionScale].
+ * @param scale The clock the covered motion runs on — [rememberTdayMotionScale] where
+ *   that motion is gated on the preference, [rememberSystemMotionScale] where it is a
+ *   Compose animation nobody has gated. [effectiveMotionScale] has the argument for
+ *   why those are two different numbers now.
  */
 suspend fun scaledDelay(millis: Long, scale: Float) {
     delay(scaledDelayMillis(millis, scale))

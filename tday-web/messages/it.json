@@ -1019,7 +1019,7 @@
         "title": "Riduci il movimento",
         "summary": "Disattiva le animazioni di T'Day senza cambiare il resto del telefono.",
         "keywords": "movimento, animazione, animazioni, ridurre, accessibilità, fermo, transizioni, vertigini",
-        "body": "Nelle impostazioni c'è un interruttore «Riduci il movimento». Attivo, T'Day smette di animare: righe, fogli e schermate vanno dritti dove stavano andando, e ogni attesa che copriva un'animazione se ne va con essa, quindi l'app diventa più veloce, non più lenta. Nient'altro cambia: le stesse schermate nello stesso ordine, solo già arrivate.",
+        "body": "Nelle impostazioni c'è un interruttore «Riduci il movimento». Attivo, T'Day smette di riprodurre le animazioni che scrive da sé: un'attività si spunta, si barra e se ne va in un colpo solo invece che in tre tempi, il suggerimento di scorrimento e i coriandoli non compaiono, e l'illustrazione del giorno vuoto è semplicemente lì invece di salire al suo posto. Ogni attesa che serviva solo a coprirne una se ne va con essa, quindi l'app diventa più veloce, non più lenta. Lo scorrimento tra schermate e i fogli che salgono sono animazioni di Android e non di T'Day: quelli continuano a seguire l'impostazione delle animazioni del tuo telefono.",
         "tip": "Toglie movimento e basta. Se l'impostazione delle animazioni di Android è già disattivata, T'Day è già fermo e l'interruttore lo dice invece di proporre di annullarlo."
       },
       "floaters-vs-todos": {

@@ -1019,7 +1019,7 @@
         "title": "Reduce motion",
         "summary": "Turn T'Day's animations off without changing the rest of your phone.",
         "keywords": "motion, animation, animations, reduce motion, accessibility, vestibular, still, transitions, dizzy",
-        "body": "Settings has a Reduce motion switch. With it on, T'Day stops animating: rows, sheets and screens go straight to where they were heading, and every wait that was there to cover an animation goes with it — so the app gets faster, not slower. Nothing else changes: the same screens in the same order, just already arrived.",
+        "body": "Settings has a Reduce motion switch. With it on, T'Day stops playing the animations it writes itself: a task ticks off, strikes through and leaves at once instead of over three beats, the swipe hint and the confetti stay away, and the empty-day illustration is simply there rather than rising into place. Every wait that was only there to cover one of those goes with it, so the app gets faster rather than slower. Sliding between screens, and sheets coming up, are Android's own animations rather than T'Day's, so those keep following your phone's animation setting.",
         "tip": "It only ever takes motion away. If Android's own animation setting is already off, T'Day is already still, and the switch says so instead of offering to undo it."
       },
       "floaters-vs-todos": {

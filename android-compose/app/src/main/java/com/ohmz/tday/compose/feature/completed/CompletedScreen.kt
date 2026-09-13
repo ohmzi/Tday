@@ -598,28 +598,45 @@ private fun CompletedSwipeRow(
         restorePhase == CompletedRestorePhase.Completed || restorePhase == CompletedRestorePhase.Unchecked
     val isFading = restorePhase == CompletedRestorePhase.Fading
     val isRestoring = restorePhase != CompletedRestorePhase.Completed
+    val restoreMotionEnabled = rememberTdayMotionEnabled()
+    // Gated like the beats in front of it. The last leg of the restore is timed
+    // against this fade, so a fade still running while its own wait had been zeroed
+    // would pull the row out of the list at full opacity — exactly the pop that leg
+    // exists to prevent.
     val rowAlpha by animateFloatAsState(
         targetValue = if (isFading) 0f else 1f,
-        animationSpec = tween(
-            durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
-            easing = TdayMotionTokens.Easings.Standard,
-        ),
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "completedRestoreRowAlpha",
     )
     val rowScale by animateFloatAsState(
         targetValue = if (isFading) 0.985f else 1f,
-        animationSpec = tween(
-            durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
-            easing = TdayMotionTokens.Easings.Standard,
-        ),
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "completedRestoreRowScale",
     )
     val rowOffsetY by animateDpAsState(
         targetValue = if (isFading) (-10).dp else 0.dp,
-        animationSpec = tween(
-            durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
-            easing = TdayMotionTokens.Easings.Standard,
-        ),
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "completedRestoreRowOffsetY",
     )
     // The rule retracts the way it swept. `animateFloatAsState` starts AT its
@@ -628,10 +645,10 @@ private fun CompletedSwipeRow(
     val titleStrikeProgress =
         rememberTaskStrikeProgress(showStrikethrough, "completedRestoreTitleStrike")
     var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
-    val restoreMotionEnabled = rememberTdayMotionEnabled()
     // The number behind that switch, for this row's waits rather than its specs:
     // the hint's two holds and the three legs of the restore are gaps between
-    // animations Compose is already scaling. See [scaledDelay].
+    // beats this row gates on [restoreMotionEnabled], which is what makes the
+    // app's own scale the right clock for them. See [scaledDelay].
     val restoreMotionScale = rememberTdayMotionScale()
     // The two beats this row cut straight to. The tint answers the finger, so it is
     // Quick; the title colour travels with the rule crossing it, so Emphasis — and

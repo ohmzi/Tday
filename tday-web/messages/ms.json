@@ -1019,7 +1019,7 @@
         "title": "Kurangkan gerakan",
         "summary": "Matikan animasi T'Day tanpa mengubah tetapan telefon yang lain.",
         "keywords": "gerakan, animasi, kurangkan, kebolehcapaian, pegun, peralihan, pening",
-        "body": "Tetapan mempunyai suis Kurangkan gerakan. Apabila dihidupkan, T'Day berhenti menganimasikan: baris, helaian dan skrin terus berada di tempat yang dituju, dan setiap masa menunggu yang menutupi animasi turut hilang — jadi apl menjadi lebih pantas, bukan lebih perlahan. Tiada apa-apa lagi berubah: skrin yang sama dalam susunan yang sama, cuma sudah sampai.",
+        "body": "Tetapan mempunyai suis Kurangkan gerakan. Apabila dihidupkan, T'Day berhenti memainkan animasi yang ditulisnya sendiri: tugasan ditanda, dipangkah dan hilang sekali gus, bukan dalam tiga rentak; petunjuk leret dan konfeti tidak muncul; dan ilustrasi hari kosong terus berada di situ dan bukannya naik ke tempatnya. Setiap masa menunggu yang hanya ada untuk menutup salah satu daripadanya turut hilang — jadi apl menjadi lebih pantas, bukan lebih perlahan. Leretan antara skrin dan helaian yang naik ialah animasi Android dan bukan T'Day, jadi yang itu terus mengikut tetapan animasi telefon anda.",
         "tip": "Ia hanya membuang gerakan. Jika tetapan animasi Android sendiri sudah dimatikan, T'Day memang sudah pegun dan suis itu menyatakannya, bukan menawarkan untuk membatalkannya."
       },
       "floaters-vs-todos": {

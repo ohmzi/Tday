@@ -2373,20 +2373,33 @@ private fun CalendarTodoRow(
         state = swipeRevealState,
         label = "calendarTaskSwipeOffset",
     )
+    val motionEnabled = rememberTdayMotionEnabled()
+    // Gated like the beats in front of it. The last leg of the check-off is timed
+    // against this fade, so a fade still running while its own wait had been zeroed
+    // would pull the row out of the list at full opacity — exactly the pop that leg
+    // exists to prevent.
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
-        animationSpec = tween(
-            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = TdayMotionTokens.Easings.Standard,
-        ),
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "calendarTaskCompletionAlpha",
     )
     val completionOffsetY by animateDpAsState(
         targetValue = if (completionFading) (-10).dp else 0.dp,
-        animationSpec = tween(
-            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = TdayMotionTokens.Easings.Standard,
-        ),
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "calendarTaskCompletionOffsetY",
     )
     // This used to be computed and never read — a 320ms animation nothing drew,
@@ -2395,10 +2408,10 @@ private fun CalendarTodoRow(
     val titleStrikeProgress = rememberTaskStrikeProgress(localStruck, "calendarTaskTitleStrike")
     var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     var noteLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
-    val motionEnabled = rememberTdayMotionEnabled()
     // The number behind that switch, for this row's waits rather than its specs:
     // the hint's two holds and the three legs of the check-off are all gaps
-    // between animations Compose is already scaling. See [scaledDelay].
+    // between beats this row gates on [motionEnabled], which is what makes the
+    // app's own scale the right clock for them. See [scaledDelay].
     val rowMotionScale = rememberTdayMotionScale()
     val toggleTint by animateColorAsState(
         targetValue = if (localChecked) {
@@ -2757,20 +2770,33 @@ private fun CalendarCompletedTodoRow(
     var fading by remember(item.id) { mutableStateOf(false) }
     val showCompletedState = !pendingUncomplete
     val showStrikethrough = !unstruck
+    val restoreMotionEnabled = rememberTdayMotionEnabled()
+    // Gated like the beats in front of it. The last leg of the restore is timed
+    // against this fade, so a fade still running while its own wait had been zeroed
+    // would pull the row out of the list at full opacity — exactly the pop that leg
+    // exists to prevent.
     val rowAlpha by animateFloatAsState(
         targetValue = if (fading) 0f else 1f,
-        animationSpec = tween(
-            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = TdayMotionTokens.Easings.Standard,
-        ),
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "calendarCompletedRestoreAlpha",
     )
     val rowOffsetY by animateDpAsState(
         targetValue = if (fading) (-10).dp else 0.dp,
-        animationSpec = tween(
-            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = TdayMotionTokens.Easings.Standard,
-        ),
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "calendarCompletedRestoreOffsetY",
     )
     // Un-completing is the check-off played backwards, and the rule retracts the
@@ -2780,7 +2806,6 @@ private fun CalendarCompletedTodoRow(
     val titleStrikeProgress =
         rememberTaskStrikeProgress(showStrikethrough, "calendarCompletedTitleStrike")
     var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
-    val restoreMotionEnabled = rememberTdayMotionEnabled()
     // Same three legs as the check-off, so the same clock. See [scaledDelay].
     val restoreMotionScale = rememberTdayMotionScale()
     val restoreToggleTint by animateColorAsState(
