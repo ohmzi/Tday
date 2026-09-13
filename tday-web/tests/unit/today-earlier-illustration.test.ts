@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   OVERDUE_ROWS_FADE_MS,
   TODAY_EARLIER_EXIT_MS,
-  earlierHandoffVacatesSlot,
+  earlierSlotChangesHands,
+  emptySceneIsLeaving,
   shouldShowTodayEmptyIllustration,
 } from "@/features/todayTodos/lib/todayEarlierIllustration";
 import type { EarlierHandoff } from "@/features/todayTodos/lib/useEarlierExpandHandoff";
@@ -186,43 +187,52 @@ describe("shouldShowTodayEmptyIllustration", () => {
 });
 
 /**
- * The geometry half of the hand-off, which is a different question from the ink
- * half: whether the beat actually gives the slot up. Worth its own coverage
- * because the answer is invisible in the happy path — the scene unmounts either
- * way — and only shows up on the path where it stays.
+ * Which taps are sequenced at all, which is a different question from who ends
+ * up owning the slot: a tap that swaps nothing gets no beat, and the scene it
+ * would have played a departure on is left exactly where it is.
  */
-describe("earlierHandoffVacatesSlot", () => {
-  it("is false whenever the scene is not the half that is leaving", () => {
-    for (const celebrate of [false, true]) {
-      for (const earlierHandoff of ["idle", "rows-leaving"] as EarlierHandoff[]) {
-        expect(earlierHandoffVacatesSlot({ earlierHandoff, celebrate })).toBe(false);
+describe("earlierSlotChangesHands", () => {
+  it("is false on a screen that still has current tasks — there is no scene in the swap", () => {
+    for (const hasEarlierItems of [false, true]) {
+      for (const celebrate of [false, true]) {
+        expect(
+          earlierSlotChangesHands({ showEmpty: false, hasEarlierItems, celebrate }),
+        ).toBe(false);
       }
     }
   });
 
-  it("vacates on the ordinary hand-off: the rows are taking the slot", () => {
+  it("is false with no Earlier bucket to trade with", () => {
     expect(
-      earlierHandoffVacatesSlot({ earlierHandoff: "scene-leaving", celebrate: false }),
+      earlierSlotChangesHands({ showEmpty: true, hasEarlierItems: false, celebrate: false }),
+    ).toBe(false);
+  });
+
+  it("sequences the ordinary tap: empty scope, Earlier holding rows", () => {
+    expect(
+      earlierSlotChangesHands({ showEmpty: true, hasEarlierItems: true, celebrate: false }),
     ).toBe(true);
   });
 
-  it("keeps the slot for a hand-off that starts inside the celebration window", () => {
-    // The scene is still on screen when this beat ends, so closing the track
-    // under it would only mean opening it again a frame later — 42vh out from
-    // under Earlier's freshly-arrived rows and straight back under them.
+  it("sequences nothing inside the celebration window", () => {
+    // The fade-then-snap defect, at its source. The scene stays on the slot for
+    // the rest of that window, so a beat here would have played it a departure
+    // it was not making — sinking the scene and the confetti still crossing it
+    // to nothing, then snapping both back when the class came off.
     expect(
-      earlierHandoffVacatesSlot({ earlierHandoff: "scene-leaving", celebrate: true }),
+      earlierSlotChangesHands({ showEmpty: true, hasEarlierItems: true, celebrate: true }),
     ).toBe(false);
   });
 
   it("answers the same question the branch it mirrors answers", () => {
-    // The anti-drift assertion. `shouldShowTodayEmptyIllustration`'s expanded
-    // branch decides whether the scene survives the hand-off; this decides
-    // whether the slot under it closes. They are the same decision read one beat
-    // apart, so a condition added to that branch and not to this one should fail
-    // here rather than in front of a user.
+    // The anti-drift assertion, kept from the predicate this replaced.
+    // `shouldShowTodayEmptyIllustration`'s expanded branch decides whether the
+    // scene survives a tap; this decides whether the tap is sequenced at all.
+    // They are the same decision read one beat apart, so a condition added to
+    // that branch and not to this one should fail here rather than in front of
+    // a user.
     for (const celebrate of [false, true]) {
-      const sceneSurvivesTheHandoff = shouldShowTodayEmptyIllustration({
+      const sceneSurvivesTheTap = shouldShowTodayEmptyIllustration({
         showEmpty: true,
         hasEarlierItems: true,
         earlierExpanded: true,
@@ -230,8 +240,21 @@ describe("earlierHandoffVacatesSlot", () => {
         celebrate,
       });
       expect(
-        earlierHandoffVacatesSlot({ earlierHandoff: "scene-leaving", celebrate }),
-      ).toBe(!sceneSurvivesTheHandoff);
+        earlierSlotChangesHands({ showEmpty: true, hasEarlierItems: true, celebrate }),
+      ).toBe(!sceneSurvivesTheTap);
+    }
+  });
+});
+
+/**
+ * The departure itself — ink and track, one question. `timeline-empty-state-slot.test.ts`
+ * asserts that both class names come off this one answer; this asserts the answer.
+ */
+describe("emptySceneIsLeaving", () => {
+  it("is true only while the scene is the half that is leaving", () => {
+    expect(emptySceneIsLeaving({ earlierHandoff: "scene-leaving" })).toBe(true);
+    for (const earlierHandoff of ["idle", "rows-leaving"] as EarlierHandoff[]) {
+      expect(emptySceneIsLeaving({ earlierHandoff })).toBe(false);
     }
   });
 });

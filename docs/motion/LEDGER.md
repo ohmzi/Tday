@@ -473,7 +473,7 @@ Restore it from git history rather than adjusting the number.
 ### PR 24b — the Earlier collapse gets the expand’s hand-off
 
 - [x] `web-earlier-collapse-has-no-handoff` — expand is sequenced, collapse is not → two jumps per tap: the illustration remounts into an already-open track and claims its 42vh in one frame, while Earlier's rows hold their own height behind it for the `OVERDUE_ROWS_FADE_MS` `useFadeUnmount` keeps them mounted. That 260 ms gap is the one PR 24a's row used to be worded with; it is counted here · web · Sev 3 · M · Gate V
-- [ ] `web-illustration-pops-back-inside-celebrate-window` — illustration snaps back to full opacity over Earlier's rows, and stays. Paint only, and deliberately kept that way: the hand-off that starts inside the celebration window does not close the scene's slot, because the scene is still there when the beat ends (`earlierHandoffVacatesSlot`). Whatever replaces the snap must not reopen a track either · web · Sev 3 · M · Gate V
+- [x] `web-illustration-pops-back-inside-celebrate-window` — illustration snaps back to full opacity over Earlier's rows, and stays. Paint only, and deliberately kept that way: the hand-off that starts inside the celebration window does not close the scene's slot, because the scene is still there when the beat ends (`earlierHandoffVacatesSlot`). Whatever replaces the snap must not reopen a track either · web · Sev 3 · M · Gate V
 - [ ] `web-celebrate-window-expiry-is-an-untimed-cut` — the 4 s window closes on an unrelated re-render, then hard-cuts · web · Sev 3 · M · Gate V
 
 ### PR 56 — the Earlier chevron says something during the wait

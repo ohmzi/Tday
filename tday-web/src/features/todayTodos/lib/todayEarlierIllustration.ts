@@ -135,38 +135,72 @@ export function shouldShowTodayEmptyIllustration({
   // Earlier's rows the instant that window closes, same as if no completion
   // had just happened here.
   //
-  // `earlierHandoffVacatesSlot` below is this same branch, asked one beat
-  // early: anything that joins this condition has to join that one too, and
-  // the test pairing them is what says so.
+  // `earlierSlotChangesHands` below is this same line read one beat early:
+  // because this keeps the scene, a tap that lands inside the window swaps
+  // nothing and is not sequenced at all. Anything that joins this condition
+  // has to join that one too, and the test pairing them is what says so.
   return celebrate;
 }
 
 /**
- * Whether the hand-off in flight is handing the SLOT over, as opposed to only
- * fading the ink sitting on it.
+ * Whether a tap on Earlier's header actually swaps who occupies the slot the
+ * scene and Earlier's rows share — the one thing `useEarlierExpandHandoff`
+ * cannot work out for itself, since it knows which way its own toggle is going
+ * and nothing about what is on the other side of it.
  *
- * They are usually the same thing and once were: the illustration exits, the
- * 42vh it held closes under the fade, Earlier's rows land in the space
- * (`.tday-empty-slot` / `.tday-empty-exit` in globals.css). Not on the
- * celebrating path. A tap that lands inside requirement 1's window hands
- * nothing over — `shouldShowTodayEmptyIllustration`'s last line keeps the scene
- * on screen for the rest of that window, above Earlier's rows rather than
- * instead of them — so the track it holds must not close, or the beat ends by
- * taking 42vh out from under those rows and then giving it straight back.
+ * One expression covers both directions because it describes the swap rather
+ * than a direction: the scene occupies this slot exactly while Earlier is
+ * closed, so a tap trades the two whenever the scope is empty and Earlier has
+ * rows to trade with. A screen with current tasks on it has no scene in the
+ * swap at all and stays the plain immediate toggle it always was.
  *
- * The ink is left alone here on purpose: the fade-then-snap that path plays is
- * a known defect with a row of its own
- * (`web-illustration-pops-back-inside-celebrate-window`), and it is a defect in
- * paint. This is only about whether the page under it moves.
+ * `!celebrate` is the whole of the fade-then-snap defect. Inside requirement
+ * 1's window the scene is not going anywhere —
+ * `shouldShowTodayEmptyIllustration`'s last line keeps it on the slot until the
+ * window closes — so a tap there swaps nothing, and sequencing it anyway made
+ * the scene play a departure it was not making: `.tday-empty-exit` sank it, and
+ * the confetti still crossing it, to nothing; then the class came off with the
+ * beat and snapped both back to full opacity, where they stayed for the rest of
+ * the window. There is no exit to shorten here and no faded state to hold — the
+ * fix is that the departure was never happening. It is also the same rule
+ * `TODAY_EARLIER_EXIT_MS` argues above, read from the other side: a beat held
+ * open in front of a screen where nothing is moving is a dead wait, and
+ * removing the trip has to remove the wait with it.
  */
-export function earlierHandoffVacatesSlot({
-  earlierHandoff,
+export function earlierSlotChangesHands({
+  showEmpty,
+  hasEarlierItems,
   celebrate,
 }: {
-  /** Which half of the swap is mid-exit, if either (see `useEarlierExpandHandoff`). */
-  earlierHandoff: EarlierHandoff;
+  /** Zero current (non-Earlier) tasks for this scope, not loading, not mid-search. */
+  showEmpty: boolean;
+  /** This scope's own "Earlier" bucket actually holds overdue tasks. */
+  hasEarlierItems: boolean;
   /** A completion (this tab's or a remote one) just emptied this scope's current tasks. */
   celebrate: boolean;
 }): boolean {
-  return earlierHandoff === "scene-leaving" && !celebrate;
+  return showEmpty && hasEarlierItems && !celebrate;
+}
+
+/**
+ * Whether the scene is LEAVING right now — the ink sinking and the track under
+ * it closing, one departure asked once.
+ *
+ * The two were a class each and a question each for exactly as long as they
+ * could disagree: a hand-off inside the celebration window closed no track,
+ * because the scene was still there when the beat ended, but faded its ink
+ * anyway. That asymmetry is gone — such a hand-off no longer starts, see
+ * `earlierSlotChangesHands` — and with it the reason for two questions. Two
+ * class names survive because the stylesheet needs them (the ink is an
+ * animation, the track is a transition on a grid), but they go on together or
+ * not at all: a scene whose ink leaves without its box, or the other way
+ * round, reads as two things happening to it rather than as it leaving.
+ */
+export function emptySceneIsLeaving({
+  earlierHandoff,
+}: {
+  /** Which half of the swap is mid-exit, if either (see `useEarlierExpandHandoff`). */
+  earlierHandoff: EarlierHandoff;
+}): boolean {
+  return earlierHandoff === "scene-leaving";
 }

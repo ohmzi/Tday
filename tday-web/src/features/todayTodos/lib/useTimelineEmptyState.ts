@@ -3,7 +3,10 @@ import { isSameDay } from "date-fns";
 import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
 import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
 import { taskJustCompleted } from "@/lib/task-completion-signal";
-import { shouldShowTodayEmptyIllustration } from "./todayEarlierIllustration";
+import {
+  earlierSlotChangesHands,
+  shouldShowTodayEmptyIllustration,
+} from "./todayEarlierIllustration";
 import type { EarlierHandoff } from "./useEarlierExpandHandoff";
 import { isTimelineScope, splitEarlierItems } from "./timelineScopeHelpers";
 import type { TimelineItem, TimelineScope } from "../component/AllTasksTimelineContainer";
@@ -132,16 +135,15 @@ export function useTimelineEmptyState({
     earlierHandoff,
     celebrate,
   });
-  // What a tap on Earlier's header does to the SLOT, which is the one thing
-  // `useEarlierExpandHandoff` cannot work out for itself: it knows which way
-  // the toggle is going, not whether there is anything on the other side of it
-  // to sequence against. One expression covers both directions because it
-  // describes the swap rather than a direction — the scene occupies this slot
-  // exactly while Earlier is closed, so a tap trades the two whenever the
-  // scope is empty and Earlier has rows to trade with. A screen with current
-  // tasks on it has no scene in the swap at all, and stays the plain
-  // immediate toggle it always was.
-  const earlierSlotChangesHands = showEmpty && hasEarlierItems;
+  // What a tap on Earlier's header does to the SLOT — the argument
+  // `useEarlierExpandHandoff` sequences on, derived here from the same three
+  // signals the block above reads so the two answers cannot drift. See its own
+  // doc comment for why one boolean covers both directions of the swap.
+  const slotChangesHands = earlierSlotChangesHands({
+    showEmpty,
+    hasEarlierItems,
+    celebrate,
+  });
   // Today's own "Earlier" bucket (requirement 2): always reachable at the
   // bottom of the screen whenever it holds anything — independent of
   // `showEmptyIllustration`, so it renders the same whether Today still has
@@ -161,7 +163,7 @@ export function useTimelineEmptyState({
     isDayDone,
     celebrate,
     showEmptyIllustration,
-    earlierSlotChangesHands,
+    earlierSlotChangesHands: slotChangesHands,
     showTodayEarlierSection,
   };
 }
