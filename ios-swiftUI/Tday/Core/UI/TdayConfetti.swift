@@ -19,7 +19,7 @@ struct TdayConfetti: View {
     /// belongs to the list it happened on.
     let accentColor: Color
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.tdayAnimation) private var tdayAnimation
     /// Set on appear rather than at init: a `View` is re-initialised freely, and
     /// a start date taken in `init` restarts the flight on every one of those.
     @State private var startedAt: Date?
@@ -31,7 +31,7 @@ struct TdayConfetti: View {
     private static let pieces = ConfettiPiece.fan()
 
     var body: some View {
-        if reduceMotion || landed {
+        if !tdayAnimation.isEnabled || landed {
             Color.clear.frame(width: 0, height: 0)
         } else {
             TimelineView(.animation) { timeline in

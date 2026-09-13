@@ -137,7 +137,7 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   `globals.css` argues in place for why anything longer there reads as a stall.
   Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:372`,
-  `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:272`,
+  `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:270`,
   `tday-web/src/globals.css:608`.
 
 ## Delays
@@ -363,7 +363,8 @@ start of its fade looks half-drawn — which is worse than no animation at all,
 because the user cannot tell it from a broken render. Android reads
 `ANIMATOR_DURATION_SCALE` through
 `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayMotion.kt`;
-web uses `prefers-reduced-motion`.
+web uses `prefers-reduced-motion`; iOS reads `accessibilityReduceMotion` through
+`ios-swiftUI/Tday/UI/Theme/TdayMotionEnvironment.swift`.
 
 Android's half of that file answers in two shapes, because the setting is a
 **scale** and not a switch — the user is offered 0x, 0.5x, 1x, 2x, 5x and 10x.
@@ -400,10 +401,25 @@ the wait is removed, so the app tears a surface out from under a transition that
 is still running. Where the choice is available, gating the covered animation is
 the better half of the fix — the run then has one clock instead of two.
 
+iOS has one clock and no switch of its own, so its file is about reach rather
+than arithmetic. `\.tdayAnimation` in the environment answers in both shapes a
+call site needs — `tdayAnimation(TdayMotion.settle)` for anything that takes an
+`Animation?`, and `tdayAnimation.isEnabled` for a `.transition`, which cannot be
+handed a nil because it does not open the transaction it plays in. The value is
+composed rather than stored: an override written by `tdayResolvedMotion()` at the
+app root, falling back to `accessibilityReduceMotion` from the same environment
+wherever nobody has written one. The fallback is what covers the surfaces the root
+cannot reach — a hand-built `UIHostingController`, of which the calendar's pager
+makes one per month page, inherits none of the app's own environment while still
+resolving the system keys from its traits. The override is what makes the answer
+live: an accessor reading a key it never declared a dependency on is right at
+first draw and silent afterwards, which is the runtime half of what this row was
+filed for.
+
 - Android: `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:126` seeds the
   appearance `Animatable` at `1f` — fully arrived — when motion is off, rather
   than at `0f` with the animation skipped.
-- iOS: `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:112` sets `entered = true`
+- iOS: `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:110` sets `entered = true`
   and returns before the `withAnimation` block.
 - Web: `tday-web/src/globals.css:744` switches the scene's animations off and
   pins the sparkle to `opacity: 1`, with the reason in the block.
