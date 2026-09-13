@@ -53,6 +53,13 @@ function hasBox(rect: DOMRect): boolean {
   return rect.width !== 0 || rect.height !== 0;
 }
 
+/**
+ * Every laid-out child's position relative to the container — the "First" of
+ * First-Last-Invert-Play.
+ *
+ * Measured against the container rather than the viewport so a scroll between
+ * the two reads does not register as every row having moved.
+ */
 function offsetsWithin(container: HTMLElement): Map<Element, Offset> {
   const base = container.getBoundingClientRect();
   const offsets = new Map<Element, Offset>();
@@ -64,6 +71,18 @@ function offsetsWithin(container: HTMLElement): Map<Element, Offset> {
   return offsets;
 }
 
+/**
+ * Travels a feed's rows to their new slots instead of letting them teleport.
+ *
+ * Returns the ref to put on the element whose direct children are the rows. It
+ * takes their positions each render, and where one has moved it plays the
+ * difference back as an Emphasis-rung transform — geometry changed, so the rung
+ * is Emphasis rather than Change.
+ *
+ * Does nothing at all where the platform says animation is off, or where
+ * `Element.animate` is absent: in both cases the rows simply appear in their new
+ * slots, which is the finished state rather than a frozen one.
+ */
 export function useRowPlacement<T extends HTMLElement = HTMLElement>(): RefObject<T | null> {
   const containerRef = useRef<T | null>(null);
   const firstRef = useRef<Map<Element, Offset>>(new Map());

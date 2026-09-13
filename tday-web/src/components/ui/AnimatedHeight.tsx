@@ -26,7 +26,7 @@ export default function AnimatedHeight({
   className?: string;
 }) {
   const content = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState<number | undefined>(undefined);
+  const [height, setHeight] = useState<number>();
 
   useLayoutEffect(() => {
     const el = content.current;
@@ -37,13 +37,18 @@ export default function AnimatedHeight({
     // clips (`overflow-hidden`) the next thing the content does.
     if (typeof ResizeObserver === "undefined") return;
 
-    const measure = () => setHeight(el.scrollHeight);
+    /** The content's natural height, which is what the box animates towards. */
+    const measure = () => {
+      setHeight(el.scrollHeight);
+    };
     measure();
     // The content, never the box. Observing the box would feed the animation
     // its own frames back as new measurements.
     const observer = new ResizeObserver(measure);
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   return (

@@ -81,7 +81,9 @@ export function useCelebrationWindowExpiry(
     const remaining = openedAt + windowMs - Date.now();
     if (remaining <= 0) return;
     const timer = setTimeout(retest, remaining);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, [openedAt, windowMs]);
 }
 
