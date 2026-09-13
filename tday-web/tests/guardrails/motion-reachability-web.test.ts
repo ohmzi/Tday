@@ -68,13 +68,31 @@ const TS_FILES = walkFiles(SRC, [".ts", ".tsx"]);
 const TSX_FILES = TS_FILES.filter((f) => f.endsWith(".tsx"));
 
 /**
+ * Blanks line and block comments, preserving both length and line count so reported line
+ * numbers stay true. Every rule below reads this rather than the raw file: prose describing a
+ * defect must not read as the defect, and a class name mentioned only in a comment is not a
+ * call site. The `[^:]` guard keeps `https://` in a string from being eaten.
+ */
+function stripTsComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/(^|[^:])\/\/[^\n]*/g, (m, lead: string) => lead + " ".repeat(m.length - lead.length));
+}
+
+const CODE = new Map<string, string>(
+  TS_FILES.map((f) => [f, stripTsComments(readSource(f))]),
+);
+
+const codeOf = (file: string) => CODE.get(file) ?? stripTsComments(readSource(file));
+
+/**
  * Where a class name or a keyframe name can legitimately be USED. Markup and code only:
  * globals.css is deliberately excluded, because a dead utility naming its own dead keyframe
  * would otherwise keep itself alive. CSS-side references are resolved separately, and only
  * through rules that are themselves reachable.
  */
 const CALL_SITE_TEXT = [
-  ...TS_FILES.map(readSource),
+  ...TS_FILES.map(codeOf),
   existsSync(INDEX_HTML) ? readSource(INDEX_HTML) : "",
 ].join("\n");
 
@@ -283,7 +301,7 @@ describe("motion reachability B — a Radix enter without its exit", () => {
     const violations: string[] = [];
 
     for (const file of TSX_FILES) {
-      const source = readSource(file);
+      const source = codeOf(file);
       if (!source.includes(RADIX_ENTER)) continue;
       for (const { text, line } of classNameValues(source)) {
         if (!text.includes(RADIX_ENTER)) continue;
@@ -304,7 +322,7 @@ describe("motion reachability B — a Radix enter without its exit", () => {
     // letting the rule pass on a file it no longer understands.
     const unreadable: string[] = [];
     for (const file of TSX_FILES) {
-      const source = readSource(file);
+      const source = codeOf(file);
       const total = source.split(RADIX_ENTER).length - 1;
       if (total === 0) continue;
       const read = classNameValues(source).reduce(
@@ -351,11 +369,14 @@ function presenceIdentifiers(source: string): string[] {
 
 describe("motion reachability C — a portal torn down before its exit can play", () => {
   /**
-   * Files that legitimately return null on an open flag because they declare no motion at all.
-   * `PendingApprovalScreen.tsx` is the shape but not the defect — it is a full-screen takeover
-   * with no enter and no exit, so there is nothing for the guard to cut short. It is tracked
-   * under its own ledger row, not this one. Listing it by name keeps the rule strict: the day
-   * it gains an animation, it has to come off this list.
+   * Deliberate exemptions, by path. Empty, and it should stay that way.
+   *
+   * Note what does NOT need to be listed here: a file that returns null on an open flag but
+   * declares no motion at all is already out of scope, because the scope test below asks for an
+   * enter animation or a Modal portal first. `PendingApprovalScreen.tsx` is exactly that shape —
+   * a full-screen takeover with no enter and no exit — so the guard there cuts nothing short and
+   * the rule stays quiet without an entry. The day it gains an animation, it starts failing,
+   * which is the point.
    */
   const SYNCHRONOUS_TEARDOWN_ALLOWLIST: string[] = [];
 
@@ -363,7 +384,7 @@ describe("motion reachability C — a portal torn down before its exit can play"
     const violations: string[] = [];
 
     for (const file of TSX_FILES) {
-      const source = readSource(file);
+      const source = codeOf(file);
       const rel = relPath(file);
       if (SYNCHRONOUS_TEARDOWN_ALLOWLIST.includes(rel)) continue;
 
@@ -376,15 +397,19 @@ describe("motion reachability C — a portal torn down before its exit can play"
       const presence = presenceIdentifiers(source);
       const lines = source.split("\n");
       for (let i = 0; i < lines.length; i++) {
-        const guard = /if\s*\(\s*!\s*([A-Za-z_$][\w$]*)\s*\)\s*return\s+null/.exec(lines[i]);
+        const guard = /if\s*\(([^)]*)\)\s*return\s+null/.exec(lines[i]);
         if (!guard) continue;
-        const flag = guard[1];
-        if (!OPEN_FLAG.test(flag)) continue;
-        if (presence.includes(flag)) continue;
-        violations.push(
-          `${rel}:${i + 1} → \`if (!${flag}) return null\` drops the subtree on the frame ` +
-            `${flag} goes false; gate it on ${PRESENCE_HOOKS[0]}(${flag}) instead`,
-        );
+        // Every flag the guard negates, not just the first — `if (!open || !data)` drops the
+        // subtree on `open` exactly as hard as `if (!open)` does.
+        for (const m of guard[1].matchAll(/!\s*([A-Za-z_$][\w$]*)/g)) {
+          const flag = m[1];
+          if (!OPEN_FLAG.test(flag)) continue;
+          if (presence.includes(flag)) continue;
+          violations.push(
+            `${rel}:${i + 1} → \`if (!${flag}) return null\` drops the subtree on the frame ` +
+              `${flag} goes false; gate it on ${PRESENCE_HOOKS[0]}(${flag}) instead`,
+          );
+        }
       }
     }
 
@@ -397,7 +422,7 @@ describe("motion reachability C — a portal torn down before its exit can play"
     const violations: string[] = [];
 
     for (const file of TSX_FILES) {
-      const source = readSource(file);
+      const source = codeOf(file);
       const rel = relPath(file);
       const lines = source.split("\n");
       const presence = presenceIdentifiers(source);
@@ -466,7 +491,7 @@ describe("motion reachability D — view transitions that can never be triggered
    * `document.startViewTransition`, directly or via React Router's own `viewTransition` opt-in.
    */
   const triggers = TS_FILES.filter((f) => {
-    const source = readSource(f);
+    const source = codeOf(f);
     return (
       /\bstartViewTransition\s*\(/.test(source) ||
       /\bviewTransition\s*[:=]/.test(source) ||

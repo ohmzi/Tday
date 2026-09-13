@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useEditCalendarTodo } from "@/features/calendar/query/update-calendar-todo";
 import { useEditCalendarTodoInstance } from "@/features/calendar/query/update-calendar-todo-instance";
 import { TodoItemType } from "@/types";
@@ -11,6 +12,7 @@ import {
   ModalTitle,
   ModalDescription,
   ModalFooter,
+  useModalPresence,
 } from "@/components/ui/Modal";
 
 export type PendingReschedule = {
@@ -22,7 +24,10 @@ export type PendingReschedule = {
 };
 
 type ConfirmRescheduleRecurringProps = {
-  pending: PendingReschedule;
+  // Nullable, and mounted unconditionally by CalendarClient. It used to be non-null and
+  // mounted only while a reschedule was pending, which meant the component was taken away on
+  // the same frame the user answered it — no flag inside it could have saved the exit.
+  pending: PendingReschedule | null;
   open: boolean;
   onClose: () => void;
 };
@@ -36,9 +41,18 @@ export default function ConfirmRescheduleRecurring({
   const { editCalendarTodo } = useEditCalendarTodo();
   const { editCalendarTodoInstance } = useEditCalendarTodoInstance();
 
-  if (!open) return null;
+  // `pending` is cleared the instant a button is pressed, and the card still has the modal's
+  // exit left to play. Holding the last non-null payload keeps those frames rendering the
+  // dialog the user is watching leave, rather than an empty one.
+  const [retained, setRetained] = useState(pending);
+  useEffect(() => {
+    if (pending) setRetained(pending);
+  }, [pending]);
 
-  const { rescheduled, originalDueIso, rruleChecksum } = pending;
+  const present = useModalPresence(open);
+  if (!present || !retained) return null;
+
+  const { rescheduled, originalDueIso, rruleChecksum } = retained;
 
   return (
     <Modal open={open} onOpenChange={(next) => !next && onClose()}>
