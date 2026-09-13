@@ -218,9 +218,9 @@ Restore it from git history rather than adjusting the number.
 
 - [ ] *infra* — `tests/guardrails/motion-exit-animations.test.ts` (5 rules) **+ 4 fixes** · web · S · Gate G
 - ↳ part 1 of 2 of `web-dead-motion-code` — delete `.animate-scroll-left` (`globals.css:300`) + `.animate-task-complete` (`:529`). Box lives under **PR 18**.
-- [ ] `web-centered-selector-has-no-exit` — Radix unmounts overlay + card on the same frame · web · Sev 3 · XS · Gate G
+- [x] `web-centered-selector-has-no-exit` — Radix unmounts overlay + card on the same frame · web · Sev 3 · XS · Gate G
 - [ ] `web-sheet-overlay-outruns-panel` — overlay has no duration → 0.15 s fallback vs panel's 300/500 ms · web · Sev 2 · XS · Gate G
-- [ ] *new, not one of the 109* — `InstallPromptBanner.tsx:8` — `return null` against `animate-in slide-in-from-bottom-4` at `:14` · web · Sev 2 · XS · Gate G
+- [x] *new, not one of the 109* — `InstallPromptBanner.tsx:8` — `return null` against `animate-in slide-in-from-bottom-4` at `:14` · web · Sev 2 · XS · Gate G
 
 ### PR G8 — pbxproj registration and the zero-test assertion
 
@@ -255,7 +255,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 17b — the web modal exit
 
-- [ ] `web-modal-has-no-exit` — `if (!isOpen) return null`; 8 call sites blink out · web · Sev 3 · M · Gate V
+- [x] `web-modal-has-no-exit` — `if (!isOpen) return null`; 8 call sites blink out · web · Sev 3 · M · Gate V
 
 ### PR 51 — three web surfaces with no transition at all
 
@@ -800,7 +800,7 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 
 ### PR 163 — route change handover
 
-- [ ] `web:rows-completion-css#root-view-transition-vs-route-fade` — root view transition vs route fade · web · Sev 2 · S · Gate G
+- [x] `web:rows-completion-css#root-view-transition-vs-route-fade` — root view transition vs route fade · web · Sev 2 · S · Gate G
 - [ ] `android:nav-settings#10` — 10 · and · Sev 1 · XS · Gate G
 
 ### PR 164 — search bar morph snaps

@@ -4,7 +4,7 @@ import { useDeleteCalendarInstanceTodo } from "@/features/calendar/query/delete-
 import { TodoItemType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
-import { Modal, ModalOverlay, ModalHeader, ModalTitle, ModalDescription, ModalContent, ModalFooter } from "@/components/ui/Modal";
+import { Modal, ModalOverlay, ModalHeader, ModalTitle, ModalDescription, ModalContent, ModalFooter, useModalPresence } from "@/components/ui/Modal";
 
 type ConfirmDeleteAllProp = {
   todo: TodoItemType;
@@ -20,7 +20,12 @@ export default function ConfirmDeleteAll({
   const { t: modalDict } = useTranslation("modal");
   const { deleteMutate } = useDeleteCalendarTodo();
   const { deleteInstanceMutate } = useDeleteCalendarInstanceTodo();
-  if (!deleteAllDialogOpen) return null
+  // Held in the tree for the modal's exit rather than dropped on the frame the flag flips.
+  // Modal's own portal already does this (`useModalPresence` in Modal.tsx); repeating the raw
+  // `if (!open) return null` here would take the whole subtree away one level higher up and
+  // undo it.
+  const present = useModalPresence(deleteAllDialogOpen);
+  if (!present) return null;
   return (
     <Modal open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
       <ModalOverlay>
