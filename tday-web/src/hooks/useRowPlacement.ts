@@ -59,6 +59,9 @@ function hasBox(rect: DOMRect): boolean {
  *
  * Measured against the container rather than the viewport so a scroll between
  * the two reads does not register as every row having moved.
+ *
+ * @param container - The element whose direct children are the rows.
+ * @returns Each laid-out child mapped to its offset inside the container.
  */
 function offsetsWithin(container: HTMLElement): Map<Element, Offset> {
   const base = container.getBoundingClientRect();
@@ -82,6 +85,8 @@ function offsetsWithin(container: HTMLElement): Map<Element, Offset> {
  * Does nothing at all where the platform says animation is off, or where
  * `Element.animate` is absent: in both cases the rows simply appear in their new
  * slots, which is the finished state rather than a frozen one.
+ *
+ * @returns The ref to place on the container whose children are the rows.
  */
 export function useRowPlacement<T extends HTMLElement = HTMLElement>(): RefObject<T | null> {
   const containerRef = useRef<T | null>(null);

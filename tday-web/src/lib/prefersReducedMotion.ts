@@ -52,6 +52,9 @@ export function prefersReducedMotion(): boolean {
  * Where the query cannot be asked there is nothing to subscribe to and the value
  * can never change, so the unsubscribe is a deliberate no-op rather than an
  * oversight.
+ *
+ * @param onChange - Called whenever the platform preference flips.
+ * @returns The detach for that listener.
  */
 function subscribe(onChange: () => void): () => void {
   const query = reduceMotionQuery();
