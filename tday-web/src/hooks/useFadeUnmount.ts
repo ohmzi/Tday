@@ -81,3 +81,36 @@ export function useFadeUnmount(expanded: boolean, durationMs: number): boolean {
 
   return mounted;
 }
+
+/**
+ * The other half of the same problem. `useFadeUnmount` keeps a node in the DOM
+ * for the length of its exit; this keeps the node's CONTENT worth looking at
+ * while it is there.
+ *
+ * The two surfaces that needed it both paint from state their own dismissal
+ * clears on the very tick it starts. The selection bar reads `selectedRows`,
+ * and `exitSelection` empties that in the same call that leaves selection mode,
+ * so without this the bar would spend its whole exit saying "0 selected" with
+ * all four actions greyed out — announcing that it has nothing to do, on its
+ * way off the screen. The calendar's search-results panel is the same shape:
+ * clearing the query empties the caller's result list, so the panel would flip
+ * to "No matching tasks" and fade THAT out instead.
+ *
+ * Returns `value` while `visible`, and the last value it saw while visible once
+ * that goes false. The snapshot is taken in an effect rather than during render
+ * so this stays a pure read — on the frame `visible` flips, the ref still holds
+ * what the previous render's effect put there, which is exactly the frame that
+ * needs it.
+ */
+export function useExitSnapshot<T>(value: T, visible: boolean): T {
+  const lastVisible = useRef(value);
+
+  // No dependency array on purpose: `value` is routinely a freshly built array
+  // or string, so a dependency list would either re-run every render anyway or
+  // quietly miss a change behind a stable identity.
+  useEffect(() => {
+    if (visible) lastVisible.current = value;
+  });
+
+  return visible ? value : lastVisible.current;
+}
