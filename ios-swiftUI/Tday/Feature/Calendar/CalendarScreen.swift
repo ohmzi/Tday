@@ -603,7 +603,21 @@ struct CalendarScreen: View {
                 .spring(response: 0.34, dampingFraction: 0.9),
                 value: pendingItems.map(\.id)
             )
-        } else if !viewModel.isLoading {
+        } else {
+            // Deliberately not gated on `viewModel.isLoading`. Nothing on this
+            // screen loads on appear: `CalendarViewModel.init` hydrates from the
+            // cache synchronously, so `items` is the truth from the first frame
+            // and the flag is raised by exactly one thing — `refresh()`, a
+            // user-initiated force sync over a cache that is already populated.
+            // A sync in flight therefore never makes the day's emptiness less
+            // true, and the gate was not withholding a premature answer but
+            // hiding a correct one: the scene blanked for the whole round trip
+            // and left the card sitting over nothing but the watermark.
+            //
+            // The web twin never had the gate: `CalendarClient.tsx` picks the
+            // day's empty panel on `selectedDayTasks.length` alone and puts the
+            // fetch on a small spinner badge in the corner instead, so the panel
+            // stays put across a refetch. This now matches it.
             calendarDayEmptyState
                 .padding(.vertical, 16)
         }
