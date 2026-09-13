@@ -84,8 +84,14 @@ export function stageTaskCompletion(id: string, commit: () => void): void {
       // refetches the row back in. It has to arrive looking untouched — a leftover phase would
       // put it back still ticked and struck, which is the opposite of what Undo promised.
       staged.delete(id);
-      commit();
-      emit();
+      try {
+        commit();
+      } finally {
+        // Subscribers hear about the end of the sequence even if the commit threw. Skipping the
+        // notification would leave any row still on screen rendering the last phase it was told
+        // about — faded to nothing, with no way back.
+        emit();
+      }
     }, TASK_COMPLETION_TOTAL_MS),
   );
   emit();
