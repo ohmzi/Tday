@@ -245,7 +245,16 @@ Restore it from git history rather than adjusting the number.
   - **Duplicate of `ios-settings-dayahead-overlay-snap` (§2.2).** No conflict to resolve — the two filings are a byte-identical one-line insert between `SettingsScreen.swift:274` and `:275`. Ticks with its twin.
 - [x] `ios-onboarding-security-questions-cut` — neither security-questions flag is in the wizard's `.animation` list · ios · Sev 3 · XS · Gate G+X
   - Both flags added to the list at `OnboardingWizardOverlay.swift:119-126`: `isChoosingSecurityQuestions` on the panel spring, `isLoadingSecurityQuestions` on the loading ease. Guarded by `motion-reachability-ios.test.ts` rule B, which fails if either is dropped again.
-- [ ] `ios-security-questions-exits-animate-by-accident` — two of three exits animate only by coincidence · ios · Sev 2 · XS · Gate TF
+- [x] `ios-security-questions-exits-animate-by-accident` — two of three exits animate only by coincidence · ios · Sev 2 · XS · Gate TF
+  - The three exits are the three sites that clear `isChoosingSecurityQuestions`. The one inside
+    the panel — "Back" (`OnboardingWizardOverlay.swift:624`) — flips the gate the card's own
+    `.animation(_:value:)` names, so it is driven by a line keyed to it and pinned by rule B. The
+    other two leave the flow by flipping a *different* flag — the account-mode toggle (`:525`)
+    flips `isCreatingAccount`, "Change setup" (`:550`) sets `step` — and moved only because the
+    card 400 lines up happens to list those two. Both now declare their own transaction with
+    `withAnimation(.spring(response: 0.28, dampingFraction: 0.86))`, the spring that chain already
+    applies to both flags, so the motion is unchanged today and survives the chain changing. TF1
+    row in `docs/verification/phase-5-device-pass.md`.
 
 ### PR 44 — the iOS create-sheet selector overlay
 
