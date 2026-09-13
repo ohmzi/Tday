@@ -114,7 +114,7 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   which is a call site to settle rather than a reason to widen the rung.
   Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
-  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3029`,
+  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3044`,
   `tday-web/src/lib/taskCompletionTiming.ts:36`.
 - **`Emphasis` (320).** 15 Android tweens (eleven of them reached through the
   two create-sheet constants and `TdayFeedItemMotion.PlacementMillis` rather
@@ -307,7 +307,7 @@ same answer from every reviewer.
 Both rungs, inside one motion — the staged check-off every task row in every
 client plays. The row's content fades where it stands at 260 (`Change`):
 `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
-`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3029`,
+`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3044`,
 `tday-web/src/lib/taskCompletionTiming.ts:36`. The rule crossing out the title
 grows across it, so it takes 320 (`Emphasis`):
 `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskStrikethrough.kt:63`,
@@ -385,7 +385,7 @@ change pixels or destroy an argument that is worth more than the tidiness.
 |---|---|---|
 | The 340–420 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/TdayApp.kt:119` (360, nav fade-in); `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5757` (420); `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:214` and `:452` (340 ms hand-off sleeps); `tday-web/src/globals.css:249` (340 ms ripple) | Five values, no two of them the same motion, and nothing that would still be true if they were merged. A rung here would sit one frame from `Emphasis` and could not be told from it by eye — exactly the case the five-rung ladder exists to refuse |
 | The 600–620 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5761` (620); `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:136` (0.62 flash delay) | Both are legs of the search-result reveal, timed against the legs either side of them rather than against a ladder. They are longer than `Scene`, which is the app's longest *motion* — these are waits |
-| iOS sub-frame sequencing constants | `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:133` (0.08 s pre-scroll delay); `ios-swiftUI/Tday/Feature/Completed/CompletedScreen.swift:468` (0.1 s) | Below the two-frame floor the ladder is built on. They order events; they are not motions anybody watches |
+| The iOS sub-frame sequencing constant | `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:133` (0.08 s pre-scroll delay) | Below the two-frame floor the ladder is built on. It orders events; it is not a motion anybody watches. `CompletedScreen.swift`'s 0.1 s was listed here and did not belong: it was the `.easeOut` on a row transition's removal leg, which is a motion somebody watches, and it is now `TdayFeedItemMotion.departure` — a departure that got 50 % longer, deliberately, because this row was the only thing claiming it was a sequencing constant |
 | `cubic-bezier(0.3, 0, 0.4, 1)` | `tday-web/src/globals.css:683` (`--tday-empty-sink-ease`, ridden by `.tday-empty-exit` and by the `.tday-empty-slot` track it closes) | The empty scene *sinking*. Deliberately not `Scene`'s curve read backwards — the exit is played only during an "Earlier" hand-off and is tuned against that hand-off's own timing. Named as a property rather than written twice: the ink and the slot under it have to leave on one curve or they read as two departures |
 | `cubic-bezier(0.25, 1, 0.5, 1)` | `tday-web/src/components/app/RootDock.tsx:122` | The dock's sliding indicator pill. A hard-out curve with no counterpart on Android or iOS, which express the dock with springs |
 | `cubic-bezier(0.22, 0.61, 0.36, 1)` | `tday-web/src/components/ui/AnimatedHeight.tsx:57` | The app's only height transition, declared once in the primitive that owns it — promoted out of the onboarding wizard, where it was written inline. One declaration, one client, and a height animation is the one place a curve's tail is load-bearing against layout. Its 280 ms did not survive the promotion: a box changing size is `Emphasis` by the second idiom rule, and that half was never argued |
