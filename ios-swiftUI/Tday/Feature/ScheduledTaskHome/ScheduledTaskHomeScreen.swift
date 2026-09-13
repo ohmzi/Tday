@@ -311,7 +311,7 @@ struct ScheduledTaskHomeScreen: View {
                                     Spacer(minLength: 12)
 
                                     TaskFloatingActionButton {
-                                        HapticManager.buttonTap()
+                                        HapticManager.buttonPress()
                                         closeSearch()
                                         showingCreateTask = true
                                     }
@@ -732,7 +732,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
             openSwipeTaskID = nil
         }
 
-        HapticManager.taskCompleted()
+        HapticManager.completion()
         SoundManager.taskCompleted()
         withAnimation(.easeInOut(duration: 0.18)) {
             completionPhase = .checked
@@ -1392,6 +1392,11 @@ struct CreateListSheet: View {
                     // so a fast second tap can otherwise reach this same closure
                     // before `.disabled` visually applies and fire a second create.
                     guard canCreate else { return }
+                    // The landing, not the press, earns `completion()` — the header
+                    // button itself only gives the control tap every button gives.
+                    // Creating a list is the same class of event as creating a task
+                    // (`CreateTaskSheet.submit`), so it gets the same pulse.
+                    HapticManager.completion()
                     isSubmitting = true
                     onSubmit(trimmedName, color, iconKey)
                     dismiss()

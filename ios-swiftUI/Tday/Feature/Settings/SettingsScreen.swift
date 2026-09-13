@@ -167,7 +167,7 @@ struct SettingsScreen: View {
     }
 
     private func openSearch() {
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = true
         }
@@ -176,7 +176,7 @@ struct SettingsScreen: View {
     /// Leaving the search drops the query with it, so the whole of settings is
     /// back the next time the bar is opened — the same bargain web's close makes.
     private func closeSearch() {
-        HapticManager.sheetDismiss()
+        HapticManager.buttonPress()
         searchFieldFocused = false
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = false
@@ -528,7 +528,7 @@ struct SettingsScreen: View {
             description: L("Try a different word, or clear the search."),
             action: AnyView(
                 Button {
-                    HapticManager.gentleTap()
+                    HapticManager.buttonPress()
                     searchQuery = ""
                     searchFieldFocused = true
                 } label: {

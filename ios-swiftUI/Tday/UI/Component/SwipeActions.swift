@@ -111,7 +111,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                     if offsetX != 0 {
                         closeActions()
                     } else {
-                        HapticManager.swipeReveal()
+                        HapticManager.reveal()
                         revealHint()
                     }
                 }
@@ -136,7 +136,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                         revealProgress: revealProgress,
                         revealDelay: 0.74
                     ) {
-                        HapticManager.buttonTap()
+                        HapticManager.buttonPress()
                         closeActions()
                         extraAction.action()
                     }
@@ -149,7 +149,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                     revealProgress: revealProgress,
                     revealDelay: 0.62
                 ) {
-                    HapticManager.buttonTap()
+                    HapticManager.buttonPress()
                     closeActions()
                     onEdit()
                 }
@@ -161,7 +161,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                     revealProgress: revealProgress,
                     revealDelay: 0.40
                 ) {
-                    HapticManager.buttonTap()
+                    HapticManager.buttonPress()
                     closeActions()
                     onCopy()
                 }
@@ -173,7 +173,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                     revealProgress: revealProgress,
                     revealDelay: 0.04
                 ) {
-                    HapticManager.buttonTap()
+                    HapticManager.destructive()
                     closeActions()
                     onDelete()
                 }

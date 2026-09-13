@@ -512,7 +512,7 @@ struct CalendarScreen: View {
     }
 
     private func openSearch() {
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = true
         }
@@ -522,7 +522,7 @@ struct CalendarScreen: View {
     /// again the next time the bar is opened — the same bargain web's close
     /// makes.
     private func closeSearch() {
-        HapticManager.sheetDismiss()
+        HapticManager.buttonPress()
         searchFieldFocused = false
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = false
@@ -636,7 +636,7 @@ struct CalendarScreen: View {
                 description: L("Try a different word, or clear the search."),
                 action: AnyView(
                     Button {
-                        HapticManager.gentleTap()
+                        HapticManager.buttonPress()
                         searchQuery = ""
                         searchFieldFocused = true
                     } label: {
@@ -859,7 +859,7 @@ struct CalendarScreen: View {
                 "recurring": todo.isRecurring
             ]
         )
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.dragDrop()
         if todo.isRecurring {
             pendingRescheduleDrop = CalendarTaskRescheduleDrop(todo: todo, targetDate: targetDay)
         } else {
@@ -878,7 +878,7 @@ struct CalendarScreen: View {
         openSwipeTaskID = nil
         dropTargetRegistry.removeAll()
         if draggedTodo?.id != todo.id {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            HapticManager.dragPickUp()
         }
         draggedTodo = todo
         CalendarTaskDragSession.shared.todo = todo
@@ -3334,7 +3334,7 @@ private struct CalendarPendingTaskRow: View {
             return
         }
 
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.completion()
         Task { @MainActor in
             withAnimation(.easeInOut(duration: 0.18)) {
                 completionPhase = .checked

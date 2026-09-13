@@ -358,7 +358,7 @@ struct RootFeedHeroHeader: View {
     }
 
     private func handleScrollToTop() {
-        HapticManager.gentleTap()
+        HapticManager.buttonPress()
         onScrollToTop()
     }
 
@@ -406,7 +406,7 @@ struct RootFeedHeroHeader: View {
 
         return HStack(spacing: Metrics.barButtonSpacing) {
             RootFeedHeaderCircleButton(icon: "NavListPlus") {
-                HapticManager.buttonTap()
+                HapticManager.buttonPress()
                 onCreateList()
             }
             .accessibilityLabel("Create list")
@@ -446,7 +446,7 @@ struct RootFeedHeroHeader: View {
             }
         } else {
             RootFeedHeaderCircleButton(icon: "NavEllipsis") {
-                HapticManager.gentleTap()
+                HapticManager.buttonPress()
                 onOpenSettings()
             }
         }
@@ -516,7 +516,7 @@ struct RootFeedHeroHeader: View {
 
     private func searchRestingContent(labelOpacity: CGFloat, labelWidth: CGFloat) -> some View {
         Button {
-            HapticManager.buttonTap()
+            HapticManager.buttonPress()
             withAnimation(Metrics.searchMorph) {
                 searchExpanded = true
             }
@@ -582,7 +582,7 @@ struct RootFeedHeroHeader: View {
                 .disabled(!searchExpanded)
 
             Button {
-                HapticManager.sheetDismiss()
+                HapticManager.buttonPress()
                 onSearchClose()
             } label: {
                 Image("NavClose")
@@ -674,7 +674,12 @@ private struct RootFeedHeaderCircleMenu<MenuItems: View>: View {
         // No extra tap gesture for the haptic `RootFeedHeaderCircleButton`
         // gives its own Button: layering one on a `Menu` risks eating the
         // press before `Menu` ever sees it, and the system already gives its
-        // own presentation feedback when the menu opens.
+        // own presentation feedback when the menu opens. The press *depth* is
+        // knowingly absent too: this face stays at 1.0 while its twin sinks to
+        // 0.94 under `TdayToolbarButtonStyle`. That style on the `Menu` would
+        // add the depth without touching the gesture path, but it also brings
+        // the style's shadow pair, so it is a visual change belonging to a row
+        // of its own — not drift for the next reader to tidy away.
         Menu {
             items()
         } label: {
@@ -861,10 +866,10 @@ struct TdaySearchCapsule: View {
             if showsTrailingButton {
                 Button {
                     if let onClose {
-                        HapticManager.sheetDismiss()
+                        HapticManager.buttonPress()
                         onClose()
                     } else {
-                        HapticManager.gentleTap()
+                        HapticManager.buttonPress()
                         text = ""
                     }
                 } label: {

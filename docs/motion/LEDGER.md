@@ -399,7 +399,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 10 — iOS haptics and bar-button press depth
 
-- [ ] `semantic-haptic-vocabulary` — One semantic haptic vocabulary: 55 of 64 Android haptics are the same CLOCK_TICK, and four documented iOS haptics have zero call sites · and+ios · Impact O3 · S · Gate G + D + TF — **final part (2 of 2)**; PR 11 carried the rest
+- [x] `semantic-haptic-vocabulary` — One semantic haptic vocabulary: 55 of 64 Android haptics are the same CLOCK_TICK, and four documented iOS haptics have zero call sites · and+ios · Impact O3 · S · Gate G + D + TF — **final part (2 of 2)**; PR 11 carried the rest
 - ↳ part 1 of 3 of `press-affordance-unification` — deepen iOS bar buttons 0.985 → 0.94. Box lives under **PR 9a/9b**.
 
 ## Phase 4 — the motion token foundation
