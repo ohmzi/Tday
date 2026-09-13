@@ -173,3 +173,42 @@ spends TF2 — see `README.md`, "iOS: three cycles, for the whole programme".
               jitter can clear the threshold arithmetically while being no gesture at all. Standing
               at the navigation floor the same press shows itself differently, as the refusal
               shake playing for a tap; both are the same fault and either one is a fail.
+
+- [ ] **PR 52 · web · Picking a task up and putting it down** — a phone, with tasks on the
+      calendar's day list, the timeline's date sections, and Today's Morning/Afternoon/Tonight
+      buckets. All three, because until this PR the calendar had a landing and the other two did
+      not, and the pick-up was missing from all three.
+      Do:     press and hold a task until the card lifts, carry it a little without dropping it,
+              then drop it on another day / date section / bucket. Repeat on each of the three
+              screens.
+      Watch:  the card GROWS out of the row over 320 ms as the shadow arrives under it — about 3 %
+              bigger, which is the same travel a card sinks by when you press it. The card is
+              opaque the whole time; the row it left is the only thing at 70 %. On release the
+              card TRAVELS to where the task lands over 320 ms rather than disappearing where
+              your finger was.
+      Fails:  the card appearing at full size with its shadow already cast, which is the defect
+              and is easiest to catch by picking up and immediately letting go. Also a fail: the
+              card reading as greyed-out or half-there while you carry it; a drop that cuts on
+              the frame you release; the three screens disagreeing with each other; or the card
+              visibly jumping in size at the instant it lands, which would mean the lift outlived
+              the landing.
+      Also:   with reduce-motion on, the card is already big and already casting in the frame it
+              appears, and a release removes it immediately. Never a card sitting flat in mid-air,
+              which is the rise pinned at its first frame rather than its last.
+
+- [ ] **PR 53 · android · The drag preview lifts instead of fading** — the timeline (a scheduled
+      list with several dated tasks) and the calendar's day list, on a device.
+      Do:     long-press a task until the preview card appears, hold still for a second, then move
+              it and let go.
+      Watch:  the preview rises as it appears — from flat to a real drop shadow, and from the
+              row's size to about 3 % over it, across 320 ms. It is fully opaque. The row you
+              pressed dims to 70 % over that same 320 ms, so the card leaving and the slot
+              emptying are one movement.
+      Fails:  the preview arriving whole — full shadow, full size, in one frame — which is the
+              defect. Also a fail: a preview you can see the list through, which is what 88 %
+              alpha looked like and reads as a task you may not have; the row snapping to 70 % on
+              the frame the long press fires while the card rises behind it, which is one gesture
+              read as two events; or the two screens lifting by different amounts.
+      Also:   with Settings → Developer options → Animator duration scale set to Off, the preview
+              appears already lifted and the row is already dimmed. A card drawn flat and small
+              under the finger would be the fifth idiom rule broken the usual way round.

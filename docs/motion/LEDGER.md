@@ -727,10 +727,45 @@ Restore it from git history rather than adjusting the number.
 ### PR 52 — web drag lift and drop
 
 - ↳ part 1 of 2 of `drag-lift-and-drop` — `dropAnimation={null}` on both dnd contexts; static overlay. Box lives under **PR 53**.
+  - The overlay was not only landing-less, it was `opacity-70`. That is the same 70 % the row left
+    behind carries, so one word was doing two opposite jobs: the hole in the list and the card in
+    the hand looked alike, and the card in the hand looked disabled. The card is opaque now and the
+    row keeps the dim, because a hole is what that row actually is.
+  - `.tday-drag-lift` (`globals.css`) declares the **lifted** state and the keyframe holds the
+    resting one, which is what the fifth idiom rule buys here: a reduced-motion reader gets a card
+    that is already up rather than one pinned to the first frame of a rise. Its `box-shadow: none`
+    is a `from` with no `to`, so each of the three overlays keeps its own elevation and this only
+    decides that the shadow arrives instead of being there.
+  - The landing left `features/calendar/lib`. Two contexts had `dropAnimation={null}` and the third
+    had a landing PR 25c gave it, which is exactly the shape a per-screen decision leaves; it is
+    `src/lib/dragLiftMotion.ts` now, with the lift beside it, and the three overlays spend it.
+  - No ceiling moves. The lift adds no duration, curve or `ms` literal on either client: it names
+    `--tday-duration-emphasis` and `--tday-ease-enter`, and its scale is `calc(2 - var(--tday-press-card))`
+    rather than a tenth press literal on top of the nine `docs/motion.md` counts.
 
 ### PR 53 — Android drag lift and drop
 
-- [ ] `drag-lift-and-drop` — A dragged row reads as disabled rather than held: Android only dims it to 70%, and both web drag contexts disable the drop animation outright · and+web · Impact O3 · M · Gate V + D — **final part (2 of 2)**; PR 52 carried the rest
+- [x] `drag-lift-and-drop` — A dragged row reads as disabled rather than held: Android only dims it to 70%, and both web drag contexts disable the drop animation outright · and+web · Impact O3 · M · Gate V + D — **final part (2 of 2)**; PR 52 carried the rest
+  - **The row's `* 0.7f` is not the whole affordance, and it is not the lift.** Both Android screens
+    already draw a preview card that follows the finger (`TimelineTaskDragPreview`,
+    `CalendarTaskDragPreview`) while the row stays in the list; the row's dim is the hole and iOS
+    says the same thing on the same row (`CalendarScreen.swift:581`). What was missing is the card:
+    it was composed straight into 12dp and its final size, so a pick-up had no frame that said the
+    app had taken the task — and it was drawn at `alpha = 0.88f`, which is the fade the brief is
+    about, one element further in than the row.
+  - So the fix is on the preview: opaque, rising from flat to 12dp and from the row's size to
+    `2f - PressScales.Card`, on Emphasis over Enter. `TdayDragLift` holds that once for both
+    screens and web derives the identical scale from the identical token, which is the two clients
+    saying one thing rather than two.
+  - The row's dim keeps its value and loses its cut: it now travels on the rise's own rung, so a
+    long press is one event instead of a card appearing whole beside a row that blinked.
+  - `0.7f` is three clients wide and is **not** promoted, because the vocabulary has no alpha
+    family to promote it into — `MotionTokens` carries durations, delays, easings, springs and
+    press scales. It is named at `TdayDragLift.VacatedAlpha` with the iOS site quoted beside it, so
+    the next reader can see it was considered. Whether the vocabulary should grow that family is a
+    question for a PR that may edit `MotionTokens.kt`; this one may not.
+  - No Android ceiling moves: tween 29, spring 10, pressScale 31. The new spec reads
+    `Durations.Emphasis` and `Easings.Enter` through the wrapper, and `1.03f` is never written.
 
 ### PR 54 — the web press affordance stops losing to `transition-colors`
 
