@@ -4,6 +4,8 @@ import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -11,6 +13,7 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -128,10 +131,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -168,12 +171,16 @@ import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.shareList
 import com.ohmz.tday.compose.core.ui.taskCopyText
+import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
@@ -5452,7 +5459,19 @@ private const val SEARCH_RESULT_CENTER_SCROLL_DURATION_MS = 520
 private const val SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP = 72f
 private const val TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160L
 private const val TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
-private const val TASK_COMPLETION_FADE_MS = 260L
+
+/**
+ * The ink leaving, and the wait before the row is handed to the list.
+ *
+ * The two are one number because they are one motion — the coroutine that ticks
+ * the task off waits exactly as long as the fade it started — so it is read from
+ * the vocabulary once rather than typed on both sides. Change is the rung: the
+ * row's content goes where it stands and nothing moves, which is the geometry
+ * test `docs/motion.md`'s second idiom rule decides this by. The two offsets
+ * above are gaps rather than motions and stay plain, the same way web's
+ * `taskCompletionTiming.ts` keeps them.
+ */
+private val TASK_COMPLETION_FADE_MS = TdayMotionTokens.Durations.Change.toLong()
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 56.dp
 private val TASK_CHECKMARK_GREEN = TdayTaskCompleteAccent
@@ -5669,7 +5688,7 @@ private fun SwipeTaskRow(
         targetValue = if (completionFading) 0f else 1f,
         animationSpec = tween(
             durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
+            easing = TdayMotionTokens.Easings.Standard,
         ),
         label = "swipeTaskCompletionAlpha",
     )
@@ -5677,10 +5696,53 @@ private fun SwipeTaskRow(
         targetValue = if (completionFading) (-10).dp else 0.dp,
         animationSpec = tween(
             durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
+            easing = TdayMotionTokens.Easings.Standard,
         ),
         label = "swipeTaskCompletionOffsetY",
     )
+    // The three beats the row used to cut straight to. Tint and title colour are
+    // one event each and travel with the glyph and the rule they belong to; the
+    // rule itself is `taskStrikethrough`, which argues the mechanism where it
+    // lives. Under reduced motion every one of these is handed its finished
+    // value rather than the first frame of a trip nobody is taking.
+    val motionEnabled = rememberTdayMotionEnabled()
+    val toggleTint by animateColorAsState(
+        targetValue = if (selectionActive) {
+            if (selected) colorScheme.primary else colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+        } else if (visuallyChecked) {
+            TASK_CHECKMARK_GREEN
+        } else {
+            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "swipeTaskToggleTint",
+    )
+    val titleColor by animateColorAsState(
+        targetValue = if (visuallyStruck) {
+            colorScheme.onSurface.copy(alpha = 0.78f)
+        } else {
+            colorScheme.onSurface
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Emphasis,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "swipeTaskTitleColor",
+    )
+    var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
+    var noteLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
+    val titleStrikeProgress = rememberTaskStrikeProgress(visuallyStruck, "swipeTaskTitleStrike")
     val isOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
     val dueBodyText = todo.due?.let {
         if (showDueDateInSubtitle) {
@@ -6028,17 +6090,7 @@ private fun SwipeTaskRow(
                                 } else {
                                     stringResource(R.string.label_mark_complete)
                                 },
-                                tint = if (selectionActive) {
-                                    if (selected) {
-                                        colorScheme.primary
-                                    } else {
-                                        colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                                    }
-                                } else if (!visuallyChecked) {
-                                    colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                                } else {
-                                    TASK_CHECKMARK_GREEN
-                                },
+                                tint = toggleTint,
                                 enabled = if (selectionActive) {
                                     true
                                 } else {
@@ -6078,22 +6130,23 @@ private fun SwipeTaskRow(
                             ) {
                                 Text(
                                     text = todo.title,
-                                    color = if (visuallyStruck) {
-                                        colorScheme.onSurface.copy(alpha = 0.78f)
-                                    } else {
-                                        colorScheme.onSurface
-                                    },
+                                    // Drawn rather than declared. `TextDecoration.LineThrough`
+                                    // is a boolean and this is a beat the user is meant to
+                                    // watch land; `taskStrikethrough` sweeps one rule per line,
+                                    // which is what the decoration would have drawn on a
+                                    // wrapped title had it been animatable.
+                                    modifier = Modifier.taskStrikethrough(
+                                        progress = titleStrikeProgress,
+                                        layout = titleLayoutResult,
+                                        color = titleColor,
+                                        thickness = TdayDimens.BorderWidthThick,
+                                    ),
+                                    color = titleColor,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold,
-                                    // Real per-line strikethrough crosses out every line of a
-                                    // wrapped title instead of one rule down the middle.
-                                    textDecoration = if (visuallyStruck) {
-                                        TextDecoration.LineThrough
-                                    } else {
-                                        TextDecoration.None
-                                    },
                                     // No line cap in-app: show the whole title.
                                     maxLines = Int.MAX_VALUE,
+                                    onTextLayout = { titleLayoutResult = it },
                                 )
                                 if (showDueText && dueSubtitleText != null) {
                                     Text(
@@ -6103,13 +6156,21 @@ private fun SwipeTaskRow(
                                     )
                                 }
                                 flattenNotesToPlainText(todo.description).takeIf { it.isNotBlank() }?.let { note ->
+                                    val noteColor = colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                     Text(
                                         text = note,
-                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                        // Struck alongside the title, on the title's own sweep,
+                                        // so the whole task reads as one edit rather than as a
+                                        // rule that grows and a rule that appears.
+                                        modifier = Modifier.taskStrikethrough(
+                                            progress = titleStrikeProgress,
+                                            layout = noteLayoutResult,
+                                            color = noteColor,
+                                            thickness = TdayDimens.BorderWidthThick,
+                                        ),
+                                        color = noteColor,
                                         style = MaterialTheme.typography.bodySmall,
-                                        // Struck alongside the title so the whole
-                                        // task reads as done during the animation.
-                                        textDecoration = if (visuallyStruck) TextDecoration.LineThrough else null,
+                                        onTextLayout = { noteLayoutResult = it },
                                     )
                                 }
                             }
@@ -6333,12 +6394,34 @@ private fun CircularCheckToggleIcon(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(24.dp),
-        )
+        // The glyph crosses over rather than swapping. On web the check mark
+        // appears inside a disc whose fill is already transitioning, so the
+        // control reads as changing even though the mark itself does not; here
+        // the glyph IS the whole control, and swapping it in one frame is the
+        // toggle hard-cutting. Same behaviour, different mechanism — which is
+        // what copying behaviour rather than implementation means.
+        Crossfade(
+            targetState = imageVector,
+            animationSpec = if (rememberTdayMotionEnabled()) {
+                tween(
+                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    easing = TdayMotionTokens.Easings.Standard,
+                )
+            } else {
+                snap()
+            },
+            label = "circularCheckToggleGlyph",
+        ) { glyph ->
+            Icon(
+                imageVector = glyph,
+                // Only the glyph being crossed TO carries the description: for
+                // the frames both exist, two identical labels in the tree would
+                // have TalkBack announce the control twice.
+                contentDescription = contentDescription.takeIf { glyph == imageVector },
+                tint = tint,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }
 

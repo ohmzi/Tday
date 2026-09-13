@@ -21,10 +21,27 @@ import {
 } from "@/components/app/nativeRouteConfig";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 
+/**
+ * The create-task button, in the corner opposite the dock.
+ *
+ * @param className - Extra classes for the BUTTON itself, which is what every
+ *   caller outside the app shell wants to restyle.
+ * @param duckClassName - The `.tday-duck-*` class from `useDuckPresence`, which
+ *   goes on the fixed wrapper instead: the travel moves the whole slot, not the
+ *   circle inside it. Passed in rather than derived here because the button
+ *   leaves by being unmounted and cannot animate that itself.
+ * @param duckInteractive - Whether the button may still be tapped, from the
+ *   same hook. False while it is ducking out, and true by default so a caller
+ *   that never ducks it gets a normal button.
+ */
 export default function TaskFloatingActionButton({
   className,
+  duckClassName,
+  duckInteractive = true,
 }: {
   className?: string;
+  duckClassName?: string;
+  duckInteractive?: boolean;
 }) {
   const pathname = usePathname();
   const calendarCreate = useCalendarCreateAction();
@@ -47,6 +64,7 @@ export default function TaskFloatingActionButton({
       className={cn(
         "pointer-events-none fixed inset-x-0 bottom-[calc(18px+env(safe-area-inset-bottom))] z-40",
         nativeAppHorizontalPaddingClassName,
+        duckClassName,
       )}
     >
       <div className={cn(nativeAppContentClassName, "flex items-center justify-end")}>
@@ -73,7 +91,11 @@ export default function TaskFloatingActionButton({
                 }
           }
           className={cn(
-            "pointer-events-auto",
+            // Live only while the button is really the button: the selection
+            // bar it hands the row to is painted under it for the whole exit,
+            // and a tap that opens a create sheet over a selection the user
+            // just dismissed is the same bug the bar guards itself against.
+            duckInteractive && "pointer-events-auto",
             // Icon-only circle on mobile (matching native); icon + label on desktop.
             "flex h-14 w-14 items-center justify-center gap-2 rounded-full px-0 sm:w-auto sm:px-5",
             "border border-white/60 bg-accent text-white",

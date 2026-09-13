@@ -314,7 +314,7 @@ export default function FloaterItemContainer({
             <div className="min-w-0">
               <p
                 className={clsx(
-                  "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
+                  "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-emphasis",
                   (completePhase === "struck" || removing) &&
                     "task-strike text-muted-foreground",
                 )}
@@ -324,9 +324,9 @@ export default function FloaterItemContainer({
               {description ? (
                 <pre
                   className={clsx(
-                    "w-48 whitespace-pre-wrap pt-1 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
-                    (completePhase === "struck" || removing) &&
-                      "line-through",
+                    "w-48 whitespace-pre-wrap pt-1 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
+                    // Same switch as the title above — see TodoItemContainer.
+                    (completePhase === "struck" || removing) && "task-strike",
                   )}
                 >
                   {description}

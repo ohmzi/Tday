@@ -2,13 +2,20 @@ package com.ohmz.tday.compose
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -71,9 +78,11 @@ import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.SnackbarEvent
 import com.ohmz.tday.compose.core.ui.SnackbarKind
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdayToastData
 import com.ohmz.tday.compose.core.ui.TdayToastHost
 import com.ohmz.tday.compose.core.ui.TdayToastKind
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
@@ -119,6 +128,10 @@ import io.sentry.android.navigation.SentryNavigationListener
 private const val NAV_FADE_IN_DURATION_MS = 360
 private const val NAV_FADE_OUT_DURATION_MS = 240
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
+
+// How far out of focus the app is pushed behind the onboarding wizard. A radius, not a
+// motion spec: what the vocabulary fixes is how long it takes to get here, not how far.
+private val ONBOARDING_BACKDROP_BLUR = 14.dp
 
 // Nav argument names, shared by the route templates that declare them and the back stack
 // entries that read them back.
@@ -1019,39 +1032,118 @@ private fun ScheduledTaskHomeRoute(
         }
     }
 
+    // Locking and unlocking the app used to be three snaps landing on one frame: the
+    // backdrop jumped out of focus, the wizard appeared over it, and the feed underneath
+    // hard-swapped between the locked placeholder and the real one. They are one event, so
+    // they run as one — same rung, same curve, all three. Nothing travels: the wizard is
+    // drawn where it will stay and the arriving feed takes the slot the leaving one had, so
+    // by the geometry rule this is not Emphasis, and a whole-screen handover is the Quick
+    // rung the vocabulary already names for it — the same call the dock's tab swap makes in
+    // RootFeedContent below. Standard is the curve because a crossfade runs both halves off
+    // one clock and neither Enter nor Exit describes that. Symmetric on purpose: the way in
+    // and the way out are one handover reversed rather than an arrival and its departure,
+    // which is also the strictest reading of "an exit is never longer than the enter it
+    // undoes". iOS times the same moment on this rung and curve, from one transaction; it
+    // has no placeholder feed to cross, so its third surface is the floating controls.
+    val motionEnabled = rememberTdayMotionEnabled()
+    val backdropBlur by animateDpAsState(
+        targetValue = if (showOnboardingWizard) ONBOARDING_BACKDROP_BLUR else 0.dp,
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "onboardingBackdropBlur",
+    )
+
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .then(
-                    if (showOnboardingWizard) {
-                        Modifier.blur(14.dp)
+                    // Skipped rather than passed a zero radius: `blur` is a RenderEffect on a
+                    // graphics layer, and keeping one alive to render nothing costs the whole
+                    // feed an offscreen buffer for as long as the app is unlocked.
+                    if (backdropBlur > 0.dp) {
+                        Modifier.blur(backdropBlur)
                     } else {
                         Modifier
                     },
                 ),
         ) {
-            RootFeedContent(
-                appUiState = appUiState,
-                appViewModel = appViewModel,
-                navController = navController,
-                unauthenticatedUiState = unauthenticatedUiState,
-                rootFeedTab = rootFeedTab,
-                onSelectRootFeedTab = onSelectRootFeedTab,
-                onChangeRootFeedTab = onChangeRootFeedTab,
-                rootCreateTaskRequestKey = rootCreateTaskRequestKey,
-                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
-                onRequestCreateTask = onRequestCreateTask,
-                scheduledScrollToTopRequestKey = scheduledScrollToTopRequestKey,
-                floaterScrollToTopRequestKey = floaterScrollToTopRequestKey,
-                rootDockCollapsed = rootDockCollapsed,
-                onRootDockCollapsedChange = onRootDockCollapsedChange,
-                rootControlsVisible = rootControlsVisible,
-                onRootControlsVisibleChange = onRootControlsVisibleChange,
-            )
+            // The placeholder feed and the real one used to be an early return inside
+            // RootFeedContent, which made the swap a recomposition and therefore a cut. It is
+            // decided here instead, beside the blur and the wizard it happens with, so the
+            // whole lock/unlock is one moment expressed in one place.
+            Crossfade(
+                targetState = appUiState.isWorkspaceAvailable,
+                modifier = Modifier.fillMaxSize(),
+                animationSpec = if (motionEnabled) {
+                    tween(
+                        durationMillis = TdayMotionTokens.Durations.Quick,
+                        easing = TdayMotionTokens.Easings.Standard,
+                    )
+                } else {
+                    snap()
+                },
+                label = "rootFeedLock",
+            ) { workspaceAvailable ->
+                if (workspaceAvailable) {
+                    RootFeedContent(
+                        appUiState = appUiState,
+                        appViewModel = appViewModel,
+                        navController = navController,
+                        rootFeedTab = rootFeedTab,
+                        onSelectRootFeedTab = onSelectRootFeedTab,
+                        onChangeRootFeedTab = onChangeRootFeedTab,
+                        rootCreateTaskRequestKey = rootCreateTaskRequestKey,
+                        onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                        onRequestCreateTask = onRequestCreateTask,
+                        scheduledScrollToTopRequestKey = scheduledScrollToTopRequestKey,
+                        floaterScrollToTopRequestKey = floaterScrollToTopRequestKey,
+                        rootDockCollapsed = rootDockCollapsed,
+                        onRootDockCollapsedChange = onRootDockCollapsedChange,
+                        rootControlsVisible = rootControlsVisible,
+                        onRootControlsVisibleChange = onRootControlsVisibleChange,
+                    )
+                } else {
+                    LockedRootFeed(uiState = unauthenticatedUiState)
+                }
+            }
         }
 
-        if (showOnboardingWizard) {
+        // AnimatedVisibility does not play an enter for a `visible` that was already true on
+        // the first composition, and that is the behaviour wanted here rather than a limit
+        // worked around: a cold start into onboarding has nothing to hand over from, so the
+        // wizard is drawn finished over a backdrop that was never in focus. What animates is
+        // the two transitions that have a before — signing in, and signing back out.
+        AnimatedVisibility(
+            visible = showOnboardingWizard,
+            enter = if (motionEnabled) {
+                fadeIn(
+                    animationSpec = tween(
+                        durationMillis = TdayMotionTokens.Durations.Quick,
+                        easing = TdayMotionTokens.Easings.Standard,
+                    ),
+                )
+            } else {
+                EnterTransition.None
+            },
+            exit = if (motionEnabled) {
+                fadeOut(
+                    animationSpec = tween(
+                        durationMillis = TdayMotionTokens.Durations.Quick,
+                        easing = TdayMotionTokens.Easings.Standard,
+                    ),
+                )
+            } else {
+                ExitTransition.None
+            },
+            label = "onboardingWizard",
+        ) {
             OnboardingOverlay(
                 appUiState = appUiState,
                 appViewModel = appViewModel,
@@ -1073,15 +1165,15 @@ private fun ScheduledTaskHomeRoute(
 }
 
 /**
- * Whichever root feed the dock has selected, with the dock and create button floating over it —
- * or the locked placeholder feed that sits under the onboarding wizard when there is no workspace.
+ * Whichever root feed the dock has selected, with the dock and create button floating over it.
+ * Only ever composed for a workspace that is available — the locked placeholder that stands in
+ * for it otherwise is the other half of [ScheduledTaskHomeRoute]'s lock crossfade.
  */
 @Composable
 private fun RootFeedContent(
     appUiState: AppUiState,
     appViewModel: AppViewModel,
     navController: NavHostController,
-    unauthenticatedUiState: ScheduledTaskHomeUiState,
     rootFeedTab: RootFeedTab,
     onSelectRootFeedTab: (RootFeedTab) -> Unit,
     onChangeRootFeedTab: (RootFeedTab) -> Unit,
@@ -1095,63 +1187,182 @@ private fun RootFeedContent(
     rootControlsVisible: Boolean,
     onRootControlsVisibleChange: (Boolean) -> Unit,
 ) {
-    if (!appUiState.isWorkspaceAvailable) {
-        LockedRootFeed(uiState = unauthenticatedUiState)
-        return
-    }
     Box(modifier = Modifier.fillMaxSize()) {
-        when (rootFeedTab) {
-            RootFeedTab.SCHEDULED_TASK_HOME -> ScheduledTaskHomeFeed(
-                appUiState = appUiState,
-                appViewModel = appViewModel,
-                navController = navController,
-                onChangeRootFeedTab = onChangeRootFeedTab,
-                rootCreateTaskRequestKey = rootCreateTaskRequestKey,
-                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
-                scrollToTopRequestKey = scheduledScrollToTopRequestKey,
-                onRootDockCollapsedChange = onRootDockCollapsedChange,
-                onRootControlsVisibleChange = onRootControlsVisibleChange,
-            )
+        val motionEnabled = rememberTdayMotionEnabled()
 
-            RootFeedTab.FLOATER_TASK_HOME -> FloaterTaskHomeFeed(
-                appUiState = appUiState,
-                navController = navController,
-                onChangeRootFeedTab = onChangeRootFeedTab,
-                rootCreateTaskRequestKey = rootCreateTaskRequestKey,
-                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
-                scrollToTopRequestKey = floaterScrollToTopRequestKey,
-                onRootDockCollapsedChange = onRootDockCollapsedChange,
-                onRootControlsVisibleChange = onRootControlsVisibleChange,
-            )
+        // The dock's selector springs across to the tab that was tapped, and the feed under
+        // it used to change on the next frame: one gesture running at two speeds, so the
+        // body read as a cut rather than as the thing the pill was carrying. Nothing here
+        // travels — the arriving feed is drawn in the slot the leaving one had — so by the
+        // geometry rule this is not Emphasis, and a tab handover is the Quick rung the
+        // vocabulary already names for it. Shorter than the selector's spring on purpose:
+        // the body is following a control rather than being one, and a surface that is
+        // still resolving after the control it answers has landed reads as lag. iOS makes
+        // the same swap on the same rung and the same curve.
+        Crossfade(
+            targetState = rootFeedTab,
+            // Crossfade's own wrapper would size to its content; the feeds were direct
+            // children of the box above until now and are measured against the screen.
+            modifier = Modifier.fillMaxSize(),
+            // Both halves run on one clock, so neither the Enter nor the Exit curve
+            // describes it; Standard is the curve for when nothing argues otherwise. With
+            // motion off the swap snaps, which draws the arriving feed finished rather than
+            // holding it half-faded (docs/motion.md's fifth idiom rule).
+            animationSpec = if (motionEnabled) {
+                tween(
+                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    easing = TdayMotionTokens.Easings.Standard,
+                )
+            } else {
+                snap()
+            },
+            label = "rootFeedTabSwap",
+        ) { tab ->
+            // Both feeds are composed for the length of the fade and only one of them is the
+            // tab that was asked for. A create-task request landing inside that window — the
+            // widget's `tday://todos/create?target=floater` switches tab and then asks for
+            // the sheet — belongs to the arriving feed alone: handing the live key to the
+            // copy on its way out would open a sheet nobody asked for and consume the
+            // request the arriving feed is waiting for. 0 is the same "nothing pending"
+            // sentinel `consumeRootCreateTaskRequest` writes back.
+            val createTaskRequestKey = if (tab == rootFeedTab) rootCreateTaskRequestKey else 0
+
+            when (tab) {
+                RootFeedTab.SCHEDULED_TASK_HOME -> ScheduledTaskHomeFeed(
+                    appUiState = appUiState,
+                    appViewModel = appViewModel,
+                    navController = navController,
+                    onChangeRootFeedTab = onChangeRootFeedTab,
+                    rootCreateTaskRequestKey = createTaskRequestKey,
+                    onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                    scrollToTopRequestKey = scheduledScrollToTopRequestKey,
+                    onRootDockCollapsedChange = onRootDockCollapsedChange,
+                    onRootControlsVisibleChange = onRootControlsVisibleChange,
+                )
+
+                RootFeedTab.FLOATER_TASK_HOME -> FloaterTaskHomeFeed(
+                    appUiState = appUiState,
+                    navController = navController,
+                    onChangeRootFeedTab = onChangeRootFeedTab,
+                    rootCreateTaskRequestKey = createTaskRequestKey,
+                    onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                    scrollToTopRequestKey = floaterScrollToTopRequestKey,
+                    onRootDockCollapsedChange = onRootDockCollapsedChange,
+                    onRootControlsVisibleChange = onRootControlsVisibleChange,
+                )
+            }
         }
 
-        if (rootControlsVisible) {
-            val rootCreateTaskButtonColor =
-                if (rootFeedTab == RootFeedTab.FLOATER_TASK_HOME) {
-                    TdayFloaterAccent
-                } else {
-                    TdayTodayBlue
-                }
+        // The dock's own tint already crosses between the two accents when the tab
+        // changes; the create button was the last surface still cutting, so a swap left a
+        // blue-to-green jump in the corner of an otherwise continuous handover. The accent
+        // is part of that one handover rather than a second event, so it rides the body's
+        // rung and curve — as does iOS's create button, which is a SwiftUI fill inside the
+        // transaction its tab switch already runs in. Its dock only half agrees: the
+        // collapsed pill's tint is in that transaction too, but the expanded control is a
+        // `UISegmentedControl` whose accent is assigned in `updateUIView`, which reads no
+        // transaction and so cuts. With motion off it snaps: the button is drawn in the
+        // arriving tab's accent, finished.
+        //
+        // Hoisted out of the visibility gate below so the accent is not re-seeded every
+        // time the search field gives the controls their row back: a button that ducks in
+        // already wearing the tab's colour is one event, and one that ducks in blue and
+        // then turns green is two.
+        val rootCreateTaskButtonColor by animateColorAsState(
+            targetValue = if (rootFeedTab == RootFeedTab.FLOATER_TASK_HOME) {
+                TdayFloaterAccent
+            } else {
+                TdayTodayBlue
+            },
+            animationSpec = if (motionEnabled) {
+                tween(
+                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    easing = TdayMotionTokens.Easings.Standard,
+                )
+            } else {
+                snap()
+            },
+            label = "rootCreateTaskAccent",
+        )
 
+        // The dock and the create button used to be a bare `if`, so opening search took
+        // them off the screen in the frame the field expanded into — a hole where the
+        // chrome had been, and then the chrome back in it. They duck instead: straight
+        // down and out through the bottom edge, and back up the same way.
+        //
+        // Travel, so Emphasis by the geometry rule — and the Settle spring is the rung's
+        // spelling here, the token whose own doc string names a dock and a bar. A tween
+        // would have to pick a curve for weight that is leaving under its own momentum
+        // and coming back to rest; that is the question springs answer. The same spec
+        // drives both directions because the exit IS the enter played backwards, and
+        // giving it a length of its own would read as two different gestures rather than
+        // one control getting out of the way. Equal also satisfies the first idiom rule,
+        // which only forbids an exit that outlasts its arrival.
+        //
+        // The fade is not decoration. `slideOutVertically { it }` offsets by the height it
+        // measured, which clears the control's own box but not the gesture-bar strip
+        // underneath it, so opacity is what guarantees the thing is gone rather than
+        // parked below the navigation bar. iOS combines the same two for the same reason;
+        // web spells the spring as the Gesture easing, having no spring runtime.
+        //
+        // With motion off, neither transition is passed at all: the controls are taken
+        // away and put back finished, which is the fifth idiom rule. AnimatedVisibility
+        // also plays no enter for a `visible` that was already true on the first
+        // composition, so a cold start draws the chrome in its slot rather than flying it
+        // in from nowhere — the same call the onboarding wizard above makes.
+        val duckEnter = if (motionEnabled) {
+            slideInVertically(
+                animationSpec = TdayMotionTokens.Springs.settle(),
+                initialOffsetY = { fullHeight -> fullHeight },
+            ) + fadeIn(animationSpec = TdayMotionTokens.Springs.settle())
+        } else {
+            EnterTransition.None
+        }
+        val duckExit = if (motionEnabled) {
+            slideOutVertically(
+                animationSpec = TdayMotionTokens.Springs.settle(),
+                targetOffsetY = { fullHeight -> fullHeight },
+            ) + fadeOut(animationSpec = TdayMotionTokens.Springs.settle())
+        } else {
+            ExitTransition.None
+        }
+
+        // Two wrappers rather than one around both: the dock and the button are anchored
+        // to opposite corners, and `Modifier.align` is a BoxScope call that the content
+        // scope inside an AnimatedVisibility does not offer.
+        AnimatedVisibility(
+            visible = rootControlsVisible,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .zIndex(8f),
+            enter = duckEnter,
+            exit = duckExit,
+            label = "rootFeedDockDuck",
+        ) {
             RootFeedDock(
                 activeTab = rootFeedTab,
                 collapsed = rootDockCollapsed,
                 onTabSelected = onSelectRootFeedTab,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .zIndex(8f),
             )
+        }
+        AnimatedVisibility(
+            visible = rootControlsVisible,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .zIndex(8f),
+            enter = duckEnter,
+            exit = duckExit,
+            label = "rootCreateTaskButtonDuck",
+        ) {
             RootCreateTaskButton(
                 onClick = onRequestCreateTask,
                 backgroundColor = rootCreateTaskButtonColor,
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
                     .navigationBarsPadding()
                     .padding(
                         end = TdayDimens.ContentPaddingHorizontal,
                         bottom = TdayDimens.ContentPaddingHorizontal,
-                    )
-                    .zIndex(8f),
+                    ),
             )
         }
     }

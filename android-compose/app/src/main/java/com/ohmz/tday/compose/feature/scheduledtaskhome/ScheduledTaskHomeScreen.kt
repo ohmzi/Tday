@@ -3,11 +3,14 @@ package com.ohmz.tday.compose.feature.scheduledtaskhome
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -90,7 +93,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -122,7 +124,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -142,9 +143,13 @@ import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayHaptics
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.taskCopyText
+import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberSheetDismissState
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
@@ -1397,6 +1402,22 @@ private fun PressableIconButton(
     }
 }
 
+/**
+ * The check-off's beats, the same four every task row in every client plays:
+ * the tick lands, the rule crosses the task, the ink leaves, the row is handed
+ * to the list. Named here rather than left as three `delay` literals so that
+ * this row can be read against `TASK_COMPLETION_*_MS` in `TodoListScreen.kt`,
+ * `CALENDAR_TASK_COMPLETION_*_MS` in `CalendarScreen.kt` and
+ * `taskCompletionTiming.ts` on web without anybody counting milliseconds.
+ *
+ * The first two are gaps and not motions — nobody watches the wait between the
+ * tick and the strike — which is why they are plain numbers while the third,
+ * which is the length of a fade somebody does watch, reads its rung instead.
+ */
+private const val SCHEDULED_TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160L
+private const val SCHEDULED_TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
+private val SCHEDULED_TASK_COMPLETION_FADE_MS = TdayMotionTokens.Durations.Change.toLong()
+
 private val SCHEDULED_TASK_HOME_TODAY_DUE_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).withZone(ZoneId.systemDefault())
 private val SCHEDULED_TASK_HOME_TODAY_DATE_FORMATTER: DateTimeFormatter =
@@ -1545,19 +1566,59 @@ private fun ScheduledTaskHomeTodayTaskRow(
     )
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
-        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        animationSpec = tween(
+            durationMillis = SCHEDULED_TASK_COMPLETION_FADE_MS.toInt(),
+            easing = TdayMotionTokens.Easings.Standard,
+        ),
         label = "scheduledTaskHomeTodayCompletionAlpha",
     )
     val completionOffsetY by animateDpAsState(
         targetValue = if (completionFading) (-10).dp else 0.dp,
-        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        animationSpec = tween(
+            durationMillis = SCHEDULED_TASK_COMPLETION_FADE_MS.toInt(),
+            easing = TdayMotionTokens.Easings.Standard,
+        ),
         label = "scheduledTaskHomeTodayCompletionOffsetY",
     )
-    val titleStrikeProgress by animateFloatAsState(
-        targetValue = if (localStruck) 1f else 0f,
-        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
-        label = "scheduledTaskHomeTodayTitleStrikeProgress",
+    val titleStrikeProgress =
+        rememberTaskStrikeProgress(localStruck, "scheduledTaskHomeTodayTitleStrike")
+    // The two beats this row cut straight to. The tint answers the finger, so it
+    // is Quick; the title colour travels with the rule crossing it, so it is
+    // Emphasis and not a rung of its own.
+    val motionEnabled = rememberTdayMotionEnabled()
+    val toggleTint by animateColorAsState(
+        targetValue = if (localChecked) {
+            TdayTaskCompleteAccent
+        } else {
+            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "scheduledTaskHomeTodayToggleTint",
     )
+    val titleColor by animateColorAsState(
+        targetValue = if (localStruck) {
+            colorScheme.onSurface.copy(alpha = 0.78f)
+        } else {
+            colorScheme.onSurface
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Emphasis,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "scheduledTaskHomeTodayTitleColor",
+    )
+    var noteLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     val dueText = todo.due?.let(SCHEDULED_TASK_HOME_TODAY_DUE_FORMATTER::format)
     val rowShape = RoundedCornerShape(16.dp)
@@ -1721,31 +1782,53 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                     TdayHaptics.completion(view)
                                     pendingCompletion = true
                                     coroutineScope.launch {
-                                        delay(160)
+                                        delay(SCHEDULED_TASK_COMPLETION_CHECK_TO_STRIKE_MS)
                                         localStruck = true
-                                        delay(360)
+                                        delay(SCHEDULED_TASK_COMPLETION_STRIKE_TO_FADE_MS)
                                         completionFading = true
-                                        delay(260)
+                                        delay(SCHEDULED_TASK_COMPLETION_FADE_MS)
                                         onComplete()
                                     }
                                 }
                             },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = if (localChecked) ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big) else ImageVector.vectorResource(
-                                R.drawable.ic_lucide_circle
-                            ),
-                            contentDescription = if (localChecked) {
-                                stringResource(R.string.label_completed)
+                        val toggleGlyph = if (localChecked) {
+                            ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
+                        } else {
+                            ImageVector.vectorResource(R.drawable.ic_lucide_circle)
+                        }
+                        val toggleLabel = if (localChecked) {
+                            stringResource(R.string.label_completed)
+                        } else {
+                            stringResource(R.string.label_mark_complete)
+                        }
+                        // Crossed over rather than swapped, the same as the task list's
+                        // and the calendar's toggles: the tint above is only half of the
+                        // t=0 beat, and a glyph that hard-cuts underneath a tint that
+                        // travels is the control answering the finger twice.
+                        Crossfade(
+                            targetState = toggleGlyph,
+                            animationSpec = if (motionEnabled) {
+                                tween(
+                                    durationMillis = TdayMotionTokens.Durations.Quick,
+                                    easing = TdayMotionTokens.Easings.Standard,
+                                )
                             } else {
-                                stringResource(R.string.label_mark_complete)
+                                snap()
                             },
-                            tint = if (localChecked) TdayTaskCompleteAccent else colorScheme.onSurfaceVariant.copy(
-                                alpha = 0.78f
-                            ),
-                            modifier = Modifier.size(24.dp),
-                        )
+                            label = "scheduledTaskHomeTodayToggleGlyph",
+                        ) { glyph ->
+                            Icon(
+                                imageVector = glyph,
+                                // Only the glyph being crossed TO carries the description:
+                                // for the frames both exist, two labels in the tree would
+                                // have TalkBack announce the control twice.
+                                contentDescription = toggleLabel.takeIf { glyph == toggleGlyph },
+                                tint = toggleTint,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
                     }
 
                     Column(
@@ -1756,33 +1839,21 @@ private fun ScheduledTaskHomeTodayTaskRow(
                     ) {
                         Text(
                             text = todo.title,
-                            modifier = Modifier.drawWithContent {
-                                drawContent()
-                                if (titleStrikeProgress > 0f) {
-                                    val lineEnd = (
-                                            titleLayoutResult
-                                                ?.takeIf { it.lineCount > 0 }
-                                                ?.getLineRight(0) ?: size.width
-                                            ).coerceIn(0f, size.width)
-                                    val lineY = size.height * 0.56f
-                                    drawLine(
-                                        color = colorScheme.onSurface.copy(alpha = 0.65f),
-                                        start = Offset(0f, lineY),
-                                        end = Offset(lineEnd * titleStrikeProgress, lineY),
-                                        strokeWidth = TdayDimens.BorderWidthThick.toPx(),
-                                    )
-                                }
-                            },
+                            // The rule this row already swept, moved into the modifier
+                            // every task row now shares: the sweep was right and the
+                            // copy of it in each screen was the problem.
+                            modifier = Modifier.taskStrikethrough(
+                                progress = titleStrikeProgress,
+                                layout = titleLayoutResult,
+                                color = colorScheme.onSurface.copy(alpha = 0.65f),
+                                thickness = TdayDimens.BorderWidthThick,
+                            ),
                             style = MaterialTheme.typography.titleMedium,
                             fontFamily = TdayFontFamily,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
                             lineHeight = 22.sp,
-                            color = if (localStruck) {
-                                colorScheme.onSurface.copy(alpha = 0.78f)
-                            } else {
-                                colorScheme.onSurface
-                            },
+                            color = titleColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             onTextLayout = { titleLayoutResult = it },
@@ -1807,9 +1878,16 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = 18.sp,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                // Struck alongside the title so the whole task
-                                // reads as done during the completion animation.
-                                textDecoration = if (localStruck) TextDecoration.LineThrough else null,
+                                // Struck alongside the title, on the title's own sweep, so
+                                // the whole task reads as one edit rather than as a rule
+                                // that grows and a rule that appears.
+                                modifier = Modifier.taskStrikethrough(
+                                    progress = titleStrikeProgress,
+                                    layout = noteLayoutResult,
+                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                    thickness = TdayDimens.BorderWidthThick,
+                                ),
+                                onTextLayout = { noteLayoutResult = it },
                             )
                         }
                     }

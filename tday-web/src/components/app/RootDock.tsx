@@ -47,12 +47,31 @@ function activeDockTab(pathname: string): DockTab {
   return "more";
 }
 
+/**
+ * The root feed's bottom navigation.
+ *
+ * @param onOpenMore - Opens the More sheet; the third tab is the only one that
+ *   does not navigate.
+ * @param moreOpen - Whether that sheet is open, which is what makes More the
+ *   selected tab while it is.
+ * @param duckClassName - The `.tday-duck-*` class from `useDuckPresence`,
+ *   applied to the fixed wrapper because that is the element the travel moves.
+ *   The shell owns it: the dock leaves when selection mode takes its slot, and
+ *   a control cannot animate its own unmounting.
+ * @param duckInteractive - Whether the tabs may still be tapped, from the same
+ *   hook. False while the dock is ducking out, and the default is true so a
+ *   caller that never ducks it gets a normal dock.
+ */
 export default function RootDock({
   onOpenMore,
   moreOpen,
+  duckClassName,
+  duckInteractive = true,
 }: {
   onOpenMore: () => void;
   moreOpen: boolean;
+  duckClassName?: string;
+  duckInteractive?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -96,6 +115,7 @@ export default function RootDock({
       className={cn(
         "pointer-events-none fixed inset-x-0 bottom-[calc(18px+env(safe-area-inset-bottom))] z-40",
         nativeAppHorizontalPaddingClassName,
+        duckClassName,
       )}
     >
       <div
@@ -112,7 +132,13 @@ export default function RootDock({
             // overflow-hidden clips the sliding indicator so it can never poke
             // out past the dock's right edge from a transient/stale measurement
             // (e.g. when the More sheet opens and the active tab collapses).
-            "pointer-events-auto relative h-16 overflow-hidden rounded-[25px] border border-white/70 bg-muted/80 p-1.5",
+            "relative h-16 overflow-hidden rounded-[25px] border border-white/70 bg-muted/80 p-1.5",
+            // Only while the dock is really the dock. On the way out it is a
+            // picture of one, and the selection bar it is handing the row to
+            // is painted UNDERNEATH it — the shell puts these controls outside
+            // the stacking context the bar lives in — so a tap meant for Delete
+            // would navigate the app away instead.
+            duckInteractive && "pointer-events-auto",
             "shadow-[0_18px_42px_-24px_hsl(var(--shadow)/0.65)] backdrop-blur-xl",
             "dark:border-white/10 dark:bg-muted/80",
           )}

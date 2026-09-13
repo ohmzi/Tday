@@ -82,7 +82,12 @@ export const TodoItemCard = ({
   const [editInstanceOnly, setEditInstanceOnly] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
   // Staged completion, on the native rows' beats (Android/iOS use 160/360):
-  //   checked (green tick) → struck (title sweep + notes line-through) → removing → gone.
+  //   checked (green tick) → struck (title and notes, one rule fading in) → removing (ink out,
+  //   box shut) → gone.
+  // Title and notes are named together because they are one beat and one class: `.task-strike`
+  // fades `text-decoration-color` up on both. Android and iOS sweep the rule across the text
+  // instead — a mechanism difference between a `text-decoration` and a drawn line, on the same
+  // rung either way.
   // The whole sequence runs on its own timers — it is not gated on the undo toast, which lives
   // for 5s independently.
   //
@@ -413,7 +418,7 @@ export const TodoItemCard = ({
           <div className="mb-1.5 flex items-center gap-1.5">
             <p
               className={clsx(
-                "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
+                "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-emphasis",
                 (completePhase === "struck" || removing) &&
                   "task-strike text-muted-foreground",
               )}
@@ -424,9 +429,11 @@ export const TodoItemCard = ({
           {description && (
             <pre
               className={clsx(
-                "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
-                (completePhase === "struck" || removing) &&
-                  "line-through",
+                "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
+                // `task-strike`, not Tailwind's `line-through`: the notes are struck on the
+                // same beat as the title an inch above them, and a rule that snaps on under
+                // one that fades in reads as two edits to one task.
+                (completePhase === "struck" || removing) && "task-strike",
               )}
             >
               {description}
