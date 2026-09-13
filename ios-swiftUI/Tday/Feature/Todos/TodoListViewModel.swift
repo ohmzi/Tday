@@ -695,7 +695,24 @@ final class TodoListViewModel {
     /// `remoteEmptiedAt`.
     private func hydrateFromExternalCacheChange() {
         let wasNonEmpty = !items.isEmpty
-        withAnimation(.easeInOut(duration: 0.22)) {
+        // The same rung the screen's own `.animation(_:value:)` runs the feed's
+        // travel on (`TdayFeedItemMotion.placement`). A remote change moves rows
+        // exactly as a local one does, so the transaction that coordinates it has
+        // no business being a length only this call site knows — and the rows it
+        // adds or removes still override it from their transition legs.
+        //
+        // This is the third place the travel is opened and the only one outside a
+        // View, so Reduce Motion is read from UIKit rather than the environment.
+        // Refusing it here is not optional: without this the one path the user
+        // never asked for — a cache change arriving on its own — would be the one
+        // path that still animates. `nil` animates nothing while still opening the
+        // explicit transaction the paragraph above depends on, which is the part
+        // that keeps List's diffing engine from seeing a section and its last row
+        // vanish in two uncoordinated updates.
+        let travel: Animation? = UIAccessibility.isReduceMotionEnabled
+            ? nil
+            : TdayFeedItemMotion.placement
+        withAnimation(travel) {
             hydrateFromCache()
         }
         if wasNonEmpty, items.isEmpty {

@@ -491,6 +491,11 @@ struct TodoListScreen: View {
     /// while this screen is still the one on top. See `isScreenVisible` for
     /// the on-screen half.
     @Environment(\.scenePhase) private var scenePhase
+    /// Gates the feed's own motion — see `timelineItemAnimationKey`'s
+    /// `.animation(_:value:)` and `timelineRowTransition`. The travel and the
+    /// row legs are refused separately because they come from two different
+    /// mechanisms; `TdayFeedItemMotion.row(reduceMotion:)` says why.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var floaterTaskHomeSearchFieldFocused: Bool
     @FocusState private var listSearchFieldFocused: Bool
     @State private var showingCreateTask = false
@@ -2873,7 +2878,17 @@ struct TodoListScreen: View {
                 .environment(\.defaultMinListRowHeight, 1)
                 .disableVerticalScrollBounce(!pullRefreshEnabled)
                 .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)
-                .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
+                // The feed's travel, and only the travel: every row the key
+                // change merely moves rides this transaction, while the rows it
+                // adds and removes override it from their own transition legs
+                // (`timelineRowTransition`). This line carried the travel before
+                // the split too — but at a length of its own, against legs pinned
+                // to the drag placeholder's spring, so the three events were timed
+                // against two clocks that never agreed.
+                .animation(
+                    reduceMotion ? nil : TdayFeedItemMotion.placement,
+                    value: timelineItemAnimationKey
+                )
 
             }
             .onAppear {
@@ -3144,7 +3159,7 @@ struct TodoListScreen: View {
                     .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 8, trailing: TodoTimelineMetrics.horizontalPadding))
                     .listRowBackground(colors.background)
                     .listRowSeparator(.hidden)
-                    .transition(timelineRowTransition())
+                    .transition(todoDropPlaceholderTransition())
                     .scheduledTodoDropTarget(
                         section: section,
                         draggedTodo: draggedTodo,
@@ -3400,13 +3415,24 @@ struct TodoListScreen: View {
     }
 
     private func timelineRowTransition() -> AnyTransition {
-        let insertion = AnyTransition.opacity
+        TdayFeedItemMotion.row(reduceMotion: reduceMotion)
+    }
+
+    /// The drop placeholder's own transition, split out from
+    /// [timelineRowTransition] rather than sharing it.
+    ///
+    /// The gap that opens under a dragged task is not a feed item: nothing was
+    /// added to the list and nothing left it, and the thing it has to stay in step
+    /// with is the finger — which is why both its legs are pinned to
+    /// `todoDropPlaceholderAnimation`, the same spring the
+    /// `activeDropSectionId` transaction above runs on. Putting it on the feed's
+    /// arrival and departure rungs would time the affordance against a list
+    /// diffing event that is not happening.
+    private func todoDropPlaceholderTransition() -> AnyTransition {
+        let leg = AnyTransition.opacity
             .combined(with: .move(edge: .top))
             .animation(todoDropPlaceholderAnimation)
-        let removal = AnyTransition.opacity
-            .combined(with: .move(edge: .top))
-            .animation(todoDropPlaceholderAnimation)
-        return .asymmetric(insertion: insertion, removal: removal)
+        return .asymmetric(insertion: leg, removal: leg)
     }
 
     /// The "all done" illustration's own insertion/removal transition — see

@@ -160,6 +160,8 @@
 		EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */; };
 		7E1A4C90B3D2F5680A1C9E33 /* TdayEmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */; };
 		C0FE7712A4B6D8E90F1A2B3C /* TdayConfetti.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7714E5F60718293A4B5C /* TdayConfetti.swift */; };
+		F0A57E0100000000000000A2 /* TdayFeedItemMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */; };
+		F0A57E0100000000000000C2 /* TdayFeedItemMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */; };
 		F0A57E0000000000000000A2 /* TdayMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000A1 /* TdayMotion.swift */; };
 		F0A57E0000000000000000B2 /* TdayMotionGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */; };
 		F0A57E0000000000000000C2 /* TdayMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000C1 /* TdayMotionTests.swift */; };
@@ -410,6 +412,8 @@
 		E30D3242D00BC6C1C4BA862D /* CredentialEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialEnvelope.swift; sourceTree = "<group>"; };
 		E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRepository.swift; sourceTree = "<group>"; };
 		E867FA22FEB66EDCE837CF6D /* SecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStore.swift; sourceTree = "<group>"; };
+		F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayFeedItemMotion.swift; sourceTree = "<group>"; };
+		F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayFeedItemMotionTests.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000A1 /* TdayMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotion.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionGenerated.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000C1 /* TdayMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionTests.swift; sourceTree = "<group>"; };
@@ -531,6 +535,7 @@
 				7BF881C9B39C6DF685E58AA6 /* DefaultHomeScreenTests.swift */,
 				19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */,
 				5E7E7A8C0B534B26A6E2F911 /* TelemetrySanitizerTests.swift */,
+				F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */,
 				F0A57E0000000000000000C1 /* TdayMotionTests.swift */,
 				7D4A9E1200000000000000A1 /* TdaySheetChromeMotionTests.swift */,
 				FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */,
@@ -1030,6 +1035,7 @@
 				0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */,
 				2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */,
 				C0FE7714E5F60718293A4B5C /* TdayConfetti.swift */,
+				F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */,
 				8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */,
 			);
 			path = UI;
@@ -1276,6 +1282,7 @@
 				E0D3B11DFB20419468405B6E /* DefaultHomeScreenTests.swift in Sources */,
 				C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */,
 				5E7E7A8C0B534B26A6E2F910 /* TelemetrySanitizerTests.swift in Sources */,
+				F0A57E0100000000000000C2 /* TdayFeedItemMotionTests.swift in Sources */,
 				F0A57E0000000000000000C2 /* TdayMotionTests.swift in Sources */,
 				7D4A9E1200000000000000A2 /* TdaySheetChromeMotionTests.swift in Sources */,
 				494E748270A233BECED5A359 /* TodayTasksWidgetSnapshotStoreTests.swift in Sources */,
@@ -1403,6 +1410,7 @@
 				CAFE0D1E000000000000005C /* DayAhead.swift in Sources */,
 				2D4CE01CFE08086ACC160F8B /* TdayAPIService.swift in Sources */,
 				861A548A6A3DDE0A78D35D83 /* TdayApp.swift in Sources */,
+				F0A57E0100000000000000A2 /* TdayFeedItemMotion.swift in Sources */,
 				F0A57E0000000000000000A2 /* TdayMotion.swift in Sources */,
 				F0A57E0000000000000000B2 /* TdayMotionGenerated.swift in Sources */,
 				BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */,
