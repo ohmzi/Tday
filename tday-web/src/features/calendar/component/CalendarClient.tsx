@@ -49,6 +49,7 @@ import { useEditCalendarTodo } from "../query/update-calendar-todo";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { moveTodoToDay } from "@/lib/moveTodoToDay";
 import type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
+import { useModalPresence } from "@/components/ui/Modal";
 import ConfirmRescheduleRecurring, {
   type PendingReschedule,
 } from "./ConfirmationModals/ConfirmRescheduleRecurring";
@@ -481,6 +482,10 @@ function CalendarTaskRow({
   highlighted?: boolean;
 }) {
   const [displayForm, setDisplayForm] = useState(false);
+  // Mounted while the form is open AND for its exit. `{displayForm && …}` handed the form the
+  // very flag it was gated on, so it was unmounted on the frame that flag went false and its
+  // close animation had nowhere to play. Still lazy: the row mounts nothing until first open.
+  const editFormPresent = useModalPresence(displayForm);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [itemElement, setItemElement] = useState<HTMLElement | null>(null);
@@ -591,7 +596,7 @@ function CalendarTaskRow({
 
   return (
     <>
-      {displayForm && (
+      {editFormPresent && (
         <EditCalendarFormContainer
           todo={todo}
           displayForm={displayForm}
@@ -854,6 +859,8 @@ export default function CalendarClient() {
   const [mounted, setMounted] = useState(false);
   const [calendarRange, setCalendarRange] = useDateRange();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  // Same shape as the edit form above: gated on presence, not on the raw flag it passes down.
+  const createFormPresent = useModalPresence(showCreateForm);
   const [selectDateRange, setSelectDateRange] = useState<{
     start: Date;
     end: Date;
@@ -1152,7 +1159,7 @@ export default function CalendarClient() {
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         )}
-        {showCreateForm && selectDateRange && (
+        {createFormPresent && selectDateRange && (
           <CreateCalendarFormContainer
             start={selectDateRange.start}
             end={selectDateRange.end}
@@ -1224,13 +1231,13 @@ export default function CalendarClient() {
           ) : null}
         </DragOverlay>
       </DndContext>
-      {pendingReschedule && (
-        <ConfirmRescheduleRecurring
-          pending={pendingReschedule}
-          open={pendingReschedule !== null}
-          onClose={() => setPendingReschedule(null)}
-        />
-      )}
+      {/* Mounted unconditionally: it holds its own last payload and its own presence, so
+          answering it lets the card play its exit instead of blinking out. */}
+      <ConfirmRescheduleRecurring
+        pending={pendingReschedule}
+        open={pendingReschedule !== null}
+        onClose={() => setPendingReschedule(null)}
+      />
     </div>
   );
 }
