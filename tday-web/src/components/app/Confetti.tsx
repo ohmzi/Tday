@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 /**
  * The burst that plays when the user ticks off the last thing they had left.
@@ -26,7 +27,9 @@ export default function Confetti({ accentColor }: { accentColor: string }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // The burst is the whole effect — there is no finished state to pin, so
+    // reduced motion means never starting rather than jumping to the end.
+    if (prefersReducedMotion()) return;
 
     const context = canvas.getContext("2d");
     if (!context) return;
