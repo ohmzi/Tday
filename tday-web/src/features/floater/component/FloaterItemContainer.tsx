@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   TASK_COMPLETION_CHECK_TO_STRIKE_MS,
-  TASK_COMPLETION_FADE_MS,
+  TASK_COMPLETION_REMOVING_TRANSITION,
   TASK_COMPLETION_STRIKE_TO_FADE_MS,
   TASK_COMPLETION_TOTAL_MS,
 } from "@/lib/taskCompletionTiming";
+import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
 import { Check, Copy, Flag, SquarePen, Trash } from "lucide-react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
@@ -68,6 +69,10 @@ export default function FloaterItemContainer({
   >(null);
   const completeTimers = useRef<number[]>([]);
   const completing = completePhase !== null;
+  const removing = completePhase === "removing";
+  // Subscribed rather than read once, for the same reason as the scheduled row: this decides
+  // what gets rendered, so it has to follow a preference that flips mid-session.
+  const reduceMotion = usePrefersReducedMotion();
   // Matches the scheduled task home row (TodoItemCard) so the swipe distance and the
   // fully-revealed Edit + Copy + Delete pills sit in the same place — at 110 the pills
   // (~136px) outran the slide, leaving the priority flag on top of Edit.
@@ -103,14 +108,19 @@ export default function FloaterItemContainer({
       return;
     }
     if (completing) return;
+    const removeAt = TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS;
     setCompletePhase("checked");
     completeTimers.current.push(
       window.setTimeout(() => setCompletePhase("struck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS),
+      window.setTimeout(() => setCompletePhase("removing"), removeAt),
+      // The scheduled row's staging module makes the same cut and argues it there: the last leg
+      // waits for the collapse, so with reduce-motion on there is nothing left to wait for.
+      // `reduceMotion` is this render's value, which is the answer at the instant a tap arms these
+      // timers — the same question `prefersReducedMotion()` asks on the other row.
       window.setTimeout(
-        () => setCompletePhase("removing"),
-        TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS,
+        () => completeMutateFn(floater),
+        reduceMotion ? removeAt : TASK_COMPLETION_TOTAL_MS,
       ),
-      window.setTimeout(() => completeMutateFn(floater), TASK_COMPLETION_TOTAL_MS),
     );
   };
 
@@ -173,12 +183,19 @@ export default function FloaterItemContainer({
     <>
       <div
         style={
-          completePhase === "removing"
-            ? { opacity: 0, transition: `opacity ${TASK_COMPLETION_FADE_MS}ms ease` }
+          removing
+            ? {
+                opacity: 0,
+                gridTemplateRows: "0fr",
+                transition: reduceMotion ? undefined : TASK_COMPLETION_REMOVING_TRANSITION,
+              }
             : undefined
         }
         className={clsx(
-          "group relative max-w-full overflow-hidden transition-opacity sm:overflow-visible",
+          // The 1fr track and the removing style below are the scheduled row's collapse
+          // (TodoItemCard), spelled the same way so an Anytime task and a dated one leave the
+          // list identically — the argument for the trick is written out there.
+          "group relative grid max-w-full grid-rows-[1fr] overflow-hidden transition-opacity sm:overflow-visible",
           resting && "opacity-50 saturate-[0.65]",
         )}
       >
@@ -268,6 +285,9 @@ export default function FloaterItemContainer({
               ? "none"
               : "transform 220ms ease, background-color 150ms ease",
             touchAction: "pan-y",
+            // Lets the grid item shrink past its content — and past the `min-h-[54px]` below,
+            // which would otherwise hold the box open at a floater's full mobile height.
+            ...(removing ? { overflow: "hidden", minHeight: 0 } : null),
           }}
           className={clsx(
             // min-h on mobile keeps the swipe-revealed Edit/Delete pills
@@ -295,7 +315,7 @@ export default function FloaterItemContainer({
               <p
                 className={clsx(
                   "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
-                  (completePhase === "struck" || completePhase === "removing") &&
+                  (completePhase === "struck" || removing) &&
                     "task-strike text-muted-foreground",
                 )}
               >
@@ -305,7 +325,7 @@ export default function FloaterItemContainer({
                 <pre
                   className={clsx(
                     "w-48 whitespace-pre-wrap pt-1 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
-                    (completePhase === "struck" || completePhase === "removing") &&
+                    (completePhase === "struck" || removing) &&
                       "line-through",
                   )}
                 >

@@ -21,6 +21,7 @@ import { Link, useLocale, usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { getListIcon } from "@/lib/listIcons";
 import type { ListColor } from "@/types";
+import { useRowPlacement } from "@/hooks/useRowPlacement";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { useTodo } from "@/features/todayTodos/query/get-todo";
 import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
@@ -106,6 +107,7 @@ export default function NativeScheduledTaskHomeDashboard() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [createListOpen, setCreateListOpen] = useState(false);
+  const placementRef = useRowPlacement<HTMLDivElement>();
   const titleDate = format(new Date(), "EEE, MMM d", {
     locale: getDateFnsLocale(locale),
   });
@@ -165,7 +167,14 @@ export default function NativeScheduledTaskHomeDashboard() {
       useReorderTodo={useReorderTodo}
     >
       <ScreenWatermark icon={Sun} />
-      <div className="flex w-full flex-col gap-4 sm:gap-5">
+      {/* The column's children travel when one of them leaves. The Today section below
+          is the reason: it is conditional on there being an incomplete task left, so
+          checking off the last one unmounts the whole wrapper — and a flex child takes
+          the column's `gap` with it, which the row's own collapse never accounts for
+          because that collapse happens inside the section. The tile grid and the list
+          rows below were dropped by that gap in the frame after the row had finished
+          closing neatly. */}
+      <div ref={placementRef} className="flex w-full flex-col gap-4 sm:gap-5">
         <RootFeedHeroHeader
           title="T'Day"
           mark="timeOfDay"

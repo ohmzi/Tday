@@ -1,4 +1,4 @@
-import type { ElementType, ReactNode } from "react";
+import type { CSSProperties, ElementType, ReactNode } from "react";
 import Confetti from "@/components/app/Confetti";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,14 @@ import { cn } from "@/lib/utils";
  * @param celebrate the list emptied because the user finished it, rather than
  *   because there was never anything in it: confetti flies first and the scene
  *   comes up through it a beat later.
+ * @param celebrationStartDelayMs how long the celebration waits before any of it
+ *   plays — the burst and the scene shift together, so the burst still leads.
+ *   Zero for the callers that draw this over a page where nothing else is
+ *   moving. A feed that draws it *inline*, in the slot the last row vacated,
+ *   passes the time its own rows take to travel out of the way
+ *   (`DELAY_MS.placementLead`, which is `TdayEmptyState`'s
+ *   `celebrationStartDelayMillis` on Android): the reference experience is the
+ *   overlay's, where the paper is the only thing on screen that moves.
  */
 export default function EmptyState({
   icon: Icon,
@@ -36,6 +44,7 @@ export default function EmptyState({
   action,
   className,
   celebrate = false,
+  celebrationStartDelayMs = 0,
 }: {
   icon: ElementType;
   accentColor: string;
@@ -44,6 +53,7 @@ export default function EmptyState({
   action?: ReactNode;
   className?: string;
   celebrate?: boolean;
+  celebrationStartDelayMs?: number;
 }) {
   const tint = (percent: number) =>
     `color-mix(in srgb, ${accentColor} ${percent}%, transparent)`;
@@ -62,6 +72,13 @@ export default function EmptyState({
           "tday-empty-enter flex w-full flex-col items-center",
           celebrate && "tday-empty-enter-celebrating",
         )}
+        style={
+          celebrationStartDelayMs > 0
+            ? ({
+                "--tday-celebration-start": `${celebrationStartDelayMs}ms`,
+              } as CSSProperties)
+            : undefined
+        }
       >
         <div aria-hidden className="tday-empty-scene relative mb-7 h-[136px] w-[172px]">
           {/* Two cards behind, fanned out. Tinted rather than `bg-card`, so they
@@ -155,7 +172,9 @@ export default function EmptyState({
         {action ? <div className="mt-6">{action}</div> : null}
       </div>
 
-      {celebrate ? <Confetti accentColor={accentColor} /> : null}
+      {celebrate ? (
+        <Confetti accentColor={accentColor} startDelayMs={celebrationStartDelayMs} />
+      ) : null}
     </div>
   );
 }

@@ -78,7 +78,7 @@ vocabulary stops being one.
 | `Enter` | `200` | `0.2` | `var(--tday-duration-enter)` | One element arrives, or a control changes state under its own steam — and nothing argues for another length |
 | `Change` | `260` | `0.26` | `var(--tday-duration-change)` | The user's own edit is replayed back to them **in place**; they are meant to watch it finish |
 | `Emphasis` | `320` | `0.32` | `var(--tday-duration-emphasis)` | Position or size changes: a row takes a new slot, a sheet arrives, a strikethrough sweeps across |
-| `Scene` | `520` | `0.52` | `var(--tday-duration-scene)` | A full-bleed illustration rises into an empty feed, or sinks out of one |
+| `Scene` | `520` | `0.52` | `var(--tday-duration-scene)` | A full-bleed illustration rises into an empty feed. The arrival, and not the way back out — see the bullet below |
 
 Five rungs, deliberately. Rungs closer together than about two frames at 60 Hz
 cannot be told apart by eye, which means a guardrail cannot tell a correct
@@ -123,10 +123,16 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1558`,
   `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:286`,
   `tday-web/src/globals.css:570`.
-- **`Scene` (520).** 2 Android, 1 iOS, 2 web — four of the five are the
-  empty-state illustration arriving or leaving, on all three clients. It is
-  **not** for route or tab handovers: `globals.css` argues in place for why
-  anything longer there reads as a stall. Anchors:
+- **`Scene` (520).** 2 Android, 1 iOS, 2 web at the census. This rung is the
+  empty-state illustration **arriving**: all three clients name their site for
+  the enter (`EnterMillis`, `EmptyStateEnter.duration`, `.tday-empty-enter`).
+  It is **not** the way back out. There is one exit that mirrors that arrival
+  anywhere in the tree — web's, played whenever that scene gives its slot up to
+  an "Earlier" bucket's rows — and it is deliberately not on this rung: an exit that hands a slot to an arrival answers
+  to that arrival's length, not to the length of the scene it undoes, and
+  `todayEarlierIllustration.ts` writes the argument out where the constant is.
+  Nor is this rung for route or tab handovers: `globals.css` argues in place for
+  why anything longer there reads as a stall. Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:372`,
   `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:272`,
   `tday-web/src/globals.css:608`.
@@ -150,13 +156,24 @@ own. `CelebrationLead` is an independent literal that happens to equal 320 today
 — welding it to `Emphasis` would let a later PR that retimes row placement
 silently retime the confetti on all three clients.
 
-- **`PlacementLead`.** One site, Android only:
-  `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:76`. See the open question
-  below.
+- **`PlacementLead`.** Three sites on two clients, all of them a feed that draws
+  the empty state *inline* and therefore moves its own layout when that scene
+  arrives. Android spends it inside the feed's motion spec
+  (`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:76`);
+  web spends it at the two screens with the same shape, as `EmptyState`'s
+  `celebrationStartDelayMs` —
+  `tday-web/src/features/todayTodos/component/AllTasksTimelineContainer.tsx:313`
+  and
+  `tday-web/src/features/floater/component/NativeFloaterTaskHomeDashboard.tsx:218`.
+  The overlay callers on both clients pass nothing, because nothing behind the
+  overlay moves. See the open question below.
 - **`CelebrationLead`.** One site per client:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:388`,
   `ios-swiftUI/Tday/Core/UI/TdayConfetti.swift:160`,
-  `tday-web/src/globals.css:615`.
+  `tday-web/src/globals.css:623`. Web's is the one that shows the two delays
+  adding: `.tday-empty-enter-celebrating` is
+  `calc(var(--tday-celebration-start, 0s) + var(--tday-delay-celebration-lead))`,
+  where the first term is whatever `PlacementLead` the host handed over.
 
 ## Easings
 
@@ -187,7 +204,7 @@ against `animation-core`'s bytecode rather than assumed.
   web today.
 - **`Scene`.** `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:375`, and three
   declarations on web — `.tday-empty-enter` at `tday-web/src/globals.css:608`,
-  `.tday-surface-enter` at `:713` and `.tday-surface-exit` at `:719`. iOS
+  `.tday-surface-enter` at `:789` and `.tday-surface-exit` at `:795`. iOS
   expresses the same arrival with `.easeOut` and is not on this curve yet.
 - **`Gesture`.** Four sites, all web: `tday-web/src/globals.css:249` and `:271`
   (press feedback), `tday-web/src/features/calendar/style/calendar-styles.css:24`
@@ -254,7 +271,7 @@ bar button than on a full-width row.
   close enough to nothing that the press read as a tap landing rather than as a
   button going down.
 - **`Card`.** 5 Android press sites; 1 on web
-  (`tday-web/src/components/onboarding/OnboardingWizard.tsx:753`).
+  (`tday-web/src/components/onboarding/OnboardingWizard.tsx:725`).
 - **`Row`.** 2 Android press sites; 2 on iOS
   (`ios-swiftUI/Tday/Feature/Onboarding/OnboardingWizardOverlay.swift:1347` and
   `:1359`); 6 `active:scale-[0.985]` on web, plus the global press rule at
@@ -335,8 +352,17 @@ because the user cannot tell it from a broken render. Android reads
   than at `0f` with the animation skipped.
 - iOS: `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:112` sets `entered = true`
   and returns before the `withAnimation` block.
-- Web: `tday-web/src/globals.css:674` switches the scene's animations off and
+- Web: `tday-web/src/globals.css:744` switches the scene's animations off and
   pins the sparkle to `opacity: 1`, with the reason in the block.
+- Web, the JS half: CSS cannot see a `setTimeout`, so a sequence gated in
+  JavaScript has to ask the same question. `tday-web/src/lib/prefersReducedMotion.ts`
+  is the one place that asks it — `prefersReducedMotion()` for a timer at the
+  instant it arms, `usePrefersReducedMotion()` for a component whose output
+  depends on the preference and must follow it when it changes. Turning an
+  animation off without telling the timer that was waiting for it removes the
+  trip and keeps the wait, which is the rule broken from the other side:
+  `useEarlierExpandHandoff` therefore takes its immediate branch rather than
+  holding the finished state behind 520 ms of a scene that cannot animate.
 
 ---
 
@@ -350,9 +376,9 @@ change pixels or destroy an argument that is worth more than the tidiness.
 | The 340–420 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/TdayApp.kt:119` (360, nav fade-in); `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5757` (420); `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:214` and `:452` (340 ms hand-off sleeps); `tday-web/src/globals.css:249` (340 ms ripple) | Five values, no two of them the same motion, and nothing that would still be true if they were merged. A rung here would sit one frame from `Emphasis` and could not be told from it by eye — exactly the case the five-rung ladder exists to refuse |
 | The 600–620 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5761` (620); `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:136` (0.62 flash delay) | Both are legs of the search-result reveal, timed against the legs either side of them rather than against a ladder. They are longer than `Scene`, which is the app's longest *motion* — these are waits |
 | iOS sub-frame sequencing constants | `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:133` (0.08 s pre-scroll delay); `ios-swiftUI/Tday/Feature/Completed/CompletedScreen.swift:468` (0.1 s) | Below the two-frame floor the ladder is built on. They order events; they are not motions anybody watches |
-| `cubic-bezier(0.3, 0, 0.4, 1)` | `tday-web/src/globals.css:633` (`.tday-empty-exit`) | The empty scene *sinking*. Deliberately not `Scene`'s curve read backwards — the exit is played only during an "Earlier" hand-off and is tuned against that hand-off's own timing |
+| `cubic-bezier(0.3, 0, 0.4, 1)` | `tday-web/src/globals.css:683` (`--tday-empty-sink-ease`, ridden by `.tday-empty-exit` and by the `.tday-empty-slot` track it closes) | The empty scene *sinking*. Deliberately not `Scene`'s curve read backwards — the exit is played only during an "Earlier" hand-off and is tuned against that hand-off's own timing. Named as a property rather than written twice: the ink and the slot under it have to leave on one curve or they read as two departures |
 | `cubic-bezier(0.25, 1, 0.5, 1)` | `tday-web/src/components/app/RootDock.tsx:122` | The dock's sliding indicator pill. A hard-out curve with no counterpart on Android or iOS, which express the dock with springs |
-| `cubic-bezier(0.22, 0.61, 0.36, 1)` | `tday-web/src/components/onboarding/OnboardingWizard.tsx:723` | An inline height transition on the wizard. One site, one client, and a height animation is the one place a curve's tail is load-bearing against layout |
+| `cubic-bezier(0.22, 0.61, 0.36, 1)` | `tday-web/src/components/ui/AnimatedHeight.tsx:57` | The app's only height transition, declared once in the primitive that owns it — promoted out of the onboarding wizard, where it was written inline. One declaration, one client, and a height animation is the one place a curve's tail is load-bearing against layout. Its 280 ms did not survive the promotion: a box changing size is `Emphasis` by the second idiom rule, and that half was never argued |
 | `SettleSpring` (0.9 damping, `StiffnessMediumLow`) | `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayHeroTitleHeader.kt:210` | Pinned to the iOS UIView spring its doc comment names, not to the vocabulary's `Settle`. Moving it onto the token would undo the cross-platform match the comment argues for — the opposite of what a token layer is for |
 | `TdayPullRefresh`'s specs | `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdayPullRefresh.kt:196` (0.72 damping), `:241` (220 ms), `:253` (1050 ms wave) | A pull-to-refresh is driven by the finger, not by a clock: the release spring is looser than anything in the vocabulary on purpose, and the wave is a loop rather than a transition |
 | `pressedScale * revealScale` | `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskSwipeActionButton.kt:48`; `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/calendar/CalendarScreen.kt:2840` | The 0.92 f here is **one factor of a composed transform**, multiplied by the reveal scale before it reaches the screen. The press-scale tokens are the whole scale a finger sees; this is not the same quantity and must not be given the same name |
@@ -378,13 +404,16 @@ different from the token they would move to; only the 5 `.easeIn` sites are a
 near-match. That is why this PR migrates none of them, and why whoever does must
 treat it as a visual change with a visual review, not as a refactor.
 
-**`PlacementLead` exists on Android only.** It has one consumer
-(`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:76`) and no counterpart on
-iOS or web: on the list-detail screens the empty state is a full-screen overlay
-and nothing on the page moves, so there is no placement to lead. It is in the
-vocabulary ahead of two of its three clients, on the argument that the inline
-layout iOS and web share will need it when they animate row placement. Until
-they do, it is a token with a single caller.
+**`PlacementLead` has no iOS caller.** It went in ahead of two of its three
+clients, on the argument that the inline layout iOS and web share would need it
+the day either one animated row placement. Web now does
+(`useRowPlacement`), and spends it at both of its inline hosts — the Delays
+section lists them — so half of that bet is settled. iOS is the other half: its
+rows travel on SwiftUI's implicit layout animation, which nothing there can
+currently ask the length of, so the inline empty state has no travel it can name
+to wait for. Until it can, this token has two clients and not three. Overlay
+callers on every client are not the gap: nothing behind an overlay moves, so
+there is no placement to lead in the first place.
 
 ---
 

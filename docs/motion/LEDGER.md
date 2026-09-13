@@ -463,22 +463,22 @@ Restore it from git history rather than adjusting the number.
 
 - [ ] `web-empty-state-slot-claims-42vh-in-one-frame` — the 42vh slot is claimed the same frame the last row is pruned · web · Sev 3 · M · Gate V+D
 - [ ] `web-floater-empty-arrival-displaces-tiles` — ~33 vh of uncued jump, on the confetti frame — largest in the set · web · Sev 4 · M · Gate V+D
-- [ ] `web-empty-state-anchor-citation-fix` — ledger hygiene: `EmptyState.tsx:163` does not exist; real anchors `:54`/`:60-65` · web · Sev 1 · XS · Gate doc
+- [ ] `web-empty-state-anchor-citation-fix` — ledger hygiene: `EmptyState.tsx:163` does not exist — the file is 161 lines. Verified anchors: the slot is `:54` (`min-h-[42vh]`, inside the wrapper at `:52-57`), the scene's own 520 ms arrival is `:60-65` (`.tday-empty-enter` / `.tday-empty-enter-celebrating`), and `:158` is the confetti the arrival sits above the wrapper to avoid fading with · web · Sev 1 · XS · Gate doc
 
 ### PR 24a — the Earlier hand-off animates height, not just paint
 
-- [ ] `web-earlier-handoff-height-jump` — hand-off animates paint only; the collapse path jumps twice 260 ms apart · web · Sev 4 · M · Gate V+D
+- [ ] `web-earlier-handoff-height-jump` — the EXPAND hand-off animates paint only: the scene fades and sinks while its box holds all 42vh, which the page then takes back in the single frame Earlier's rows arrive in. The collapse tap's own two jumps 260 ms apart — this row's original wording — are a different mechanism and belong to `web-earlier-collapse-has-no-handoff` in PR 24b, which is where they are counted: a collapse takes no hand-off at all, so nothing here reaches it · web · Sev 4 · M · Gate V+D
 - [ ] `web-earlier-exit-520ms-dead-wait` — `TODAY_EARLIER_EXIT_MS` 520 → **220**; update `today-earlier-illustration.test.ts:165-172` same commit · web · Sev 3 · S · Gate V
 
 ### PR 24b — the Earlier collapse gets the expand’s hand-off
 
-- [ ] `web-earlier-collapse-has-no-handoff` — expand is sequenced, collapse is not → two jumps per tap · web · Sev 3 · M · Gate V
-- [ ] `web-illustration-pops-back-inside-celebrate-window` — illustration snaps back to full opacity over Earlier's rows, and stays · web · Sev 3 · M · Gate V
-- [ ] `web-celebrate-window-expiry-is-an-untimed-cut` — the 4 s window closes on an unrelated re-render, then hard-cuts · web · Sev 3 · M · Gate V
+- [x] `web-earlier-collapse-has-no-handoff` — expand is sequenced, collapse is not → two jumps per tap: the illustration remounts into an already-open track and claims its 42vh in one frame, while Earlier's rows hold their own height behind it for the `OVERDUE_ROWS_FADE_MS` `useFadeUnmount` keeps them mounted. That 260 ms gap is the one PR 24a's row used to be worded with; it is counted here · web · Sev 3 · M · Gate V
+- [x] `web-illustration-pops-back-inside-celebrate-window` — illustration snaps back to full opacity over Earlier's rows, and stays. Paint only, and deliberately kept that way: the hand-off that starts inside the celebration window does not close the scene's slot, because the scene is still there when the beat ends (`earlierHandoffVacatesSlot`). Whatever replaces the snap must not reopen a track either · web · Sev 3 · M · Gate V
+- [x] `web-celebrate-window-expiry-is-an-untimed-cut` — the 4 s window closes on an unrelated re-render, then hard-cuts · web · Sev 3 · M · Gate V
 
 ### PR 56 — the Earlier chevron says something during the wait
 
-- [ ] `web-earlier-header-no-feedback-during-handoff` — the tapped chevron is identical for the whole 520 ms wait · web · Sev 3 · S · Gate V
+- [x] `web-earlier-header-no-feedback-during-handoff` — the tapped chevron is identical for the whole 520 ms wait · web · Sev 3 · S · Gate V
 - ↳ part 1 of 2 of `disclosure-expand-collapse` — promote `AnimatedHeight` out of `OnboardingWizard.tsx:704-729`. Box lives under **PR 42b+42c**.
 
 ## Phase 6 — parity pairs (android + web together; iOS follows)

@@ -784,7 +784,9 @@ const RUNG_GUIDE =
   "changing position. " +
   "Emphasis 320 — anything that changes where or how big it is; the boundary with " +
   "Change is geometry, not importance. " +
-  "Scene 520 — the empty-state illustration rising or sinking, and nothing else. " +
+  "Scene 520 — the empty-state illustration rising into an empty feed, and nothing " +
+  "else; the one exit that mirrors that arrival is timed against the hand-off it " +
+  "serves instead. " +
   "Easings, springs and press scales have rows in the same table.";
 
 const BUDGET_FILE = path.join(__dirname, "..", "fixtures", "motion-budget.json");

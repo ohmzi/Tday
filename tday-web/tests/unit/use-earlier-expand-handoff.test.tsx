@@ -2,8 +2,20 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useEarlierExpandHandoff } from "@/features/todayTodos/lib/useEarlierExpandHandoff";
+import { installReducedMotion } from "../setup/reduced-motion";
 
-const EXIT_MS = 520;
+/**
+ * The two beats are deliberately different lengths here, and neither is a token
+ * value: every assertion below is about WHICH exit a direction waits for, and
+ * two numbers that happen to match would let a collapse wait on the scene's
+ * timer — or an expand on the rows' — with nothing to notice.
+ */
+const SCENE_EXIT_MS = 200;
+const ROWS_EXIT_MS = 260;
+
+function mountHandoff() {
+  return renderHook(() => useEarlierExpandHandoff(SCENE_EXIT_MS, ROWS_EXIT_MS));
+}
 
 describe("useEarlierExpandHandoff", () => {
   beforeEach(() => {
@@ -14,149 +26,288 @@ describe("useEarlierExpandHandoff", () => {
     vi.useRealTimers();
   });
 
-  it("starts collapsed with no hand-off in flight", () => {
-    const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+  it("starts collapsed with no beat in flight", () => {
+    const { result } = mountHandoff();
     expect(result.current.expanded).toBe(false);
-    expect(result.current.handoffPending).toBe(false);
+    expect(result.current.handoff).toBe("idle");
   });
 
-  it("toggle(false) — no illustration to hand off from — expands immediately, never sets handoffPending", () => {
-    const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+  it("toggle(false) — nothing swaps — expands immediately, never leaves idle", () => {
+    const { result } = mountHandoff();
 
     act(() => {
       result.current.toggle(false);
     });
 
     expect(result.current.expanded).toBe(true);
-    expect(result.current.handoffPending).toBe(false);
+    expect(result.current.handoff).toBe("idle");
   });
 
-  it("toggle(true) while collapsed — requirement 3 — hides the illustration first, expands only after exitMs", async () => {
-    const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+  describe("expanding: the scene is the one leaving", () => {
+    it("hides the illustration first, expands only after the scene's own exit", async () => {
+      const { result } = mountHandoff();
 
-    act(() => {
-      result.current.toggle(true);
+      act(() => {
+        result.current.toggle(true);
+      });
+
+      // Phase 1: the scene is leaving, rows not revealed yet.
+      expect(result.current.handoff).toBe("scene-leaving");
+      expect(result.current.expanded).toBe(false);
+
+      // Not yet — the whole point is this doesn't fire early.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS - 50);
+      });
+      expect(result.current.expanded).toBe(false);
+      expect(result.current.handoff).toBe("scene-leaving");
+
+      // Phase 2: exactly at the scene's exit, the hand-off completes — same
+      // instant the CSS `.tday-empty-exit` animation, drawn on the rung
+      // `TODAY_EARLIER_EXIT_MS` names, finishes playing.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(50);
+      });
+      expect(result.current.expanded).toBe(true);
+      expect(result.current.handoff).toBe("idle");
     });
 
-    // Phase 1: hand-off pending, rows not revealed yet.
-    expect(result.current.handoffPending).toBe(true);
-    expect(result.current.expanded).toBe(false);
+    it("waits the scene's exit and not the rows', which are two different numbers", async () => {
+      const { result } = mountHandoff();
 
-    // Not yet — the whole point is this doesn't fire early.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(EXIT_MS - 50);
-    });
-    expect(result.current.expanded).toBe(false);
-    expect(result.current.handoffPending).toBe(true);
+      act(() => {
+        result.current.toggle(true);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS);
+      });
 
-    // Phase 2: exactly at exitMs, the hand-off completes — same instant the
-    // CSS `.tday-empty-exit` animation (given the same `exitMs` via
-    // `animationDuration`) finishes playing.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(50);
+      // Still short of ROWS_EXIT_MS. A beat timed against the wrong exit would
+      // still be pending here.
+      expect(result.current.expanded).toBe(true);
+      expect(result.current.handoff).toBe("idle");
     });
-    expect(result.current.expanded).toBe(true);
-    expect(result.current.handoffPending).toBe(false);
+
+    it("a second tap during the beat is ignored — no new timer, no restart", async () => {
+      const { result } = mountHandoff();
+
+      act(() => {
+        result.current.toggle(true);
+      });
+      expect(result.current.handoff).toBe("scene-leaving");
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS / 2);
+      });
+
+      // A tap landing inside the running beat — matches the real toggle
+      // handler being called again by a second click on the header.
+      act(() => {
+        result.current.toggle(true);
+      });
+      expect(result.current.handoff).toBe("scene-leaving");
+      expect(result.current.expanded).toBe(false);
+
+      // The ORIGINAL timer still fires on schedule — a restarted timer would
+      // still be pending here.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS / 2);
+      });
+      expect(result.current.expanded).toBe(true);
+      expect(result.current.handoff).toBe("idle");
+    });
   });
 
-  it("a second tap during the exit beat is ignored — no new timer, no restart", async () => {
-    const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+  describe("collapsing: the rows are the one leaving", () => {
+    async function expand(result: { current: ReturnType<typeof useEarlierExpandHandoff> }) {
+      act(() => {
+        result.current.toggle(true);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS);
+      });
+      expect(result.current.expanded).toBe(true);
+    }
 
-    act(() => {
-      result.current.toggle(true);
-    });
-    expect(result.current.handoffPending).toBe(true);
+    it("drops `expanded` on the tap — that flag is what arms the rows' own fade", async () => {
+      const { result } = mountHandoff();
+      await expand(result);
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(EXIT_MS / 2);
+      act(() => {
+        result.current.toggle(true);
+      });
+
+      // The mirror of the expand, and mirrored rather than copied: there the
+      // flag is held BACK so the scene keeps drawing itself while it leaves;
+      // here it is dropped AT ONCE, because it is the thing `useFadeUnmount`
+      // and `.tday-rows-exit` read to start the rows leaving at all.
+      expect(result.current.expanded).toBe(false);
+      expect(result.current.handoff).toBe("rows-leaving");
     });
 
-    // A tap landing inside the running beat — matches the real toggle
-    // handler being called again by a second click on the header.
-    act(() => {
-      result.current.toggle(true);
-    });
-    // Still pending, still not expanded — the tap changed nothing.
-    expect(result.current.handoffPending).toBe(true);
-    expect(result.current.expanded).toBe(false);
+    it("holds the beat open for the rows' fade, not the scene's exit", async () => {
+      const { result } = mountHandoff();
+      await expand(result);
 
-    // The ORIGINAL timer still fires on schedule — a restarted timer would
-    // still be pending here.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(EXIT_MS / 2);
+      act(() => {
+        result.current.toggle(true);
+      });
+
+      // The defect this replaced: the scene remounted into an already-open
+      // track on the tap frame and claimed its 42vh while the rows it landed
+      // on were still holding their own height behind it. Ending the beat at
+      // the scene's exit instead of the rows' would leave most of that overlap
+      // in place, so the two numbers are kept apart to prove which one is read.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS);
+      });
+      expect(result.current.handoff).toBe("rows-leaving");
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ROWS_EXIT_MS - SCENE_EXIT_MS);
+      });
+      expect(result.current.handoff).toBe("idle");
+      expect(result.current.expanded).toBe(false);
     });
-    expect(result.current.expanded).toBe(true);
-    expect(result.current.handoffPending).toBe(false);
+
+    it("ignores a tap that lands inside its own beat, the same way the expand does", async () => {
+      const { result } = mountHandoff();
+      await expand(result);
+
+      act(() => {
+        result.current.toggle(true);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ROWS_EXIT_MS / 2);
+      });
+      act(() => {
+        result.current.toggle(true);
+      });
+      expect(result.current.handoff).toBe("rows-leaving");
+      expect(result.current.expanded).toBe(false);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ROWS_EXIT_MS / 2);
+      });
+      expect(result.current.handoff).toBe("idle");
+      expect(result.current.expanded).toBe(false);
+    });
+
+    it("is immediate when nothing swaps — a screen with tasks on it", async () => {
+      const { result } = mountHandoff();
+      act(() => {
+        result.current.toggle(false);
+      });
+      expect(result.current.expanded).toBe(true);
+
+      act(() => {
+        result.current.toggle(false);
+      });
+      expect(result.current.expanded).toBe(false);
+      expect(result.current.handoff).toBe("idle");
+    });
   });
 
-  it("collapsing is always immediate, even if called mid a stale pending window", async () => {
-    const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+  describe("beginSceneExit: the same beat, reached without a tap", () => {
+    it("plays the scene out and leaves the rows holding the slot", async () => {
+      const { result } = mountHandoff();
 
-    act(() => {
-      result.current.toggle(true);
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(EXIT_MS);
-    });
-    expect(result.current.expanded).toBe(true);
+      // Earlier already open — the shape the celebration window closes on, and
+      // the only one that calls this.
+      act(() => {
+        result.current.toggle(false);
+      });
+      expect(result.current.expanded).toBe(true);
 
-    // Collapse: expanded is true, so this takes the immediate branch
-    // regardless of the (irrelevant, since !expanded is false) argument.
-    act(() => {
-      result.current.toggle(true);
+      act(() => {
+        result.current.beginSceneExit();
+      });
+      expect(result.current.handoff).toBe("scene-leaving");
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS);
+      });
+      expect(result.current.handoff).toBe("idle");
+      // Unchanged, and unchanged on purpose: this beat ends where an expand's
+      // ends — the scene gone, Earlier's rows on the slot — so it sets the same
+      // flag to the same value rather than carrying an ending of its own.
+      expect(result.current.expanded).toBe(true);
     });
-    expect(result.current.expanded).toBe(false);
-    expect(result.current.handoffPending).toBe(false);
+
+    it("is ignored inside a beat that is already running", async () => {
+      const { result } = mountHandoff();
+
+      act(() => {
+        result.current.toggle(true);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS / 2);
+      });
+
+      // A window expiring mid-tap. Sharing one timer with the tap is what makes
+      // this free: a second beat would double-fire the ending and land the
+      // scene's exit twice on one departure.
+      act(() => {
+        result.current.beginSceneExit();
+      });
+      expect(result.current.handoff).toBe("scene-leaving");
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS / 2);
+      });
+      expect(result.current.handoff).toBe("idle");
+      expect(result.current.expanded).toBe(true);
+    });
   });
 
-  it("the hand-off flag is cleared by setExpandedImmediately — the exact class of bug the iOS review caught", async () => {
-    const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+  it("the beat is cleared by setExpandedImmediately — the exact class of bug the iOS review caught", async () => {
+    const { result } = mountHandoff();
 
     act(() => {
       result.current.toggle(true);
     });
-    expect(result.current.handoffPending).toBe(true);
+    expect(result.current.handoff).toBe("scene-leaving");
 
     // A deep-link/focus effect firing mid-exit (e.g. a toast navigation)
-    // must not leave `handoffPending` stuck true forever — that was the
-    // exact bug: a hand-off flag set on expand that no other path reset.
+    // must not leave the beat stuck open forever — that was the exact bug: a
+    // hand-off flag set on expand that no other path reset.
     act(() => {
       result.current.setExpandedImmediately(true);
     });
     expect(result.current.expanded).toBe(true);
-    expect(result.current.handoffPending).toBe(false);
+    expect(result.current.handoff).toBe("idle");
 
     // And the original timer, if it fired anyway, would be a no-op — assert
     // nothing throws and state stays put.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(EXIT_MS + 10);
+      await vi.advanceTimersByTimeAsync(ROWS_EXIT_MS + 10);
     });
     expect(result.current.expanded).toBe(true);
-    expect(result.current.handoffPending).toBe(false);
+    expect(result.current.handoff).toBe("idle");
   });
 
-  it("setExpandedImmediately(false) also clears a pending hand-off (collapse-while-exiting path)", () => {
-    const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+  it("setExpandedImmediately(false) also clears a beat in flight", () => {
+    const { result } = mountHandoff();
 
     act(() => {
       result.current.toggle(true);
     });
-    expect(result.current.handoffPending).toBe(true);
+    expect(result.current.handoff).toBe("scene-leaving");
 
     act(() => {
       result.current.setExpandedImmediately(false);
     });
     expect(result.current.expanded).toBe(false);
-    expect(result.current.handoffPending).toBe(false);
+    expect(result.current.handoff).toBe("idle");
   });
 
-  it("unmounting mid hand-off clears the pending timer instead of leaking a setState-after-unmount", async () => {
-    const { result, unmount } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+  it("unmounting mid-beat clears the pending timer instead of leaking a setState-after-unmount", async () => {
+    const { result, unmount } = mountHandoff();
 
     act(() => {
       result.current.toggle(true);
     });
-    expect(result.current.handoffPending).toBe(true);
+    expect(result.current.handoff).toBe("scene-leaving");
 
     unmount();
 
@@ -164,15 +315,109 @@ describe("useEarlierExpandHandoff", () => {
     // unmounted component — vitest/jsdom surfaces that as a thrown/console
     // error, so simply not throwing here is the assertion.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(EXIT_MS + 10);
+      await vi.advanceTimersByTimeAsync(ROWS_EXIT_MS + 10);
+    });
+  });
+
+  describe("under prefers-reduced-motion", () => {
+    const REAL_MATCH_MEDIA = window.matchMedia;
+
+    afterEach(() => {
+      window.matchMedia = REAL_MATCH_MEDIA;
+    });
+
+    it("expands on the same tap — no dead wait in front of an illustration that cannot animate", () => {
+      installReducedMotion(true);
+      const { result } = mountHandoff();
+
+      act(() => {
+        result.current.toggle(true);
+      });
+
+      // The bug this replaced: the beat went open, `.tday-empty-exit` was
+      // `animation: none`, and the reader got the scene's exit length of a
+      // static picture followed by the whole screen changing at once.
+      expect(result.current.expanded).toBe(true);
+      expect(result.current.handoff).toBe("idle");
+    });
+
+    it("collapses on the same tap too — the rows have no fade to wait for either", () => {
+      installReducedMotion(true);
+      const { result } = mountHandoff();
+
+      act(() => {
+        result.current.toggle(true);
+      });
+      act(() => {
+        result.current.toggle(true);
+      });
+
+      // `.tday-rows-exit` is `animation: none` under the preference and
+      // `useFadeUnmount` skips its own delay, so the rows are gone on the tap
+      // frame. Holding the scene off for a fade nobody is playing would be the
+      // same dead wait from the other direction.
+      expect(result.current.expanded).toBe(false);
+      expect(result.current.handoff).toBe("idle");
+    });
+
+    it("arms no timer at all — nothing is left to fire later and undo the expand", async () => {
+      installReducedMotion(true);
+      const { result } = mountHandoff();
+
+      act(() => {
+        result.current.toggle(true);
+      });
+      expect(result.current.expanded).toBe(true);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(ROWS_EXIT_MS + 10);
+      });
+      expect(result.current.expanded).toBe(true);
+      expect(result.current.handoff).toBe("idle");
+    });
+
+    it("plays no beat for a window that expires — the scene goes with its reason", () => {
+      installReducedMotion(true);
+      const { result } = mountHandoff();
+
+      act(() => {
+        result.current.toggle(false);
+      });
+      act(() => {
+        result.current.beginSceneExit();
+      });
+
+      // Rule 5 of `docs/motion.md` from the usual side: removing the trip has
+      // to remove the wait, so the scene leaves on the frame the window shut
+      // rather than after a beat of a picture that cannot animate.
+      expect(result.current.handoff).toBe("idle");
+      expect(result.current.expanded).toBe(true);
+    });
+
+    it("a mid-session flip reaches the toggle the header is already holding", () => {
+      const media = installReducedMotion(false);
+      const { result } = mountHandoff();
+
+      // The preference arrives after mount — an OS battery-saver, or the user
+      // changing their mind — so a `matchMedia` read once at mount would still
+      // be answering "motion is fine" here.
+      act(() => {
+        media.set(true);
+      });
+      act(() => {
+        result.current.toggle(true);
+      });
+
+      expect(result.current.expanded).toBe(true);
+      expect(result.current.handoff).toBe("idle");
     });
   });
 
   it("a fresh instance never inherits a previous instance's pending state", () => {
     // Guards the "component remounts per scope/route" claim in the hook's
     // own doc comment: a brand-new mount always starts clean.
-    const { result } = renderHook(() => useEarlierExpandHandoff(EXIT_MS));
+    const { result } = mountHandoff();
     expect(result.current.expanded).toBe(false);
-    expect(result.current.handoffPending).toBe(false);
+    expect(result.current.handoff).toBe("idle");
   });
 });

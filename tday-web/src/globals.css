@@ -610,9 +610,19 @@
 
 /* The burst leads; the scene follows through it. Without the wait the
    illustration is already sitting there when the first piece of paper clears
-   it, and the confetti reads as decoration on a static page. */
+   it, and the confetti reads as decoration on a static page.
+
+   `--tday-celebration-start` is how long the WHOLE celebration waited before
+   any of it played, set by a feed that draws this scene inline and has to move
+   its own rows out of the way first (`EmptyState`'s `celebrationStartDelayMs`).
+   It is added to the lead rather than spent out of it — `MotionTokens.kt` calls
+   the two "added, never traded" — because a lead the travel eats into is not a
+   lead: the paper would be crossing a screen that is still sliding. Unset, and
+   therefore zero, for the overlay callers, where nothing but the paper moves. */
 .tday-empty-enter-celebrating {
-  animation-delay: 320ms;
+  animation-delay: calc(
+    var(--tday-celebration-start, 0s) + var(--tday-delay-celebration-lead)
+  );
 }
 
 @keyframes tday-empty-rise {
@@ -620,17 +630,83 @@
   to { opacity: 1; transform: none; }
 }
 
-/* The exit mirror of `.tday-empty-enter`, played only during an "Earlier"
-   hand-off (requirement 3 of the Earlier section — Today originally, since
-   generalized to every other scope with its own Earlier bucket): the caller
-   sets `animation-duration` inline from `TODAY_EARLIER_EXIT_MS`
-   (`todayEarlierIllustration.ts`) — the SAME constant that gates the delay
-   before Earlier's rows are told to appear — so the visual exit and that
-   hand-off are one number, read twice, not two independently tuned to look
-   close together. */
+/* The slot the scene sits in, as opposed to the ink on it.
+
+   `.tday-empty-exit` below animates paint. Its box used to hold all 42vh of the
+   slot for the whole beat and then be released in the single frame the hand-off
+   swapped Earlier's rows in — a motion, then a jump, and the jump the larger of
+   the two. The track closes under the fade instead, so the page has taken the
+   space back by the time the rows arrive and the swap frame has nothing left to
+   move.
+
+   A grid with one 1fr row is the only interpolable spelling of "as tall as
+   whatever is inside it": `height` cannot be animated away from `auto`, and a
+   measured pixel height would want re-measuring every time the copy inside
+   rewraps. Same track the completed row closes on its way out
+   (`TodoItemContainer`). */
+.tday-empty-slot {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--tday-duration-enter) var(--tday-empty-sink-ease);
+}
+
+/* The track closing, a separate class from the ink sinking below because the
+   stylesheet needs it to be — the ink is an animation and this is a transition
+   on a grid — and not because the two can disagree. They cannot: one departure,
+   one question, asked in `emptySceneIsLeaving` (`todayEarlierIllustration.ts`)
+   and spent on both names. A scene whose ink leaves without its box, or the
+   other way round, reads as two things happening to it rather than as it
+   leaving.
+
+   Nothing here runs inside the celebration window, and nothing needs to: the
+   scene is still on screen when that window ends
+   (`shouldShowTodayEmptyIllustration`'s last line), so a tap landing in it
+   swaps nothing and is never sequenced at all (`earlierSlotChangesHands`). A
+   track closed on that path would have had to open again the frame the class
+   came off — 42vh taken out from under Earlier's rows and put straight back —
+   and the ink that did fade there snapped back to full opacity with it.
+
+   The child's two declarations are scoped to the closing rather than left on: a
+   grid item that is not a scroll container keeps its own content height as the
+   track's floor, so without them the track would have nothing to shrink to —
+   and left on, they would clip the resting scene. */
+.tday-empty-slot-closing {
+  grid-template-rows: 0fr;
+}
+
+.tday-empty-slot-closing > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+:root {
+  /* Named once because the sink and the track closing under it have to ride the
+     same curve: two curves on one departure read as two things happening to the
+     scene rather than as the scene leaving. Deliberately not `Scene`'s curve
+     read backwards — see the non-token table in docs/motion.md. */
+  --tday-empty-sink-ease: cubic-bezier(0.3, 0, 0.4, 1);
+}
+
+/* The exit mirror of `.tday-empty-enter`, played whenever the empty scene gives
+   its slot up to Earlier's own rows (requirement 3 of the Earlier section —
+   Today originally, since generalized to every other scope with its own Earlier
+   bucket). Two things ask for it and they ask for the same beat: a tap that
+   swaps the slot, and the celebration window that was holding the scene above
+   those rows running out (`useCelebrationSceneExit`). Only ever applied to a
+   `.tday-empty-slot`, which carries the track this rides over — closed by
+   `.tday-empty-slot-closing` above, always in the same breath as this.
+
+   `--tday-duration-enter` is the rung `TODAY_EARLIER_EXIT_MS`
+   (`todayEarlierIllustration.ts`) sits on, and that constant argues the choice:
+   it gates the delay before Earlier's rows are told to appear, these two draw
+   the exit that delay is waiting for, and all three read the one generated rung
+   — a duration bound for a stylesheet wants the token and only a `setTimeout`
+   wants the integer (`src/lib/motion.ts`). One number, read twice, not two
+   tuned to look close together. */
 .tday-empty-exit {
   animation-name: tday-empty-sink;
-  animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1);
+  animation-duration: var(--tday-duration-enter);
+  animation-timing-function: var(--tday-empty-sink-ease);
   animation-fill-mode: both;
 }
 
@@ -678,10 +754,18 @@
   .tday-empty-sparkle { animation: none; opacity: 1; }
   /* Drawn where it lands, with no trip to get there. */
   .tday-empty-enter { animation: none; }
-  /* Held fully visible rather than switched off mid-air — the hand-off's own
-     timer (not this animation) is what actually gates Earlier's rows, so
-     disabling the animation changes nothing about when they appear. */
+  /* Held fully visible rather than switched off mid-air, and its slot held open
+     underneath it. Mostly unreachable now: `useEarlierExpandHandoff` reads the
+     same preference and takes its immediate branch, so `earlierHandoffPending`
+     — the only thing that ever applies this class — never goes true in the
+     first place. What is left is the hand-off already in flight when the
+     preference flips mid-beat, whose timer is not cancelled; this is what stops
+     that one sinking through. The track stays open for the same reason: shutting
+     it with no trip to carry it would take the scene off the screen and leave
+     the rest of that beat holding nothing, which is the destination of the
+     hand-off and not the destination of this scene. */
   .tday-empty-exit { animation: none; }
+  .tday-empty-slot-closing { grid-template-rows: 1fr; }
   /* `useFadeUnmount` itself skips its own delay under reduced motion (see its
      own doc comment), so these never actually get applied for long — this is
      just the same belt-and-braces as the pair above. */
