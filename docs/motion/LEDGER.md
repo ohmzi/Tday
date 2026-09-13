@@ -653,6 +653,9 @@ Restore it from git history rather than adjusting the number.
     from the start. Removing it means hoisting the modal shell out of the lazy chunk so only the
     body swaps — a change to both dialogs and their boundary, not a rider on a fallback.
   - `ModalPlaceholder` is still unimported: it is the edit form's shape, and PR 49 owns it.
+    PR 49 has since deleted it rather than wiring it up — see there for why the edit form stopped
+    needing a surface-shaped fallback at all. The known cost above is unchanged and still open:
+    it is the same hoist, on the confirm dialogs, and nothing in PR 49 reached them.
 
 ### PR 25d — the highlight ring is clipped away by the row's own collapse wrapper
 
@@ -673,8 +676,45 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 49 — the drawer placeholder matches the surface it precedes
 
-- [ ] `web-drawer-placeholder-wrong-shape-on-desktop` — bottom-sheet skeleton for a desktop modal; `ModalPlaceholder` has zero importers · web · Sev 3 · XS · Gate V
-- [ ] `web-drawer-placeholder-double-arrival` — static placeholder at final geometry, then vaul slides the real sheet into it · web · Sev 3 · S · Gate V+D
+- [x] `web-drawer-placeholder-wrong-shape-on-desktop` — bottom-sheet skeleton for a desktop modal; `ModalPlaceholder` has zero importers · web · Sev 3 · XS · Gate V
+- [x] `web-drawer-placeholder-double-arrival` — static placeholder at final geometry, then vaul slides the real sheet into it · web · Sev 3 · S · Gate V+D
+  - **Both rows, one cause: the code split sat around the surface.** `EditFormContainer` and
+    `CreateFormContainer` each lazily imported a drawer AND a modal behind a single Suspense
+    fallback, so the fallback had to *be* a surface. It could not be the right one — one
+    `DrawerPlaceholder` answered for both branches, so a tap above 640px put a bottom sheet on
+    screen for an arriving centred modal — and it could not hand over, because being replaced is
+    the only thing a fallback does. A finished sheet removed while vaul slides an identical sheet
+    into the same place is one tap and two arrivals.
+  - So wiring `ModalPlaceholder` up fixes neither. It was written to be the desktop half of that
+    pair and never imported — the missing half, not dead code, which `ConfirmPlaceholder`'s own
+    doc comment already names as "the edit form" — but a matched pair of impersonations still has
+    to get out of the way twice. The split moves **inside** the sheet instead: both shells are
+    imported outright and only `CalendarTaskFormBody` is lazy, waited for from within the sheet
+    that is already on screen. The surface the user sees is the real one, so it is the right shape
+    on both breakpoints without anybody choosing, and it mounts once and slides in once while its
+    contents are swapped underneath.
+  - This is the shape `TaskFormSheet` already uses — an eager `AppBottomSheet` around a suspended
+    `TodoFormContainer` — so it is one fewer way to spell this, not a new one. It also puts the
+    boundary where the weight is: the shells are chrome plus a mutation hook and `rrule` was
+    already eager in the containers through `useCalendarTaskFormState`, while the body's subtree
+    is the chrono title field, the TipTap notes editor and the selector overlays. The build still
+    emits `CalendarTaskFormBody` as its own chunk, with `NotesField`'s 311kB behind it.
+  - `DrawerPlaceholder` and `ModalPlaceholder` are both gone, replaced by one `FormBodyPlaceholder`
+    built from the `sheet-chrome` cards and rows the real body lands into — the reason
+    `ConfirmPlaceholder` gives next door, that the radii and row heights should be the ones the
+    content arrives at rather than a second set tuned to look like them.
+  - **No transition on the swap, deliberately.** `lazy` renders an already-resolved module without
+    suspending, so on every open after the first the placeholder never appears at all; a fade
+    declared there would animate the body over a sheet that is itself still arriving — paying on
+    the common path to smooth the rare one. No new motion literals either: the budget is unchanged.
+  - The gate needed building, not just running. `calendar-form-shell-resize` waits for a shell and
+    then reads the fields, which the old eager body satisfied exactly as well — so it is green on
+    the defect and is evidence for neither row. `tests/unit/calendar-form-placeholder.test.tsx`
+    is the one that can tell them apart: it holds the body's chunk open on a gate and asserts what
+    the document contains while it is in flight (a modal shell at 900px with the one `aria-busy`
+    node *inside* it, no drawer and no portal beside it), then opens the gate and asserts the shell
+    node is the same object afterwards — identity being the only thing a second arrival cannot
+    fake. All three cases fail on `bd0cefbb^` and pass on the fix.
 
 ### PR 50 — the nested confirm drawer’s double scrim
 
