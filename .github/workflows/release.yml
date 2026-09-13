@@ -65,6 +65,9 @@ jobs:
       - name: Verify guide content is not stale
         run: ./gradlew :shared:verifyGuideContent --no-daemon
 
+      - name: Verify motion tokens are not stale
+        run: ./gradlew :shared:verifyMotionTokens --no-daemon
+
       # `build-and-release` hangs off this job, so an Android regression caught here stops the
       # APK from being published rather than shipping inside it. PRs are gated earlier and
       # separately by `android.yml`; this is the last line, for whatever a merge commit
@@ -154,6 +157,14 @@ jobs:
       - name: Regenerate guide content for the new version
         run: ./gradlew :shared:exportGuideContent --no-daemon
 
+      # The motion artifacts take no input from version.json, so unlike the guide
+      # ones a bump cannot stale them and this is normally a no-op. It runs anyway
+      # so the two codegens are operated identically — the failure mode being
+      # avoided is someone adding a version-dependent field later and this step
+      # being the one nobody remembered to add.
+      - name: Regenerate motion tokens
+        run: ./gradlew :shared:exportMotionTokens --no-daemon
+
       # The repo still carries legacy v1.8.x-v1.44.0 tags from an earlier
       # versioning era, so ask GitHub for the previous release rather than
       # letting `git describe` pick one of those up.
@@ -197,7 +208,11 @@ jobs:
             tday-web/tests/fixtures/guide-icons.json \
             shared/src/commonMain/kotlin/com/ohmz/tday/shared/guide/GuideStringsGenerated.kt \
             shared/src/commonMain/kotlin/com/ohmz/tday/shared/summary/SummaryStringBundlesGenerated.kt \
-            ios-swiftUI/Tday/Resources/Guide
+            ios-swiftUI/Tday/Resources/Guide \
+            android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayMotionTokensGenerated.kt \
+            ios-swiftUI/Tday/UI/Theme/TdayMotionGenerated.swift \
+            tday-web/src/generated/motion-tokens.css \
+            tday-web/src/generated/motion-tokens.ts
 
           if git diff --cached --quiet; then
             echo "::error::Release commit is empty — expected at least regenerated release metadata."
