@@ -3,6 +3,21 @@ import path from "path";
 import { describe, expect, it } from "vitest";
 
 /**
+ * `RegExpMatchArray.index` is typed optional because a match object can be
+ * constructed by hand, but it is always set on one produced by `exec()` or
+ * `matchAll()` — which is the only way this file makes them. Reading it through
+ * this helper keeps the invariant explicit: a non-null assertion would let a
+ * future refactor that passes in a synthetic match silently scan from offset 0
+ * and report the wrong line, which for a guardrail is worse than crashing.
+ */
+function matchIndex(match: RegExpMatchArray): number {
+  if (match.index === undefined) {
+    throw new Error(`regex match carries no index: ${JSON.stringify(match[0]?.slice(0, 60))}`);
+  }
+  return match.index;
+}
+
+/**
  * Animation specs on Android get written, reviewed and merged while being UNREACHABLE.
  * The spec sits in the file, reads correctly, names its durations and easings — and can
  * never run. Review does not catch it, because nothing about the spec is wrong; what is
@@ -157,7 +172,7 @@ function findCalls(masked: string, callee: string): KotlinCall[] {
   const calls: KotlinCall[] = [];
   const pattern = new RegExp(`\\b${callee}\\s*\\(`, "g");
   for (const match of masked.matchAll(pattern)) {
-    const start = match.index!;
+    const start = matchIndex(match);
     const argsOpen = start + match[0].length - 1;
     const argsClose = matchDelimiter(masked, argsOpen);
     if (argsClose === -1) continue;
@@ -257,13 +272,13 @@ function declarationsOf(masked: string): Map<string, Declaration> {
     // where the scanner should stay quiet rather than reason about the wrong binding.
     if (declarations.has(name)) continue;
     const delegated = match[5] === "by";
-    const equals = match.index! + match[0].length - 1;
+    const equals = matchIndex(match) + match[0].length - 1;
     declarations.set(name, {
       kind: match[2] as "val" | "var",
       delegated,
       isConst: Boolean(match[1]),
       rhs: delegated ? "" : declarationRhs(masked, equals),
-      index: match.index!,
+      index: matchIndex(match),
     });
   }
   return declarations;
@@ -317,7 +332,7 @@ describeAndroid("Rule A — AnimatedVisibility content survives its own exit", (
         const name = nullCheck[1];
         const deref = new RegExp(`\\b${name}\\s*(!!|\\?\\.|\\?:)`).exec(call.lambda);
         if (deref) {
-          const at = lineOf(source, call.lambdaOpen + 1 + deref.index!);
+          const at = lineOf(source, call.lambdaOpen + 1 + matchIndex(deref));
           violations.push(
             `${relPath(file)}:${at} → content reads '${name}', the same nullable that drives ` +
               `visible; it is null for the whole exit`,
@@ -373,7 +388,7 @@ function writeOnceVisibilityFlags(file: string): string[] {
     if (!exit) continue;
     const assignments = [
       ...masked.matchAll(new RegExp(`(?:^|[^.\\w])${name}\\s*=\\s*([^=\\n][^\\n]*)`, "g")),
-    ].filter((match) => match.index! !== declaration.index);
+    ].filter((match) => matchIndex(match) !== declaration.index);
     if (assignments.length === 0) continue;
     const everSetFalse = assignments.some((match) => /^false\b/.test(match[1].trim()));
     // An assignment of anything other than a literal is a value we cannot read here, so
@@ -543,7 +558,7 @@ interface GuardedVisibility {
 function enclosingGuard(masked: string, index: number): { condition: string; index: number } | null {
   let best: { condition: string; index: number } | null = null;
   for (const match of masked.matchAll(/\bif\s*\(/g)) {
-    const open = match.index! + match[0].length - 1;
+    const open = matchIndex(match) + match[0].length - 1;
     const close = matchDelimiter(masked, open);
     if (close === -1 || close > index) continue;
     let cursor = close + 1;
@@ -551,8 +566,8 @@ function enclosingGuard(masked: string, index: number): { condition: string; ind
     if (masked[cursor] !== "{") continue;
     const blockEnd = matchDelimiter(masked, cursor);
     if (blockEnd === -1 || index < cursor || index > blockEnd) continue;
-    if (!best || match.index! > best.index) {
-      best = { condition: masked.slice(open + 1, close), index: match.index! };
+    if (!best || matchIndex(match) > best.index) {
+      best = { condition: masked.slice(open + 1, close), index: matchIndex(match) };
     }
   }
   return best;
