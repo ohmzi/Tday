@@ -19,15 +19,16 @@ import { Leaf } from "lucide-react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import TimelineEmptyState from "@/features/todayTodos/component/TimelineEmptyState";
+import type { EarlierHandoff } from "@/features/todayTodos/lib/useEarlierExpandHandoff";
 
 afterEach(cleanup);
 
 function renderSlot({
   celebrate = false,
-  earlierHandoffPending = false,
+  earlierHandoff = "idle",
 }: {
   celebrate?: boolean;
-  earlierHandoffPending?: boolean;
+  earlierHandoff?: EarlierHandoff;
 } = {}) {
   const { container } = render(
     <TimelineEmptyState
@@ -35,7 +36,7 @@ function renderSlot({
       accentColor="#22c55e"
       isDayDone={false}
       celebrate={celebrate}
-      earlierHandoffPending={earlierHandoffPending}
+      earlierHandoff={earlierHandoff}
       locale="en-US"
       emptyTitle="allDone"
       emptyBody="allDoneBody"
@@ -54,7 +55,7 @@ describe("the empty scene's slot", () => {
   });
 
   it("fades its ink and closes its track together on an ordinary hand-off", () => {
-    const slot = renderSlot({ earlierHandoffPending: true });
+    const slot = renderSlot({ earlierHandoff: "scene-leaving" });
     expect(slot.classList.contains("tday-empty-slot")).toBe(true);
     expect(slot.classList.contains("tday-empty-exit")).toBe(true);
     expect(slot.classList.contains("tday-empty-slot-closing")).toBe(true);
@@ -64,7 +65,7 @@ describe("the empty scene's slot", () => {
     // Mid hand-off inside the celebration window: the scene is still on screen
     // when the beat ends, so a track closed here would reopen a frame later and
     // shove Earlier's newly arrived rows down the height it had just taken.
-    const slot = renderSlot({ earlierHandoffPending: true, celebrate: true });
+    const slot = renderSlot({ earlierHandoff: "scene-leaving", celebrate: true });
     expect(slot.classList.contains("tday-empty-exit")).toBe(true);
     expect(slot.classList.contains("tday-empty-slot-closing")).toBe(false);
   });

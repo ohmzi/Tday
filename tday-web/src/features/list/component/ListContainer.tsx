@@ -71,7 +71,7 @@ const ListContainer = ({ id }: { id: string }) => {
     // Today/All/Priority/Scheduled use — see `useListEmptyState`'s own doc
     // comment for why the two Earlier/current readings above must stay fed to
     // exactly the parameters they are here.
-    const { earlierExpanded, earlierHandoffPending, toggleEarlierExpanded, celebrate, showEmptyIllustration } =
+    const { earlierExpanded, earlierHandoff, earlierSlotChangesHands, toggleEarlierExpanded, celebrate, showEmptyIllustration } =
         useListEmptyState({
             listTodosLoading,
             isSearching,
@@ -209,7 +209,7 @@ const ListContainer = ({ id }: { id: string }) => {
                             accentColor={listAccent}
                             isDayDone={false}
                             celebrate={celebrate}
-                            earlierHandoffPending={earlierHandoffPending}
+                            earlierHandoff={earlierHandoff}
                             locale={locale}
                             emptyTitle="listEmpty"
                             emptyBody="listEmptyBody"
@@ -248,17 +248,18 @@ const ListContainer = ({ id }: { id: string }) => {
                             // A live query outranks a shut bucket: a list opens
                             // with Earlier closed, and a task the search turns up in
                             // there must not stay hidden behind its header. Native
-                            // makes the same call. `!earlierHandoffPending`: mid
-                            // hand-off, Earlier's own rows stay hidden until the
-                            // illustration above has actually finished exiting —
-                            // requirement 3's sequencing, reused from Today.
-                            earlierExpanded={(earlierExpanded && !earlierHandoffPending) || isSearching}
-                            // Passes `showEmptyIllustration` through exactly like
-                            // Today/All/Priority/Scheduled do: expanding Earlier
-                            // hands off through the illustration first when it
-                            // currently owns the slot (requirement 3), and stays
+                            // makes the same call. `earlierExpanded` alone is
+                            // the whole sequencing signal: the hand-off holds it
+                            // false until the illustration above has finished
+                            // exiting, and on the way back it goes false first
+                            // and the rows linger on their own fade.
+                            earlierExpanded={earlierExpanded || isSearching}
+                            // Passes `earlierSlotChangesHands` through exactly
+                            // like Today/All/Priority/Scheduled do: a tap that
+                            // trades the slot between the scene and Earlier's
+                            // rows is sequenced whichever way it goes, and stays
                             // the plain immediate toggle otherwise.
-                            onToggleEarlier={() => toggleEarlierExpanded(showEmptyIllustration)}
+                            onToggleEarlier={() => toggleEarlierExpanded(earlierSlotChangesHands)}
                             onDragActiveChange={setDragActive}
                         />
                     )}

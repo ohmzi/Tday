@@ -3,6 +3,7 @@ import { CheckCheck } from "lucide-react";
 import EmptyState from "@/components/app/EmptyState";
 import { cn } from "@/lib/utils";
 import { earlierHandoffVacatesSlot } from "../lib/todayEarlierIllustration";
+import type { EarlierHandoff } from "../lib/useEarlierExpandHandoff";
 
 /**
  * The native-style centered empty message `AllTasksTimelineContainer` shows
@@ -24,7 +25,7 @@ export default function TimelineEmptyState({
   isDayDone,
   celebrate,
   celebrationStartDelayMs = 0,
-  earlierHandoffPending,
+  earlierHandoff,
   locale,
   emptyTitle,
   emptyBody,
@@ -49,8 +50,8 @@ export default function TimelineEmptyState({
    * screen moves when this mounts.
    */
   celebrationStartDelayMs?: number;
-  /** Requirement 3's two-phase hand-off is mid-exit (see `useEarlierExpandHandoff`). */
-  earlierHandoffPending: boolean;
+  /** Which half of the swap is mid-exit, if either (see `useEarlierExpandHandoff`). */
+  earlierHandoff: EarlierHandoff;
   locale: string;
   emptyTitle: string;
   emptyBody: string;
@@ -60,9 +61,8 @@ export default function TimelineEmptyState({
     <div
       className={cn(
         "tday-empty-slot",
-        earlierHandoffPending && "tday-empty-exit",
-        earlierHandoffVacatesSlot({ earlierHandoffPending, celebrate }) &&
-          "tday-empty-slot-closing",
+        earlierHandoff === "scene-leaving" && "tday-empty-exit",
+        earlierHandoffVacatesSlot({ earlierHandoff, celebrate }) && "tday-empty-slot-closing",
       )}
     >
       {/* The track the grid above closes. It is the one that takes the clip

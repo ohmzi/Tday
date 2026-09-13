@@ -5,6 +5,10 @@ import {
   earlierHandoffVacatesSlot,
   shouldShowTodayEmptyIllustration,
 } from "@/features/todayTodos/lib/todayEarlierIllustration";
+import type { EarlierHandoff } from "@/features/todayTodos/lib/useEarlierExpandHandoff";
+
+/** Every state the swap can be in, for the exhaustive loops below. */
+const HANDOFFS: EarlierHandoff[] = ["idle", "scene-leaving", "rows-leaving"];
 
 /**
  * Requirement 1's regression coverage: adding Today's "Earlier" bucket must
@@ -26,14 +30,14 @@ describe("shouldShowTodayEmptyIllustration", () => {
   it("never shows once there are pending tasks (showEmpty false), regardless of Earlier", () => {
     for (const hasEarlierItems of [false, true]) {
       for (const earlierExpanded of [false, true]) {
-        for (const earlierHandoffPending of [false, true]) {
+        for (const earlierHandoff of HANDOFFS) {
           for (const celebrate of [false, true]) {
             expect(
               shouldShowTodayEmptyIllustration({
                 showEmpty: false,
                 hasEarlierItems,
                 earlierExpanded,
-                earlierHandoffPending,
+                earlierHandoff,
                 celebrate,
               }),
             ).toBe(false);
@@ -52,7 +56,7 @@ describe("shouldShowTodayEmptyIllustration", () => {
         showEmpty: true,
         hasEarlierItems: false,
         earlierExpanded: false,
-        earlierHandoffPending: false,
+        earlierHandoff: "idle",
         celebrate: false,
       }),
     ).toBe(true);
@@ -61,7 +65,7 @@ describe("shouldShowTodayEmptyIllustration", () => {
         showEmpty: true,
         hasEarlierItems: false,
         earlierExpanded: false,
-        earlierHandoffPending: false,
+        earlierHandoff: "idle",
         celebrate: true,
       }),
     ).toBe(true);
@@ -74,7 +78,7 @@ describe("shouldShowTodayEmptyIllustration", () => {
           showEmpty: true,
           hasEarlierItems: true,
           earlierExpanded: false,
-          earlierHandoffPending: false,
+          earlierHandoff: "idle",
           celebrate: true,
         }),
       ).toBe(true);
@@ -86,7 +90,7 @@ describe("shouldShowTodayEmptyIllustration", () => {
           showEmpty: true,
           hasEarlierItems: true,
           earlierExpanded: true,
-          earlierHandoffPending: false,
+          earlierHandoff: "idle",
           celebrate: true,
         }),
       ).toBe(true);
@@ -98,7 +102,7 @@ describe("shouldShowTodayEmptyIllustration", () => {
           showEmpty: true,
           hasEarlierItems: true,
           earlierExpanded: false,
-          earlierHandoffPending: true,
+          earlierHandoff: "scene-leaving",
           celebrate: true,
         }),
       ).toBe(true);
@@ -112,7 +116,7 @@ describe("shouldShowTodayEmptyIllustration", () => {
         showEmpty: true,
         hasEarlierItems: true,
         earlierExpanded: true,
-        earlierHandoffPending: false,
+        earlierHandoff: "idle",
       };
       expect(shouldShowTodayEmptyIllustration({ ...base, celebrate: true })).toBe(true);
       expect(shouldShowTodayEmptyIllustration({ ...base, celebrate: false })).toBe(false);
@@ -126,7 +130,7 @@ describe("shouldShowTodayEmptyIllustration", () => {
           showEmpty: true,
           hasEarlierItems: true,
           earlierExpanded: false,
-          earlierHandoffPending: false,
+          earlierHandoff: "idle",
           celebrate: false,
         }),
       ).toBe(true);
@@ -140,26 +144,43 @@ describe("shouldShowTodayEmptyIllustration", () => {
           showEmpty: true,
           hasEarlierItems: true,
           earlierExpanded: true,
-          earlierHandoffPending: false,
+          earlierHandoff: "idle",
           celebrate: false,
         }),
       ).toBe(false);
     });
 
-    it("mid hand-off always wins over the expanded flag — still on screen until the timer fires", () => {
-      // `earlierExpanded` is still false at this instant in the real
-      // component (see useEarlierExpandHandoff: `expanded` only flips once
-      // the timer fires), but this asserts the precedence explicitly even if
-      // a future caller passed a stale `true`.
+    it("keeps drawing the scene through its own exit — `earlierExpanded` is still false there", () => {
+      // The expand beat, in the shape the real hook produces it: `expanded`
+      // only flips once the timer fires, so the scene is still the occupant
+      // and still draws itself while it leaves.
       expect(
         shouldShowTodayEmptyIllustration({
           showEmpty: true,
           hasEarlierItems: true,
-          earlierExpanded: true,
-          earlierHandoffPending: true,
+          earlierExpanded: false,
+          earlierHandoff: "scene-leaving",
           celebrate: false,
         }),
       ).toBe(true);
+    });
+
+    it("holds the scene OFF through a collapse, where the same flag is already false", () => {
+      // The one state the flag cannot be read for, and the whole of this
+      // hand-off's other half: a collapse drops `expanded` on the tap because
+      // that is what arms the rows' fade, so reading it alone would put the
+      // scene back on the slot in the same frame — 42vh claimed on top of rows
+      // still holding their own height, which is the pile-up the beat exists
+      // to unpick.
+      expect(
+        shouldShowTodayEmptyIllustration({
+          showEmpty: true,
+          hasEarlierItems: true,
+          earlierExpanded: false,
+          earlierHandoff: "rows-leaving",
+          celebrate: false,
+        }),
+      ).toBe(false);
     });
   });
 });
@@ -171,17 +192,17 @@ describe("shouldShowTodayEmptyIllustration", () => {
  * way — and only shows up on the path where it stays.
  */
 describe("earlierHandoffVacatesSlot", () => {
-  it("is false whenever no hand-off is in flight", () => {
+  it("is false whenever the scene is not the half that is leaving", () => {
     for (const celebrate of [false, true]) {
-      expect(earlierHandoffVacatesSlot({ earlierHandoffPending: false, celebrate })).toBe(
-        false,
-      );
+      for (const earlierHandoff of ["idle", "rows-leaving"] as EarlierHandoff[]) {
+        expect(earlierHandoffVacatesSlot({ earlierHandoff, celebrate })).toBe(false);
+      }
     }
   });
 
   it("vacates on the ordinary hand-off: the rows are taking the slot", () => {
     expect(
-      earlierHandoffVacatesSlot({ earlierHandoffPending: true, celebrate: false }),
+      earlierHandoffVacatesSlot({ earlierHandoff: "scene-leaving", celebrate: false }),
     ).toBe(true);
   });
 
@@ -190,7 +211,7 @@ describe("earlierHandoffVacatesSlot", () => {
     // under it would only mean opening it again a frame later — 42vh out from
     // under Earlier's freshly-arrived rows and straight back under them.
     expect(
-      earlierHandoffVacatesSlot({ earlierHandoffPending: true, celebrate: true }),
+      earlierHandoffVacatesSlot({ earlierHandoff: "scene-leaving", celebrate: true }),
     ).toBe(false);
   });
 
@@ -205,12 +226,12 @@ describe("earlierHandoffVacatesSlot", () => {
         showEmpty: true,
         hasEarlierItems: true,
         earlierExpanded: true,
-        earlierHandoffPending: false,
+        earlierHandoff: "idle",
         celebrate,
       });
-      expect(earlierHandoffVacatesSlot({ earlierHandoffPending: true, celebrate })).toBe(
-        !sceneSurvivesTheHandoff,
-      );
+      expect(
+        earlierHandoffVacatesSlot({ earlierHandoff: "scene-leaving", celebrate }),
+      ).toBe(!sceneSurvivesTheHandoff);
     }
   });
 });
