@@ -109,6 +109,10 @@ object TdayHaptics {
      * `LONG_PRESS` — the heaviest single thud in the set. Deletion should cost more in the hand
      * than the edit button sitting 16dp away from it, so that a mis-tap on the wrong swipe
      * action is felt before it is read.
+     *
+     * It fires at the moment of destruction, not on the button that asks about it: a control
+     * that only opens a confirmation is a [buttonPress], and the thud belongs to the confirm
+     * that commits.
      */
     fun destructive(view: View) {
         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.LONG_PRESS)
