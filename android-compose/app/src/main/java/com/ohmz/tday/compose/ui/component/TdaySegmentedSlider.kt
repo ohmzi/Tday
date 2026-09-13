@@ -40,8 +40,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 
 private val TdaySegmentedSliderAccent = TdayTodayBlue
@@ -210,10 +209,7 @@ fun <T> TdaySegmentedSlider(
                                 selected = selected,
                                 onClick = {
                                     if (!selected) {
-                                        ViewCompat.performHapticFeedback(
-                                            view,
-                                            HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                        )
+                                        TdayHaptics.selection(view)
                                     }
                                     onOptionSelected(option)
                                 },

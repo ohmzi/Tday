@@ -64,8 +64,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
@@ -76,6 +74,7 @@ import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
@@ -653,10 +652,7 @@ private fun CompletedSwipeRow(
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.62f,
                         onClick = {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                            )
+                            TdayHaptics.buttonPress(view)
                             closeSwipeSlot()
                             onInfo()
                         },
@@ -670,10 +666,7 @@ private fun CompletedSwipeRow(
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.40f,
                         onClick = {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                            )
+                            TdayHaptics.buttonPress(view)
                             closeSwipeSlot()
                             runCatching {
                                 clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, item)))
@@ -693,10 +686,7 @@ private fun CompletedSwipeRow(
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.04f,
                         onClick = {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                            )
+                            TdayHaptics.destructive(view)
                             closeSwipeSlot()
                             onDelete()
                         },
@@ -767,10 +757,7 @@ private fun CompletedSwipeRow(
                             },
                             enabled = !isRestoring,
                             onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
+                                TdayHaptics.toggle(view, on = false)
                                 closeSwipeSlot()
                                 coroutineScope.launch {
                                     restorePhase = CompletedRestorePhase.Unchecked
@@ -948,7 +935,7 @@ private fun CompletedBarButton(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,

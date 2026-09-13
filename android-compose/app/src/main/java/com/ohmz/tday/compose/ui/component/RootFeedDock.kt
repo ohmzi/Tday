@@ -56,9 +56,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayRootFeedAccent
@@ -127,7 +126,7 @@ fun RootCreateTaskButton(
     Card(
         modifier = modifier,
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -378,17 +377,11 @@ fun RootFeedDock(
                             selected = selected,
                             onClick = {
                                 if (!expanded && selected) {
-                                    ViewCompat.performHapticFeedback(
-                                        view,
-                                        HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                    )
+                                    TdayHaptics.reveal(view)
                                     expandedByTap = true
                                 } else {
                                     if (!selected) {
-                                        ViewCompat.performHapticFeedback(
-                                            view,
-                                            HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                        )
+                                        TdayHaptics.selection(view)
                                     }
                                     onTabSelected(tab)
                                 }
@@ -443,10 +436,7 @@ fun RootFeedDock(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                            )
+                            TdayHaptics.reveal(view)
                             expandedByTap = true
                         },
                 )
