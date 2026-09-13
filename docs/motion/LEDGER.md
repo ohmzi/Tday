@@ -280,9 +280,37 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 45 — iOS empty states that blank or cut
 
-- [ ] `ios-calendar-empty-state-blanked-by-isloading` — pull-to-refresh blanks the empty state for the whole sync · ios · Sev 3 · S · Gate G+TF
-- [ ] `ios-completed-empty-state-no-removal-transition` — deleting a char out of a no-match search makes it vanish in one frame · ios · Sev 2 · XS · Gate G
-- [ ] `ios-completed-stale-pull-to-refresh-comment` — a comment justifying a gesture the screen does not have (cost a verifier pass) · ios · Sev 1 · XS · Gate review
+- [x] `ios-calendar-empty-state-blanked-by-isloading` — pull-to-refresh blanks the empty state for the whole sync · ios · Sev 3 · S · Gate G+TF
+  - **The row's trigger is wrong; the gate it names is real.** Pull-to-refresh is not wired on this
+    screen either — `pullRefreshEnabled` defaults to false and `AppRootView.swift:450` builds
+    `CalendarScreen` without it — so the gesture cannot be what blanks anything. The defect is
+    `CalendarScreen.swift:606`, `} else if !viewModel.isLoading {` in front of
+    `calendarDayEmptyState`, and `isLoading` is raised only by `refresh()`: a force sync over a
+    cache `CalendarViewModel.init` already hydrated from. Nothing on the screen loads on appear, so
+    the flag never means "the answer is not known yet", only "a sync is in flight" — and the gate
+    hid a correct scene for the length of it. Today `refresh()` is reachable from the error-retry
+    button; it is reachable from the drag the moment that parameter is passed. Now a plain `else`.
+- [x] `ios-completed-empty-state-no-removal-transition` — deleting a char out of a no-match search makes it vanish in one frame · ios · Sev 2 · XS · Gate G
+  - Both scenes in `CompletedScreen`'s overlay take `completedEmptyStateTransition` —
+    `.asymmetric(insertion: .identity, removal: .opacity)`, copied in shape and in reasoning from
+    `TodoListScreen.emptyStateIllustrationTransition`. **The insertion leg is inert on purpose** and
+    must stay that way: `TdayEmptyState` already rises itself over 0.52s from its own `onAppear`, so
+    a second opacity leg would stack two fades on one arrival. The transaction the removal runs in
+    is `.animation(.easeIn(duration: 0.22), value: showsCompletedEmptyState)` on the overlay's
+    `ZStack` — the scene leaves on a keystroke written straight into `searchQuery`, which is inside
+    no `withAnimation`, so without that modifier the transition above it was decoration.
+- [x] `ios-completed-stale-pull-to-refresh-comment` — a comment justifying a gesture the screen does not have (cost a verifier pass) · ios · Sev 1 · XS · Gate review
+  - Citation `CompletedScreen.swift:122-124` was accurate. **Fixed the comment, not the parameter**:
+    which screens own a force-sync trigger is a product call (`AppRootView` hands
+    `pullRefreshEnabled: !appViewModel.isLocalMode` to the two root feeds and to nothing else), and
+    a motion PR is the wrong place to make it. The `.allowsHitTesting(false)` keeps its line on its
+    real justification — the scene is decoration inside a full-screen overlay and would otherwise
+    answer for the history's own scroll — and the comment now says the gesture is absent.
+  - All three are latched by `tday-web/tests/guardrails/ios-empty-state-presence.test.ts`, which the
+    iOS reachability scan cannot cover: its rules key off a view's `@State`, and every gate here is
+    a computed `private var` over the view model. The pull-to-refresh row is asserted as an
+    *agreement* between `AppRootView`'s call site and the prose, so wiring the parameter later is
+    allowed and simply requires the comment back.
 
 ### PR 17a — closed inside G7
 
