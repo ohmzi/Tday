@@ -99,23 +99,31 @@ const RAW_HAPTIC_MARKERS = [
 
 /** Names declared as `static func` on `enum HapticManager`, in declaration order. */
 function declaredVocabulary(source: string): string[] {
-  return [...source.matchAll(/^ {4}static func\s+([A-Za-z][A-Za-z0-9]*)\s*\(/gm)].map((m) => m[1]);
+  return [
+    ...source.matchAll(/^ {4}static func\s+([A-Za-z][A-Za-z0-9]*)\s*\(/gm),
+  ].map((m) => m[1]);
 }
 
 /** Names declared as `fun` on `object TdayHaptics`, in declaration order. */
 function declaredAndroidVocabulary(source: string): string[] {
-  return [...source.matchAll(/^ {4}fun\s+([A-Za-z][A-Za-z0-9]*)\s*\(/gm)].map((m) => m[1]);
+  return [...source.matchAll(/^ {4}fun\s+([A-Za-z][A-Za-z0-9]*)\s*\(/gm)].map(
+    (m) => m[1],
+  );
 }
 
 /** The generator call one vocabulary function resolves to, style and intensity included. */
 function recipeFor(source: string, name: string): string {
-  const start = source.search(new RegExp(`^ {4}static func\\s+${name}\\s*\\(`, "m"));
+  const start = source.search(
+    new RegExp(`^ {4}static func\\s+${name}\\s*\\(`, "m"),
+  );
   if (start === -1) return "";
   const rest = source.slice(start + 1);
   const nextFunc = rest.search(/^ {4}static func\s+/m);
   const body = nextFunc === -1 ? rest : rest.slice(0, nextFunc);
   return [
-    ...body.matchAll(/(UI\w*FeedbackGenerator\([^)]*\))|(\.(?:impactOccurred|notificationOccurred|selectionChanged)\([^)]*\))/g),
+    ...body.matchAll(
+      /(UI\w*FeedbackGenerator\([^)]*\))|(\.(?:impactOccurred|notificationOccurred|selectionChanged)\([^)]*\))/g,
+    ),
   ]
     .map((m) => m[0])
     .join(" ");
@@ -144,7 +152,12 @@ describeIOS("iOS haptic vocabulary", () => {
       const lines = readSource(file).split("\n");
       for (let i = 0; i < lines.length; i++) {
         const code = lines[i].trimStart();
-        if (code.startsWith("//") || code.startsWith("*") || code.startsWith("/*")) continue;
+        if (
+          code.startsWith("//") ||
+          code.startsWith("*") ||
+          code.startsWith("/*")
+        )
+          continue;
         if (RAW_HAPTIC_MARKERS.some((marker) => lines[i].includes(marker))) {
           violations.push(`${relPath(file)}:${i + 1} → ${code}`);
         }
@@ -161,7 +174,9 @@ describeIOS("iOS haptic vocabulary", () => {
 
   it("gives every vocabulary name at least one call site", () => {
     const callers = CALLER_SWIFT.map(readSource).join("\n");
-    const unused = VOCABULARY.filter((name) => !callers.includes(`HapticManager.${name}(`));
+    const unused = VOCABULARY.filter(
+      (name) => !callers.includes(`HapticManager.${name}(`),
+    );
 
     expect(
       unused,
@@ -174,18 +189,24 @@ describeIOS("iOS haptic vocabulary", () => {
   it("keeps a tap, a completion and a deletion feeling different from each other", () => {
     const source = readSource(VOCABULARY_FILE);
     const distinct = ["buttonPress", "completion", "destructive"];
-    const resolved = distinct.map((name) => ({ name, recipe: recipeFor(source, name) }));
+    const resolved = distinct.map((name) => ({
+      name,
+      recipe: recipeFor(source, name),
+    }));
 
     for (const { name, recipe } of resolved) {
-      expect(recipe, `${name}() must resolve to a concrete generator call`).not.toBe("");
+      expect(
+        recipe,
+        `${name}() must resolve to a concrete generator call`,
+      ).not.toBe("");
     }
 
     const recipes = resolved.map(({ recipe }) => recipe);
     expect(
       new Set(recipes).size,
-      "Tapping a button, finishing a task and deleting one are three different events and " +
-        "must not collapse back onto one generator: " +
-        resolved.map(({ name, recipe }) => `${name}=${recipe}`).join(", "),
+      `Tapping a button, finishing a task and deleting one are three different events and must not collapse back onto one generator: ${resolved
+        .map(({ name, recipe }) => `${name}=${recipe}`)
+        .join(", ")}`,
     ).toBe(recipes.length);
   });
 
