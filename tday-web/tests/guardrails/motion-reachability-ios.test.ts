@@ -303,11 +303,22 @@ interface TypeScope {
   end: number;
   animated: Set<string>;
   ownState: Set<string>;
+  /** This type's computed `var`s, by name, as their body text. */
+  computed: Map<string, string>;
 }
 
-/** The `value:` expression of every `.animation(_:value:)` in a slice. */
-function animatedValueExpressions(text: string): string[] {
-  const exprs: string[] = [];
+/**
+ * Every `.animation(_:value:)` in a slice: its `value:` expression, and the
+ * 1-based line the `.animation(` itself sits on.
+ *
+ * The line is what rule D needs and rule A's scope building does not, which is why
+ * this returns pairs and [animatedValueExpressions] throws half of them away. The
+ * call is nearly always written across four lines with `value:` on the third, so
+ * the line that matters is the one the modifier OPENS on — that is the line whose
+ * enclosing branches say where in the tree the modifier lives.
+ */
+function animatedValueSites(text: string): { line: number; expr: string }[] {
+  const sites: { line: number; expr: string }[] = [];
   for (const match of text.matchAll(/\.animation\s*\(/g)) {
     const open = match.index + match[0].length - 1;
     let depth = 0;
@@ -325,9 +336,86 @@ function animatedValueExpressions(text: string): string[] {
     if (close < 0) continue;
     const args = text.slice(open + 1, close);
     const valueAt = args.indexOf("value:");
-    if (valueAt >= 0) exprs.push(args.slice(valueAt + "value:".length));
+    if (valueAt < 0) continue;
+    let line = 1;
+    for (let i = 0; i < match.index; i += 1) if (text[i] === "\n") line += 1;
+    sites.push({ line, expr: args.slice(valueAt + "value:".length) });
   }
-  return exprs;
+  return sites;
+}
+
+/** The `value:` expression of every `.animation(_:value:)` in a slice. */
+function animatedValueExpressions(text: string): string[] {
+  return animatedValueSites(text).map((site) => site.expr);
+}
+
+/**
+ * Maximal dotted chains, as segment arrays: `!viewModel.todayTodos.isEmpty` yields
+ * `[viewModel, todayTodos, isEmpty]`, and a leading-dot member like `.opacity`
+ * yields nothing.
+ */
+function dottedPaths(text: string): string[][] {
+  const out: string[][] = [];
+  for (const match of text.matchAll(/(^|[^.\w$])([A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)*)/g)) {
+    const segments = match[2].split(".").map((part) => part.trim());
+    if (SWIFT_KEYWORDS.has(segments[0])) continue;
+    out.push(segments);
+  }
+  return out;
+}
+
+/**
+ * Predicates a condition asks ABOUT a piece of state rather than state of their
+ * own. `if !todos.isEmpty` is gated on `todos`; `if viewModel.isLoading` is gated
+ * on `isLoading`, and reading it as "gated on viewModel" would make every
+ * condition in a screen look like every other one.
+ */
+const COLLECTION_PREDICATES = new Set(["isEmpty", "count", "first", "last"]);
+
+/** What a condition is actually gated on, as dotted paths. */
+function gateStatePaths(cond: string): string[][] {
+  return dottedPaths(cond).map((segments) =>
+    segments.length > 1 && COLLECTION_PREDICATES.has(segments[segments.length - 1])
+      ? segments.slice(0, -1)
+      : segments,
+  );
+}
+
+/** Does `expr` read `state`, or something under it? */
+function expressionReads(expr: string, state: string[]): boolean {
+  return dottedPaths(expr).some(
+    (segments) =>
+      segments.length >= state.length && state.every((name, i) => segments[i] === name),
+  );
+}
+
+/**
+ * The same question, asked one hop through the type's own computed properties.
+ *
+ * [expressionReads] is textual, and the expression that names the state is often not
+ * the expression that is written: a `value:` keyed on a composite like
+ * `pendingDayAnimationKey` reads the gate's collection in the property's body and
+ * nothing at all on the line itself. Rule D's whole subject is a modifier that LOOKS
+ * right, so a rule that only reads the line is exactly one rename away from being
+ * blind at the site it was written for.
+ *
+ * One hop, and no transitive closure. A key assembled out of the branch's own state is
+ * the shape that exists; chasing further would start pulling half a screen's
+ * properties into every expression and turn a precise rule into a noisy one. Returns
+ * the property it went through so the failure can name the indirection rather than
+ * point at a line the state does not appear on.
+ */
+function expressionReadsVia(
+  expr: string,
+  state: string[],
+  scope: TypeScope | null,
+): { reads: boolean; through?: string } {
+  if (expressionReads(expr, state)) return { reads: true };
+  for (const name of bareIdentifiers(expr)) {
+    const body = scope?.computed.get(name);
+    if (body && expressionReads(body, state)) return { reads: true, through: name };
+  }
+  return { reads: false };
 }
 
 /** Every identifier touched inside a `withAnimation { … }` body in a slice. */
@@ -349,6 +437,45 @@ function withAnimationIdentifiers(text: string): string[] {
     found.push(...rootIdentifiers(text.slice(i, end)));
   }
   return found;
+}
+
+/** `var x: T { … }` — computed, so no `=` between the name and the brace. */
+const COMPUTED_PROPERTY = /\bvar\s+(\w+)\s*:\s*[^={]*\{$/;
+
+/**
+ * The computed `var`s declared directly in a type's body, by name, as body text.
+ *
+ * Every brace-opening member is skipped whole rather than walked, which is what keeps
+ * a nested view struct's properties out of the outer type's table: two structs in one
+ * file routinely share a name like `items`, and resolving through the wrong one would
+ * make rule D fail on a line that reads nothing of the sort.
+ */
+function computedProperties(code: string[], start: number, end: number): Map<string, string> {
+  const map = new Map<string, string>();
+  let i = start + 1;
+  while (i <= end) {
+    if (!code[i].trim().endsWith("{")) {
+      i += 1;
+      continue;
+    }
+    const close = blockEnd(code, i);
+    const header = joinedHeader(code, i, DECLARATION_HEADER);
+    const match = header && COMPUTED_PROPERTY.exec(header.text);
+    if (match) {
+      map.set(
+        match[1],
+        code
+          .slice(i, close + 1)
+          .join(" ")
+          .replace(/^[^{]*\{/, "")
+          .replace(/\}\s*$/, "")
+          .replace(/\s+/g, " ")
+          .trim(),
+      );
+    }
+    i = close + 1;
+  }
+  return map;
 }
 
 function typeScopes(code: string[]): TypeScope[] {
@@ -376,6 +503,7 @@ function typeScopes(code: string[]): TypeScope[] {
       end: end + 1,
       animated,
       ownState,
+      computed: computedProperties(code, i, end),
     });
   }
   return scopes;
@@ -441,6 +569,17 @@ const PANEL_SWAP_CUTS_ON_PURPOSE: Record<string, string> = {};
 /** Rule C — private view declarations reached from somewhere this scan cannot see. */
 const VIEW_DECLARATIONS_REACHED_ELSEWHERE: Record<string, string> = {};
 
+/**
+ * Rule D — `.animation(_:value:)` inside its own gate's branch, on purpose.
+ *
+ * There is no honest entry for "the branch should cut": a branch that is meant to
+ * cut wants no animation at all, and one written inside the branch still animates
+ * everything that changes WITHIN it while animating nothing about the branch
+ * appearing or going away. An entry here would have to name a third thing the
+ * modifier is for.
+ */
+const ANIMATION_INSIDE_ITS_OWN_BRANCH: Record<string, string> = {};
+
 /** Protocol witnesses: SwiftUI calls these, never the file. */
 const PROTOCOL_WITNESSES = new Set(["body", "previews", "makeBody"]);
 
@@ -481,6 +620,10 @@ describeIOS("iOS motion reachability scan integrity", () => {
     const branches = PARSED.reduce((total, parsed) => total + parsed.structure.branches.length, 0);
     const scopes = PARSED.reduce((total, parsed) => total + parsed.scopes.length, 0);
     const decls = PARSED.reduce((total, parsed) => total + viewDeclarations(parsed).length, 0);
+    const computed = PARSED.reduce(
+      (total, parsed) => total + parsed.scopes.reduce((n, scope) => n + scope.computed.size, 0),
+      0,
+    );
 
     expect(IOS_FILES.length, "iOS .swift files").toBeGreaterThan(80);
     expect(transitions, "`.transition(` sites").toBeGreaterThan(15);
@@ -488,6 +631,9 @@ describeIOS("iOS motion reachability scan integrity", () => {
     expect(branches, "if/else branches").toBeGreaterThan(500);
     expect(scopes, "type scopes").toBeGreaterThan(100);
     expect(decls, "private view declarations").toBeGreaterThan(60);
+    // Rule D reads the gate's state through these. An empty table is not a rule that
+    // fails; it is a rule that stops seeing every indirect `value:` in the tree.
+    expect(computed, "computed `var` bodies").toBeGreaterThan(400);
   });
 });
 
@@ -608,6 +754,65 @@ describeIOS("iOS motion reachability", () => {
 
     expect(violations, violations.join("\n")).toEqual([]);
   });
+
+  // Rule D — where the modifier is written, not just whether it exists.
+  //
+  // Rule A asks whether a transaction exists somewhere in the type. It cannot ask
+  // the next question, which is the one that bit the today block and the calendar's
+  // day list: a `.animation(_:value:)` written INSIDE `if <that same state> { … }`
+  // is part of that branch. The update that flips the gate removes the branch and
+  // the modifier together, so at the moment the removal is decided there is no
+  // transaction open — the block cuts, and every `.transition` inside it cuts with
+  // it, while the same modifier goes on animating changes within the branch
+  // perfectly well. It reads correct, it IS correct for half its job, and rule A
+  // sees a gate that is named in an `.animation(value:)` and says nothing.
+  //
+  // The fix is never an allowlist entry; it is moving the modifier out, onto a
+  // `Group` or whatever else spans both states of the branch.
+  //
+  // "The state it animates" is resolved one hop through the type's computed
+  // properties, not read off the line. Both original sites happened to write the
+  // collection inline, but a `value:` keyed on something assembled out of it —
+  // `pendingDayAnimationKey`, which is what the calendar ships — names no state
+  // textually at all, and a rule that only read the line would have gone green on the
+  // very defect it was written for the moment the expression was given a name.
+  it("no `.animation(_:value:)` sits inside the branch it would animate", () => {
+    const violations: string[] = [];
+
+    for (const parsed of PARSED) {
+      const { code, raw, structure, file } = parsed;
+      for (const site of animatedValueSites(code.join("\n"))) {
+        const scope = scopeAt(parsed, site.line);
+        for (const index of structure.enclosing[site.line - 1] ?? []) {
+          const branch = structure.branches[index];
+          if (!branch.cond) continue;
+          const shared = gateStatePaths(branch.cond)
+            .map((state) => ({ state, hit: expressionReadsVia(site.expr, state, scope) }))
+            .filter(({ hit }) => hit.reads)
+            .map(({ state, hit }) =>
+              hit.through
+                ? `\`${state.join(".")}\` (through \`${hit.through}\`)`
+                : `\`${state.join(".")}\``,
+            );
+          if (shared.length === 0) continue;
+
+          const siteKey = `${relPath(file)}:${site.line}`;
+          if (siteKey in ANIMATION_INSIDE_ITS_OWN_BRANCH) break;
+          violations.push(
+            `${siteKey} → ${raw[site.line - 1].trim()} — animates ` +
+              `${[...new Set(shared)].join(", ")}, which gates the ` +
+              `branch at :${branch.startLine} that this modifier is written inside. It is ` +
+              "removed in the same update as the views it would animate out; hang it on a " +
+              "`Group` around the `if` instead",
+          );
+          break;
+        }
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+
 });
 
 // ─── Rule C — view code no path reaches ────────────────────────────
