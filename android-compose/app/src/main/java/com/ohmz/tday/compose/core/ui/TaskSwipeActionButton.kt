@@ -42,6 +42,9 @@ fun TaskSwipeActionButton(
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
+    // not a token — see docs/motion.md. This is multiplied by the reveal scale
+    // below, so it is one factor of a composed transform rather than the press
+    // scale a finger actually sees; the press-scale tokens are the whole scale.
     val pressedScale by animateFloatAsState(
         targetValue = if (pressed) 0.92f else 1f,
         label = "taskSwipeActionScale",

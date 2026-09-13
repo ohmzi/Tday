@@ -135,7 +135,14 @@ private enum CalendarModeCardMetrics {
 }
 
 private let calendarTodayTintColor = Color(red: 80.0 / 255.0, green: 154.0 / 255.0, blue: 230.0 / 255.0)
+/// Gesture's response (0.34) but not its damping (0.82): the card is resizing to a
+/// committed mode, not coasting after a finger, and 0.92 is what stops the grid
+/// wobbling under the anchored header. Left off the token for the damping alone.
 private let calendarModeResizeAnimation = Animation.spring(response: 0.34, dampingFraction: 0.92, blendDuration: 0.02)
+/// Between Quick (0.15) and Enter (0.20), on neither. The crossfade has to be over
+/// well before the resize spring above has settled, or the paging reads as a card
+/// replacement rather than a pager — which is a length fitted to that spring, not
+/// a rung off the ladder.
 private let calendarModeContentTransitionAnimation = Animation.easeInOut(duration: 0.18)
 private let calendarModeTransitionCleanupDelay: DispatchTimeInterval = .milliseconds(260)
 
@@ -512,7 +519,7 @@ struct CalendarScreen: View {
     }
 
     private func openSearch() {
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = true
         }
@@ -522,7 +529,7 @@ struct CalendarScreen: View {
     /// again the next time the bar is opened — the same bargain web's close
     /// makes.
     private func closeSearch() {
-        HapticManager.sheetDismiss()
+        HapticManager.buttonPress()
         searchFieldFocused = false
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = false
@@ -603,7 +610,21 @@ struct CalendarScreen: View {
                 .spring(response: 0.34, dampingFraction: 0.9),
                 value: pendingItems.map(\.id)
             )
-        } else if !viewModel.isLoading {
+        } else {
+            // Deliberately not gated on `viewModel.isLoading`. Nothing on this
+            // screen loads on appear: `CalendarViewModel.init` hydrates from the
+            // cache synchronously, so `items` is the truth from the first frame
+            // and the flag is raised by exactly one thing — `refresh()`, a
+            // user-initiated force sync over a cache that is already populated.
+            // A sync in flight therefore never makes the day's emptiness less
+            // true, and the gate was not withholding a premature answer but
+            // hiding a correct one: the scene blanked for the whole round trip
+            // and left the card sitting over nothing but the watermark.
+            //
+            // The web twin never had the gate: `CalendarClient.tsx` picks the
+            // day's empty panel on `selectedDayTasks.length` alone and puts the
+            // fetch on a small spinner badge in the corner instead, so the panel
+            // stays put across a refetch. This now matches it.
             calendarDayEmptyState
                 .padding(.vertical, 16)
         }
@@ -622,7 +643,7 @@ struct CalendarScreen: View {
                 description: L("Try a different word, or clear the search."),
                 action: AnyView(
                     Button {
-                        HapticManager.gentleTap()
+                        HapticManager.buttonPress()
                         searchQuery = ""
                         searchFieldFocused = true
                     } label: {
@@ -845,7 +866,7 @@ struct CalendarScreen: View {
                 "recurring": todo.isRecurring
             ]
         )
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.dragDrop()
         if todo.isRecurring {
             pendingRescheduleDrop = CalendarTaskRescheduleDrop(todo: todo, targetDate: targetDay)
         } else {
@@ -864,7 +885,7 @@ struct CalendarScreen: View {
         openSwipeTaskID = nil
         dropTargetRegistry.removeAll()
         if draggedTodo?.id != todo.id {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            HapticManager.dragPickUp()
         }
         draggedTodo = todo
         CalendarTaskDragSession.shared.todo = todo
@@ -3320,7 +3341,7 @@ private struct CalendarPendingTaskRow: View {
             return
         }
 
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.completion()
         Task { @MainActor in
             withAnimation(.easeInOut(duration: 0.18)) {
                 completionPhase = .checked

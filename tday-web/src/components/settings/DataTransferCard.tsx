@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, Loader2, Upload } from "lucide-react";
@@ -81,6 +81,17 @@ export default function DataTransferCard() {
   const [importing, setImporting] = useState(false);
   // Holds the parsed bundle + its dry-run preview until the user confirms.
   const [pending, setPending] = useState<{ bundle: unknown; preview: ImportCounts } | null>(null);
+  // The confirmation card outlives `pending` by MODAL_EXIT_MS: `ModalOverlay` holds its portal
+  // in the document for that long so the exit has frames to play in (`useModalPresence` in
+  // Modal.tsx). `pending` is cleared the instant a button is pressed, so a body reading it
+  // directly repaints the card the user is watching leave — the item count drops to zero and the
+  // remapped-ids sentence disappears, one frame into the fade. Retaining the last non-null
+  // bundle keeps those frames showing the dialog that was actually answered. This is the same
+  // shape `ConfirmRescheduleRecurring` carries, and for the same reason.
+  const [retained, setRetained] = useState(pending);
+  useEffect(() => {
+    if (pending) setRetained(pending);
+  }, [pending]);
 
   const taskCount = (todos?.length ?? 0) + (floaters?.length ?? 0);
   const listCount = Object.keys(listMetaData ?? {}).length;
@@ -141,7 +152,7 @@ export default function DataTransferCard() {
     }
   }
 
-  const previewTotal = pending ? importedItemTotal(pending.preview) : 0;
+  const previewTotal = retained ? importedItemTotal(retained.preview) : 0;
 
   return (
     <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
@@ -202,8 +213,8 @@ export default function DataTransferCard() {
               <ModalTitle>{t("data.confirmTitle")}</ModalTitle>
               <ModalDescription>
                 {t("data.confirmBody", { count: previewTotal })}
-                {pending && pending.preview.remappedIds > 0
-                  ? " " + t("data.confirmRemapped", { count: pending.preview.remappedIds })
+                {retained && retained.preview.remappedIds > 0
+                  ? " " + t("data.confirmRemapped", { count: retained.preview.remappedIds })
                   : ""}
               </ModalDescription>
             </ModalHeader>

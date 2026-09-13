@@ -112,6 +112,9 @@ T'Day is a task app, not a marketing site. Mobile screens should feel quiet, use
 - Prefer theme and dimension tokens over inline colors or magic sizes.
 - If a new semantic color or repeated dimension is needed, add it to the platform's theme/token layer instead of scattering literals.
 - Existing feature-scoped constants can remain when they are already part of that feature's local style, but do not expand hardcoded styling casually.
+- Motion has its own shared vocabulary: durations, delays, easings, springs, and press scales come from `MotionTokens.kt` (`shared/src/commonMain/kotlin/com/ohmz/tday/shared/motion/`) through a generated artifact per client — web `--tday-*` custom properties, `ease-*` utilities and `src/lib/motion.ts`; Android `TdayMotionTokens`; iOS `TdayMotion`. Never hand-edit a generated artifact.
+- A motion value two clients share belongs in `MotionTokens.kt`; a one-client value with a written argument stays put and carries a `not a token — see docs/motion.md` comment. After editing `MotionTokens.kt`, run `./gradlew :shared:exportMotionTokens` and commit the regenerated artifacts — `./gradlew :shared:verifyMotionTokens` is the CI drift gate.
+- See `docs/motion.md` for the normative table, the idiom rules, and the deliberate non-tokens.
 
 ## Global Version Management
 

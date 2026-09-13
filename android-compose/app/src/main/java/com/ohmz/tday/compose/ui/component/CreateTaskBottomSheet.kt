@@ -4,7 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -55,9 +55,11 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -86,13 +89,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.feature.guide.GuideHelpLink
 import com.ohmz.tday.compose.ui.priority.PRIORITY_OPTIONS_LOW_TO_HIGH
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
@@ -136,6 +138,67 @@ private const val CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION = 0.86f
 private const val CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.85f
 private const val CREATE_TASK_SHEET_MOTION_MS = 320
 
+/**
+ * The dismissal half of a sheet that is an `AnimatedVisibility` inside a [Dialog].
+ *
+ * Every dismiss affordance used to call the caller's `onDismiss` directly: the scrim tap,
+ * the close button, and the host `Dialog`'s own back/outside-tap request. Each caller's
+ * `onDismiss` flips the state that composes the sheet at all — `showCreateTaskSheet = false`,
+ * `editTargetTodoId = null`, `finish()` for the widget — so the whole `Dialog` left the
+ * composition on the frame of the tap and the exit spec never animated a single frame. The
+ * sheet was cut, not slid, from all seven call sites, and the flag driving `visible` was set
+ * true once and never set false, which is exactly what Rule B of the Android
+ * motion-reachability guardrail reports.
+ *
+ * So dismissal is two steps and every path takes both. [start] flips the transition's target
+ * to false and the exit plays; the caller is told only once the transition has settled on
+ * "gone", which is the first moment it is safe to tear the composition down. Because the
+ * sheet's own state outlives the tap, its content is still composed — and still readable —
+ * for the whole slide out.
+ *
+ * Waiting on the transition rather than on a `delay(320)` also keeps the handoff honest when
+ * the system animation scale is 0: the transition settles on the next frame and the sheet
+ * closes immediately, instead of stranding a sheet-less scrim on screen for 320 ms.
+ */
+@Stable
+internal class SheetDismissState(internal val transition: MutableTransitionState<Boolean>) {
+    /** True once a dismissal has been asked for. The exit may still be playing. */
+    var dismissing: Boolean by mutableStateOf(false)
+        private set
+
+    /** The exit has finished and the sheet is off screen; the host can go away now. */
+    val gone: Boolean
+        get() = dismissing && transition.isIdle && !transition.currentState
+
+    /** Start the exit. Repeat taps during the slide out are ignored, not queued. */
+    fun start() {
+        if (dismissing) return
+        dismissing = true
+        transition.targetState = false
+    }
+}
+
+/**
+ * Remembers a [SheetDismissState], runs the sheet's enter, and calls [onDismissed] exactly
+ * once — after the exit has finished.
+ *
+ * [presentImmediately] is for a host that is itself the sheet (the widget create activity):
+ * it opens already showing it, so there is nothing to slide in.
+ */
+@Composable
+internal fun rememberSheetDismissState(
+    presentImmediately: Boolean = false,
+    onDismissed: () -> Unit,
+): SheetDismissState {
+    val state = remember { SheetDismissState(MutableTransitionState(presentImmediately)) }
+    LaunchedEffect(Unit) { state.transition.targetState = true }
+    val currentOnDismissed by rememberUpdatedState(onDismissed)
+    LaunchedEffect(state.gone) {
+        if (state.gone) currentOnDismissed()
+    }
+    return state
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateTaskBottomSheet(
@@ -149,6 +212,7 @@ fun CreateTaskBottomSheet(
     initialTitle: String? = null,
     initialNotes: String? = null,
     presentImmediately: Boolean = false,
+    dismissEnabled: Boolean = true,
     onParseTaskTitleNlp: (suspend (
         title: String,
         referenceDueEpochMs: Long,
@@ -289,7 +353,34 @@ fun CreateTaskBottomSheet(
     }
     var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
-    var sheetVisible by remember { mutableStateOf(presentImmediately) }
+    // Every way out of this sheet goes through `startDismiss`: the scrim, the close
+    // button, the host Dialog's back press and outside tap, and so — one step later — each
+    // caller's own onDismiss. See [SheetDismissState] for why it is two steps.
+    //
+    // The keyboard leaves with the caller's onDismiss, at the END of the exit, and not at
+    // the start of it. Hiding it first collapses `WindowInsets.ime` while the slide is
+    // still playing: `reserveKeyboardLayout` below follows the insets down, the Surface's
+    // modifier chain hard-swaps from a fixed 85 % of the screen to the wrap-content branch
+    // mid-slide, and because `slideOutVertically` offsets by the height it measured, the
+    // card's top edge collapses about a third of a screen on one frame while it is still
+    // on its way out. That is `and-create-sheet-ime-height-snap` (PR 15b) escaping the
+    // opening and getting into the exit; leaving the IME alone until the Dialog goes keeps
+    // it in the one place PR 15b will fix it.
+    val sheetDismiss = rememberSheetDismissState(
+        presentImmediately = presentImmediately,
+        onDismissed = {
+            dismissKeyboard()
+            onDismiss()
+        },
+    )
+    // [dismissEnabled] is the host's veto — the widget create surface withdraws it while a
+    // submit is in flight. A refused gesture must not reach `start()`, because `start()`
+    // latches: a dismissal that the sheet accepts and the host then drops can never be
+    // retried, and it leaves the user looking at a bare full-screen scrim with no sheet in
+    // it. Refusing the gesture keeps the sheet on screen and every later tap a fresh try.
+    val startDismiss = {
+        if (dismissEnabled) sheetDismiss.start()
+    }
 
     val noListLabel = stringResource(R.string.create_task_no_list)
     val priorityOptions = remember { PRIORITY_OPTIONS_LOW_TO_HIGH }
@@ -315,8 +406,11 @@ fun CreateTaskBottomSheet(
     val sheetTonalElevation = TdaySheetDefaults.tonalElevation()
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val density = LocalDensity.current
-    val keyboardVisible = WindowInsets.ime.getBottom(density) > 0
-    val reserveKeyboardLayout = keyboardVisible
+    // The live inset, not a crossing. The platform animates this up and down over roughly
+    // 250 ms and republishes it every frame, so reading the dp here is what puts the sheet
+    // on the keyboard's own clock instead of on a threshold.
+    val imeHeight = with(density) { WindowInsets.ime.getBottom(this).toDp() }
+    val keyboardVisible = imeHeight > 0.dp
     val maxSheetHeight = screenHeight * CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION
     val usesTallCreateModal = !isEditMode && showScheduleControls
     val usesFloaterCreateModal = !isEditMode && !showScheduleControls
@@ -333,20 +427,55 @@ fun CreateTaskBottomSheet(
     val floaterEditSheetHeight = (screenHeight * CREATE_TASK_SHEET_FLOATER_EDIT_HEIGHT_FRACTION)
         .coerceAtMost(maxSheetHeight)
     val sheetFormScrollState = rememberScrollState()
-    val keyboardSheetHeight by animateDpAsState(
-        targetValue = (screenHeight * CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION)
-            .coerceAtMost(maxSheetHeight),
-        animationSpec = tween(
-            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-            easing = FastOutSlowInEasing,
-        ),
-        label = "createTaskKeyboardSheetHeight",
+    // A plain value, not an animation. Both inputs are fixed for the life of the
+    // composition — the screen height and a `const val` fraction — so the 320 ms tween
+    // that used to wrap this had a target it could never move away from and never ran a
+    // single frame. It read as motion in review for exactly as long as it was dead.
+    //
+    // It is no longer a destination either. The chain below used to swap whole branches on
+    // "is the IME visible", which sent the sheet here in the one frame the keyboard's first
+    // pixel appeared; this is now the ceiling that growth stops at, and the growth itself
+    // comes from the live inset. See [CreateSheetImeHeight].
+    val keyboardSheetHeight = (screenHeight * CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION)
+        .coerceAtMost(maxSheetHeight)
+    // The least its own branch below will accept — a floor under the resting height, not
+    // the resting height itself. Three of the four branches wrap their content, so they
+    // stand taller than this whenever the form is taller than the fraction.
+    val restingSheetMinHeight = when {
+        usesTallCreateModal || usesFloaterCreateModal -> floaterCreateSheetHeight
+        usesScheduledEditModal -> editSheetHeight
+        usesFloaterEditModal -> floaterEditSheetHeight
+        else -> 0.dp
+    }
+    // Where the sheet actually stood the last time the keyboard was down. Climbing from
+    // the branch minimum instead would spend the first (measured − minimum) dp of keyboard
+    // travel below a sheet that is already taller than that, so the sheet would sit still
+    // for that part of the rise and only then start tracking — the late start the device
+    // row is hunting for.
+    var restingSheetHeight by remember { mutableStateOf(0.dp) }
+    val keyboardFloorHeight = CreateSheetImeHeight.sheetHeightFor(
+        restingHeight = maxOf(restingSheetHeight, restingSheetMinHeight),
+        imeHeight = imeHeight,
+        keyboardHeight = keyboardSheetHeight,
     )
-
-    LaunchedEffect(presentImmediately) {
-        if (!presentImmediately) {
-            sheetVisible = true
-        }
+    // A content tween belongs in the height chain only while the keyboard is still. With
+    // the inset moving, the sheet is held to it exactly (below), and `animateContentSize`
+    // left in the chain would keep chasing a height it is never allowed to report —
+    // drifting hundreds of dp behind it, because a tween restarts from zero velocity every
+    // time its target moves and so covers under 1 % of the gap per frame. On the frame the
+    // keyboard finally reaches zero and the pin comes off, that stale value is what the
+    // sheet would snap to. Taking the node out for the duration means it is rebuilt at the
+    // size the sheet is actually at, and content changes still animate with the keyboard
+    // down, which is the only time they are visible anyway.
+    val sheetContentSizeAnimation = if (keyboardVisible) {
+        Modifier
+    } else {
+        Modifier.animateContentSize(
+            animationSpec = tween(
+                durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                easing = FastOutSlowInEasing,
+            ),
+        )
     }
 
     fun submitTask() {
@@ -401,7 +530,7 @@ fun CreateTaskBottomSheet(
     }
 
     Dialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = startDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false,
@@ -417,14 +546,18 @@ fun CreateTaskBottomSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(sheetScrimColor)
-                    .clickable {
-                        dismissKeyboard()
-                        onDismiss()
-                    },
+                    // No indication: a dismiss tap on the scrim is a gesture at the sheet,
+                    // not a press of a full-screen button, and the default ripple draws
+                    // itself across the entire window on the way out.
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = startDismiss,
+                    ),
             )
 
             AnimatedVisibility(
-                visible = sheetVisible,
+                visibleState = sheetDismiss.transition,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth(),
@@ -446,49 +579,47 @@ fun CreateTaskBottomSheet(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
+                        // Read with the keyboard down only, so what it records is the
+                        // height the climb has to start from and never a height the climb
+                        // itself produced.
+                        .onSizeChanged { size ->
+                            if (!keyboardVisible) {
+                                restingSheetHeight = with(density) { size.height.toDp() }
+                            }
+                        }
+                        // While the inset is anywhere but zero, the keyboard owns the
+                        // height and the sheet is held to it EXACTLY, outside the branch
+                        // below rather than instead of it. An exact height is clamped in
+                        // both directions, so the sheet follows the inset down as
+                        // faithfully as it follows it up. A `heightIn(min = ...)` floor
+                        // here would only clamp upward — on the way down the branch's own
+                        // animated size sits above the falling floor, inside the range,
+                        // and is reported verbatim, which hands the whole retraction to a
+                        // 320 ms tween racing the keyboard's ~250 ms.
                         .then(
-                            if (reserveKeyboardLayout) {
-                                Modifier.height(keyboardSheetHeight)
-                            } else if (usesTallCreateModal) {
+                            if (keyboardVisible) {
+                                Modifier.height(keyboardFloorHeight)
+                            } else {
+                                Modifier
+                            },
+                        )
+                        .then(
+                            if (usesTallCreateModal) {
                                 // Wrap content (like the floater create sheet) so the
                                 // bottom padding under the last row matches; a fixed
                                 // height left extra space below Repeat.
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(min = floaterCreateSheetHeight, max = maxSheetHeight)
                             } else if (usesScheduledEditModal) {
                                 Modifier.height(editSheetHeight)
                             } else if (usesFloaterCreateModal) {
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(min = floaterCreateSheetHeight, max = maxSheetHeight)
                             } else if (usesFloaterEditModal) {
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(min = floaterEditSheetHeight, max = maxSheetHeight)
                             } else {
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(max = maxSheetHeight)
                             },
                         )
@@ -518,10 +649,7 @@ fun CreateTaskBottomSheet(
                                 ),
                                 leftIcon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                                 leftContentDescription = stringResource(R.string.action_close),
-                                onLeftClick = {
-                                    dismissKeyboard()
-                                    onDismiss()
-                                },
+                                onLeftClick = startDismiss,
                                 confirmContentDescription = stringResource(
                                     if (isEditMode) {
                                         R.string.action_save_task
@@ -918,10 +1046,7 @@ private fun SplitDateTimeRow(
                 modifier = Modifier
                     .weight(1f)
                     .clickable(onClick = {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.CLOCK_TICK
-                        )
+                        TdayHaptics.buttonPress(view)
                         onDateClick()
                     })
                     .padding(horizontal = 8.dp, vertical = 8.dp),
@@ -948,10 +1073,7 @@ private fun SplitDateTimeRow(
                 modifier = Modifier
                     .weight(1f)
                     .clickable(onClick = {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.CLOCK_TICK
-                        )
+                        TdayHaptics.buttonPress(view)
                         onTimeClick()
                     })
                     .padding(horizontal = 8.dp, vertical = 8.dp),
@@ -982,7 +1104,7 @@ private fun ScheduleSwitchRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                TdayHaptics.toggle(view, on = !enabled)
                 onEnabledChange(!enabled)
             }
             .heightIn(min = 72.dp)
@@ -1047,7 +1169,7 @@ private fun SheetRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                TdayHaptics.buttonPress(view)
                 onClick()
             })
             .padding(horizontal = 16.dp, vertical = 14.dp),

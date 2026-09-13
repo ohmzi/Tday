@@ -157,7 +157,7 @@ enum TdayConfettiMetrics {
     static let fadeStart: Double = 0.55
 
     /// How long the burst has the screen to itself before the scene comes up.
-    static let sceneLead: Double = 0.32
+    static let sceneLead: Double = TdayMotion.Delays.celebrationLead
 
     /// A festive subset of the list palette rather than a new set of colours, so
     /// the burst is made of shades the app already uses.

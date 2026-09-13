@@ -12,6 +12,7 @@ import {
   ModalTitle,
   ModalDescription,
   ModalFooter,
+  useModalPresence,
 } from "@/components/ui/Modal";
 
 type ConfirmEditAllDialogProp = {
@@ -35,7 +36,12 @@ export default function ConfirmEditAllDialog({
   const { editCalendarTodo } = useEditCalendarTodo();
   const { editCalendarTodoInstance } = useEditCalendarTodoInstance();
 
-  if (!editAllDialogOpen) return null;
+  // Held in the tree for the modal's exit rather than dropped on the frame the flag flips.
+  // Modal's own portal already does this (`useModalPresence` in Modal.tsx); repeating the raw
+  // `if (!open) return null` here would take the whole subtree away one level higher up and
+  // undo it.
+  const present = useModalPresence(editAllDialogOpen);
+  if (!present) return null;
 
   return (
     <Modal open={editAllDialogOpen} onOpenChange={setEditAllDialogOpen}>

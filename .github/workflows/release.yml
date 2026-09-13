@@ -24,10 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 20
           cache: npm
@@ -51,7 +51,7 @@ jobs:
           TZ: UTC
 
       - name: Set up JDK 21
-        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: 21
@@ -65,6 +65,9 @@ jobs:
       - name: Verify guide content is not stale
         run: ./gradlew :shared:verifyGuideContent --no-daemon
 
+      - name: Verify motion tokens are not stale
+        run: ./gradlew :shared:verifyMotionTokens --no-daemon
+
       # `build-and-release` hangs off this job, so an Android regression caught here stops the
       # APK from being published rather than shipping inside it. PRs are gated earlier and
       # separately by `android.yml`; this is the last line, for whatever a merge commit
@@ -75,7 +78,7 @@ jobs:
       # root build (`:android-compose:app:assembleRelease`), so this tests the same build that
       # ships; and the root build is already configured in this job for the two Gradle steps
       # above, so this reuses it instead of standing up a second Gradle root. Both roots run
-      # the same 240 tests.
+      # the same 365 tests.
       #
       # The SDK comes from the runner's ANDROID_HOME — no `local.properties` exists in CI.
       - name: Run Android unit tests
@@ -103,18 +106,18 @@ jobs:
       # it is what lets this job push the release commit. checkout wires it into
       # git and switches the remote to SSH, so every push below uses it.
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 20
 
       - name: Set up JDK 21
-        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4.8.0
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: 21
@@ -153,6 +156,14 @@ jobs:
       # Regenerate them here so they ride along in the release commit.
       - name: Regenerate guide content for the new version
         run: ./gradlew :shared:exportGuideContent --no-daemon
+
+      # The motion artifacts take no input from version.json, so unlike the guide
+      # ones a bump cannot stale them and this is normally a no-op. It runs anyway
+      # so the two codegens are operated identically — the failure mode being
+      # avoided is someone adding a version-dependent field later and this step
+      # being the one nobody remembered to add.
+      - name: Regenerate motion tokens
+        run: ./gradlew :shared:exportMotionTokens --no-daemon
 
       # The repo still carries legacy v1.8.x-v1.44.0 tags from an earlier
       # versioning era, so ask GitHub for the previous release rather than
@@ -197,7 +208,11 @@ jobs:
             tday-web/tests/fixtures/guide-icons.json \
             shared/src/commonMain/kotlin/com/ohmz/tday/shared/guide/GuideStringsGenerated.kt \
             shared/src/commonMain/kotlin/com/ohmz/tday/shared/summary/SummaryStringBundlesGenerated.kt \
-            ios-swiftUI/Tday/Resources/Guide
+            ios-swiftUI/Tday/Resources/Guide \
+            android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayMotionTokensGenerated.kt \
+            ios-swiftUI/Tday/UI/Theme/TdayMotionGenerated.swift \
+            tday-web/src/generated/motion-tokens.css \
+            tday-web/src/generated/motion-tokens.ts
 
           if git diff --cached --quiet; then
             echo "::error::Release commit is empty — expected at least regenerated release metadata."

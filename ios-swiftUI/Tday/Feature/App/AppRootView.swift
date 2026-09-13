@@ -494,7 +494,7 @@ struct AppRootView: View {
             requestRootFeedScrollToTop(for: tab)
             return
         }
-        HapticManager.tabSwitch()
+        HapticManager.selection()
         selectRootFeedTab(tab)
     }
 

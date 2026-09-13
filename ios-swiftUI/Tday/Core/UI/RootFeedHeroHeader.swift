@@ -66,6 +66,10 @@ enum RootFeedHeroHeaderMetrics {
     static var refreshPillRestingTop: CGFloat {
         heroTitleCenterY - (TdayRefreshIndicatorMetrics.containerHeight / 2)
     }
+    /// Slower and more damped than Settle (0.40/0.86), which is the nearest
+    /// token. Left alone: the pill's travel is driven by the pull fraction
+    /// below and this spring only catches the release, so the extra damping is
+    /// what keeps it from overshooting the title it is hovering in front of.
     static let refreshPillMotion = Animation.spring(response: 0.42, dampingFraction: 0.9)
 
     /// Fraction of the pull over which the pill completes its travel. It leads
@@ -118,6 +122,10 @@ enum RootFeedHeroHeaderMetrics {
     static let searchCollapseEnd: CGFloat = 0.50
     static let titleTravelEnd: CGFloat = 0.55
 
+    /// Two hundredths off Snappy (0.28/0.86), same damping. Left alone rather than
+    /// rounded onto the token: this morph runs alongside the collapse fractions
+    /// above, which were fitted against it, and a token layer that lands by
+    /// nudging call sites two hundredths is not a zero-pixel token layer.
     static let searchMorph = Animation.spring(response: 0.30, dampingFraction: 0.86)
 
     static func collapseProgress(forScrollOffset offset: CGFloat) -> CGFloat {
@@ -358,7 +366,7 @@ struct RootFeedHeroHeader: View {
     }
 
     private func handleScrollToTop() {
-        HapticManager.gentleTap()
+        HapticManager.buttonPress()
         onScrollToTop()
     }
 
@@ -406,7 +414,7 @@ struct RootFeedHeroHeader: View {
 
         return HStack(spacing: Metrics.barButtonSpacing) {
             RootFeedHeaderCircleButton(icon: "NavListPlus") {
-                HapticManager.buttonTap()
+                HapticManager.buttonPress()
                 onCreateList()
             }
             .accessibilityLabel("Create list")
@@ -446,7 +454,7 @@ struct RootFeedHeroHeader: View {
             }
         } else {
             RootFeedHeaderCircleButton(icon: "NavEllipsis") {
-                HapticManager.gentleTap()
+                HapticManager.buttonPress()
                 onOpenSettings()
             }
         }
@@ -516,7 +524,7 @@ struct RootFeedHeroHeader: View {
 
     private func searchRestingContent(labelOpacity: CGFloat, labelWidth: CGFloat) -> some View {
         Button {
-            HapticManager.buttonTap()
+            HapticManager.buttonPress()
             withAnimation(Metrics.searchMorph) {
                 searchExpanded = true
             }
@@ -582,7 +590,7 @@ struct RootFeedHeroHeader: View {
                 .disabled(!searchExpanded)
 
             Button {
-                HapticManager.sheetDismiss()
+                HapticManager.buttonPress()
                 onSearchClose()
             } label: {
                 Image("NavClose")
@@ -674,7 +682,12 @@ private struct RootFeedHeaderCircleMenu<MenuItems: View>: View {
         // No extra tap gesture for the haptic `RootFeedHeaderCircleButton`
         // gives its own Button: layering one on a `Menu` risks eating the
         // press before `Menu` ever sees it, and the system already gives its
-        // own presentation feedback when the menu opens.
+        // own presentation feedback when the menu opens. The press *depth* is
+        // knowingly absent too: this face stays at 1.0 while its twin sinks to
+        // 0.94 under `TdayToolbarButtonStyle`. That style on the `Menu` would
+        // add the depth without touching the gesture path, but it also brings
+        // the style's shadow pair, so it is a visual change belonging to a row
+        // of its own — not drift for the next reader to tidy away.
         Menu {
             items()
         } label: {
@@ -861,10 +874,10 @@ struct TdaySearchCapsule: View {
             if showsTrailingButton {
                 Button {
                     if let onClose {
-                        HapticManager.sheetDismiss()
+                        HapticManager.buttonPress()
                         onClose()
                     } else {
-                        HapticManager.gentleTap()
+                        HapticManager.buttonPress()
                         text = ""
                     }
                 } label: {

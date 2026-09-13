@@ -161,6 +161,9 @@ private enum EmptyStateIllustrationLayout {
     static let minimumRemainder: CGFloat = 240
 }
 
+/// Snappy's response (0.28) with two hundredths more damping. Left off the token
+/// for the damping alone: the placeholder is opening a gap under a row the finger
+/// is still holding, and Snappy's 0.86 lets that gap overshoot visibly.
 private let todoDropPlaceholderAnimation = Animation.spring(response: 0.28, dampingFraction: 0.88, blendDuration: 0.02)
 
 private func isTodoRootDaytime(_ date: Date) -> Bool {
@@ -364,7 +367,7 @@ private struct FloaterTaskHomeSearchResultsCard: View {
                             .padding(.vertical, 9)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                HapticManager.gentleTap()
+                                HapticManager.buttonPress()
                                 onOpenTodo(todo)
                             }
                         }
@@ -1015,6 +1018,11 @@ struct TodoListScreen: View {
     /// `withAnimation` anyway, both for symmetry with the exit branch and as
     /// a live seam if a future visible property ever needs to ride along
     /// with this flag on the way back in.
+    ///
+    /// None of the three is a rung and none is moved onto one. This is a sequence
+    /// whose legs are timed against each other, so putting any single leg on its
+    /// nearest token (Enter 0.20, Emphasis 0.32) would retime the hand-off, not
+    /// just that leg.
     private enum EarlierIllustrationHandoff {
         static let exitDuration: Double = 0.22
         /// The section toggle's own spring (`response: 0.28,
@@ -1122,7 +1130,7 @@ struct TodoListScreen: View {
     }
 
     private func enterSelectionMode() {
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         // Nothing may be half-open underneath the mode.
         openSwipeTaskID = nil
         selectedTodoIDs = []
@@ -1145,7 +1153,7 @@ struct TodoListScreen: View {
     private func toggleSelection(of todo: TodoItem) {
         if selectedTodoIDs.contains(todo.id) {
             selectedTodoIDs.remove(todo.id)
-            HapticManager.gentleTap()
+            HapticManager.selection()
             return
         }
         // At the cap a further tap is refused in place. The bar already says the
@@ -1153,11 +1161,11 @@ struct TodoListScreen: View {
         // already on screen would only talk over it.
         guard !isSelectionAtCap else { return }
         selectedTodoIDs.insert(todo.id)
-        HapticManager.gentleTap()
+        HapticManager.selection()
     }
 
     private func toggleSelectAll() {
-        HapticManager.buttonTap()
+        HapticManager.selection()
         if selectionAllSelected {
             selectedTodoIDs = []
             return
@@ -1189,7 +1197,7 @@ struct TodoListScreen: View {
     private func performBulkComplete() {
         let targets = effectiveBulkTodos(for: .complete)
         guard !targets.isEmpty else { return }
-        HapticManager.taskCompleted()
+        HapticManager.completion()
         exitSelectionMode()
         Task { await viewModel.bulkComplete(targets) }
     }
@@ -1198,7 +1206,7 @@ struct TodoListScreen: View {
     /// undo toast that follows is the second guard, not a substitute for this.
     private func requestBulkDelete() {
         guard !effectiveBulkTodos(for: .delete).isEmpty else { return }
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         withAnimation(.spring(response: 0.24, dampingFraction: 0.9)) {
             showingBulkDeleteConfirmation = true
         }
@@ -1211,7 +1219,7 @@ struct TodoListScreen: View {
             exitSelectionMode()
             return
         }
-        HapticManager.sheetConfirm()
+        HapticManager.destructive()
         exitSelectionMode()
         Task { await viewModel.bulkDelete(targets) }
     }
@@ -1258,21 +1266,18 @@ struct TodoListScreen: View {
             exitSelectionMode()
             return
         }
-        HapticManager.sheetConfirm()
+        HapticManager.completion()
         exitSelectionMode()
         Task { await viewModel.bulkMove(targets, toListId: listID) }
     }
 
+    /// Every `TodoListMode` renders the same drop-capable minimal timeline —
+    /// Today included, so tasks can be dragged between the Morning / Afternoon /
+    /// Tonight buckets. `isTodayMode` and `isMinimalTimelineMode` cover all seven
+    /// cases between them, so the second layout this used to fall back to could
+    /// never be reached; it is gone rather than left looking like a default.
     private var modeContent: AnyView {
-        if isTodayMode {
-            // Today reuses the drop-capable minimal-timeline content so tasks can
-            // be dragged between the Morning / Afternoon / Tonight buckets.
-            return AnyView(minimalTimelineModeContent)
-        }
-        if isMinimalTimelineMode {
-            return AnyView(minimalTimelineModeContent)
-        }
-        return AnyView(standardModeContent)
+        AnyView(minimalTimelineModeContent)
     }
 
     var body: some View {
@@ -1495,6 +1500,7 @@ struct TodoListScreen: View {
                     .zIndex(31)
             }
         }
+        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: activeBulkSelector)
     }
 
     private var screenWithNavigationChrome: some View {
@@ -1767,7 +1773,7 @@ struct TodoListScreen: View {
                     suppressDayDoneFeedbackOnReturn = false
                     return
                 }
-                HapticManager.taskCompleted()
+                HapticManager.completion()
                 SoundManager.taskCompleted()
             }
             .transition(emptyStateIllustrationTransition)
@@ -1977,7 +1983,7 @@ struct TodoListScreen: View {
 
             if !isViewerList {
                 TaskFloatingActionButton(fillColor: modeAccentColor) {
-                    HapticManager.buttonTap()
+                    HapticManager.buttonPress()
                     showingCreateTask = true
                 }
                 .padding(.trailing, 18)
@@ -2014,7 +2020,7 @@ struct TodoListScreen: View {
                 tint: nil,
                 isEnabled: editableCount > 0
             ) {
-                HapticManager.buttonTap()
+                HapticManager.buttonPress()
                 activeBulkSelector = .priority
             }
             bulkActionButton(
@@ -2023,7 +2029,7 @@ struct TodoListScreen: View {
                 tint: nil,
                 isEnabled: editableCount > 0
             ) {
-                HapticManager.buttonTap()
+                HapticManager.buttonPress()
                 activeBulkSelector = .list
             }
             bulkActionButton(
@@ -2369,7 +2375,7 @@ struct TodoListScreen: View {
             return
         }
 
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.dragDrop()
         if todo.isRecurring {
             pendingRescheduleDrop = TodoRescheduleDrop(todo: todo, targetDate: targetDay, targetHour: nil)
         } else {
@@ -2411,7 +2417,7 @@ struct TodoListScreen: View {
             return
         }
 
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.dragDrop()
         if todo.isRecurring {
             pendingRescheduleDrop = TodoRescheduleDrop(todo: todo, targetDate: nil, targetHour: hour)
         } else {
@@ -2462,7 +2468,7 @@ struct TodoListScreen: View {
     private func beginInAppDrag(_ todo: TodoItem, at location: CGPoint) {
         openSwipeTaskID = nil
         if draggedTodo?.id != todo.id {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            HapticManager.dragPickUp()
         }
         draggedTodo = todo
         TodoTaskDragSession.shared.todo = todo
@@ -2553,7 +2559,7 @@ struct TodoListScreen: View {
     }
 
     private func openListSearch() {
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             listSearchExpanded = true
         }
@@ -2562,7 +2568,7 @@ struct TodoListScreen: View {
     /// Leaving the search drops the query with it, so the list is whole again
     /// the next time the bar is opened — the same bargain web's close makes.
     private func closeListSearch() {
-        HapticManager.sheetDismiss()
+        HapticManager.buttonPress()
         listSearchFieldFocused = false
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             listSearchExpanded = false
@@ -2702,181 +2708,6 @@ struct TodoListScreen: View {
         }
     }
 
-    private var standardModeContent: some View {
-        List {
-            if let errorMessage = viewModel.errorMessage {
-                Section {
-                    ErrorRetryView(message: errorMessage) {
-                        Task { await viewModel.refresh() }
-                    }
-                    .listRowBackground(colors.background)
-                }
-            }
-            ForEach(groupedSections) { section in
-                let isDropEligibleSection = draggedTodo.map { canDropTodo($0, into: section) } ?? false
-                let isActiveDropSection = activeDropSectionId == section.id && isDropEligibleSection
-                Section {
-                    ForEach(section.items) { todo in
-                        todoRow(todo, in: section)
-                            .todoInAppDropTargetFrame(
-                                targetID: "standard-row-\(section.id)-\(todo.id)",
-                                section: section,
-                                enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && isDropEligibleSection
-                            )
-                            .listRowBackground(todo.id == highlightedTodoId ? colors.surfaceVariant : colors.surface)
-                    }
-                    if viewModel.mode.supportsTaskReschedule,
-                       isActiveDropSection,
-                       section.targetDate != nil {
-                        TodoDropPlaceholder(isActive: isActiveDropSection)
-                            .todoInAppDropTargetFrame(
-                                targetID: "standard-placeholder-\(section.id)",
-                                section: section,
-                                enabled: isDropEligibleSection
-                            )
-                            .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 6, trailing: 20))
-                            .listRowBackground(colors.surface)
-                            .transition(timelineRowTransition())
-                            .scheduledTodoDropTarget(
-                                section: section,
-                                draggedTodo: draggedTodo,
-                                resolveTodo: resolveTodoForDrop,
-                                onMove: { todo, targetDate in
-                                    requestReschedule(todo, to: targetDate)
-                                },
-                                canMoveTodo: canDropTodo,
-                                onSectionChange: { sectionId in
-                                    setActiveDropSection(sectionId)
-                                }
-                            )
-                    }
-                    if viewModel.mode.supportsTaskReschedule, !section.items.isEmpty {
-                        Color.clear
-                            .frame(height: 8)
-                            .todoInAppDropTargetFrame(
-                                targetID: "standard-spacer-\(section.id)",
-                                section: section,
-                                enabled: isDropEligibleSection
-                            )
-                            .listRowInsets(EdgeInsets())
-                            .scheduledTodoDropTarget(
-                                section: section,
-                                draggedTodo: draggedTodo,
-                                resolveTodo: resolveTodoForDrop,
-                                onMove: { todo, targetDate in
-                                    requestReschedule(todo, to: targetDate)
-                                },
-                                canMoveTodo: canDropTodo,
-                                onSectionChange: { sectionId in
-                                    setActiveDropSection(sectionId)
-                                }
-                            )
-                    }
-                } header: {
-                    if section.title.isEmpty {
-                        EmptyView()
-                    } else {
-                        Text(section.title)
-                            .foregroundStyle(isActiveDropSection ? colors.error : colors.onSurfaceVariant)
-                            .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .todoInAppDropTargetFrame(
-                                targetID: "standard-header-\(section.id)",
-                                section: section,
-                                enabled: viewModel.mode.supportsTaskReschedule && !isViewerList && isDropEligibleSection
-                            )
-                            .timelinePinnedSectionHeaderBackground()
-                            .scheduledTodoDropTarget(
-                                section: section,
-                                draggedTodo: draggedTodo,
-                                resolveTodo: resolveTodoForDrop,
-                                onMove: { todo, targetDate in
-                                    requestReschedule(todo, to: targetDate)
-                                },
-                                canMoveTodo: canDropTodo,
-                                onSectionChange: { sectionId in
-                                    setActiveDropSection(sectionId)
-                                }
-                            )
-                    }
-                }
-            }
-        }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .background(colors.background)
-        .disableVerticalScrollBounce()
-        .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)
-        .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
-    }
-
-    private var todayModeContent: some View {
-        ZStack {
-            List {
-                timelineHeroTitleRow
-
-                if let errorMessage = viewModel.errorMessage {
-                    Section {
-                        ErrorRetryView(message: errorMessage) {
-                            Task { await viewModel.refresh() }
-                        }
-                        .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 18, trailing: TodoTimelineMetrics.horizontalPadding))
-                        .listRowBackground(colors.background)
-                        .listRowSeparator(.hidden)
-                    }
-                }
-
-                ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
-                    Section {
-                        if !section.items.isEmpty {
-                            ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
-                                minimalTimelineRow(todo, in: section)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
-                                    .listRowBackground(colors.background)
-                                    .listRowSeparator(.hidden)
-                                if shouldShowDateDivider(after: itemIndex, inSectionAt: index, sections: groupedSections) {
-                                    TimelineRowDivider()
-                                }
-                            }
-                        }
-                    } header: {
-                        TimelineSectionHeader(
-                            title: section.title,
-                            isActiveDropTarget: activeDropSectionId == section.id
-                        )
-                        .padding(.top, index == 0 ? 0 : TodoTimelineMetrics.sectionTopSpacing)
-                        .timelinePinnedSectionHeaderBackground()
-                        .listRowInsets(
-                            EdgeInsets(
-                                top: 0,
-                                leading: 0,
-                                bottom: 0,
-                                trailing: 0
-                            )
-                        )
-                        .listRowSeparator(.hidden)
-                    }
-                }
-
-                Color.clear
-                    .frame(height: TodoTimelineMetrics.timelineBottomSpacerHeight)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(colors.background)
-                    .listRowSeparator(.hidden)
-                    .disableVerticalScrollBounce()
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .background(colors.background)
-            .contentMargins(.top, 0, for: .scrollContent)
-            .listRowSpacing(0)
-            .listSectionSpacing(0)
-            .environment(\.defaultMinListRowHeight, 1)
-            .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
-
-        }
-    }
-
     /// Shown in place of the timeline when a search matches nothing. The screen's
     /// own empty scene carries it, so a screen has one no-results treatment and
     /// not two — with the way out of the query that does not need the keyboard
@@ -2889,7 +2720,7 @@ struct TodoListScreen: View {
             description: L("Try a different word, or clear the search."),
             action: AnyView(
                 Button {
-                    HapticManager.gentleTap()
+                    HapticManager.buttonPress()
                     listSearchQuery = ""
                     listSearchFieldFocused = true
                 } label: {
@@ -3083,97 +2914,6 @@ struct TodoListScreen: View {
         }
     }
 
-    private func todoRow(
-        _ todo: TodoItem,
-        in section: TodoTimelineSection
-    ) -> some View {
-        let completionPhase = completionPhases[todo.id]
-        let isCompleting = completionPhase != nil
-        let isFading = completionPhase == .fading
-        let rowContent = VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(priorityColor(todo.priority))
-                    .frame(width: 10, height: 10)
-                Text(todo.title)
-                    .font(.tdayRounded(size: 15, weight: .bold))
-                    .foregroundStyle(colors.onSurface)
-                Spacer()
-                if todo.pinned {
-                    Image(systemName: "pin.fill")
-                        .foregroundStyle(colors.tertiary)
-                }
-            }
-            if let due = todo.due {
-                HStack(spacing: 6) {
-                    Text(due.formatted(.dateTime.month(.abbreviated).day().year().hour().minute().locale(AppLocale.current)))
-                        .font(.tdayRounded(size: 12, weight: .semibold))
-                        .foregroundStyle(colors.onSurfaceVariant)
-                }
-            }
-            let flattenedDescription = flattenNotesToPlainText(todo.description)
-            if !flattenedDescription.isEmpty {
-                Text(flattenedDescription)
-                    .font(.tdayRounded(size: 12, weight: .semibold))
-                    .foregroundStyle(colors.onSurfaceVariant)
-            }
-        }
-        .opacity(isFading ? 0 : 1)
-        .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
-        .offset(y: isFading ? -10 : 0)
-        .animation(.easeInOut(duration: 0.26), value: isFading)
-        .opacity(draggedTodo?.id == todo.id ? 0.7 : 1)
-        .allowsHitTesting(!isCompleting)
-        .todoTrailingSwipeActions(
-            rowID: todo.id,
-            openRowID: $openSwipeTaskID,
-            enabled: !isCompleting && !isViewerList,
-            extraAction: promoteOrFloatSwipeAction(for: todo),
-            onEdit: {
-                editingTodo = todo
-            },
-            onCopy: {
-                viewModel.copyToClipboard(todo)
-            },
-            onDelete: {
-                Task { await viewModel.delete(todo) }
-            }
-        )
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button {
-                completeTodoWithoutReflow(todo)
-            } label: {
-                Label("Complete", systemImage: "checkmark")
-            }
-            .tint(.green)
-        }
-
-        return rowContent
-            .transition(.opacity.combined(with: .scale(scale: 0.985)))
-            .scheduledTodoDropTarget(
-                section: section,
-                draggedTodo: draggedTodo,
-                resolveTodo: resolveTodoForDrop,
-                onMove: { droppedTodo, targetDate in
-                    requestReschedule(droppedTodo, to: targetDate)
-                },
-                canMoveTodo: canDropTodo,
-                onSectionChange: { sectionId in
-                    setActiveDropSection(sectionId)
-                }
-            )
-            .modifier(
-                TodoInAppDragModifier(
-                    enabled: viewModel.mode.supportsTaskReschedule && !isViewerList,
-                    todo: todo,
-                    onStart: beginInAppDrag,
-                    onMove: updateInAppDrag,
-                    onEnd: finishInAppDrag,
-                    onCancel: cancelInAppDrag
-                )
-            )
-    }
-
     /// Dim factor for a "resting" floater row: 1 = normal, lower = faded/dormant.
     private func restingRowOpacity(for todo: TodoItem) -> Double {
         guard viewModel.mode == .floater, !todo.completed, RestingFloatersStore().isEnabled else {
@@ -3359,7 +3099,7 @@ struct TodoListScreen: View {
         if openSwipeTaskID == todo.id {
             openSwipeTaskID = nil
         }
-        HapticManager.taskCompleted()
+        HapticManager.completion()
         SoundManager.taskCompleted()
         withAnimation(.easeInOut(duration: 0.16)) {
             completionPhases[todo.id] = .checked
@@ -5197,7 +4937,7 @@ private struct ListSettingsSheet: View {
                         HStack(spacing: 10) {
                             if let onMembersRequest {
                                 Button {
-                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    HapticManager.buttonPress()
                                     onMembersRequest()
                                 } label: {
                                     ListSettingsSheetActionTileLabel(
@@ -5264,6 +5004,10 @@ private struct ListSettingsSheet: View {
 
     private func submit() {
         guard canSave else { return }
+        // The landing, not the press: the header's ✓ gives the control tap every
+        // button gives, and the save that goes through earns the success pulse —
+        // the same order `CreateTaskSheet.submit` uses.
+        HapticManager.completion()
         onSubmit(trimmedName, color, iconKey)
         dismiss()
     }
@@ -5320,7 +5064,7 @@ private struct ListSettingsSheetDeleteButton: View {
 
     var body: some View {
         Button(role: .destructive) {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            HapticManager.destructive()
             action()
         } label: {
             HStack(spacing: 12) {
@@ -5384,7 +5128,7 @@ private struct ScheduledDragModifier: ViewModifier {
     func body(content: Content) -> some View {
         if enabled {
             content.onDrag {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                HapticManager.dragPickUp()
                 onDragStart()
                 TodoTaskDragSession.shared.todo = todo
                 TodoTaskDragSession.shared.handledDropSignature = nil

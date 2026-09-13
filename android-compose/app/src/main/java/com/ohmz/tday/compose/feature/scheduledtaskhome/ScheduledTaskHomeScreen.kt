@@ -130,8 +130,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -143,10 +141,12 @@ import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.rememberSheetDismissState
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
@@ -679,10 +679,7 @@ fun ScheduledTaskHomeScreen(
                                                 .semantics(mergeDescendants = true) {}
                                                 .heightIn(min = 48.dp)
                                                 .clickable {
-                                                    ViewCompat.performHapticFeedback(
-                                                        view,
-                                                        HapticFeedbackConstantsCompat.CLOCK_TICK
-                                                    )
+                                                    TdayHaptics.buttonPress(view)
                                                     openTaskFromSearch(todo.id)
                                                 }
                                                 .padding(horizontal = 12.dp, vertical = 9.dp),
@@ -989,7 +986,22 @@ private fun CreateListBottomSheet(
         focusManager.clearFocus(force = true)
     }
     var nameFieldFocused by remember { mutableStateOf(false) }
-    var sheetVisible by remember { mutableStateOf(false) }
+    // The same two-step dismissal the create-task sheet uses: start the exit, and tell the
+    // caller only once it has finished, so the 320 ms slide out is not cut off by the host
+    // Dialog leaving the composition on the frame of the tap.
+    //
+    // The keyboard goes at the end of that, with the caller's onDismiss, for the same
+    // reason it does over there: clearing focus first drops `useTypingHeight` below, which
+    // retargets `sheetHeight` from 80 % of the screen down to 70 % in the middle of the
+    // slide, and `slideOutVertically` offsets by the height it measured — so the card
+    // shrinks while it is leaving instead of just leaving.
+    val sheetDismiss = rememberSheetDismissState(
+        onDismissed = {
+            dismissKeyboard()
+            onDismiss()
+        },
+    )
+    val startDismiss = { sheetDismiss.start() }
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = tdayListAccentColor(listColor)
     val canCreate = listName.isNotBlank()
@@ -1015,15 +1027,8 @@ private fun CreateListBottomSheet(
     val sheetScrimColor = TdaySheetDefaults.scrimColor()
     val sheetTonalElevation = TdaySheetDefaults.tonalElevation()
 
-    LaunchedEffect(Unit) {
-        sheetVisible = true
-    }
-
     Dialog(
-        onDismissRequest = {
-            dismissKeyboard()
-            onDismiss()
-        },
+        onDismissRequest = startDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false,
@@ -1039,14 +1044,18 @@ private fun CreateListBottomSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(sheetScrimColor)
-                    .clickable {
-                        dismissKeyboard()
-                        onDismiss()
-                    },
+                    // No indication: a dismiss tap on the scrim is a gesture at the sheet,
+                    // not a press of a full-screen button, and the default ripple draws
+                    // itself across the entire window on the way out.
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = startDismiss,
+                    ),
             )
 
             AnimatedVisibility(
-                visible = sheetVisible,
+                visibleState = sheetDismiss.transition,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth(),
@@ -1089,10 +1098,7 @@ private fun CreateListBottomSheet(
                                 title = stringResource(R.string.scheduled_task_home_new_list),
                                 leftIcon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                                 leftContentDescription = stringResource(R.string.action_close),
-                                onLeftClick = {
-                                dismissKeyboard()
-                                onDismiss()
-                            },
+                                onLeftClick = startDismiss,
                                 confirmContentDescription = stringResource(R.string.action_create_list),
                             onConfirm = {
                                 dismissKeyboard()
@@ -1191,10 +1197,7 @@ private fun CreateListBottomSheet(
                                                     radius = 24.dp,
                                                 ),
                                             ) {
-                                                ViewCompat.performHapticFeedback(
-                                                    view,
-                                                    HapticFeedbackConstantsCompat.CLOCK_TICK
-                                                )
+                                                TdayHaptics.selection(view)
                                                 onListColorChange(option.key)
                                             },
                                     )
@@ -1239,10 +1242,7 @@ private fun CreateListBottomSheet(
                                                     radius = 24.dp,
                                                 ),
                                             ) {
-                                                ViewCompat.performHapticFeedback(
-                                                    view,
-                                                    HapticFeedbackConstantsCompat.CLOCK_TICK
-                                                )
+                                                TdayHaptics.selection(view)
                                                 onListIconChange(option.key)
                                             },
                                         contentAlignment = Alignment.Center,
@@ -1279,7 +1279,7 @@ private fun CreateTaskButton(
     Card(
         modifier = modifier,
         onClick = {
-            performGentleHaptic(view)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -1371,7 +1371,7 @@ private fun PressableIconButton(
                 scaleY = scale
             },
         onClick = {
-            performGentleHaptic(view)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -1432,7 +1432,7 @@ private fun ScheduledTaskHomeTodayCard(
             .offset(y = animatedOffsetY)
             .graphicsLayer { scaleX = animatedScale; scaleY = animatedScale },
         onClick = {
-            performGentleHaptic(view)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -1612,10 +1612,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                     revealProgress = actionRevealProgress,
                     revealDelay = 0.62f,
                     onClick = {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.SEGMENT_FREQUENT_TICK
-                        )
+                        TdayHaptics.buttonPress(view)
                         closeSwipeSlot()
                         onEdit()
                     },
@@ -1629,10 +1626,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                     revealProgress = actionRevealProgress,
                     revealDelay = 0.40f,
                     onClick = {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.SEGMENT_FREQUENT_TICK
-                        )
+                        TdayHaptics.buttonPress(view)
                         closeSwipeSlot()
                         runCatching {
                             clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
@@ -1652,10 +1646,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                     revealProgress = actionRevealProgress,
                     revealDelay = 0.04f,
                     onClick = {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.SEGMENT_FREQUENT_TICK
-                        )
+                        TdayHaptics.destructive(view)
                         closeSwipeSlot()
                         onDelete()
                     },
@@ -1727,10 +1718,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                     taskCompletionSound.play()
                                     closeSwipeSlot()
                                     localChecked = true
-                                    ViewCompat.performHapticFeedback(
-                                        view,
-                                        HapticFeedbackConstantsCompat.CONFIRM
-                                    )
+                                    TdayHaptics.completion(view)
                                     pendingCompletion = true
                                     coroutineScope.launch {
                                         delay(160)
@@ -1992,7 +1980,7 @@ private fun ListRow(
                 scaleY = animatedScale
             },
         onClick = {
-            performGentleHaptic(view)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -2158,10 +2146,6 @@ private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_MOTION_MS = 320
 private const val SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS = 260L
 private val RootFeedDockCollapseThreshold = 44.dp
-
-private fun performGentleHaptic(view: android.view.View) {
-    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
-}
 
 @Composable
 private fun priorityIconFor(priority: String): ImageVector? {
