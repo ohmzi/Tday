@@ -46,6 +46,11 @@ export type EarlierHandoff = "idle" | "scene-leaving" | "rows-leaving";
  * keeps those rows in the DOM. One number read twice on each side, not two
  * guesses tuned to land close together.
  *
+ * A tap is not the only thing that plays the scene's exit: `beginSceneExit`
+ * below hands the same beat to `useCelebrationSceneExit`, for the window that
+ * was holding the scene above Earlier's rows running out. Same class, same
+ * rung, same ending — one beat with two ways in rather than two that look alike.
+ *
  * Under reduced motion there is no beat at all: both directions collapse to
  * the plain immediate toggle and `handoff` never leaves `"idle"`. See the
  * sequenced branch for why that is the only honest reading of the preference.
@@ -70,6 +75,40 @@ export function useEarlierExpandHandoff(sceneExitMs: number, rowsExitMs: number)
   // component — this container remounts per scope/route, so this also covers
   // navigating away mid-exit.
   useEffect(() => clearPending, [clearPending]);
+
+  // The scene's own exit beat, factored out because two different things play
+  // it: a tap that swaps the slot, and a celebration window running out under a
+  // scene that was only on the slot because of it. Deliberately ONE beat rather
+  // than two that look alike — same class, same rung, same ending, and the
+  // "a tap landing inside a running beat is ignored" rule falls out of the two
+  // of them sharing this one timer instead of having to be restated.
+  const startSceneExit = useCallback(() => {
+    setHandoff("scene-leaving");
+    timeoutRef.current = setTimeout(() => {
+      setExpandedState(true);
+      setHandoff("idle");
+      timeoutRef.current = null;
+    }, sceneExitMs);
+  }, [sceneExitMs]);
+
+  /**
+   * Plays the scene off the slot for a reason that is not a tap — see
+   * `useCelebrationSceneExit` below, which is the only caller.
+   */
+  const beginSceneExit = useCallback(() => {
+    // `timeoutRef` and not `handoff`: the two say the same thing (a beat is in
+    // flight exactly while a timer is armed) and only one of them leaves this
+    // callback's identity stable, which is load-bearing — the effect that calls
+    // it lists it as a dependency, and a callback rebuilt on every state change
+    // would re-run that effect mid-beat.
+    if (timeoutRef.current != null) return;
+    // No trip, so no wait: under the preference the scene goes on the frame its
+    // reason for being there did, which is the finished state rule 5 of
+    // `docs/motion.md` asks for rather than a beat of a picture that cannot
+    // animate.
+    if (reducedMotion) return;
+    startSceneExit();
+  }, [reducedMotion, startSceneExit]);
 
   /**
    * @param slotChangesHands whether this tap actually swaps who occupies the
@@ -99,12 +138,7 @@ export function useEarlierExpandHandoff(sceneExitMs: number, rowsExitMs: number)
           // Expanding: hide the scene first (it starts exiting the instant
           // `handoff` flips — see `shouldShowTodayEmptyIllustration`) and only
           // reveal Earlier's rows once that exit has actually finished.
-          setHandoff("scene-leaving");
-          timeoutRef.current = setTimeout(() => {
-            setExpandedState(true);
-            setHandoff("idle");
-            timeoutRef.current = null;
-          }, sceneExitMs);
+          startSceneExit();
           return;
         }
 
@@ -128,7 +162,7 @@ export function useEarlierExpandHandoff(sceneExitMs: number, rowsExitMs: number)
       setHandoff("idle");
       setExpandedState((value) => !value);
     },
-    [clearPending, expanded, handoff, reducedMotion, rowsExitMs, sceneExitMs],
+    [clearPending, expanded, handoff, reducedMotion, rowsExitMs, startSceneExit],
   );
 
   /** Expands or collapses immediately, bypassing the hand-off entirely — for
@@ -143,5 +177,97 @@ export function useEarlierExpandHandoff(sceneExitMs: number, rowsExitMs: number)
     [clearPending],
   );
 
-  return { expanded, handoff, toggle, setExpandedImmediately };
+  return { expanded, handoff, toggle, beginSceneExit, setExpandedImmediately };
+}
+
+/**
+ * Plays the scene off the slot when the celebration window that was keeping it
+ * there runs out.
+ *
+ * The window closing is the scene's cue to leave on exactly one screen shape:
+ * an empty scope whose Earlier bucket is open, where the rows below own the
+ * slot and the scene is sitting on it for the length of the celebration and
+ * nothing else (`shouldShowTodayEmptyIllustration`'s last line). Everywhere
+ * else the window shutting takes nothing off the screen, so there is nothing to
+ * play out and this stays silent.
+ *
+ * Reusing the hand-off's own beat rather than inventing a second one is the
+ * whole design: this departure ends the same way an expand's does — the scene
+ * gone, Earlier's rows holding the slot — so it is the same beat arriving by a
+ * different route, and a tap that lands inside it is ignored by the rule that
+ * already ignores one.
+ *
+ * The falling edge is read from a ref rather than from a `celebrate` that
+ * lingers, because the alternative is to hold the flag true through the exit
+ * and then work out which of its two meanings is live. `celebrate` means the
+ * window is open; the beat means the scene is leaving; conflating them is how a
+ * later reader gets the scene back at full opacity on the frame the beat ends.
+ *
+ * It is read DURING RENDER, and the returned flag is why. The edge and the
+ * thing it is an edge of arrive on the same render — `celebrate` going false is
+ * what closes the window — and on that render nothing has armed the beat yet,
+ * so `shouldShowTodayEmptyIllustration` falls through to its last line and
+ * answers false. Discovering the edge one commit later, in an effect, therefore
+ * costs the scene its node: React unmounts the slot on the closing render and
+ * the effect mounts a fresh one carrying the exit classes. That is three
+ * defects, not one — a blank frame between the two commits; a track whose FIRST
+ * computed style is already `0fr`, so the 42vh is reclaimed in a single frame
+ * instead of over `.tday-empty-slot`'s transition; and `.tday-empty-enter`
+ * restarting on the element that is supposed to be leaving, a 520ms Scene
+ * arrival playing underneath a 200ms departure.
+ *
+ * So the closing render holds the scene itself. `holdingForExit` is set during
+ * that render (the standard "adjust state while rendering" pattern — React
+ * re-runs this component before committing, so the false answer is never
+ * committed at all), and the effect below turns it into the beat one commit
+ * later, by which point the slot node the exit classes land on is the same node
+ * that has been sitting there for the whole window. One held frame, drawn
+ * exactly as the frame before it, buys a departure that is actually played.
+ *
+ * The tap path needs none of this and is the contrast that proves the shape:
+ * `toggle` sets the hand-off synchronously inside the event handler, so the
+ * scene's `true` never lapses and there is no gap to hold across.
+ *
+ * @returns whether the scene is being held on the slot for a departure that has
+ *   been decided and not yet started — feed it to
+ *   `shouldShowTodayEmptyIllustration`.
+ */
+export function useCelebrationSceneExit({
+  celebrate,
+  sceneLeavesWithTheWindow,
+  beginSceneExit,
+}: {
+  /** A completion (this tab's or a remote one) just emptied this scope's current tasks. */
+  celebrate: boolean;
+  /** Everything but the window itself that puts the scene on the slot right now. */
+  sceneLeavesWithTheWindow: boolean;
+  /** `useEarlierExpandHandoff`'s own `beginSceneExit`. */
+  beginSceneExit: () => void;
+}): boolean {
+  const wasCelebrating = useRef(celebrate);
+  const [holdingForExit, setHoldingForExit] = useState(false);
+
+  const windowJustClosed = wasCelebrating.current && !celebrate;
+  wasCelebrating.current = celebrate;
+  // Read at the edge and not on every pass: the scene also stops being held
+  // when the user collapses Earlier, or when a task arrives and the scope is
+  // no longer empty. Neither is this departure — in both, something else is
+  // already taking the slot — and playing the scene out of a slot it is about
+  // to be given back would end the beat by putting it straight back on.
+  if (windowJustClosed && sceneLeavesWithTheWindow && !holdingForExit) {
+    setHoldingForExit(true);
+  }
+
+  useEffect(() => {
+    if (!holdingForExit) return;
+    // Both in one effect pass, so React batches them into the single render
+    // that swaps the hold for the beat. Dropped first and unconditionally:
+    // under reduced motion `beginSceneExit` starts nothing, and a hold nobody
+    // ever releases is the scene sitting there until an unrelated render
+    // happens to notice — the exact ending this whole unit replaced.
+    setHoldingForExit(false);
+    beginSceneExit();
+  }, [beginSceneExit, holdingForExit]);
+
+  return holdingForExit;
 }

@@ -208,6 +208,58 @@ describe("useEarlierExpandHandoff", () => {
     });
   });
 
+  describe("beginSceneExit: the same beat, reached without a tap", () => {
+    it("plays the scene out and leaves the rows holding the slot", async () => {
+      const { result } = mountHandoff();
+
+      // Earlier already open — the shape the celebration window closes on, and
+      // the only one that calls this.
+      act(() => {
+        result.current.toggle(false);
+      });
+      expect(result.current.expanded).toBe(true);
+
+      act(() => {
+        result.current.beginSceneExit();
+      });
+      expect(result.current.handoff).toBe("scene-leaving");
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS);
+      });
+      expect(result.current.handoff).toBe("idle");
+      // Unchanged, and unchanged on purpose: this beat ends where an expand's
+      // ends — the scene gone, Earlier's rows on the slot — so it sets the same
+      // flag to the same value rather than carrying an ending of its own.
+      expect(result.current.expanded).toBe(true);
+    });
+
+    it("is ignored inside a beat that is already running", async () => {
+      const { result } = mountHandoff();
+
+      act(() => {
+        result.current.toggle(true);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS / 2);
+      });
+
+      // A window expiring mid-tap. Sharing one timer with the tap is what makes
+      // this free: a second beat would double-fire the ending and land the
+      // scene's exit twice on one departure.
+      act(() => {
+        result.current.beginSceneExit();
+      });
+      expect(result.current.handoff).toBe("scene-leaving");
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(SCENE_EXIT_MS / 2);
+      });
+      expect(result.current.handoff).toBe("idle");
+      expect(result.current.expanded).toBe(true);
+    });
+  });
+
   it("the beat is cleared by setExpandedImmediately — the exact class of bug the iOS review caught", async () => {
     const { result } = mountHandoff();
 
@@ -322,6 +374,24 @@ describe("useEarlierExpandHandoff", () => {
       });
       expect(result.current.expanded).toBe(true);
       expect(result.current.handoff).toBe("idle");
+    });
+
+    it("plays no beat for a window that expires — the scene goes with its reason", () => {
+      installReducedMotion(true);
+      const { result } = mountHandoff();
+
+      act(() => {
+        result.current.toggle(false);
+      });
+      act(() => {
+        result.current.beginSceneExit();
+      });
+
+      // Rule 5 of `docs/motion.md` from the usual side: removing the trip has
+      // to remove the wait, so the scene leaves on the frame the window shut
+      // rather than after a beat of a picture that cannot animate.
+      expect(result.current.handoff).toBe("idle");
+      expect(result.current.expanded).toBe(true);
     });
 
     it("a mid-session flip reaches the toggle the header is already holding", () => {

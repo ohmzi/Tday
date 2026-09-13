@@ -127,8 +127,8 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   empty-state illustration **arriving**: all three clients name their site for
   the enter (`EnterMillis`, `EmptyStateEnter.duration`, `.tday-empty-enter`).
   It is **not** the way back out. There is one exit that mirrors that arrival
-  anywhere in the tree — web's, played during an "Earlier" hand-off — and it is
-  deliberately not on this rung: an exit that hands a slot to an arrival answers
+  anywhere in the tree — web's, played whenever that scene gives its slot up to
+  an "Earlier" bucket's rows — and it is deliberately not on this rung: an exit that hands a slot to an arrival answers
   to that arrival's length, not to the length of the scene it undoes, and
   `todayEarlierIllustration.ts` writes the argument out where the constant is.
   Nor is this rung for route or tab handovers: `globals.css` argues in place for

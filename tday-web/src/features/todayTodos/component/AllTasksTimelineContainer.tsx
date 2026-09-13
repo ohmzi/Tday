@@ -105,6 +105,7 @@ const AllTasksTimelineContainer = ({
   const {
     expanded: earlierExpanded,
     handoff: earlierHandoff,
+    beginSceneExit,
     toggle: toggleEarlierExpanded,
     setExpandedImmediately: setEarlierExpandedImmediately,
   } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS, OVERDUE_ROWS_FADE_MS);
@@ -199,6 +200,7 @@ const AllTasksTimelineContainer = ({
     isSearching,
     earlierExpanded,
     earlierHandoff,
+    beginSceneExit,
     todayHasEarlierItems,
   });
 
