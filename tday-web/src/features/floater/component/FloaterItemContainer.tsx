@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   TASK_COMPLETION_CHECK_TO_STRIKE_MS,
@@ -27,6 +27,7 @@ import { hapticButtonTap } from "@/lib/haptics";
 import { SWIPE_COPY_COLOR, SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { useSwipeRow } from "@/hooks/useSwipeRow";
 import { buildTaskShareText } from "@/lib/listShareText";
 
 type FloaterItemContainerProps = {
@@ -77,13 +78,14 @@ export default function FloaterItemContainer({
   // fully-revealed Edit + Copy + Delete pills sit in the same place — at 110 the pills
   // (~136px) outran the slide, leaving the priority flag on top of Edit.
   const ACTIONS_WIDTH = 210;
-  const [swipeX, setSwipeX] = useState(0);
-  const [swiping, setSwiping] = useState(false);
-  const swipeTouch = useRef<
-    { x: number; y: number; startX: number; axis: "x" | "y" | null } | null
-  >(null);
-
-  const closeSwipe = () => setSwipeX(0);
+  const announceSwipeOpen = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("tday-floater-swipe-open", { detail: floater.id }));
+  }, [floater.id]);
+  const { swipeX, transition: swipeTransition, closeSwipe, swipeHandlers } = useSwipeRow({
+    actionsWidth: ACTIONS_WIDTH,
+    onOpen: announceSwipeOpen,
+    disabled: readOnly,
+  });
 
   /** Copies the floater's title/notes/priority to the clipboard as plain text. */
   const handleCopy = async () => {
@@ -134,50 +136,12 @@ export default function FloaterItemContainer({
   useEffect(() => {
     const onOpen = (event: Event) => {
       const id = (event as CustomEvent<string>).detail;
-      if (id !== floater.id) setSwipeX(0);
+      if (id !== floater.id) closeSwipe();
     };
     window.addEventListener("tday-floater-swipe-open", onOpen as EventListener);
     return () =>
       window.removeEventListener("tday-floater-swipe-open", onOpen as EventListener);
-  }, [floater.id]);
-
-  const handleTouchStart = (event: React.TouchEvent) => {
-    if (readOnly) return;
-    const touch = event.touches[0];
-    swipeTouch.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      startX: swipeX,
-      axis: null,
-    };
-    setSwiping(true);
-  };
-  const handleTouchMove = (event: React.TouchEvent) => {
-    const data = swipeTouch.current;
-    if (!data) return;
-    const touch = event.touches[0];
-    const dx = touch.clientX - data.x;
-    const dy = touch.clientY - data.y;
-    if (data.axis === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-      data.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-      if (data.axis === "x") {
-        window.dispatchEvent(
-          new CustomEvent("tday-floater-swipe-open", { detail: floater.id }),
-        );
-      }
-    }
-    if (data.axis === "x") {
-      setSwipeX(Math.min(0, Math.max(-ACTIONS_WIDTH, data.startX + dx)));
-    }
-  };
-  const handleTouchEnd = () => {
-    const data = swipeTouch.current;
-    setSwiping(false);
-    swipeTouch.current = null;
-    if (data?.axis === "x") {
-      setSwipeX((previous) => (previous < -ACTIONS_WIDTH / 2 ? -ACTIONS_WIDTH : 0));
-    }
-  };
+  }, [closeSwipe, floater.id]);
 
   return (
     <>
@@ -276,14 +240,12 @@ export default function FloaterItemContainer({
           onClick={() => {
             if (swipeX !== 0) closeSwipe();
           }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          {...swipeHandlers}
           style={{
             transform: `translateX(${swipeX}px)`,
-            transition: swiping
-              ? "none"
-              : "transform 220ms ease, background-color 150ms ease",
+            // The scheduled and calendar rows carry the identical list from the same hook —
+            // an Anytime task and a dated one have to leave under a finger the same way.
+            transition: swipeTransition,
             touchAction: "pan-y",
             // Lets the grid item shrink past its content — and past the `min-h-[54px]` below,
             // which would otherwise hold the box open at a floater's full mobile height.

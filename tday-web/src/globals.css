@@ -229,6 +229,23 @@
     color: hsl(var(--accent-foreground));
   }
 
+  /* The blanket press affordance: anything that takes a finger squashes, dips a
+     pixel and a half, and pushes a ripple out from under the touch.
+
+     `:where()` holds the whole selector at 0,0,0 so a call site can say
+     `active:scale-[0.97]` and be obeyed — 17 do, at three depths — and the
+     pressed geometry stays down here in `base` so that they still can.
+
+     The rest of the affordance does not stay here, because specificity was
+     never the lever. `@layer base` loses to `@layer utilities` at every
+     specificity there is: `transition-colors`, which every shadcn Button
+     carries, replaced this rule's transition wholesale, and the most common
+     button in the app squashed in one frame instead of easing in — under a
+     ripple that still took its time, because no class can reach a pseudo. An
+     0,3,4 selector written in this layer loses to that 0,1,0 utility just the
+     same. What a class must not be able to delete lives in `@layer tday-press`
+     immediately below this block, which is opened after the Tailwind import and
+     therefore sorts after `utilities`. */
   :where(
       button,
       [role="button"],
@@ -244,9 +261,17 @@
     isolation: isolate;
     overflow: hidden;
     position: relative;
-    transition-duration: 180ms;
-    transition-property: background-color, border-color, box-shadow, color, filter, opacity, scale, translate;
-    transition-timing-function: var(--tday-ease-gesture);
+    /* Quick — the app answering a finger that is on it — and left down here on
+       purpose, where a `duration-200` on the element still beats it. A rule that
+       cannot see how big its surface is can pick the press LENGTH for a site
+       that says nothing, but it should not overrule a site that said something;
+       the dozen pressables carrying a duration of their own are a call-site
+       migration with its own row, not a silent retiming to be had for free
+       here. It ran on a hand-written 180ms, which named no rung and differed
+       from Tailwind's un-overridden `--default-transition-duration` — the 150
+       every bare `transition-*` in the app already rides — by exactly enough to
+       make two buttons beside each other disagree. */
+    transition-duration: var(--tday-duration-quick);
   }
 
   :where(
@@ -266,12 +291,26 @@
     pointer-events: none;
     position: absolute;
     scale: 0.34;
-    transition-duration: 340ms;
+    /* The ripple goes from a third of the surface to nearly twice it. That is a
+       change of size, which rule 2 puts on Emphasis; it ran on a hand-written
+       340ms, which is that rung to within a frame and named nothing. */
+    transition-duration: var(--tday-duration-emphasis);
     transition-property: opacity, scale;
     transition-timing-function: var(--tday-ease-gesture);
     z-index: 0;
   }
 
+  /* The one half of the affordance a call site is meant to be able to beat, and
+     the reason the selector is a `:where()` at all. `--tday-press-row` is the
+     full-width-row depth, which is the right default for a rule that cannot see
+     how big its element is; 17 elements that DO know how big they are say
+     otherwise and are obeyed, because a utility beats `base`: the onboarding
+     wizard's step chip at `active:scale-[0.97]` (which is `--tday-press-card`),
+     eight sheet buttons at `[0.99]`, and eight small round icon buttons — the
+     task FAB among them — at `active:scale-95`. Six more say `[0.985]`, which is
+     this token written out, so they are not counted here; they are a separate
+     tidy-up. Move this declaration up a layer and all 17 go quiet at once, which
+     would look like a tidy-up while it happened. */
   :where(
       button,
       [role="button"],
@@ -281,9 +320,7 @@
       a[href][class*="bg-"],
       [data-pressable="true"]
     ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]):active {
-    box-shadow: var(--press-shadow) !important;
-    filter: saturate(0.98);
-    scale: 0.985;
+    scale: var(--tday-press-row);
     translate: 0 1.5px;
   }
 
@@ -299,7 +336,88 @@
     opacity: 1;
     scale: 1.9;
   }
+}
 
+/* The half of the press affordance no component class may delete.
+
+   Where this layer is opened is the whole mechanism: layer order follows first
+   appearance, so a layer opened here — after `@import "tailwindcss"` — sorts
+   after `utilities` and outranks `transition-colors`, `duration-300` and
+   `shadow-lg` alike, whatever specificity either side happens to have. Opened
+   above the import it would sort first instead, and every defect below would
+   come back with the stylesheet still reading exactly as it does now.
+
+   What is up here is the smallest set of declarations that has to win, and no
+   more. WHICH properties animate, because `transition-colors` on a shadcn
+   Button — the most common button in the app — deleted scale and translate out
+   of the list and the squash arrived in one frame under a ripple that still
+   took its time. WHAT CURVE they animate on, for the same reason. The
+   reduced-motion floor, which the same utility was overriding on every element
+   that carried one. And the pressed shadow, which used to hold its ground with
+   an `!important`; the layer does that work now, so the escalation comes out
+   rather than being met with a bigger one. HOW LONG the press takes is not up
+   here — that one stays in `base` with the pressed scale, where a call site can
+   still beat it. */
+@layer tday-press {
+  :where(
+      button,
+      [role="button"],
+      [class*="cursor-pointer"],
+      a[href][class*="rounded"],
+      a[href][class*="shadow"],
+      a[href][class*="bg-"],
+      [data-pressable="true"]
+    ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]) {
+    /* This list REPLACES whatever the call site asked for — that is what being
+       up here means — so it has to carry the properties those call sites were
+       animating and not just the ones the press needs. `transition-colors`
+       contributes outline-color, text-decoration-color, fill and stroke;
+       `transition-transform` contributes transform and rotate. Neither the squash
+       nor the ripple touches any of those six: they are here so a button that
+       tints its own focus ring, or turns its own chevron, keeps doing it while
+       the press rides along beside it.
+
+       It is NOT a superset of `transition-all`, and no closed list can be. So it
+       is the closed list plus whatever `all` is actually animating on a pressable
+       in this app, which is one property: `min-width`, for the dock tab, which
+       grows to hold its label on becoming the selected tab and collapses again on
+       losing it. Drop it and that tab snaps 104px → 48px in a single frame beside
+       an indicator pill that still glides for 300ms — the same jolt-under-a-slow-
+       companion this rule exists to remove, relocated rather than removed. It has
+       to be enumerated HERE because a call site cannot add to this list from
+       below: a `transition-[min-width]` of its own is displaced by this very
+       declaration, and the `!important` that would beat it is the escalation the
+       layer exists to make unnecessary. `width` and `height` stay out: nothing
+       pressable animates them today, and a blanket size transition on every
+       button in the app is a larger promise than a rule that cannot see its own
+       element is in a position to make. */
+    transition-property: background-color, border-color, box-shadow, color, fill, filter,
+      min-width, opacity, outline-color, rotate, scale, stroke, text-decoration-color, transform,
+      translate;
+    /* Gesture is the press curve in the normative table, and this is the half
+       of the timing the rule does own: `transition-colors` on a shadcn Button
+       was pressing on Tailwind's default ease, so the most common button in the
+       app answered a finger on a curve the vocabulary does not have. */
+    transition-timing-function: var(--tday-ease-gesture);
+  }
+
+  :where(
+      button,
+      [role="button"],
+      [class*="cursor-pointer"],
+      a[href][class*="rounded"],
+      a[href][class*="shadow"],
+      a[href][class*="bg-"],
+      [data-pressable="true"]
+    ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]):active {
+    box-shadow: var(--press-shadow);
+    filter: saturate(0.98);
+  }
+
+  /* The floor belongs up here with the transition it floors. A layer down it
+     was overridden by the same `transition-*` utilities, so a button carrying
+     one went on animating under `prefers-reduced-motion: reduce`. The squash it
+     draws instead is instant, which is the finished state. */
   @media (prefers-reduced-motion: reduce) {
     :where(
         button,
@@ -325,7 +443,12 @@
       display: none;
     }
   }
+}
 
+/* `base` reopened. The colour and radius variables below were always in this
+   layer; the press layer is spliced in above them rather than appended to the
+   file so that both halves of the affordance stay in one place to read. */
+@layer base {
   :root {
     /*
      * Toast action ("Undo") colour. Mirrors the iOS snackbar accent exactly —
@@ -881,6 +1004,49 @@
   .tday-surface-exit { animation: none; }
 }
 
+/* ── A task being carried ──
+   The card inside a dnd-kit `DragOverlay`, on the three screens that let a task
+   be dragged somewhere (`src/lib/dragLiftMotion.ts` holds the other end of this
+   — the landing — and argues both).
+
+   The overlay used to appear at full size with its shadow already cast, which
+   gives a pick-up no moment of picking up: the card is in the list, then it is
+   in the air, in the same paint. This is that moment. The card rises out of the
+   row — it gets bigger and it starts casting — so `from` is the resting state
+   and the class itself declares the lifted one, which is what leaves a reduced-
+   motion reader with a card that is already up rather than one held halfway.
+
+   `box-shadow: none` interpolates against whatever shadow the card's own class
+   carries (CSS matches a `none` against the other list as zero-size and
+   transparent), so the three overlays keep their own elevation and this only
+   decides that it arrives rather than being there.
+
+   The scale is `--tday-press-card` read backwards. That token is how far a card
+   sinks under a finger; this is the same card going the other way under the same
+   finger, and it costs the tree no tenth press literal on top of the nine
+   `docs/motion.md` already counts. Emphasis by the geometry rule, on the Enter
+   curve — a thing arriving, which should settle rather than stop. */
+.tday-drag-lift {
+  animation: tday-drag-lift var(--tday-duration-emphasis) var(--tday-ease-enter) both;
+  scale: calc(2 - var(--tday-press-card));
+}
+
+@keyframes tday-drag-lift {
+  from {
+    box-shadow: none;
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The trip goes; the destination — a card that is up, bigger and casting —
+     stays, because it is declared on the class and not in the keyframe. The
+     landing asks the same question in JavaScript and answers it the other way
+     round, which its own doc comment argues: there, a drop's finished state is
+     the overlay gone. */
+  .tday-drag-lift { animation: none; }
+}
+
 /* ── The bottom chrome ducking ──
    The dock and the create button leave by travelling straight down and out
    through the bottom edge, and come back the same way. They used to be
@@ -946,16 +1112,112 @@
 
 /* ── Route change ──
    Screens share a toolbar row, so nothing in the bar moves between routes; the
-   fade is what turns a one-frame swap into a handover. Short: this sits between
-   a tap and the screen the user asked for, and anything longer reads as lag. */
-@keyframes fade-in {
+   fade is what turns a one-frame swap into a handover.
+
+   `Enter`, and it was a hand-written 140 until PR 55. Half of that number's
+   argument survives the move and is restated here: this is not `Scene`, and it is
+   not Android's 360 either — a route change that can be watched is a route change
+   that reads as a stall. What the 140 could not defend was 140 in particular. It
+   named no rung, and the lag it was written against is the wait in front of the
+   destination rather than the length of the fade: the arriving screen is laid out
+   and hit-testable from the first frame, so this animation never sits between a
+   tap and its answer. A thing arriving with no reason to be another length is
+   `Enter`, which is what the normative table says and what the other client in
+   this row is being brought to.
+
+   Two paths, because only one of them exists everywhere:
+
+     Everywhere — the arriving screen fades up out of the background and the
+     leaving one is simply gone. `RouteFade` argues why its tree is not held
+     mounted for an exit, and that argument still stands.
+
+     Where `document.startViewTransition` exists — `lib/navigation.tsx` asks for
+     one, and the leaving screen comes back as a SNAPSHOT laid over the top. That
+     is the outgoing half of the handover at none of the cost of the live tree
+     `RouteFade` refused to pay for it: no duplicate queries, no second set of
+     subscriptions, a flat image the compositor owns.
+
+   The two COMPOSE rather than switch, which is the whole reason the overrides
+   below are shaped the way they are. Nothing has to detect which path it is on,
+   and nothing has to be turned off halfway — a browser without view transitions
+   runs exactly the first path and sees no difference. */
+@keyframes tday-route-fade-in {
   from { opacity: 0; }
 }
 
+@keyframes tday-route-fade-out {
+  to { opacity: 0; }
+}
+
 .tday-route-fade {
-  animation: 140ms ease-out both fade-in;
+  animation: var(--tday-duration-enter) var(--tday-ease-enter) both tday-route-fade-in;
+}
+
+/* Three things the UA default has to be talked out of, none of which has a local
+   symptom if it is deleted — the transition keeps running and keeps looking like
+   a route change, just a wrong one.
+
+   `new` must not animate. It renders the arriving screen LIVE, `.tday-route-fade`
+   is already fading up inside it, and a second opacity curve over that one is a
+   fade of a fade — the double-dip this pairing exists to avoid.
+
+   `old` is therefore the half that moves, so it has to be on top: the UA paints
+   `new` last, and an opaque `new` over a fading `old` hides the outgoing half
+   completely.
+
+   And the blend has to be `normal`. `plus-lighter` is what keeps the UA's own
+   symmetric crossfade from dipping through the background in the middle; over two
+   layers that are each opaque at the ends it blows the whole screen out to white.
+
+   What is left is a fade THROUGH the background rather than a straight crossfade —
+   the new content reaches half opacity a beat after the old has left half of its
+   own — which is the same fade `RouteFade` already describes on the path without
+   snapshots, now with the outgoing screen in it. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+  animation: var(--tday-duration-enter) var(--tday-ease-exit) both tday-route-fade-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tday-route-fade { animation: none; }
+  /* The destination is the whole of the finished state at a route change, so the
+     outgoing snapshot is not merely un-animated — an un-animated `old` is opaque
+     and on top, and would hold the screen the user just left for the frame it
+     takes the transition to end. Taken off outright instead. */
+  ::view-transition-old(root) { animation: none; opacity: 0; }
+}
+
+/* ── A sheet leaving ──
+   vaul animates its own sheet and scrim from a stylesheet it injects at import:
+   half a second in, half a second out. The way in keeps that. It is a library
+   default rather than a decision made here — the standing `docs/motion.md`
+   gives Compose's `StiffnessMediumLow` — and the same 0.5s is written inline
+   onto the sheet as the transition a released drag settles on, so retiming the
+   arrival without the drag would split a dragged close from a tapped one.
+
+   The way out is a decision. A sheet leaves by travelling out through the bottom
+   edge, which is position changing, which is Emphasis by the geometry rule; that
+   it is shorter than the enter it undoes is rule 1 rather than a coincidence.
+   `DRAWER_EXIT_MS` in `components/ui/drawer.tsx` names the same rung, because a
+   caller has to hold the subtree in the DOM for exactly as long as this plays,
+   and the calendar's form sheet spent a release waiting out the modal's number
+   instead — taken away halfway down, with the confirm sheet stacked on it going
+   in the same frame.
+
+   Specific enough to outrank the injected rules without `!important`: vaul sets
+   the duration on `[data-vaul-drawer]` and on
+   `[data-vaul-overlay][data-vaul-snap-points]`, and each selector below carries
+   one attribute more than the rule it is overriding. */
+[data-vaul-drawer][data-vaul-drawer-direction][data-state="closed"],
+[data-vaul-overlay][data-vaul-snap-points][data-state="closed"] {
+  animation-duration: var(--tday-duration-emphasis);
 }

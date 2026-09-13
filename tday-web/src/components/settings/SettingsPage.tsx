@@ -468,6 +468,14 @@ export default function SettingsPage() {
     }
     void i18n.changeLanguage(target);
     // Swap the leading locale segment of the current URL so deep links stay valid.
+    //
+    // Deliberately `useNavigate` rather than `useRouter().push`, which would ask for
+    // the route hand-over: this is the one pathname change in the shell where the
+    // screen being left is not being left. `changeLanguage` above has already told
+    // every subscriber to re-render in the new language, so the outgoing snapshot a
+    // transition would take is of a tree mid-swap — the same settings page, some of
+    // it translated — and crossfading that over its finished self is a flicker
+    // rather than a hand-over.
     navigate(pathname.replace(/^\/[^/]+/, `/${target}`));
   };
 

@@ -1,10 +1,8 @@
-import React, { lazy, Suspense } from "react";
-import DrawerPlaceholder from "../LoadingPlaceholders/DrawerPlaceholder";
+import React from "react";
+import CreateDrawer from "./Form/DrawerForm/CreateDrawer";
+import CreateModal from "./Form/ModalForm/CreateModal";
 import useWindowSize from "@/hooks/useWindowSize";
 import { useCalendarTaskFormState } from "@/features/calendar/hooks/useCalendarTaskFormState";
-
-const CreateDrawer = lazy(() => import("./Form/DrawerForm/CreateDrawer"));
-const CreateModal = lazy(() => import("./Form/ModalForm/CreateModal"));
 
 type CreateCalendarFormContainerProps = {
   start: Date;
@@ -13,6 +11,8 @@ type CreateCalendarFormContainerProps = {
   setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
+// Imported outright, for the reason `EditFormContainer` sets out: the code
+// split belongs inside the sheet, not around it.
 const CreateCalendarFormContainer = ({
   start,
   end,
@@ -27,26 +27,22 @@ const CreateCalendarFormContainer = ({
   // anything they owned would be destroyed with them. Held here, only the shell changes.
   const form = useCalendarTaskFormState({ due: end });
 
-  return (
-    <Suspense fallback={<DrawerPlaceholder />}>
-      {isDesktop ? (
-        <CreateModal
-          start={start}
-          end={end}
-          displayForm={displayForm}
-          setDisplayForm={setDisplayForm}
-          form={form}
-        />
-      ) : (
-        <CreateDrawer
-          start={start}
-          end={end}
-          displayForm={displayForm}
-          setDisplayForm={setDisplayForm}
-          form={form}
-        />
-      )}
-    </Suspense>
+  return isDesktop ? (
+    <CreateModal
+      start={start}
+      end={end}
+      displayForm={displayForm}
+      setDisplayForm={setDisplayForm}
+      form={form}
+    />
+  ) : (
+    <CreateDrawer
+      start={start}
+      end={end}
+      displayForm={displayForm}
+      setDisplayForm={setDisplayForm}
+      form={form}
+    />
   );
 };
 

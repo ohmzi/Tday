@@ -1,7 +1,87 @@
 import * as React from "react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
+import { useFadeUnmount } from "@/hooks/useFadeUnmount"
+import { DURATION_MS } from "@/lib/motion"
 import { cn } from "@/lib/utils"
+
+/**
+ * How long a drawer's exit is given to play.
+ *
+ * vaul animates the sheet and its scrim from a stylesheet it injects at import —
+ * half a second each way. That half-second is a library default rather than a
+ * decision made here, the same standing `docs/motion.md` gives Compose's
+ * `StiffnessMediumLow`, and the enter keeps it: the identical 0.5s is written
+ * inline onto the sheet as the transition a released drag settles on, so
+ * retiming the way in without the way a drag lands splits one gesture in two.
+ *
+ * The exit is a decision, and it is on a rung. `globals.css` plays it there and
+ * this is the same rung in milliseconds, read by `useDrawerPresence` — the
+ * `MODAL_EXIT_MS` arrangement exactly: one number read twice cannot drift, and
+ * two numbers tuned to look alike is how an exit ends up half-played.
+ */
+export const DRAWER_EXIT_MS = DURATION_MS.emphasis;
+
+/**
+ * Whether a caller's drawer subtree should still be rendered right now — true
+ * while it is open, and for `DRAWER_EXIT_MS` after it closes.
+ *
+ * The drawer's answer to `useModalPresence`, and it exists for that hook's
+ * reason: the guard belongs to whoever decides to render the drawer at all, and
+ * nothing `DrawerContent` does inside itself survives a parent that stops
+ * rendering it. It is a separate hook rather than a duration argument because
+ * the two surfaces leave on different clocks and the caller should not have to
+ * remember which — the calendar's form sheet spent a release waiting out the
+ * modal's 200 ms, which took it away mid-slide and took the confirm sheet
+ * stacked on top of it in the same frame.
+ */
+export function useDrawerPresence(open: boolean): boolean {
+  return useFadeUnmount(open, DRAWER_EXIT_MS);
+}
+
+/**
+ * Which drawers are open right now, by identity.
+ *
+ * Module scope rather than a context because the drawers that stack are not
+ * nested in the tree: the calendar's confirm sheet is a SIBLING of the form
+ * sheet it covers (`EditDrawer`, `CreateDrawer`), so there is no provider either
+ * of them is inside of. What they do share is the screen, and that is what this
+ * tracks.
+ *
+ * Identities rather than a count because a scrim has to be able to leave itself
+ * out of the answer, and it cannot do that by subtracting one: whether its own
+ * drawer is in the set by the time the scrim asks depends on which commit vaul
+ * mounts the portal in, which is vaul's business rather than a fact to build on.
+ */
+const openDrawerIds = new Set<string>();
+
+/** This scrim's own drawer, so it can tell itself apart from the stack. */
+const DrawerIdContext = React.createContext<string | null>(null);
+
+/**
+ * Holds this drawer in `openDrawerIds` for as long as it is open.
+ *
+ * Deliberately keyed on the caller's flag rather than on the scrim being in the
+ * document, which is what an earlier version registered on and is a different,
+ * longer span: Radix's `Presence` keeps a closed overlay mounted until its exit
+ * animation reports `animationend`, so a drawer registered by mount stays
+ * registered for the whole `DRAWER_EXIT_MS`. A second sheet opened inside that
+ * window — two calendar rows tapped in the same third of a second, or a sheet
+ * reopened off the one just dismissed — found a scrim "already up" that was on
+ * its way out, declined to dim, and then stayed undimmed for its whole life,
+ * because the answer below is taken once. Registering on the flag closes the
+ * window: the entry is dropped on the frame the drawer is told to close, while
+ * the scrim it belongs to is still fading.
+ */
+function useDrawerIsOpenRegistration(id: string, open: boolean): void {
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    openDrawerIds.add(id);
+    return () => {
+      openDrawerIds.delete(id);
+    };
+  }, [id, open]);
+}
 
 const Drawer = ({
   shouldScaleBackground = true,
@@ -9,14 +89,41 @@ const Drawer = ({
   // + DrawerContent). vaul's built-in input repositioning fights that math and
   // leaves the sheet shifted after the keyboard dismisses, so disable it.
   repositionInputs = false,
+  open,
+  defaultOpen,
+  onOpenChange,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerPrimitive.Root
-    shouldScaleBackground={shouldScaleBackground}
-    repositionInputs={repositionInputs}
-    {...props}
-  />
-)
+}: React.ComponentProps<typeof DrawerPrimitive.Root>) => {
+  // vaul's root can be driven or left to itself, and the registry has to be
+  // right either way — `CustomRepeatDrawer` opens from a `DrawerTrigger` and
+  // passes no flag at all. Mirror every change vaul reports and defer to the
+  // caller's flag whenever there is one; `open` still goes to vaul untouched, so
+  // which of the two is in charge is vaul's decision, not a second one made here.
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen ?? false);
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      setUncontrolledOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
+
+  const id = React.useId();
+  useDrawerIsOpenRegistration(id, open ?? uncontrolledOpen);
+
+  return (
+    <DrawerIdContext.Provider value={id}>
+      <DrawerPrimitive.Root
+        shouldScaleBackground={shouldScaleBackground}
+        repositionInputs={repositionInputs}
+        open={open}
+        defaultOpen={defaultOpen}
+        onOpenChange={handleOpenChange}
+        {...props}
+      />
+    </DrawerIdContext.Provider>
+  );
+}
 Drawer.displayName = "Drawer"
 
 const DrawerTrigger = DrawerPrimitive.Trigger
@@ -25,16 +132,73 @@ const DrawerPortal = DrawerPrimitive.Portal
 
 const DrawerClose = DrawerPrimitive.Close
 
+/**
+ * Whether this scrim is the one dimming the page, or a second one over a page
+ * that is already dim.
+ *
+ * Opacity composes. Two `black/80` sheets over the same pixels resolve to 96%
+ * black — darker than either was drawn to be, and darker than any surface in the
+ * app — so a confirm sheet opened over a drawer arrived on what read as a
+ * different colour scheme. A scrim that finds one already up therefore draws no
+ * dim of its own: the dim it wants is the one that is already there.
+ *
+ * Decided when the scrim arrives and never revised afterwards. Recomputing when
+ * the sheet underneath leaves would be the more principled rule and would look
+ * worse — two stacked sheets are usually dismissed together, and the nested
+ * scrim would turn from transparent to 80% black for the last frames of its own
+ * exit. A flash on the way out is most of what this is here to remove. What
+ * makes that safe is that what it reads is the set of drawers that are OPEN,
+ * not of scrims still in the document (`useDrawerIsOpenRegistration`): a "yes"
+ * taken here is about a sheet that is staying, not one already leaving.
+ *
+ * Read in a layout effect rather than during render because a double-invoked
+ * render would ask twice and, more to the point, would ask before the commit the
+ * answer belongs to. The effect and the state it sets both land before the
+ * browser paints, so the first frame is already the right one.
+ *
+ * "Any drawer but mine" rather than "more than one drawer", because whether this
+ * scrim's own root has registered by the time this runs depends on which commit
+ * vaul mounts the portal in. Asked this way the question has the same answer
+ * either way.
+ */
+function useScrimIsNested(): boolean {
+  const ownId = React.useContext(DrawerIdContext);
+  const [nested, setNested] = React.useState(false);
+
+  React.useLayoutEffect(() => {
+    for (const id of openDrawerIds) {
+      if (id !== ownId) {
+        setNested(true);
+        return;
+      }
+    }
+  }, [ownId]);
+
+  return nested;
+}
+
 const DrawerOverlay = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Overlay
-    ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/80", className)}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const nested = useScrimIsNested();
+
+  return (
+    <DrawerPrimitive.Overlay
+      ref={ref}
+      // The node stays, and stays catching pointers: the scrim is what a tap
+      // outside the sheet lands on, and what vaul releases a drag against. Only
+      // the dim is dropped.
+      data-nested-scrim={nested ? "true" : undefined}
+      className={cn(
+        "fixed inset-0 z-50",
+        nested ? "bg-transparent" : "bg-black/80",
+        className,
+      )}
+      {...props}
+    />
+  );
+})
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 
 /**

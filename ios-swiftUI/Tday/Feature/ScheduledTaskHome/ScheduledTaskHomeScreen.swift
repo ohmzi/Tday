@@ -71,6 +71,11 @@ struct ScheduledTaskHomeScreen: View {
 
     @State private var viewModel: ScheduledTaskHomeViewModel
     @Environment(\.tdayColors) private var colors
+    /// Gates the today block's own motion — see the `.animation(_:value:)` that
+    /// carries it and `TdayFeedItemMotion.row(reduceMotion:)`. The travel and the
+    /// row legs are refused separately because they come from two different
+    /// mechanisms; that method says why.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var searchFieldFocused: Bool
 
     @State private var searchExpanded = false
@@ -228,18 +233,39 @@ struct ScheduledTaskHomeScreen: View {
                                     }
                                 )
 
-                                if !viewModel.todayTodos.isEmpty {
-                                    VStack(spacing: 0) {
-                                        ForEach(viewModel.todayTodos) { todo in
-                                            scheduledTaskHomeTodayTaskRow(todo)
-                                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                // The block's travel, hung on the `Group` and
+                                // NOT inside the `if`. A modifier written inside
+                                // the branch is part of that branch: the update
+                                // that empties `todayTodos` takes the modifier out
+                                // of the tree in the same pass it takes the rows
+                                // out, so there is no open transaction at the
+                                // moment the removal is decided and roughly 72pt
+                                // of layout closes up in one frame — including the
+                                // rows' own `.transition` legs, which are inert
+                                // outside one. Out here the modifier outlives both
+                                // states of the branch, which is the only position
+                                // from which it can animate either.
+                                Group {
+                                    if !viewModel.todayTodos.isEmpty {
+                                        VStack(spacing: 0) {
+                                            ForEach(viewModel.todayTodos) { todo in
+                                                scheduledTaskHomeTodayTaskRow(todo)
+                                                    .transition(TdayFeedItemMotion.row(reduceMotion: reduceMotion))
+                                            }
                                         }
+                                        // The block is what a feed adds and removes
+                                        // alongside its rows, so it leaves on the
+                                        // departure rung rather than inheriting the
+                                        // travel below — an exit that outlasts the
+                                        // arrival it undoes is the thing the rung
+                                        // split exists to prevent.
+                                        .transition(TdayFeedItemMotion.row(reduceMotion: reduceMotion))
                                     }
-                                    .animation(
-                                        .spring(response: 0.34, dampingFraction: 0.9),
-                                        value: viewModel.todayTodos.map(\.id)
-                                    )
                                 }
+                                .animation(
+                                    reduceMotion ? nil : TdayFeedItemMotion.placement,
+                                    value: viewModel.todayTodos.map(\.id)
+                                )
 
                                 ScheduledTaskHomeCategoryBoard(
                                     overdueCount: overdueCount,

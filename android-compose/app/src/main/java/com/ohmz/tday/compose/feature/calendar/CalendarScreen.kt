@@ -114,6 +114,7 @@ import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
+import com.ohmz.tday.compose.core.ui.TdayDragLift
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
@@ -2237,13 +2238,24 @@ private fun CalendarTaskDragPreview(
     val colorScheme = MaterialTheme.colorScheme
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val previewShape = RoundedCornerShape(18.dp)
+    // The pick-up itself. This card used to be composed straight into its final
+    // size and elevation, so the one frame that says "the app has your task"
+    // never existed; [TdayDragLift] argues the rise and its two ends.
+    val lift by TdayDragLift.rememberProgress(rememberTdayMotionEnabled())
     Card(
         modifier = modifier
-            .sizeIn(minWidth = 220.dp, maxWidth = 280.dp),
+            .sizeIn(minWidth = 220.dp, maxWidth = 280.dp)
+            .graphicsLayer {
+                val scale = TdayDragLift.scaleAt(lift)
+                scaleX = scale
+                scaleY = scale
+            },
         shape = previewShape,
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface.copy(alpha = 0.88f)),
+        // Opaque. A card the finger is holding is not a card the user may not
+        // have, and partial alpha is what this app says everywhere else.
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.55f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDragLift.elevationAt(lift)),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -2406,6 +2418,15 @@ private fun CalendarTodoRow(
         },
         label = "calendarTaskTitleColor",
     )
+    // The other half of the pick-up: the slot this card came out of. It used to
+    // cut to 70 % on the frame the long press fired, alongside a preview that
+    // cut to full size, which is two events for one gesture. Same rung as the
+    // rise, so the row empties exactly as the card leaves it.
+    val vacatedAlpha by animateFloatAsState(
+        targetValue = if (dragging) TdayDragLift.VacatedAlpha else 1f,
+        animationSpec = TdayDragLift.spec(motionEnabled),
+        label = "calendarTaskDragVacated",
+    )
     val dueText = todo.due
         ?.let {
             DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
@@ -2429,7 +2450,7 @@ private fun CalendarTodoRow(
         modifier = modifier
             .fillMaxWidth()
             .graphicsLayer {
-                alpha = if (dragging) completionAlpha * 0.7f else completionAlpha
+                alpha = completionAlpha * vacatedAlpha
                 translationY = completionOffsetY.toPx()
             }
             .semantics(mergeDescendants = true) { },
