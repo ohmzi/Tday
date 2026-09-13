@@ -2677,6 +2677,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                 deleteCount,
             ),
             confirmColor = colorScheme.error,
+            confirmIsDestructive = true,
             onDismissRequest = { showBulkDeleteConfirmation = false },
             onConfirm = {
                 showBulkDeleteConfirmation = false
@@ -3390,6 +3391,7 @@ private fun ListDeleteConfirmationDialog(
         message = stringResource(R.string.todos_delete_list_message),
         confirmLabel = stringResource(R.string.action_delete),
         confirmColor = MaterialTheme.colorScheme.error,
+        confirmIsDestructive = true,
         onDismissRequest = onDismissRequest,
         onConfirm = onConfirm,
     )
@@ -3403,6 +3405,12 @@ private fun ListDeleteConfirmationDialog(
  *
  * [skippedMessage] carries the "applies to N of M" line when a bulk selection
  * held repeating occurrences the action cannot touch.
+ *
+ * [confirmIsDestructive] says whether this dialog's confirm button is the moment
+ * something is destroyed rather than one more control on the way there. It has to
+ * be told, because the button itself cannot know: the same composable commits a
+ * list delete, a delete of N tasks and a move of N tasks, and only the first two
+ * earn the heavy thud.
  */
 @Composable
 private fun TdayConfirmationDialog(
@@ -3410,6 +3418,7 @@ private fun TdayConfirmationDialog(
     message: String,
     confirmLabel: String,
     confirmColor: Color,
+    confirmIsDestructive: Boolean = false,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
     skippedMessage: String? = null,
@@ -3496,7 +3505,15 @@ private fun TdayConfirmationDialog(
                         Spacer(Modifier.size(10.dp))
                         TextButton(
                             onClick = {
-                                TdayHaptics.buttonPress(view)
+                                // This is the tap that destroys; the one that
+                                // opened this dialog only asked. The heavy thud
+                                // belongs here, where Cancel has stopped being an
+                                // option.
+                                if (confirmIsDestructive) {
+                                    TdayHaptics.destructive(view)
+                                } else {
+                                    TdayHaptics.buttonPress(view)
+                                }
                                 onConfirm()
                             },
                         ) {
@@ -4318,7 +4335,9 @@ private fun ListSettingsDeleteButton(
                 scaleY = scale
             },
         onClick = {
-            TdayHaptics.destructive(view)
+            // Opens the confirmation, destroys nothing — Cancel is still there.
+            // The thud is fired by the dialog's confirm button instead.
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
