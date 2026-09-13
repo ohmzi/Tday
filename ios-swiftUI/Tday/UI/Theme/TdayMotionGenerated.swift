@@ -9,26 +9,40 @@ import Foundation
 
 enum TdayMotionGenerated {
 
+    /// Control points in CSS order, named rather than positional: SwiftUI takes
+    /// them as `Animation.timingCurve(x1, y1, x2, y2, duration:)`, and a bare
+    /// four-element array is the one place in this vocabulary where two of them
+    /// could be transposed with no compile error and no failing test.
+    struct Bezier {
+        let x1: Double
+        let y1: Double
+        let x2: Double
+        let y2: Double
+    }
+
     enum Durations {
         static let quick: TimeInterval = 0.15
-        static let enter: TimeInterval = 0.19
+        static let enter: TimeInterval = 0.2
         static let change: TimeInterval = 0.26
         static let emphasis: TimeInterval = 0.32
         static let scene: TimeInterval = 0.52
+    }
+
+    enum Delays {
         static let placementLead: TimeInterval = 0.32
         static let celebrationLead: TimeInterval = 0.32
     }
 
     enum Easings {
-        static let standard: [Double] = [0.4, 0, 0.2, 1]
-        static let enter: [Double] = [0, 0, 0.2, 1]
-        static let exit: [Double] = [0.4, 0, 1, 1]
-        static let scene: [Double] = [0.05, 0.7, 0.1, 1]
-        static let gesture: [Double] = [0.2, 0.8, 0.2, 1]
+        static let standard = Bezier(x1: 0.4, y1: 0, x2: 0.2, y2: 1)
+        static let enter = Bezier(x1: 0, y1: 0, x2: 0.2, y2: 1)
+        static let exit = Bezier(x1: 0.4, y1: 0, x2: 1, y2: 1)
+        static let scene = Bezier(x1: 0.05, y1: 0.7, x2: 0.1, y2: 1)
+        static let gesture = Bezier(x1: 0.2, y1: 0.8, x2: 0.2, y2: 1)
     }
 
     enum Springs {
-        static let snappyResponse: Double = 0.3
+        static let snappyResponse: Double = 0.28
         static let snappyDamping: Double = 0.86
         static let gestureResponse: Double = 0.34
         static let gestureDamping: Double = 0.82
