@@ -64,9 +64,15 @@ object TaskSwipeMotion {
  * numbers repeat — settling closed from zero twice running has to restart the
  * animation both times — and identity equality is what makes `snapshotFlow`
  * emit it again.
+ *
+ * The `skipcq` marker is that rationale, enforced. DeepSource reads a class with
+ * only `val`s as one that wants the `data` keyword, which is the usual case and
+ * is wrong here: generated `equals` would make two identical releases compare
+ * equal, `snapshotFlow` would drop the second, and a row settling closed from
+ * zero twice running would animate once.
  */
 @Stable
-internal class TaskSwipeRelease(
+internal class TaskSwipeRelease(  // skipcq
     val fromPx: Float,
     val toPx: Float,
     val initialVelocityPxPerSecond: Float,
