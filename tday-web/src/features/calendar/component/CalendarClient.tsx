@@ -77,6 +77,13 @@ import { getPriorityFlag } from "@/lib/priority";
 import i18n from "@/i18n";
 import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
+import {
+  TASK_COMPLETION_CHECK_TO_STRIKE_MS,
+  TASK_COMPLETION_REMOVING_TRANSITION,
+  TASK_COMPLETION_STRIKE_TO_FADE_MS,
+  TASK_COMPLETION_TOTAL_MS,
+} from "@/lib/taskCompletionTiming";
+import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
 import { buildTaskShareText } from "@/lib/listShareText";
 import { useToast } from "@/hooks/use-toast";
 import { SWIPE_COPY_COLOR, SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
@@ -501,12 +508,19 @@ function CalendarTaskRow({
   });
   const priorityFlag = getPriorityFlag(todo.priority);
 
-  // Staged "checking off" sequence — identical to the scheduled task home row.
+  // Staged "checking off" sequence — identical to the scheduled task home row, and now on the
+  // same clock as well. It used to run 280 / 620 / 960 against that row's 160 / 360 / 260,
+  // which is the same four beats a third slower: the same task, ticked off on two screens,
+  // finishing at two different speeds.
   const [completePhase, setCompletePhase] = useState<
     "checked" | "struck" | "removing" | null
   >(null);
   const completeTimers = useRef<number[]>([]);
   const completing = completePhase !== null;
+  const removing = completePhase === "removing";
+  // Subscribed rather than read once: this decides what the row renders, so it has to follow a
+  // preference that flips mid-session.
+  const reduceMotion = usePrefersReducedMotion();
 
   // Mobile swipe-to-reveal Edit + Copy + Delete — mirrors the scheduled task
   // home row exactly (same slide distance, same pills) so the calendar
@@ -578,11 +592,14 @@ function CalendarTaskRow({
       return;
     }
     if (completing) return;
+    const removeAt = TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS;
     setCompletePhase("checked"); // 1. green tick + pop
     completeTimers.current.push(
-      window.setTimeout(() => setCompletePhase("struck"), 280), // 2. strike the title
-      window.setTimeout(() => setCompletePhase("removing"), 620), // 3. start fading
-      window.setTimeout(() => completeTask(), 960), // 4. remove from cache
+      window.setTimeout(() => setCompletePhase("struck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS), // 2. strike
+      window.setTimeout(() => setCompletePhase("removing"), removeAt), // 3. the ink leaves
+      // 4. gone. The last leg waits for the box to shut, and with reduce-motion on there is no
+      // box shutting — the same cut the other two task rows make, argued in `taskCompletionTiming`.
+      window.setTimeout(() => completeTask(), reduceMotion ? removeAt : TASK_COMPLETION_TOTAL_MS),
     );
   };
 
@@ -612,12 +629,21 @@ function CalendarTaskRow({
         {...attributes}
         {...listeners}
         style={
-          completePhase === "removing"
-            ? { opacity: 0, transition: "opacity 300ms ease" }
+          removing
+            ? {
+                opacity: 0,
+                gridTemplateRows: "0fr",
+                transition: reduceMotion ? undefined : TASK_COMPLETION_REMOVING_TRANSITION,
+              }
             : undefined
         }
         className={cn(
-          "group relative max-w-full overflow-hidden sm:overflow-visible",
+          // The 1fr track is the scheduled row's collapse (TodoItemCard), which argues the
+          // trick where it lives: a height cannot be animated away from `auto`, so the box
+          // shuts by closing a grid row instead. The swipe actions sit out of flow and never
+          // size it. Without this the calendar row faded out and left a full-height gap for
+          // the rows below to jump through.
+          "group relative grid max-w-full grid-rows-[1fr] overflow-hidden sm:overflow-visible",
           isDragging && "opacity-70",
         )}
       >
@@ -703,6 +729,8 @@ function CalendarTaskRow({
               ? "none"
               : "transform 220ms ease, background-color 150ms ease",
             touchAction: "pan-y",
+            // Lets the grid item shrink past its own content while the track closes.
+            ...(removing ? { overflow: "hidden", minHeight: 0 } : null),
           }}
           className={cn(
             "relative z-10 flex items-center justify-between gap-3 px-1 py-2.5",
@@ -734,9 +762,9 @@ function CalendarTaskRow({
               <div className="mb-1.5 flex items-center gap-1.5">
                 <p
                   className={cn(
-                    "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
-                    (completePhase === "struck" || completePhase === "removing") &&
-                      "text-muted-foreground line-through",
+                    "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-emphasis",
+                    (completePhase === "struck" || removing) &&
+                      "task-strike text-muted-foreground",
                   )}
                 >
                   {todo.title}
@@ -745,9 +773,9 @@ function CalendarTaskRow({
               {todo.description && (
                 <pre
                   className={cn(
-                    "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
-                    (completePhase === "struck" || completePhase === "removing") &&
-                      "line-through",
+                    "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
+                    // Same switch as the title above — see TodoItemContainer.
+                    (completePhase === "struck" || removing) && "task-strike",
                   )}
                 >
                   {flattenNotesToPlainText(todo.description)}

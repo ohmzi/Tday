@@ -1,11 +1,21 @@
 import { DURATION_MS } from "@/lib/motion";
 
 /**
- * Timings for the staged "checking off" animation on task and floater rows.
+ * Timings for the staged "checking off" animation — the one clock every row in the app leaves
+ * its list on, in either direction.
  *
  * The first three legs mirror the native constants one-for-one so web, Android and iOS complete a
  * task with the same rhythm — see `TASK_COMPLETION_*_MS` in `TodoListScreen.kt` and
  * `CALENDAR_TASK_COMPLETION_*_MS` in `CalendarScreen.kt`.
+ *
+ * "Every row" is the part that had to be earned. Five row types play this sequence — the
+ * scheduled row, the Anytime row, the calendar row and the two Completed rows, which play it
+ * backwards to un-tick a task — and until this module reached all five, three of them ran
+ * 280 / 620 / 960: the same four beats a third slower, so the same task ticked off on two
+ * screens finished at two different speeds. The offsets below are gaps rather than motions,
+ * which is why they are plain integers and not rungs: nobody watches the wait between the tick
+ * and the strike, they watch the tick and they watch the strike, and each of those is on a rung
+ * of its own where it is drawn.
  *
  * The sequence is deliberately independent of the undo toast, which lives for 5s on its own
  * schedule: the row finishes its animation and leaves the list in well under a second, and Undo
@@ -15,7 +25,7 @@ import { DURATION_MS } from "@/lib/motion";
 /** Green tick lands, then the strike begins. */
 export const TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160;
 
-/** Title sweep + notes line-through hold before the row starts fading. */
+/** The strike holds — title and notes both — before the row starts fading. */
 export const TASK_COMPLETION_STRIKE_TO_FADE_MS = 360;
 
 /**

@@ -545,12 +545,25 @@
  * positioned bar at 55% of the block, which on a two-line title landed in the
  * gap between the lines and on a three-line title crossed only the middle one.
  *
- * The sweep is gone rather than rebuilt, because both native apps dropped
- * theirs for the same reason in `f07187b2`: Android's row is a plain
- * `TextDecoration.LineThrough` and iOS's a plain `.strikethrough()`, each
- * fading in over the same 320ms. What is left here is that fade. It also means
- * the title and the notes directly below it are now struck by the same
- * mechanism instead of two that never quite matched.
+ * The sweep stayed gone here rather than being rebuilt, because a decoration
+ * the browser draws already crosses every line and a bar we position does not —
+ * that is the lesson of `f07187b2`, not a rule against sweeps. Android draws one
+ * rule per line and sweeps them (`TaskStrikethrough.kt`) because Compose's
+ * `TextDecoration.LineThrough` is a boolean with nothing to animate; iOS keeps
+ * `.strikethrough()` and animates it. Three mechanisms, one beat, one rung.
+ *
+ * What is left on this client is the fade, and it also means the title and the
+ * notes directly below it are struck by the same mechanism instead of two that
+ * never quite matched — a claim this comment made for a while before it was
+ * true: the notes carried Tailwind's bare `line-through`, so the rule above them
+ * faded in and the rule under them snapped on, half a beat of the check-off
+ * telling the reader two different things.
+ *
+ * Emphasis and not Change, by `docs/motion.md`'s second idiom rule: the
+ * decoration grows across the text, and a thing that changes how big it is
+ * takes the longer rung. The rows' own colour transition is pinned to the same
+ * rung for the same reason — `text-decoration-color` is `currentColor`, so ink
+ * and rule have to arrive together or the strike reads as a second event.
  *
  * Declared here rather than with Tailwind's `line-through` utility so the class
  * stays the single switch the rows toggle, and so the decoration's reveal has
@@ -564,16 +577,53 @@
 
 .task-strike {
   text-decoration: line-through;
-  /* Follows the title into `text-muted-foreground`, so the rule dims with the
-     text over the row's own 300ms colour transition. */
+  /* Follows the text into `text-muted-foreground`, so the rule dims with it
+     over the row's own colour transition. */
   text-decoration-color: currentColor;
-  animation: task-strike-fade 320ms var(--tday-ease-standard) forwards;
+  animation: task-strike-fade var(--tday-duration-emphasis) var(--tday-ease-standard) forwards;
 }
 
-/* A reduced-motion reader still needs to see the task is struck — just not the fade. */
+/*
+ * The same rule lifting again, on the Completed screens, where un-ticking a task
+ * replays the check-off backwards.
+ *
+ * It is a separate class and not `.task-strike` played in reverse because the two
+ * states are not symmetrical in the DOM: a completed row is BORN struck, so a class
+ * whose whole job is to reveal a decoration would fade a rule in on every row in
+ * the list the moment the list mounted. This one only ever appears on the beat the
+ * user asked for, and the decoration stays declared underneath the transparent
+ * colour so the text does not reflow as the rule goes.
+ *
+ * Emphasis in both directions, like the strike it undoes. The rule is one motion
+ * and it does not get shorter for being played backwards — the first idiom rule
+ * caps an exit at the length of the enter it undoes, and this sits exactly at that
+ * cap rather than under it, because the native rows retract the same rule they
+ * swept and a retraction IS the geometry the second rule points at. Web fades where
+ * they retract; that is a mechanism difference between a `text-decoration` and a
+ * drawn line, and not a reason for the beat to take a different length of time.
+ */
+@keyframes task-strike-lift {
+  to {
+    text-decoration-color: transparent;
+  }
+}
+
+.task-unstrike {
+  text-decoration: line-through;
+  animation: task-strike-lift var(--tday-duration-emphasis) var(--tday-ease-standard) forwards;
+}
+
+/* A reduced-motion reader still needs to see the task is struck — just not the fade.
+   `.task-unstrike` is handed its finished frame the other way: no animation, and the
+   transparent colour taken straight, so the rule is simply gone. */
 @media (prefers-reduced-motion: reduce) {
   .task-strike {
     animation: none;
+  }
+
+  .task-unstrike {
+    animation: none;
+    text-decoration-color: transparent;
   }
 }
 

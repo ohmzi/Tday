@@ -413,7 +413,7 @@ export const TodoItemCard = ({
           <div className="mb-1.5 flex items-center gap-1.5">
             <p
               className={clsx(
-                "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
+                "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-emphasis",
                 (completePhase === "struck" || removing) &&
                   "task-strike text-muted-foreground",
               )}
@@ -424,9 +424,11 @@ export const TodoItemCard = ({
           {description && (
             <pre
               className={clsx(
-                "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
-                (completePhase === "struck" || removing) &&
-                  "line-through",
+                "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
+                // `task-strike`, not Tailwind's `line-through`: the notes are struck on the
+                // same beat as the title an inch above them, and a rule that snaps on under
+                // one that fades in reads as two edits to one task.
+                (completePhase === "struck" || removing) && "task-strike",
               )}
             >
               {description}
