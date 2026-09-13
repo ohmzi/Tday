@@ -202,6 +202,18 @@ Card(
 <div style={{ backgroundColor: "#FFFFFF", color: "#1C2333", padding: "18px" }}>
 ```
 
+### Motion — One Shared Vocabulary
+
+Durations, delays, easings, springs, and press scales follow the same rule as colors and dimensions, with one addition: the source of truth is cross-platform. It is `shared/src/commonMain/kotlin/com/ohmz/tday/shared/motion/MotionTokens.kt`, and each client reads a **generated** artifact from it. Do not hand-edit those artifacts.
+
+- **Web**: the `--tday-duration-*`, `--tday-delay-*` and `--tday-press-*` custom properties from `src/generated/motion-tokens.css`, the `ease-*` utilities (Tailwind's own `ease-in-out`/`ease-out`/`ease-in` are the Standard/Enter/Exit curves; `ease-scene` and `ease-gesture` are mapped in `globals.css`), and `src/lib/motion.ts` when a timer needs the raw number. A bare `transition-*` already runs at the `Quick` rung — never rebind Tailwind's `--default-transition-duration`.
+- **Android**: `TdayMotionTokens` (`core/ui/`), not raw `tween(...)` literals or `Spring.Stiffness*` defaults.
+- **iOS**: `TdayMotion` (`UI/Theme/`), not inline `.easeInOut(duration:)` or `.spring(response:dampingFraction:)` pairs.
+
+A value two clients share belongs in `MotionTokens.kt`. A one-client value with a written argument for why it is special stays where it is and carries a `not a token — see docs/motion.md` comment, so the next reader knows it was considered and kept. After changing `MotionTokens.kt`, run `./gradlew :shared:exportMotionTokens` and commit the regenerated artifacts; `verifyMotionTokens` is the CI drift gate.
+
+See [`motion.md`](motion.md) for the normative table, the five idiom rules, and the deliberate non-tokens.
+
 ### Icons — One Lucide Source Across Platforms
 
 All user-facing icons come from **[Lucide](https://lucide.dev)** and must look identical on web, Android, and iOS. Do not use a platform's built-in icon set (Material `Icons.*`, SF Symbols `Image(systemName:)`) for shared product surfaces.

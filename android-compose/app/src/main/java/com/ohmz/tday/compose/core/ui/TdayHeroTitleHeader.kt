@@ -204,6 +204,9 @@ class TdayHeroTitleCollapse internal constructor(
  * the same shape. The visibility threshold is in pixels so it stops when it has
  * visibly stopped rather than chasing hundredths of one.
  */
+// not a token — see docs/motion.md. This is pinned to the iOS spring named
+// above, not to the vocabulary's Settle, and moving it onto that token would
+// undo the match the doc comment argues for.
 private val SettleSpring = spring<Float>(
     dampingRatio = 0.9f,
     stiffness = Spring.StiffnessMediumLow,

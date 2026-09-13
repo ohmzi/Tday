@@ -88,3 +88,33 @@ run {
         args(rootProject.rootDir.absolutePath, "--check")
     }
 }
+
+// ── Motion token codegen ─────────────────────────────────────────────────
+// The repo's second cross-platform Gradle codegen, modelled on the guide one
+// above: generates the committed Android/iOS/web motion artifacts from the
+// shared MotionTokens source of truth. `verifyMotionTokens` (--check) is the CI
+// drift gate. See docs/motion.md.
+run {
+    val jvmMainCompilation = kotlin.jvm().compilations.getByName("main")
+    val exporterMain = "com.ohmz.tday.shared.motion.export.MotionTokenExporterKt"
+    val exporterClasspath =
+        jvmMainCompilation.output.allOutputs + requireNotNull(jvmMainCompilation.runtimeDependencyFiles)
+
+    tasks.register<JavaExec>("exportMotionTokens") {
+        group = "motion"
+        description = "Generate the committed motion token artifacts for all three clients."
+        dependsOn(jvmMainCompilation.compileTaskProvider)
+        classpath = exporterClasspath
+        mainClass.set(exporterMain)
+        args(rootProject.rootDir.absolutePath)
+    }
+
+    tasks.register<JavaExec>("verifyMotionTokens") {
+        group = "motion"
+        description = "Fail if the committed motion token artifacts are stale (CI drift gate)."
+        dependsOn(jvmMainCompilation.compileTaskProvider)
+        classpath = exporterClasspath
+        mainClass.set(exporterMain)
+        args(rootProject.rootDir.absolutePath, "--check")
+    }
+}

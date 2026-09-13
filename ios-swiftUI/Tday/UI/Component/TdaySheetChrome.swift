@@ -206,11 +206,20 @@ extension View {
 /// Timing for the sheet's entrance and exit, kept in one place so the card
 /// animation and the deferred teardown can't drift apart.
 private enum TdayBottomSheetMotion {
+    /// Between Enter (0.20) and Change (0.26) and on neither rung. Left alone: the
+    /// deferred teardown is timed against this, and 20 ms either way is the sheet
+    /// unmounting before or after its own card has finished leaving.
     static let exitDuration: TimeInterval = 0.24
 
+    /// 0.22 is not a rung either, and the argument for it is written out under
+    /// `TdayCenteredSelectorMotion` below: it is matched to the keyboard's own
+    /// ~0.25 s dismissal, not to this vocabulary.
     static let scrimIn = Animation.easeOut(duration: 0.22)
+    /// Numerically the Enter rung, but this is a scrim leaving on SwiftUI's own
+    /// `.easeIn`. Binding an exit to a token whose docstring reads "one element
+    /// arriving" would name it wrong for no pixel gained, so it stays a literal.
     static let scrimOut = Animation.easeIn(duration: 0.2)
-    static let cardIn = Animation.spring(response: 0.4, dampingFraction: 0.86)
+    static let cardIn = TdayMotion.settle
     static let cardOut = Animation.easeIn(duration: exitDuration)
 }
 

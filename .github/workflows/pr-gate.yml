@@ -92,3 +92,6 @@ jobs:
 
       - name: Verify guide content is not stale
         run: ./gradlew :shared:verifyGuideContent --no-daemon
+
+      - name: Verify motion tokens are not stale
+        run: ./gradlew :shared:verifyMotionTokens --no-daemon
