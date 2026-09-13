@@ -52,6 +52,7 @@ import type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
 import AnimatedHeight from "@/components/ui/AnimatedHeight";
 import { calendarDropAnimation } from "../lib/dragOverlayDrop";
 import { useNavigationRefusal } from "../lib/useNavigationRefusal";
+import ConfirmPlaceholder from "./LoadingPlaceholders/ConfirmPlaceholder";
 import { useModalPresence } from "@/components/ui/Modal";
 import ConfirmRescheduleRecurring, {
   type PendingReschedule,
@@ -911,14 +912,32 @@ export function CalendarTaskRow({
         </div>
       </div>
 
-      <Suspense fallback={null}>
+      {/* The fallback is gated on the flag, and that is the whole trick. Both
+          boundaries render unconditionally — that is what starts the import
+          when the row mounts instead of when the button is pressed — so a
+          fallback that drew itself whenever the boundary was suspended would
+          flash a modal over the calendar on first paint, once per row. Gated,
+          it draws only for the tap it is answering. */}
+      <Suspense
+        fallback={
+          deleteDialogOpen
+            ? <ConfirmPlaceholder onCancel={() => setDeleteDialogOpen(false)} />
+            : null
+        }
+      >
         <ConfirmDelete
           todo={todo}
           deleteDialogOpen={deleteDialogOpen}
           setDeleteDialogOpen={setDeleteDialogOpen}
         />
       </Suspense>
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={
+          deleteAllDialogOpen
+            ? <ConfirmPlaceholder onCancel={() => setDeleteAllDialogOpen(false)} />
+            : null
+        }
+      >
         <ConfirmDeleteAll
           todo={todo}
           deleteAllDialogOpen={deleteAllDialogOpen}
