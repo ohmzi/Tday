@@ -52,7 +52,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.ui.theme.TdayDimens
-import kotlinx.coroutines.delay
 
 /**
  * What a screen shows when it has nothing to show.
@@ -118,6 +117,7 @@ fun TdayEmptyState(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val motion = rememberEmptySceneMotion()
+    val motionScale = rememberTdayMotionScale()
     val motionEnabled = rememberTdayMotionEnabled() && animateAppearance
 
     // 0 is off-screen-ish and invisible, 1 is the finished state. Held at 1 from
@@ -131,7 +131,10 @@ fun TdayEmptyState(
         // clears it, and the confetti reads as decoration on a static page.
         // The start delay is the burst's own — the two are added, never traded,
         // so holding the celebration back never eats into the lead.
-        if (celebrate) delay(celebrationStartDelayMillis + CelebrationLeadMillis)
+        // Scaled: the lead is measured against the burst it is standing in front
+        // of, and that burst is a `tween` on the animator's clock. At 2x an
+        // unscaled lead would let the scene rise through paper still climbing.
+        if (celebrate) scaledDelay(celebrationStartDelayMillis + CelebrationLeadMillis, motionScale)
         appear.animateTo(
             targetValue = 1f,
             animationSpec = tween(durationMillis = EnterMillis, easing = EnterEasing),
