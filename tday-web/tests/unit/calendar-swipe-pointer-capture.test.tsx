@@ -27,7 +27,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, createEvent, fireEvent, render } from "@testing-library/react";
 import { useCalendarPagerSwipe } from "@/features/calendar/lib/useCalendarPagerSwipe";
 import { useSwipeRow } from "@/hooks/useSwipeRow";
 
@@ -100,6 +100,11 @@ describe("calendar page swipe — pointer capture and cancel", () => {
     const { card, onNavigate } = renderPager();
 
     fireEvent.pointerDown(card, { pointerId: 1, clientX: 300 });
+    // The move is not scenery: the release is gated on a locked horizontal axis,
+    // and on a device a finger cannot reach 49px away without having passed the
+    // 8px that locks one. A down-then-up 49px apart is a thing no pointer stream
+    // contains, and asserting on it would be asserting on a gesture nobody makes.
+    fireEvent.pointerMove(card, { pointerId: 1, clientX: 300 - SWIPE_THRESHOLD - 1 });
     fireEvent.pointerUp(card, { pointerId: 1, clientX: 300 - SWIPE_THRESHOLD - 1 });
 
     expect(onNavigate).toHaveBeenCalledWith(1);
@@ -156,6 +161,7 @@ describe("calendar page swipe — pointer capture and cancel", () => {
     const { card, onNavigate } = renderPager();
 
     fireEvent.pointerDown(card, { pointerId: 1, clientX: 300 });
+    fireEvent.pointerMove(card, { pointerId: 1, clientX: 400 });
     // A second finger landing and lifting mid-gesture must not commit — nor end
     // — the gesture the first one is still making.
     fireEvent.pointerUp(card, { pointerId: 9, clientX: 100 });
@@ -235,6 +241,32 @@ function touch(clientX: number, clientY = 0) {
   return { touches: [{ clientX, clientY }] };
 }
 
+/**
+ * One touch event at a time the test chose, for every gesture here that ends in
+ * a lift.
+ *
+ * A release is now decided on where the finger was *going*, so a lift with no
+ * timestamps of its own is a lift decided by whatever the machine was doing that
+ * second: jsdom stamps everything fired in one tick from `performance.now()`, so
+ * a busy runner can put a whole gesture 20ms wide where a quiet one puts it
+ * inside a fraction of a millisecond, and the sampler reads the first as a flick
+ * and the second as nothing at all. `swipe-row-release.test.tsx` and
+ * `calendar-pager-tracks-finger.test.tsx` carry the same helper for the same
+ * reason. `timeStamp` is readonly on the prototype, so it is defined on the
+ * instance; React copies it across, except for a stamp of exactly zero, which it
+ * replaces with the wall clock — hence stamps starting at 1000.
+ */
+function at(
+  row: HTMLElement,
+  kind: "touchStart" | "touchMove" | "touchEnd",
+  t: number,
+  init?: ReturnType<typeof touch>,
+) {
+  const event = createEvent[kind](row, init);
+  Object.defineProperty(event, "timeStamp", { value: t });
+  fireEvent(row, event);
+}
+
 describe("calendar row swipe — a cancelled touch is an exit, not a freeze", () => {
   it("a horizontal drag tracks the finger with its transition switched off", () => {
     const { row, onOpen } = renderRow();
@@ -266,10 +298,14 @@ describe("calendar row swipe — a cancelled touch is an exit, not a freeze", ()
   it("cancelling a gesture that began on an open row returns it to open, not closed", () => {
     const { row } = renderRow();
 
-    // Open it for real first: a drag past half the actions width, then a lift.
-    fireEvent.touchStart(row, touch(300, 50));
-    fireEvent.touchMove(row, touch(300 - ACTIONS_WIDTH / 2 - 10, 50));
-    fireEvent.touchEnd(row);
+    // Open it for real first: a drag past half the actions width, held still for
+    // longer than the sampler's window, then a lift. The hold is what makes this
+    // a statement about position rather than about speed — every older reading
+    // has dropped out of the window, so the release carries no velocity and the
+    // row opens on the 10px it is past halfway by and nothing else.
+    at(row, "touchStart", 1000, touch(300, 50));
+    at(row, "touchMove", 1016, touch(300 - ACTIONS_WIDTH / 2 - 10, 50));
+    at(row, "touchEnd", 1200);
     expect(row.style.transform).toBe(`translateX(-${ACTIONS_WIDTH}px)`);
 
     // Now a second gesture that starts closing it and is cancelled part-way. A
@@ -305,10 +341,14 @@ describe("calendar row swipe — a cancelled touch is an exit, not a freeze", ()
   it("a lift still settles to the nearer edge", () => {
     const { row } = renderRow();
 
-    // Short of halfway: the row closes again.
-    fireEvent.touchStart(row, touch(300, 50));
-    fireEvent.touchMove(row, touch(300 - ACTIONS_WIDTH / 2 + 10, 50));
-    fireEvent.touchEnd(row);
+    // Short of halfway, and stopped before lifting: the row closes again. The
+    // hold is the whole of what makes this the nearer *edge* and not the nearer
+    // projection — a finger still travelling at 10px short of the mark is a
+    // flick and commits, which is `swipe-row-release.test.tsx`'s subject, not
+    // this file's.
+    at(row, "touchStart", 1000, touch(300, 50));
+    at(row, "touchMove", 1016, touch(300 - ACTIONS_WIDTH / 2 + 10, 50));
+    at(row, "touchEnd", 1200);
 
     expect(row.style.transform).toBe("translateX(0px)");
     expect(settleOf(row)).toBe(SETTLE_HOME);

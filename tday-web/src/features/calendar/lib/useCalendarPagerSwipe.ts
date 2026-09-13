@@ -329,7 +329,16 @@ export function useCalendarPagerSwipe<T extends HTMLElement = HTMLDivElement>(
       const velocity = gesture.sampler.release(event.clientX, event.timeStamp);
       const projected = projectedRest(event.clientX - gesture.x, velocity);
       const direction: -1 | 1 = projected < 0 ? 1 : -1;
-      const decided = gesture.axis !== "y" && Math.abs(projected) >= threshold;
+      // Gated on the lock, not on "not vertical" — the row hook's rule, for a
+      // reason that only became true when the projection landed. While the test
+      // was position-only the two were the same sentence said twice: a gesture
+      // cannot travel a threshold's 48px without passing the 8px that locks an
+      // axis, so an unlocked release could never be decided. A projection is
+      // 150ms of travel the finger did not make, and an unlocked gesture is
+      // exactly the one the sampler measured across the whole press instead of
+      // across its last 100ms — so 7px of contact jitter delivered in 20ms
+      // projects to 59px and turns the user's month on what was a tap.
+      const decided = gesture.axis === "x" && Math.abs(projected) >= threshold;
       // What the screen will do with a decided swipe, worked out here only to
       // know whether this element is about to be replaced. The floor rule itself
       // stays where it is enforced: a refused swipe is still reported, because
