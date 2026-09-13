@@ -146,6 +146,7 @@ import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.rememberSheetDismissState
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
@@ -985,7 +986,22 @@ private fun CreateListBottomSheet(
         focusManager.clearFocus(force = true)
     }
     var nameFieldFocused by remember { mutableStateOf(false) }
-    var sheetVisible by remember { mutableStateOf(false) }
+    // The same two-step dismissal the create-task sheet uses: start the exit, and tell the
+    // caller only once it has finished, so the 320 ms slide out is not cut off by the host
+    // Dialog leaving the composition on the frame of the tap.
+    //
+    // The keyboard goes at the end of that, with the caller's onDismiss, for the same
+    // reason it does over there: clearing focus first drops `useTypingHeight` below, which
+    // retargets `sheetHeight` from 80 % of the screen down to 70 % in the middle of the
+    // slide, and `slideOutVertically` offsets by the height it measured — so the card
+    // shrinks while it is leaving instead of just leaving.
+    val sheetDismiss = rememberSheetDismissState(
+        onDismissed = {
+            dismissKeyboard()
+            onDismiss()
+        },
+    )
+    val startDismiss = { sheetDismiss.start() }
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = tdayListAccentColor(listColor)
     val canCreate = listName.isNotBlank()
@@ -1011,15 +1027,8 @@ private fun CreateListBottomSheet(
     val sheetScrimColor = TdaySheetDefaults.scrimColor()
     val sheetTonalElevation = TdaySheetDefaults.tonalElevation()
 
-    LaunchedEffect(Unit) {
-        sheetVisible = true
-    }
-
     Dialog(
-        onDismissRequest = {
-            dismissKeyboard()
-            onDismiss()
-        },
+        onDismissRequest = startDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             decorFitsSystemWindows = false,
@@ -1035,14 +1044,18 @@ private fun CreateListBottomSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(sheetScrimColor)
-                    .clickable {
-                        dismissKeyboard()
-                        onDismiss()
-                    },
+                    // No indication: a dismiss tap on the scrim is a gesture at the sheet,
+                    // not a press of a full-screen button, and the default ripple draws
+                    // itself across the entire window on the way out.
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = startDismiss,
+                    ),
             )
 
             AnimatedVisibility(
-                visible = sheetVisible,
+                visibleState = sheetDismiss.transition,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth(),
@@ -1085,10 +1098,7 @@ private fun CreateListBottomSheet(
                                 title = stringResource(R.string.scheduled_task_home_new_list),
                                 leftIcon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                                 leftContentDescription = stringResource(R.string.action_close),
-                                onLeftClick = {
-                                dismissKeyboard()
-                                onDismiss()
-                            },
+                                onLeftClick = startDismiss,
                                 confirmContentDescription = stringResource(R.string.action_create_list),
                             onConfirm = {
                                 dismissKeyboard()
