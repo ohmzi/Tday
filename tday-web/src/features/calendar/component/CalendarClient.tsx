@@ -309,6 +309,23 @@ export function CalendarModeCard({
           the card coming loose rather than as the page declining to turn. */}
       <div className={cn(refusedBack && "cal-native-page-refused")}>
         <AnimatedHeight className="-mx-4 px-4 sm:-mx-5 sm:px-5">
+          {/* A header, sitting where the headers sit: outside the pager that
+              slides and outside the track the finger moves. AGENTS.md's
+              Calendar UX Contract asks for exactly this — "in month view, the
+              month title and weekday row should not slide with the date grid" —
+              and the labels are the reason it is right rather than merely
+              asked for: they come from today and the locale, never from the
+              selected date, so they are the same seven letters on every page
+              this card can draw. Inside the height box all the same, because
+              the row comes and goes with the view and a row that left the
+              measured content would take its height out of the card in one
+              frame while the rest of the change eased. Which leaves it inside
+              the refusal wrapper too, so a declined back swipe nudges it along
+              with everything else by 8px: kept deliberately, because that
+              answer is the calendar body saying no as one thing, and a header
+              held still inside a body that moved would read as the body coming
+              loose rather than as the page declining. */}
+          {view === "month" && <MonthWeekdayRow />}
           <div
             key={animationKey}
             className={cn(
@@ -403,6 +420,41 @@ function DroppableDayCell({
   );
 }
 
+/**
+ * S M T W T F S, and nothing that belongs to a page.
+ *
+ * Rendered by the card rather than by the grid because it is not part of one:
+ * the labels are derived from today and the active locale, so every page the
+ * card can turn to draws the same seven letters. Sliding them said nothing and
+ * then said it again on the way back — 17px of it on a page turn, and up to
+ * 96px of it under a thumb once the grid started tracking the finger, which is
+ * where a pointless header became a contract breach.
+ *
+ * The spacing is the grid's old `space-y-3` rebuilt from the two sides that now
+ * own it: 4px of the 16px above comes from this row because the pager used to
+ * contribute it, and 4px of the 12px below still comes from the pager's own
+ * `pt-1`, so the card draws to the same pixels it did before the row moved.
+ */
+function MonthWeekdayRow() {
+  const weekdayLabels = eachDayOfInterval({
+    start: startOfWeek(new Date()),
+    end: endOfWeek(new Date()),
+  }).map((date) => format(date, "EEEEE", { locale: activeDfLocale() }));
+
+  return (
+    <div className="mb-2 grid grid-cols-7 pt-1">
+      {weekdayLabels.map((label, index) => (
+        <div
+          key={`${label}-${index}`}
+          className="text-center text-xs font-black uppercase text-muted-foreground/55"
+        >
+          {label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MonthCalendarGrid({
   selectedDate,
   tasksByDay,
@@ -415,60 +467,44 @@ function MonthCalendarGrid({
   const today = new Date();
   const minimumMonth = startOfMonth(today);
   const days = makeMonthDays(selectedDate);
-  const weekdayLabels = eachDayOfInterval({
-    start: startOfWeek(today),
-    end: endOfWeek(today),
-  }).map((date) => format(date, "EEEEE", { locale: activeDfLocale() }));
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-7">
-        {weekdayLabels.map((label, index) => (
-          <div
-            key={`${label}-${index}`}
-            className="text-center text-xs font-black uppercase text-muted-foreground/55"
-          >
-            {label}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-y-2">
-        {days.map((date) => {
-          const selected = isSameDay(date, selectedDate);
-          const todayDate = isSameDay(date, today);
-          const currentMonth = isSameMonth(date, selectedDate);
-          const disabled = isBefore(startOfMonth(date), minimumMonth);
-          const count = tasksByDay.get(dayKey(date))?.length ?? 0;
+    <div className="grid grid-cols-7 gap-y-2">
+      {days.map((date) => {
+        const selected = isSameDay(date, selectedDate);
+        const todayDate = isSameDay(date, today);
+        const currentMonth = isSameMonth(date, selectedDate);
+        const disabled = isBefore(startOfMonth(date), minimumMonth);
+        const count = tasksByDay.get(dayKey(date))?.length ?? 0;
 
-          return (
-            <DroppableDayCell
-              key={date.toISOString()}
-              date={date}
-              disabled={disabled}
-              onSelectDate={onSelectDate}
+        return (
+          <DroppableDayCell
+            key={date.toISOString()}
+            date={date}
+            disabled={disabled}
+            onSelectDate={onSelectDate}
+            className={cn(
+              "mx-auto flex h-[3.1rem] w-[2.9rem] flex-col items-center justify-center rounded-2xl text-center transition-colors duration-200",
+              "hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-30",
+              selected && "bg-accent text-accent-foreground shadow-[0_12px_24px_-18px_hsl(var(--accent)/0.8)] hover:bg-accent",
+              !selected && todayDate && "border border-accent/45 text-accent",
+              !selected && !todayDate && currentMonth && "text-foreground",
+              !selected && !todayDate && !currentMonth && "text-muted-foreground/45",
+            )}
+          >
+            <span className="text-lg font-black leading-none">{format(date, "d", { locale: activeDfLocale() })}</span>
+            <span
               className={cn(
-                "mx-auto flex h-[3.1rem] w-[2.9rem] flex-col items-center justify-center rounded-2xl text-center transition-colors duration-200",
-                "hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-30",
-                selected && "bg-accent text-accent-foreground shadow-[0_12px_24px_-18px_hsl(var(--accent)/0.8)] hover:bg-accent",
-                !selected && todayDate && "border border-accent/45 text-accent",
-                !selected && !todayDate && currentMonth && "text-foreground",
-                !selected && !todayDate && !currentMonth && "text-muted-foreground/45",
+                "mt-1 flex h-3 items-center gap-1 text-[0.62rem] font-black leading-none",
+                selected ? "text-accent-foreground/90" : count > 0 ? "text-accent" : "text-transparent",
               )}
             >
-              <span className="text-lg font-black leading-none">{format(date, "d", { locale: activeDfLocale() })}</span>
-              <span
-                className={cn(
-                  "mt-1 flex h-3 items-center gap-1 text-[0.62rem] font-black leading-none",
-                  selected ? "text-accent-foreground/90" : count > 0 ? "text-accent" : "text-transparent",
-                )}
-              >
-                {count > 0 && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
-                {taskCountText(count)}
-              </span>
-            </DroppableDayCell>
-          );
-        })}
-      </div>
+              {count > 0 && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
+              {taskCountText(count)}
+            </span>
+          </DroppableDayCell>
+        );
+      })}
     </div>
   );
 }

@@ -155,6 +155,17 @@ function pageFollow(offset: number, threshold: number, refused: boolean): number
  * by resetting exactly as an ordinary release does, minus the navigation, so an
  * interrupted gesture ends interrupted rather than ending armed.
  *
+ * Capture is taken at the axis lock and not on the way down, which is what lets
+ * the gesture start on a day cell. In month view a day cell is where nearly
+ * every finger lands — seven columns of buttons, 8px of gap between the rows and
+ * none whatever between the columns — so a pager that refused to begin on one
+ * would be a pager the thumb could hardly ever find. The reason it used to
+ * refuse is real but narrower than the refusal was: capture retargets the click
+ * that follows a press, so a press that took capture would cost the cell its
+ * tap. Taking it at the lock answers both. Before the lock the gesture has
+ * claimed nothing and written nothing, so a tap is still a tap; after it, the
+ * press is a swipe and the cell's click is one the user no longer means.
+ *
  * Every reset goes through one `endGesture`, and the tracked `pointerId` is
  * what makes a release count: an event carrying another pointer's id — a second
  * finger, or the stray release above — can neither end nor commit a gesture it
@@ -228,19 +239,41 @@ export function useCalendarPagerSwipe<T extends HTMLElement = HTMLDivElement>(
     }
   }, []);
 
+  /**
+   * Makes this pointer the gesture's own, and the card the element its
+   * remainder is delivered to.
+   *
+   * Deliberately not called on the way down — see the note on capture in the
+   * hook's own comment. Capture is an enhancement rather than a precondition:
+   * without it the gesture still commits on a release over the card, and
+   * `pointercancel` still cleans up after one that ends anywhere else.
+   */
+  const claimPointer = useCallback((target: HTMLElement, pointerId: number) => {
+    captureTargetRef.current = target;
+    try {
+      target.setPointerCapture?.(pointerId);
+    } catch {
+      // A pointer the platform has already taken back cannot be captured, and
+      // the gesture it belonged to is one of the ones `pointercancel` ends.
+    }
+  }, []);
+
   const onPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {
-      const target = event.target as HTMLElement;
-      // A press on a chevron or a day cell is a tap, not a page swipe. Bail
-      // before capturing anything: pointer capture retargets the click that
-      // follows, so capturing here would cost the button its own click.
-      // `endGesture` rather than a bare `return`, so pressing a button also
-      // clears any gesture that was somehow still open.
-      if (target.closest("button")) {
-        endGesture();
-        return;
-      }
+      // Every press is tracked, day cells included. Which button the press
+      // landed on decides nothing here; what it eventually turns out to be —
+      // tap or swipe — is decided by where the finger goes, which is the only
+      // place a pager can decide it and still be draggable across its own cells.
       const startOffset = pageOffset(trackRef.current);
+      // A second finger arriving mid-drag takes the page over rather than
+      // fighting the first one for it: the capture in flight is handed back, and
+      // a fresh gesture starts from wherever the page currently stands. Starting
+      // one at all is the load-bearing half. An arrival that merely ended the
+      // gesture underneath it would leave the page parked at the offset that
+      // gesture had reached with nothing left listening to put it back — a
+      // strand the page cannot come out of, because selecting a date does not
+      // re-key the pager and so never replaces the element holding the offset.
+      endGesture();
       gestureRef.current = {
         x: event.clientX,
         y: event.clientY,
@@ -248,19 +281,11 @@ export function useCalendarPagerSwipe<T extends HTMLElement = HTMLDivElement>(
         axis: null,
       };
       pointerIdRef.current = event.pointerId;
-      captureTargetRef.current = event.currentTarget;
       // A page that is still on its way home is pinned where this finger found
       // it, which stops that return and makes its own position the starting
       // point of the gesture that interrupted it. A page already at rest is left
       // alone: a tap on the grid is not a drag, and should leave nothing behind.
       if (startOffset !== 0) holdAt(startOffset);
-      try {
-        event.currentTarget.setPointerCapture?.(event.pointerId);
-      } catch {
-        // Capture is an enhancement, not a precondition: without it the
-        // gesture still commits on a release over the card, and `pointercancel`
-        // still cleans up after one that ends anywhere else.
-      }
     },
     [endGesture, holdAt],
   );
@@ -276,6 +301,14 @@ export function useCalendarPagerSwipe<T extends HTMLElement = HTMLDivElement>(
       if (gesture.axis === null) {
         if (Math.abs(dx) <= AXIS_SLOP_PX && Math.abs(dy) <= AXIS_SLOP_PX) return;
         gesture.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+        // The horizontal lock is the instant the press stops being a tap, so it
+        // is the instant the card claims the pointer: capture routes the rest of
+        // the gesture back here when the finger leaves the card, and it
+        // retargets the click away from whatever day cell the drag began on. A
+        // vertical lock claims neither — that gesture belongs to the scroller
+        // below, and the `pointercancel` the platform sends when it takes the
+        // scroll over is what ends it.
+        if (gesture.axis === "x") claimPointer(event.currentTarget, event.pointerId);
       }
       // A vertical drag belongs to the page's scroller. The gesture is kept open
       // rather than ended, so the release that follows can be recognised as this
@@ -285,7 +318,7 @@ export function useCalendarPagerSwipe<T extends HTMLElement = HTMLDivElement>(
       const pulled = gesture.startOffset + dx;
       holdAt(pageFollow(pulled, threshold, pulled > 0 && !canGoBack));
     },
-    [canGoBack, holdAt, threshold],
+    [canGoBack, claimPointer, holdAt, threshold],
   );
 
   const onPointerUp = useCallback(
@@ -305,6 +338,18 @@ export function useCalendarPagerSwipe<T extends HTMLElement = HTMLDivElement>(
       // stays where it is enforced: a refused swipe is still reported, because
       // the answer to one is the screen's to play.
       const turning = decided && (direction === 1 || canGoBack);
+      // A turn drops the offset rather than handing it on, and the cut that
+      // leaves is a choice rather than an oversight. Web keeps ONE page in the
+      // DOM, so the content standing at, say, -80px *is* the outgoing month; the
+      // incoming one has to finish at 0, and a continuation from -80px could
+      // only reach 0 by travelling RIGHT — which is the exact movement the
+      // undecided release below makes, and the one a user reads as "the swipe
+      // was refused". Direction is the half of this that carries meaning, so the
+      // arrival keeps it: the new page starts from `translateX(5%)` on the far
+      // side and moves the way the finger was going, at the price of one frame
+      // where the grid jumps back across the offset the drag had built up. There
+      // is no third option while one page is in the DOM, and the frame is listed
+      // for the device pass to judge in `docs/verification/phase-7-device-pass.md`.
       restHome(!turning);
       if (decided) onNavigate(direction);
     },

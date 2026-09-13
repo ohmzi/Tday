@@ -19,23 +19,40 @@ spends TF2 — see `README.md`, "iOS: three cycles, for the whole programme".
 
 - [ ] **PR 21 · web · The month is under the thumb, not behind it** — the calendar on a phone,
       Month view, standing on any month but the current one, so both directions are live.
-      Do:     drag the grid sideways slowly and hold there; carry on past the 48px threshold and
-              keep going, a whole card width if you can; then let go. Repeat, releasing well short
-              of the threshold. Then drag, release short, and catch the grid again before it has
-              finished coming home.
+      Do:     start with the thumb ON a date, not in the gaps between the rows — a month grid is
+              seven columns of date buttons, so that is where a thumb lands and it is the case
+              that matters. Drag the grid sideways slowly and hold there; carry on past the 48px
+              threshold and keep going, a whole card width if you can; then let go. Repeat,
+              releasing well short of the threshold, and check the date you started on did not get
+              selected. Tap a date on its own afterwards to be sure taps still land. Then drag,
+              release short, and catch the grid again before it has finished coming home. Last, with
+              one thumb holding a drag half-way, put a second thumb down on a date and lift both.
       Watch:  the grid is under the thumb from the first pixel, one for one, until the threshold.
               Past that it keeps answering but gives — a card width of thumb buys about 96px of
               grid and no more. Released past the threshold, the grid's own offset is dropped and
               the next month slides in over 320 ms: one movement, not a glide home followed by a
               page turn. Released short, it glides back over 150 ms and the month does not change.
-              The re-grab is the third thing to look for: the grid should carry on from exactly
-              where your thumb caught it, never jump back out to where you let it go.
+              The month title, the chevrons and the S M T W T F S row stay still throughout — only
+              the dates travel. The re-grab is the fourth thing to look for: the grid should carry
+              on from exactly where your thumb caught it, never jump back out to where you let it
+              go. After the two-thumb case the grid must end up square again, either way.
       Fails:  nothing moving until the release, which is the defect — the whole gesture was a
-              measurement before it was a movement. Also a fail: the month title or the chevrons
-              travelling with the grid; the grid left sitting out of place after any release; a
-              release past the threshold playing both a glide home and a page turn; or the grid
-              tracking sideways while you scroll the task list below it, which the axis lock is
-              there to prevent — start a scroll from inside the grid to check that one.
+              measurement before it was a movement; and nothing moving only when the drag starts on
+              a date, which is the same defect wearing the gesture's own clothes. Also a fail: the
+              month title, the chevrons or the weekday row travelling with the dates; the date you
+              began a swipe on ending up selected; the grid left sitting out of place after any
+              release, the two-thumb one included; a release past the threshold playing both a
+              glide home and a page turn; or the grid tracking sideways while you scroll the task
+              list below it, which the axis lock is there to prevent — start a scroll from inside
+              the grid to check that one.
+      Judge:  the hand-off at the moment you let go is a cut, and a deliberate one. The grid is
+              carrying up to 96px of your drag; the arriving month starts from the far side and
+              moves the way your thumb was going, so the content crosses that offset in a single
+              frame before the 320 ms plays. Web keeps one page in the DOM, so the alternative is
+              an arrival that travels BACKWARDS to centre — the same movement a refused swipe
+              makes, which would say the opposite of what happened. Call it if the jump reads as a
+              glitch rather than as the page changing hands; the argument is at the `restHome`
+              call site in `useCalendarPagerSwipe.ts`.
       Also:   with reduce-motion on, the tracking stays and the trip home goes: the grid still
               follows the thumb, and lands in the frame you lift it. The page turn itself is a cut
               under that preference, as it already was.
