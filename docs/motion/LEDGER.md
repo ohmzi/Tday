@@ -164,10 +164,10 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 3 — calendar pager flags, Android and iOS
 
-- [ ] `and-calendar-pager-scrollrequest-stranded` — finger mid-slide cancels `animateScrollToPage`; both chevrons go dead · and · Sev 4 · XS · Gate J+D
-- [ ] `and-calendar-requestpage-guard-races` — pointless `coroutineScope.launch` around the `scrollRequest` write · and · Sev 1 · XS · Gate G
-- [ ] `ios-calendar-pager-flags-stranded` — no `scrollViewWillBeginDragging`; `isProgrammaticScroll` strands forever · ios · Sev 4 · S · Gate X
-- [ ] `ios-pager-early-return-leaves-flags-set` — early return at `:133` strands the flags on the `!animated` path · ios · Sev 3 · XS · Gate X
+- [x] `and-calendar-pager-scrollrequest-stranded` — finger mid-slide cancels `animateScrollToPage`; both chevrons go dead · and · Sev 4 · XS · Gate J+D
+- [x] `and-calendar-requestpage-guard-races` — pointless `coroutineScope.launch` around the `scrollRequest` write · and · Sev 1 · XS · Gate G
+- [x] `ios-calendar-pager-flags-stranded` — no `scrollViewWillBeginDragging`; `isProgrammaticScroll` strands forever · ios · Sev 4 · S · Gate X
+- [x] `ios-pager-early-return-leaves-flags-set` — early return at `:133` strands the flags on the `!animated` path · ios · Sev 3 · XS · Gate X
 
 ### PR 4 — the Today jump and the week-page settle
 
