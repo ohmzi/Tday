@@ -952,8 +952,72 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 26 — two iOS feed cuts
 
-- [ ] `ios-today-block-removal-is-a-cut` — `.animation` inside the `if`; ~72 pt of layout vanishes in one frame · ios · Sev 3 · S · Gate G+TF
-- [ ] `ios-calendar-day-swap-stacks-rows` — both days' rows play insert and removal over the same pixels · ios · Sev 3 · S · Gate TF
+- [x] `ios-today-block-removal-is-a-cut` — `.animation` inside the `if`; ~72 pt of layout vanishes in one frame · ios · Sev 3 · S · Gate G+TF
+  - **The modifier was inside the thing it was for.** `ScheduledTaskHomeScreen.swift` wrote
+    `.animation(.spring(0.34/0.9), value: viewModel.todayTodos.map(\.id))` on the `VStack` *inside*
+    `if !viewModel.todayTodos.isEmpty { … }`. A modifier written inside a branch is part of that
+    branch: the update that empties `todayTodos` takes the modifier out of the tree in the same pass
+    it takes the rows out, so at the moment the removal is decided there is no transaction open. The
+    block cuts, the rows' own `.transition` legs cut with it — a `.transition` outside a transaction
+    is inert — and the ~72 pt the block held closes in one frame. It animated everything that
+    happened *within* the block perfectly well, which is why it reads correct and why review has
+    walked past it: it did half its job, and the half it did is the half anyone looks at.
+  - The fix is position, not duration: a `Group` around the `if`, with the `.animation` on the
+    `Group`. That is the only place that spans both states of the branch. The block then leaves on
+    `TdayFeedItemMotion.row` — a feed's departure rung, because the block is what this feed adds and
+    removes alongside its rows — while the board and the lists below travel up into its space on
+    `placement`. Two beats, 150 then 320, in that order.
+  - The rows joined `TdayFeedItemMotion` while the file was open, which is PR 47's split reaching its
+    third feed: arrival on Enter, departure on Quick, travel on Emphasis, all on Standard. Reduced
+    motion is refused at both mechanisms separately for the reason `row(reduceMotion:)` gives —
+    `nil` to the `.animation(_:value:)` for the travel, `.identity` for the legs.
+  - **Gate G is rule D of `motion-reachability-ios.test.ts`**, and it is a new rule rather than a case
+    added to rule A. Rule A asks whether a transaction exists *somewhere in the type*; it could not
+    ask where the modifier is written, and on both of these sites it saw a gate that appears in an
+    `.animation(value:)` and said nothing. Rule D reads the branches enclosing each
+    `.animation(_:value:)` line and fails when one of them is gated on the state that modifier
+    animates. It has no allowlist and is not meant to grow one: a branch that should cut wants no
+    animation at all. Verified red on `94097db4` on exactly these two sites and nothing else in the
+    tree, green after.
+- [x] `ios-calendar-day-swap-stacks-rows` — both days' rows play insert and removal over the same pixels · ios · Sev 3 · S · Gate G+TF
+  - The calendar's day list had the same misplaced `.animation` as the row above and is fixed the same
+    way, but that is not this row: hoisting it makes the swap animate, and a swap that animates as it
+    stood is worse than one that cuts. `pendingItems` is keyed by task id, and two days share no task,
+    so a day change is one `ForEach` diff in which every row of the outgoing day is removed and every
+    row of the incoming day is inserted — concurrently, in one slot, over the same pixels. Both legs
+    also carried `.move(edge: .top)`, so both days slid down from the top through each other.
+  - **Identity first.** `.id(selectedDayStart)` on the day's `VStack` makes a day change one view
+    replaced rather than N removals interleaved with M insertions. That is what gives the swap two
+    things to sequence; without it there is nothing to hold an order between. The day is normalised
+    to `startOfDay` because `isSelectedDay` already throws the time away, and an identity that did
+    not would replace a day with itself.
+  - **Then ordering.** `calendarDayListTransition()` is asymmetric and *sequential*, which is where it
+    parts company with `TdayFeedItemMotion.row`: a row's arrival and departure are concurrent on
+    purpose, because they happen to different rows in different places while the feed stays the same
+    feed. A day swap is one list replacing another in the same slot. So the outgoing day leaves on
+    `Durations.departure` and the incoming day is delayed by exactly that before it arrives on
+    `Durations.arrival` — the delay is that constant and not a number of its own, because what it has
+    to match is that leg. No `.move`: the rows are not travelling anywhere, the day under them
+    changed. The card's height crosses on `placement`, the rung a box changing size answers to.
+  - The transaction is keyed on `pendingDayAnimationKey`, which carries the day as well as the row
+    ids. The ids alone would open it for every swap that exists today, but the `.id()` is the thing
+    being animated and a transaction should be keyed to what it carries, not to a property of the
+    data that happens to imply it.
+  - The empty day gets the same ordered transition. A day with nothing on it is still a day arriving,
+    and has no more business being drawn over the day it replaced than a populated one does.
+  - **Rule D resolves one hop**, which is what puts this row behind gate G rather than behind TF
+    alone. The rule was red here before the fix only because the site wrote `value:
+    pendingItems.map(\.id)` inline; naming that expression `pendingDayAnimationKey` would have made
+    the identical defect invisible to a purely textual match, and a gate that a rename can switch off
+    is not a gate on this row at all. So the rule expands a bare identifier in `value:` through the
+    type's own computed `var`s before asking what the expression reads — one hop, no transitive
+    closure, because a key assembled out of the branch's state is the shape that exists and chasing
+    further would pull half a screen's properties into every expression. Re-verified by putting the
+    `.animation` back inside the `if` in the shape the screen now ships: red, naming the state and the
+    property it travelled through.
+  - iOS `spring` ceiling 108 → 104, closing the unit: the two screens each carried the same
+    `0.34/0.9` spring, two counted literals apiece, and `Gesture` is 0.34/**0.82** — an orphan pair,
+    not a near-miss of a token that a migration could have absorbed.
 
 ## Phase 8 — accessibility
 

@@ -13,7 +13,8 @@ number. Hence the `V+D` on these rows — the `V` half says the instruction was 
 
 Phase 7's iOS batch (PR 26) is not checked here. Cycles are spent at phase merges and there are
 exactly three in the whole programme, so those rows write into the file for the phase whose merge
-spends TF2 — see `README.md`, "iOS: three cycles, for the whole programme".
+spends TF2 — `phase-8-device-pass.md`, which those rows open. See `README.md`, "iOS: three
+cycles, for the whole programme".
 
 ## Web
 
