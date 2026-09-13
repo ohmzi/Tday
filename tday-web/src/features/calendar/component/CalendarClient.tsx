@@ -50,6 +50,7 @@ import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { moveTodoToDay } from "@/lib/moveTodoToDay";
 import type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
 import AnimatedHeight from "@/components/ui/AnimatedHeight";
+import { calendarDropAnimation } from "../lib/dragOverlayDrop";
 import { useNavigationRefusal } from "../lib/useNavigationRefusal";
 import { useModalPresence } from "@/components/ui/Modal";
 import ConfirmRescheduleRecurring, {
@@ -978,6 +979,11 @@ export default function CalendarClient() {
   // The floor's answer to a back navigation it turned down: the hook holds both
   // the flag the card draws from and the clock it comes down on.
   const { refusing: refusedBack, refuse: refuseNavigation } = useNavigationRefusal();
+  // The subscribed shape of the preference, where the refusal above takes the
+  // imperative one. The drop animation is chosen during render and has to be
+  // re-chosen when the preference flips; a refusal only ever asks at the instant
+  // its timer arms.
+  const reduceMotion = usePrefersReducedMotion();
   const selectedDateRef = useRef<Date>(selectedDate);
   const viewRef = useRef<CalendarViewMode>(view);
   selectedDateRef.current = selectedDate;
@@ -1339,7 +1345,7 @@ export default function CalendarClient() {
           )}
         </section>
       </div>
-        <DragOverlay dropAnimation={null}>
+        <DragOverlay dropAnimation={calendarDropAnimation(reduceMotion)}>
           {activeTodo ? (
             <div className="pointer-events-none w-[min(20rem,80vw)] rounded-[20px] border border-white/70 bg-card px-4 py-3 opacity-70 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.6)] dark:border-white/10">
               <p className="line-clamp-1 text-[0.98rem] font-black leading-5 text-foreground">
