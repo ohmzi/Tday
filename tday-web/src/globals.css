@@ -650,17 +650,21 @@
   transition: grid-template-rows var(--tday-duration-enter) var(--tday-empty-sink-ease);
 }
 
-/* The track closing, kept a separate class from the ink sinking below because
-   the two do not always go together. A hand-off that starts inside the
-   celebration window never hands the slot over: the scene is still on screen
-   when the beat ends (`shouldShowTodayEmptyIllustration`'s last line), so a
-   track that had closed under it would have to open again the frame the class
-   came off — 42vh taken out from under Earlier's rows and then put straight
-   back under them, a bounce for a scene that never left. The ink still fades on
-   that path, on this rung and this curve; only the geometry is withheld, which
-   is what leaves that beat exactly as still as it was before the slot could
-   move at all. `earlierHandoffVacatesSlot` (`todayEarlierIllustration.ts`) is
-   the one place that asks which of the two a hand-off is.
+/* The track closing, a separate class from the ink sinking below because the
+   stylesheet needs it to be — the ink is an animation and this is a transition
+   on a grid — and not because the two can disagree. They cannot: one departure,
+   one question, asked in `emptySceneIsLeaving` (`todayEarlierIllustration.ts`)
+   and spent on both names. A scene whose ink leaves without its box, or the
+   other way round, reads as two things happening to it rather than as it
+   leaving.
+
+   Nothing here runs inside the celebration window, and nothing needs to: the
+   scene is still on screen when that window ends
+   (`shouldShowTodayEmptyIllustration`'s last line), so a tap landing in it
+   swaps nothing and is never sequenced at all (`earlierSlotChangesHands`). A
+   track closed on that path would have had to open again the frame the class
+   came off — 42vh taken out from under Earlier's rows and put straight back —
+   and the ink that did fade there snapped back to full opacity with it.
 
    The child's two declarations are scoped to the closing rather than left on: a
    grid item that is not a scroll container keeps its own content height as the
@@ -687,8 +691,8 @@
    hand-off (requirement 3 of the Earlier section — Today originally, since
    generalized to every other scope with its own Earlier bucket). Only ever
    applied to a `.tday-empty-slot`, which carries the track this rides over —
-   closed by `.tday-empty-slot-closing` above on the hand-offs that actually
-   vacate it.
+   closed by `.tday-empty-slot-closing` above, always in the same breath as
+   this.
 
    `--tday-duration-enter` is the rung `TODAY_EARLIER_EXIT_MS`
    (`todayEarlierIllustration.ts`) sits on, and that constant argues the choice:

@@ -4,6 +4,7 @@ import { useEarlierExpandHandoff } from "@/features/todayTodos/lib/useEarlierExp
 import {
   OVERDUE_ROWS_FADE_MS,
   TODAY_EARLIER_EXIT_MS,
+  earlierSlotChangesHands,
   shouldShowTodayEmptyIllustration,
 } from "@/features/todayTodos/lib/todayEarlierIllustration";
 
@@ -72,16 +73,20 @@ export function useListEmptyState({
     celebrate,
   });
 
-  // What a tap on Earlier's header does to the SLOT — the argument
-  // `useEarlierExpandHandoff` sequences on, and the same expression
-  // `useTimelineEmptyState` derives for the scoped screens; see its own
-  // comment for why one boolean covers both directions of the swap.
-  const earlierSlotChangesHands = showEmpty && hasEarlierItems;
+  // What a tap on Earlier's header does to the SLOT — the same derivation
+  // `useTimelineEmptyState` makes for the scoped screens, reused rather than
+  // restated; see its own doc comment for why one boolean covers both
+  // directions of the swap.
+  const slotChangesHands = earlierSlotChangesHands({
+    showEmpty,
+    hasEarlierItems,
+    celebrate,
+  });
 
   return {
     earlierExpanded,
     earlierHandoff,
-    earlierSlotChangesHands,
+    earlierSlotChangesHands: slotChangesHands,
     toggleEarlierExpanded,
     celebrate,
     showEmptyIllustration,
