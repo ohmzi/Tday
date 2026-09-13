@@ -374,6 +374,20 @@ underneath it, published live by `ProvideTdayMotionScale` in `TdayTheme` — one
 the quick settings tile is not left looking at the answer this app read at
 mount.
 
+That number is also where Android's own **"Reduce motion"** switch lands
+(Settings → Motion, persisted by `ReduceMotionPreferenceStore`). The two answers
+compose in `effectiveMotionScale`, and the composition is one-way: the in-app
+switch can subtract motion and can never add any back, so a device whose
+animator scale is 0 stays at 0 whatever the switch says. Android needs the
+switch because it is the one client with nothing better: web is handed
+`prefers-reduced-motion` and iOS `UIAccessibility.isReduceMotionEnabled`, both of
+them accessibility settings a user has already been taught to find, while
+`ANIMATOR_DURATION_SCALE` is device-wide and lives behind developer options on
+many builds. The Settings row reads the system half on its own
+(`rememberSystemMotionScale()`) for one reason: when the device has already
+removed animations the switch cannot change anything, and a control that cannot
+act must say so rather than claim the app is still moving.
+
 - Android: `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:126` seeds the
   appearance `Animatable` at `1f` — fully arrived — when motion is off, rather
   than at `0f` with the animation skipped.

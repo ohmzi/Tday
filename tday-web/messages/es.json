@@ -1015,6 +1015,13 @@
         "body": "Al completar una tarea suena un pop corto y, en el teléfono, la app responde a tus toques y arrastres con una pequeña vibración. Ajustes tiene un interruptor para cada uno: desactiva el que quieras y todo lo demás sigue igual.",
         "tip": "Los interruptores pertenecen a este navegador y no a tu cuenta, así que un portátil en silencio y un teléfono que vibra pueden tener cada uno su propia respuesta."
       },
+      "reduce-motion": {
+        "title": "Reducir el movimiento",
+        "summary": "Desactiva las animaciones de T'Day sin cambiar el resto del teléfono.",
+        "keywords": "movimiento, animación, animaciones, reducir, accesibilidad, quieto, transiciones, mareo",
+        "body": "Ajustes incluye un interruptor «Reducir el movimiento». Con él activado, T'Day deja de animar: las filas, las hojas y las pantallas van directas a su destino, y cada espera que cubría una animación desaparece con ella, así que la app se vuelve más rápida, no más lenta. Nada más cambia: las mismas pantallas en el mismo orden, solo que ya han llegado.",
+        "tip": "Solo quita movimiento. Si la propia opción de animaciones de Android ya está desactivada, T'Day ya está quieto y el interruptor lo dice en vez de ofrecerse a deshacerlo."
+      },
       "floaters-vs-todos": {
         "title": "Flotantes frente a tareas con fecha",
         "summary": "Las tareas sin fecha viven en En cualquier momento; las que tienen fecha, en Programado.",

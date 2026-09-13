@@ -85,6 +85,7 @@ Every tappable Settings row leads with a glyph in a 22px slot (20px glyph, 14px 
 | Password | `lock` | `Lock` | `ic_lucide_lock` | `LucideLock` |
 | Security questions | `shield-question` | `ShieldQuestion` | `ic_lucide_shield_question` | `LucideShieldQuestion` |
 | Role | — (empty slot) | — | (empty slot) | (empty slot) |
+| Reduce motion | `activity` | — | `ic_lucide_activity` | — |
 | Default reminder | `bell` | — | `ic_lucide_bell` | `LucideBell` |
 | Day Ahead digest | `bell-ring` | — | `ic_lucide_bell_ring` | `LucideBellRing` |
 | Quiet hours | `moon` | — | `ic_lucide_moon` | `LucideMoon` |

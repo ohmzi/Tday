@@ -1015,6 +1015,13 @@
         "body": "Cocher une tâche joue un petit son et, sur téléphone, l'app répond à tes appuis et à tes glissements par une légère vibration. Les Paramètres proposent un interrupteur pour chacun : désactive celui que tu veux, tout le reste ne bouge pas.",
         "tip": "Les interrupteurs appartiennent à ce navigateur et non à ton compte : un ordinateur silencieux et un téléphone qui vibre peuvent chacun avoir leur propre réponse."
       },
+      "reduce-motion": {
+        "title": "Réduire les animations",
+        "summary": "Désactivez les animations de T'Day sans toucher au reste du téléphone.",
+        "keywords": "mouvement, animation, animations, réduire, accessibilité, immobile, transitions, vertige",
+        "body": "Les réglages contiennent un interrupteur « Réduire les animations ». Activé, T'Day n'anime plus rien : les lignes, les feuilles et les écrans arrivent directement à destination, et chaque attente qui couvrait une animation disparaît avec elle — l'app devient donc plus rapide, pas plus lente. Rien d'autre ne change : les mêmes écrans dans le même ordre, simplement déjà arrivés.",
+        "tip": "Il ne fait que retirer du mouvement. Si le réglage d'animation d'Android est déjà désactivé, T'Day est déjà immobile et l'interrupteur le dit au lieu de proposer d'annuler."
+      },
       "floaters-vs-todos": {
         "title": "Floaters et tâches datées",
         "summary": "Les tâches sans date vivent dans À tout moment ; les tâches datées dans Planifié.",
