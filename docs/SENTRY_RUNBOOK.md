@@ -104,7 +104,7 @@ Keep names stable, low-cardinality, and structural:
 | Area | Examples |
 |------|----------|
 | API | `api.request`, `api.transport`, route template like `PATCH /api/todo/:id` |
-| Sync | `sync.replay`, `sync.manual`, `local_mode.sync_noop` |
+| Sync | `sync.replay`, `sync.replay_rate_limited`, `sync.manual`, `local_mode.sync_noop` |
 | Server setup | `server.probe`, `update.check` |
 | Realtime | `realtime.connect`, `realtime.disconnect` |
 | Reminders | `reminder.reschedule`, `reminder.cancel_all` |
