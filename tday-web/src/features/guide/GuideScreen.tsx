@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight, CircleHelp, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "@/lib/navigation";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
@@ -26,9 +27,9 @@ function isNew(topic: GuideTopicDef): boolean {
 
 export default function GuideScreen() {
   const { t } = useTranslation();
-  const { locale, topicId: topicIdParam } = useParams();
+  const { topicId: topicIdParam } = useParams();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const focusTopicId = topicIdParam ?? searchParams.get("topic");
   const [query, setQuery] = useState("");
@@ -84,7 +85,7 @@ export default function GuideScreen() {
         showNew={showNewBadges && isNew(topic)}
         expanded={expandedId === topic.id}
         onToggle={() => setExpandedId((cur) => (cur === topic.id ? null : topic.id))}
-        onTryIt={(seg) => navigate(`/${locale}/app/${seg}`)}
+        onTryIt={(seg) => router.push(`/app/${seg}`)}
         registerRef={(el) => (rowRefs.current[topic.id] = el)}
       />
     </div>
