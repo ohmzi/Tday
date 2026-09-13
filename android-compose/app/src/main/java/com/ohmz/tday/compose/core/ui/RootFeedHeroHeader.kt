@@ -592,12 +592,21 @@ private fun BoxScope.HeroTitle(
     // it sits clear of the toolbar row, so there is nothing to hide it for. It
     // fades as it docks — where it WOULD collide with the expanded field — and
     // goes entirely once a query starts and the results take the screen over.
-    val titleAlpha = when {
-        !searchExpanded -> 1f
-        searchHasQuery -> 0f
-        else -> 1f - drop
-    }
-    val visible = titleAlpha > 0.01f
+    val openAlpha = if (searchHasQuery) 0f else 1f - drop
+    // Only the open/close STEP is played back, on the same rung as the mark and the
+    // two round buttons the field clears out alongside it. `1f - drop` is
+    // scroll-derived and has to stay on the finger: a tween over a value the fold
+    // rewrites every frame never arrives at the value it was handed, it only trails
+    // it by its own length. So the gate is what animates and the fold is multiplied
+    // through it — the same split web makes, and the one iOS gets for free, since
+    // its `withAnimation(searchMorph)` wraps the `searchExpanded` mutation alone and
+    // the scroll that drives `drop` happens outside that transaction.
+    val searchGate = searchClearAlpha(visible = !searchExpanded)
+    val titleAlpha = openAlpha + ((1f - openAlpha) * searchGate)
+    // Hit testing follows the settled state rather than this frame's alpha: a title
+    // that is on its way out should not still be taking the tap that scrolls the
+    // feed to the top for the length of the fade.
+    val visible = !searchExpanded || openAlpha > 0.01f
 
     Box(
         modifier = Modifier
