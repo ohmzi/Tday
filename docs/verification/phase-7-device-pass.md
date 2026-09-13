@@ -237,3 +237,26 @@ spends TF2 — see `README.md`, "iOS: three cycles, for the whole programme".
               from the chrome the body lands into.
       Also:   with reduce-motion on, the surface is simply present rather than sliding, and the
               handover is still invisible — a finished form is the finished state either way.
+
+- [ ] **PR 54 · web · Every button answers the finger the same way** — the app on a phone, anywhere
+      with a shadcn `Button` and a hand-rolled one in the same view: a form sheet's Cancel / Save
+      pair beside the round header buttons, or the calendar's Today pill beside its chevrons.
+      Do:     press and HOLD each button in turn, a full second, and watch the moment the finger
+              lands rather than the moment it lifts. Then lift, and watch the way back up. Do it
+              on a Save button inside a sheet, on a round header button, and on the onboarding
+              card, which presses deeper than the rest on purpose.
+      Watch:  the surface goes down into the press — it should be possible to see it travel, not
+              just find it already down. Every button travels the same way and on the same curve,
+              whichever kind it is, and comes back the same way on the lift. The ripple blooms out
+              from under the finger over the same beat it always did. The onboarding card still
+              goes visibly deeper than a sheet button does.
+      Fails:  a button that is already squashed on the frame the finger lands — the defect, and it
+              is easiest to catch beside one that is not, which is why the two kinds have to be in
+              the same view. A jolt down under a ripple that then blooms slowly is the exact
+              before-state. Also a fail: the onboarding card pressing to the same shallow depth as
+              everything else, which would mean the pressed scale was promoted out of reach of the
+              call sites that set their own.
+      Also:   with reduce-motion on, the pressed state is simply there on contact and gone on
+              release, with no ripple at all — including on a Save button, which is the half that
+              used to go on animating under the setting because its own `transition-colors`
+              outranked the floor.

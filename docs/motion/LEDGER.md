@@ -819,6 +819,62 @@ Restore it from git history rather than adjusting the number.
 ### PR 54 — the web press affordance stops losing to `transition-colors`
 
 - ↳ part 2 of 3 of `press-affordance-unification` — `:where()` at 0,0,0 loses to `transition-colors` at 0,1,0 on every shadcn Button. Box lives under **PR 9a/9b**.
+  - **The specificity reading was the wrong diagnosis, and it matters because it points at the
+    wrong fix.** Both rules are layered, and a layer outranks specificity outright: measured in
+    Chromium, an 0,3,4 selector written inside `@layer base` still loses to `transition-colors` at
+    0,1,0 in `@layer utilities`. Escalating would not have worked; the whole class of fix is dead.
+  - What the defect actually looked like, before, on a shadcn Button: the squash was not missing —
+    `scale: 0.985`, `translate: 0 1.5px` and the shadow all landed, because no utility competes for
+    those — but the utility had replaced `transition-property`, so all three arrived in ONE FRAME
+    and left in one, under a ripple that still took its 340 ms because no class can reach a pseudo.
+    Half an affordance reads worse than none: a jolt under a slow bloom.
+  - The same override took the reduced-motion floor with it. `@media (prefers-reduced-motion:
+    reduce) { transition-duration: 0ms }` sat in `base`, so every element carrying any
+    `transition-*` at all went on animating under it — a shadcn Button at 150 ms, a
+    `transition-all duration-300` button at 300.
+  - The fix is `@layer tday-press`, opened after `@import "tailwindcss"` so it sorts after
+    `utilities`, holding the smallest set that has to win: which properties transition, what curve
+    they take, the reduced-motion floor, and the pressed shadow — whose `!important` comes OUT,
+    the layer doing that work now.
+  - **What deliberately did not move up.** The pressed scale, so that the 17 call sites pressing to
+    their own depth still win: the onboarding wizard's step chip at `[0.97]` (which is
+    `--tday-press-card`), eight sheet buttons at `[0.99]`, and eight small round icon buttons — the
+    task FAB among them — at `scale-95`. Verified in Chromium that all three depths still do. Six
+    further sites say `[0.985]`, which is `--tday-press-row` written out rather than a depth of
+    their own; retiring those six literals is a separate row. And the press LENGTH, so that the dozen
+    pressables carrying a `duration-200` of their own keep it — bringing those onto the ladder is a
+    call-site migration with its own row, not a silent retiming to be taken for free here. A site
+    that says nothing still gets Quick from `base`; a bare `transition-*` rides Tailwind's
+    un-overridden 150, which is the same rung, so both land in the same place.
+  - **The property list displaces `transition-all` too, and no closed list is a superset of `all`.**
+    It IS a superset of the two named utilities — `transition-colors` adds
+    outline-color/text-decoration-color/fill/stroke, `transition-transform` adds transform/rotate,
+    so displacing either costs the call site nothing. `transition-all` is on 19 class strings and
+    the list has to be checked against them one at a time: on all but one the properties actually in
+    flight (translate, scale, background-color, color, opacity, box-shadow) are already in it. The
+    exception is the dock tab, `RootDock.tsx:185`, `sm:min-w-[104px]` when selected against
+    `sm:min-w-12` when not — measured in Chromium against the compiled stylesheet, it went from
+    easing over 200 ms to reaching 104 px in the first frame, beside an indicator pill that is a
+    `pointer-events-none` div this selector does not match and so still glides for 300 ms. That is
+    this unit's own defect shape relocated, and it would have taken the written argument at
+    `RootDock.tsx:101` — the re-measure timed against "the tab width transition (200ms)" — with it.
+    `min-width` is therefore in the list, and it has to be there rather than at the call site: a
+    `transition-[min-width]` on the button is displaced by this same declaration, and the
+    `!important` that would beat it is the escalation the layer exists to retire. `width` and
+    `height` stay out — nothing pressable animates them, and `sm:min-w-*` appears on exactly one
+    element in `src`. The tab's curve does change, from Tailwind's default ease to
+    `--tday-ease-gesture`, which is the vocabulary's press curve and the same one its colours
+    already took after this PR.
+  - Two literals retired and the ceiling lowered with them: `web.cssMsLiteral` 5 → 3. The press ran
+    on a hand-written 180 (now `Quick`: the app answering a finger, and the number every bare
+    `transition-*` already rides) and the ripple on 340 (now `Emphasis`: it changes size, and 320 is
+    that motion to within a frame). The 340–420 ms band in `docs/motion.md` loses its web member.
+  - `tests/guardrails/press-affordance-cascade.test.ts` is the gate. It reads the stylesheet rather
+    than a rendered className, for the reason `toast-action-specificity` gives next door: the class
+    was present and correct the whole time. It fails on `ce071f30` on three counts — no layer, an
+    `!important` in the affordance, and the pressed scale written out rather than read from the
+    token — and a fourth case holds `min-width` in the property list, which is the one declaration
+    here whose removal has no local symptom: the tab that needs it cannot ask for it from below.
 
 ### PR 55 — the web route hand-over
 

@@ -229,6 +229,23 @@
     color: hsl(var(--accent-foreground));
   }
 
+  /* The blanket press affordance: anything that takes a finger squashes, dips a
+     pixel and a half, and pushes a ripple out from under the touch.
+
+     `:where()` holds the whole selector at 0,0,0 so a call site can say
+     `active:scale-[0.97]` and be obeyed — 17 do, at three depths — and the
+     pressed geometry stays down here in `base` so that they still can.
+
+     The rest of the affordance does not stay here, because specificity was
+     never the lever. `@layer base` loses to `@layer utilities` at every
+     specificity there is: `transition-colors`, which every shadcn Button
+     carries, replaced this rule's transition wholesale, and the most common
+     button in the app squashed in one frame instead of easing in — under a
+     ripple that still took its time, because no class can reach a pseudo. An
+     0,3,4 selector written in this layer loses to that 0,1,0 utility just the
+     same. What a class must not be able to delete lives in `@layer tday-press`
+     immediately below this block, which is opened after the Tailwind import and
+     therefore sorts after `utilities`. */
   :where(
       button,
       [role="button"],
@@ -244,9 +261,17 @@
     isolation: isolate;
     overflow: hidden;
     position: relative;
-    transition-duration: 180ms;
-    transition-property: background-color, border-color, box-shadow, color, filter, opacity, scale, translate;
-    transition-timing-function: var(--tday-ease-gesture);
+    /* Quick — the app answering a finger that is on it — and left down here on
+       purpose, where a `duration-200` on the element still beats it. A rule that
+       cannot see how big its surface is can pick the press LENGTH for a site
+       that says nothing, but it should not overrule a site that said something;
+       the dozen pressables carrying a duration of their own are a call-site
+       migration with its own row, not a silent retiming to be had for free
+       here. It ran on a hand-written 180ms, which named no rung and differed
+       from Tailwind's un-overridden `--default-transition-duration` — the 150
+       every bare `transition-*` in the app already rides — by exactly enough to
+       make two buttons beside each other disagree. */
+    transition-duration: var(--tday-duration-quick);
   }
 
   :where(
@@ -266,12 +291,26 @@
     pointer-events: none;
     position: absolute;
     scale: 0.34;
-    transition-duration: 340ms;
+    /* The ripple goes from a third of the surface to nearly twice it. That is a
+       change of size, which rule 2 puts on Emphasis; it ran on a hand-written
+       340ms, which is that rung to within a frame and named nothing. */
+    transition-duration: var(--tday-duration-emphasis);
     transition-property: opacity, scale;
     transition-timing-function: var(--tday-ease-gesture);
     z-index: 0;
   }
 
+  /* The one half of the affordance a call site is meant to be able to beat, and
+     the reason the selector is a `:where()` at all. `--tday-press-row` is the
+     full-width-row depth, which is the right default for a rule that cannot see
+     how big its element is; 17 elements that DO know how big they are say
+     otherwise and are obeyed, because a utility beats `base`: the onboarding
+     wizard's step chip at `active:scale-[0.97]` (which is `--tday-press-card`),
+     eight sheet buttons at `[0.99]`, and eight small round icon buttons — the
+     task FAB among them — at `active:scale-95`. Six more say `[0.985]`, which is
+     this token written out, so they are not counted here; they are a separate
+     tidy-up. Move this declaration up a layer and all 17 go quiet at once, which
+     would look like a tidy-up while it happened. */
   :where(
       button,
       [role="button"],
@@ -281,9 +320,7 @@
       a[href][class*="bg-"],
       [data-pressable="true"]
     ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]):active {
-    box-shadow: var(--press-shadow) !important;
-    filter: saturate(0.98);
-    scale: 0.985;
+    scale: var(--tday-press-row);
     translate: 0 1.5px;
   }
 
@@ -299,7 +336,88 @@
     opacity: 1;
     scale: 1.9;
   }
+}
 
+/* The half of the press affordance no component class may delete.
+
+   Where this layer is opened is the whole mechanism: layer order follows first
+   appearance, so a layer opened here — after `@import "tailwindcss"` — sorts
+   after `utilities` and outranks `transition-colors`, `duration-300` and
+   `shadow-lg` alike, whatever specificity either side happens to have. Opened
+   above the import it would sort first instead, and every defect below would
+   come back with the stylesheet still reading exactly as it does now.
+
+   What is up here is the smallest set of declarations that has to win, and no
+   more. WHICH properties animate, because `transition-colors` on a shadcn
+   Button — the most common button in the app — deleted scale and translate out
+   of the list and the squash arrived in one frame under a ripple that still
+   took its time. WHAT CURVE they animate on, for the same reason. The
+   reduced-motion floor, which the same utility was overriding on every element
+   that carried one. And the pressed shadow, which used to hold its ground with
+   an `!important`; the layer does that work now, so the escalation comes out
+   rather than being met with a bigger one. HOW LONG the press takes is not up
+   here — that one stays in `base` with the pressed scale, where a call site can
+   still beat it. */
+@layer tday-press {
+  :where(
+      button,
+      [role="button"],
+      [class*="cursor-pointer"],
+      a[href][class*="rounded"],
+      a[href][class*="shadow"],
+      a[href][class*="bg-"],
+      [data-pressable="true"]
+    ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]) {
+    /* This list REPLACES whatever the call site asked for — that is what being
+       up here means — so it has to carry the properties those call sites were
+       animating and not just the ones the press needs. `transition-colors`
+       contributes outline-color, text-decoration-color, fill and stroke;
+       `transition-transform` contributes transform and rotate. Neither the squash
+       nor the ripple touches any of those six: they are here so a button that
+       tints its own focus ring, or turns its own chevron, keeps doing it while
+       the press rides along beside it.
+
+       It is NOT a superset of `transition-all`, and no closed list can be. So it
+       is the closed list plus whatever `all` is actually animating on a pressable
+       in this app, which is one property: `min-width`, for the dock tab, which
+       grows to hold its label on becoming the selected tab and collapses again on
+       losing it. Drop it and that tab snaps 104px → 48px in a single frame beside
+       an indicator pill that still glides for 300ms — the same jolt-under-a-slow-
+       companion this rule exists to remove, relocated rather than removed. It has
+       to be enumerated HERE because a call site cannot add to this list from
+       below: a `transition-[min-width]` of its own is displaced by this very
+       declaration, and the `!important` that would beat it is the escalation the
+       layer exists to make unnecessary. `width` and `height` stay out: nothing
+       pressable animates them today, and a blanket size transition on every
+       button in the app is a larger promise than a rule that cannot see its own
+       element is in a position to make. */
+    transition-property: background-color, border-color, box-shadow, color, fill, filter,
+      min-width, opacity, outline-color, rotate, scale, stroke, text-decoration-color, transform,
+      translate;
+    /* Gesture is the press curve in the normative table, and this is the half
+       of the timing the rule does own: `transition-colors` on a shadcn Button
+       was pressing on Tailwind's default ease, so the most common button in the
+       app answered a finger on a curve the vocabulary does not have. */
+    transition-timing-function: var(--tday-ease-gesture);
+  }
+
+  :where(
+      button,
+      [role="button"],
+      [class*="cursor-pointer"],
+      a[href][class*="rounded"],
+      a[href][class*="shadow"],
+      a[href][class*="bg-"],
+      [data-pressable="true"]
+    ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]):active {
+    box-shadow: var(--press-shadow);
+    filter: saturate(0.98);
+  }
+
+  /* The floor belongs up here with the transition it floors. A layer down it
+     was overridden by the same `transition-*` utilities, so a button carrying
+     one went on animating under `prefers-reduced-motion: reduce`. The squash it
+     draws instead is instant, which is the finished state. */
   @media (prefers-reduced-motion: reduce) {
     :where(
         button,
@@ -325,7 +443,12 @@
       display: none;
     }
   }
+}
 
+/* `base` reopened. The colour and radius variables below were always in this
+   layer; the press layer is spliced in above them rather than appended to the
+   file so that both halves of the affordance stay in one place to read. */
+@layer base {
   :root {
     /*
      * Toast action ("Undo") colour. Mirrors the iOS snackbar accent exactly —
