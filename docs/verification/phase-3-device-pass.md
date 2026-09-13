@@ -78,9 +78,12 @@ cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme"
               Back gesture; and once more for the edit sheet opened from a task, and for the New List
               sheet on the lists row).
       Watch:  the card SLIDES down off the bottom edge while fading, over 320 ms, on every one of those
-              paths — the dim scrim is still there behind it until the card has finished leaving.
+              paths — the dim scrim is still there behind it until the card has finished leaving, and
+              the keyboard stays up until the card has gone, dropping after it rather than before it.
       Fails:  the sheet disappears on a single frame on any path, or one path slides and another cuts;
-              or the scrim disappears first and the card is left sliding over the live screen.
+              or the scrim disappears first and the card is left sliding over the live screen; or the
+              keyboard drops first and the card's top edge jumps down a third of the screen part-way
+              through the slide (`and-create-sheet-ime-height-snap` getting into the exit).
 
 - [ ] **PR 15a · and · The card is still readable the whole way out** — open the edit sheet on a task
       that has a title, notes, a due date and a repeat set, so the card is full.
@@ -92,8 +95,10 @@ cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme"
 
 - [ ] **PR 15a · and · A scrim dismiss draws no ripple** — create sheet open over Today, dark theme,
       where a ripple against the dim scrim is easiest to see.
-      Do:     press and HOLD a finger on the scrim a good distance above the card, then release.
-      Watch:  nothing lights under the finger while it is held — the scrim stays one flat dim — and the
-              sheet starts its slide out on release.
+      Do:     press and HOLD a finger on the scrim a good distance above the card for a full second,
+              then release.
+      Watch:  nothing lights under the finger for the whole second it is held — a Material ripple
+              reaches full radius in ~300 ms, so a second is three times over — the scrim stays one
+              flat dim, and the sheet starts its 320 ms slide out on release.
       Fails:  a circular ripple spreads out from the finger across the whole window, or the scrim
               brightens as a full-screen button would while held.

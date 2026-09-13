@@ -989,11 +989,19 @@ private fun CreateListBottomSheet(
     // The same two-step dismissal the create-task sheet uses: start the exit, and tell the
     // caller only once it has finished, so the 320 ms slide out is not cut off by the host
     // Dialog leaving the composition on the frame of the tap.
-    val sheetDismiss = rememberSheetDismissState(onDismissed = onDismiss)
-    val startDismiss = {
-        dismissKeyboard()
-        sheetDismiss.start()
-    }
+    //
+    // The keyboard goes at the end of that, with the caller's onDismiss, for the same
+    // reason it does over there: clearing focus first drops `useTypingHeight` below, which
+    // retargets `sheetHeight` from 80 % of the screen down to 70 % in the middle of the
+    // slide, and `slideOutVertically` offsets by the height it measured — so the card
+    // shrinks while it is leaving instead of just leaving.
+    val sheetDismiss = rememberSheetDismissState(
+        onDismissed = {
+            dismissKeyboard()
+            onDismiss()
+        },
+    )
+    val startDismiss = { sheetDismiss.start() }
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = tdayListAccentColor(listColor)
     val canCreate = listName.isNotBlank()
