@@ -99,6 +99,57 @@ func mergeCompletedFloaterRecordsWithPendingOverrides(
     return mergedRecords
 }
 
+/// What the pending-mutation replay should do with a mutation whose push just
+/// failed. Pulled out of `SyncManager.applyPendingMutations` so the decision — and
+/// with `applyPendingMutationReplayOutcome`, its effect on the queue — is a pure
+/// state machine the tests can drive without a network or a `SyncManager`.
+enum PendingMutationReplayOutcome: Equatable {
+    /// Stop the replay here, leaving this mutation AND every later one queued for
+    /// the next sync. Nothing is dropped and nothing is marked failed.
+    case stopAndKeepRemaining
+    /// Keep this one mutation queued and carry on with the rest of the replay.
+    case keepAndContinue
+    /// The server will never accept this one; drop it and carry on.
+    case dropAndContinue
+}
+
+func pendingMutationReplayOutcome(for error: Error) -> PendingMutationReplayOutcome {
+    // No network / backend down: every later request would fail the same way.
+    if isLikelyConnectivityIssue(error) {
+        return .stopAndKeepRemaining
+    }
+    // Same treatment, for the same reason. A 429 says the account's rate-limit
+    // window is already closed, and the remaining mutations share that window —
+    // firing them anyway can only push the window further out, and the replay
+    // previously kept going and spent the rest of the queue against a limiter that
+    // was already refusing. They stay queued, so the next sync replays them.
+    if isRateLimitedError(error) {
+        return .stopAndKeepRemaining
+    }
+    return isLikelyUnrecoverableMutationError(error) ? .dropAndContinue : .keepAndContinue
+}
+
+/// Applies `outcome` to the replay's keep-list. Returns true when the replay should
+/// stop, in which case `remaining` has been extended with the failed mutation and
+/// every mutation after it, exactly as the queue needs to look for the next sync.
+func applyPendingMutationReplayOutcome(
+    _ outcome: PendingMutationReplayOutcome,
+    at index: Int,
+    of orderedMutations: [PendingMutationRecord],
+    keeping remaining: inout [PendingMutationRecord]
+) -> Bool {
+    switch outcome {
+    case .stopAndKeepRemaining:
+        remaining.append(contentsOf: orderedMutations[index...])
+        return true
+    case .keepAndContinue:
+        remaining.append(orderedMutations[index])
+        return false
+    case .dropAndContinue:
+        return false
+    }
+}
+
 @MainActor
 final class SyncManager {
     private let api: TdayAPIService
@@ -663,12 +714,20 @@ final class SyncManager {
                     resolvedFloaterListIDs: &resolvedFloaterListIDs
                 )
             } catch {
-                if isLikelyConnectivityIssue(error) {
-                    remaining.append(contentsOf: orderedMutations[index...])
-                    break
+                let outcome = pendingMutationReplayOutcome(for: error)
+                if outcome == .stopAndKeepRemaining, isRateLimitedError(error) {
+                    TdayTelemetry.addBreadcrumb(
+                        "sync.replay_rate_limited",
+                        data: ["remainingMutationCount": orderedMutations.count - index]
+                    )
                 }
-                if !isLikelyUnrecoverableMutationError(error) {
-                    remaining.append(mutation)
+                if applyPendingMutationReplayOutcome(
+                    outcome,
+                    at: index,
+                    of: orderedMutations,
+                    keeping: &remaining
+                ) {
+                    break
                 }
             }
         }

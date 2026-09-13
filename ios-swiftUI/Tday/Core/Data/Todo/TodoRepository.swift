@@ -11,6 +11,10 @@ struct TodoListCacheSnapshot {
     let lists: [ListSummary]
     let items: [TodoItem]
     let aiSummaryEnabled: Bool
+    /// Carried on the snapshot so hydrating a list costs ONE `loadOfflineState()`.
+    /// It used to be a second, separate full-cache read per hydrate, and every
+    /// cache write wakes every live list view model.
+    let completedTodayCount: Int
 }
 
 /// Snapshot of everything `stageDeleteTodo(_:)` pruned from the local cache,
@@ -92,7 +96,8 @@ final class TodoRepository {
         TodoListCacheSnapshot(
             lists: buildListSummaries(from: state, mode: mode),
             items: buildTodos(from: state, mode: mode, listId: listId),
-            aiSummaryEnabled: syncManager.isLocalMode ? false : state.aiSummaryEnabled
+            aiSummaryEnabled: syncManager.isLocalMode ? false : state.aiSummaryEnabled,
+            completedTodayCount: completedTodayCount(from: state)
         )
     }
 
@@ -352,9 +357,14 @@ final class TodoRepository {
     }
 
     /// Completed-today count from the local cache, for the Day Done state.
-    func completedTodayCount() -> Int {
+    ///
+    /// Takes the state rather than loading it: `makeTodoListCacheSnapshot` already
+    /// holds one, and hydrating a list used to read the whole cache a second time
+    /// just to reach this filter — on every cache write, in every live list view
+    /// model.
+    func completedTodayCount(from state: OfflineSyncState) -> Int {
         let calendar = Calendar.current
-        return cacheManager.loadOfflineState().completedItems.filter { record in
+        return state.completedItems.filter { record in
             calendar.isDateInToday(Date(epochMilliseconds: record.completedAtEpochMs))
         }.count
     }
