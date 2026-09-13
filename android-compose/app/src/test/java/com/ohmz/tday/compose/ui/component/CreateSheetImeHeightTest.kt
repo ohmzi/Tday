@@ -18,6 +18,14 @@ import org.junit.Test
  *
  * What separates the two is continuity in the threshold region, which is what these
  * assertions are about: at one dp of keyboard the sheet has moved one dp, not 248.
+ *
+ * What this file deliberately cannot see is the modifier chain the answer is applied
+ * through, and that is where the other half of the defect lives: the very same numbers,
+ * applied as a `heightIn(min = …)` floor above a sheet that animates its own content size,
+ * track the inset exactly on the way up and not at all on the way down, because
+ * `Constraints.constrain` clamps up against `minHeight` and never down against it. The
+ * arithmetic below is symmetric either way, so no assertion here can tell the two apart —
+ * which is why the retraction carries a device row as well as this file.
  */
 class CreateSheetImeHeightTest {
 
@@ -122,6 +130,44 @@ class CreateSheetImeHeightTest {
         assertEquals(rising.size, falling.size)
         rising.zip(falling.reversed()).forEach { (up, down) -> assertDp(up, down) }
         assertDp(createResting, falling.last())
+    }
+
+    @Test
+    fun `a sheet standing taller than its branch minimum still moves on the very first dp`() {
+        // Three of the four modals wrap their content, so what they stand at is
+        // max(content, fraction) and is routinely above the fraction. Feeding the fraction
+        // in as the resting height rather than the measured height is what produces a dead
+        // zone at the start of the rise: the floor spends its first
+        // (measured − minimum) dp below a sheet already standing above it, and the sheet
+        // does not move at all for that part of the keyboard's travel.
+        val measured = createResting + 68.dp
+
+        assertDp(measured + 1.dp, heightAt(measured, 1.dp))
+        assertDp(measured + 40.dp, heightAt(measured, 40.dp))
+
+        // And the dead zone being guarded against is real, or the two assertions above
+        // would be proving nothing: from the branch minimum, 40 dp of keyboard still lands
+        // below where this sheet is already standing.
+        assertTrue(
+            "the branch minimum has to be genuinely below the measured height here",
+            heightAt(createResting, 40.dp) < measured,
+        )
+    }
+
+    @Test
+    fun `the height never exceeds the sheet's own maximum`() {
+        // The answer is applied as an exact height with no `heightIn(max = ...)` outside
+        // it, so the ceiling has to hold on its own — for every resting height the four
+        // branches can measure at, all of which are themselves capped at maxSheetHeight.
+        for (resting in listOf(0.dp, createResting, editResting, maxSheetHeight)) {
+            for (ime in listOf(0.dp, 1.dp, 200.dp, fullKeyboard, 2000.dp)) {
+                val height = heightAt(resting, ime)
+                assertTrue(
+                    "height $height passed the sheet maximum at resting=$resting ime=$ime",
+                    height <= maxSheetHeight,
+                )
+            }
+        }
     }
 
     @Test

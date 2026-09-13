@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -437,19 +438,45 @@ fun CreateTaskBottomSheet(
     // comes from the live inset. See [CreateSheetImeHeight].
     val keyboardSheetHeight = (screenHeight * CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION)
         .coerceAtMost(maxSheetHeight)
-    // What the sheet stands at with the keyboard down — the minimum its own branch below
-    // asks for. The keyboard raises this floor a dp at a time rather than replacing it.
+    // The least its own branch below will accept — a floor under the resting height, not
+    // the resting height itself. Three of the four branches wrap their content, so they
+    // stand taller than this whenever the form is taller than the fraction.
     val restingSheetMinHeight = when {
         usesTallCreateModal || usesFloaterCreateModal -> floaterCreateSheetHeight
         usesScheduledEditModal -> editSheetHeight
         usesFloaterEditModal -> floaterEditSheetHeight
         else -> 0.dp
     }
+    // Where the sheet actually stood the last time the keyboard was down. Climbing from
+    // the branch minimum instead would spend the first (measured − minimum) dp of keyboard
+    // travel below a sheet that is already taller than that, so the sheet would sit still
+    // for that part of the rise and only then start tracking — the late start the device
+    // row is hunting for.
+    var restingSheetHeight by remember { mutableStateOf(0.dp) }
     val keyboardFloorHeight = CreateSheetImeHeight.sheetHeightFor(
-        restingHeight = restingSheetMinHeight,
+        restingHeight = maxOf(restingSheetHeight, restingSheetMinHeight),
         imeHeight = imeHeight,
         keyboardHeight = keyboardSheetHeight,
     )
+    // A content tween belongs in the height chain only while the keyboard is still. With
+    // the inset moving, the sheet is held to it exactly (below), and `animateContentSize`
+    // left in the chain would keep chasing a height it is never allowed to report —
+    // drifting hundreds of dp behind it, because a tween restarts from zero velocity every
+    // time its target moves and so covers under 1 % of the gap per frame. On the frame the
+    // keyboard finally reaches zero and the pin comes off, that stale value is what the
+    // sheet would snap to. Taking the node out for the duration means it is rebuilt at the
+    // size the sheet is actually at, and content changes still animate with the keyboard
+    // down, which is the only time they are visible anyway.
+    val sheetContentSizeAnimation = if (keyboardVisible) {
+        Modifier
+    } else {
+        Modifier.animateContentSize(
+            animationSpec = tween(
+                durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                easing = FastOutSlowInEasing,
+            ),
+        )
+    }
 
     fun submitTask() {
         val due =
@@ -552,56 +579,47 @@ fun CreateTaskBottomSheet(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // The keyboard's floor, applied OUTSIDE the branch below rather
-                        // than instead of it. Every modal keeps its own sizing, and the
-                        // live inset raises the bottom of the range it may size within —
-                        // so the sheet grows a dp per dp of keyboard instead of taking the
-                        // whole trip on the frame the inset first goes non-zero. Outside
-                        // `animateContentSize` on purpose: a floor that rises here clamps
-                        // the animated size up immediately, where a floor inside it would
-                        // hand the keyboard's travel to a second 320 ms tween to chase.
-                        .heightIn(min = keyboardFloorHeight, max = maxSheetHeight)
+                        // Read with the keyboard down only, so what it records is the
+                        // height the climb has to start from and never a height the climb
+                        // itself produced.
+                        .onSizeChanged { size ->
+                            if (!keyboardVisible) {
+                                restingSheetHeight = with(density) { size.height.toDp() }
+                            }
+                        }
+                        // While the inset is anywhere but zero, the keyboard owns the
+                        // height and the sheet is held to it EXACTLY, outside the branch
+                        // below rather than instead of it. An exact height is clamped in
+                        // both directions, so the sheet follows the inset down as
+                        // faithfully as it follows it up. A `heightIn(min = ...)` floor
+                        // here would only clamp upward — on the way down the branch's own
+                        // animated size sits above the falling floor, inside the range,
+                        // and is reported verbatim, which hands the whole retraction to a
+                        // 320 ms tween racing the keyboard's ~250 ms.
+                        .then(
+                            if (keyboardVisible) {
+                                Modifier.height(keyboardFloorHeight)
+                            } else {
+                                Modifier
+                            },
+                        )
                         .then(
                             if (usesTallCreateModal) {
                                 // Wrap content (like the floater create sheet) so the
                                 // bottom padding under the last row matches; a fixed
                                 // height left extra space below Repeat.
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(min = floaterCreateSheetHeight, max = maxSheetHeight)
                             } else if (usesScheduledEditModal) {
                                 Modifier.height(editSheetHeight)
                             } else if (usesFloaterCreateModal) {
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(min = floaterCreateSheetHeight, max = maxSheetHeight)
                             } else if (usesFloaterEditModal) {
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(min = floaterEditSheetHeight, max = maxSheetHeight)
                             } else {
-                                Modifier
-                                    .animateContentSize(
-                                        animationSpec = tween(
-                                            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
+                                sheetContentSizeAnimation
                                     .heightIn(max = maxSheetHeight)
                             },
                         )
