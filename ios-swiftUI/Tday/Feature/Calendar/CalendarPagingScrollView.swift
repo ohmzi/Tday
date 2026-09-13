@@ -91,6 +91,12 @@ struct CalendarPagingScrollView: UIViewRepresentable {
                 return
             }
 
+            // Rebuilding tears out the views the in-flight scroll was aimed at and resets the
+            // content size under it, and UIKit reports none of that back through the delegate.
+            // The index this animation was travelling to no longer means the month it meant when
+            // it started, so the flags describing it are stale the moment the pages change.
+            endProgrammaticScroll()
+
             hostedControllers.forEach { controller in
                 controller.view.removeFromSuperview()
             }
@@ -130,15 +136,48 @@ struct CalendarPagingScrollView: UIViewRepresentable {
             }
 
             let targetX = CGFloat(index) * scrollView.bounds.width
-            guard abs(scrollView.contentOffset.x - targetX) > 0.5 else { return }
+            guard abs(scrollView.contentOffset.x - targetX) > 0.5 else {
+                // Already parked on the target, so nothing is going to scroll and no delegate
+                // callback is coming. An un-animated request is the app putting the pager back
+                // where it belongs — after a settle, after a month change — and arriving there is
+                // the end of the programmatic scroll however we arrived. Returning without saying
+                // so is how a flag set by an earlier animated request outlived the animation that
+                // was meant to clear it, and a stranded flag here silences every settle the pager
+                // will ever report.
+                if !animated {
+                    endProgrammaticScroll()
+                }
+                return
+            }
+            // An animated request for the page we are already animating towards is a duplicate
+            // update, not a new scroll: the original animation is still running and still owns
+            // these flags, so it — not this call — is what clears them.
             guard !animated || programmaticSelection != selection else { return }
 
             isProgrammaticScroll = true
             programmaticSelection = animated ? selection : nil
             scrollView.setContentOffset(CGPoint(x: targetX, y: 0), animated: animated)
             if !animated {
-                isProgrammaticScroll = false
+                // `setContentOffset(_:animated: false)` fires no
+                // `scrollViewDidEndScrollingAnimation`, so this jump has to retract its own flag
+                // rather than wait for a callback that is never sent.
+                endProgrammaticScroll()
             }
+        }
+
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            // UIKit kills a `setContentOffset(_:animated: true)` the instant a touch takes the
+            // scroll view, and it does NOT call `scrollViewDidEndScrollingAnimation` for the
+            // animation it just threw away. That callback was the only thing clearing these flags,
+            // so a finger landing on a chevron slide left `isProgrammaticScroll` true with nothing
+            // in the app able to set it false again: `updateSelection` then declined every drag
+            // that followed, the calendar stopped changing page on swipe, `pageSelection` never
+            // returned to centre, and both chevrons stayed disabled until the process died.
+            //
+            // A drag beginning is the unambiguous signal that whatever the app was animating no
+            // longer owns this scroll view, which makes this the one callback UIKit is guaranteed
+            // to send on the path that used to strand.
+            endProgrammaticScroll()
         }
 
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
@@ -152,9 +191,20 @@ struct CalendarPagingScrollView: UIViewRepresentable {
         }
 
         func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+            endProgrammaticScroll()
+            notifySettledSelection(from: scrollView)
+        }
+
+        /// Forgets an in-flight programmatic scroll.
+        ///
+        /// `isProgrammaticScroll` exists to stop a scroll the app started from being read back as
+        /// a page the user chose, which makes it a latch — and every latch needs a path that opens
+        /// it again on each frame the animation stops mattering, not just the happy one. Routing
+        /// all of them through a single method is what keeps that list honest: there are four ways
+        /// a programmatic scroll can end here and only one of them is UIKit telling us so.
+        private func endProgrammaticScroll() {
             isProgrammaticScroll = false
             programmaticSelection = nil
-            notifySettledSelection(from: scrollView)
         }
 
         private func updateSelection(from scrollView: UIScrollView) {
