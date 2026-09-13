@@ -565,9 +565,39 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 25c — three small calendar and dialog cuts
 
-- [ ] `web-calendar-back-swipe-at-floor-is-silent` — rejected swipe at the earliest month produces no feedback at all · web · Sev 2 · S · Gate V
-- [ ] `web-calendar-drag-overlay-drops-with-no-animation` — `dropAnimation={null}`; card vanishes at release · web · Sev 2 · XS · Gate V+D
-- [ ] `web-delete-dialog-has-no-fallback` — first Delete tap renders literally nothing until the chunk lands · web · Sev 2 · XS · Gate V
+- [x] `web-calendar-back-swipe-at-floor-is-silent` — rejected swipe at the earliest month produces no feedback at all · web · Sev 2 · S · Gate V
+  - The card resists 8px and comes back, on Quick with the Gesture curve the paging slide already
+    uses — short enough that it cannot be read as a page turn that started and changed its mind.
+    The answer is given at the refusal rather than at the gesture: `animateToDate` now reports
+    whether the page turned, so the arrow keys get the same answer the swipe does and the floor
+    rule stays in one place.
+  - Reduced motion gets nothing, deliberately. A refusal ends where it began, so the fifth idiom
+    rule's "keep the destination" has no destination to keep; the flag is not raised at all in that
+    case. The still signal there is the previous chevron, `disabled` at the floor.
+  - Android does not share this row: its `HorizontalPager` gets the platform's stretch overscroll
+    at page 0. iOS does — `CalendarPagingScrollView.swift:37` sets `bounces = false` — and is not
+    fixed here, there being no Swift toolchain on this machine. Filed under **PR 26**.
+- [x] `web-calendar-drag-overlay-drops-with-no-animation` — `dropAnimation={null}`; card vanishes at release · web · Sev 2 · XS · Gate V+D
+  - Emphasis on the Enter curve, only those two values named; dnd-kit keeps its own keyframes and
+    the side effect that hides the row underneath.
+  - What the library decides, and therefore what the fix does not reach: dnd-kit measures the
+    draggable's node at the drop and declines to animate if it has gone. A card released over
+    nothing or back on its own day flies home; one dropped on another day flies to where its row
+    was, and if the optimistic update has already removed that row there is no landing to play.
+    The first case is the one the old code punished hardest — changing your mind deleted the card
+    you were holding.
+  - The two sibling drag contexts (`TimelineDndContext`, `TodayBucketDnd`) carry the identical
+    `dropAnimation={null}` and are left for their own rows, which is why the config sits in the
+    calendar's `lib/`.
+- [x] `web-delete-dialog-has-no-fallback` — first Delete tap renders literally nothing until the chunk lands · web · Sev 2 · XS · Gate V
+  - Both boundaries render unconditionally, so the import starts at row mount rather than at the
+    tap; what is left is a cold cache or a bad connection. The fallback is gated on the open flag —
+    ungated it would flash a modal over the calendar on first paint, once per row.
+  - Built from the Modal primitives, so the scrim, the card and the click-to-dismiss are the real
+    dialog's. Known cost: a chunk that lands mid-enter makes the real dialog play that enter again
+    from the start. Removing it means hoisting the modal shell out of the lazy chunk so only the
+    body swaps — a change to both dialogs and their boundary, not a rider on a fallback.
+  - `ModalPlaceholder` is still unimported: it is the edit form's shape, and PR 49 owns it.
 
 ### PR 25d — the highlight ring is clipped away by the row's own collapse wrapper
 
