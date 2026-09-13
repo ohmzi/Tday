@@ -1,21 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Options, RRule } from "rrule";
-import { TodoItemType } from "@/types";
+import { RRule } from "rrule";
 import { useCreateCalendarTodo } from "@/features/calendar/query/create-calendar-todo";
 import ConfirmCancelEditDialog from "@/features/calendar/component/ConfirmationModals/ConfirmCancelEdit";
 import { Modal, ModalOverlay, ModalContent } from "@/components/ui/Modal";
 import { SheetHeader } from "@/components/ui/sheet-chrome";
-import deriveRepeatType from "@/lib/deriveRepeatType";
+import type { CalendarTaskFormState } from "@/features/calendar/hooks/useCalendarTaskFormState";
 import CalendarTaskFormBody from "../CalendarTaskFormBody";
-
-type ModalDateRange = { from: Date; to: Date };
 
 type CreateCalendarFormProps = {
   start: Date;
   end: Date;
   displayForm: boolean;
   setDisplayForm: React.Dispatch<React.SetStateAction<boolean>>;
+  /** Owned by CreateFormContainer so it outlives the 640 px modal/drawer swap. */
+  form: CalendarTaskFormState;
 };
 
 const CreateCalendarForm = ({
@@ -23,19 +22,28 @@ const CreateCalendarForm = ({
   end,
   displayForm,
   setDisplayForm,
+  form,
 }: CreateCalendarFormProps) => {
   void start;
   const { t: appDict } = useTranslation("app");
   const titleRef = useRef<HTMLDivElement | null>(null);
 
   const [cancelEditDialogOpen, setCancelEditDialogOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<TodoItemType["priority"]>("Low");
-  const [dateRange, setDateRange] = useState<ModalDateRange>({ from: end, to: end });
-  const [rruleOptions, setRruleOptions] = useState<Partial<Options> | null>(null);
-  const [listID, setListID] = useState<string | null>(null);
-  const derivedRepeatType = deriveRepeatType({ rruleOptions });
+  const {
+    title,
+    setTitle,
+    description,
+    setDescription,
+    priority,
+    setPriority,
+    dateRange,
+    setDateRange,
+    rruleOptions,
+    setRruleOptions,
+    listID,
+    setListID,
+    derivedRepeatType,
+  } = form;
 
   const { createCalendarTodo, createTodoStatus } = useCreateCalendarTodo();
 
