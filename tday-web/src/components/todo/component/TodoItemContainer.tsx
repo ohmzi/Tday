@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { Checkbox } from "@/components/ui/checkbox";
 import clsx from "clsx";
-import { TASK_COMPLETION_FADE_MS } from "@/lib/taskCompletionTiming";
+import { TASK_COMPLETION_REMOVING_TRANSITION } from "@/lib/taskCompletionTiming";
+import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
 import {
   stageTaskCompletion,
   useTaskCompletionPhase,
@@ -80,17 +81,21 @@ export const TodoItemCard = ({
   const [displayForm, setDisplayForm] = useState(false);
   const [editInstanceOnly, setEditInstanceOnly] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
-  // Staged completion, matching the native rows exactly (Android/iOS use 160/360/260ms):
-  //   checked (green tick) → struck (title sweep + notes line-through) → fading → removed.
-  // The whole sequence is ~780ms and runs on its own timers — it is not gated on the undo
-  // toast, which lives for 5s independently.
+  // Staged completion, on the native rows' beats (Android/iOS use 160/360):
+  //   checked (green tick) → struck (title sweep + notes line-through) → removing → gone.
+  // The whole sequence runs on its own timers — it is not gated on the undo toast, which lives
+  // for 5s independently.
   //
   // The phase is read from `taskCompletionStaging`, not held here, because the row has no right
-  // to those 780ms: a filter change or a re-keyed list unmounts it mid-sequence, and when the
+  // to that window: a filter change or a re-keyed list unmounts it mid-sequence, and when the
   // timers were component state the unmount cleanup threw the user's completion away with them.
   // Keyed by task id, so a row that leaves and comes back rejoins its own sequence.
   const completePhase = useTaskCompletionPhase(todoItem.id);
   const completing = completePhase !== null;
+  const removing = completePhase === "removing";
+  // Subscribed rather than read once: this decides what the row renders, so a reader who turns
+  // reduce-motion on mid-session must not be stuck with the answer given at mount.
+  const reduceMotion = usePrefersReducedMotion();
 
   // Mobile swipe-to-reveal (mirrors the native slide-to-edit/copy/delete). The
   // row foreground translates left to expose Edit + Copy + Delete. A quick
@@ -215,15 +220,28 @@ export const TodoItemCard = ({
         id={getTodoFocusElementId(todoItem.id)}
         ref={setCombinedRef}
         style={
-          completePhase === "removing"
-            ? { ...style, opacity: 0, transition: `opacity ${TASK_COMPLETION_FADE_MS}ms ease` }
+          removing
+            ? {
+                ...style,
+                opacity: 0,
+                // Closing the track is the whole height animation. Under reduced motion the row
+                // is handed the same finished frame with nothing to carry it there: an empty box
+                // and no ink, which is the destination without the trip.
+                gridTemplateRows: "0fr",
+                transition: reduceMotion ? undefined : TASK_COMPLETION_REMOVING_TRANSITION,
+              }
             : style
         }
         {...containerProps}
         className={clsx(
           // No per-row divider — the date group owns a single divider after its
           // last task (see TodoGroup / TimelineSectionDroppable).
-          "group relative max-w-full overflow-hidden sm:overflow-visible",
+          //
+          // A grid with one 1fr row so the box has something interpolable to collapse: `height`
+          // cannot be animated away from `auto`, and a measured pixel height would have to be
+          // re-measured every time the title rewraps. Same trick the settings editors' `Collapse`
+          // uses. The swipe actions sit out of flow and so never size the track.
+          "group relative grid max-w-full grid-rows-[1fr] overflow-hidden sm:overflow-visible",
           dragging && "opacity-70",
         )}
       >
@@ -348,6 +366,11 @@ export const TodoItemCard = ({
               ? "none"
               : "transform 220ms ease, background-color 150ms ease",
             touchAction: "pan-y",
+            // A grid item's automatic minimum size is its own content, so the track above can
+            // only close once this one is allowed to be smaller than the row it holds. Applied
+            // while removing rather than always: clipping a row that is staying would cost it
+            // the focus ring and the hover actions that sit proud of its box.
+            ...(removing ? { overflow: "hidden", minHeight: 0 } : null),
           }}
           className={clsx(
             // Flat native-style row; transparent so the screen watermark shows
@@ -391,7 +414,7 @@ export const TodoItemCard = ({
             <p
               className={clsx(
                 "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
-                (completePhase === "struck" || completePhase === "removing") &&
+                (completePhase === "struck" || removing) &&
                   "task-strike text-muted-foreground",
               )}
             >
@@ -402,7 +425,7 @@ export const TodoItemCard = ({
             <pre
               className={clsx(
                 "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
-                (completePhase === "struck" || completePhase === "removing") &&
+                (completePhase === "struck" || removing) &&
                   "line-through",
               )}
             >
