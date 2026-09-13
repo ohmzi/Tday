@@ -60,15 +60,22 @@ export default function TodoCheckbox({
 
       {variant === "outline-solid" ? (
         <div
-          // Pointer, not mouse. This is the most-tapped control in the app and the pop was armed
-          // from `onMouseDown`, an event a touch browser either synthesises several hundred
-          // milliseconds late — after the tap has already been dispatched — or never sends at
-          // all. The phone got the sound, the haptic and the strike, and the one piece of
-          // feedback that belongs to the finger itself was the piece it did not get.
+          // Pointer, not mouse, for the pop. This is the most-tapped control in the app and the
+          // squash was armed from `onMouseDown`, an event a touch browser either synthesises
+          // several hundred milliseconds late — after the tap has already been dispatched — or
+          // never sends at all. The phone got the sound, the haptic and the strike, and the one
+          // piece of feedback that belongs to the finger itself was the piece it did not get.
           onPointerDown={(e) => {
             e.stopPropagation();
             setExpand(true);
           }}
+          // `mousedown` stays stopped as well, and for a different reason: the rows this
+          // checkbox sits in are dnd-kit draggables whose `MouseSensor` activates on `mousedown`,
+          // not on `pointerdown`. `TaskActionButtons.tsx` writes that lesson up at length — a
+          // click with a few pixels of travel in it gets read as a drag-start and swallowed.
+          // Arming the pop from the pointer is about when the squash is drawn; this is about
+          // whether the tap survives at all, so one does not replace the other.
+          onMouseDown={(e) => e.stopPropagation()}
           className={clsx(
             "relative group w-5 h-5 rounded-full flex items-center justify-center border-[2.23px]",
             // One transition for the squash and the fill, on one curve, because they are one
@@ -99,6 +106,8 @@ export default function TodoCheckbox({
               e.stopPropagation();
               setExpand(true);
             }}
+            // The drag-sensor guard the outline variant carries, for the same reason.
+            onMouseDown={(e) => e.stopPropagation()}
             className={clsx(
               "group w-[1.35rem] h-[1.35rem] flex items-center justify-center",
               checked ? "text-accent-lime" : "text-foreground",
