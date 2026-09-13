@@ -193,6 +193,9 @@ fun TdayPullToRefreshBox(
                 // starts, and stays sprung for the whole unwind afterwards so the
                 // release never re-reads the stale fraction.
                 animationSpec = if (contentHome) {
+                    // not a token — see docs/motion.md. 0.72 is looser than any
+                    // spring in the vocabulary on purpose: the feed is being let
+                    // go, not placed.
                     spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
                 } else {
                     snap()
