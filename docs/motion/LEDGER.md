@@ -176,7 +176,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 6 — Today drag targets survive an emptied section
 
-- [ ] `and-today-drag-targets-dropped-when-empty` — Morning/Afternoon/Tonight vanish mid-drag; an Earlier row has nowhere to drop · and · Sev 2 · XS · Gate J
+- [x] `and-today-drag-targets-dropped-when-empty` — Morning/Afternoon/Tonight vanish mid-drag; an Earlier row has nowhere to drop · and · Sev 2 · XS · Gate J
 
 ## Phase 1 — guardrails
 
