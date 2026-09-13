@@ -186,9 +186,12 @@ private const val CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
 private const val CALENDAR_TASK_COMPLETION_FADE_MS = 260L
 private val CalendarTaskDragDueTimeFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).withZone(ZoneId.systemDefault())
-private const val CalendarMonthPagerPageCount = 240
-private const val CalendarWeekPagerPageCount = 1040
-private const val CalendarDayPagerPageCount = 3650
+// Internal rather than private because `CalendarPageSelection.kt` owns the page
+// arithmetic these three size, and a page count that lived in only one of the
+// two files would be a clamp the decisions could disagree with.
+internal const val CalendarMonthPagerPageCount = 240
+internal const val CalendarWeekPagerPageCount = 1040
+internal const val CalendarDayPagerPageCount = 3650
 
 private fun shouldShowDateDivider(
     afterItemIndex: Int,
@@ -1062,37 +1065,68 @@ private fun CalendarWeekCard(
         }
     }
 
-    fun dateForPage(page: Int): LocalDate {
-        return minWeekStart.plusWeeks(page.toLong()).plusDays(selectedDayOffset)
-    }
+    // The date a Today jump is carrying while its sweep is in the air. The week
+    // pager's own settle arithmetic only knows the weekday the user came in on,
+    // so without this the sweep lands on today's week with last week's weekday
+    // still selected.
+    var pendingTodayJumpDate by remember { mutableStateOf<LocalDate?>(null) }
 
     fun settlePage(page: Int) {
-        val targetDate = dateForPage(page)
-        if (canSelectDate(targetDate)) {
-            TdayTelemetry.addBreadcrumb(
-                "calendar.page",
-                data = mapOf(
-                    "mode" to "week",
-                    "direction" to if (page >= currentPage) "next" else "previous",
-                ),
+        // One settle consumes the pending jump whether or not this is the page
+        // the jump asked for: a finger that grabs the sweep mid-flight lands
+        // somewhere else entirely, and a target left pending would then fire on
+        // whatever week the user paged to next.
+        val jumpTarget = pendingTodayJumpDate
+        pendingTodayJumpDate = null
+        val targetDate = weekPageSettleSelection(
+            minWeekStart = minWeekStart,
+            page = page,
+            preferredDayOffset = selectedDayOffset,
+            pendingJumpDate = jumpTarget,
+            canSelectDate = canSelectDate,
+        )
+        if (targetDate == null) {
+            // No day on this page may be selected, so the screen has nothing it
+            // can say about it: the header, the day list and the `+` prefill
+            // would all go on describing the week we left. Send the pager back
+            // to the page the selection does describe rather than sit in that
+            // split state saying nothing, which is what it used to do.
+            scrollRequest = CalendarPagerScrollRequest(
+                id = System.nanoTime().toInt(),
+                page = currentPage,
             )
-            onSelectDate(targetDate)
+            return
         }
+        TdayTelemetry.addBreadcrumb(
+            "calendar.page",
+            data = mapOf(
+                "mode" to "week",
+                "direction" to if (page >= currentPage) "next" else "previous",
+            ),
+        )
+        onSelectDate(targetDate)
     }
 
     LaunchedEffect(todayJumpRequest) {
         val request = todayJumpRequest ?: return@LaunchedEffect
-        val targetWeek = startOfWeek(request.targetDate)
-        if (targetWeek == weekStart) {
-            onSelectDate(request.targetDate)
-            onTodayJumpHandled(request.id)
-        } else {
-            val targetPage = ChronoUnit.WEEKS.between(minWeekStart, targetWeek)
-                .toInt()
-                .coerceIn(0, CalendarWeekPagerPageCount - 1)
-            scrollRequest = CalendarPagerScrollRequest(request.id, targetPage)
-            onTodayJumpHandled(request.id)
+        when (
+            val jump = weekPagerTodayJump(
+                minWeekStart = minWeekStart,
+                currentPage = currentPage,
+                targetDate = request.targetDate,
+            )
+        ) {
+            is CalendarTodayJump.SelectNow -> {
+                pendingTodayJumpDate = null
+                onSelectDate(jump.date)
+            }
+
+            is CalendarTodayJump.PageThenSelect -> {
+                pendingTodayJumpDate = jump.date
+                scrollRequest = CalendarPagerScrollRequest(request.id, jump.page)
+            }
         }
+        onTodayJumpHandled(request.id)
     }
 
     Card(
@@ -1460,16 +1494,22 @@ private fun CalendarDayCard(
 
     LaunchedEffect(todayJumpRequest) {
         val request = todayJumpRequest ?: return@LaunchedEffect
-        if (request.targetDate == selectedDate) {
-            onSelectDate(request.targetDate)
-            onTodayJumpHandled(request.id)
-        } else {
-            val targetPage = ChronoUnit.DAYS.between(minDate, request.targetDate)
-                .toInt()
-                .coerceIn(0, CalendarDayPagerPageCount - 1)
-            scrollRequest = CalendarPagerScrollRequest(request.id, targetPage)
-            onTodayJumpHandled(request.id)
+        when (
+            val jump = dayPagerTodayJump(
+                minDate = minDate,
+                currentPage = currentPage,
+                targetDate = request.targetDate,
+            )
+        ) {
+            is CalendarTodayJump.SelectNow -> onSelectDate(jump.date)
+
+            // Alone of the three, this pager's page *is* its date, so the settle
+            // below re-derives exactly the day the jump asked for and nothing
+            // has to wait in the air for it.
+            is CalendarTodayJump.PageThenSelect ->
+                scrollRequest = CalendarPagerScrollRequest(request.id, jump.page)
         }
+        onTodayJumpHandled(request.id)
     }
 
     Card(
@@ -1580,11 +1620,6 @@ private fun CalendarDayCard(
             }
         }
     }
-}
-
-private fun startOfWeek(date: LocalDate): LocalDate {
-    val sundayOffset = date.dayOfWeek.value % 7
-    return date.minusDays(sundayOffset.toLong())
 }
 
 private fun formatWeekRange(weekStart: LocalDate): String {
@@ -1796,7 +1831,16 @@ private fun CalendarMonthCard(
         return minNavigableMonth.plusMonths(page.toLong())
     }
 
+    // The date a Today jump is carrying while its sweep is in the air. A settled
+    // month page carries no day of its own — swiping to November means "show me
+    // November", not "select a day in November" — so a cross-month jump has to
+    // hand its date over here or arrive with the selection left behind.
+    var pendingTodayJumpDate by remember { mutableStateOf<LocalDate?>(null) }
+
     fun settlePage(page: Int) {
+        // Consumed on any settle, not only a matching one: see the week card.
+        val jumpTarget = pendingTodayJumpDate
+        pendingTodayJumpDate = null
         TdayTelemetry.addBreadcrumb(
             "calendar.page",
             data = mapOf(
@@ -1804,22 +1848,42 @@ private fun CalendarMonthCard(
                 "direction" to if (page >= currentPage) "next" else "previous",
             ),
         )
-        onVisibleMonthChanged(monthForPage(page))
+        val jumpSelection = monthPageSettleSelection(
+            minNavigableMonth = minNavigableMonth,
+            page = page,
+            pendingJumpDate = jumpTarget,
+        )
+        if (jumpSelection != null) {
+            // `onSelectDate` moves the visible month as well as the day, so this
+            // is the whole settle — and it is the only thing that moves the
+            // "Tasks due …" heading, the day list and the `+` prefill onto the
+            // month the sweep just landed on.
+            onSelectDate(jumpSelection)
+        } else {
+            onVisibleMonthChanged(monthForPage(page))
+        }
     }
 
     LaunchedEffect(todayJumpRequest) {
         val request = todayJumpRequest ?: return@LaunchedEffect
-        val targetMonth = YearMonth.from(request.targetDate)
-        if (targetMonth == visibleMonth) {
-            onSelectDate(request.targetDate)
-            onTodayJumpHandled(request.id)
-        } else {
-            val targetPage = ChronoUnit.MONTHS.between(minNavigableMonth, targetMonth)
-                .toInt()
-                .coerceIn(0, CalendarMonthPagerPageCount - 1)
-            scrollRequest = CalendarPagerScrollRequest(request.id, targetPage)
-            onTodayJumpHandled(request.id)
+        when (
+            val jump = monthPagerTodayJump(
+                minNavigableMonth = minNavigableMonth,
+                currentPage = currentPage,
+                targetDate = request.targetDate,
+            )
+        ) {
+            is CalendarTodayJump.SelectNow -> {
+                pendingTodayJumpDate = null
+                onSelectDate(jump.date)
+            }
+
+            is CalendarTodayJump.PageThenSelect -> {
+                pendingTodayJumpDate = jump.date
+                scrollRequest = CalendarPagerScrollRequest(request.id, jump.page)
+            }
         }
+        onTodayJumpHandled(request.id)
     }
 
     Card(
