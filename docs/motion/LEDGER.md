@@ -270,9 +270,17 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 51 — three web surfaces with no transition at all
 
-- [ ] `web-calendar-search-results-pop` — mobile search results panel is a bare conditional · web · Sev 1 · XS · Gate V
-- [ ] `web-bulk-selection-bar-has-no-transition` — fixed bottom bar with no enter and no exit · web · Sev 1 · XS · Gate V
-- [ ] `web-floater-row-dead-dnd-subscription` — every floater row calls `useSortable` with no `DndContext` anywhere · web · Sev 1 · XS · Gate V
+- [x] `web-calendar-search-results-pop` — mobile search results panel is a bare conditional · web · Sev 1 · XS · Gate V
+  - The panel is not in `CalendarClient` — it lives in the shared
+    `components/ui/MobileSearchHeader.tsx`, which every screen's pinned bar uses.
+    Calendar is simply the only caller that passes `onSelectResult` today, which
+    is why the row reads as a calendar defect.
+- [x] `web-bulk-selection-bar-has-no-transition` — fixed bottom bar with no enter and no exit · web · Sev 1 · XS · Gate V
+- [x] `web-floater-row-dead-dnd-subscription` — every floater row calls `useSortable` with no `DndContext` anywhere · web · Sev 1 · XS · Gate V
+  - Resolved by REMOVING the subscription, not by wiring a context: floater order
+    is fixed (priority → most-recently-modified → id, shared with both native
+    clients and the widgets) and drag-to-reorder is retired there, as
+    `FloaterGroup`'s own doc comment already says.
 
 ### PR 18 — the rest of web’s dead motion code
 

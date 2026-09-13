@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
 import {
   TASK_COMPLETION_CHECK_TO_STRIKE_MS,
@@ -42,13 +40,15 @@ export default function FloaterItemContainer({
   highlighted = false,
   readOnly = false,
 }: FloaterItemContainerProps) {
-  // attributes/listeners intentionally unused — see TodoItemContainer.
-  const { setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: floater.id });
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-  };
+  // No `useSortable` here, deliberately. Floater order is fixed (see
+  // `FloaterGroup`) and drag-to-reorder is retired, so there is no
+  // `DndContext` anywhere above this row — the subscription every row used to
+  // open resolved against dnd-kit's default context, registered a droppable
+  // nobody could ever drag onto, and re-ran its measuring work on every render
+  // of every row in the list for a `transform` that was permanently null and an
+  // `isDragging` that was permanently false. The scheduled row
+  // (`TodoItemContainer`) keeps its own for the opposite reason: it really does
+  // render inside a drag context.
   const { floaterListMetaData } = useFloaterListMetaData();
   const { completeMutateFn } = useCompleteFloater();
   const { deleteMutateFn } = useDeleteFloater();
@@ -172,15 +172,13 @@ export default function FloaterItemContainer({
   return (
     <>
       <div
-        ref={setNodeRef}
         style={
           completePhase === "removing"
-            ? { ...style, opacity: 0, transition: `opacity ${TASK_COMPLETION_FADE_MS}ms ease` }
-            : style
+            ? { opacity: 0, transition: `opacity ${TASK_COMPLETION_FADE_MS}ms ease` }
+            : undefined
         }
         className={clsx(
           "group relative max-w-full overflow-hidden transition-opacity sm:overflow-visible",
-          isDragging && "opacity-70",
           resting && "opacity-50 saturate-[0.65]",
         )}
       >
