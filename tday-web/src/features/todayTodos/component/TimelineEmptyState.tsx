@@ -66,9 +66,10 @@ export default function TimelineEmptyState({
       )}
     >
       {/* The track the grid above closes. It is the one that takes the clip
-          while the exit runs — a grid item that is not a scroll container keeps
-          its own content height as the track's floor (see globals.css) — so it
-          has to be a box of this component's own rather than the scene's. */}
+          while the track is closing — a grid item that is not a scroll container
+          keeps its own content height as the track's floor (see globals.css) —
+          so it has to be a box of this component's own rather than the
+          scene's. */}
       <div>
         <EmptyState
           // Day Done keeps its own glyph and its date line: it is a payoff,
