@@ -99,6 +99,115 @@ func mergeCompletedFloaterRecordsWithPendingOverrides(
     return mergedRecords
 }
 
+/// What the pending-mutation replay should do with a mutation whose push just
+/// failed. Pulled out of `SyncManager.applyPendingMutations` so the decision — and
+/// with `applyPendingMutationReplayOutcome`, its effect on the queue — is a pure
+/// state machine the tests can drive without a network or a `SyncManager`.
+enum PendingMutationReplayOutcome: Equatable {
+    /// Stop the replay here, leaving this mutation AND every later one queued for
+    /// the next sync. Nothing is dropped and nothing is marked failed.
+    case stopAndKeepRemaining
+    /// Keep this one mutation queued and carry on with the rest of the replay.
+    case keepAndContinue
+    /// The server will never accept this one; drop it and carry on.
+    case dropAndContinue
+}
+
+func pendingMutationReplayOutcome(for error: Error) -> PendingMutationReplayOutcome {
+    // No network / backend down: every later request would fail the same way.
+    if isLikelyConnectivityIssue(error) {
+        return .stopAndKeepRemaining
+    }
+    // Same treatment, for the same reason. A 429 says the account's rate-limit
+    // window is already closed, and the remaining mutations share that window —
+    // firing them anyway can only push the window further out, and the replay
+    // previously kept going and spent the rest of the queue against a limiter that
+    // was already refusing. They stay queued, so the next sync replays them.
+    if isRateLimitedError(error) {
+        return .stopAndKeepRemaining
+    }
+    return isLikelyUnrecoverableMutationError(error) ? .dropAndContinue : .keepAndContinue
+}
+
+/// Applies `outcome` to the replay's keep-list. Returns true when the replay should
+/// stop, in which case `remaining` has been extended with the failed mutation and
+/// every mutation after it, exactly as the queue needs to look for the next sync.
+func applyPendingMutationReplayOutcome(
+    _ outcome: PendingMutationReplayOutcome,
+    at index: Int,
+    of orderedMutations: [PendingMutationRecord],
+    keeping remaining: inout [PendingMutationRecord]
+) -> Bool {
+    switch outcome {
+    case .stopAndKeepRemaining:
+        remaining.append(contentsOf: orderedMutations[index...])
+        return true
+    case .keepAndContinue:
+        remaining.append(orderedMutations[index])
+        return false
+    case .dropAndContinue:
+        return false
+    }
+}
+
+/// What one pass of the pending-mutation replay left behind.
+struct PendingMutationReplayResult: Equatable {
+    /// Exactly the queue to write back to the cache: staged markers that were never
+    /// attempted, mutations kept after a recoverable failure, and — when the pass
+    /// stopped — the failed mutation plus every later one, in replay order.
+    var remaining: [PendingMutationRecord]
+    /// True when the pass stopped early because the server answered 429. The caller
+    /// uses it to keep the rest of the sync cycle out of a window it already knows
+    /// is closed.
+    var stoppedOnRateLimit: Bool
+}
+
+/// The replay loop itself, with the per-mutation network push pushed out behind
+/// `apply`.
+///
+/// This is the loop `SyncManager.applyPendingMutations` runs, not a copy of it: that
+/// method's only job is to supply the closure and fold the result back into the
+/// state. Keeping the loop here — the staged skip, the classification, the effect on
+/// the keep-list and the early exit — is what lets a test drive the shipping control
+/// flow with a stub that throws a 429 at a chosen index. A test that rebuilt the loop
+/// itself would keep passing if this one were reverted.
+@MainActor
+func runPendingMutationReplay(
+    _ orderedMutations: [PendingMutationRecord],
+    apply: (Int, PendingMutationRecord) async throws -> Void
+) async -> PendingMutationReplayResult {
+    var remaining: [PendingMutationRecord] = []
+    for index in orderedMutations.indices {
+        let mutation = orderedMutations[index]
+        if mutation.staged {
+            // A delayed-commit list/floater-list delete still inside its undo
+            // window (see PendingMutationRecord.staged): never replay it — that
+            // would leak the delete to the server before Undo/commit resolves —
+            // just keep it pending so mergeRemoteWithLocal's resurrection guard
+            // keeps covering the list for as long as it stays staged.
+            remaining.append(mutation)
+            continue
+        }
+        do {
+            try await apply(index, mutation)
+        } catch {
+            let shouldStop = applyPendingMutationReplayOutcome(
+                pendingMutationReplayOutcome(for: error),
+                at: index,
+                of: orderedMutations,
+                keeping: &remaining
+            )
+            if shouldStop {
+                return PendingMutationReplayResult(
+                    remaining: remaining,
+                    stoppedOnRateLimit: isRateLimitedError(error)
+                )
+            }
+        }
+    }
+    return PendingMutationReplayResult(remaining: remaining, stoppedOnRateLimit: false)
+}
+
 @MainActor
 final class SyncManager {
     private let api: TdayAPIService
@@ -220,9 +329,31 @@ final class SyncManager {
 
         let initialRemote = try await fetchRemoteSnapshot()
         if shouldReplay {
-            state = try await applyPendingMutations(initialState: state, remoteSnapshot: initialRemote)
+            let replay = await applyPendingMutations(initialState: state, remoteSnapshot: initialRemote)
+            state = replay.state
             let replayChangedContent = try await cacheManager.saveOfflineState(state, notify: false)
             cacheContentChanged = cacheContentChanged || replayChangedContent
+            if replay.stoppedOnRateLimit {
+                // The replay just backed off because the server answered 429. That
+                // limit is per-account and covers the whole `/api/` prefix (backend
+                // `RateLimiting.kt` applies the `api_global` policy to every path
+                // under it), so the second `fetchRemoteSnapshot()` below would fire
+                // seven more GETs straight into the window that had already refused a
+                // write — very likely 429ing again. And a 429 is not a connectivity
+                // error, so unlike the back-off it would propagate out of here and
+                // reach the user as "Too many requests" instead of staying quiet.
+                //
+                // Stop the cycle here instead. Nothing is lost: the retained queue was
+                // persisted by the save above, `lastSyncAttemptEpochMs` was recorded
+                // before any network work, and `lastSuccessfulSyncEpochMs` is
+                // deliberately left untouched so the next cycle re-syncs — which it
+                // will do regardless of the resync interval, because a non-empty
+                // pending queue forces `shouldSync`.
+                if cacheContentChanged {
+                    try await cacheManager.notifyCacheChanged()
+                }
+                return true
+            }
         }
 
         let latestRemote = try await fetchRemoteSnapshot()
@@ -632,49 +763,42 @@ final class SyncManager {
         return generated
     }
 
-    private func applyPendingMutations(initialState: OfflineSyncState, remoteSnapshot: RemoteSnapshot) async throws -> OfflineSyncState {
+    /// Replays the queue and reports whether it stopped on a 429, so the caller can
+    /// keep the rest of the cycle out of the same closed rate-limit window.
+    private func applyPendingMutations(
+        initialState: OfflineSyncState,
+        remoteSnapshot: RemoteSnapshot
+    ) async -> (state: OfflineSyncState, stoppedOnRateLimit: Bool) {
         var state = initialState
-        var remaining: [PendingMutationRecord] = []
         var resolvedTodoIDs: [String: String] = [:]
         var resolvedFloaterIDs: [String: String] = [:]
         var resolvedListIDs: [String: String] = [:]
         var resolvedFloaterListIDs: [String: String] = [:]
         let orderedMutations = initialState.pendingMutations.sorted { $0.timestampEpochMs < $1.timestampEpochMs }
 
-        for index in orderedMutations.indices {
-            let mutation = orderedMutations[index]
-            if mutation.staged {
-                // A delayed-commit list/floater-list delete still inside its undo
-                // window (see PendingMutationRecord.staged): never replay it — that
-                // would leak the delete to the server before Undo/commit resolves —
-                // just keep it pending so mergeRemoteWithLocal's resurrection guard
-                // keeps covering the list for as long as it stays staged.
-                remaining.append(mutation)
-                continue
-            }
-            do {
-                try await applyPendingMutation(
-                    mutation,
-                    state: &state,
-                    remoteSnapshot: remoteSnapshot,
-                    resolvedTodoIDs: &resolvedTodoIDs,
-                    resolvedFloaterIDs: &resolvedFloaterIDs,
-                    resolvedListIDs: &resolvedListIDs,
-                    resolvedFloaterListIDs: &resolvedFloaterListIDs
-                )
-            } catch {
-                if isLikelyConnectivityIssue(error) {
-                    remaining.append(contentsOf: orderedMutations[index...])
-                    break
-                }
-                if !isLikelyUnrecoverableMutationError(error) {
-                    remaining.append(mutation)
-                }
-            }
+        let replay = await runPendingMutationReplay(orderedMutations) { _, mutation in
+            try await self.applyPendingMutation(
+                mutation,
+                state: &state,
+                remoteSnapshot: remoteSnapshot,
+                resolvedTodoIDs: &resolvedTodoIDs,
+                resolvedFloaterIDs: &resolvedFloaterIDs,
+                resolvedListIDs: &resolvedListIDs,
+                resolvedFloaterListIDs: &resolvedFloaterListIDs
+            )
         }
 
-        state.pendingMutations = dedupePendingMutations(remaining)
-        return state
+        state.pendingMutations = dedupePendingMutations(replay.remaining)
+        if replay.stoppedOnRateLimit {
+            // The real post-replay queue length, i.e. what is about to be persisted —
+            // the failed mutation and everything after it PLUS anything the earlier
+            // part of the pass already kept (staged markers, recoverable failures).
+            TdayTelemetry.addBreadcrumb(
+                "sync.replay_rate_limited",
+                data: ["remainingMutationCount": state.pendingMutations.count]
+            )
+        }
+        return (state, replay.stoppedOnRateLimit)
     }
 
     private func applyPendingMutation(

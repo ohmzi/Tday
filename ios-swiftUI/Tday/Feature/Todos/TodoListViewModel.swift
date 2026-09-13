@@ -631,7 +631,10 @@ final class TodoListViewModel {
         aiSummaryEnabled = snapshot.aiSummaryEnabled
         errorMessage = nil
         if mode == .today {
-            completedTodayCount = container.todoRepository.completedTodayCount()
+            // Off the snapshot, not a second `loadOfflineState()`: every cache
+            // write wakes every live list view model, so a hydrate that reads the
+            // whole cache twice doubles the main-actor cost of every sync.
+            completedTodayCount = snapshot.completedTodayCount
         }
     }
 
