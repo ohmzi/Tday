@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { forwardRef, type ComponentProps } from "react";
 import i18n, { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n";
+import { startsRouteHandover } from "@/lib/routeHandover";
 
 function resolveLocale(params: Record<string, string | undefined>): string {
   const fromParams = params.locale;
@@ -13,41 +14,6 @@ function resolveLocale(params: Record<string, string | undefined>): string {
     return fromParams;
   }
   return i18n.language || DEFAULT_LOCALE;
-}
-
-/**
- * Whether this navigation is one the route hand-over has anything to say about,
- * and one the browser can actually play.
- *
- * Two questions, and both have to be answered here rather than in `globals.css`,
- * because a view transition is started by the navigation and not by the
- * stylesheet.
- *
- * The first is the same question `RouteFade` answers when it keys its fade on
- * `pathname` and not on the full location: a query-string change — the task-focus
- * params the timeline pages push — is the same screen answering itself. A view
- * transition snapshots the whole document, so starting one there would crossfade a
- * page with itself, which is the flash `RouteFade` already refuses to draw.
- *
- * The second is a feature test React Router does not need — it falls back to a
- * plain state update on its own — but does warn about, once per app, on every
- * environment that cannot honour the opt-in. jsdom is one of those. Asking a
- * question we can answer for free is cheaper than a warning nobody can act on.
- *
- * Asked per call rather than captured at module scope, for the reason
- * `prefersReducedMotion` gives about `matchMedia`: a module-scope read binds to
- * whatever the document was at import time, which in a test is before anything has
- * had a chance to stub it.
- */
-function startsRouteHandover(target: string, current: string): boolean {
-  if (typeof document === "undefined") return false;
-  if (typeof document.startViewTransition !== "function") return false;
-  const targetPath = target.split(/[?#]/)[0];
-  // A `to` that is only a query string or only a fragment resolves to the page it
-  // was clicked on, and splits to the empty string rather than to that page's path —
-  // the one way this comparison can say "different" about a destination that is not.
-  if (targetPath === "") return false;
-  return targetPath !== current;
 }
 
 function localizePath(path: string, locale: string): string {

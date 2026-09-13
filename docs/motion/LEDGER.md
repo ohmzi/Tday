@@ -907,14 +907,31 @@ Restore it from git history rather than adjusting the number.
     symmetric crossfade from dipping, and over two layers each opaque at one end it blows the screen
     out to white. What is left is a fade THROUGH the constant background — which is the fade
     `RouteFade` already describes, now with the outgoing screen in it.
-  - The opt-in lives in `src/lib/navigation.tsx`, the app's one navigation chokepoint (38 importers;
-    the only direct `react-router-dom` links left are the landing, 404 and route-error pages, none
-    of which is inside the app shell). It asks the same question `RouteFade` asks — **pathname**, not
+  - The opt-in is asked by `src/lib/routeHandover.ts` and wired in `src/lib/navigation.tsx`, the
+    app's one navigation chokepoint (39 importers). Three call sites inside the shell were routing
+    around it and now go through `useRouter().push`: the guide's "try it" (`GuideScreen.tsx`) and
+    the release toast (`ReleaseUpdateAnnouncer.tsx`), both of which were hand-building
+    `/${locale}/app/...` that `localizePath` already builds. What is left on raw `react-router-dom`
+    is outside the shell — the landing, 404, route-error and blog pages — plus ONE deliberate
+    exception, argued at its call site: Settings' locale switch. That is the one pathname change
+    here where the screen being left is not being left, and `changeLanguage` has already started
+    re-rendering it, so the snapshot a transition would take is of a tree mid-swap.
+  - The question it asks about the destination is the same one `RouteFade` asks — **pathname**, not
     the full location — because a view transition snapshots the whole document, so one started for a
     task-focus query param would crossfade a page with itself, which is the flash `RouteFade`
-    already declines to draw. `back()` gets no opt-in and cannot have one: `navigate(-1)` takes a
-    delta rather than a destination, and the browser's own back button never comes through this
-    module, so a POP keeps the path that exists everywhere.
+    already declines to draw. A `to` that is only a query string or only a fragment needs its own
+    guard rather than falling out of that comparison: it splits to the EMPTY string, not to the path
+    it was clicked on, so the comparison alone would call it a different page. `back()` gets no
+    opt-in and cannot have one: `navigate(-1)` takes a delta rather than a destination, and the
+    browser's own back button never comes through this module, so a POP keeps the path that exists
+    everywhere.
+  - **Reduced motion is answered in the opt-in, not only in the stylesheet, because the CSS lands
+    too late to be the whole answer.** `globals.css` can pin the finished frame; it cannot stop
+    React Router taking the opt-in's slower path, which does not commit the new route in the
+    navigation at all — it parks it in `pendingState`, picks it up two effect passes later and
+    applies it inside the `startViewTransition` callback. Left to CSS alone, a user who asked for
+    less motion would pay that deferral to be shown nothing. The stylesheet override stays as
+    defence in depth for a call site that passes `viewTransition` directly.
   - Reduced motion: `.tday-route-fade` is off as before, and the outgoing snapshot is taken off
     outright rather than merely un-animated — an un-animated `old` is opaque and on top, and would
     hold the screen the user just left for the frame the transition takes to end. The destination is
@@ -922,10 +939,16 @@ Restore it from git history rather than adjusting the number.
   - One literal retired and the ceiling lowered with it: `web.cssMsLiteral` 3 → 2. The keyframe was
     renamed with it, `fade-in` → `tday-route-fade-in`, so the pair reads as a pair and matches the
     prefix every other keyframe in the file carries.
-  - `tests/guardrails/route-handover.test.ts` is the gate, and it reads the stylesheet rather than a
-    render for a reason jsdom makes unavoidable: there are no view transitions to start there, so a
-    rendered assertion could only ever see the path that was already present. It fails on `6774e5c2`
-    on the rung and on all three overrides being absent.
+  - `tests/guardrails/route-handover.test.ts` is the gate, and it is in two halves because the two
+    halves are testable in different ways. The CSS half reads the stylesheet rather than a render for
+    a reason jsdom makes unavoidable: there are no view transitions to start there, so a rendered
+    assertion could only ever see the path that was already present. The navigation half calls
+    `startsRouteHandover` and asserts what it RETURNS — which is why the function sits in its own
+    module instead of staying private to `navigation.tsx`. Grepping the source for the guards, which
+    is what an earlier draft did, stayed green on an implementation with the empty-path guard moved
+    below the `return` and on one whose split let `#anchor` through: both are the self-crossfade the
+    unit exists to prevent, and both have their own case now. It fails on `6774e5c2` on the rung and
+    on all three overrides being absent.
 
 ### PR 26 — two iOS feed cuts
 

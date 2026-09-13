@@ -1,6 +1,9 @@
+// @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { startsRouteHandover } from "@/lib/routeHandover";
+import { installReducedMotion } from "../setup/reduced-motion";
 
 /**
  * THE ROUTE HAND-OVER, AND THE THREE UA DEFAULTS IT HAS TO BEAT
@@ -29,14 +32,21 @@ import { describe, expect, it } from "vitest";
  *      symmetric crossfade dipping through the background halfway; over two layers
  *      that are each opaque at one end it blows the screen out to white instead.
  *
- * Read out of the stylesheet as text rather than out of a render, for the reason
- * `press-affordance-cascade` gives next door: jsdom has no view transitions to
- * start, so a rendered assertion can only ever see the path that was already there.
+ * The three are read out of the stylesheet as text rather than out of a render, for
+ * the reason `press-affordance-cascade` gives next door: jsdom has no view
+ * transitions to start, so a rendered assertion could only ever see the path that
+ * was already there.
+ *
+ * That argument covers the CSS and stops there. The navigation half — WHICH
+ * navigations ask for a transition at all — is a pure function, and jsdom can call
+ * one however little it can play the result, so the last block below asserts what
+ * `startsRouteHandover` returns rather than what `navigation.tsx` says. Grepping the
+ * source for the guards would pass just as happily on an implementation that had
+ * them in the wrong order.
  */
 describe("the route hand-over composes its two halves", () => {
   const SRC = resolve(__dirname, "../../src");
   const css = readFileSync(resolve(SRC, "globals.css"), "utf8");
-  const navigation = readFileSync(resolve(SRC, "lib/navigation.tsx"), "utf8");
 
   /**
    * One rule's body, by exact prelude.
@@ -103,16 +113,63 @@ describe("the route hand-over composes its two halves", () => {
     );
   });
 
-  it("starts a transition only for a change of pathname, the same question RouteFade asks", () => {
-    // A view transition snapshots the whole document, so one started for a
-    // query-string change would crossfade a page with itself — the flash `RouteFade`
-    // already declines to draw when it keys its own fade on pathname alone.
-    expect(navigation).toMatch(/function startsRouteHandover\(/);
-    expect(navigation).toMatch(/targetPath !== current/);
-    // And a `to` that is only a query string or only a fragment splits to the empty
-    // string, which is the one way that comparison can call the current page a
-    // different one.
-    expect(navigation).toMatch(/targetPath === ""/);
-    expect(navigation).toMatch(/typeof document\.startViewTransition !== "function"/);
+  describe("starts a transition only where one is worth playing", () => {
+    const REAL_MATCH_MEDIA = window.matchMedia;
+
+    /** jsdom has no view transitions; this is the presence the feature test reads. */
+    function withViewTransitions() {
+      (document as unknown as { startViewTransition: unknown }).startViewTransition =
+        () => ({ finished: Promise.resolve() });
+    }
+
+    afterEach(() => {
+      delete (document as unknown as { startViewTransition?: unknown })
+        .startViewTransition;
+      window.matchMedia = REAL_MATCH_MEDIA;
+    });
+
+    it("hands over when the pathname changes", () => {
+      withViewTransitions();
+      expect(startsRouteHandover("/en/app/calendar", "/en/app")).toBe(true);
+    });
+
+    it("declines when the destination is the page already on screen", () => {
+      withViewTransitions();
+      expect(startsRouteHandover("/en/app", "/en/app")).toBe(false);
+    });
+
+    it("declines a query-string-only destination, which is the same screen", () => {
+      // A view transition snapshots the whole document, so one started for the
+      // task-focus params the timeline pages push would crossfade a page with
+      // itself — the flash `RouteFade` already declines to draw when it keys its
+      // own fade on pathname alone. Asserted through the function because the
+      // guard that catches it is a second one: `"?focus=1"` splits to the EMPTY
+      // string, not to `/en/app`, so the pathname comparison alone calls it a
+      // different page.
+      withViewTransitions();
+      expect(startsRouteHandover("?focus=1", "/en/app")).toBe(false);
+    });
+
+    it("declines a fragment-only destination for the same reason", () => {
+      withViewTransitions();
+      expect(startsRouteHandover("#section", "/en/app/guide")).toBe(false);
+    });
+
+    it("declines where the browser cannot play one", () => {
+      // React Router falls back on its own, but warns once per app on every
+      // environment that cannot honour the opt-in. jsdom is one of them, and this
+      // is the state it is in with nothing stubbed.
+      expect(startsRouteHandover("/en/app/calendar", "/en/app")).toBe(false);
+    });
+
+    it("declines under reduced motion, where the CSS override lands too late", () => {
+      // The stylesheet can pin the finished frame; it cannot stop the opt-in
+      // parking the new route in `pendingState` to be applied two effect passes
+      // later, inside the transition callback. Leaving this to CSS alone would bill
+      // that deferral to the users who asked for less motion, for nothing drawn.
+      withViewTransitions();
+      installReducedMotion(true);
+      expect(startsRouteHandover("/en/app/calendar", "/en/app")).toBe(false);
+    });
   });
 });

@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import { useLocale } from "@/lib/navigation";
+import { useRouter } from "@/lib/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { useReleaseInfo } from "@/features/release/query/get-release-info";
 import { formatDisplayVersion } from "@/features/release/lib/release";
@@ -26,8 +25,7 @@ function setSessionFlag(key: string) {
 
 export default function ReleaseUpdateAnnouncer() {
   const { isAuthenticated, user } = useAuth();
-  const locale = useLocale();
-  const navigate = useNavigate();
+  const router = useRouter();
   const lastAnnouncedVersionRef = useRef<string | null>(null);
   const isAdmin = isAuthenticated && user?.role === "ADMIN" && user?.approvalStatus === "APPROVED";
   const releaseInfoQuery = useReleaseInfo({ enabled: isAdmin });
@@ -57,7 +55,7 @@ export default function ReleaseUpdateAnnouncer() {
           type="button"
           onClick={() => {
             toast.dismiss(id);
-            navigate(`/${locale}/app/admin/version`);
+            router.push("/app/admin/version");
           }}
           className="flex w-[min(calc(100vw-2rem),24rem)] items-center gap-3 rounded-[24px] border border-border bg-popover/92 px-4 py-3.5 text-left text-popover-foreground backdrop-blur-xl shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)] transition-colors hover:bg-popover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
         >
@@ -75,7 +73,7 @@ export default function ReleaseUpdateAnnouncer() {
         duration: 10000,
       },
     );
-  }, [isAdmin, locale, navigate, releaseInfoQuery.data]);
+  }, [isAdmin, router, releaseInfoQuery.data]);
 
   return null;
 }
