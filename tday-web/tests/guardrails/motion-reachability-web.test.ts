@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, existsSync } from "fs";
+import { readdirSync, readFileSync, existsSync, statSync } from "fs";
 import path from "path";
 import { describe, it, expect } from "vitest";
 
@@ -11,7 +11,7 @@ import { describe, it, expect } from "vitest";
  * and has no way to tell, from the file in front of them, whether anything will ever play it —
  * so eleven of these were written, reviewed and merged across the three clients.
  *
- * The four rules below are each anchored to an instance that was live on `develop` when this
+ * The five rules below are each anchored to an instance that was live on `develop` when this
  * file was written. A rule with no known instance is not a rule, it is noise.
  *
  *   A. Dead keyframes / dead animation utilities. `.animate-scroll-left` (`globals.css:300`)
@@ -28,6 +28,11 @@ import { describe, it, expect } from "vitest";
  *      `@view-transition { navigation: auto }`, which fires only on a real document
  *      navigation; this app is a `createBrowserRouter` SPA and never performs one, and
  *      `document.startViewTransition` appears nowhere in the repo.
+ *   E. Motion in a module nothing imports. Rule A asks whether a class is named anywhere under
+ *      `src/`, which is the right question one level too low: `.animate-pulse` was named twelve
+ *      times in `components/app/skeletons.tsx`, and no module imported that file. Eleven
+ *      components were in that state — the pre-dock `SidebarContainer.tsx` among them — and
+ *      between them they held four of web's durations and its only `ease-in`.
  *
  * These are static reads of source text — the same approach `android-standards.test.ts` and
  * `sentry-privacy.test.ts` take — because the defect is in what the source can reach, not in
@@ -520,5 +525,107 @@ describe("motion reachability D — view transitions that can never be triggered
     expect(
       VIEW_TRANSITION_PSEUDOS.map((b) => `${GLOBALS_REL}:${b.line} → ${b.prelude}`),
     ).toEqual([]);
+  });
+});
+
+// ─── Rule E — motion in a module nothing imports ────────────────────
+
+const TESTS_DIR = path.join(ROOT, "tests");
+const VITE_CONFIG = path.join(ROOT, "vite.config.ts");
+
+/**
+ * The two modules that are entry points rather than imports: `index.html` names `main.tsx` in a
+ * `<script type="module">`, and `vite.config.ts` names `sw.ts` as the service-worker source.
+ * Both are asserted below rather than trusted, because the day one of them is renamed this rule
+ * would otherwise start reporting the app's own entry as dead motion.
+ */
+const ENTRY_MODULES = [path.join(SRC, "main.tsx"), path.join(SRC, "sw.ts")];
+
+/**
+ * Resolves an import specifier the way Vite resolves it for this project: `@/` is `src/`,
+ * relative paths are relative to the importer, and an extensionless path picks up `.ts`/`.tsx`
+ * or the directory's `index`. Bare specifiers are packages and resolve to nothing here.
+ */
+function resolveSpecifier(spec: string, fromFile: string): string | null {
+  let base: string;
+  if (spec.startsWith("@/")) base = path.join(SRC, spec.slice(2));
+  else if (spec.startsWith("./") || spec.startsWith("../")) {
+    base = path.resolve(path.dirname(fromFile), spec);
+  } else return null;
+
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    `${base}.js`,
+    path.join(base, "index.ts"),
+    path.join(base, "index.tsx"),
+  ];
+  return (
+    candidates.find((c) => existsSync(c) && statSync(c).isFile()) ?? null
+  );
+}
+
+/**
+ * Every project-local specifier in a file, from any position — `import … from`, a dynamic
+ * `import()`, and `vi.mock("@/…")` alike. A suite that mocks a module is still naming it, and
+ * this rule is looking for files nothing names at all, not files only the app names.
+ */
+const LOCAL_SPECIFIER = /["']((?:@\/|\.\.?\/)[^"']+)["']/g;
+
+/** What counts as a declared motion: Tailwind's motion utilities, plus inline CSS motion. */
+const MOTION_DECLARATION =
+  /(?<![\w-])(?:transition-(?:all|colors|opacity|shadow|transform|none|discrete|\[)|transition(?![\w-])|animate-[a-z0-9-]+|duration-(?:\d+|\[)|ease-(?:in|out|linear|\[)|animation(?:Name|Duration)?\s*[:=])/;
+
+describe("motion reachability E — motion in a module nothing imports", () => {
+  /**
+   * Deliberate exemptions, by repo-relative path. Empty, and it should stay that way: a
+   * component nothing imports is never mounted, so every transition and animation it declares
+   * is unreachable by construction — the same defect as a dead `@keyframes`, one level up.
+   *
+   * Note what is NOT in scope here: a module that is dead but declares no motion. That is a
+   * dead-code question and this file only answers motion ones, which is why deleting the
+   * eleven below left `SidebarToggleContainer.tsx` and `carousel.tsx` where they are.
+   */
+  const ORPHANED_MOTION_ALLOWLIST: string[] = [];
+
+  const TEST_FILES = walkFiles(TESTS_DIR, [".ts", ".tsx"]);
+
+  it("names the app's entry modules, so they are never read as orphans", () => {
+    // The premise of the rule below. If either entry moves, it fails here — with the reason —
+    // rather than ten lines down with `main.tsx` reported as dead motion.
+    expect(readSource(INDEX_HTML)).toContain("/src/main.tsx");
+    expect(readSource(VITE_CONFIG)).toContain('"sw.ts"');
+  });
+
+  it("every module under src/ that declares motion is imported by something", () => {
+    const imported = new Set<string>();
+    for (const file of [...TS_FILES, ...TEST_FILES]) {
+      const source = stripTsComments(readSource(file));
+      for (const match of source.matchAll(LOCAL_SPECIFIER)) {
+        const resolved = resolveSpecifier(match[1], file);
+        if (resolved) imported.add(resolved);
+      }
+    }
+
+    const violations: string[] = [];
+    for (const file of TS_FILES) {
+      if (ENTRY_MODULES.includes(file)) continue;
+      if (imported.has(file)) continue;
+      if (file.endsWith(".d.ts")) continue;
+      const rel = relPath(file);
+      if (ORPHANED_MOTION_ALLOWLIST.includes(rel)) continue;
+
+      const source = codeOf(file);
+      const match = MOTION_DECLARATION.exec(source);
+      if (!match) continue;
+      const line = source.slice(0, match.index).split("\n").length;
+      violations.push(
+        `${rel}:${line} → declares \`${match[0]}\` and no module imports this file, ` +
+          "so nothing ever mounts it and the motion cannot run",
+      );
+    }
+
+    expect(violations).toEqual([]);
   });
 });
