@@ -1,15 +1,144 @@
 import { useCallback, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
+
+/** What one gesture has to remember about itself. */
+type PagerGesture = {
+  /** Where the finger went down, in client coordinates. */
+  x: number;
+  y: number;
+  /** Where the page was when this gesture found it — at rest, or still on its way home. */
+  startOffset: number;
+  /** Locked once the finger has moved far enough to say what it meant. */
+  axis: "x" | "y" | null;
+};
 
 /**
- * The month/week/day card's horizontal page swipe, as a gesture that cannot be
- * left half-finished.
+ * Below this, a move is a hand steadying rather than a gesture starting.
  *
- * The card used to track a swipe with two bare refs and nothing but `pointerup`
- * to clear them, so every gesture that did not end with a `pointerup` *on the
- * card* leaked. Drag past the card's edge and lift there, or let the platform
- * claim the pointer for a scroll or an edge back-swipe, and the refs were still
- * saying "a swipe is in progress and it began at x = 300" long after the finger
- * was gone. Two things then went wrong, in this order:
+ * The same 8px the calendar row's swipe locks its own axis at, and the two
+ * gestures are an inch apart on the same screen: the grid sits directly above a
+ * scrolling task list, so a finger that means to scroll very often lands on the
+ * pager first. Sharing the number is not tidiness — a pager that claimed the
+ * axis sooner than the row below it would take swipes the row was about to get.
+ */
+const AXIS_SLOP_PX = 8;
+
+/**
+ * How much further the page can be pulled once the swipe has already passed the
+ * threshold, and how far it can be pulled at all in a direction the floor has
+ * refused — both as multiples of the threshold, which is the only length this
+ * gesture has of its own.
+ *
+ * Past the threshold the question is answered and there is nothing left to
+ * uncover: web keeps ONE page in the DOM, which is what lets `AnimatedHeight`
+ * measure a single height for a card whose four pages are four heights. So the
+ * travel goes on, at a price, and stops promising a neighbour that is not there.
+ * The refused direction never tracks at all for the same reason read twice over:
+ * there is no page that way and there never will be, so the grid gives half a
+ * threshold and stops — visibly less than the gesture that would have turned it.
+ */
+const OVERDRAG_GIVE = 1;
+const REFUSED_GIVE = 0.5;
+
+/**
+ * The page going home from wherever the finger left it.
+ *
+ * Quick, because this is the tail of a gesture rather than a page turn: the rung
+ * is the app answering a finger that was on it, and the same one the floor's
+ * refusal answers on — the two play together when a back swipe is declined at
+ * the floor, and one clock is what keeps that reading as a single answer. The
+ * Gesture curve for the reason it carries in `docs/motion.md`: web has no spring
+ * runtime, and a surface continuing after a release is exactly what it names.
+ */
+const RETURN_TRANSITION = "transform var(--tday-duration-quick) var(--tday-ease-gesture)";
+
+/**
+ * Where the page actually is at this instant, mid-return or at rest.
+ *
+ * Asked rather than remembered, because the two answers differ precisely when it
+ * matters: a finger that lands during the return home finds the page part-way
+ * back, and the offset this hook last *wrote* is where it was let go, not where
+ * it is. Starting a fresh gesture from the remembered number would jump the grid
+ * back out from under the finger that came to catch it.
+ *
+ * Where `DOMMatrixReadOnly` is missing there is no transition engine either
+ * (jsdom), so nothing can be caught in flight and rest is the true answer.
+ */
+function pageOffset(track: HTMLElement | null): number {
+  if (!track) return 0;
+  if (typeof DOMMatrixReadOnly !== "function") return 0;
+  const { transform } = getComputedStyle(track);
+  if (!transform || transform === "none") return 0;
+  try {
+    return new DOMMatrixReadOnly(transform).m41;
+  } catch {
+    // A transform the matrix constructor will not parse is one this hook did not
+    // write; treating it as rest is the only reading that cannot make things worse.
+    return 0;
+  }
+}
+
+/**
+ * How far the page has travelled for a finger that has pulled it `offset`.
+ *
+ * One to one while the swipe is still a question — every pixel up to the
+ * threshold is the user deciding, and a page that lags there is the app arguing
+ * with a finger it should be following. After that the pull is spent against a
+ * limit it approaches and never reaches, so the grid keeps answering without
+ * ever claiming to be most of the way to a page that is not rendered.
+ *
+ * @param offset - What the finger has asked for: this gesture's travel, plus
+ *   whatever was left of the last one.
+ * @param threshold - The distance that turns a page, which is also the scale
+ *   everything here is measured in.
+ * @param refused - Whether the floor has already declined the direction being
+ *   pulled, in which case there is no free travel at all.
+ */
+function pageFollow(offset: number, threshold: number, refused: boolean): number {
+  const distance = Math.abs(offset);
+  const tracked = refused ? 0 : Math.min(distance, threshold);
+  const give = threshold * (refused ? REFUSED_GIVE : OVERDRAG_GIVE);
+  const stretched = give * (1 - Math.exp(-(distance - tracked) / give));
+  return Math.sign(offset) * (tracked + stretched);
+}
+
+/**
+ * The month/week/day card's horizontal page swipe: a gesture the page follows,
+ * and one that cannot be left half-finished.
+ *
+ * The card used to record an x on `pointerdown` and jump a page on `pointerup`,
+ * with nothing whatever moving in between — a slideshow being operated rather
+ * than a surface being dragged. Android fixed the same defect on its task rows
+ * in Phase 3 and states the rule it was fixed to: a finger and a clock of the
+ * app's own are two clocks, and only one of them belongs to the app. The page
+ * now writes the finger's translation straight onto the grid, and the app's own
+ * clocks run only for what happens after the finger leaves.
+ *
+ * There are two of those. A swipe that turned the page hands over to the slide
+ * the incoming page arrives on — Emphasis, on this same Gesture curve, which is
+ * why a release can hand over to it at all — and the grid's own offset is simply
+ * dropped, because the element carrying it is replaced by the page that
+ * displaced it. A swipe that did not turn the page has nothing to hand over to,
+ * so it glides home on [RETURN_TRANSITION].
+ *
+ * The drag is written to a child of the element that slides, and that is
+ * structural rather than tidy — the same rule the refusal wrapper above it is
+ * built on. A filling CSS animation outranks an inline style, so a page that
+ * arrived on `cal-native-slide-from-*` holds its own `transform` at
+ * `translateX(0)` for as long as it lives, and a drag written there would be
+ * silently ignored on every page but the first. One element, one owner of
+ * `transform`.
+ *
+ * Reduced motion keeps the tracking and loses the return's trip. The preference
+ * is about motion the app plays, not about the movement a finger is making — the
+ * same reason it does not switch scrolling off — and the instant the finger
+ * leaves, everything it moved is put back in the frame that asks for it.
+ *
+ * The gesture's other half is its exits, which predate the tracking. Every
+ * gesture that did not end with a `pointerup` *on the card* used to leak the
+ * tracking refs, so they went on saying "a swipe is in progress and it began at
+ * x = 300" long after the finger was gone. Two things then went wrong, in this
+ * order:
  *
  *  1. the swipe the user actually made was dropped — no `pointerup` reached the
  *     card, so nothing was measured and the calendar did not page; and
@@ -30,21 +159,59 @@ import { useCallback, useRef, type PointerEvent as ReactPointerEvent } from "rea
  * what makes a release count: an event carrying another pointer's id — a second
  * finger, or the stray release above — can neither end nor commit a gesture it
  * never started.
+ *
+ * @param threshold - How far a finger travels before the release turns a page.
+ * @param onNavigate - Where a decided swipe is reported. The screen owns the
+ *   floor rule, so a back swipe is reported there even when it will be refused.
+ * @param canGoBack - Whether the page behind this one exists. Used for the
+ *   resistance only: what the refusal *is* stays with the screen.
+ * @returns The ref for the element the drag is written to, and the card's
+ *   pointer handlers.
  */
-export function useCalendarPagerSwipe(
+export function useCalendarPagerSwipe<T extends HTMLElement = HTMLDivElement>(
   threshold: number,
   onNavigate: (offset: -1 | 1) => void,
+  canGoBack: boolean,
 ) {
-  const originXRef = useRef<number | null>(null);
+  const trackRef = useRef<T | null>(null);
+  const gestureRef = useRef<PagerGesture | null>(null);
   const pointerIdRef = useRef<number | null>(null);
   // The element capture was taken on, so the release always targets the node
   // that holds it rather than whatever the ending event happens to land on.
   const captureTargetRef = useRef<HTMLElement | null>(null);
 
+  /** Puts the page where the finger has it, with no clock in between the two. */
+  const holdAt = useCallback((offset: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.style.transition = "none";
+    // Hundredths, because the resistance curve returns a full double and no
+    // screen can spend the rest of it: what the extra digits buy is a
+    // seventeen-character transform rewritten sixty times a second.
+    track.style.transform = `translateX(${Math.round(offset * 100) / 100}px)`;
+  }, []);
+
+  /**
+   * Returns the page to rest — the only place a page has, unlike the row swipe
+   * beside it, which can be resting open.
+   *
+   * `glide` is false when something else is about to move this element anyway:
+   * a turned page replaces it and plays its own arrival, and a trip home
+   * underneath that would be a second page turn nobody asked for.
+   */
+  const restHome = useCallback((glide: boolean) => {
+    const track = trackRef.current;
+    // A page nothing moved has nothing to put back, and a tap on the grid — the
+    // commonest gesture this card gets — should leave no declaration behind it.
+    if (!track || track.style.transform === "") return;
+    track.style.transition = glide && !prefersReducedMotion() ? RETURN_TRANSITION : "none";
+    track.style.transform = "";
+  }, []);
+
   const endGesture = useCallback(() => {
     const target = captureTargetRef.current;
     const pointerId = pointerIdRef.current;
-    originXRef.current = null;
+    gestureRef.current = null;
     pointerIdRef.current = null;
     captureTargetRef.current = null;
     if (!target || pointerId == null) return;
@@ -73,9 +240,20 @@ export function useCalendarPagerSwipe(
         endGesture();
         return;
       }
-      originXRef.current = event.clientX;
+      const startOffset = pageOffset(trackRef.current);
+      gestureRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        startOffset,
+        axis: null,
+      };
       pointerIdRef.current = event.pointerId;
       captureTargetRef.current = event.currentTarget;
+      // A page that is still on its way home is pinned where this finger found
+      // it, which stops that return and makes its own position the starting
+      // point of the gesture that interrupted it. A page already at rest is left
+      // alone: a tap on the grid is not a drag, and should leave nothing behind.
+      if (startOffset !== 0) holdAt(startOffset);
       try {
         event.currentTarget.setPointerCapture?.(event.pointerId);
       } catch {
@@ -84,7 +262,30 @@ export function useCalendarPagerSwipe(
         // still cleans up after one that ends anywhere else.
       }
     },
-    [endGesture],
+    [endGesture, holdAt],
+  );
+
+  const onPointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => {
+      if (pointerIdRef.current !== event.pointerId) return;
+      const gesture = gestureRef.current;
+      if (!gesture) return;
+
+      const dx = event.clientX - gesture.x;
+      const dy = event.clientY - gesture.y;
+      if (gesture.axis === null) {
+        if (Math.abs(dx) <= AXIS_SLOP_PX && Math.abs(dy) <= AXIS_SLOP_PX) return;
+        gesture.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      }
+      // A vertical drag belongs to the page's scroller. The gesture is kept open
+      // rather than ended, so the release that follows can be recognised as this
+      // pointer's and refused a page of its own.
+      if (gesture.axis === "y") return;
+
+      const pulled = gesture.startOffset + dx;
+      holdAt(pageFollow(pulled, threshold, pulled > 0 && !canGoBack));
+    },
+    [canGoBack, holdAt, threshold],
   );
 
   const onPointerUp = useCallback(
@@ -92,23 +293,33 @@ export function useCalendarPagerSwipe(
       // Not our pointer — including the "nothing is being tracked" case, where
       // the ref is null and no real pointer id can match it.
       if (pointerIdRef.current !== event.pointerId) return;
-      const originX = originXRef.current;
+      const gesture = gestureRef.current;
       endGesture();
-      if (originX == null) return;
+      if (!gesture) return;
 
-      const delta = event.clientX - originX;
-      if (Math.abs(delta) < threshold) return;
-      onNavigate(delta < 0 ? 1 : -1);
+      const delta = event.clientX - gesture.x;
+      const direction: -1 | 1 = delta < 0 ? 1 : -1;
+      const decided = gesture.axis !== "y" && Math.abs(delta) >= threshold;
+      // What the screen will do with a decided swipe, worked out here only to
+      // know whether this element is about to be replaced. The floor rule itself
+      // stays where it is enforced: a refused swipe is still reported, because
+      // the answer to one is the screen's to play.
+      const turning = decided && (direction === 1 || canGoBack);
+      restHome(!turning);
+      if (decided) onNavigate(direction);
     },
-    [endGesture, onNavigate, threshold],
+    [canGoBack, endGesture, onNavigate, restHome, threshold],
   );
 
   const onPointerCancel = useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {
       if (pointerIdRef.current !== event.pointerId) return;
       endGesture();
+      // A cancelled gesture is an abandoned one, not a quiet commit: the page
+      // goes home the way an undecided release does, and turns nothing.
+      restHome(true);
     },
-    [endGesture],
+    [endGesture, restHome],
   );
 
   const onLostPointerCapture = useCallback(
@@ -120,9 +331,19 @@ export function useCalendarPagerSwipe(
       // already cleared the id, so the guard below returns.
       if (pointerIdRef.current !== event.pointerId) return;
       endGesture();
+      restHome(true);
     },
-    [endGesture],
+    [endGesture, restHome],
   );
 
-  return { onPointerDown, onPointerUp, onPointerCancel, onLostPointerCapture };
+  return {
+    trackRef,
+    swipeHandlers: {
+      onPointerDown,
+      onPointerMove,
+      onPointerUp,
+      onPointerCancel,
+      onLostPointerCapture,
+    },
+  };
 }

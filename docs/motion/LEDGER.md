@@ -538,7 +538,36 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 21 — the web calendar swipe tracks the finger
 
-- [ ] `web-calendar-swipe-is-untracked` — pointerdown records x, pointerup jumps; nothing moves under the finger · web · Sev 3 · M · Gate V+D
+- [x] `web-calendar-swipe-is-untracked` — pointerdown records x, pointerup jumps; nothing moves under the finger · web · Sev 3 · M · Gate V+D
+  - The grid now carries the finger's translation, written straight onto the DOM rather than
+    through React state, and the app's own clocks run only for what happens after the finger
+    leaves. Android's Phase 3 rows state the rule this was fixed to: a finger and a clock of the
+    app's own are two clocks, and only one of them belongs to the app.
+  - A release that turns the page hands over to the slide the incoming page already arrives on —
+    Emphasis, on the Gesture curve, which is why a release can hand over to it at all — and the
+    grid's own offset is dropped with the element that carried it. A release that turns nothing
+    glides home on Quick, the rung the floor's refusal answers on, so the two compose as one
+    answer when a back swipe is declined at the floor.
+  - Past the threshold the grid gives instead of tracking, and in a refused direction it gives
+    from the first pixel and reaches half a threshold at most. Web keeps ONE page in the DOM —
+    the thing that lets `AnimatedHeight` measure a single height for a card whose four pages are
+    four heights — so past the threshold there is no neighbour to uncover, and a grid that
+    travelled a third of the card would be promising one.
+  - The drag is written to a CHILD of the element that slides, which is structural rather than
+    tidy: a filling CSS animation outranks an inline style, so a page that arrived on
+    `cal-native-slide-from-*` holds its own `transform` at `translateX(0)` for as long as it
+    lives. Written there, the drag would have been ignored on every page but the first the card
+    ever drew — the same "one element, one `animation`" rule the refusal wrapper above it is
+    built on, read on the property next door.
+  - Reduced motion keeps the tracking and loses the trip home. The preference is about motion the
+    app plays, not about the movement a finger is making, and the fifth idiom rule is kept the
+    usual way: the destination is drawn in the frame the finger leaves.
+  - No literal is added: the return names `var(--tday-duration-quick)` and
+    `var(--tday-ease-gesture)`, and every distance in the gesture is a multiple of the swipe
+    threshold it already had. The three web ceilings are untouched at 58 / 3 / 10.
+  - Two things fall out of the gesture rather than out of the row, and both are kept: the axis
+    locks at the same 8px the calendar row's swipe locks at, because the grid sits directly above
+    a scrolling task list, and a gesture that ends vertically now turns no page at all.
 
 ### PR 25a — the calendar grid height animates across month lengths
 

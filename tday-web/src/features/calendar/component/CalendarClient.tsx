@@ -239,7 +239,15 @@ export function CalendarModeCard({
   onNavigate: (offset: -1 | 1) => void;
   onSelectDate: (date: Date) => void;
 }) {
-  const swipeHandlers = useCalendarPagerSwipe(swipeThreshold, onNavigate);
+  // `canGoPrevious` reaches the gesture as well as the chevron, and for the same
+  // rule: the page behind the current month does not exist. The chevron says so
+  // by being `disabled`; the gesture says so by giving under the finger and not
+  // travelling far enough to look like a page about to turn.
+  const { trackRef, swipeHandlers } = useCalendarPagerSwipe(
+    swipeThreshold,
+    onNavigate,
+    canGoPrevious,
+  );
 
   const { t: appDict } = useTranslation("app");
   const dfLocale = activeDfLocale();
@@ -320,26 +328,36 @@ export function CalendarModeCard({
             )}
             {...swipeHandlers}
           >
-            {view === "month" && (
-              <MonthCalendarGrid
-                selectedDate={selectedDate}
-                tasksByDay={tasksByDay}
-                onSelectDate={onSelectDate}
-              />
-            )}
-            {view === "week" && (
-              <WeekCalendarStrip
-                selectedDate={selectedDate}
-                tasksByDay={tasksByDay}
-                onSelectDate={onSelectDate}
-              />
-            )}
-            {view === "day" && (
-              <DayCalendarSummary
-                selectedDate={selectedDate}
-                taskCount={tasksByDay.get(dayKey(selectedDate))?.length ?? 0}
-              />
-            )}
+            {/* The element the finger actually moves, and a child of the one
+                that slides for a reason that is structural rather than tidy —
+                the same rule the refusal wrapper above is built on. A filling
+                CSS animation outranks an inline style, so a page that arrived
+                on `cal-native-slide-from-*` holds its own `transform` at
+                `translateX(0)` for as long as it lives, and a drag written
+                there would be ignored on every page but the very first one the
+                card ever drew. One element, one owner of `transform`. */}
+            <div ref={trackRef}>
+              {view === "month" && (
+                <MonthCalendarGrid
+                  selectedDate={selectedDate}
+                  tasksByDay={tasksByDay}
+                  onSelectDate={onSelectDate}
+                />
+              )}
+              {view === "week" && (
+                <WeekCalendarStrip
+                  selectedDate={selectedDate}
+                  tasksByDay={tasksByDay}
+                  onSelectDate={onSelectDate}
+                />
+              )}
+              {view === "day" && (
+                <DayCalendarSummary
+                  selectedDate={selectedDate}
+                  taskCount={tasksByDay.get(dayKey(selectedDate))?.length ?? 0}
+                />
+              )}
+            </div>
           </div>
         </AnimatedHeight>
       </div>

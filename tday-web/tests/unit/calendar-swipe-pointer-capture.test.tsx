@@ -51,14 +51,20 @@ function installCaptureSpies(element: HTMLElement) {
 }
 
 function PagerHarness({ onNavigate }: { onNavigate: (offset: -1 | 1) => void }) {
-  const swipeHandlers = useCalendarPagerSwipe(SWIPE_THRESHOLD, onNavigate);
+  const { trackRef, swipeHandlers } = useCalendarPagerSwipe(SWIPE_THRESHOLD, onNavigate, true);
   return (
     <div data-testid="card" {...swipeHandlers}>
-      {/* A day cell: the card bails out of tracking on any press that lands on
-          a button, because capture would otherwise steal the button's click. */}
-      <button type="button" data-testid="day">
-        7
-      </button>
+      {/* The card's two elements, in the order the real one has them: the
+          handlers and the capture on the outer, the drag on the inner. What the
+          page does under the finger is `calendar-pager-tracks-finger.test.tsx`;
+          what this file is about is how the gesture ends. */}
+      <div ref={trackRef}>
+        {/* A day cell: the card bails out of tracking on any press that lands on
+            a button, because capture would otherwise steal the button's click. */}
+        <button type="button" data-testid="day">
+          7
+        </button>
+      </div>
     </div>
   );
 }
