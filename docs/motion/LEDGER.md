@@ -731,6 +731,13 @@ Restore it from git history rather than adjusting the number.
     behind carries, so one word was doing two opposite jobs: the hole in the list and the card in
     the hand looked alike, and the card in the hand looked disabled. The card is opaque now and the
     row keeps the dim, because a hole is what that row actually is.
+  - The row left behind kept its value and lost its cut, the same move PR 53 makes on Android: it
+    blinked to 70 % on the frame the press fired while the card above it rose over Emphasis, which
+    is two events for one gesture. `DRAG_VACATED_TRANSITION` is a `transition` shorthand rather
+    than a `transition-opacity duration-emphasis` utility because both rows already hand the DOM
+    an inline `style` — dnd-kit writes its own `transform` shorthand into the timeline row's for
+    the whole drag, and an inline shorthand outranks any class the row could carry, so the utility
+    would have declared a transition that never ran.
   - `.tday-drag-lift` (`globals.css`) declares the **lifted** state and the keyframe holds the
     resting one, which is what the fifth idiom rule buys here: a reduced-motion reader gets a card
     that is already up rather than one pinned to the first frame of a rise. Its `box-shadow: none`
@@ -758,7 +765,9 @@ Restore it from git history rather than adjusting the number.
     screens and web derives the identical scale from the identical token, which is the two clients
     saying one thing rather than two.
   - The row's dim keeps its value and loses its cut: it now travels on the rise's own rung, so a
-    long press is one event instead of a card appearing whole beside a row that blinked.
+    long press is one event instead of a card appearing whole beside a row that blinked. Web's two
+    rows say the same thing the same way under PR 52; iOS's row is still a cut and is not in this
+    box's scope.
   - `0.7f` is three clients wide and is **not** promoted, because the vocabulary has no alpha
     family to promote it into — `MotionTokens` carries durations, delays, easings, springs and
     press scales. It is named at `TdayDragLift.VacatedAlpha` with the iOS site quoted beside it, so

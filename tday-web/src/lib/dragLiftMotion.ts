@@ -38,6 +38,30 @@ import { DURATION_MS, EASE } from "@/lib/motion";
 export const DRAG_LIFT_CLASS = "tday-drag-lift";
 
 /**
+ * How the row the card came out of empties, as a `transition` shorthand the two
+ * draggable rows hand the DOM.
+ *
+ * The dim itself is not new and its value does not move: the vacated row has
+ * always been `opacity-70`, and it is the same 0.7 Android names at
+ * `TdayDragLift.VacatedAlpha` and iOS spends on the same row
+ * (`CalendarScreen.swift`'s `.opacity(draggedTodo?.id == todo.id ? 0.7 : 1)`).
+ * What it did not have is a clock. The row cut to 70 % on the frame the press
+ * fired while the card above it rose over Emphasis, which is two events for one
+ * gesture — a card appearing whole beside a row that blinked. Same rung and same
+ * curve as the lift, so the row empties exactly as the card leaves it.
+ *
+ * A shorthand rather than a `transition-opacity duration-emphasis` utility
+ * because both rows already hand the DOM an inline `style`, and on the timeline
+ * row that style carries dnd-kit's own `transform` transition for the whole
+ * drag — an inline shorthand no class can outrank. The dim travels here or it
+ * does not travel at all. Spelled with the custom properties for the reason
+ * `taskCompletionTiming.ts` gives beside its own shorthand: a duration that ends
+ * up inside a CSS string wants `var(--tday-duration-*)`.
+ */
+export const DRAG_VACATED_TRANSITION =
+  "opacity var(--tday-duration-emphasis) var(--tday-ease-enter)";
+
+/**
  * How a drag overlay lands when the finger lets go.
  *
  * `dropAnimation={null}` is not "no animation", it is "no landing": dnd-kit
