@@ -1015,6 +1015,13 @@
         "body": "Concluir uma tarefa toca um som curto e, no telemóvel, a app responde aos seus toques e arrastos com uma pequena vibração. As Definições têm um interruptor para cada um — desligue um e tudo o resto fica igual.",
         "tip": "Os interruptores pertencem a este navegador e não à sua conta, por isso um portátil silencioso e um telemóvel que vibra podem ter cada um a sua própria resposta."
       },
+      "reduce-motion": {
+        "title": "Reduzir o movimento",
+        "summary": "Desative as animações do T'Day sem mudar o resto do telefone.",
+        "keywords": "movimento, animação, animações, reduzir, acessibilidade, parado, transições, tontura",
+        "body": "As configurações têm um botão Reduzir o movimento. Com ele ligado, o T'Day para de animar: linhas, folhas e telas vão direto para onde estavam indo, e cada espera que cobria uma animação vai junto — então o app fica mais rápido, não mais lento. Nada mais muda: as mesmas telas na mesma ordem, só que já chegaram.",
+        "tip": "Ele só tira movimento. Se a própria opção de animações do Android já estiver desligada, o T'Day já está parado e o botão diz isso em vez de oferecer desfazer."
+      },
       "floaters-vs-todos": {
         "title": "Flutuantes vs tarefas agendadas",
         "summary": "As tarefas sem data ficam em Qualquer altura; as tarefas com data ficam no feed Agendado.",

@@ -122,6 +122,33 @@ object GuideCatalog {
             deepLink = GuideDeepLink(web = "settings"),
             helpAnchors = listOf("settings-feature-toggle"),
         ),
+        topic(
+            // Beside Sound and vibration, and last for the same reason it is: these
+            // are the three ways the app answers a hand that is on it, and this is
+            // the one you turn down when the other two are not the problem.
+            //
+            // ANDROID only, and — like its neighbour — that is the topic. The other
+            // two clients already have a switch that reaches them: the browser hands
+            // web `prefers-reduced-motion`, and iOS hands SwiftUI
+            // `UIAccessibility.isReduceMotionEnabled`, both of them a system setting
+            // a user has already been taught to find. Android offers no such signal;
+            // what it has is the animator duration scale, which lives in the
+            // developer options on many builds and is device-wide when it is
+            // reachable at all. So Android is the one client whose users need to be
+            // told where the switch is, because it is the one client that had to
+            // grow its own.
+            //
+            // "activity": the glyph is a line that moves, which is the thing being
+            // turned down, and it already has a drawable and an imageset — a new
+            // glyph would mean drawing both for a topic only one platform shows.
+            GuideTopicIds.REDUCE_MOTION, GuideSectionId.GESTURES, "activity",
+            setOf(ANDROID), sinceVersion = "0.7.23",
+            body = listOf(
+                para(GuideTopicIds.REDUCE_MOTION),
+                tip(GuideTopicIds.REDUCE_MOTION),
+            ),
+            helpAnchors = listOf("settings-motion"),
+        ),
 
         // ── Organizing ───────────────────────────────────────────────────
         topic(

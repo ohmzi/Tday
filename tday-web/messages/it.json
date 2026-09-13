@@ -1015,6 +1015,13 @@
         "body": "Quando completi un'attività parte un breve suono e, sul telefono, l'app risponde ai tuoi tocchi e trascinamenti con una piccola vibrazione. Nelle Impostazioni c'è un interruttore per ciascuno: disattivane uno e tutto il resto resta com'era.",
         "tip": "Gli interruttori appartengono a questo browser e non al tuo account, così un portatile silenzioso e un telefono che vibra possono avere ciascuno la propria risposta."
       },
+      "reduce-motion": {
+        "title": "Riduci il movimento",
+        "summary": "Disattiva le animazioni di T'Day senza cambiare il resto del telefono.",
+        "keywords": "movimento, animazione, animazioni, ridurre, accessibilità, fermo, transizioni, vertigini",
+        "body": "Nelle impostazioni c'è un interruttore «Riduci il movimento». Attivo, T'Day smette di animare: righe, fogli e schermate vanno dritti dove stavano andando, e ogni attesa che copriva un'animazione se ne va con essa, quindi l'app diventa più veloce, non più lenta. Nient'altro cambia: le stesse schermate nello stesso ordine, solo già arrivate.",
+        "tip": "Toglie movimento e basta. Se l'impostazione delle animazioni di Android è già disattivata, T'Day è già fermo e l'interruttore lo dice invece di proporre di annullarlo."
+      },
       "floaters-vs-todos": {
         "title": "Floater e attività con data",
         "summary": "Le attività senza data vivono in In qualsiasi momento; quelle con data nel feed Pianificato.",

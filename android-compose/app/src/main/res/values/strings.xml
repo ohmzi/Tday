@@ -220,6 +220,9 @@
     <string name="settings_account_current_password_required">Enter your current password</string>
     <string name="settings_account_security_questions_updated">Security questions updated</string>
     <string name="settings_appearance">Appearance</string>
+    <string name="settings_motion">Motion</string>
+    <string name="settings_reduce_motion">Reduce motion</string>
+    <string name="settings_reduce_motion_system">Animations are already off in Android settings.</string>
     <string name="settings_behavior">Behavior</string>
     <string name="settings_default_home_screen">Default home screen</string>
     <string name="settings_reminders">Reminders</string>

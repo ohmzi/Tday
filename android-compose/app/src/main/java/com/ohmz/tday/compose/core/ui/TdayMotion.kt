@@ -11,20 +11,26 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import com.ohmz.tday.compose.core.data.ReduceMotionPreferenceStore
 import kotlinx.coroutines.delay
 import kotlin.math.roundToLong
 
 /**
- * How fast the platform is running animations, as a multiplier on every duration.
+ * How fast this app is running animations, as a multiplier on every duration.
  *
- * Compose has no equivalent of `prefers-reduced-motion`, so this reads what Android
- * actually offers: the animator duration scale, which is what Settings' "Remove
- * animations" and the developer-options slider both write. A *scale* and not a
- * switch, because that is what the user is given — 0x, 0.5x, 1x, 2x, 5x, 10x — and
+ * Compose has no equivalent of `prefers-reduced-motion`, so this starts from what
+ * Android actually offers: the animator duration scale, which is what Settings'
+ * "Remove animations" and the developer-options slider both write. A *scale* and not
+ * a switch, because that is what the user is given — 0x, 0.5x, 1x, 2x, 5x, 10x — and
  * treating it as a boolean throws away four of those six.
+ *
+ * The app's own "Reduce motion" switch folds into the same number rather than sitting
+ * beside it as a second thing every call site would have to remember to ask — see
+ * [effectiveMotionScale] for which way the two compose.
  *
  * Compose already reads the same setting for the animations themselves: an
  * `animateTo` or an `animate*AsState` runs against a `MotionDurationScale` in its
@@ -42,6 +48,9 @@ val LocalTdayMotionScale = compositionLocalOf<Float?> { null }
 /** What the platform reports when nobody has moved the slider, and our fallback. */
 private const val UNSCALED = 1f
 
+/** What either answer asking for less motion resolves to: none, and no wait in its place. */
+private const val REDUCED = 0f
+
 /**
  * Reads the scale right now.
  *
@@ -53,13 +62,41 @@ private fun readAnimatorScale(resolver: ContentResolver): Float =
     Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, UNSCALED)
 
 /**
- * Publishes the live animator scale to everything underneath, and keeps it live.
+ * The one scale, from the device's answer and the app's own.
  *
- * Installed once, in `TdayTheme`, which is the one wrapper all four of the app's
- * `setContent` roots already go through. One registration for the whole app rather
- * than one per asker is the point: [rememberTdayMotionEnabled] is read per *row* in
- * a feed, and a `ContentObserver` per visible row would be a subscription leak
- * dressed up as a preference.
+ * A composition and not a choice between them, in the only direction an in-app
+ * preference is allowed to move: [reduceInApp] can subtract motion and can never add
+ * any back. Someone who told Android to remove animations and then left this app's
+ * switch off has not asked for animations — they have asked for nothing extra — and a
+ * device at 0x stays at 0x however this switch is set. It reads the same way from the
+ * other side: the switch reduces on a phone sitting at 10x exactly as it does on one
+ * at 1x, because "reduce" is an answer about this app and not about the slider.
+ *
+ * Split out of the composable so the rule can be tested without a device, which for a
+ * rule about never re-enabling something is the part worth pinning.
+ *
+ * The two halves do **not** have the same reach, and a call site has to know it.
+ * [systemScale] is also read by Compose itself — it is the `MotionDurationScale` in
+ * the recomposer's coroutine context, which every `animate*AsState` and `animateTo`
+ * obeys whether or not anybody wrote code for it. [reduceInApp] cannot be: that
+ * context belongs to the composition and no composable can substitute one for its own
+ * subtree. So the in-app switch reaches exactly the motion that *asks* — anything
+ * built on [rememberTdayMotionEnabled], [rememberTdayMotionScale] or [scaledDelay] —
+ * and an animation that leaves its timing to Compose keeps animating at the device's
+ * scale. Which is to say: on Android, honouring the preference is a thing a call site
+ * does, not a thing it gets. The site-by-site migration is the `reduced-motion-coverage`
+ * item in `docs/motion/LEDGER.md`; this function is what it migrates onto.
+ */
+internal fun effectiveMotionScale(systemScale: Float, reduceInApp: Boolean): Float =
+    if (reduceInApp) REDUCED else systemScale
+
+/**
+ * The platform's half of the answer, live.
+ *
+ * Public for the one caller that has to tell the two halves apart: the Settings row
+ * that owns the in-app switch, which has to say "Android has already done this"
+ * instead of offering a switch that cannot change anything. Everything else wants
+ * [rememberTdayMotionScale], which is the composed number.
  *
  * The observer is what turns a change in the setting into a recomposition. Compose's
  * own `MotionDurationScale` re-reads the setting on every animation frame and so
@@ -68,9 +105,14 @@ private fun readAnimatorScale(resolver: ContentResolver): Float =
  * mount until something unrelated happened to invalidate it. A user who turns
  * animations off from the quick settings tile while the app is open would go on
  * seeing the animated build until they navigated away.
+ *
+ * Call it once per screen at most. [rememberTdayMotionEnabled] is read per *row* in a
+ * feed, and a `ContentObserver` per visible row would be a subscription leak dressed
+ * up as a preference — which is why the app-wide registration is [ProvideTdayMotionScale]'s
+ * job and the rows read a composition local instead.
  */
 @Composable
-fun ProvideTdayMotionScale(content: @Composable () -> Unit) {
+fun rememberSystemMotionScale(): Float {
     val resolver = LocalContext.current.contentResolver
     var scale by remember(resolver) { mutableFloatStateOf(readAnimatorScale(resolver)) }
     DisposableEffect(resolver) {
@@ -90,6 +132,41 @@ fun ProvideTdayMotionScale(content: @Composable () -> Unit) {
         scale = readAnimatorScale(resolver)
         onDispose { resolver.unregisterContentObserver(observer) }
     }
+    return scale
+}
+
+/**
+ * The app's own half of the answer, live.
+ *
+ * Same shape and same reason as [rememberSystemMotionScale]: the switch is in
+ * Settings and the motion it governs is everywhere else, so a write that nothing
+ * observes would take effect at the next cold start and nowhere before it.
+ */
+@Composable
+private fun rememberInAppReduceMotion(): Boolean {
+    val context = LocalContext.current.applicationContext
+    val store = remember(context) { ReduceMotionPreferenceStore(context) }
+    var reduce by remember(store) { mutableStateOf(store.isEnabled()) }
+    DisposableEffect(store) {
+        val cancel = store.observeEnabled { reduce = it }
+        // Same window as the one above: a flip between the seeding read and this
+        // registration would otherwise go unheard for the life of the composition.
+        reduce = store.isEnabled()
+        onDispose { cancel() }
+    }
+    return reduce
+}
+
+/**
+ * Publishes the live motion scale to everything underneath, and keeps it live.
+ *
+ * Installed once, in `TdayTheme`, which is the one wrapper all four of the app's
+ * `setContent` roots already go through. One registration for the whole app rather
+ * than one per asker is the point — see [rememberSystemMotionScale].
+ */
+@Composable
+fun ProvideTdayMotionScale(content: @Composable () -> Unit) {
+    val scale = effectiveMotionScale(rememberSystemMotionScale(), rememberInAppReduceMotion())
     CompositionLocalProvider(LocalTdayMotionScale provides scale, content = content)
 }
 
@@ -100,16 +177,23 @@ fun ProvideTdayMotionScale(content: @Composable () -> Unit) {
  * a `@Preview`, a unit-test harness, a composable hoisted outside `TdayTheme`. Those
  * fall back to a one-shot read rather than to [UNSCALED], because a screen drawn
  * outside the provider should still obey the setting; the only thing it gives up is
- * noticing it change.
+ * noticing it change. The fallback reads *both* halves for the same reason it reads
+ * either: a surface that escaped the provider is exactly where a preference quietly
+ * failing to apply would never be noticed.
  *
- * @return The animator duration scale: 0 for animations off, 1 for untouched.
+ * @return The effective scale: 0 for no motion, 1 for untouched.
  */
 @Composable
 fun rememberTdayMotionScale(): Float {
     val provided = LocalTdayMotionScale.current
     if (provided != null) return provided
-    val resolver = LocalContext.current.contentResolver
-    return remember(resolver) { readAnimatorScale(resolver) }
+    val context = LocalContext.current.applicationContext
+    return remember(context) {
+        effectiveMotionScale(
+            readAnimatorScale(context.contentResolver),
+            ReduceMotionPreferenceStore(context).isEnabled(),
+        )
+    }
 }
 
 /**

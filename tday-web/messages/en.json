@@ -1015,6 +1015,13 @@
         "body": "Ticking a task off plays a short pop, and on a phone the app answers your taps and drags with a small vibration. Settings has a switch for each one — turn either off and everything else stays exactly as it was.",
         "tip": "The switches belong to this browser rather than to your account, so a quiet laptop and a buzzing phone can each have their own answer."
       },
+      "reduce-motion": {
+        "title": "Reduce motion",
+        "summary": "Turn T'Day's animations off without changing the rest of your phone.",
+        "keywords": "motion, animation, animations, reduce motion, accessibility, vestibular, still, transitions, dizzy",
+        "body": "Settings has a Reduce motion switch. With it on, T'Day stops animating: rows, sheets and screens go straight to where they were heading, and every wait that was there to cover an animation goes with it — so the app gets faster, not slower. Nothing else changes: the same screens in the same order, just already arrived.",
+        "tip": "It only ever takes motion away. If Android's own animation setting is already off, T'Day is already still, and the switch says so instead of offering to undo it."
+      },
       "floaters-vs-todos": {
         "title": "Floaters vs dated tasks",
         "summary": "Dateless tasks live in Anytime; dated tasks live in Scheduled.",

@@ -1015,6 +1015,13 @@
         "body": "Beim Abhaken einer Aufgabe erklingt ein kurzer Ton, und auf dem Handy antwortet die App auf dein Tippen und Ziehen mit einer kleinen Vibration. In den Einstellungen gibt es für beides einen Schalter — schalte einen aus, alles andere bleibt, wie es war.",
         "tip": "Die Schalter gehören zu diesem Browser und nicht zu deinem Konto: Ein stiller Laptop und ein vibrierendes Handy können jeweils ihre eigene Antwort haben."
       },
+      "reduce-motion": {
+        "title": "Bewegung reduzieren",
+        "summary": "Schalte die Animationen von T'Day aus, ohne den Rest des Telefons zu ändern.",
+        "keywords": "bewegung, animation, animationen, reduzieren, barrierefreiheit, still, übergänge, schwindel",
+        "body": "In den Einstellungen gibt es einen Schalter „Bewegung reduzieren“. Ist er an, animiert T'Day nichts mehr: Zeilen, Blätter und Bildschirme sind sofort dort, wo sie hinwollten, und jede Wartezeit, die eine Animation überbrückt hat, entfällt mit ihr – die App wird dadurch schneller, nicht langsamer. Sonst ändert sich nichts: dieselben Bildschirme in derselben Reihenfolge, nur schon angekommen.",
+        "tip": "Er nimmt Bewegung nur weg. Sind Animationen in den Android-Einstellungen bereits aus, ist T'Day schon still – und der Schalter sagt das, statt anzubieten, es rückgängig zu machen."
+      },
       "floaters-vs-todos": {
         "title": "Floater vs. geplante Aufgaben",
         "summary": "Aufgaben ohne Datum leben in Jederzeit; Aufgaben mit Datum in Geplant.",

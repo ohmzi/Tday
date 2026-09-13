@@ -21,6 +21,7 @@ object GuideTopicIds {
     const val LONG_PRESS_ACTIONS = "long-press-actions"
     const val DRAG_REORDER = "drag-reorder"
     const val SOUND_AND_VIBRATION = "sound-and-vibration"
+    const val REDUCE_MOTION = "reduce-motion"
     const val FLOATERS_VS_TODOS = "floaters-vs-todos"
     const val PROMOTE_AND_FLOAT = "promote-and-float"
     const val QUICK_DEFER = "quick-defer"

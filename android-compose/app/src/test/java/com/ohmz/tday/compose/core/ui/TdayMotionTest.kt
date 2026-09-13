@@ -56,6 +56,34 @@ class TdayMotionTest {
     }
 
     @Test
+    fun `the in-app switch subtracts motion at any scale`() {
+        // The switch is an answer about this app, not about the slider: it has to
+        // reduce a 10x device as readily as a 1x one, or somebody who moved the
+        // slider up once would find the app's own preference silently inert.
+        assertEquals(0f, effectiveMotionScale(1f, reduceInApp = true), 0f)
+        assertEquals(0f, effectiveMotionScale(10f, reduceInApp = true), 0f)
+        assertEquals(0f, effectiveMotionScale(0.5f, reduceInApp = true), 0f)
+    }
+
+    @Test
+    fun `the in-app switch cannot hand animations back`() {
+        // The direction that matters. A user who told Android to remove animations
+        // and left this switch off has asked for nothing extra — not for motion — so
+        // 0x survives an off switch. An in-app preference that could raise the
+        // platform's answer would be an accessibility setting the app overrules.
+        assertEquals(0f, effectiveMotionScale(0f, reduceInApp = false), 0f)
+    }
+
+    @Test
+    fun `an untouched device with the switch off is left exactly as it was`() {
+        // The other three-quarters of the truth table are one line, but this is the
+        // one every user is in: neither answer asks for anything, so the scale is
+        // the platform's own and the app is not quietly re-timing itself.
+        assertEquals(1f, effectiveMotionScale(1f, reduceInApp = false), 0f)
+        assertEquals(2f, effectiveMotionScale(2f, reduceInApp = false), 0f)
+    }
+
+    @Test
     fun `a fractional result rounds rather than truncating`() {
         // 0.5x of an odd number. Truncating would bias every scaled wait in the app
         // short by up to a millisecond, which is invisible once and a drift when the

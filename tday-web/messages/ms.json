@@ -1015,6 +1015,13 @@
         "body": "Menanda tugasan sebagai selesai memainkan bunyi pop yang pendek, dan pada telefon apl membalas ketikan serta seretan anda dengan getaran kecil. Tetapan mempunyai suis untuk setiap satu — matikan mana-mana satu dan yang lain kekal sama.",
         "tip": "Suis ini milik pelayar ini dan bukan akaun anda, jadi komputer riba yang senyap dan telefon yang bergetar boleh mempunyai jawapan masing-masing."
       },
+      "reduce-motion": {
+        "title": "Kurangkan gerakan",
+        "summary": "Matikan animasi T'Day tanpa mengubah tetapan telefon yang lain.",
+        "keywords": "gerakan, animasi, kurangkan, kebolehcapaian, pegun, peralihan, pening",
+        "body": "Tetapan mempunyai suis Kurangkan gerakan. Apabila dihidupkan, T'Day berhenti menganimasikan: baris, helaian dan skrin terus berada di tempat yang dituju, dan setiap masa menunggu yang menutupi animasi turut hilang — jadi apl menjadi lebih pantas, bukan lebih perlahan. Tiada apa-apa lagi berubah: skrin yang sama dalam susunan yang sama, cuma sudah sampai.",
+        "tip": "Ia hanya membuang gerakan. Jika tetapan animasi Android sendiri sudah dimatikan, T'Day memang sudah pegun dan suis itu menyatakannya, bukan menawarkan untuk membatalkannya."
+      },
       "floaters-vs-todos": {
         "title": "Floater vs tugasan berjadual",
         "summary": "Tugasan tanpa tarikh tinggal dalam suapan Bila-bila; tugasan bertarikh tinggal dalam suapan Dijadualkan.",
