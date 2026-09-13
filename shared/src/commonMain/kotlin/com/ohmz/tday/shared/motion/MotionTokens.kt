@@ -131,9 +131,10 @@ object MotionTokens {
         Duration(
             "Scene", 520,
             "A full-bleed illustration rising into an empty feed, or sinking out of one — the " +
-                "longest motion the app plays, and the only one at this length. NOT for route " +
-                "or tab handovers: those are Quick, and globals.css argues in place for why " +
-                "anything longer there reads as a stall.",
+                "longest motion the app plays. Four of the five sites at this length are that " +
+                "illustration; the fifth is a search-result scroll. NOT for route or tab " +
+                "handovers: those are Quick, and globals.css argues in place for why anything " +
+                "longer there reads as a stall.",
         ),
     )
 
@@ -213,7 +214,9 @@ object MotionTokens {
             "Snappy", 0.28, 0.86, 504,
             "Confirmation dialogs, selector overlays, a control committing to a new state. The " +
                 "busiest spring on iOS by a wide margin: the exact 0.28/0.86 pair is hand-written " +
-                "at nineteen sites across nine files.",
+                "at nineteen sites across eight files. It has no Android anchor yet — Compose's " +
+                "nearest value is Spring.StiffnessMediumLow, which is a library default rather " +
+                "than a decision anybody made.",
         ),
         Spring(
             "Gesture", 0.34, 0.82, 340,
