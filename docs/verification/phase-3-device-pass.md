@@ -71,3 +71,29 @@ cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme"
       Do:     select two tasks and delete them through the bulk bar's Delete → confirm; then open the list's ⋯ menu → Delete → Cancel, and finally ⋯ → Delete → confirm.
       Watch:  every button that only opens a prompt is the plain light click, and the heavier LONG_PRESS thud lands exactly twice across the whole run — on the two confirms that actually destroyed something, and never on the prompt you cancelled.
       Fails:  the thud fires on the Delete that merely opens the prompt, so cancelling felt like a deletion; or the confirm that removes the two tasks, or the whole list, feels like any other button.
+
+- [ ] **PR 15a · and · The create sheet plays its exit from every dismiss path** — Today, tap `+` to
+      open the create sheet and type a word so the keyboard is up.
+      Do:     tap the scrim well above the card (repeat from: the ✕ in the sheet header; the system
+              Back gesture; and once more for the edit sheet opened from a task, and for the New List
+              sheet on the lists row).
+      Watch:  the card SLIDES down off the bottom edge while fading, over 320 ms, on every one of those
+              paths — the dim scrim is still there behind it until the card has finished leaving.
+      Fails:  the sheet disappears on a single frame on any path, or one path slides and another cuts;
+              or the scrim disappears first and the card is left sliding over the live screen.
+
+- [ ] **PR 15a · and · The card is still readable the whole way out** — open the edit sheet on a task
+      that has a title, notes, a due date and a repeat set, so the card is full.
+      Do:     tap the ✕ and watch the card, not the screen behind it.
+      Watch:  title, notes and the date rows stay drawn and legible for the whole 320 ms slide; they
+              fade with the card, at the card's opacity, and are still there as it clears the edge.
+      Fails:  the card empties, blanks or collapses on the frame the slide starts, so what slides away
+              is an empty rectangle — the exit playing over nothing.
+
+- [ ] **PR 15a · and · A scrim dismiss draws no ripple** — create sheet open over Today, dark theme,
+      where a ripple against the dim scrim is easiest to see.
+      Do:     press and HOLD a finger on the scrim a good distance above the card, then release.
+      Watch:  nothing lights under the finger while it is held — the scrim stays one flat dim — and the
+              sheet starts its slide out on release.
+      Fails:  a circular ripple spreads out from the finger across the whole window, or the scrim
+              brightens as a full-screen button would while held.
