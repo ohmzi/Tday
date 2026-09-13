@@ -57,10 +57,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
-import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 
 object TdaySheetDefaults {
@@ -318,7 +317,7 @@ private fun TdayCenteredSelectorRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                TdayHaptics.selection(view)
                 onClick()
             })
             .padding(horizontal = 18.dp, vertical = 14.dp),
@@ -462,7 +461,7 @@ fun TdaySheetActionButton(
             ),
         onClick = {
             if (enabled) {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                TdayHaptics.buttonPress(view)
             }
             onClick()
         },

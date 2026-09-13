@@ -15,3 +15,59 @@ iOS haptics and bar-button press depth write their rows into `phase-5-device-pas
 cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme".
 
 ## Android
+
+> **Every PR 11 row below states a minimum Android version, and it is not decoration.**
+> `minSdk = 26` (`android-compose/app/build.gradle.kts:125`), and `androidx.core`'s
+> `HapticFeedbackConstantsCompat.getFeedbackConstantOrFallback` rewrites the newer constants
+> down to older ones on older handsets. Nothing goes silent — but below API 34 the vocabulary
+> partly *collapses*: `SEGMENT_TICK` and `TOGGLE_ON` both become `CONTEXT_CLICK`, `TOGGLE_OFF`
+> and `SEGMENT_FREQUENT_TICK` both become `CLOCK_TICK`, and `DRAG_START` becomes `LONG_PRESS`
+> — the same constant `destructive()` uses. Below API 30, `CONFIRM` additionally becomes
+> `VIRTUAL_KEY` and `REJECT` becomes `LONG_PRESS`. On a handset under the stated version the
+> two haptics a row asks you to compare are the *same constant*, so a `Fails` there is a
+> property of the fallback table and proves nothing about this diff.
+
+- [ ] **PR 11 · and · Completion against deletion** — Today, Android 11+ (API 30), 2+ pending tasks, system haptics on (Settings › Sound & vibration › Vibration & haptics), phone held rather than on a desk.
+      Do:     tick the first task's circle, then swipe the second row open and tap Delete.
+      Watch:  two haptics you could name blind — the tick is one rounded CONFIRM pulse, the delete a single heavier LONG_PRESS thud that lands harder than the tick did.
+      Fails:  the two are indistinguishable (both are still the old CLOCK_TICK), or the delete is the lighter of the pair.
+
+- [ ] **PR 11 · and · Edit and Delete on the same revealed row** — Today, Android 11+ (API 30), one pending task, swiped open so Edit / Copy / Delete are showing.
+      Do:     tap Edit, dismiss what opens, swipe the same row open again and tap Delete.
+      Watch:  Edit gives the same light click as any other button in the app; Delete gives the heavier thud. The two buttons sit 16dp apart and a mis-tap should be felt before it is read.
+      Fails:  Edit and Delete feel the same, or Edit is the heavy one.
+
+- [ ] **PR 11 · and · Pick-up against drop** — Today, Android 14+, 2+ scheduled tasks, timeline visible, two tasks at different hours.
+      Do:     long-press a task until it lifts, drag it onto a different hour, release.
+      Watch:  two different haptics inside the one gesture — a DRAG_START lift at the moment the row comes loose, and a rounded CONFIRM when it lands. The lift is not the tick a tap gives.
+      Fails:  only one haptic fires across the whole gesture, or the pick-up and the drop feel identical.
+
+- [ ] **PR 11 · and · Tab change against dock expand** — root feed, Android 14+, dock collapsed, sitting on any tab (collapsed, the other tabs are transparent and parked outside the dock, so the tab you are on is the only thing there is to press).
+      Do:     tap the tab you are on to expand the dock, then tap a different tab.
+      Watch:  the expand is the sharper CONTEXT_CLICK; the tab change that follows is a single SEGMENT_TICK detent. Same finger, same target, two events.
+      Fails:  both taps feel the same, or the expand fires nothing at all.
+
+- [ ] **PR 11 · and · Toggle direction** — create-task sheet open, Android 14+, scrolled to the Schedule switch row.
+      Do:     tap the Schedule row to turn it on, then tap it again to turn it off.
+      Watch:  on and off differ from each other (TOGGLE_ON against TOGGLE_OFF), and neither is the plain click the Date / Time row below it gives.
+      Fails:  both directions feel identical, or the switch row feels the same as the Date / Time row below it.
+
+- [ ] **PR 11 · and · Restoring is not completing** — Completed screen, Android 14+, at least one item in it.
+      Do:     tap the filled circle on a completed task to restore it.
+      Watch:  a TOGGLE_OFF, lighter than the CONFIRM the same circle gave when the task was finished — an undo, not an achievement.
+      Fails:  restoring feels like a completion, or gives the old flat tick.
+
+- [ ] **PR 11 · and · One event, one feel, on every screen** — Android 11+ (API 30), a pending task visible in each of Today, the Scheduled-home Today card list, and Calendar's day list (recreate a task between deletes).
+      Do:     swipe open and tap Delete on each of the three in turn.
+      Watch:  all three deletes are the same heavier thud. Before this change Scheduled-home's swipe buttons fired SEGMENT_FREQUENT_TICK while Today's and Calendar's fired CLOCK_TICK, so this is the row that catches a screen left behind.
+      Fails:  one of the three is lighter, sharper or shorter than the other two.
+
+- [ ] **PR 11 · and · One circle, two events** — Today, Android 14+, 2+ pending tasks, bulk-select entered from the Select (circle-check) button in the top bar — never a long-press, which is drag-to-reschedule.
+      Do:     tap a task's circle to add it to the selection, tap the X in the header to leave bulk-select, then tap that same circle to complete the task.
+      Watch:  the same pixel gives a light SEGMENT_TICK detent while it is moving a selection and the rounded CONFIRM when it finishes the task — the one control in the app whose haptic depends on the mode it is in.
+      Fails:  both give the same pulse, or the bulk-select tap fires the completion CONFIRM, so selecting ten tasks reads as ten completions.
+
+- [ ] **PR 11 · and · Asking is light, destroying is heavy** — Android 11+ (API 30), a list you can afford to delete, open on its detail screen with 2+ pending tasks in it.
+      Do:     select two tasks and delete them through the bulk bar's Delete → confirm; then open the list's ⋯ menu → Delete → Cancel, and finally ⋯ → Delete → confirm.
+      Watch:  every button that only opens a prompt is the plain light click, and the heavier LONG_PRESS thud lands exactly twice across the whole run — on the two confirms that actually destroyed something, and never on the prompt you cancelled.
+      Fails:  the thud fires on the Delete that merely opens the prompt, so cancelling felt like a deletion; or the confirm that removes the two tasks, or the whole list, feels like any other button.
