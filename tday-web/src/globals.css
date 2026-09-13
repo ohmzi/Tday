@@ -651,6 +651,64 @@
   .tday-rows-exit { animation: none; }
 }
 
+/* ── Surfaces that used to just appear ──
+   A panel or a bar whose entire existence is a conditional: the mobile
+   search-results dropdown (`MobileSearchHeader`) and the selection action bar
+   (`BulkSelectionBar`). Both were `{flag && <div …>}` and nothing more, which
+   gives a surface an enter of zero frames and an exit of none at all — it is on
+   the screen, then it is not, in the same paint the content behind it reflows
+   in. Neither is a modal, so neither inherited the portal's own transition.
+
+   Same shape as the `.tday-rows-*` pair above: a named keyframe, the curve
+   fixed here, and the duration handed in inline from `SURFACE_TRANSITION_MS`
+   (`src/lib/surfaceTransitionTiming.ts`) so the CSS and the `useFadeUnmount`
+   call that actually keeps the node in the DOM are one number read twice.
+
+   It translates as well as fades, because both of these arrive OVER content
+   that stays exactly where it is: with opacity alone the arrival has no
+   direction and reads as a repaint rather than as something turning up. The
+   curve is `.tday-empty-enter`'s own — the app already has one "something is
+   arriving" curve, and a second one tuned to look like it is how a vocabulary
+   of four durations becomes a vocabulary of fourteen. */
+.tday-surface-enter {
+  animation-name: tday-surface-in;
+  animation-timing-function: cubic-bezier(0.05, 0.7, 0.1, 1);
+  animation-fill-mode: both;
+}
+
+.tday-surface-exit {
+  animation-name: tday-surface-out;
+  animation-timing-function: cubic-bezier(0.05, 0.7, 0.1, 1);
+  animation-fill-mode: both;
+}
+
+/* A surface that hangs BELOW the control that opened it drops out of that
+   control rather than rising into it, so the panel and the field it belongs to
+   are moving the same way. Only the offset changes — the curve and the duration
+   stay the pair's, so this can never quietly become a second, differently-tuned
+   transition. */
+.tday-surface-from-top {
+  --tday-surface-offset: -6px;
+}
+
+@keyframes tday-surface-in {
+  from { opacity: 0; transform: translateY(var(--tday-surface-offset, 8px)); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes tday-surface-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(var(--tday-surface-offset, 8px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* `useFadeUnmount` skips its own lingering here too (see its doc comment), so
+     the exit class is barely applied at all — the same belt-and-braces as the
+     `.tday-rows-*` pair above. */
+  .tday-surface-enter { animation: none; }
+  .tday-surface-exit { animation: none; }
+}
+
 /* ── Route change ──
    Screens share a toolbar row, so nothing in the bar moves between routes; the
    fade is what turns a one-frame swap into a handover. Short: this sits between
