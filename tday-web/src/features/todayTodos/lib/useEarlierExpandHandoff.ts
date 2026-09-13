@@ -12,11 +12,12 @@ import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
  * `false`).
  *
  * `handoffPending` is true for exactly the window between that tap and the
- * moment `expanded` actually flips. It is driven by `exitMs` — the SAME
- * duration the caller also applies to the illustration's own exit animation
- * (see `TODAY_EARLIER_EXIT_MS` / `.tday-empty-exit` in globals.css) — so the
- * visual exit and the hand-off are sequenced by construction: one number,
- * read twice, not two guesses tuned to land close together.
+ * moment `expanded` actually flips. It is driven by `exitMs` — the SAME rung
+ * the illustration's own exit is drawn on, ink and slot together (see
+ * `TODAY_EARLIER_EXIT_MS` / `.tday-empty-slot` / `.tday-empty-exit` in
+ * globals.css) — so the visual exit and the hand-off are sequenced by
+ * construction: one number, read twice, not two guesses tuned to land close
+ * together.
  *
  * Under reduced motion there is no such window: the hand-off collapses to the
  * plain immediate toggle and `handoffPending` never goes true at all. See the
