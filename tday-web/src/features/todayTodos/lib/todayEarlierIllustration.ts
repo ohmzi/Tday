@@ -27,6 +27,12 @@ import type { EarlierHandoff } from "./useEarlierExpandHandoff";
  * construction. Shared by every scope below, not retuned per screen — see this
  * module's own doc comment for why that is deliberate.
  *
+ * It times that departure by whichever route it is reached: a tap that swaps
+ * the slot, and the celebration window running out under a scene that was only
+ * on the slot for its length (`useCelebrationSceneExit`). One departure, one
+ * length — a window expiry that faded the scene out over some other number
+ * would read as a different thing happening to it.
+ *
  * The stylesheet names the rung rather than taking this number: a duration
  * bound for CSS wants `var(--tday-duration-*)` and only a timer wants the
  * integer (`src/lib/motion.ts` says so, and `taskCompletionTiming.ts` splits
@@ -95,6 +101,7 @@ export function shouldShowTodayEmptyIllustration({
   earlierExpanded,
   earlierHandoff,
   celebrate,
+  sceneHeldForExit = false,
 }: {
   /** Zero current (non-Earlier) tasks for this scope, not loading, not mid-search. */
   showEmpty: boolean;
@@ -106,6 +113,13 @@ export function shouldShowTodayEmptyIllustration({
   earlierHandoff: EarlierHandoff;
   /** A completion (this tab's or a remote one) just emptied this scope's current tasks. */
   celebrate: boolean;
+  /**
+   * The window has just shut and the scene's departure is decided but not yet
+   * started — one render long, see `useCelebrationSceneExit`. Optional because
+   * it only ever matters on the last line below; a caller with no celebration
+   * window in play has nothing to hold.
+   */
+  sceneHeldForExit?: boolean;
 }): boolean {
   if (!showEmpty) return false;
 
@@ -120,11 +134,18 @@ export function shouldShowTodayEmptyIllustration({
   // still leaving, which is the pile-up this hand-off exists to undo.
   if (earlierHandoff === "rows-leaving") return false;
 
+  // The mirror, and the branch that says who is drawing rather than who will
+  // own the slot: the scene is on its way off it and is still the thing on it.
+  // Redundant for an expand, which holds `earlierExpanded` false for the whole
+  // beat — and not redundant at all for the other way this beat is reached. A
+  // celebration window running out plays it with Earlier already expanded, and
+  // without this line the two branches below would hand the slot over a frame
+  // before the scene had finished leaving it, which is the untimed cut this
+  // beat exists to replace.
+  if (earlierHandoff === "scene-leaving") return true;
+
   // Requirement 2: collapsed — the illustration owns the slot, Earlier's
-  // header sits reachable right underneath it. Requirement 3's expand beat is
-  // the same answer for the same reason and needs no branch of its own: the
-  // hand-off holds `earlierExpanded` false until the scene's exit has played,
-  // so the scene is still the occupant and still draws itself, mid-exit.
+  // header sits reachable right underneath it.
   if (!earlierExpanded) return true;
 
   // Requirement 3: expanded — Earlier's own rows own the slot instead of the
@@ -139,7 +160,17 @@ export function shouldShowTodayEmptyIllustration({
   // because this keeps the scene, a tap that lands inside the window swaps
   // nothing and is not sequenced at all. Anything that joins this condition
   // has to join that one too, and the test pairing them is what says so.
-  return celebrate;
+  //
+  // `sceneHeldForExit` is the seam between this line and the `"scene-leaving"`
+  // one above, and it exists because the two are one render apart. The window
+  // closing is what makes `celebrate` false, so on that render the beat it
+  // causes has not been armed yet and this line would hand the slot over a
+  // render early — taking the scene's own node out of the tree, which costs the
+  // departure its track transition and hands the replacement node the Scene
+  // arrival to replay. Held here for exactly the one render it takes the beat
+  // to arm. It is not a third reason to show the scene; it is the same reason,
+  // one render before the hand-off can say so.
+  return celebrate || sceneHeldForExit;
 }
 
 /**

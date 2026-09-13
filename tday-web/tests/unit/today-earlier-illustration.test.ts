@@ -122,6 +122,29 @@ describe("shouldShowTodayEmptyIllustration", () => {
       expect(shouldShowTodayEmptyIllustration({ ...base, celebrate: true })).toBe(true);
       expect(shouldShowTodayEmptyIllustration({ ...base, celebrate: false })).toBe(false);
     });
+
+    it("holds the scene across the render where the window shuts and the beat is not armed yet", () => {
+      // The two lines above are one render apart in production: `celebrate`
+      // going false IS the window closing, and the hand-off that plays the
+      // departure cannot exist until the commit after it. Answering false in
+      // between takes the scene's own node out of the tree, and an exit hung on
+      // a node that was just created is not an exit — see
+      // `useCelebrationSceneExit`, and the DOM-level test in
+      // `celebrate-window-expiry.test.tsx` that holds it to that.
+      const base = {
+        showEmpty: true,
+        hasEarlierItems: true,
+        earlierExpanded: true,
+        earlierHandoff: "idle" as EarlierHandoff,
+        celebrate: false,
+      };
+      expect(shouldShowTodayEmptyIllustration({ ...base, sceneHeldForExit: true })).toBe(true);
+      // And it is a hold, not a second window: it says nothing on its own once
+      // the screen has stopped being the shape where the scene was on the slot.
+      expect(
+        shouldShowTodayEmptyIllustration({ ...base, showEmpty: false, sceneHeldForExit: true }),
+      ).toBe(false);
+    });
   });
 
   describe("requirement 2: the illustration shows whenever Earlier is collapsed, celebration or not", () => {
@@ -160,6 +183,23 @@ describe("shouldShowTodayEmptyIllustration", () => {
           showEmpty: true,
           hasEarlierItems: true,
           earlierExpanded: false,
+          earlierHandoff: "scene-leaving",
+          celebrate: false,
+        }),
+      ).toBe(true);
+    });
+
+    it("keeps drawing the scene through the celebration window's own exit", () => {
+      // The other route into the same beat, and the one the flag below cannot
+      // cover: the window runs out with Earlier already expanded, so the scene
+      // is leaving a slot the rows are about to own while `earlierExpanded` has
+      // been true throughout. Without this the scene would be cut on the frame
+      // the window shut — which is the defect the beat replaced.
+      expect(
+        shouldShowTodayEmptyIllustration({
+          showEmpty: true,
+          hasEarlierItems: true,
+          earlierExpanded: true,
           earlierHandoff: "scene-leaving",
           celebrate: false,
         }),

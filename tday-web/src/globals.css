@@ -687,12 +687,14 @@
   --tday-empty-sink-ease: cubic-bezier(0.3, 0, 0.4, 1);
 }
 
-/* The exit mirror of `.tday-empty-enter`, played only during an "Earlier"
-   hand-off (requirement 3 of the Earlier section — Today originally, since
-   generalized to every other scope with its own Earlier bucket). Only ever
-   applied to a `.tday-empty-slot`, which carries the track this rides over —
-   closed by `.tday-empty-slot-closing` above, always in the same breath as
-   this.
+/* The exit mirror of `.tday-empty-enter`, played whenever the empty scene gives
+   its slot up to Earlier's own rows (requirement 3 of the Earlier section —
+   Today originally, since generalized to every other scope with its own Earlier
+   bucket). Two things ask for it and they ask for the same beat: a tap that
+   swaps the slot, and the celebration window that was holding the scene above
+   those rows running out (`useCelebrationSceneExit`). Only ever applied to a
+   `.tday-empty-slot`, which carries the track this rides over — closed by
+   `.tday-empty-slot-closing` above, always in the same breath as this.
 
    `--tday-duration-enter` is the rung `TODAY_EARLIER_EXIT_MS`
    (`todayEarlierIllustration.ts`) sits on, and that constant argues the choice:
