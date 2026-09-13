@@ -139,8 +139,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
@@ -168,6 +166,7 @@ import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
@@ -794,7 +793,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             uiState.completedTodayCount > 0
     LaunchedEffect(isDayDone) {
         if (isDayDone) {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
+            TdayHaptics.completion(view)
         }
     }
     val emptyStateSceneIconRes = if (isDayDone) {
@@ -1298,7 +1297,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             val currentDue = todo.due ?: return@requestTaskReschedule
             val currentDate = LocalDate.ofInstant(currentDue, zoneId)
         if (currentDate != targetDate) {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
+            TdayHaptics.dragDrop(view)
             if (todo.isRecurring) {
                 pendingRescheduleDrop = TaskRescheduleDrop(todo = todo, targetDate = targetDate)
             } else {
@@ -1321,7 +1320,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                 zoneId,
             ).toInstant()
             if (movedDue != currentDue) {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
+                TdayHaptics.dragDrop(view)
                 if (todo.isRecurring) {
                     pendingRescheduleDrop = TaskRescheduleDrop(todo = todo, targetHour = hour)
                 } else {
@@ -1675,7 +1674,7 @@ fun TodoListScreen( // skipcq: KT-R1006
         activeDropSectionKey = null
         timelineDropTargetBounds.clear()
         draggedScheduledTodoId = todo.id
-        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.LONG_PRESS)
+        TdayHaptics.dragPickUp(view)
         activeTimelineDrag = TimelineInAppDrag(todo, position)
     }
     val onTimelineDragMove: (todo: TodoItem, position: Offset) -> Unit = { todo, position ->
@@ -3358,7 +3357,7 @@ private fun BulkSelectionAction(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
             .clickable(enabled = enabled) {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                TdayHaptics.buttonPress(view)
                 onClick()
             }
             .padding(horizontal = 14.dp, vertical = 6.dp),
@@ -3497,10 +3496,7 @@ private fun TdayConfirmationDialog(
                         Spacer(Modifier.size(10.dp))
                         TextButton(
                             onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
+                                TdayHaptics.buttonPress(view)
                                 onConfirm()
                             },
                         ) {
@@ -3648,7 +3644,7 @@ private fun FloaterTaskHomeListRow(
                 scaleY = animatedScale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -3795,7 +3791,7 @@ private fun TodayHeaderButton(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -3924,7 +3920,7 @@ private fun CreateTaskButton(
     Card(
         modifier = modifier,
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -4267,7 +4263,7 @@ private fun ListSettingsActionTile(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -4322,7 +4318,7 @@ private fun ListSettingsDeleteButton(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.destructive(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -5783,10 +5779,7 @@ private fun SwipeTaskRow(
                             revealProgress = actionRevealProgress,
                             revealDelay = 0.74f,
                             onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
+                                TdayHaptics.buttonPress(view)
                                 closeSwipeSlot()
                                 promoteAction()
                             },
@@ -5802,10 +5795,7 @@ private fun SwipeTaskRow(
                             revealProgress = actionRevealProgress,
                             revealDelay = 0.74f,
                             onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
+                                TdayHaptics.buttonPress(view)
                                 closeSwipeSlot()
                                 demoteAction()
                             },
@@ -5821,10 +5811,7 @@ private fun SwipeTaskRow(
                             revealProgress = actionRevealProgress,
                             revealDelay = 0.74f,
                             onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
+                                TdayHaptics.buttonPress(view)
                                 closeSwipeSlot()
                                 deferAction()
                             },
@@ -5839,10 +5826,7 @@ private fun SwipeTaskRow(
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.62f,
                         onClick = {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                            )
+                            TdayHaptics.buttonPress(view)
                             closeSwipeSlot()
                             onInfo()
                         },
@@ -5856,10 +5840,7 @@ private fun SwipeTaskRow(
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.40f,
                         onClick = {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                            )
+                            TdayHaptics.buttonPress(view)
                             closeSwipeSlot()
                             runCatching {
                                 clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
@@ -5879,10 +5860,7 @@ private fun SwipeTaskRow(
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.04f,
                         onClick = {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                            )
+                            TdayHaptics.destructive(view)
                             closeSwipeSlot()
                             onDelete()
                         },
@@ -5906,10 +5884,7 @@ private fun SwipeTaskRow(
                                             dragPointerPosition = startPosition
                                             onDragStart?.invoke(startPosition)
                                             onDragMove(startPosition)
-                                            ViewCompat.performHapticFeedback(
-                                                view,
-                                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                            )
+                                            TdayHaptics.dragPickUp(view)
                                         },
                                         onDrag = { change, dragAmount ->
                                             change.consume()
@@ -6051,13 +6026,14 @@ private fun SwipeTaskRow(
                                     !visuallyChecked && !pendingCompletion && !readOnly
                                 },
                                 onClick = {
-                                    ViewCompat.performHapticFeedback(
-                                        view,
-                                        HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                    )
+                                    // One control, two events: in bulk-select mode this
+                                    // circle moves the selection, everywhere else it
+                                    // finishes the task. They must not feel the same.
                                     if (selectionActive) {
+                                        TdayHaptics.selection(view)
                                         onToggleSelected()
                                     } else {
+                                        TdayHaptics.completion(view)
                                         taskCompletionSound.play()
                                         closeSwipeSlot()
                                         localChecked = true

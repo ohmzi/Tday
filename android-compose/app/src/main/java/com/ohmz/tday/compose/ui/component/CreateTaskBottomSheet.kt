@@ -85,13 +85,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.feature.guide.GuideHelpLink
 import com.ohmz.tday.compose.ui.priority.PRIORITY_OPTIONS_LOW_TO_HIGH
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
@@ -919,10 +918,7 @@ private fun SplitDateTimeRow(
                 modifier = Modifier
                     .weight(1f)
                     .clickable(onClick = {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.CLOCK_TICK
-                        )
+                        TdayHaptics.buttonPress(view)
                         onDateClick()
                     })
                     .padding(horizontal = 8.dp, vertical = 8.dp),
@@ -949,10 +945,7 @@ private fun SplitDateTimeRow(
                 modifier = Modifier
                     .weight(1f)
                     .clickable(onClick = {
-                        ViewCompat.performHapticFeedback(
-                            view,
-                            HapticFeedbackConstantsCompat.CLOCK_TICK
-                        )
+                        TdayHaptics.buttonPress(view)
                         onTimeClick()
                     })
                     .padding(horizontal = 8.dp, vertical = 8.dp),
@@ -983,7 +976,7 @@ private fun ScheduleSwitchRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                TdayHaptics.toggle(view, on = !enabled)
                 onEnabledChange(!enabled)
             }
             .heightIn(min = 72.dp)
@@ -1048,7 +1041,7 @@ private fun SheetRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                TdayHaptics.buttonPress(view)
                 onClick()
             })
             .padding(horizontal = 16.dp, vertical = 14.dp),

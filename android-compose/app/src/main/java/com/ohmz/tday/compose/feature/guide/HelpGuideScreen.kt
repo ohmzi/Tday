@@ -29,6 +29,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
@@ -63,8 +64,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.GuidePreferenceStore
@@ -329,7 +328,7 @@ private fun GuideBarButton(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
