@@ -478,7 +478,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 56 — the Earlier chevron says something during the wait
 
-- [ ] `web-earlier-header-no-feedback-during-handoff` — the tapped chevron is identical for the whole 520 ms wait · web · Sev 3 · S · Gate V
+- [x] `web-earlier-header-no-feedback-during-handoff` — the tapped chevron is identical for the whole 520 ms wait · web · Sev 3 · S · Gate V
 - ↳ part 1 of 2 of `disclosure-expand-collapse` — promote `AnimatedHeight` out of `OnboardingWizard.tsx:704-729`. Box lives under **PR 42b+42c**.
 
 ## Phase 6 — parity pairs (android + web together; iOS follows)

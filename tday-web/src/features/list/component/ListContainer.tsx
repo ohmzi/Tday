@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
 import TimelineEmptyState from "@/features/todayTodos/component/TimelineEmptyState";
+import { earlierIsExpanding } from "@/features/todayTodos/lib/todayEarlierIllustration";
 import { useListSearch } from "../lib/useListSearch";
 import { useListEarlierSection } from "../lib/useListEarlierSection";
 import { useListEmptyState } from "../lib/useListEmptyState";
@@ -254,6 +255,12 @@ const ListContainer = ({ id }: { id: string }) => {
                             // exiting, and on the way back it goes false first
                             // and the rows linger on their own fade.
                             earlierExpanded={earlierExpanded || isSearching}
+                            // The one thing `earlierExpanded` cannot say: on
+                            // the way open it stays false for the whole
+                            // hand-off, so the header the finger just landed
+                            // on has nothing to show for the tap. See
+                            // `earlierIsExpanding`.
+                            earlierExpanding={earlierIsExpanding({ earlierHandoff })}
                             // Passes `earlierSlotChangesHands` through exactly
                             // like Today/All/Priority/Scheduled do: a tap that
                             // trades the slot between the scene and Earlier's

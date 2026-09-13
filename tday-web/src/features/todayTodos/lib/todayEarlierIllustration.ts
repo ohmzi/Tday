@@ -235,3 +235,31 @@ export function emptySceneIsLeaving({
 }): boolean {
   return earlierHandoff === "scene-leaving";
 }
+
+/**
+ * Whether Earlier is ON ITS WAY OPEN — the beat its own `expanded` flag is
+ * deliberately false for.
+ *
+ * The header needs this and nothing else does. An expand holds `expanded`
+ * false for the length of the scene's exit (`useEarlierExpandHandoff`), which
+ * is right for everything that draws the slot and wrong for the chevron the
+ * finger just landed on: read `expanded` alone and the header is identical for
+ * the whole wait, so the tap reads as ignored and gets made again. A collapse
+ * needs no equivalent — `expanded` goes false on the tap there, and the
+ * chevron already turns with it.
+ *
+ * Derived from `emptySceneIsLeaving` rather than re-comparing the state,
+ * because it is not a second beat: the scene only ever leaves this slot to
+ * hand it to Earlier's rows, so "the scene is leaving" and "Earlier is opening"
+ * are one moment seen from either end, and two independent comparisons of the
+ * same value are two chances to disagree. Which is also why this covers the
+ * departure a tap did not start — a celebration window running out under an
+ * expanded bucket ends with Earlier's rows on the slot exactly as a tap does,
+ * and the chevron should have turned by then either way.
+ */
+export function earlierIsExpanding(args: {
+  /** Which half of the swap is mid-exit, if either (see `useEarlierExpandHandoff`). */
+  earlierHandoff: EarlierHandoff;
+}): boolean {
+  return emptySceneIsLeaving(args);
+}
