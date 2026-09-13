@@ -269,7 +269,9 @@ private enum BurstBox {
 }
 
 private enum EmptyStateEnter {
-    static let duration: Double = 0.52
+    static let duration: Double = TdayMotion.Durations.scene
+    /// Not a press scale. The three of those describe a surface squashing under a
+    /// finger; this is a scene arriving from further away than any of them travel.
     static let startScale: Double = 0.92
     static let rise: Double = 18
 }

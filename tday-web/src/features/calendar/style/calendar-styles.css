@@ -21,9 +21,9 @@
 }
 
 .cal-native-slide-from-left {
-  animation: cal-native-slide-in-left 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: cal-native-slide-in-left 260ms var(--tday-ease-gesture) both;
 }
 
 .cal-native-slide-from-right {
-  animation: cal-native-slide-in-right 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: cal-native-slide-in-right 260ms var(--tday-ease-gesture) both;
 }

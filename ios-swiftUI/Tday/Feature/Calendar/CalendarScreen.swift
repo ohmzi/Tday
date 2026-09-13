@@ -135,7 +135,14 @@ private enum CalendarModeCardMetrics {
 }
 
 private let calendarTodayTintColor = Color(red: 80.0 / 255.0, green: 154.0 / 255.0, blue: 230.0 / 255.0)
+/// Gesture's response (0.34) but not its damping (0.82): the card is resizing to a
+/// committed mode, not coasting after a finger, and 0.92 is what stops the grid
+/// wobbling under the anchored header. Left off the token for the damping alone.
 private let calendarModeResizeAnimation = Animation.spring(response: 0.34, dampingFraction: 0.92, blendDuration: 0.02)
+/// Between Quick (0.15) and Enter (0.20), on neither. The crossfade has to be over
+/// well before the resize spring above has settled, or the paging reads as a card
+/// replacement rather than a pager — which is a length fitted to that spring, not
+/// a rung off the ladder.
 private let calendarModeContentTransitionAnimation = Animation.easeInOut(duration: 0.18)
 private let calendarModeTransitionCleanupDelay: DispatchTimeInterval = .milliseconds(260)
 
