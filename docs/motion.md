@@ -206,9 +206,12 @@ against `animation-core`'s bytecode rather than assumed.
   declarations on web — `.tday-empty-enter` at `tday-web/src/globals.css:608`,
   `.tday-surface-enter` at `:789` and `.tday-surface-exit` at `:795`. iOS
   expresses the same arrival with `.easeOut` and is not on this curve yet.
-- **`Gesture`.** Four sites, all web: `tday-web/src/globals.css:249` and `:271`
-  (press feedback), `tday-web/src/features/calendar/style/calendar-styles.css:32`
-  and `:36` (calendar paging). Android and iOS express the same intent with the
+- **`Gesture`.** Four sites, all web: `tday-web/src/globals.css:299` (the press
+  ripple) and `:401` (the press itself, which is in `@layer tday-press` so that
+  a `transition-colors` on a shadcn Button cannot put the app's most common
+  button back on Tailwind's default ease),
+  `tday-web/src/features/calendar/style/calendar-styles.css:32` and `:36`
+  (calendar paging). Android and iOS express the same intent with the
   **Gesture spring**, which is a different thing under a shared name.
 
 > **Migrating an iOS easing site onto a token is a visible change.** SwiftUI's
@@ -275,7 +278,9 @@ bar button than on a full-width row.
 - **`Row`.** 2 Android press sites; 2 on iOS
   (`ios-swiftUI/Tday/Feature/Onboarding/OnboardingWizardOverlay.swift:1347` and
   `:1359`); 6 `active:scale-[0.985]` on web, plus the global press rule at
-  `tday-web/src/globals.css:286`.
+  `tday-web/src/globals.css:323`, which reads the token rather than writing
+  0.985 out again and stays in `@layer base` on purpose — a call site pressing
+  to its own depth has to be able to beat it.
 
 These three are the narrowest part of the vocabulary and the tree is messier
 than they are — nine distinct press literals span 0.92–0.992. See the open
@@ -383,7 +388,7 @@ change pixels or destroy an argument that is worth more than the tidiness.
 
 | Not a token | Where | Why it is excluded |
 |---|---|---|
-| The 340–420 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/TdayApp.kt:119` (360, nav fade-in); `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5757` (420); `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:214` and `:452` (340 ms hand-off sleeps); `tday-web/src/globals.css:249` (340 ms ripple) | Five values, no two of them the same motion, and nothing that would still be true if they were merged. A rung here would sit one frame from `Emphasis` and could not be told from it by eye — exactly the case the five-rung ladder exists to refuse |
+| The 340–420 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/TdayApp.kt:119` (360, nav fade-in); `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5757` (420); `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:214` and `:452` (340 ms hand-off sleeps) | Four values, no two of them the same motion, and nothing that would still be true if they were merged. The web press ripple was the fifth at 340 ms and is no longer in the band: it grows from a third of its surface to nearly twice it, which rule 2 puts on `Emphasis`, and 320 is that same motion to within a frame. A rung here would sit one frame from `Emphasis` and could not be told from it by eye — exactly the case the five-rung ladder exists to refuse |
 | The 600–620 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5761` (620); `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:136` (0.62 flash delay) | Both are legs of the search-result reveal, timed against the legs either side of them rather than against a ladder. They are longer than `Scene`, which is the app's longest *motion* — these are waits |
 | The iOS sub-frame sequencing constant | `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:133` (0.08 s pre-scroll delay) | Below the two-frame floor the ladder is built on. It orders events; it is not a motion anybody watches. `CompletedScreen.swift`'s 0.1 s was listed here and did not belong: it was the `.easeOut` on a row transition's removal leg, which is a motion somebody watches, and it is now `TdayFeedItemMotion.departure` — a departure that got 50 % longer, deliberately, because this row was the only thing claiming it was a sequencing constant |
 | `cubic-bezier(0.3, 0, 0.4, 1)` | `tday-web/src/globals.css:683` (`--tday-empty-sink-ease`, ridden by `.tday-empty-exit` and by the `.tday-empty-slot` track it closes) | The empty scene *sinking*. Deliberately not `Scene`'s curve read backwards — the exit is played only during an "Earlier" hand-off and is tuned against that hand-off's own timing. Named as a property rather than written twice: the ink and the slot under it have to leave on one curve or they read as two departures |
