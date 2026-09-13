@@ -526,8 +526,20 @@ struct OnboardingWizardOverlay: View {
                     localError = nil
                     onClearAuthStatus()
                     isCompletingAuthentication = false
-                    isChoosingSecurityQuestions = false
-                    isCreatingAccount.toggle()
+                    // This exit out of the create-account flow — and out of the
+                    // security-questions step it leads to — has animated so far only
+                    // because the card happens to list `isCreatingAccount` in its
+                    // `.animation(_:value:)` chain 400 lines above. That transaction is
+                    // inherited: nothing here, and nothing in the panel this button lives
+                    // in, asks for it. Drop a line from that chain, or lift this content
+                    // into a view of its own, and the exit hard-cuts with nothing in the
+                    // build to say so. So it declares its own, over both flags it flips,
+                    // in the panel spring the chain already applies — which is why the
+                    // motion today is unchanged.
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                        isChoosingSecurityQuestions = false
+                        isCreatingAccount.toggle()
+                    }
                 }
                 .buttonStyle(WizardTextButtonStyle())
                 .font(.tdayRounded(size: 15, weight: .bold))
@@ -539,9 +551,14 @@ struct OnboardingWizardOverlay: View {
                     localError = nil
                     onClearAuthStatus()
                     isCompletingAuthentication = false
-                    isCreatingAccount = false
-                    isChoosingSecurityQuestions = false
-                    step = .mode
+                    // The same borrowed transaction as the exit above, inherited from
+                    // the chain's `step` entry rather than its `isCreatingAccount` one,
+                    // and declared here for the same reason, with the spring `step` uses.
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                        isCreatingAccount = false
+                        isChoosingSecurityQuestions = false
+                        step = .mode
+                    }
                 }
                 .buttonStyle(WizardTextButtonStyle())
                 .font(.tdayRounded(size: 15, weight: .bold))

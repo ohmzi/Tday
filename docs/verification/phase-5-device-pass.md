@@ -45,3 +45,14 @@ Rows from Android and web PRs of Phases 5 and 6 belong in this file too, alongsi
               up for a beat after the sheet has gone. On the confirm path, watch for the keyboard
               staying up for the whole save on a slow connection — that is the same defect with the
               `await` in front of it.
+
+- [ ] **PR 16 · ios · The two create-account exits still swap at one speed** — onboarding wizard,
+      past the server step, on the Sign in / Create account card.
+      Do:     from Create account, tap "I already have an account" (repeat from the questions step:
+              Back, then the same tap; and once more with "Change setup" from Create account).
+      Watch:  the card's fields swap over the same ~0.28 s spring as a Mode or Server step change —
+              First name and Confirm password grow and shrink the card with the rest of the panel.
+      Fails:  the swap now runs at a different speed from a step change; or something that used to
+              be still — the step chips, the hero tile, the card's height on the way back to Mode —
+              slides or fades, which is the newly explicit transaction reaching further than the
+              `.animation(_:value:)` chain it replaces did.
