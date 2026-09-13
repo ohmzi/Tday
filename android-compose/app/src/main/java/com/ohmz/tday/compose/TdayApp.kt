@@ -1257,9 +1257,12 @@ private fun RootFeedContent(
         // changes; the create button was the last surface still cutting, so a swap left a
         // blue-to-green jump in the corner of an otherwise continuous handover. The accent
         // is part of that one handover rather than a second event, so it rides the body's
-        // rung and curve — iOS gets the same thing for free, because its create button and
-        // dock sit inside the transaction its tab switch already runs in. With motion off
-        // it snaps: the button is drawn in the arriving tab's accent, finished.
+        // rung and curve — as does iOS's create button, which is a SwiftUI fill inside the
+        // transaction its tab switch already runs in. Its dock only half agrees: the
+        // collapsed pill's tint is in that transaction too, but the expanded control is a
+        // `UISegmentedControl` whose accent is assigned in `updateUIView`, which reads no
+        // transaction and so cuts. With motion off it snaps: the button is drawn in the
+        // arriving tab's accent, finished.
         //
         // Hoisted out of the visibility gate below so the accent is not re-seeded every
         // time the search field gives the controls their row back: a button that ducks in
