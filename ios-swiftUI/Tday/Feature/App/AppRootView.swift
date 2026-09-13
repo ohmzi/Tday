@@ -100,6 +100,18 @@ struct AppRootView: View {
 
                             if appViewModel.isWorkspaceAvailable, rootControlsVisible {
                                 rootFloatingControls
+                                    // Down and out through the bottom edge, and back up the
+                                    // same way. The opacity half is load-bearing rather than
+                                    // decorative: `.move(edge:)` offsets by the view's own
+                                    // height, which clears the dock's box but not the home
+                                    // indicator strip it sits above, so the fade is what
+                                    // guarantees the control is gone rather than parked in
+                                    // it. Android pairs `slideOutVertically { it }` with a
+                                    // fade for the same reason. The travel answers to
+                                    // `rootControlsVisible` and to nothing else — the unlock
+                                    // that also inserts these controls is handed no animation
+                                    // below, for the reason written there.
+                                    .transition(.move(edge: .bottom).combined(with: .opacity))
                             }
                         }
                         // The dock's pill slides to the tab that was tapped and the feed under
@@ -124,6 +136,55 @@ struct AppRootView: View {
                             reduceMotion ? nil : TdayMotion.standard(duration: TdayMotion.Durations.quick),
                             value: rootFeedTab
                         )
+                        // The dock and the create button used to be nothing but the `if`
+                        // above: expanding the search field took them off the screen in the
+                        // frame the field grew into, leaving a hole where the chrome had
+                        // been and then putting the chrome back in it. The transition on the
+                        // controls is inert without a transaction, and this is that one.
+                        //
+                        // Travel, so Emphasis by the geometry rule — and Settle is the rung
+                        // spelled as a spring, the token whose own doc string names a dock
+                        // and a bar. One spec for both directions: the exit is the enter
+                        // played backwards, and a length of its own would read as two
+                        // gestures rather than one control getting out of the way. The first
+                        // idiom rule only forbids an exit that OUTLASTS its arrival, and
+                        // these cannot. Android drives the same two controls off the same
+                        // spring; web, having no spring runtime, spells it as the Gesture
+                        // easing on the Emphasis rung.
+                        //
+                        // Its own `.animation` rather than a second value on the one above,
+                        // because a tab swap and the chrome standing down are different
+                        // events that happen to share a container — folding them together
+                        // would put the dock's departure on the tab handover's clock.
+                        // Reduce Motion passes nil, so the controls are taken away and put
+                        // back finished (`docs/motion.md`'s fifth idiom rule).
+                        .animation(
+                            reduceMotion ? nil : TdayMotion.settle,
+                            value: rootControlsVisible
+                        )
+                        // The other way these controls come and go: `isWorkspaceAvailable` in
+                        // the `if` above, which the unlock flips at the same moment as the
+                        // `showOnboardingOverlay` further down. That one opens a transaction
+                        // over this whole subtree, and a transaction is all a `.transition`
+                        // needs — so without this line the move above would ALSO play the
+                        // lock and unlock, travelling the dock and the button up from under
+                        // the bottom edge on the Quick rung, in the one handover where
+                        // nothing else on the screen moves at all.
+                        //
+                        // Handing that value no animation is how an insertion says it has no
+                        // before. Android says it in its own dialect: `RootFeedContent` is
+                        // composed fresh inside the arriving half of the lock Crossfade, and
+                        // `AnimatedVisibility` plays no enter for a `visible` that was
+                        // already true on its first composition, so the dock is simply drawn
+                        // in its slot while the wizard hands over above it. What fades on
+                        // either client is the wizard, not the chrome underneath it.
+                        //
+                        // It also settles a split this file already had: an unlock whose
+                        // version check is blocking leaves `showOnboardingOverlay` false on
+                        // both sides, so that unlock opened no transaction and the chrome
+                        // appeared finished, while an ordinary one animated it. The same
+                        // event cannot mean two things depending on a version number.
+                        .animation(nil, value: showOnboardingOverlay)
                     }
                     .blur(radius: showOnboardingOverlay ? 6 : 0)
                     .scaleEffect(showOnboardingOverlay ? 0.992 : 1)
@@ -245,34 +306,39 @@ struct AppRootView: View {
                             )
                         }
                     }
-                    // Locking and unlocking the app is one event with several surfaces in it:
-                    // the app behind goes out of focus and shrinks a thousandth, the wizard
-                    // covers it, and the floating controls that only exist for a real
-                    // workspace come and go underneath. The blur and the scale were already
-                    // animated, on a 220 ms of their own; the wizard carried no `.transition`
-                    // at all, so it cut in over a backdrop that was still resolving. They need
-                    // one transaction between them, and a transaction reaches a `.transition`
-                    // only from a modifier applied OUTSIDE the `.overlay` that inserts it —
-                    // which is why this sits below the overlay rather than beside the blur it
-                    // also drives. Absorbing that 220 is the point: three surfaces of one
-                    // event cannot keep separate clocks, and the odd duration was never in the
-                    // vocabulary to be kept. The wizard is drawn where it will stay and the
-                    // controls fade in place, so nothing in the handover travels; the 0.992 is
-                    // the blur's other half and not a geometry change — eight thousandths is a
-                    // focus cue, too small to read as a move, and it answers to the rung the
-                    // blur it accompanies is on. So by the geometry rule this is not Emphasis,
-                    // and a whole-screen handover is the Quick rung the vocabulary names for
-                    // it — the rung the tab swap above already runs on. Standard is the curve
-                    // because a crossfade runs both halves off one clock and neither Enter nor
-                    // Exit describes that, and one animation covers both directions because
-                    // the way in and the way out are the same handover reversed. Android times
-                    // the same moment on this rung and curve; its third surface is a crossfade
-                    // rather than a fade-in, because it draws an inert placeholder feed under
-                    // the wizard where this one draws the real screens, and it has no scale
-                    // because its backdrop cue is a 14 dp blur that carries the focus change
-                    // on its own. Reduce Motion passes no animation: the app is drawn unlocked
-                    // and in focus, finished, rather than held mid-blur (`docs/motion.md`'s
-                    // fifth idiom rule).
+                    // Locking and unlocking the app is one event with several surfaces in
+                    // it: the app behind goes out of focus and shrinks a thousandth, the
+                    // wizard covers it, and the floating controls that only exist for a
+                    // real workspace come and go underneath. The blur and the scale were
+                    // already animated, on a 220 ms of their own; the wizard carried no
+                    // `.transition` at all, so it cut in over a backdrop that was still
+                    // resolving. They need one transaction between them, and a transaction
+                    // reaches a `.transition` only from a modifier applied OUTSIDE the
+                    // `.overlay` that inserts it — which is why this sits below the overlay
+                    // rather than beside the blur it also drives. Absorbing that 220 is the
+                    // point: three surfaces of one event cannot keep separate clocks, and
+                    // the odd duration was never in the vocabulary to be kept. The wizard
+                    // is drawn where it will stay and the controls are put back in their
+                    // slot finished, so nothing in the handover travels; the 0.992 is the
+                    // blur's other half and not a geometry change — eight thousandths is a
+                    // focus cue, too small to read as a move, and it answers to the rung
+                    // the blur it accompanies is on. Those controls carry a move of their
+                    // own for when the search field takes their row, and they are held out
+                    // of this transaction (`.animation(nil, value:)` above) so it cannot
+                    // drive that move through an event nothing else moves in. So by the
+                    // geometry rule this is not Emphasis, and a whole-screen handover is
+                    // the Quick rung the vocabulary names for it — the rung the tab swap
+                    // above already runs on. Standard is the curve because a crossfade runs
+                    // both halves off one clock and neither Enter nor Exit describes that,
+                    // and one animation covers both directions because the way in and the
+                    // way out are the same handover reversed. Android times the same moment
+                    // on this rung and curve; its third surface is a crossfade rather than
+                    // a fade-in, because it draws an inert placeholder feed under the
+                    // wizard where this one draws the real screens, and it has no scale
+                    // because its backdrop cue is a 14 dp blur that carries the focus
+                    // change on its own. Reduce Motion passes no animation: the app is
+                    // drawn unlocked and in focus, finished, rather than held mid-blur
+                    // (`docs/motion.md`'s fifth idiom rule).
                     .animation(
                         reduceMotion ? nil : TdayMotion.standard(duration: TdayMotion.Durations.quick),
                         value: showOnboardingOverlay
