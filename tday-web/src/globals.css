@@ -13,6 +13,65 @@
    verbatim and never resolves it, so ordering for its sake would not matter. */
 @import "./generated/motion-tokens.css";
 
+/* ── The reduced-motion floor ──
+   The safety net under every animation in the app, and specifically under the
+   ones nobody remembered to guard. The blocks further down this file each
+   answer for one motion they own; this one answers for the motion no block
+   claims — a Tailwind `animate-*` utility, a library's inline transition, the
+   next keyframe somebody writes without reading this paragraph.
+
+   It sits directly under the imports because everything it floors has to be in
+   the cascade before it, and because an `@import` that follows any other rule
+   is discarded — the note above the motion-tokens import spells that out.
+
+   `!important`, in a file that spends a paragraph below arguing its way OUT of
+   one. A cascade layer cannot do this job: the `tday-press` layer wins against
+   utilities, and most of what this rule exists for is not a utility. It is
+   dnd-kit's `transition` string on a dragging row and vaul's on a drawer —
+   inline styles, which no layer outranks and only `!important` does.
+   Specificity stays at zero all the same (`:where()` inside the `:not()`), so
+   a rule that deliberately means to out-rank the floor still can.
+
+   A floor and not an off switch. `animation: none` would take the fill mode
+   with it, and an element whose resting CSS *is* its own start frame —
+   `opacity: 0`, waiting for a keyframe to raise it — would then be invisible
+   for good. That is the fifth idiom rule in `docs/motion.md` exactly inverted:
+   the trip removed and the destination with it. A floored animation still
+   runs, still fills `forwards`/`both` onto its last frame, and still fires
+   `animationend`, so the JS that waits for one advances instead of stalling.
+   The delays go to zero for the other half of the same rule: a delay is the
+   wait with the motion already gone, and removing the motion must never mean
+   keeping the wait.
+
+   The two exemptions are busy indicators, which are status rather than
+   transition. They have no finished state for this rule to draw, and one that
+   has stopped reads as work that has finished when it has not — the single
+   thing worse than a spinner that spins. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    /* not a token — see docs/motion.md. Not a rung and not a length anybody
+       watches: it is the shortest animation that still reports having
+       happened. Zero is what the eye wants, but a zero-length animation's
+       `animationend` is not something every engine agrees to fire, and this
+       rule's whole argument is that the event still arrives. */
+    --tday-motion-floor: 1ms;
+  }
+
+  *:not(:where(.animate-spin, .animate-pulse)),
+  *:not(:where(.animate-spin, .animate-pulse))::before,
+  *:not(:where(.animate-spin, .animate-pulse))::after {
+    animation-duration: var(--tday-motion-floor) !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: var(--tday-motion-floor) !important;
+    transition-delay: 0s !important;
+    /* The CSS half of `src/lib/scroll.ts`. That module downgrades the smooth
+       scroll a script asks for; this catches the scroller that asks for one in
+       a stylesheet, where no script is passing through to be asked. */
+    scroll-behavior: auto !important;
+  }
+}
+
 @font-face {
   font-family: "Nunito";
   src: url("./assets/fonts/Nunito.ttf") format("truetype");
@@ -778,7 +837,7 @@
    off leaving the screen, and a state that simply appears in that gap reads as
    the list breaking rather than as the list being finished. */
 .tday-empty-enter {
-  animation: 520ms var(--tday-ease-scene) both tday-empty-rise;
+  animation: var(--tday-duration-scene) var(--tday-ease-scene) both tday-empty-rise;
 }
 
 /* The burst leads; the scene follows through it. Without the wait the
