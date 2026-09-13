@@ -161,9 +161,15 @@ spends TF2 — see `README.md`, "iOS: three cycles, for the whole programme".
       standing on a month with pages live in both directions.
       Do:     flick the grid sideways — fast, and released after well under the 48px the threshold
               asks for. Then drag the grid a long way past the threshold, walk it back towards the
-              middle without lifting, and let go.
+              middle without lifting, and let go. Then tap twenty-odd day cells at speed, the way
+              a thumb picks a date — quick, careless taps, not careful ones.
       Watch:  the flick turns the page. The drag that was being walked back does not: the grid
-              glides home over 150 ms and the month is unchanged.
+              glides home over 150 ms and the month is unchanged. The taps select their dates and
+              nothing else: the month stays put, and the card never shakes.
       Fails:  a flick that has to be dragged the full 48px before it counts, which is the defect on
               a surface a whole card wide. Also a fail: a drag you have already changed your mind
-              about turning the page anyway; or a flick turning two pages.
+              about turning the page anyway; or a flick turning two pages. And a tap turning one —
+              a projection is 150 ms of travel the finger never made, so a few pixels of contact
+              jitter can clear the threshold arithmetically while being no gesture at all. Standing
+              at the navigation floor the same press shows itself differently, as the refusal
+              shake playing for a tap; both are the same fault and either one is a fail.

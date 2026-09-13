@@ -229,9 +229,14 @@ describe("the calendar page follows the finger", () => {
   it("glides the page home when the swipe stops short", () => {
     const { container, onNavigate } = renderCard();
 
-    press(container, 300);
-    move(container, 270);
-    lift(container, 270);
+    // Stamped, and stopped before the lift, because "stops short" is a statement
+    // about distance and the release is no longer decided on distance alone: a
+    // finger still travelling at 30px would be the flick two tests below, and
+    // left to the wall clock this one is whichever of the two the runner's load
+    // happens to make it.
+    at(container, "pointerDown", 300, 1000);
+    at(container, "pointerMove", 270, 1020);
+    at(container, "pointerUp", 270, 1200);
 
     expect(onNavigate).not.toHaveBeenCalled();
     expect(trackOf(container).style.transform).toBe("");
@@ -310,6 +315,27 @@ describe("the calendar page follows the finger", () => {
     expect(onNavigate).toHaveBeenCalledWith(1);
   });
 
+  it("refuses a press that jittered but never locked an axis", () => {
+    // Contact jitter, not a swipe: 7px is inside the 8px lock, so no move ever
+    // said which way this gesture meant to go. The projection is what makes that
+    // dangerous — 7px in 20ms carries 52px further in the 150ms a release is
+    // worth, clearing a threshold the finger itself came nowhere near — and an
+    // unlocked gesture is precisely the one the sampler timed across the whole
+    // press rather than across its last 100ms. In month view the same touch is a
+    // tap on a day cell, so the user would get a date selected and a month
+    // turned by one press.
+    const { container, onNavigate } = renderCard();
+
+    at(container, "pointerDown", 300, 1000);
+    at(container, "pointerMove", 293, 1016);
+    at(container, "pointerUp", 293, 1020);
+
+    expect(onNavigate).not.toHaveBeenCalled();
+    // And nothing was written under the finger either: a press that stayed
+    // inside the slop leaves the grid exactly as it found it.
+    expect(trackOf(container).style.transform).toBe("");
+  });
+
   it("refuses a long drag that was already being walked back", () => {
     // The same mistake from the other side. The finger is 60px from where it
     // started — past the threshold — but spent the last 60ms travelling the
@@ -333,11 +359,15 @@ describe("the calendar page follows the finger", () => {
     installReducedMotion(true);
     const { container } = renderCard();
 
-    press(container, 300);
-    move(container, 268);
+    // Stamped so the release is undecided for certain. A turned page also leaves
+    // `transition: none` behind — it hands over to the incoming slide rather than
+    // gliding — so an unstamped lift that the wall clock read as a flick would
+    // pass these two assertions without the preference having done anything.
+    at(container, "pointerDown", 300, 1000);
+    at(container, "pointerMove", 268, 1020);
     expect(trackOf(container).style.transform).toBe("translateX(-32px)");
 
-    lift(container, 268);
+    at(container, "pointerUp", 268, 1200);
     expect(trackOf(container).style.transform).toBe("");
     expect(trackOf(container).style.transition).toBe("none");
   });

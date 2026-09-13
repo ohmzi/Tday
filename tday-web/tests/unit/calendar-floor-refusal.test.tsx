@@ -97,6 +97,10 @@ describe("the calendar answers a page it refuses to turn", () => {
 
     const pager = pagerOf(container);
     fireEvent.pointerDown(pager, { pointerId: 1, clientX: 100 });
+    // The move locks the axis, which is what the release is gated on: a finger
+    // 49px from where it went down passed the 8px lock on the way, and a stream
+    // with no move in it is one no device produces.
+    fireEvent.pointerMove(pager, { pointerId: 1, clientX: 100 + SWIPE_THRESHOLD + 1 });
     fireEvent.pointerUp(pager, { pointerId: 1, clientX: 100 + SWIPE_THRESHOLD + 1 });
 
     expect(onNavigate).toHaveBeenCalledWith(-1);
