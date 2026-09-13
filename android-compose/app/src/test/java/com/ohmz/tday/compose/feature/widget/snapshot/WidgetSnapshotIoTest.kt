@@ -5,14 +5,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
-import java.nio.file.FileSystems
-import java.nio.file.StandardWatchEventKinds
-import java.nio.file.WatchService
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -37,10 +33,19 @@ import java.util.concurrent.atomic.AtomicReference
  *     whether to hydrate (or whether to fast-paint at all) from a bare `File.exists()`. Under
  *     delete-then-write that probe was transiently false on every single cache write.
  *
- * Defect 3 is checked by asserting that the replacement never unlinks the name — once against the
- * `File` the caller passes in, once against the kernel's own event stream — rather than by racing
- * a thread to catch the name missing. A `rename(2)` has no window to catch, so a sampling probe
- * can only ever report noise or nothing; see the comments on those two tests for what it measured.
+ * Defect 3 is checked by asserting that the replacement never unlinks the name, rather than by
+ * racing a thread to catch the name missing. A `rename(2)` has no window to catch, so a sampling
+ * probe can only ever report noise or nothing.
+ *
+ * There was briefly a second oracle here that watched the directory through `WatchService` and
+ * failed on an `ENTRY_DELETE` for the target name. It was removed because it is unsound, and the
+ * way it is unsound is worth recording so nobody rebuilds it. The kernel does distinguish the two
+ * cases — `strace`/raw `inotify` show a replacement emitting only `IN_MOVED_FROM` on the `.tmp`
+ * name and `IN_MOVED_TO` on the target, and never `IN_DELETE` on the target — but Java's
+ * `WatchService` surfaces the target's arrival as `ENTRY_DELETE` all the same, 200 times out of
+ * 200 renames. So the probe reported an unlink on a write that provably never unlinked anything,
+ * which is the same shape of error as the `exists()` loop it was written to replace: an inference
+ * from a JDK-level signal to a filesystem-level claim the signal does not carry.
  */
 class WidgetSnapshotIoTest {
 
@@ -131,81 +136,6 @@ class WidgetSnapshotIoTest {
         )
         // The write has to have actually happened, or the count above proves nothing.
         assertArrayEquals("payload-${WRITE_ITERATIONS - 1}".toByteArray(), target.readBytes())
-    }
-
-    @Test
-    fun `the kernel never reports the snapshot name being unlinked mid-replacement`() {
-        // Defect 3, half two. The check above only sees a delete routed through the `File` handed
-        // in; this one sees any unlink of the name whatever API performs it, because it reads the
-        // kernel's own event stream. inotify queues events, so unlike a stat loop this cannot miss
-        // the window by being descheduled — which is why it held at 50/50 under load where the
-        // spin loop collapsed to 18/50.
-        //
-        // `rename(2)` reports the temp NAME moving away and the target name being created; it
-        // never reports the target being deleted. Delete-then-write reports exactly that.
-        val target = target()
-        WidgetSnapshotIo.writeAtomically(target, "seed".toByteArray())
-
-        FileSystems.getDefault().newWatchService().use { watcher ->
-            target.parentFile.toPath()
-                .register(watcher, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.OVERFLOW)
-
-            // Positive control, before trusting this oracle to report an absence of events: prove
-            // it can see an unlink at all. A JDK whose WatchService polls directory listings rather
-            // than using inotify (the BSD/macOS fallback) would deliver nothing and turn every
-            // assertion below into a silent pass, which is worse than no test. Skip there instead;
-            // `a replacement never deletes the snapshot it is replacing` still runs everywhere.
-            val control = File(target.parentFile, "watcher-control-probe")
-            control.writeBytes("x".toByteArray())
-            assertTrue(control.delete())
-            assumeTrue(
-                "this JDK's WatchService is not event-driven, so it cannot witness an unlink",
-                drain(watcher, CONTROL_TIMEOUT_MS).contains(control.name),
-            )
-
-            repeat(WRITE_ITERATIONS) { i ->
-                WidgetSnapshotIo.writeAtomically(target, "payload-$i".toByteArray())
-            }
-            val unlinked = drain(watcher, DRAIN_TIMEOUT_MS)
-
-            assertFalse("inotify overflowed, so this run proved nothing — rerun it", unlinked.contains(OVERFLOWED))
-            // Liveness. Each rename moves `<name>.tmp` away, which inotify reports against that
-            // name. Seeing none of those would mean the watcher was dead and the assertion below
-            // vacuously true — the failure mode the old prober had, which nothing there asserted
-            // against: some of its runs got through the whole write window taking zero probes.
-            assertTrue("the watcher observed nothing at all", unlinked.contains("${target.name}.tmp"))
-            assertFalse(
-                "the replacement unlinked ${target.name}, so it is transiently absent to the " +
-                    "hydrate and fast-paint probes",
-                unlinked.contains(target.name),
-            )
-        }
-    }
-
-    /**
-     * Every entry name the watcher reported, plus [OVERFLOWED] if the kernel queue overran.
-     *
-     * Waits [firstTimeoutMs] for anything at all to arrive, then [DRAIN_TIMEOUT_MS] between
-     * batches. Two timeouts rather than one because the first wait has to be long enough to
-     * conclude "this watcher never delivers", while the later ones only bridge the gap between
-     * events the kernel has already queued — paying the long wait on every batch would add ten
-     * seconds to a test that is otherwise instant.
-     */
-    private fun drain(watcher: WatchService, firstTimeoutMs: Long): List<String> {
-        val names = mutableListOf<String>()
-        var timeoutMs = firstTimeoutMs
-        while (true) {
-            val key = watcher.poll(timeoutMs, TimeUnit.MILLISECONDS) ?: return names
-            key.pollEvents().forEach { event ->
-                names += if (event.kind() === StandardWatchEventKinds.OVERFLOW) {
-                    OVERFLOWED
-                } else {
-                    event.context().toString()
-                }
-            }
-            key.reset()
-            timeoutMs = DRAIN_TIMEOUT_MS
-        }
     }
 
     @Test
@@ -300,18 +230,8 @@ class WidgetSnapshotIoTest {
     private companion object {
         const val WRITE_ITERATIONS = 200
 
-        /** Marks a kernel event-queue overrun in [drain]; no file can be named this. */
-        const val OVERFLOWED = "<overflow>"
 
-        /** Long enough that a loaded box still delivers the control unlink before we give up. */
-        const val CONTROL_TIMEOUT_MS = 10_000L
 
-        /**
-         * Gap between batches of events the kernel has already queued, so this is a scheduling
-         * delay and not an IO wait. Generous anyway: ending the drain early would mean missing a
-         * delete that did happen, which is the one way this test could wrongly pass.
-         */
-        const val DRAIN_TIMEOUT_MS = 1_000L
         const val WRITER_THREADS = 4
         const val PAYLOAD_REPEAT = 400
         const val LOCK_THREADS = 6
