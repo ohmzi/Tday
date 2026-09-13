@@ -113,16 +113,16 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:3159`,
   which is a call site to settle rather than a reason to widen the rung.
   Anchors:
-  `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1548`,
+  `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
   `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3029`,
-  `tday-web/src/lib/taskCompletionTiming.ts:20`.
+  `tday-web/src/lib/taskCompletionTiming.ts:36`.
 - **`Emphasis` (320).** 15 Android tweens (eleven of them reached through the
   two create-sheet constants and `TdayFeedItemMotion.PlacementMillis` rather
   than written out), 5 iOS, 1 on web. Long enough to be followed with the eye.
   Anchors:
-  `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1558`,
+  `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskStrikethrough.kt:63`,
   `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:286`,
-  `tday-web/src/globals.css:570`.
+  `tday-web/src/globals.css:579`.
 - **`Scene` (520).** 2 Android, 1 iOS, 2 web at the census. This rung is the
   empty-state illustration **arriving**: all three clients name their site for
   the enter (`EnterMillis`, `EmptyStateEnter.duration`, `.tday-empty-enter`).
@@ -197,7 +197,7 @@ against `animation-core`'s bytecode rather than assumed.
   `--ease-in-out` *and* `--default-transition-timing-function`, so all 123
   default-timed utilities are already on it, plus one explicit `ease-in-out` and
   one declaration of its own, `.task-strike-fade` at
-  `tday-web/src/globals.css:570`.
+  `tday-web/src/globals.css:579`.
 - **`Enter`.** 6 `LinearOutSlowInEasing` on Android; 8 `ease-out` utilities on
   web (e.g. `tday-web/src/components/settings/SettingsPage.tsx:287`).
 - **`Exit`.** 7 `FastOutLinearInEasing` on Android; zero `ease-in` utilities on
@@ -304,10 +304,20 @@ place and nothing moves, it is `Change`. "How important is this?" is not the
 question and produces inconsistent answers; "does anything move?" produces the
 same answer from every reviewer.
 
-Both rungs, ten lines apart in one file:
-`android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1548`
-fades a completed row in place at 260 (`Change`), while `:1558` runs the
-strikethrough sweeping across the title at 320 (`Emphasis`).
+Both rungs, inside one motion — the staged check-off every task row in every
+client plays. The row's content fades where it stands at 260 (`Change`):
+`android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
+`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3029`,
+`tday-web/src/lib/taskCompletionTiming.ts:36`. The rule crossing out the title
+grows across it, so it takes 320 (`Emphasis`):
+`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskStrikethrough.kt:63`,
+`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:286`,
+`tday-web/src/globals.css:579`.
+
+The same beat played backwards — a completed task being restored — stays on
+`Emphasis` rather than dropping to `Change`, because a rule that retracts is
+still changing how big it is. Rule 1 caps it at the length of the enter it
+undoes, and it sits exactly at that cap.
 
 ### 3. Do not rebind Tailwind's default transition duration
 
