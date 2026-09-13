@@ -166,8 +166,8 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 4 — the Today jump and the week-page settle
 
-- [ ] `and-calendar-today-jump-loses-selection` — cross-month Today jump moves the page but never selects today → `+` prefills the wrong date · and · Sev 4 · S · Gate J+D
-- [ ] `and-week-page-settle-declines-silently` — week page 0 can start in the previous month; `settlePage` declines silently · and · Sev 2 · S · Gate J+D
+- [x] `and-calendar-today-jump-loses-selection` — cross-month Today jump moves the page but never selects today → `+` prefills the wrong date · and · Sev 4 · S · Gate J+D
+- [x] `and-week-page-settle-declines-silently` — week page 0 can start in the previous month; `settlePage` declines silently · and · Sev 2 · S · Gate J+D
 
 ### PR 5 — pointer capture on the web calendar and row swipes
 
