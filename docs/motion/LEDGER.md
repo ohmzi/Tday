@@ -191,24 +191,34 @@ Restore it from git history rather than adjusting the number.
 
 ### PR G2 — Rule A, content empties as the exit starts
 
-- [ ] *infra* — Rule A (content empties as exit starts) **+ fix** `TdayToastHost.kt:140` · and · S · Gate J
-- [ ] `and-toast-exit-never-plays` — toast content lambda returns null the frame `visible` flips · and · Sev 3 · XS · Gate J+D
+- [x] *infra* — Rule A (content empties as exit starts) **+ fix** `TdayToastHost.kt:140` · and · S · Gate G
+  - Rules A–D landed as one vitest scanner, `tday-web/tests/guardrails/motion-reachability-android.test.ts`:
+    that suite already statically reads Kotlin on Linux and runs on every PR, so these rows read `Gate G`
+    rather than `Gate J`. The four rules and the canary are 9 tests, ~0.5 s.
+- [x] `and-toast-exit-never-plays` — toast content lambda returns null the frame `visible` flips · and · Sev 3 · XS · Gate G+D
 - [ ] `and-toast-drag-dismiss-has-no-threshold` — drag-dismiss commits on any downward movement (1 px twitch) · and · Sev 2 · S · Gate J+D
 
 ### PR G3 — Rule B, write-once visibility flag
 
-- [ ] *infra* — Rule B (write-once visibility flag) — deferred to PR 15a/PR 41b which carry its fixes · and · XS · Gate J
+- [x] *infra* — Rule B (write-once visibility flag) — deferred to PR 15a/PR 41b which carry its fixes · and · XS · Gate G
+  - The rule ships enforcing, with `CreateTaskBottomSheet.kt` and `ScheduledTaskHomeScreen.kt` named in a
+    `RULE_B_PENDING_FIX` list against `and-create-sheet-dismiss-cut`. The exemption is self-closing: a
+    second test asserts each listed site still has the defect, so PR 15a's fix fails this suite until the
+    name is deleted from the list.
 
 ### PR G4 — Rule C, composition-constant animation target
 
-- [ ] *infra* — Rule C (composition-constant target) **+ 2 deletions** · and · S · Gate J
-- [ ] `and-create-sheet-dead-keyboard-height-animation` — `keyboardSheetHeight`'s `animateDpAsState` can never run · and · Sev 2 · XS · Gate J
-- [ ] *new, not one of the 109* — `OnboardingWizardOverlay.kt:1679-1683` `wizardStepChipBorderWidth` animates a literal `1.dp` · and · Sev 2 · XS · Gate J
+- [x] *infra* — Rule C (composition-constant target) **+ 2 deletions** · and · S · Gate G
+- [x] `and-create-sheet-dead-keyboard-height-animation` — `keyboardSheetHeight`'s `animateDpAsState` can never run · and · Sev 2 · XS · Gate G
+- [x] *new, not one of the 109* — `OnboardingWizardOverlay.kt:1679-1683` `wizardStepChipBorderWidth` animates a literal `1.dp` · and · Sev 2 · XS · Gate G
 
 ### PR G5 — Rule D, a guard implies `visible`
 
-- [ ] *infra* — Rule D (guard implies `visible`) **+ fix** — carries PR 13 · and · S · Gate J
-- [ ] `and-earlier-scene-enter-never-runs` — Earlier empty scene enters already visible; 34 % of screen snaps open · and · Sev 4 · S · Gate J+D
+- [x] *infra* — Rule D (guard implies `visible`) **+ fix** — carries PR 13 · and · S · Gate G
+- [x] `and-earlier-scene-enter-never-runs` — Earlier empty scene enters already visible; 34 % of screen snaps open · and · Sev 4 · S · Gate G+D
+  - Fixed with a `MutableTransitionState` hoisted above the guard and **seeded from the live visibility
+    value**, not from `false`: seeding false would animate the scene in on every cold entry into an
+    already-finished Today, which is a behaviour change nobody asked for.
 
 ### PR G6 — the iOS reachability scanner
 

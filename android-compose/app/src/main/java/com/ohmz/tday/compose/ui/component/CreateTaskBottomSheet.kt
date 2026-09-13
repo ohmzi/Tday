@@ -4,7 +4,6 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -333,15 +332,17 @@ fun CreateTaskBottomSheet(
     val floaterEditSheetHeight = (screenHeight * CREATE_TASK_SHEET_FLOATER_EDIT_HEIGHT_FRACTION)
         .coerceAtMost(maxSheetHeight)
     val sheetFormScrollState = rememberScrollState()
-    val keyboardSheetHeight by animateDpAsState(
-        targetValue = (screenHeight * CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION)
-            .coerceAtMost(maxSheetHeight),
-        animationSpec = tween(
-            durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-            easing = FastOutSlowInEasing,
-        ),
-        label = "createTaskKeyboardSheetHeight",
-    )
+    // A plain value, not an animation. Both inputs are fixed for the life of the
+    // composition — the screen height and a `const val` fraction — so the 320 ms tween
+    // that used to wrap this had a target it could never move away from and never ran a
+    // single frame. It read as motion in review for exactly as long as it was dead.
+    //
+    // The sheet does still jump when the IME opens, but not here: the modifier chain
+    // below swaps whole branches on `reserveKeyboardLayout`, which is a hard cut no tween
+    // on this value could soften. That is `and-create-sheet-ime-height-snap`, tracked
+    // separately, and it needs the branch swap animated rather than the constant.
+    val keyboardSheetHeight = (screenHeight * CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION)
+        .coerceAtMost(maxSheetHeight)
 
     LaunchedEffect(presentImmediately) {
         if (!presentImmediately) {
