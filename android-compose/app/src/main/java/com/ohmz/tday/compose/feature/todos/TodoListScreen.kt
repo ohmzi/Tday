@@ -167,6 +167,7 @@ import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.TdayDragLift
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
@@ -4540,13 +4541,24 @@ private fun TimelineTaskDragPreview(
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val showListIndicator = listMeta != null && mode != TodoListMode.LIST
     val previewShape = RoundedCornerShape(18.dp)
+    // The pick-up itself. This card used to be composed straight into its final
+    // size and elevation, so the one frame that says "the app has your task"
+    // never existed; [TdayDragLift] argues the rise and its two ends.
+    val lift by TdayDragLift.rememberProgress(rememberTdayMotionEnabled())
     Card(
         modifier = modifier
-            .sizeIn(minWidth = 220.dp, maxWidth = 280.dp),
+            .sizeIn(minWidth = 220.dp, maxWidth = 280.dp)
+            .graphicsLayer {
+                val scale = TdayDragLift.scaleAt(lift)
+                scaleX = scale
+                scaleY = scale
+            },
         shape = previewShape,
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface.copy(alpha = 0.88f)),
+        // Opaque. A card the finger is holding is not a card the user may not
+        // have, and partial alpha is what this app says everywhere else.
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.55f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDragLift.elevationAt(lift)),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -5798,6 +5810,15 @@ private fun SwipeTaskRow(
     val priorityIcon = priorityIconFor(todo.priority)
     val showPriorityIcon = priorityIcon != null
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
+    // The other half of the pick-up: the slot this card came out of. It used to
+    // cut to 70 % on the frame the long press fired, alongside a preview that
+    // cut to full size, which is two events for one gesture. Same rung as the
+    // rise, so the row empties exactly as the card leaves it.
+    val vacatedAlpha by animateFloatAsState(
+        targetValue = if (dragging) TdayDragLift.VacatedAlpha else 1f,
+        animationSpec = TdayDragLift.spec(motionEnabled),
+        label = "timelineTaskDragVacated",
+    )
     LaunchedEffect(openSwipeTaskId, todo.id) {
         if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
             swipeRevealState.close()
@@ -5832,7 +5853,7 @@ private fun SwipeTaskRow(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer {
-                alpha = if (dragging) completionAlpha * 0.7f else completionAlpha
+                alpha = completionAlpha * vacatedAlpha
                 translationY = completionOffsetY.toPx()
             },
         verticalArrangement = Arrangement.spacedBy(4.dp),
