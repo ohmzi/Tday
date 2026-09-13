@@ -2,12 +2,14 @@ package com.ohmz.tday.compose
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -124,6 +126,10 @@ import io.sentry.android.navigation.SentryNavigationListener
 private const val NAV_FADE_IN_DURATION_MS = 360
 private const val NAV_FADE_OUT_DURATION_MS = 240
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
+
+// How far out of focus the app is pushed behind the onboarding wizard. A radius, not a
+// motion spec: what the vocabulary fixes is how long it takes to get here, not how far.
+private val ONBOARDING_BACKDROP_BLUR = 14.dp
 
 // Nav argument names, shared by the route templates that declare them and the back stack
 // entries that read them back.
@@ -1024,39 +1030,118 @@ private fun ScheduledTaskHomeRoute(
         }
     }
 
+    // Locking and unlocking the app used to be three snaps landing on one frame: the
+    // backdrop jumped out of focus, the wizard appeared over it, and the feed underneath
+    // hard-swapped between the locked placeholder and the real one. They are one event, so
+    // they run as one — same rung, same curve, all three. Nothing travels: the wizard is
+    // drawn where it will stay and the arriving feed takes the slot the leaving one had, so
+    // by the geometry rule this is not Emphasis, and a whole-screen handover is the Quick
+    // rung the vocabulary already names for it — the same call the dock's tab swap makes in
+    // RootFeedContent below. Standard is the curve because a crossfade runs both halves off
+    // one clock and neither Enter nor Exit describes that. Symmetric on purpose: the way in
+    // and the way out are one handover reversed rather than an arrival and its departure,
+    // which is also the strictest reading of "an exit is never longer than the enter it
+    // undoes". iOS times the same moment on this rung and curve, from one transaction; it
+    // has no placeholder feed to cross, so its third surface is the floating controls.
+    val motionEnabled = rememberTdayMotionEnabled()
+    val backdropBlur by animateDpAsState(
+        targetValue = if (showOnboardingWizard) ONBOARDING_BACKDROP_BLUR else 0.dp,
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "onboardingBackdropBlur",
+    )
+
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .then(
-                    if (showOnboardingWizard) {
-                        Modifier.blur(14.dp)
+                    // Skipped rather than passed a zero radius: `blur` is a RenderEffect on a
+                    // graphics layer, and keeping one alive to render nothing costs the whole
+                    // feed an offscreen buffer for as long as the app is unlocked.
+                    if (backdropBlur > 0.dp) {
+                        Modifier.blur(backdropBlur)
                     } else {
                         Modifier
                     },
                 ),
         ) {
-            RootFeedContent(
-                appUiState = appUiState,
-                appViewModel = appViewModel,
-                navController = navController,
-                unauthenticatedUiState = unauthenticatedUiState,
-                rootFeedTab = rootFeedTab,
-                onSelectRootFeedTab = onSelectRootFeedTab,
-                onChangeRootFeedTab = onChangeRootFeedTab,
-                rootCreateTaskRequestKey = rootCreateTaskRequestKey,
-                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
-                onRequestCreateTask = onRequestCreateTask,
-                scheduledScrollToTopRequestKey = scheduledScrollToTopRequestKey,
-                floaterScrollToTopRequestKey = floaterScrollToTopRequestKey,
-                rootDockCollapsed = rootDockCollapsed,
-                onRootDockCollapsedChange = onRootDockCollapsedChange,
-                rootControlsVisible = rootControlsVisible,
-                onRootControlsVisibleChange = onRootControlsVisibleChange,
-            )
+            // The placeholder feed and the real one used to be an early return inside
+            // RootFeedContent, which made the swap a recomposition and therefore a cut. It is
+            // decided here instead, beside the blur and the wizard it happens with, so the
+            // whole lock/unlock is one moment expressed in one place.
+            Crossfade(
+                targetState = appUiState.isWorkspaceAvailable,
+                modifier = Modifier.fillMaxSize(),
+                animationSpec = if (motionEnabled) {
+                    tween(
+                        durationMillis = TdayMotionTokens.Durations.Quick,
+                        easing = TdayMotionTokens.Easings.Standard,
+                    )
+                } else {
+                    snap()
+                },
+                label = "rootFeedLock",
+            ) { workspaceAvailable ->
+                if (workspaceAvailable) {
+                    RootFeedContent(
+                        appUiState = appUiState,
+                        appViewModel = appViewModel,
+                        navController = navController,
+                        rootFeedTab = rootFeedTab,
+                        onSelectRootFeedTab = onSelectRootFeedTab,
+                        onChangeRootFeedTab = onChangeRootFeedTab,
+                        rootCreateTaskRequestKey = rootCreateTaskRequestKey,
+                        onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                        onRequestCreateTask = onRequestCreateTask,
+                        scheduledScrollToTopRequestKey = scheduledScrollToTopRequestKey,
+                        floaterScrollToTopRequestKey = floaterScrollToTopRequestKey,
+                        rootDockCollapsed = rootDockCollapsed,
+                        onRootDockCollapsedChange = onRootDockCollapsedChange,
+                        rootControlsVisible = rootControlsVisible,
+                        onRootControlsVisibleChange = onRootControlsVisibleChange,
+                    )
+                } else {
+                    LockedRootFeed(uiState = unauthenticatedUiState)
+                }
+            }
         }
 
-        if (showOnboardingWizard) {
+        // AnimatedVisibility does not play an enter for a `visible` that was already true on
+        // the first composition, and that is the behaviour wanted here rather than a limit
+        // worked around: a cold start into onboarding has nothing to hand over from, so the
+        // wizard is drawn finished over a backdrop that was never in focus. What animates is
+        // the two transitions that have a before — signing in, and signing back out.
+        AnimatedVisibility(
+            visible = showOnboardingWizard,
+            enter = if (motionEnabled) {
+                fadeIn(
+                    animationSpec = tween(
+                        durationMillis = TdayMotionTokens.Durations.Quick,
+                        easing = TdayMotionTokens.Easings.Standard,
+                    ),
+                )
+            } else {
+                EnterTransition.None
+            },
+            exit = if (motionEnabled) {
+                fadeOut(
+                    animationSpec = tween(
+                        durationMillis = TdayMotionTokens.Durations.Quick,
+                        easing = TdayMotionTokens.Easings.Standard,
+                    ),
+                )
+            } else {
+                ExitTransition.None
+            },
+            label = "onboardingWizard",
+        ) {
             OnboardingOverlay(
                 appUiState = appUiState,
                 appViewModel = appViewModel,
@@ -1078,15 +1163,15 @@ private fun ScheduledTaskHomeRoute(
 }
 
 /**
- * Whichever root feed the dock has selected, with the dock and create button floating over it —
- * or the locked placeholder feed that sits under the onboarding wizard when there is no workspace.
+ * Whichever root feed the dock has selected, with the dock and create button floating over it.
+ * Only ever composed for a workspace that is available — the locked placeholder that stands in
+ * for it otherwise is the other half of [ScheduledTaskHomeRoute]'s lock crossfade.
  */
 @Composable
 private fun RootFeedContent(
     appUiState: AppUiState,
     appViewModel: AppViewModel,
     navController: NavHostController,
-    unauthenticatedUiState: ScheduledTaskHomeUiState,
     rootFeedTab: RootFeedTab,
     onSelectRootFeedTab: (RootFeedTab) -> Unit,
     onChangeRootFeedTab: (RootFeedTab) -> Unit,
@@ -1100,10 +1185,6 @@ private fun RootFeedContent(
     rootControlsVisible: Boolean,
     onRootControlsVisibleChange: (Boolean) -> Unit,
 ) {
-    if (!appUiState.isWorkspaceAvailable) {
-        LockedRootFeed(uiState = unauthenticatedUiState)
-        return
-    }
     Box(modifier = Modifier.fillMaxSize()) {
         // The dock's selector springs across to the tab that was tapped, and the feed under
         // it used to change on the next frame: one gesture running at two speeds, so the
