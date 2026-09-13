@@ -2,13 +2,14 @@
 import { readFileSync } from "fs";
 import path from "path";
 import React from "react";
-import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   Drawer,
   DrawerContent,
   DrawerTitle,
+  DrawerTrigger,
   DRAWER_EXIT_MS,
 } from "@/components/ui/drawer";
 import { DURATION_MS } from "@/lib/motion";
@@ -69,9 +70,42 @@ function scrims(): HTMLElement[] {
   return Array.from(document.querySelectorAll<HTMLElement>("[data-vaul-overlay]"));
 }
 
+/**
+ * Makes jsdom hold a closed overlay in the document the way a browser does.
+ *
+ * Radix's `Presence` keeps a closing node until `animationend`, but it only ever
+ * waits if `getComputedStyle` reports an animation on it — and jsdom computes
+ * none, so it drops every closed overlay on the spot. That difference is not a
+ * detail here: the whole hazard this file guards is what a *second* sheet sees
+ * while the first one's exit is still playing, and untouched jsdom cannot put a
+ * scrim in that state at all. The names are vaul's own, from the stylesheet it
+ * injects at import.
+ */
+function holdClosedNodesLikeABrowser(): void {
+  const real = window.getComputedStyle.bind(window);
+  vi.spyOn(window, "getComputedStyle").mockImplementation(
+    (element: Element, pseudo?: string | null) => {
+      const computed = real(element, pseudo ?? undefined);
+      const state = element.getAttribute?.("data-state");
+      if (state !== "open" && state !== "closed") return computed;
+      return new Proxy(computed, {
+        get: (target, key) => {
+          if (key === "animationName") return state === "open" ? "fadeIn" : "fadeOut";
+          const value = Reflect.get(target, key, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+    },
+  );
+}
+
+const REAL_MATCH_MEDIA = window.matchMedia;
+
 describe("a drawer scrim over a drawer scrim", () => {
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
+    window.matchMedia = REAL_MATCH_MEDIA;
   });
 
   it("dims the page when it is the only scrim up", () => {
@@ -113,7 +147,7 @@ describe("a drawer scrim over a drawer scrim", () => {
   });
 
   it("dims again for the next sheet once the stack has emptied", () => {
-    // The count is a registry, not a latch: a drawer opened later, on its own,
+    // The registry is a registry, not a latch: a drawer opened later, on its own,
     // is the only scrim up and has to be the one that dims.
     const { rerender, unmount } = render(<StackedDrawers formOpen confirmOpen />);
     rerender(<StackedDrawers formOpen={false} confirmOpen={false} />);
@@ -125,7 +159,79 @@ describe("a drawer scrim over a drawer scrim", () => {
     expect(scrims()[0].className).toContain("bg-black/80");
     expect(scrims()[0].getAttribute("data-nested-scrim")).toBeNull();
   });
+
+  it("dims for a sheet opened while the last one is still sliding out", () => {
+    // The window this file's own exit rung opens, and the reason the registry
+    // counts drawers that are OPEN rather than scrims that are mounted: for the
+    // whole of DRAWER_EXIT_MS the leaving scrim is still in the document, and a
+    // sheet that took it for company would spend its entire life over an
+    // undimmed page. Two calendar rows tapped in the same third of a second is
+    // the ordinary way in — each row owns its own EditDrawer.
+    holdClosedNodesLikeABrowser();
+
+    const { rerender } = render(<StackedDrawers formOpen confirmOpen={false} />);
+    rerender(<StackedDrawers formOpen={false} confirmOpen={false} />);
+    // The premise: the old scrim really is still there, mid-exit.
+    expect(scrims()).toHaveLength(1);
+    expect(scrims()[0].getAttribute("data-state")).toBe("closed");
+
+    rerender(<StackedDrawers formOpen={false} confirmOpen />);
+
+    const arriving = scrims().find((s) => s.getAttribute("data-state") === "open");
+    expect(arriving?.getAttribute("data-nested-scrim")).toBeNull();
+    expect(arriving?.className).toContain("bg-black/80");
+  });
+
+  it("counts a drawer that opens from its own trigger", () => {
+    // `CustomRepeatDrawer` passes no open flag at all — it opens from a
+    // DrawerTrigger and lets vaul hold the state. The registry has to hear about
+    // those too, or a confirm sheet over one would dim a page that is already dim.
+    //
+    // Opening for real is what the rest of this file skips, and vaul's own
+    // open path asks for a matchMedia this environment does not have.
+    window.matchMedia = ((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })) as unknown as typeof window.matchMedia;
+
+    render(
+      <>
+        <Drawer>
+          <DrawerTrigger>open</DrawerTrigger>
+          <DrawerContent>
+            <DrawerTitle>uncontrolled</DrawerTitle>
+          </DrawerContent>
+        </Drawer>
+        <UncontrolledNeighbour />
+      </>,
+    );
+
+    fireEvent.click(screen.getByText("open"));
+    expect(scrims()).toHaveLength(1);
+
+    fireEvent.click(screen.getByText("cover it"));
+
+    const [beneath, above] = scrims();
+    expect(scrims()).toHaveLength(2);
+    expect(beneath.className).toContain("bg-black/80");
+    expect(above.getAttribute("data-nested-scrim")).toBe("true");
+    expect(above.className).toContain("bg-transparent");
+  });
 });
+
+/** A second uncontrolled sheet, opened over the first the way a confirm is. */
+function UncontrolledNeighbour() {
+  return (
+    <Drawer>
+      <DrawerTrigger>cover it</DrawerTrigger>
+      <DrawerContent>
+        <DrawerTitle>neighbour</DrawerTitle>
+      </DrawerContent>
+    </Drawer>
+  );
+}
 
 describe("how long a drawer is given to leave", () => {
   it("holds a caller's subtree for exactly the rung the stylesheet plays the exit on", () => {
