@@ -157,7 +157,7 @@ struct HelpGuideScreen: View {
     }
 
     private func openSearch() {
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = true
         }
@@ -166,7 +166,7 @@ struct HelpGuideScreen: View {
     /// Leaving the search drops the query with it, so the guide is whole again
     /// the next time the bar is opened — the same bargain every other screen makes.
     private func closeSearch() {
-        HapticManager.sheetDismiss()
+        HapticManager.buttonPress()
         searchFieldFocused = false
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = false

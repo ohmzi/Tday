@@ -77,17 +77,14 @@ struct TdaySheetActionButton: View {
 
     @Environment(\.tdayColors) private var colors
 
-    private var isConfirm: Bool {
-        accentColor == TdaySheetMetrics.confirmAccent
-    }
-
     var body: some View {
         Button {
-            if isConfirm {
-                HapticManager.sheetConfirm()
-            } else {
-                HapticManager.sheetDismiss()
-            }
+            // Both heads of the bar are a control being tapped, confirm included:
+            // the *landing* is what earns `completion()`, and the screens that
+            // have one already fire it (`CreateTaskSheet.submit`). Branching on
+            // the accent here fired a success pulse on the press and a second
+            // one a moment later when the save returned.
+            HapticManager.buttonPress()
             action()
         } label: {
             Image(systemName: systemName)
@@ -487,7 +484,7 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
     }
 
     private func dismissSheet() {
-        HapticManager.sheetDismiss()
+        HapticManager.buttonPress()
         // Routed through `dismiss()` rather than animating here, so a scrim tap
         // takes exactly the same path as a `dismiss()` from inside the sheet:
         // the presenting modifier intercepts it and drives `animateOut()`.
@@ -612,7 +609,7 @@ struct TdayCenteredSelectorRow: View {
 
     var body: some View {
         Button {
-            HapticManager.gentleTap()
+            HapticManager.selection()
             action()
         } label: {
             HStack(spacing: 14) {

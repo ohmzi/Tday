@@ -159,7 +159,12 @@ private struct TdayToolbarButtonEffectModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .tdayRippleEffect(isPressed: isPressed)
-            .scaleEffect(isPressed ? 0.95 : 1)
+            // 0.94 is the programme's one press depth, and this modifier is the
+            // shared bar-button lift — the round header buttons, the timeline top
+            // bar and the search capsule all wear it. It sat at 0.95: on a 56 pt
+            // circle that is half a point of travel, close enough to nothing that
+            // the press read as a tap landing rather than as a button going down.
+            .scaleEffect(isPressed ? 0.94 : 1)
             .offset(y: isPressed ? 1 : 0)
             .shadow(
                 color: Color.black.opacity(ambientShadowOpacity),
