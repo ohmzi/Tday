@@ -73,8 +73,12 @@ spends TF2 — see `README.md`, "iOS: three cycles, for the whole programme".
       Do:     reload the calendar and tap a task's Delete immediately.
       Watch:  a scrim and a dialog-shaped card with two skeleton lines and two skeleton buttons
               arrive at once, in the place the real dialog will be, and the real dialog fills that
-              card in when it lands. Tapping the scrim while it is still waiting closes it.
-      Fails:  nothing on screen until the dialog appears, which is the defect. Also record — it is
-              known and accepted, not a regression — whether the real dialog visibly re-plays its
-              arrival after the placeholder; and a real fail if the placeholder's card is a
-              different size from the dialog that replaces it.
+              card in when it lands. Tapping the scrim while it is still waiting closes it the way
+              the real dialog closes — the card fades and settles downwards over 200 ms rather than
+              being cut away under your finger.
+      Fails:  nothing on screen until the dialog appears, which is the defect. Also a fail: the
+              placeholder gone in the frame you tap the scrim, which would be the same silence at
+              the other end of the same gesture. And record — it is known and accepted, not a
+              regression — whether the real dialog visibly re-plays its arrival after the
+              placeholder; a real fail if the placeholder's card is a different size from the
+              dialog that replaces it.
