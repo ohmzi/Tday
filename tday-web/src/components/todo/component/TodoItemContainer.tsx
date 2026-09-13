@@ -82,7 +82,12 @@ export const TodoItemCard = ({
   const [editInstanceOnly, setEditInstanceOnly] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
   // Staged completion, on the native rows' beats (Android/iOS use 160/360):
-  //   checked (green tick) → struck (title sweep + notes line-through) → removing → gone.
+  //   checked (green tick) → struck (title and notes, one rule fading in) → removing (ink out,
+  //   box shut) → gone.
+  // Title and notes are named together because they are one beat and one class: `.task-strike`
+  // fades `text-decoration-color` up on both. Android and iOS sweep the rule across the text
+  // instead — a mechanism difference between a `text-decoration` and a drawn line, on the same
+  // rung either way.
   // The whole sequence runs on its own timers — it is not gated on the undo toast, which lives
   // for 5s independently.
   //

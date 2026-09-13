@@ -479,7 +479,18 @@ function DayCalendarSummary({
   );
 }
 
-function CalendarTaskRow({
+/**
+ * Exported for `calendar-row-complete-interaction.test.tsx` and for nothing else — this screen
+ * renders it itself, a few hundred lines down.
+ *
+ * Worth the export because of what it covers. This row plays the app's staged check-off and was
+ * the last one running it on a clock of its own, at 280 / 620 / 960 against everybody else's
+ * 160 / 360 / 260, and nothing in the repository noticed for as long as that was true: the
+ * literal counter cannot see a row retimed through named constants, and reaching the row through
+ * `CalendarClient` means standing up a month grid, a drag context and four queries to press one
+ * checkbox.
+ */
+export function CalendarTaskRow({
   todo,
   listName,
   highlighted = false,
