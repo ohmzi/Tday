@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  OVERDUE_ROWS_FADE_MS,
   TODAY_EARLIER_EXIT_MS,
   shouldShowTodayEmptyIllustration,
 } from "@/features/todayTodos/lib/todayEarlierIllustration";
@@ -163,10 +164,22 @@ describe("shouldShowTodayEmptyIllustration", () => {
 });
 
 describe("TODAY_EARLIER_EXIT_MS", () => {
-  it("matches the illustration's own CSS arrival duration (.tday-empty-enter, globals.css)", () => {
-    // Not a coincidence: the exit is designed to mirror the entrance. This
-    // pins the value so a future edit to one side is caught rather than
-    // silently drifting from the other.
-    expect(TODAY_EARLIER_EXIT_MS).toBe(520);
+  it("is the Enter rung, written out rather than read back from its own token", () => {
+    // The literal and not `DURATION_MS.enter`: comparing the constant back
+    // against the thing that defines it would pass whatever either one changed
+    // to — the trap `EarlierIllustrationMotionTest.kt` argues its way out of on
+    // Android, and `tests/guardrails/motion-parity.test.ts` re-argues for the
+    // whole vocabulary. 200 sits here so that moving this hand-off onto another
+    // rung has to be a deliberate edit to a line that says which rung it is on.
+    expect(TODAY_EARLIER_EXIT_MS).toBe(200);
+  });
+
+  it("is shorter than the arrival it hands the slot to", () => {
+    // The rule that picked the rung, kept as an assertion rather than as a
+    // comment: Earlier's own rows fade in over OVERDUE_ROWS_FADE_MS, and an
+    // exit that outlasts the arrival it is making room for reads as the app
+    // hesitating (docs/motion.md, first idiom rule). Retuning either one past
+    // the other should fail here rather than in front of a user.
+    expect(TODAY_EARLIER_EXIT_MS).toBeLessThan(OVERDUE_ROWS_FADE_MS);
   });
 });

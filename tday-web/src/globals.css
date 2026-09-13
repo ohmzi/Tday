@@ -651,7 +651,7 @@
 .tday-empty-slot {
   display: grid;
   grid-template-rows: 1fr;
-  transition: grid-template-rows var(--tday-duration-scene) var(--tday-empty-sink-ease);
+  transition: grid-template-rows var(--tday-duration-enter) var(--tday-empty-sink-ease);
 }
 
 .tday-empty-exit > * {
@@ -672,16 +672,16 @@
    generalized to every other scope with its own Earlier bucket). Only ever
    applied to a `.tday-empty-slot`, which is what lets it close the track.
 
-   `--tday-duration-scene` is the rung `TODAY_EARLIER_EXIT_MS`
-   (`todayEarlierIllustration.ts`) sits on: that constant gates the delay before
-   Earlier's rows are told to appear, these two draw the exit that delay is
-   waiting for, and all three read the one generated rung — a duration bound for
-   a stylesheet wants the token and only a `setTimeout` wants the integer
-   (`src/lib/motion.ts`). One number, read twice, not two tuned to look close
-   together. */
+   `--tday-duration-enter` is the rung `TODAY_EARLIER_EXIT_MS`
+   (`todayEarlierIllustration.ts`) sits on, and that constant argues the choice:
+   it gates the delay before Earlier's rows are told to appear, these two draw
+   the exit that delay is waiting for, and all three read the one generated rung
+   — a duration bound for a stylesheet wants the token and only a `setTimeout`
+   wants the integer (`src/lib/motion.ts`). One number, read twice, not two
+   tuned to look close together. */
 .tday-empty-exit {
   animation-name: tday-empty-sink;
-  animation-duration: var(--tday-duration-scene);
+  animation-duration: var(--tday-duration-enter);
   animation-timing-function: var(--tday-empty-sink-ease);
   animation-fill-mode: both;
   grid-template-rows: 0fr;
