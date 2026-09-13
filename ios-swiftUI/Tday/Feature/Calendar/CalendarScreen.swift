@@ -3303,7 +3303,7 @@ private struct CalendarPendingTaskRow: View {
                             // Struck alongside the title so the whole task reads
                             // as done during the completion animation.
                             .strikethrough(showStrikethrough, color: colors.onSurfaceVariant)
-                            .animation(.easeInOut(duration: 0.32), value: showStrikethrough)
+                            .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: showStrikethrough)
                     }
                 }
 
@@ -3332,7 +3332,7 @@ private struct CalendarPendingTaskRow: View {
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
-        .animation(.easeInOut(duration: 0.26), value: isFading)
+        .animation(TdayMotion.standard(duration: TdayMotion.Durations.change), value: isFading)
         .allowsHitTesting(!isCompleting)
     }
 
@@ -3342,16 +3342,20 @@ private struct CalendarPendingTaskRow: View {
         }
 
         HapticManager.completion()
+        // The pop the other two task rows play. The calendar row fired the haptic
+        // and drew the whole sequence in silence, so a task ticked off here was the
+        // one place in the app where finishing something made no sound.
+        SoundManager.taskCompleted()
         Task { @MainActor in
-            withAnimation(.easeInOut(duration: 0.18)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
                 completionPhase = .checked
             }
             try? await Task.sleep(nanoseconds: 160_000_000)
-            withAnimation(.easeInOut(duration: 0.22)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)) {
                 completionPhase = .struck
             }
             try? await Task.sleep(nanoseconds: 360_000_000)
-            withAnimation(.easeInOut(duration: 0.26)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)) {
                 completionPhase = .fading
             }
             try? await Task.sleep(nanoseconds: 260_000_000)
