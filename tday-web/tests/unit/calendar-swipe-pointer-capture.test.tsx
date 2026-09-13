@@ -29,12 +29,27 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { useCalendarPagerSwipe } from "@/features/calendar/lib/useCalendarPagerSwipe";
-import { useCalendarRowSwipe } from "@/features/calendar/lib/useCalendarRowSwipe";
+import { useSwipeRow } from "@/hooks/useSwipeRow";
 
 /** Mirrors `swipeThreshold` in CalendarClient.tsx. */
 const SWIPE_THRESHOLD = 48;
 /** Mirrors `ACTIONS_WIDTH` in CalendarTaskRow. */
 const ACTIONS_WIDTH = 210;
+
+/**
+ * The two settles, spelled exactly as `swipeGesture.ts` spells them. A row going
+ * home is Quick; one finishing the trip the release paid for is Emphasis — the
+ * arguments for both are written there. Both ride the Gesture curve, which is
+ * what web spends where the native clients spend the Gesture spring.
+ */
+const SETTLE_HOME = "transform var(--tday-duration-quick) var(--tday-ease-gesture)";
+const SETTLE_OPEN = "transform var(--tday-duration-emphasis) var(--tday-ease-gesture)";
+
+/**
+ * The transform clause of the row's whitelist. The rest of the list is the
+ * highlight's tint and ring, which are not this file's subject.
+ */
+const settleOf = (row: HTMLElement) => row.style.transition.split(",")[0].trim();
 
 afterEach(cleanup);
 
@@ -194,18 +209,18 @@ describe("calendar page swipe — pointer capture and cancel", () => {
 });
 
 function RowHarness({ onOpen }: { onOpen: () => void }) {
-  const { swipeX, swiping, swipeHandlers } = useCalendarRowSwipe(ACTIONS_WIDTH, onOpen);
+  const { swipeX, transition, swipeHandlers } = useSwipeRow({
+    actionsWidth: ACTIONS_WIDTH,
+    onOpen,
+  });
   return (
     <div
       data-testid="row"
       {...swipeHandlers}
-      // The real row's style, verbatim: `swiping` is what switches the
-      // transition off so the row can track the finger, which is exactly what a
-      // cancelled gesture used to leave switched off forever.
-      style={{
-        transform: `translateX(${swipeX}px)`,
-        transition: swiping ? "none" : "transform 220ms ease",
-      }}
+      // The real row's style, verbatim: the hook owns the whole whitelist, and
+      // the `none` it returns while a finger is down is exactly what a cancelled
+      // gesture used to leave switched off forever.
+      style={{ transform: `translateX(${swipeX}px)`, transition }}
     />
   );
 }
@@ -244,7 +259,7 @@ describe("calendar row swipe — a cancelled touch is an exit, not a freeze", ()
     // at -100px with `transition: none` — visibly stuck, not slow.
     fireEvent.touchCancel(row);
 
-    expect(row.style.transition).toBe("transform 220ms ease");
+    expect(settleOf(row)).toBe(SETTLE_HOME);
     expect(row.style.transform).toBe("translateX(0px)");
   });
 
@@ -267,7 +282,9 @@ describe("calendar row swipe — a cancelled touch is an exit, not a freeze", ()
     fireEvent.touchCancel(row);
 
     expect(row.style.transform).toBe(`translateX(-${ACTIONS_WIDTH}px)`);
-    expect(row.style.transition).toBe("transform 220ms ease");
+    // Open is where this cancelled gesture found the row, and a row sitting at
+    // its open resting place settles on the longer of the two.
+    expect(settleOf(row)).toBe(SETTLE_OPEN);
   });
 
   it("a pointercancel resets the row just as a touchcancel does", () => {
@@ -281,7 +298,7 @@ describe("calendar row swipe — a cancelled touch is an exit, not a freeze", ()
     // deliver either, and the reset is idempotent so both is fine too.
     fireEvent.pointerCancel(row, { pointerId: 1 });
 
-    expect(row.style.transition).toBe("transform 220ms ease");
+    expect(settleOf(row)).toBe(SETTLE_HOME);
     expect(row.style.transform).toBe("translateX(0px)");
   });
 
@@ -294,7 +311,7 @@ describe("calendar row swipe — a cancelled touch is an exit, not a freeze", ()
     fireEvent.touchEnd(row);
 
     expect(row.style.transform).toBe("translateX(0px)");
-    expect(row.style.transition).toBe("transform 220ms ease");
+    expect(settleOf(row)).toBe(SETTLE_HOME);
   });
 
   it("a vertical drag never moves the row and never claims the open slot", () => {
@@ -309,6 +326,6 @@ describe("calendar row swipe — a cancelled touch is an exit, not a freeze", ()
     // And the scroll the platform is about to take over ends the gesture
     // cleanly rather than leaving the transition off.
     fireEvent.touchCancel(row);
-    expect(row.style.transition).toBe("transform 220ms ease");
+    expect(settleOf(row)).toBe(SETTLE_HOME);
   });
 });

@@ -21,7 +21,7 @@ import {
 import { TodoItemType } from "@/types";
 import { useDateRange } from "../hooks/useDateRange";
 import { useCalendarPagerSwipe } from "../lib/useCalendarPagerSwipe";
-import { useCalendarRowSwipe } from "../lib/useCalendarRowSwipe";
+import { useSwipeRow } from "@/hooks/useSwipeRow";
 import { useCalendarTodo } from "../query/get-calendar-todo";
 import {
   lazy,
@@ -650,10 +650,10 @@ export function CalendarTaskRow({
   const announceSwipeOpen = useCallback(() => {
     window.dispatchEvent(new CustomEvent("tday-calendar-swipe-open", { detail: todo.id }));
   }, [todo.id]);
-  const { swipeX, swiping, closeSwipe, swipeHandlers } = useCalendarRowSwipe(
-    ACTIONS_WIDTH,
-    announceSwipeOpen,
-  );
+  const { swipeX, transition: swipeTransition, closeSwipe, swipeHandlers } = useSwipeRow({
+    actionsWidth: ACTIONS_WIDTH,
+    onOpen: announceSwipeOpen,
+  });
 
   /** Copies the task's title/notes/due/priority to the clipboard as plain text. */
   const handleCopy = async () => {
@@ -846,24 +846,10 @@ export function CalendarTaskRow({
           {...swipeHandlers}
           style={{
             transform: `translateX(${swipeX}px)`,
-            // A transition list is a whitelist, and `box-shadow` was not on it. The highlight
-            // a deep link or a search result leaves on this row is drawn two ways by the
-            // className below — a ring under `sm`, which Tailwind draws as a box-shadow, and a
-            // tint above it — so the same arrival faded in on a desktop and cut in one frame on
-            // a phone, which is the half nobody is looking at when they change this line.
-            // Both are the app acknowledging a jump the user just made somewhere else, so both
-            // take Quick, and they take the same curve because two spellings of one signal that
-            // land differently are two signals.
-            //
-            // The swipe's own travel keeps the 220ms it was written with: it is geometry under
-            // a finger, it has no rung, and it is the same number the two sibling rows carry —
-            // retiming it is the swipe rows' call to make in all three at once, not a
-            // whitelist fix's to make in one.
-            transition: swiping
-              ? "none"
-              : "transform 220ms ease, " +
-                "background-color var(--tday-duration-quick) var(--tday-ease-standard), " +
-                "box-shadow var(--tday-duration-quick) var(--tday-ease-standard)",
+            // The whole whitelist — the swipe's settle and the two spellings of the highlight
+            // beside it — comes from `useSwipeRow`, because all three task rows draw the same
+            // three properties and used to write out three slightly different lists saying so.
+            transition: swipeTransition,
             touchAction: "pan-y",
             // Lets the grid item shrink past its own content while the track closes.
             ...(removing ? { overflow: "hidden", minHeight: 0 } : null),

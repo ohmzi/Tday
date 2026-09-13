@@ -128,3 +128,42 @@ spends TF2 — see `README.md`, "iOS: three cycles, for the whole programme".
               regression — whether the real dialog visibly re-plays its arrival after the
               placeholder; a real fail if the placeholder's card is a different size from the
               dialog that replaces it.
+
+- [ ] **PR 20 · web · A task row hears the flick, and gives at its ends** — any screen that lists
+      tasks on a phone: Today, a scheduled list, the calendar's day list, and the Anytime feed.
+      Check at least the Anytime feed and one dated list, because those two rows were copies of
+      each other until this PR and are one hook now.
+      Do:     flick a row left — a short, fast throw of about a thumb's width, released while it is
+              still moving — and let go well before the actions are uncovered. Then drag a second
+              row slowly past halfway, pause, and lift. Then drag a third slowly past halfway and,
+              without lifting, walk it back a little before you let go. Then, with a row open, keep
+              dragging left past the Delete pill; and with a row closed, drag it to the right.
+      Watch:  the flick opens the row: it carries on to the full 210px and settles over 320 ms.
+              The slow drag past halfway also opens — a pause before the lift is a decision not to
+              flick, and position decides it. The one that was being walked back closes again over
+              150 ms, which is visibly the shorter of the two. At both ends the row keeps answering
+              the finger and stops answering it in proportion: about 26px at most, however hard you
+              pull, and it returns the instant you let go.
+      Fails:  the flick closing the row again, which is the defect — the row was well short of
+              halfway and the old rule could only see that. Also a fail: a row that stops dead at
+              either end while the finger keeps moving; a row leaving the rubber band and never
+              coming back; the give being large enough to read as a fourth action arriving behind
+              Delete; or the two settles being indistinguishable from one another, which would mean
+              a row shuts as slowly as it opens.
+      Also:   the highlight a deep link leaves on a row now fades on all three rows rather than on
+              the calendar's alone. Open a task from a search result or a notification on the
+              Anytime feed and check the ring arrives rather than cuts.
+      Also:   with reduce-motion on, a released row is at its resting place in the frame you lift
+              your finger — never part-way, and never travelling. It still follows the finger while
+              the finger is down.
+
+- [ ] **PR 20 · web · The calendar turns a page on a flick** — the calendar on a phone, Month view,
+      standing on a month with pages live in both directions.
+      Do:     flick the grid sideways — fast, and released after well under the 48px the threshold
+              asks for. Then drag the grid a long way past the threshold, walk it back towards the
+              middle without lifting, and let go.
+      Watch:  the flick turns the page. The drag that was being walked back does not: the grid
+              glides home over 150 ms and the month is unchanged.
+      Fails:  a flick that has to be dragged the full 48px before it counts, which is the defect on
+              a surface a whole card wide. Also a fail: a drag you have already changed your mind
+              about turning the page anyway; or a flick turning two pages.
