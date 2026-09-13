@@ -59,13 +59,37 @@ jobs:
 
       # WHAT COUNTS AS A WEB CHANGE
       #
-      #   tday-web/**    the app, its tests, its lockfile and its build config
-      #   version.json   `scripts/version.mjs sync` mirrors it into tday-web/package.json, and
-      #                  vite.config.ts injects the result as `__APP_VERSION__` — a version
-      #                  edit really can reach a test that asserts on what the app reports
-      #   this workflow  a change to the gate is a change worth running the gate on
+      #   tday-web/**        the app, its tests, its lockfile and its build config
+      #   ios-swiftUI/**     read below
+      #   android-compose/** read below
+      #   shared/**          read below
+      #   version.json       `scripts/version.mjs sync` mirrors it into tday-web/package.json,
+      #                      and vite.config.ts injects the result as `__APP_VERSION__` — a
+      #                      version edit really can reach a test that asserts on what the app
+      #                      reports
+      #   this workflow      a change to the gate is a change worth running the gate on
       #
-      # Markdown under those trees is excluded: prose does not reach the bundle.
+      # WHY THE NATIVE TREES ARE IN A *WEB* FILTER
+      #
+      # `tday-web/tests/guardrails/` is not a web suite. Eleven of its files statically analyse
+      # source outside tday-web: `android-standards.test.ts` and `coding-standards.test.ts` walk
+      # `android-compose/app/src/main/java/...` for unsafe casts and hardcoded colours;
+      # `sentry-privacy.test.ts`, `guide-icons.test.ts` and `settings-icons.test.ts` read
+      # `ios-swiftUI/`; and `motion-reachability-{android,ios,web}.test.ts` assert that a
+      # declared animation can actually run, in Kotlin and Swift as well as CSS. They live here
+      # because vitest on Linux is the only runner in this repo that can read all three
+      # languages in under a second — not because their subject is web.
+      #
+      # Scoped to `tday-web/` alone, those rules only ran when a web file happened to change.
+      # An iOS-only or Android-only PR — exactly the PR most likely to introduce an unreachable
+      # Swift or Kotlin animation — skipped every one of them. PR #189 did precisely that: it
+      # edited `OnboardingWizardOverlay.swift` and this job reported "skipping".
+      #
+      # So the filter matches what the suite READS, not where it lives. The cost is ~1m15s of
+      # ubuntu time on native-only PRs; the alternative is a guardrail that is silent on the
+      # changes it exists to guard.
+      #
+      # Markdown under those trees is excluded: prose reaches neither the bundle nor a scanner.
       - name: Decide whether to run the web checks
         id: filter
         env:
@@ -99,7 +123,7 @@ jobs:
           fi
 
           RELEVANT=$(printf '%s\n' "$CHANGED" | grep -E \
-            '^(tday-web/|version\.json$|\.github/workflows/web\.yml$)' \
+            '^(tday-web/|ios-swiftUI/|android-compose/|shared/|version\.json$|\.github/workflows/web\.yml$)' \
             | grep -vE '\.md$' || true)
 
           if [ -n "$RELEVANT" ]; then
@@ -111,8 +135,8 @@ jobs:
           echo "web=false" >> "$GITHUB_OUTPUT"
           echo "No web-relevant file changed — skipping the web checks."
           {
-            echo "Web checks: **skipped** — no file under \`tday-web/\` or \`version.json\`"
-            echo "changed in this pull request."
+            echo "Web checks: **skipped** — no file under \`tday-web/\`, \`ios-swiftUI/\`,"
+            echo "\`android-compose/\`, \`shared/\` or \`version.json\` changed in this pull request."
           } >> "$GITHUB_STEP_SUMMARY"
 
   checks:
