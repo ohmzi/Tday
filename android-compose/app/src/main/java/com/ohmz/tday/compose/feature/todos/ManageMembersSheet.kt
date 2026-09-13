@@ -45,8 +45,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -55,6 +53,7 @@ import com.ohmz.tday.compose.core.data.list.ListShareRepository
 import com.ohmz.tday.compose.core.data.list.ShareListKind
 import com.ohmz.tday.compose.core.model.ListMemberDto
 import com.ohmz.tday.compose.core.model.UserSearchResultDto
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
@@ -543,7 +542,7 @@ private fun SearchResultRow(
         } else {
             Card(
                 onClick = {
-                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                    TdayHaptics.buttonPress(view)
                     onAdd()
                 },
                 enabled = enabled,
@@ -601,7 +600,7 @@ private fun MembersSheetActionButton(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,

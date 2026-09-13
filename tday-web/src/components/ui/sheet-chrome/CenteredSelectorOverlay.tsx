@@ -8,6 +8,13 @@ import { hapticTick } from "@/lib/haptics";
 // Radix Dialog so it portals to <body> and stacks (z-[60]) above the vaul drawer
 // and the calendar Modal (both z-50). Nested Radix dismissable layers mean
 // interacting with this overlay does not dismiss the sheet beneath it.
+//
+// Both nodes declare a `data-[state=closed]` exit as well as the `open` enter.
+// That pairing is not decoration: Radix holds a node in the tree only while an
+// exit animation is actually running on it, so an enter declared on its own
+// means the node is removed on the frame the state flips and the card vanishes
+// rather than closing. 200ms out against 300ms in keeps the same
+// faster-to-leave asymmetry `sheet.tsx` already uses for the layer beneath.
 
 export function CenteredSelectorOverlay({
   open,
@@ -23,11 +30,11 @@ export function CenteredSelectorOverlay({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/45 data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <Dialog.Overlay className="fixed inset-0 z-[60] bg-black/45 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:duration-300 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:duration-200" />
         <Dialog.Content
           aria-describedby={undefined}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="fixed left-1/2 top-1/2 z-[60] w-[min(330px,calc(100vw-3rem))] max-h-[80dvh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[32px] border border-white/70 bg-card shadow-[0_30px_80px_-30px_hsl(var(--shadow)/0.7)] dark:border-white/10 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+          className="fixed left-1/2 top-1/2 z-[60] w-[min(330px,calc(100vw-3rem))] max-h-[80dvh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[32px] border border-white/70 bg-card shadow-[0_30px_80px_-30px_hsl(var(--shadow)/0.7)] dark:border-white/10 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:duration-300 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:duration-200"
         >
           <Dialog.Title className="px-5 pb-3 pt-5 text-lg font-black text-muted-foreground">
             {title}

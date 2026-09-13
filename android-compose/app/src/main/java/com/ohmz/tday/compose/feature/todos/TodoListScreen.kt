@@ -8,6 +8,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -138,8 +139,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
@@ -167,6 +166,7 @@ import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
@@ -449,6 +449,38 @@ internal val EarlierExpandDeferMillis: Long = TdayFeedItemMotion.FadeOutMillis.t
  */
 internal fun nonEarlierSectionsEmpty(sections: List<TodoSection>): Boolean =
     sections.none { section -> section.key != EARLIER_SECTION_KEY && section.items.isNotEmpty() }
+
+/**
+ * The task a live reschedule drag is actually carrying, or null when the id in
+ * hand no longer names a row on screen.
+ *
+ * Searches [earlierItems] as well as [items] because in Today mode those are
+ * two disjoint arrays, not one: [TodoListUiState.earlierItems] deliberately
+ * keeps overdue tasks OUT of `items` so the empty-state gate can stay a plain
+ * "pending today" count (see [nonEarlierSectionsEmpty]). Every Earlier row is
+ * still a real, long-pressable, draggable row, so an `items`-only lookup
+ * answered null for exactly the rows this screen most needs to move -- the
+ * overdue ones -- and a drag that starts on Earlier read as no drag at all:
+ * no dragged task to test drop-eligibility against, therefore no registered
+ * drop targets, therefore a gesture that went nowhere and died on release.
+ * Every other mode leaves `earlierItems` empty, so the extra scan costs them
+ * nothing and changes nothing.
+ *
+ * One function for both readers (the liveness flag that restores empty drop
+ * buckets, and the dragged-task lookup the drop-eligibility test runs on) so
+ * the two can never disagree about whether a drag is live -- they used to
+ * match on different fields, `id` alone against `id`-or-`canonicalId`, which
+ * is a disagreement waiting to happen for a recurring occurrence.
+ */
+internal fun draggedTimelineTodo(
+    draggedTodoId: String?,
+    items: List<TodoItem>,
+    earlierItems: List<TodoItem>,
+): TodoItem? {
+    val targetId = draggedTodoId ?: return null
+    return (items.asSequence() + earlierItems.asSequence())
+        .firstOrNull { todo -> todo.id == targetId || todo.canonicalId == targetId }
+}
 
 /**
  * Whether [sectionedTimelineContent]'s Earlier header should skip
@@ -761,7 +793,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             uiState.completedTodayCount > 0
     LaunchedEffect(isDayDone) {
         if (isDayDone) {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
+            TdayHaptics.completion(view)
         }
     }
     val emptyStateSceneIconRes = if (isDayDone) {
@@ -811,9 +843,17 @@ fun TodoListScreen( // skipcq: KT-R1006
     // is rememberSaveable, so a rotation mid-drag persists it while the gesture
     // that would clear it is gone — and the scaffold would then be stuck on
     // screen at rest, which is the very thing this is meant to remove.
+    // Resolved against the search-filtered `timelineItems` rather than raw
+    // `uiState.items` -- a row the query has hidden cannot be under a thumb --
+    // but against `uiState.earlierItems` unfiltered, the same way the Earlier
+    // section itself is built below: Earlier's rows are on screen, and
+    // draggable, whether or not a scoped search is narrowing the day.
     val timelineDragActive = canRescheduleTasks &&
-            draggedScheduledTodoId != null &&
-            timelineItems.any { it.id == draggedScheduledTodoId }
+            draggedTimelineTodo(
+                draggedTodoId = draggedScheduledTodoId,
+                items = timelineItems,
+                earlierItems = uiState.earlierItems,
+            ) != null
     val timelineSections = remember(
         uiState.mode,
         timelineItems,
@@ -1149,6 +1189,28 @@ fun TodoListScreen( // skipcq: KT-R1006
             !uiState.isLoading &&
             !suppressInitialTodayTimeline &&
             !scopedSearchActive
+    // The scene's own visibility, and the transition that plays it, hoisted out of the
+    // `item {}` that draws it.
+    //
+    // It has to live up here because `earlierIllustrationPresent` above is implied by
+    // `showEarlierIllustration`: completing the last task in scope turns both true on the
+    // same frame, so the item is created at the exact moment the scene should be appearing.
+    // An `AnimatedVisibility(visible = …)` inside it would therefore enter composition with
+    // initialState == targetState and skip its enter outright — the 190 ms fade + expand
+    // below was never once seen, and 34 % of the screen claimed its slot in one jump,
+    // shoving Earlier's header down with it. A transition state remembered out here
+    // outlives the item's mount, so it still holds the "not visible yet" the enter needs
+    // to animate from.
+    //
+    // Seeded from the live value rather than from `false`, deliberately: seeding false
+    // would also animate the scene in on every cold entry into an already-finished Today,
+    // which is motion nobody asked for. Keyed by scope for the same reason — arriving at a
+    // mode or list that is already empty is a cold entry too, not a transition.
+    val earlierSceneVisible = showEarlierIllustration || showEarlierExpandedCelebration
+    val earlierSceneTransition = remember(uiState.mode, uiState.listId) {
+        MutableTransitionState(earlierSceneVisible)
+    }
+    earlierSceneTransition.targetState = earlierSceneVisible
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -1218,11 +1280,14 @@ fun TodoListScreen( // skipcq: KT-R1006
     val editTargetTodo = remember(editTargetTodoId, uiState.items) {
         editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
     }
-    val draggedScheduledTodo = remember(draggedScheduledTodoId, uiState.items) {
-        draggedScheduledTodoId?.let { targetId ->
-            uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
+    val draggedScheduledTodo =
+        remember(draggedScheduledTodoId, uiState.items, uiState.earlierItems) {
+            draggedTimelineTodo(
+                draggedTodoId = draggedScheduledTodoId,
+                items = uiState.items,
+                earlierItems = uiState.earlierItems,
+            )
         }
-    }
     val requestTaskReschedule: (TodoItem, LocalDate) -> Unit =
         requestTaskReschedule@{ todo, targetDate ->
         draggedScheduledTodoId = null
@@ -1232,7 +1297,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             val currentDue = todo.due ?: return@requestTaskReschedule
             val currentDate = LocalDate.ofInstant(currentDue, zoneId)
         if (currentDate != targetDate) {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
+            TdayHaptics.dragDrop(view)
             if (todo.isRecurring) {
                 pendingRescheduleDrop = TaskRescheduleDrop(todo = todo, targetDate = targetDate)
             } else {
@@ -1255,7 +1320,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                 zoneId,
             ).toInstant()
             if (movedDue != currentDue) {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONFIRM)
+                TdayHaptics.dragDrop(view)
                 if (todo.isRecurring) {
                     pendingRescheduleDrop = TaskRescheduleDrop(todo = todo, targetHour = hour)
                 } else {
@@ -1609,7 +1674,7 @@ fun TodoListScreen( // skipcq: KT-R1006
         activeDropSectionKey = null
         timelineDropTargetBounds.clear()
         draggedScheduledTodoId = todo.id
-        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.LONG_PRESS)
+        TdayHaptics.dragPickUp(view)
         activeTimelineDrag = TimelineInAppDrag(todo, position)
     }
     val onTimelineDragMove: (todo: TodoItem, position: Offset) -> Unit = { todo, position ->
@@ -1855,8 +1920,12 @@ fun TodoListScreen( // skipcq: KT-R1006
                             contentType = "today-earlier-empty-scene",
                         ) {
                             AnimatedVisibility(
-                                visible = showEarlierIllustration ||
-                                        showEarlierExpandedCelebration,
+                                // `earlierSceneTransition`, not a plain `visible =`: this
+                                // item is mounted by a guard that the visibility implies,
+                                // so a boolean here would arrive already true and the
+                                // enter below would never play. See where the state is
+                                // remembered, above the guard, for the whole story.
+                                visibleState = earlierSceneTransition,
                                 // Fade AND expand: the mirror of exit's fade +
                                 // shrink below, so the scene's arrival reads
                                 // as the same one motion running backwards
@@ -2608,6 +2677,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                 deleteCount,
             ),
             confirmColor = colorScheme.error,
+            confirmIsDestructive = true,
             onDismissRequest = { showBulkDeleteConfirmation = false },
             onConfirm = {
                 showBulkDeleteConfirmation = false
@@ -3288,7 +3358,7 @@ private fun BulkSelectionAction(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
             .clickable(enabled = enabled) {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                TdayHaptics.buttonPress(view)
                 onClick()
             }
             .padding(horizontal = 14.dp, vertical = 6.dp),
@@ -3321,6 +3391,7 @@ private fun ListDeleteConfirmationDialog(
         message = stringResource(R.string.todos_delete_list_message),
         confirmLabel = stringResource(R.string.action_delete),
         confirmColor = MaterialTheme.colorScheme.error,
+        confirmIsDestructive = true,
         onDismissRequest = onDismissRequest,
         onConfirm = onConfirm,
     )
@@ -3334,6 +3405,12 @@ private fun ListDeleteConfirmationDialog(
  *
  * [skippedMessage] carries the "applies to N of M" line when a bulk selection
  * held repeating occurrences the action cannot touch.
+ *
+ * [confirmIsDestructive] says whether this dialog's confirm button is the moment
+ * something is destroyed rather than one more control on the way there. It has to
+ * be told, because the button itself cannot know: the same composable commits a
+ * list delete, a delete of N tasks and a move of N tasks, and only the first two
+ * earn the heavy thud.
  */
 @Composable
 private fun TdayConfirmationDialog(
@@ -3341,6 +3418,7 @@ private fun TdayConfirmationDialog(
     message: String,
     confirmLabel: String,
     confirmColor: Color,
+    confirmIsDestructive: Boolean = false,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
     skippedMessage: String? = null,
@@ -3427,10 +3505,15 @@ private fun TdayConfirmationDialog(
                         Spacer(Modifier.size(10.dp))
                         TextButton(
                             onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
+                                // This is the tap that destroys; the one that
+                                // opened this dialog only asked. The heavy thud
+                                // belongs here, where Cancel has stopped being an
+                                // option.
+                                if (confirmIsDestructive) {
+                                    TdayHaptics.destructive(view)
+                                } else {
+                                    TdayHaptics.buttonPress(view)
+                                }
                                 onConfirm()
                             },
                         ) {
@@ -3578,7 +3661,7 @@ private fun FloaterTaskHomeListRow(
                 scaleY = animatedScale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -3725,7 +3808,7 @@ private fun TodayHeaderButton(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -3854,7 +3937,7 @@ private fun CreateTaskButton(
     Card(
         modifier = modifier,
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -4197,7 +4280,7 @@ private fun ListSettingsActionTile(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -4252,7 +4335,9 @@ private fun ListSettingsDeleteButton(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            // Opens the confirmation, destroys nothing — Cancel is still there.
+            // The thud is fired by the dialog's confirm button instead.
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -4770,10 +4855,23 @@ internal fun buildTimelineSections(
     // there is still a backlog collapsed underneath. That is requirement 2:
     // the "day is empty" illustration cares about pending-today only, and
     // Earlier staying reachable while it shows is requirement 3.
+    //
+    // The "nothing in the day, so no headers" rule above describes the screen
+    // at REST. A drag is not rest: the task in hand has to have somewhere to
+    // land, and for Today the only somewheres are exactly these three buckets.
+    // Hiding them because they are empty is self-defeating -- an empty bucket
+    // is precisely the one a task is being dragged INTO -- and it is what left
+    // an Earlier row with no drop target at all on a day whose pending list had
+    // just been emptied: pick the row up, and there was nothing on screen that
+    // could catch it. So a live drag restores all three for its duration, the
+    // same exception, for the same reason, that the general rule below already
+    // makes for every other scope's empty date buckets. Both restores are keyed
+    // on the one `isDragActive` flag, so the buckets appear and leave together
+    // with the gesture rather than on any state of their own.
     if (mode == TodoListMode.TODAY) {
         val timeOfDaySections = sections.filterNot { section -> section.key == EARLIER_SECTION_KEY }
         val earlierSection = sections.firstOrNull { section -> section.key == EARLIER_SECTION_KEY }
-        val visibleTimeOfDay = if (timeOfDaySections.any { it.items.isNotEmpty() }) {
+        val visibleTimeOfDay = if (isDragActive || timeOfDaySections.any { it.items.isNotEmpty() }) {
             timeOfDaySections
         } else {
             emptyList()
@@ -5700,10 +5798,7 @@ private fun SwipeTaskRow(
                             revealProgress = actionRevealProgress,
                             revealDelay = 0.74f,
                             onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
+                                TdayHaptics.buttonPress(view)
                                 closeSwipeSlot()
                                 promoteAction()
                             },
@@ -5719,10 +5814,7 @@ private fun SwipeTaskRow(
                             revealProgress = actionRevealProgress,
                             revealDelay = 0.74f,
                             onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
+                                TdayHaptics.buttonPress(view)
                                 closeSwipeSlot()
                                 demoteAction()
                             },
@@ -5738,10 +5830,7 @@ private fun SwipeTaskRow(
                             revealProgress = actionRevealProgress,
                             revealDelay = 0.74f,
                             onClick = {
-                                ViewCompat.performHapticFeedback(
-                                    view,
-                                    HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                )
+                                TdayHaptics.buttonPress(view)
                                 closeSwipeSlot()
                                 deferAction()
                             },
@@ -5756,10 +5845,7 @@ private fun SwipeTaskRow(
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.62f,
                         onClick = {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                            )
+                            TdayHaptics.buttonPress(view)
                             closeSwipeSlot()
                             onInfo()
                         },
@@ -5773,10 +5859,7 @@ private fun SwipeTaskRow(
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.40f,
                         onClick = {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                            )
+                            TdayHaptics.buttonPress(view)
                             closeSwipeSlot()
                             runCatching {
                                 clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
@@ -5796,10 +5879,7 @@ private fun SwipeTaskRow(
                         revealProgress = actionRevealProgress,
                         revealDelay = 0.04f,
                         onClick = {
-                            ViewCompat.performHapticFeedback(
-                                view,
-                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                            )
+                            TdayHaptics.destructive(view)
                             closeSwipeSlot()
                             onDelete()
                         },
@@ -5823,10 +5903,7 @@ private fun SwipeTaskRow(
                                             dragPointerPosition = startPosition
                                             onDragStart?.invoke(startPosition)
                                             onDragMove(startPosition)
-                                            ViewCompat.performHapticFeedback(
-                                                view,
-                                                HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                            )
+                                            TdayHaptics.dragPickUp(view)
                                         },
                                         onDrag = { change, dragAmount ->
                                             change.consume()
@@ -5968,13 +6045,14 @@ private fun SwipeTaskRow(
                                     !visuallyChecked && !pendingCompletion && !readOnly
                                 },
                                 onClick = {
-                                    ViewCompat.performHapticFeedback(
-                                        view,
-                                        HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                    )
+                                    // One control, two events: in bulk-select mode this
+                                    // circle moves the selection, everywhere else it
+                                    // finishes the task. They must not feel the same.
                                     if (selectionActive) {
+                                        TdayHaptics.selection(view)
                                         onToggleSelected()
                                     } else {
+                                        TdayHaptics.completion(view)
                                         taskCompletionSound.play()
                                         closeSwipeSlot()
                                         localChecked = true

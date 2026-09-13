@@ -107,6 +107,15 @@ func isBackendUnavailableError(_ error: Error) -> Bool {
     return (500 ... 599).contains(statusCode)
 }
 
+/// True when the server answered 429 Too Many Requests. A 429 is not a verdict on
+/// one item — it is the server telling the whole fan-out to back off, so callers
+/// that are pushing a queue of requests should stop rather than treat it as a
+/// per-request failure. Read off `APIError.statusCode` like every other classifier
+/// here; never off the message text.
+func isRateLimitedError(_ error: Error) -> Bool {
+    (error as? APIError)?.statusCode == 429
+}
+
 func isLikelyUnrecoverableMutationError(_ error: Error) -> Bool {
     guard let apiError = error as? APIError, let statusCode = apiError.statusCode else {
         return false

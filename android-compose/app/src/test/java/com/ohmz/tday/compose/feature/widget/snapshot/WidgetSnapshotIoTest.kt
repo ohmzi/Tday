@@ -12,6 +12,7 @@ import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -31,6 +32,20 @@ import java.util.concurrent.atomic.AtomicReference
  *  3. `FloaterTasksWidget`, `TodayTasksWidget`, `ListTasksWidget` and `WidgetFastPaint` decide
  *     whether to hydrate (or whether to fast-paint at all) from a bare `File.exists()`. Under
  *     delete-then-write that probe was transiently false on every single cache write.
+ *
+ * Defect 3 is checked by asserting that the replacement never unlinks the name, rather than by
+ * racing a thread to catch the name missing. A `rename(2)` has no window to catch, so a sampling
+ * probe can only ever report noise or nothing.
+ *
+ * There was briefly a second oracle here that watched the directory through `WatchService` and
+ * failed on an `ENTRY_DELETE` for the target name. It was removed because it is unsound, and the
+ * way it is unsound is worth recording so nobody rebuilds it. The kernel does distinguish the two
+ * cases — `strace`/raw `inotify` show a replacement emitting only `IN_MOVED_FROM` on the `.tmp`
+ * name and `IN_MOVED_TO` on the target, and never `IN_DELETE` on the target — but Java's
+ * `WatchService` surfaces the target's arrival as `ENTRY_DELETE` all the same, 200 times out of
+ * 200 renames. So the probe reported an unlink on a write that provably never unlinked anything,
+ * which is the same shape of error as the `exists()` loop it was written to replace: an inference
+ * from a JDK-level signal to a filesystem-level claim the signal does not carry.
  */
 class WidgetSnapshotIoTest {
 
@@ -87,40 +102,40 @@ class WidgetSnapshotIoTest {
     }
 
     @Test
-    fun `the snapshot file is never absent while it is being replaced`() {
-        // Defect 3, directly: this is the invariant the four `File.exists()` hydrate/fast-paint
-        // probes depend on. Under delete-then-write it was violated on every write.
-        val target = target()
-        WidgetSnapshotIo.writeAtomically(target, "seed".toByteArray())
-
-        val observedMissing = AtomicBoolean(false)
-        val stop = AtomicBoolean(false)
-        val prober = Thread {
-            // Consecutive misses, not a single one. The defect this guards — delete-then-write —
-            // leaves the path absent for the whole of `writeBytes` (open, write, close: tens of
-            // microseconds), which this tight `stat` loop samples many times over. One isolated
-            // false from `exists()` is a different thing: `rename(2)` over an existing name is
-            // atomic on every filesystem this runs on, and a lone miss was still observed once on
-            // ext4 (Linux 6.11) with the rename-based write in place and 13 clean runs either side
-            // of it. Requiring a short run of misses keeps the assertion strict against the real
-            // window while not failing a release on one spurious sample.
-            var missingStreak = 0
-            while (!stop.get()) {
-                if (target.exists()) {
-                    missingStreak = 0
-                } else if (++missingStreak >= MISSING_PROBES_TO_FAIL) {
-                    observedMissing.set(true)
-                }
+    fun `a replacement never deletes the snapshot it is replacing`() {
+        // Defect 3, half one: the regression this guards IS a `target.delete()`, so watch for that
+        // call directly instead of sampling for its after-effect. No threads, no timing, no
+        // sampling — a delete is either called or it is not.
+        //
+        // This replaced a prober thread that spun on `target.exists()` and failed on three
+        // consecutive misses. That instrument did not work. Measured against a deliberately
+        // reintroduced delete-then-write, the spin loop noticed it in 30 of 50 idle runs and 18 of
+        // 50 at load average 74-90 — a 64%-under-load false-negative rate against the one defect
+        // it exists to catch — because the writes finish before a descheduled prober gets to stat
+        // at all (probes taken during the write window ranged from 0 to 119,404 across runs). This
+        // check and the inotify one below both caught the same regression 50 of 50 times, idle and
+        // loaded, with no false alarm on the shipped implementation.
+        val deletes = AtomicInteger(0)
+        val target = object : File(folder.newFolder("widget"), "widget-today-snapshot.json") {
+            override fun delete(): Boolean {
+                deletes.incrementAndGet()
+                return super.delete()
             }
         }
-        prober.start()
+        WidgetSnapshotIo.writeAtomically(target, "seed".toByteArray())
+
         repeat(WRITE_ITERATIONS) { i ->
             WidgetSnapshotIo.writeAtomically(target, "payload-$i".toByteArray())
         }
-        stop.set(true)
-        prober.join(JOIN_TIMEOUT_MS)
 
-        assertFalse("exists() went false mid-write", observedMissing.get())
+        assertEquals(
+            "the write unlinked the snapshot instead of renaming onto it, so the four " +
+                "File.exists() hydrate/fast-paint probes go transiently false",
+            0,
+            deletes.get(),
+        )
+        // The write has to have actually happened, or the count above proves nothing.
+        assertArrayEquals("payload-${WRITE_ITERATIONS - 1}".toByteArray(), target.readBytes())
     }
 
     @Test
@@ -165,6 +180,9 @@ class WidgetSnapshotIoTest {
         stop.set(true)
         reader.join(JOIN_TIMEOUT_MS)
 
+        // `join` returns silently on timeout, so assert the reader really finished. A reader still
+        // running here would have had its findings discarded.
+        assertFalse("the reader thread did not finish", reader.isAlive)
         assertNull("a writer threw: ${writerFailure.get()}", writerFailure.get())
         assertNull(
             "read a file that was neither payload — a torn write",
@@ -212,8 +230,8 @@ class WidgetSnapshotIoTest {
     private companion object {
         const val WRITE_ITERATIONS = 200
 
-        /** See the prober in `the snapshot file is never absent while it is being replaced`. */
-        const val MISSING_PROBES_TO_FAIL = 3
+
+
         const val WRITER_THREADS = 4
         const val PAYLOAD_REPEAT = 400
         const val LOCK_THREADS = 6

@@ -97,8 +97,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -125,6 +123,7 @@ import com.ohmz.tday.compose.core.notification.notificationToggleAction
 import com.ohmz.tday.compose.core.notification.notificationToggleChecked
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
@@ -906,7 +905,7 @@ private fun SettingsBarButton(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -1498,7 +1497,7 @@ private fun SettingsPillButton(
             .clip(CircleShape)
             .background(colorScheme.secondary.copy(alpha = 0.12f))
             .clickable {
-                ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                TdayHaptics.buttonPress(view)
                 onClick()
             }
             .height(34.dp)
@@ -2590,10 +2589,7 @@ private fun ReminderSelector(
                 isSelected = { option -> option == selectedReminder },
                 onDismiss = { expanded = false },
                 onOptionSelected = { option ->
-                    ViewCompat.performHapticFeedback(
-                        view,
-                        HapticFeedbackConstantsCompat.CLOCK_TICK,
-                    )
+                    TdayHaptics.selection(view)
                     onReminderSelected(option)
                     expanded = false
                 },
@@ -2643,10 +2639,7 @@ private fun DayAheadSelector(
                 isSelected = { option -> option == selectedDayAhead },
                 onDismiss = { expanded = false },
                 onOptionSelected = { option ->
-                    ViewCompat.performHapticFeedback(
-                        view,
-                        HapticFeedbackConstantsCompat.CLOCK_TICK,
-                    )
+                    TdayHaptics.selection(view)
                     onDayAheadSelected(option)
                     expanded = false
                 },
@@ -2716,7 +2709,7 @@ private fun LanguageSelector() {
                 isSelected = { it == current },
                 onDismiss = { expanded = false },
                 onOptionSelected = { lang ->
-                    ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                    TdayHaptics.selection(view)
                     val locales = lang.tag
                         ?.let { LocaleListCompat.forLanguageTags(it) }
                         ?: LocaleListCompat.getEmptyLocaleList()

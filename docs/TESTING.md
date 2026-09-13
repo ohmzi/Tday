@@ -144,6 +144,23 @@ npm run observability:smoke                 # no-dependency Sentry/privacy smoke
 | `NetworkModule` uses `kotlinx.serialization`, not Gson | Consistent serialization library |
 | `EncryptedCookieStore` and `SecureConfigStore` exist | Encrypted local storage for sensitive data |
 
+#### `motion-reachability-android.test.ts` — Compose Animation Reachability
+
+Animation specs get merged while being unreachable: the spec is in the file, reads correctly, and can
+never run. This suite reads the Compose source and reports the four shapes that make that happen. It is
+proof-positive — a site is reported only when the defect is demonstrable from the source, so an
+unresolvable expression is passed over rather than guessed at.
+
+| What it checks | Rule enforced |
+|---------------|---------------|
+| No `return@AnimatedVisibility` in an `AnimatedVisibility` content lambda | Content stays composed for the whole exit; bailing out empties it on the first frame of the exit |
+| Content does not read the nullable that drives `visible` | That value is already null for the length of the exit — retain the last one and draw it |
+| No `AnimatedVisibility` exit hangs off a flag nothing sets false | An exit spec on a write-once flag is dead code (exemptions are named in `RULE_B_PENDING_FIX` and self-closing) |
+| No `animate*AsState` targets a composition-constant value | A target built only from literals, `const val`s and screen metrics can never move |
+| No `AnimatedVisibility` sits behind a guard its own `visible` implies | It would enter composition already visible and skip its enter spec |
+| A guarded `visibleState` is remembered above its guard | The transition state has to outlive the guard's mount or it is re-seeded every time |
+| The walk finds the Compose tree and its animation call sites | A scanner that reads nothing passes everything |
+
 #### `dependency-hygiene.test.ts` — Configuration and Infrastructure
 
 | What it checks | Rule enforced |
@@ -384,7 +401,7 @@ ios-swiftUI/Tests/
 └── TdayCoreTests/
 ```
 
-Current XCTest coverage includes API model contracts, cache mapper date parsing, completed-sync merging, connectivity classification, realtime client behavior, server URL persistence, system credential login handling, Today/Floater widget snapshot schema/status/cap storage, and widget create deep-link routing.
+Current XCTest coverage includes API model contracts, cache mapper date parsing, completed-sync merging, connectivity classification, the offline-sync lock's FIFO hand-off and mutual exclusion, the pending-mutation replay's failure handling (including the 429 early exit that leaves the rest of the queue pending), realtime client behavior, server URL persistence, system credential login handling, Today/Floater widget snapshot schema/status/cap storage, widget create deep-link routing, and the bottom-sheet chrome's motion spec and keyboard-frame probe.
 
 ### What Should Be Tested (iOS)
 

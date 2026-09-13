@@ -93,6 +93,46 @@ struct CompletedScreen: View {
         searchedItems.map(\.id).joined(separator: "|")
     }
 
+    /// The gate for both empty scenes, and the value the overlay's
+    /// `.animation(_:value:)` keys off. One property rather than the condition
+    /// written twice, because the thing that decides the scene is on screen and
+    /// the thing that supplies the transaction to take it off screen drifting
+    /// apart is exactly how a removal transition goes quietly inert.
+    private var showsCompletedEmptyState: Bool {
+        searchedItems.isEmpty && !viewModel.isLoading
+    }
+
+    /// The empty scene's insertion and removal. The same shape, for the same
+    /// reasons, as `TodoListScreen.emptyStateIllustrationTransition`:
+    ///
+    /// - Removal is `.opacity`, so the scene fades out. Deleting a character out
+    ///   of a query that matched nothing turns the no-match scene back into a
+    ///   list of rows, and without a removal leg SwiftUI simply stops drawing
+    ///   the scene on that frame — a cut, in the middle of a sequence the user
+    ///   is driving one keystroke at a time.
+    /// - Insertion is `.identity`, deliberately inert. `TdayEmptyState` gives
+    ///   itself a 0.52s rise-and-fade from its own `onAppear` (see its doc
+    ///   comment: "it never cuts in") which owes nothing to SwiftUI's transition
+    ///   system, so an opacity leg here would stack a second, independent fade
+    ///   on the same arrival and buy nothing for it.
+    ///
+    /// Spelled out again rather than shared with `TodoListScreen`: the two are
+    /// in different files and there is no motion-token layer between them yet.
+    /// If one moves, move both.
+    private var completedEmptyStateTransition: AnyTransition {
+        .asymmetric(insertion: .identity, removal: .opacity)
+    }
+
+    /// The scene's exit. The same 0.22s ease-in as the timeline's illustration
+    /// exit (`TodoListScreen.EarlierIllustrationHandoff.exitDuration`), so the
+    /// two screens' empty scenes leave the same way, and a touch inside the
+    /// 0.24s the history's own rows arrive on (`completedTimelineAnimationKey`)
+    /// so the scene is out of the way rather than dissolving over the rows it
+    /// was standing in for.
+    private enum CompletedEmptyStateExit {
+        static let duration: Double = 0.22
+    }
+
     var body: some View {
         completedTimelineContent
             .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
@@ -109,9 +149,10 @@ struct CompletedScreen: View {
                         accentColor: completedAccentColor,
                         assetName: "TileComplete"
                     )
-                    if searchedItems.isEmpty, !viewModel.isLoading {
+                    if showsCompletedEmptyState {
                         if isSearching {
                             searchEmptyState
+                                .transition(completedEmptyStateTransition)
                         } else {
                             TdayEmptyState(
                                 assetName: "TileComplete",
@@ -119,13 +160,41 @@ struct CompletedScreen: View {
                                 title: L("No completed tasks"),
                                 description: L("Tick something off and it will land here.")
                             )
-                            // Pull-to-refresh still has to work on an empty
-                            // history, and a Text sitting in an overlay would
-                            // swallow the drag before the list ever saw it.
+                            // This scene is decoration: nothing in it is
+                            // tappable, and the overlay it sits in spans the
+                            // whole screen. Left hit-testable it would answer
+                            // for every touch the history beneath it should have
+                            // had — the list's own scroll, and with it the hero
+                            // title's collapse, which `timelineHeroTitleRow`
+                            // reads off that scroll. The search scene opposite
+                            // keeps its hits because it owns a button; this one
+                            // has nothing to defend.
+                            //
+                            // It is *not* about the refresh gesture, whatever
+                            // this comment used to say: `pullRefreshEnabled`
+                            // defaults to false and `AppRootView` builds this
+                            // screen without it, so the `tdayPullToRefresh` in
+                            // the body above is wired to nothing and there is no
+                            // drag here to protect. That claim cost one verifier
+                            // pass a wrong conclusion, so it is written down
+                            // rather than left to be re-derived.
                             .allowsHitTesting(false)
+                            .transition(completedEmptyStateTransition)
                         }
                     }
                 }
+                // The transaction the removal leg above runs in. The scene
+                // leaves when a query stops matching nothing, and that is a
+                // keystroke written straight into `searchQuery` by the field in
+                // the top bar with no `withAnimation` within reach of it — so
+                // without this there is no animation for the removal to take and
+                // SwiftUI drops the view between two frames. Keyed to the gate
+                // rather than to `searchQuery`, so the keystrokes that only
+                // narrow a list already on screen open no transaction at all.
+                .animation(
+                    .easeIn(duration: CompletedEmptyStateExit.duration),
+                    value: showsCompletedEmptyState
+                )
             }
             // Tapping the content puts the field away, as it does on the root feeds.
             // Sits above the bar's own safe-area inset, so the gesture only ever
@@ -265,7 +334,7 @@ struct CompletedScreen: View {
             description: L("Try a different word, or clear the search."),
             action: AnyView(
                 Button {
-                    HapticManager.gentleTap()
+                    HapticManager.buttonPress()
                     searchQuery = ""
                     searchFieldFocused = true
                 } label: {
@@ -279,7 +348,7 @@ struct CompletedScreen: View {
     }
 
     private func openSearch() {
-        HapticManager.buttonTap()
+        HapticManager.buttonPress()
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = true
         }
@@ -288,7 +357,7 @@ struct CompletedScreen: View {
     /// Leaving the search drops the query with it, so the history is whole again
     /// the next time the bar is opened — the same bargain web's close makes.
     private func closeSearch() {
-        HapticManager.sheetDismiss()
+        HapticManager.buttonPress()
         searchFieldFocused = false
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
             searchExpanded = false
@@ -550,7 +619,7 @@ private struct CompletedTimelineRow: View {
             openSwipeTaskID = nil
         }
 
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        HapticManager.toggle(on: false)
         Task { @MainActor in
             withAnimation(.easeInOut(duration: 0.16)) {
                 restorePhase = .unchecked

@@ -1,5 +1,17 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* The shared motion vocabulary, written by `:shared:exportMotionTokens` from
+   `MotionTokens.kt`. It declares `--tday-duration-*`, `--tday-delay-*`,
+   `--tday-ease-*` and `--tday-press-*` on `:root` and nothing else.
+
+   It sits up here with the other `@import`s because an `@import` that follows
+   any other rule is discarded — silently, on a build that still exits 0 and
+   prints no warning. Move this line below the `@font-face` and the whole `:root`
+   block goes with it, leaving every `var(--tday-*)` in the app resolving to an
+   undefined custom property with nothing in CI to catch it. The `@theme inline`
+   block below is not the reason: it copies `var(--tday-ease-scene)` through
+   verbatim and never resolves it, so ordering for its sake would not matter. */
+@import "./generated/motion-tokens.css";
 
 @font-face {
   font-family: "Nunito";
@@ -124,6 +136,32 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
+
+  /* The two easings Tailwind does not already ship, and only those two. Its own
+     `--ease-in-out`, `--ease-out` and `--ease-in` (theme.css:434-436) are
+     byte-for-byte the Standard, Enter and Exit tokens, so redeclaring them here
+     would mint a second name for a curve the utilities already resolve to —
+     which is how a vocabulary stops being one.
+
+     `--default-transition-duration` is left alone for the same reason read the
+     other way: it is an un-overridden 150ms, which is exactly Quick, and every
+     bare `transition-*` in the app is already on that rung for free. Rebinding
+     it would be a visible change to ~159 sites, not a tidy-up. */
+  --ease-scene: var(--tday-ease-scene);
+  --ease-gesture: var(--tday-ease-gesture);
+
+  /* The duration rungs, so a class can name one. The namespace is
+     `--transition-duration-*` and not the `--duration-*` the name of the utility
+     suggests: `@theme` accepts `--duration-emphasis` without complaint and
+     generates nothing from it, so the obvious spelling produces a class that
+     silently does not exist. Nothing is emitted until a class is used and
+     `duration-200` still resolves to its own `.2s`, so these cost the bundle
+     nothing and move no existing site. */
+  --transition-duration-quick: var(--tday-duration-quick);
+  --transition-duration-enter: var(--tday-duration-enter);
+  --transition-duration-change: var(--tday-duration-change);
+  --transition-duration-emphasis: var(--tday-duration-emphasis);
+  --transition-duration-scene: var(--tday-duration-scene);
 }
 
 /*
@@ -208,7 +246,7 @@
     position: relative;
     transition-duration: 180ms;
     transition-property: background-color, border-color, box-shadow, color, filter, opacity, scale, translate;
-    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition-timing-function: var(--tday-ease-gesture);
   }
 
   :where(
@@ -230,7 +268,7 @@
     scale: 0.34;
     transition-duration: 340ms;
     transition-property: opacity, scale;
-    transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition-timing-function: var(--tday-ease-gesture);
     z-index: 0;
   }
 
@@ -286,19 +324,6 @@
       ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press])::after {
       display: none;
     }
-  }
-
-  @keyframes scroll-left {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-100%);
-    }
-  }
-
-  .animate-scroll-left {
-    animation: scroll-left 30s infinite linear;
   }
 
   :root {
@@ -514,22 +539,6 @@
     background-clip: content-box;
   }
 }
-/* ── Task completion animation ── */
-@keyframes task-complete-out {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-}
-
-.animate-task-complete {
-  animation: task-complete-out 280ms ease-out forwards;
-}
-
 /*
  * Title strike: the font's own `line-through`, so it crosses the text on every
  * line of a wrapped title. A single swept rule could not — it was one absolutely
@@ -558,7 +567,7 @@
   /* Follows the title into `text-muted-foreground`, so the rule dims with the
      text over the row's own 300ms colour transition. */
   text-decoration-color: currentColor;
-  animation: task-strike-fade 320ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: task-strike-fade 320ms var(--tday-ease-standard) forwards;
 }
 
 /* A reduced-motion reader still needs to see the task is struck — just not the fade. */
@@ -566,25 +575,6 @@
   .task-strike {
     animation: none;
   }
-}
-
-/* ── View Transitions (Chrome 111+) ── */
-@view-transition {
-  navigation: auto;
-}
-
-::view-transition-old(root) {
-  animation: 180ms ease-out both fade-out;
-}
-::view-transition-new(root) {
-  animation: 180ms ease-in both fade-in;
-}
-
-@keyframes fade-out {
-  to { opacity: 0; }
-}
-@keyframes fade-in {
-  from { opacity: 0; }
 }
 
 /* https://www.joshwcomeau.com/css/designing-shadows/ */
@@ -615,7 +605,7 @@
    off leaving the screen, and a state that simply appears in that gap reads as
    the list breaking rather than as the list being finished. */
 .tday-empty-enter {
-  animation: 520ms cubic-bezier(0.05, 0.7, 0.1, 1) both tday-empty-rise;
+  animation: 520ms var(--tday-ease-scene) both tday-empty-rise;
 }
 
 /* The burst leads; the scene follows through it. Without the wait the
@@ -699,10 +689,72 @@
   .tday-rows-exit { animation: none; }
 }
 
+/* ── Surfaces that used to just appear ──
+   A panel or a bar whose entire existence is a conditional: the mobile
+   search-results dropdown (`MobileSearchHeader`) and the selection action bar
+   (`BulkSelectionBar`). Both were `{flag && <div …>}` and nothing more, which
+   gives a surface an enter of zero frames and an exit of none at all — it is on
+   the screen, then it is not, in the same paint the content behind it reflows
+   in. Neither is a modal, so neither inherited the portal's own transition.
+
+   Same shape as the `.tday-rows-*` pair above: a named keyframe, the curve
+   fixed here, and the duration handed in inline from `SURFACE_TRANSITION_MS`
+   (`src/lib/surfaceTransitionTiming.ts`) so the CSS and the `useFadeUnmount`
+   call that actually keeps the node in the DOM are one number read twice.
+
+   It translates as well as fades, because both of these arrive OVER content
+   that stays exactly where it is: with opacity alone the arrival has no
+   direction and reads as a repaint rather than as something turning up. The
+   curve is `.tday-empty-enter`'s own — the app already has one "something is
+   arriving" curve, and a second one tuned to look like it is how a vocabulary
+   of four durations becomes a vocabulary of fourteen. */
+.tday-surface-enter {
+  animation-name: tday-surface-in;
+  animation-timing-function: var(--tday-ease-scene);
+  animation-fill-mode: both;
+}
+
+.tday-surface-exit {
+  animation-name: tday-surface-out;
+  animation-timing-function: var(--tday-ease-scene);
+  animation-fill-mode: both;
+}
+
+/* A surface that hangs BELOW the control that opened it drops out of that
+   control rather than rising into it, so the panel and the field it belongs to
+   are moving the same way. Only the offset changes — the curve and the duration
+   stay the pair's, so this can never quietly become a second, differently-tuned
+   transition. */
+.tday-surface-from-top {
+  --tday-surface-offset: -6px;
+}
+
+@keyframes tday-surface-in {
+  from { opacity: 0; transform: translateY(var(--tday-surface-offset, 8px)); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes tday-surface-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(var(--tday-surface-offset, 8px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* `useFadeUnmount` skips its own lingering here too (see its doc comment), so
+     the exit class is barely applied at all — the same belt-and-braces as the
+     `.tday-rows-*` pair above. */
+  .tday-surface-enter { animation: none; }
+  .tday-surface-exit { animation: none; }
+}
+
 /* ── Route change ──
    Screens share a toolbar row, so nothing in the bar moves between routes; the
    fade is what turns a one-frame swap into a handover. Short: this sits between
    a tap and the screen the user asked for, and anything longer reads as lag. */
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
 .tday-route-fade {
   animation: 140ms ease-out both fade-in;
 }

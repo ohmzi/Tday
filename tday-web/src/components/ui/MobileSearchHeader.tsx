@@ -13,6 +13,8 @@ import {
 import type { NativePageBarSlots } from "@/components/app/NativePageHeader";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { useExitSnapshot, useFadeUnmount } from "@/hooks/useFadeUnmount";
+import { SURFACE_TRANSITION_MS } from "@/lib/surfaceTransitionTiming";
 import { hapticButtonTap, hapticDismiss } from "@/lib/haptics";
 
 export interface SearchResultItem {
@@ -79,6 +81,24 @@ export default function MobileSearchHeader({
   const searchQuery = externalQuery ?? internalQuery;
   const setSearchQuery = onSearchChange ?? setInternalQuery;
   const hasQuery = searchQuery.trim().length > 0;
+
+  // The results panel used to be `{onSelectResult && hasQuery && <div …>}` and
+  // nothing else, so it appeared and disappeared in a single paint over a
+  // calendar grid that does not move — the one place a hard cut is most
+  // obvious. `resultsPanelMounted` outlives `showResults` by
+  // `SURFACE_TRANSITION_MS` so `.tday-surface-exit` has frames to play in;
+  // `showResults` itself (never the presence value) is what picks enter vs
+  // exit, so deleting a character and retyping it goes straight back to
+  // entering rather than finishing a fade it has changed its mind about — the
+  // same rule `Modal`'s `data-state` follows.
+  //
+  // Deleting the last character empties the caller's result list on the same
+  // tick, so the panel keeps painting the last results it actually had while it
+  // leaves; otherwise the exit would play over "no matching tasks" that was
+  // never true.
+  const showResults = Boolean(onSelectResult) && hasQuery;
+  const resultsPanelMounted = useFadeUnmount(showResults, SURFACE_TRANSITION_MS);
+  const shownResults = useExitSnapshot(results, showResults);
 
   const clearCollapseTimer = useCallback(() => {
     if (collapseTimerRef.current != null) {
@@ -329,11 +349,28 @@ export default function MobileSearchHeader({
             </div>
           </div>
 
-          {onSelectResult && hasQuery && (
-            <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[28px] border border-white/70 bg-card/98 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.5)] backdrop-blur-xl dark:border-white/10">
-              {results && results.length > 0 ? (
+          {onSelectResult && resultsPanelMounted && (
+            <div
+              // A panel that hangs off the field drops out of it rather than
+              // rising into it — see `.tday-surface-from-top` in globals.css.
+              // The duration is inline because it is the SAME number
+              // `useFadeUnmount` above is holding the node for; a
+              // `duration-*` utility here would be a second one that only
+              // looks like it.
+              style={{ animationDuration: `${SURFACE_TRANSITION_MS}ms` }}
+              className={cn(
+                "absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-[28px] border border-white/70 bg-card/98 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.5)] backdrop-blur-xl dark:border-white/10",
+                "tday-surface-from-top",
+                showResults ? "tday-surface-enter" : "tday-surface-exit",
+                // On the way out it is a picture of a list, not a list: a tap
+                // landing on a result that is already fading would jump the
+                // calendar somewhere the user has stopped asking about.
+                !showResults && "pointer-events-none",
+              )}
+            >
+              {shownResults && shownResults.length > 0 ? (
                 <ul className="max-h-72 overflow-y-auto py-1">
-                  {results.map((result) => (
+                  {shownResults.map((result) => (
                     <li key={result.id}>
                       <button
                         type="button"

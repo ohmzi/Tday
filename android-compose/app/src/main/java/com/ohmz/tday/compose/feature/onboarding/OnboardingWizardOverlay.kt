@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -1677,11 +1676,6 @@ private fun WizardStepChip(
         animationSpec = tween(durationMillis = 180),
         label = "wizardStepChipScale",
     )
-    val borderWidth by animateDpAsState(
-        targetValue = 1.dp,
-        animationSpec = tween(durationMillis = 180),
-        label = "wizardStepChipBorderWidth",
-    )
     val colorScheme = MaterialTheme.colorScheme
     val ringColor = lerp(color, MaterialTheme.colorScheme.onSurface, 0.35f)
     val contentColor = if (highlighted) Color.White else colorScheme.onSurface.copy(alpha = 0.68f)
@@ -1695,7 +1689,11 @@ private fun WizardStepChip(
         colors = CardDefaults.cardColors(containerColor = if (highlighted) color else colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = if (highlighted) 8.dp else 0.dp),
         border = BorderStroke(
-            borderWidth,
+            // A hairline, not an animation: this width used to come from an
+            // `animateDpAsState` targeting this same literal `1.dp`, so it had nothing to
+            // animate towards and never ran a frame. Only the border COLOUR changes with
+            // `highlighted`, and it changes on the same frame as the card's own.
+            1.dp,
             if (highlighted) ringColor.copy(alpha = 0.62f) else colorScheme.onSurface.copy(alpha = 0.08f),
         ),
     ) {

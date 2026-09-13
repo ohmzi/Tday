@@ -28,6 +28,8 @@ import {
 } from "@/components/todo/component/TodoForm/labels";
 import { useTaskSelection } from "@/providers/TaskSelectionProvider";
 import { useBulkTodoActions } from "@/hooks/use-bulk-todo-actions";
+import { useExitSnapshot, useFadeUnmount } from "@/hooks/useFadeUnmount";
+import { SURFACE_TRANSITION_MS } from "@/lib/surfaceTransitionTiming";
 import {
   bulkActionRequiresConfirmation,
   distinctSourceListCount,
@@ -96,7 +98,37 @@ export default function BulkSelectionBar({
   const prioritySet = effectiveBulkSelection("priority", selected, isRecurringRow);
   const moveSet = effectiveBulkSelection("move", selected, isRecurringRow);
 
-  if (!selection.selectionMode) return null;
+  const countLabel = selection.atCap
+    ? t("bulkSelectedCapped", { count: total })
+    : t("bulkSelected", { count: total });
+
+  // The bar used to be `if (!selection.selectionMode) return null` and nothing
+  // else: a fixed slab the width of the dock simply existed, and then simply
+  // did not, while the dock and the FAB it stands in for
+  // (`bulk-selection-signal.ts`) vanished and reappeared in the same slot on
+  // the same frame. `barPresent` outlives `selectionMode` by
+  // `SURFACE_TRANSITION_MS` so `.tday-surface-exit` has frames to play in, and
+  // `selectionMode` itself — never this value — is what picks enter vs exit, so
+  // re-entering selection mode mid-exit goes straight back to arriving.
+  const barPresent = useFadeUnmount(selection.selectionMode, SURFACE_TRANSITION_MS);
+
+  // `exitSelection` empties the selection in the same call that leaves
+  // selection mode, so by the frame the bar starts leaving every count it
+  // paints is already zero. It keeps showing the last selection it really had
+  // instead — otherwise the exit plays over "0 selected" with all four actions
+  // greyed out, the bar announcing it has nothing to do on its way off screen.
+  const shown = useExitSnapshot(
+    {
+      countLabel,
+      completeCount: completeSet.length,
+      deleteCount: deleteSet.length,
+      priorityCount: prioritySet.length,
+      moveCount: moveSet.length,
+    },
+    selection.selectionMode,
+  );
+
+  if (!barPresent) return null;
 
   const closeAfterAction = () => {
     setPicker(null);
@@ -136,10 +168,6 @@ export default function BulkSelectionBar({
     runMove(listID);
   };
 
-  const countLabel = selection.atCap
-    ? t("bulkSelectedCapped", { count: total })
-    : t("bulkSelected", { count: total });
-
   const writableLists = Object.entries(listMetaData).filter(
     // Moving into a list you can only view is rejected by the backend with
     // "list not found", so those are never offered — same rule as the
@@ -150,24 +178,35 @@ export default function BulkSelectionBar({
   return (
     <>
       <div
+        // The duration is inline because it is the SAME number `useFadeUnmount`
+        // above is holding this subtree for; a `duration-*` utility here would
+        // be a second one that only looks like it. No offset override: the bar
+        // sits on the bottom edge, so the pair's default rise is the direction
+        // it should already be coming from.
+        style={{ animationDuration: `${SURFACE_TRANSITION_MS}ms` }}
         className={cn(
           "pointer-events-none fixed inset-x-0 bottom-[calc(18px+env(safe-area-inset-bottom))] z-40",
           nativeAppHorizontalPaddingClassName,
+          selection.selectionMode ? "tday-surface-enter" : "tday-surface-exit",
         )}
       >
         <div className={nativeAppContentClassName}>
           <div
             role="toolbar"
-            aria-label={countLabel}
+            aria-label={shown.countLabel}
             className={cn(
-              "pointer-events-auto flex flex-col gap-1 rounded-[25px] border border-white/70 bg-muted/80 p-1.5",
+              "flex flex-col gap-1 rounded-[25px] border border-white/70 bg-muted/80 p-1.5",
               "shadow-[0_18px_42px_-24px_hsl(var(--shadow)/0.65)] backdrop-blur-xl",
               "dark:border-white/10 dark:bg-muted/80",
+              // Only while the bar is really the bar. On the way out it is a
+              // picture of one, and a tap landing on Delete during those frames
+              // would act on a selection the user has already dismissed.
+              selection.selectionMode && "pointer-events-auto",
             )}
           >
             <div className="flex items-center gap-1.5 px-1.5 pt-1">
               <span className="min-w-0 flex-1 truncate text-sm font-black text-foreground">
-                {countLabel}
+                {shown.countLabel}
               </span>
               <button
                 type="button"
@@ -199,7 +238,7 @@ export default function BulkSelectionBar({
               <BulkActionButton
                 icon={CheckCheck}
                 label={t("bulkComplete")}
-                disabled={completeSet.length === 0}
+                disabled={shown.completeCount === 0}
                 onClick={() => {
                   actions.completeSelected(completeSet);
                   closeAfterAction();
@@ -208,20 +247,20 @@ export default function BulkSelectionBar({
               <BulkActionButton
                 icon={Flag}
                 label={t("bulkPriority")}
-                disabled={prioritySet.length === 0}
+                disabled={shown.priorityCount === 0}
                 onClick={() => setPicker("priority")}
               />
               <BulkActionButton
                 icon={List}
                 label={t("bulkMove")}
-                disabled={moveSet.length === 0}
+                disabled={shown.moveCount === 0}
                 onClick={() => setPicker("move")}
               />
               <BulkActionButton
                 icon={Trash2}
                 label={t("bulkDelete")}
                 destructive
-                disabled={deleteSet.length === 0}
+                disabled={shown.deleteCount === 0}
                 onClick={() => setDeleteConfirmOpen(true)}
               />
             </div>

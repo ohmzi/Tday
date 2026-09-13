@@ -59,7 +59,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -102,8 +101,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.core.view.HapticFeedbackConstantsCompat
-import androidx.core.view.ViewCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
@@ -116,9 +113,12 @@ import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
+import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
@@ -186,9 +186,12 @@ private const val CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
 private const val CALENDAR_TASK_COMPLETION_FADE_MS = 260L
 private val CalendarTaskDragDueTimeFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).withZone(ZoneId.systemDefault())
-private const val CalendarMonthPagerPageCount = 240
-private const val CalendarWeekPagerPageCount = 1040
-private const val CalendarDayPagerPageCount = 3650
+// Internal rather than private because `CalendarPageSelection.kt` owns the page
+// arithmetic these three size, and a page count that lived in only one of the
+// two files would be a clamp the decisions could disagree with.
+internal const val CalendarMonthPagerPageCount = 240
+internal const val CalendarWeekPagerPageCount = 1040
+internal const val CalendarDayPagerPageCount = 3650
 
 private fun shouldShowDateDivider(
     afterItemIndex: Int,
@@ -409,7 +412,7 @@ fun CalendarScreen(
         activeDropDateIso = null
         calendarDropTargetBounds.clear()
         if (calendarTaskAlreadyDueOnDate(todo, targetDate, zoneId)) return
-        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+        TdayHaptics.dragDrop(view)
         TdayTelemetry.addBreadcrumb(
             "calendar.drag_reschedule",
             data = mapOf(
@@ -933,7 +936,7 @@ private fun CalendarCreateTaskFab(
     val view = LocalView.current
     FloatingActionButton(
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         modifier = Modifier.size(TdayDimens.FabSize),
@@ -1039,7 +1042,6 @@ private fun CalendarWeekCard(
     val colorScheme = MaterialTheme.colorScheme
     val minWeekStart = remember(minNavigableMonth) { startOfWeek(minNavigableMonth.atDay(1)) }
     val weekStart = remember(selectedDate) { startOfWeek(selectedDate) }
-    val coroutineScope = rememberCoroutineScope()
     val selectedDayOffset = remember(selectedDate) {
         (selectedDate.dayOfWeek.value % 7).toLong()
     }
@@ -1054,45 +1056,79 @@ private fun CalendarWeekCard(
     fun requestPage(offset: Int) {
         val targetIndex = (currentPage + offset).coerceIn(0, CalendarWeekPagerPageCount - 1)
         if (targetIndex == currentPage || !isPagingAtRest) return
-        coroutineScope.launch {
-            scrollRequest = CalendarPagerScrollRequest(
-                id = System.nanoTime().toInt(),
-                page = targetIndex,
-            )
-        }
+        // Written straight through rather than from a `coroutineScope.launch`. The launch bought
+        // nothing — this is a plain state write, not suspending work — and it cost the guard two
+        // lines above its meaning: the check read `isPagingAtRest` in the click's frame while the
+        // write landed on a later dispatch, so two taps inside one frame both passed a guard
+        // neither had yet closed. Writing here makes the read and the write the same moment.
+        scrollRequest = CalendarPagerScrollRequest(
+            id = System.nanoTime().toInt(),
+            page = targetIndex,
+        )
     }
 
-    fun dateForPage(page: Int): LocalDate {
-        return minWeekStart.plusWeeks(page.toLong()).plusDays(selectedDayOffset)
-    }
+    // The date a Today jump is carrying while its sweep is in the air. The week
+    // pager's own settle arithmetic only knows the weekday the user came in on,
+    // so without this the sweep lands on today's week with last week's weekday
+    // still selected.
+    var pendingTodayJumpDate by remember { mutableStateOf<LocalDate?>(null) }
 
     fun settlePage(page: Int) {
-        val targetDate = dateForPage(page)
-        if (canSelectDate(targetDate)) {
-            TdayTelemetry.addBreadcrumb(
-                "calendar.page",
-                data = mapOf(
-                    "mode" to "week",
-                    "direction" to if (page >= currentPage) "next" else "previous",
-                ),
+        // One settle consumes the pending jump whether or not this is the page
+        // the jump asked for: a finger that grabs the sweep mid-flight lands
+        // somewhere else entirely, and a target left pending would then fire on
+        // whatever week the user paged to next.
+        val jumpTarget = pendingTodayJumpDate
+        pendingTodayJumpDate = null
+        val targetDate = weekPageSettleSelection(
+            minWeekStart = minWeekStart,
+            page = page,
+            preferredDayOffset = selectedDayOffset,
+            pendingJumpDate = jumpTarget,
+            canSelectDate = canSelectDate,
+        )
+        if (targetDate == null) {
+            // No day on this page may be selected, so the screen has nothing it
+            // can say about it: the header, the day list and the `+` prefill
+            // would all go on describing the week we left. Send the pager back
+            // to the page the selection does describe rather than sit in that
+            // split state saying nothing, which is what it used to do.
+            scrollRequest = CalendarPagerScrollRequest(
+                id = System.nanoTime().toInt(),
+                page = currentPage,
             )
-            onSelectDate(targetDate)
+            return
         }
+        TdayTelemetry.addBreadcrumb(
+            "calendar.page",
+            data = mapOf(
+                "mode" to "week",
+                "direction" to if (page >= currentPage) "next" else "previous",
+            ),
+        )
+        onSelectDate(targetDate)
     }
 
     LaunchedEffect(todayJumpRequest) {
         val request = todayJumpRequest ?: return@LaunchedEffect
-        val targetWeek = startOfWeek(request.targetDate)
-        if (targetWeek == weekStart) {
-            onSelectDate(request.targetDate)
-            onTodayJumpHandled(request.id)
-        } else {
-            val targetPage = ChronoUnit.WEEKS.between(minWeekStart, targetWeek)
-                .toInt()
-                .coerceIn(0, CalendarWeekPagerPageCount - 1)
-            scrollRequest = CalendarPagerScrollRequest(request.id, targetPage)
-            onTodayJumpHandled(request.id)
+        when (
+            val jump = weekPagerTodayJump(
+                minWeekStart = minWeekStart,
+                currentPage = currentPage,
+                targetDate = request.targetDate,
+            )
+        ) {
+            is CalendarTodayJump.SelectNow -> {
+                pendingTodayJumpDate = null
+                onSelectDate(jump.date)
+            }
+
+            is CalendarTodayJump.PageThenSelect -> {
+                pendingTodayJumpDate = jump.date
+                scrollRequest = CalendarPagerScrollRequest(request.id, jump.page)
+            }
         }
+        onTodayJumpHandled(request.id)
     }
 
     Card(
@@ -1422,7 +1458,6 @@ private fun CalendarDayCard(
     onSelectDate: (LocalDate) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val coroutineScope = rememberCoroutineScope()
     val minDate = remember(minNavigableMonth) { minNavigableMonth.atDay(1) }
     val currentPage = remember(minDate, selectedDate) {
         ChronoUnit.DAYS.between(minDate, selectedDate)
@@ -1435,12 +1470,11 @@ private fun CalendarDayCard(
     fun requestPage(offset: Int) {
         val targetIndex = (currentPage + offset).coerceIn(0, CalendarDayPagerPageCount - 1)
         if (targetIndex == currentPage || !isPagingAtRest) return
-        coroutineScope.launch {
-            scrollRequest = CalendarPagerScrollRequest(
-                id = System.nanoTime().toInt(),
-                page = targetIndex,
-            )
-        }
+        // Same synchronous write as the week card above, for the same reason.
+        scrollRequest = CalendarPagerScrollRequest(
+            id = System.nanoTime().toInt(),
+            page = targetIndex,
+        )
     }
 
     fun dateForPage(page: Int): LocalDate {
@@ -1460,16 +1494,22 @@ private fun CalendarDayCard(
 
     LaunchedEffect(todayJumpRequest) {
         val request = todayJumpRequest ?: return@LaunchedEffect
-        if (request.targetDate == selectedDate) {
-            onSelectDate(request.targetDate)
-            onTodayJumpHandled(request.id)
-        } else {
-            val targetPage = ChronoUnit.DAYS.between(minDate, request.targetDate)
-                .toInt()
-                .coerceIn(0, CalendarDayPagerPageCount - 1)
-            scrollRequest = CalendarPagerScrollRequest(request.id, targetPage)
-            onTodayJumpHandled(request.id)
+        when (
+            val jump = dayPagerTodayJump(
+                minDate = minDate,
+                currentPage = currentPage,
+                targetDate = request.targetDate,
+            )
+        ) {
+            is CalendarTodayJump.SelectNow -> onSelectDate(jump.date)
+
+            // Alone of the three, this pager's page *is* its date, so the settle
+            // below re-derives exactly the day the jump asked for and nothing
+            // has to wait in the air for it.
+            is CalendarTodayJump.PageThenSelect ->
+                scrollRequest = CalendarPagerScrollRequest(request.id, jump.page)
         }
+        onTodayJumpHandled(request.id)
     }
 
     Card(
@@ -1582,11 +1622,6 @@ private fun CalendarDayCard(
     }
 }
 
-private fun startOfWeek(date: LocalDate): LocalDate {
-    val sundayOffset = date.dayOfWeek.value % 7
-    return date.minusDays(sundayOffset.toLong())
-}
-
 private fun formatWeekRange(weekStart: LocalDate): String {
     val weekEnd = weekStart.plusDays(6)
     val monthShortFormatter = DateTimeFormatter.ofPattern("MMM", Locale.getDefault())
@@ -1633,7 +1668,7 @@ private fun CalendarBarButton(
                 scaleY = scale
             },
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -1706,7 +1741,7 @@ private fun CalendarTodayButton(
             }
             .animateContentSize(),
         onClick = {
-            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+            TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
@@ -1772,7 +1807,6 @@ private fun CalendarMonthCard(
     resolveTodo: (String) -> TodoItem?,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val coroutineScope = rememberCoroutineScope()
     val currentPage = remember(minNavigableMonth, visibleMonth) {
         ChronoUnit.MONTHS.between(minNavigableMonth, visibleMonth)
             .toInt()
@@ -1784,19 +1818,27 @@ private fun CalendarMonthCard(
     fun requestPage(offset: Int) {
         val targetIndex = (currentPage + offset).coerceIn(0, CalendarMonthPagerPageCount - 1)
         if (targetIndex == currentPage || !isPagingAtRest) return
-        coroutineScope.launch {
-            scrollRequest = CalendarPagerScrollRequest(
-                id = System.nanoTime().toInt(),
-                page = targetIndex,
-            )
-        }
+        // Same synchronous write as the week card above, for the same reason.
+        scrollRequest = CalendarPagerScrollRequest(
+            id = System.nanoTime().toInt(),
+            page = targetIndex,
+        )
     }
 
     fun monthForPage(page: Int): YearMonth {
         return minNavigableMonth.plusMonths(page.toLong())
     }
 
+    // The date a Today jump is carrying while its sweep is in the air. A settled
+    // month page carries no day of its own — swiping to November means "show me
+    // November", not "select a day in November" — so a cross-month jump has to
+    // hand its date over here or arrive with the selection left behind.
+    var pendingTodayJumpDate by remember { mutableStateOf<LocalDate?>(null) }
+
     fun settlePage(page: Int) {
+        // Consumed on any settle, not only a matching one: see the week card.
+        val jumpTarget = pendingTodayJumpDate
+        pendingTodayJumpDate = null
         TdayTelemetry.addBreadcrumb(
             "calendar.page",
             data = mapOf(
@@ -1804,22 +1846,42 @@ private fun CalendarMonthCard(
                 "direction" to if (page >= currentPage) "next" else "previous",
             ),
         )
-        onVisibleMonthChanged(monthForPage(page))
+        val jumpSelection = monthPageSettleSelection(
+            minNavigableMonth = minNavigableMonth,
+            page = page,
+            pendingJumpDate = jumpTarget,
+        )
+        if (jumpSelection != null) {
+            // `onSelectDate` moves the visible month as well as the day, so this
+            // is the whole settle — and it is the only thing that moves the
+            // "Tasks due …" heading, the day list and the `+` prefill onto the
+            // month the sweep just landed on.
+            onSelectDate(jumpSelection)
+        } else {
+            onVisibleMonthChanged(monthForPage(page))
+        }
     }
 
     LaunchedEffect(todayJumpRequest) {
         val request = todayJumpRequest ?: return@LaunchedEffect
-        val targetMonth = YearMonth.from(request.targetDate)
-        if (targetMonth == visibleMonth) {
-            onSelectDate(request.targetDate)
-            onTodayJumpHandled(request.id)
-        } else {
-            val targetPage = ChronoUnit.MONTHS.between(minNavigableMonth, targetMonth)
-                .toInt()
-                .coerceIn(0, CalendarMonthPagerPageCount - 1)
-            scrollRequest = CalendarPagerScrollRequest(request.id, targetPage)
-            onTodayJumpHandled(request.id)
+        when (
+            val jump = monthPagerTodayJump(
+                minNavigableMonth = minNavigableMonth,
+                currentPage = currentPage,
+                targetDate = request.targetDate,
+            )
+        ) {
+            is CalendarTodayJump.SelectNow -> {
+                pendingTodayJumpDate = null
+                onSelectDate(jump.date)
+            }
+
+            is CalendarTodayJump.PageThenSelect -> {
+                pendingTodayJumpDate = jump.date
+                scrollRequest = CalendarPagerScrollRequest(request.id, jump.page)
+            }
         }
+        onTodayJumpHandled(request.id)
     }
 
     Card(
@@ -2244,20 +2306,15 @@ private fun CalendarTodoRow(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val taskCompletionSound = rememberTaskCompletionSound()
-    val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
     // Edit + Copy + Delete: matches the 3-pill width used elsewhere (see
     // SwipeTaskRow.revealWidth).
-    val actionRevealPx = with(density) { 256.dp.toPx() }
-    val swipeHintOffsetPx = with(density) { 42.dp.toPx() }.coerceAtMost(actionRevealPx * 0.24f)
-    val maxElasticDragPx = actionRevealPx * 1.14f
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = 256.dp)
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
     val copyContext = LocalContext.current
     val copiedMessage = stringResource(R.string.task_copied_toast)
     val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
-    var targetOffsetX by remember(todo.id) { mutableFloatStateOf(0f) }
-    var swipeHinting by remember(todo.id) { mutableStateOf(false) }
     var localChecked by remember(todo.id) { mutableStateOf(false) }
     var localStruck by remember(todo.id) { mutableStateOf(false) }
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
@@ -2272,14 +2329,13 @@ private fun CalendarTodoRow(
     }
 
     fun closeSwipeSlot() {
-        targetOffsetX = 0f
+        swipeRevealState.close()
         if (latestOpenSwipeTaskId.value == todo.id) {
             onOpenSwipeTaskIdChange(null)
         }
     }
-    val animatedOffsetX by animateFloatAsState(
-        targetValue = targetOffsetX,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+    val animatedOffsetX by animateTaskSwipeOffsetAsState(
+        state = swipeRevealState,
         label = "calendarTaskSwipeOffset",
     )
     val completionAlpha by animateFloatAsState(
@@ -2315,11 +2371,10 @@ private fun CalendarTodoRow(
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
     val rowShape = RoundedCornerShape(16.dp)
     val foregroundColor = colorScheme.background
-    val actionRevealProgress = (-animatedOffsetX / actionRevealPx).coerceIn(0f, 1f)
+    val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     LaunchedEffect(openSwipeTaskId, todo.id) {
-        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && targetOffsetX != 0f) {
-            targetOffsetX = 0f
-            swipeHinting = false
+        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
+            swipeRevealState.close()
         }
     }
 
@@ -2355,7 +2410,7 @@ private fun CalendarTodoRow(
                     revealProgress = actionRevealProgress,
                     revealDelay = 0.62f,
                     onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        TdayHaptics.buttonPress(view)
                         closeSwipeSlot()
                         onInfo()
                     },
@@ -2369,7 +2424,7 @@ private fun CalendarTodoRow(
                     revealProgress = actionRevealProgress,
                     revealDelay = 0.40f,
                     onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        TdayHaptics.buttonPress(view)
                         closeSwipeSlot()
                         runCatching {
                             clipboardManager.setText(AnnotatedString(taskCopyText(copyContext, todo)))
@@ -2389,7 +2444,7 @@ private fun CalendarTodoRow(
                     revealProgress = actionRevealProgress,
                     revealDelay = 0.04f,
                     onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        TdayHaptics.destructive(view)
                         closeSwipeSlot()
                         onDelete()
                     },
@@ -2413,10 +2468,7 @@ private fun CalendarTodoRow(
                                         dragPointerPosition = startPosition
                                         onDragStart(startPosition)
                                         onDragMove(startPosition)
-                                        ViewCompat.performHapticFeedback(
-                                            view,
-                                            HapticFeedbackConstantsCompat.CLOCK_TICK,
-                                        )
+                                        TdayHaptics.dragPickUp(view)
                                     },
                                     onDrag = { change, dragAmount ->
                                         change.consume()
@@ -2442,26 +2494,17 @@ private fun CalendarTodoRow(
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
-                            if (delta < 0f || targetOffsetX != 0f) {
+                            if (delta < 0f || swipeRevealState.isOpenOrDragging) {
                                 claimSwipeSlot()
                             }
-                            targetOffsetX = (targetOffsetX + delta).coerceIn(
-                                -maxElasticDragPx,
-                                0f,
-                            )
-                            if (targetOffsetX == 0f && latestOpenSwipeTaskId.value == todo.id) {
+                            swipeRevealState.dragBy(delta)
+                            if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
                                 onOpenSwipeTaskIdChange(null)
                             }
                         },
                         onDragStopped = { velocity ->
-                            val flingOpen = velocity < -1450f
-                            val dragOpen = targetOffsetX < -(actionRevealPx * 0.32f)
-                            targetOffsetX = if (flingOpen || dragOpen) {
-                                -actionRevealPx
-                            } else {
-                                0f
-                            }
-                            if (targetOffsetX != 0f) {
+                            swipeRevealState.settle(velocity)
+                            if (swipeRevealState.isOpenOrDragging) {
                                 claimSwipeSlot()
                             } else if (latestOpenSwipeTaskId.value == todo.id) {
                                 onOpenSwipeTaskIdChange(null)
@@ -2472,18 +2515,15 @@ private fun CalendarTodoRow(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                     ) {
-                        if (targetOffsetX != 0f) {
+                        if (swipeRevealState.isOpenOrDragging) {
                             closeSwipeSlot()
-                        } else if (!swipeHinting && !pendingCompletion) {
-                            swipeHinting = true
+                        } else if (!swipeRevealState.isHinting && !pendingCompletion) {
                             claimSwipeSlot()
                             coroutineScope.launch {
-                                targetOffsetX = -swipeHintOffsetPx
-                                delay(150)
-                                targetOffsetX = 0f
-                                delay(360)
-                                swipeHinting = false
-                                if (latestOpenSwipeTaskId.value == todo.id && targetOffsetX == 0f) {
+                                swipeRevealState.playHint()
+                                if (latestOpenSwipeTaskId.value == todo.id &&
+                                    !swipeRevealState.isOpenOrDragging
+                                ) {
                                     onOpenSwipeTaskIdChange(null)
                                 }
                             }
@@ -2517,7 +2557,7 @@ private fun CalendarTodoRow(
                         },
                         enabled = !pendingCompletion,
                         onClick = {
-                            ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                            TdayHaptics.completion(view)
                             taskCompletionSound.play()
                             closeSwipeSlot()
                             localChecked = true
@@ -2694,7 +2734,7 @@ private fun CalendarCompletedTodoRow(
                     },
                     enabled = !pendingUncomplete,
                     onClick = {
-                        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CLOCK_TICK)
+                        TdayHaptics.toggle(view, on = false)
                         pendingUncomplete = true
                         coroutineScope.launch {
                             delay(180)
@@ -2794,6 +2834,9 @@ private fun CalendarSwipeActionButton(
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
+    // not a token — see docs/motion.md. This is multiplied by the reveal scale
+    // below, so it is one factor of a composed transform rather than the press
+    // scale a finger actually sees; the press-scale tokens are the whole scale.
     val pressedScale by animateFloatAsState(
         targetValue = if (pressed) 0.92f else 1f,
         label = "calendarSwipeActionScale",

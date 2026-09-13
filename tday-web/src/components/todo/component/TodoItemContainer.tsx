@@ -2,12 +2,11 @@ import React, { useEffect, useRef, useState } from "react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { Checkbox } from "@/components/ui/checkbox";
 import clsx from "clsx";
+import { TASK_COMPLETION_FADE_MS } from "@/lib/taskCompletionTiming";
 import {
-  TASK_COMPLETION_CHECK_TO_STRIKE_MS,
-  TASK_COMPLETION_FADE_MS,
-  TASK_COMPLETION_STRIKE_TO_FADE_MS,
-  TASK_COMPLETION_TOTAL_MS,
-} from "@/lib/taskCompletionTiming";
+  stageTaskCompletion,
+  useTaskCompletionPhase,
+} from "@/lib/taskCompletionStaging";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TodoItemType } from "@/types";
@@ -85,10 +84,12 @@ export const TodoItemCard = ({
   //   checked (green tick) → struck (title sweep + notes line-through) → fading → removed.
   // The whole sequence is ~780ms and runs on its own timers — it is not gated on the undo
   // toast, which lives for 5s independently.
-  const [completePhase, setCompletePhase] = useState<
-    "checked" | "struck" | "removing" | null
-  >(null);
-  const completeTimers = useRef<number[]>([]);
+  //
+  // The phase is read from `taskCompletionStaging`, not held here, because the row has no right
+  // to those 780ms: a filter change or a re-keyed list unmounts it mid-sequence, and when the
+  // timers were component state the unmount cleanup threw the user's completion away with them.
+  // Keyed by task id, so a row that leaves and comes back rejoins its own sequence.
+  const completePhase = useTaskCompletionPhase(todoItem.id);
   const completing = completePhase !== null;
 
   // Mobile swipe-to-reveal (mirrors the native slide-to-edit/copy/delete). The
@@ -154,22 +155,10 @@ export const TodoItemCard = ({
       return;
     }
     if (completing) return;
-    setCompletePhase("checked"); // 1. green tick + pop
-    completeTimers.current.push(
-      window.setTimeout(() => setCompletePhase("struck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS),
-      window.setTimeout(
-        () => setCompletePhase("removing"),
-        TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS,
-      ),
-      window.setTimeout(() => completeMutateFn(todoItem), TASK_COMPLETION_TOTAL_MS),
-    );
+    // Green tick + pop now; strike, fade and the actual completion are scheduled by the staging
+    // module so that none of them depend on this row still being on screen when they come due.
+    stageTaskCompletion(todoItem.id, () => completeMutateFn(todoItem));
   };
-
-  useEffect(() => {
-    return () => {
-      completeTimers.current.forEach((id) => window.clearTimeout(id));
-    };
-  }, []);
 
   /** Copies the task's title/notes/due/priority to the clipboard as plain text. */
   const handleCopy = async () => {
