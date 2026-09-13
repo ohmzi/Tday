@@ -2,9 +2,9 @@
 
 /**
  * Ticking a task plays the same staged sequence the native apps do, on the same clock: green
- * check, then the title strike sweeps in while the notes get a plain line-through, then the row
- * fades and collapses its box out of the list. The timings come from `@/lib/taskCompletionTiming`,
- * whose first two legs mirror the native TASK_COMPLETION_* constants (160 / 360ms).
+ * check, then the rule fades in over title and notes together, then the row fades and collapses
+ * its box out of the list. The timings come from `@/lib/taskCompletionTiming`, whose first two
+ * legs mirror the native TASK_COMPLETION_* constants (160 / 360ms).
  *
  * The last leg is the one web does not share: the native lists animate a removal themselves, so on
  * web the row's own collapse IS the removal and the prune has to wait for it. That is what these
@@ -62,7 +62,10 @@ import { useCompleteTodo } from "@/features/todayTodos/query/complete-todo";
 const TODO: TodoItemType = {
   id: "todo-1",
   title: "Water the plants",
-  description: null,
+  // Given notes on purpose: the rule that crosses them is the same class and the same beat as
+  // the one crossing the title, and the row spent a while striking them with Tailwind's bare
+  // `line-through` instead — a rule that snapped on under one that faded in.
+  description: "By the window",
   completed: false,
   priority: "Low",
   due: new Date("2026-08-22T10:00:00.000Z"),
@@ -175,8 +178,9 @@ describe("ticking a task row's checkbox", () => {
     expect(foreground().style.overflow).toBe("");
     expect(foreground().style.minHeight).toBe("");
 
-    // 2. Strike sweeps in. The title uses the swept rule, not a plain line-through — notes keep
-    //    the plain one, exactly as the native rows split it. The box is still at full height:
+    // 2. The rule fades in. `.task-strike` and not Tailwind's bare `line-through`, which is the
+    //    difference between a rule that arrives with the beat and one that snaps on inside it —
+    //    the notes are asserted on the same class below. The box is still at full height:
     //    this beat is the user reading their own edit, and closing up under them would take the
     //    strike off the screen before it has been seen.
     await act(async () => {
@@ -184,6 +188,8 @@ describe("ticking a task row's checkbox", () => {
     });
     expect(title().className).toContain("task-strike");
     expect(title().className).not.toContain("line-through");
+    expect(screen.getByText("By the window").className).toContain("task-strike");
+    expect(screen.getByText("By the window").className).not.toContain("line-through");
     expect(row().style.gridTemplateRows).toBe("");
     expect(queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])).toHaveLength(2);
 
