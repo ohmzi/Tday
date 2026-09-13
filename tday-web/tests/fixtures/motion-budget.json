@@ -1,0 +1,44 @@
+{
+  "_note": "A ceiling, not a target. Every number below was COUNTED by the counters in tests/guardrails/motion-parity.test.ts, on the integrated motion/p4-token-foundation branch: the token layer plus the three wrappers plus the byte-identical migrations that landed with them (a 0.4/0.86 sheet spring onto Settle; the web's press and calendar-paging curves onto var(--tday-ease-gesture), which is the same (0.2,0.8,0.2,1) they spelled out). They are NOT reproducible at 4c941b1c, which predates the wrappers: counted there, ios.spring is 110 and web.rawCubicBezier is 11, and three of the paths this file excludes do not exist yet. The branch is the unit these numbers belong to, not the commit. The assertion is actual <= budget: this file does not ask anyone to migrate, it asks that nobody add. Lower a number whenever a migration PR takes sites off it; raise one only alongside a call-site comment arguing why that value is deliberately not a token, the way MotionTokens.kt requires.",
+  "_measuredBy": "tday-web/tests/guardrails/motion-parity.test.ts — the COUNTERS table. The regexes live there rather than here because a count is only meaningful as the output of a rule, and a fixture cannot hold the rule.",
+  "_excluded": {
+    "_why": "Each path below is a file whose entire job is to hold these numbers once. Counting them would raise every budget by the size of the token layer on the day it landed, and every later migration would move a literal from a counted file to an excluded one for no net change — a ratchet that measures nothing. What is counted is what has NOT been migrated yet.",
+    "generated": [
+      "android-compose/.../core/ui/TdayMotionTokensGenerated.kt",
+      "ios-swiftUI/Tday/UI/Theme/TdayMotionGenerated.swift",
+      "tday-web/src/generated/"
+    ],
+    "wrappers": [
+      "android-compose/.../core/ui/TdayMotionTokens.kt",
+      "ios-swiftUI/Tday/UI/Theme/TdayMotion.swift",
+      "tday-web/src/lib/motion.ts"
+    ],
+    "comments": "Comment text is stripped before counting, in every language. This PR's own call-site comments argue in place for why a value is NOT a token and quote the numbers while doing it — one of them contains a literal 'response: 0.28,' inside a doc comment. Counting those would let an argument for leaving a value alone raise the budget it is arguing about.",
+    "notCountedOnPurpose": "The ~159 bare Tailwind transition-* utilities in tday-web/src. They ride --default-transition-duration, which is an un-overridden 150ms and therefore already exactly the Quick rung. They are on the vocabulary for free; rebinding that default would be a visible change to all of them."
+  },
+  "android": {
+    "_source": "android-compose/app/src/main/java/com/ohmz/tday/compose, *.kt",
+    "_tween": "durationMillis = <n>, or tween(<n>",
+    "tween": 35,
+    "_spring": "dampingRatio = <n> or stiffness = <n>, written out. Compose's Spring.StiffnessMediumLow and friends are library defaults rather than decisions — the audit found Android's 400 to be exactly that — so they are not counted and moving onto one is not progress.",
+    "spring": 10,
+    "_pressScale": "a scale literal in [0.90, 1.0) on a line that also says scale or press. This catches a few enter-scales alongside the press ones (EnterStartScale = 0.92f); they are the same family and the same PRs will touch them, so the over-count is honest rather than convenient.",
+    "pressScale": 31
+  },
+  "ios": {
+    "_source": "ios-swiftUI/Tday, *.swift",
+    "_spring": "response: <n> and dampingFraction: <n>, counted separately — so one hand-written .spring() costs two. Nineteen of these pairs are the exact 0.28/0.86 that the Snappy token was re-anchored on.",
+    "spring": 108,
+    "_easeDuration": "duration: <n> — .easeInOut(duration:), .easeOut(duration:), .snappy(duration:) and the static lets that hold them. Note this is the grep that CANNOT see the generated file's own durations, which are 'static let quick: TimeInterval = 0.15' with no duration: anywhere on the line.",
+    "easeDuration": 56
+  },
+  "web": {
+    "_source": "tday-web/src, *.ts *.tsx *.css",
+    "_durationUtility": "Tailwind duration-<n> utilities. 52 of these are duration-200, which is already the Enter rung numerically — they are counted anyway, because a utility that happens to equal a token is not the same thing as a site that names one.",
+    "durationUtility": 73,
+    "_rawCubicBezier": "cubic-bezier( written out at a call site. All three survivors are deliberate orphans with no token and no second site: globals.css (0.3,0,0.4,1), RootDock.tsx (0.25,1,0.5,1), OnboardingWizard.tsx (0.22,0.61,0.36,1). Cited by curve and not by line: a line number recorded in a fixture is stale the moment anything above it moves, and one of these three moved twice while this PR was being written. With the Gesture curve named, those three orphans ARE the count — the ceiling and the list are the same three sites, so a fourth is always new.",
+    "rawCubicBezier": 3,
+    "_cssMsLiteral": "a bare <n>ms in CSS or in an inline style string.",
+    "cssMsLiteral": 19
+  }
+}
