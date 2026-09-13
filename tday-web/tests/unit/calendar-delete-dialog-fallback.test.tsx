@@ -16,6 +16,14 @@
  * modal over the calendar on first paint, once per row. So both halves are
  * asserted here — nothing before the tap, a dialog-shaped placeholder after it.
  *
+ * The way back out is asserted as carefully as the way in, because a placeholder
+ * that arrives on the real dialog's scrim and card and then vanishes on the
+ * dismissing frame has answered the tap and cut the answer off. That takes two
+ * separate things being right — an `open` prop the card can go closed on, and a
+ * gate on `useModalPresence` rather than on the flag — and each of them alone
+ * still ends in a cut, so the exit gets its own test rather than riding on the
+ * dismissal's `waitFor`, which a cut satisfies just as well.
+ *
  * The chunks are mocked as imports that never settle, which is the only way to
  * hold a real Suspense boundary in its fallback: vitest resolves a genuine
  * dynamic import inside a microtask, so the fallback would otherwise be gone
@@ -99,6 +107,21 @@ const placeholder = () => document.querySelector<HTMLElement>("[aria-busy='true'
 /** The scrim it is drawn on, and the way back out of it. */
 const scrim = () => placeholder()!.closest<HTMLElement>(".fixed.inset-0")!;
 
+/**
+ * Clicks the scrim and lets the close land. `ModalOverlay` defers its own
+ * `setIsOpen(false)` by one frame to avoid click-through, so a dismissal that
+ * is not given that frame has not happened yet and anything asserted about the
+ * exit would be reading the state before it.
+ */
+async function dismiss() {
+  act(() => {
+    fireEvent.click(scrim());
+  });
+  await act(async () => {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  });
+}
+
 /** The row draws its actions twice: swipe-revealed on mobile, hover on desktop. */
 function tapDelete() {
   const buttons = screen.getAllByLabelText("Delete");
@@ -144,10 +167,28 @@ describe("the calendar's delete dialog answers the tap that opened it", () => {
     renderRow(TODO);
     tapDelete();
 
-    act(() => {
-      fireEvent.click(scrim());
-    });
+    await dismiss();
 
+    await waitFor(() => expect(placeholder()).toBeNull());
+  });
+
+  it("leaves the way it came, rather than being cut away on the dismissing frame", async () => {
+    // The half a `waitFor(… toBeNull)` cannot see: it is satisfied by a cut and
+    // by a played exit alike. Both of the ways this used to be a cut are asserted
+    // here — `<Modal open>` pinned `data-state` at "open" so the closed-state
+    // animation could never key, and a fallback gated on the raw flag took the
+    // subtree away above the modal on the frame the flag flipped, which is the
+    // shape `useModalPresence`'s own doc comment exists to warn callers off.
+    renderRow(TODO);
+    tapDelete();
+    const card = placeholder()!;
+
+    await dismiss();
+
+    expect(placeholder()).toBe(card);
+    expect(card.closest("[data-state]")!.getAttribute("data-state")).toBe("closed");
+
+    // And it is a linger, not a leak — the exit ends.
     await waitFor(() => expect(placeholder()).toBeNull());
   });
 

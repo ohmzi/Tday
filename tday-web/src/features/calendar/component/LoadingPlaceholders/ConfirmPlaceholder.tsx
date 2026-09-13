@@ -19,15 +19,29 @@ import { Modal, ModalContent, ModalFooter, ModalHeader, ModalOverlay } from "@/c
  * content it is waiting for.
  *
  * Built from the Modal primitives rather than a portal of its own so that the
- * scrim, the card, the enter and the click-to-dismiss are the same ones the
- * real dialog arrives with; the only thing this file decides is what fills the
- * card. It is dismissible for that reason too — a tap that can be answered can
- * also be taken back, and a scrim that swallows both while a chunk downloads
- * would be a worse answer than none.
+ * scrim, the card, the enter, the exit and the click-to-dismiss are the same
+ * ones the real dialog arrives and leaves with; the only thing this file
+ * decides is what fills the card. It is dismissible for that reason too — a
+ * tap that can be answered can also be taken back, and a scrim that swallows
+ * both while a chunk downloads would be a worse answer than none.
+ *
+ * `open` is a prop rather than a hardcoded `open`, and the difference is the
+ * whole exit. `<Modal open>` pins `data-state` at "open" forever, so the
+ * closed-state animation the primitives declare could never key and the card
+ * would be cut away the frame the flag flipped — a dismissal answered with
+ * nothing, in a file whose entire subject is that nothing is not an answer. The
+ * caller pairs this with `useModalPresence` on the same flag; both halves are
+ * needed, because either one alone still takes the subtree away mid-exit.
  */
-export default function ConfirmPlaceholder({ onCancel }: { onCancel: () => void }) {
+export default function ConfirmPlaceholder({
+  open,
+  onCancel,
+}: {
+  open: boolean;
+  onCancel: () => void;
+}) {
   return (
-    <Modal open onOpenChange={(next) => { if (!next) onCancel(); }}>
+    <Modal open={open} onOpenChange={(next) => { if (!next) onCancel(); }}>
       <ModalOverlay>
         <ModalContent>
           {/* No copy, because there is none to give: the strings the real

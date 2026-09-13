@@ -555,6 +555,13 @@ export function CalendarTaskRow({
   const editFormPresent = useModalPresence(displayForm);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  // The Suspense fallbacks below are gated on these, not on the flags themselves, for the
+  // reason `useModalPresence` is exported at all: a gate on the raw flag takes the placeholder
+  // away one level above the modal, and the exit the primitives declare never gets a frame.
+  // The real dialogs make the same call inside themselves; the fallbacks that stand in for
+  // them have to make it here, because a Suspense fallback has no inside to make it in.
+  const deleteFallbackPresent = useModalPresence(deleteDialogOpen);
+  const deleteAllFallbackPresent = useModalPresence(deleteAllDialogOpen);
   const [itemElement, setItemElement] = useState<HTMLElement | null>(null);
   const [showHandle, setShowHandle] = useState(false);
   const { t: todayDict } = useTranslation("today");
@@ -912,16 +919,21 @@ export function CalendarTaskRow({
         </div>
       </div>
 
-      {/* The fallback is gated on the flag, and that is the whole trick. Both
-          boundaries render unconditionally — that is what starts the import
-          when the row mounts instead of when the button is pressed — so a
-          fallback that drew itself whenever the boundary was suspended would
-          flash a modal over the calendar on first paint, once per row. Gated,
-          it draws only for the tap it is answering. */}
+      {/* The fallback is gated, and that is the whole trick. Both boundaries
+          render unconditionally — that is what starts the import when the row
+          mounts instead of when the button is pressed — so a fallback that drew
+          itself whenever the boundary was suspended would flash a modal over the
+          calendar on first paint, once per row. Gated, it draws only for the tap
+          it is answering. */}
       <Suspense
         fallback={
-          deleteDialogOpen
-            ? <ConfirmPlaceholder onCancel={() => setDeleteDialogOpen(false)} />
+          deleteFallbackPresent
+            ? (
+              <ConfirmPlaceholder
+                open={deleteDialogOpen}
+                onCancel={() => setDeleteDialogOpen(false)}
+              />
+            )
             : null
         }
       >
@@ -933,8 +945,13 @@ export function CalendarTaskRow({
       </Suspense>
       <Suspense
         fallback={
-          deleteAllDialogOpen
-            ? <ConfirmPlaceholder onCancel={() => setDeleteAllDialogOpen(false)} />
+          deleteAllFallbackPresent
+            ? (
+              <ConfirmPlaceholder
+                open={deleteAllDialogOpen}
+                onCancel={() => setDeleteAllDialogOpen(false)}
+              />
+            )
             : null
         }
       >
