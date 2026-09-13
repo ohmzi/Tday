@@ -3,6 +3,7 @@ package com.ohmz.tday.compose.feature.scheduledtaskhome
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -1792,18 +1793,42 @@ private fun ScheduledTaskHomeTodayTaskRow(
                             },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = if (localChecked) ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big) else ImageVector.vectorResource(
-                                R.drawable.ic_lucide_circle
-                            ),
-                            contentDescription = if (localChecked) {
-                                stringResource(R.string.label_completed)
+                        val toggleGlyph = if (localChecked) {
+                            ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
+                        } else {
+                            ImageVector.vectorResource(R.drawable.ic_lucide_circle)
+                        }
+                        val toggleLabel = if (localChecked) {
+                            stringResource(R.string.label_completed)
+                        } else {
+                            stringResource(R.string.label_mark_complete)
+                        }
+                        // Crossed over rather than swapped, the same as the task list's
+                        // and the calendar's toggles: the tint above is only half of the
+                        // t=0 beat, and a glyph that hard-cuts underneath a tint that
+                        // travels is the control answering the finger twice.
+                        Crossfade(
+                            targetState = toggleGlyph,
+                            animationSpec = if (motionEnabled) {
+                                tween(
+                                    durationMillis = TdayMotionTokens.Durations.Quick,
+                                    easing = TdayMotionTokens.Easings.Standard,
+                                )
                             } else {
-                                stringResource(R.string.label_mark_complete)
+                                snap()
                             },
-                            tint = toggleTint,
-                            modifier = Modifier.size(24.dp),
-                        )
+                            label = "scheduledTaskHomeTodayToggleGlyph",
+                        ) { glyph ->
+                            Icon(
+                                imageVector = glyph,
+                                // Only the glyph being crossed TO carries the description:
+                                // for the frames both exist, two labels in the tree would
+                                // have TalkBack announce the control twice.
+                                contentDescription = toggleLabel.takeIf { glyph == toggleGlyph },
+                                tint = toggleTint,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
                     }
 
                     Column(

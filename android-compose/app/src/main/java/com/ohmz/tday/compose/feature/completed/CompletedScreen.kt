@@ -1,10 +1,12 @@
 package com.ohmz.tday.compose.feature.completed
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -61,8 +63,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CompletedItem
@@ -76,11 +78,15 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.taskCopyText
+import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
@@ -110,8 +116,23 @@ private val CompletedTimelineSectionTopSpacing = 6.dp
 private val CompletedTimelineHeaderBodySpacing = 2.dp
 private val CompletedTimelineCollapsedSectionSpacing = 4.dp
 private val CompletedSwipeRowHeight = 56.dp
-private const val COMPLETED_RESTORE_STEP_MS = 180L
-private const val COMPLETED_RESTORE_FADE_MS = 260L
+/**
+ * The check-off's beats, run backwards — the same four every task row in every
+ * client plays, only in the direction that puts a task back.
+ *
+ * This screen kept a third set for a long time, 180 / 180, which meant un-ticking
+ * a task here took 620ms while un-ticking the same task from the calendar's own
+ * Completed list took 780ms: the same app, the same control, the same direction.
+ * Read against `CALENDAR_TASK_COMPLETION_*_MS` in `CalendarScreen.kt`,
+ * `TASK_COMPLETION_*_MS` in `TodoListScreen.kt` and `taskCompletionTiming.ts`.
+ *
+ * The first two are gaps rather than motions — nobody watches the wait between
+ * the tick clearing and the rule lifting — which is why they stay plain numbers
+ * while the fade, which somebody does watch, reads its rung.
+ */
+private const val COMPLETED_RESTORE_UNCHECK_TO_UNSTRIKE_MS = 160L
+private const val COMPLETED_RESTORE_UNSTRIKE_TO_FADE_MS = 360L
+private val COMPLETED_RESTORE_FADE_MS = TdayMotionTokens.Durations.Change.toLong()
 
 private fun completedTaskBottomSpacing(
     itemIndex: Int,
@@ -573,7 +594,7 @@ private fun CompletedSwipeRow(
         targetValue = if (isFading) 0f else 1f,
         animationSpec = tween(
             durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
+            easing = TdayMotionTokens.Easings.Standard,
         ),
         label = "completedRestoreRowAlpha",
     )
@@ -581,7 +602,7 @@ private fun CompletedSwipeRow(
         targetValue = if (isFading) 0.985f else 1f,
         animationSpec = tween(
             durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
+            easing = TdayMotionTokens.Easings.Standard,
         ),
         label = "completedRestoreRowScale",
     )
@@ -589,9 +610,36 @@ private fun CompletedSwipeRow(
         targetValue = if (isFading) (-10).dp else 0.dp,
         animationSpec = tween(
             durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
+            easing = TdayMotionTokens.Easings.Standard,
         ),
         label = "completedRestoreRowOffsetY",
+    )
+    // The rule retracts the way it swept. `animateFloatAsState` starts AT its
+    // target, so a row that was already complete when the screen opened is simply
+    // drawn struck — the sweep only ever plays for the tap that asked for it.
+    val titleStrikeProgress =
+        rememberTaskStrikeProgress(showStrikethrough, "completedRestoreTitleStrike")
+    var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
+    val restoreMotionEnabled = rememberTdayMotionEnabled()
+    // The two beats this row cut straight to. The tint answers the finger, so it is
+    // Quick; the title colour travels with the rule crossing it, so Emphasis — and
+    // Emphasis is also what the rule itself runs on, which is the point: a colour
+    // that settled first would read as two events rather than one.
+    val restoreToggleTint by animateColorAsState(
+        targetValue = if (showCompletedCheckmark) {
+            TdayTaskCompleteAccent
+        } else {
+            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+        },
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "completedRestoreToggleTint",
     )
     val titleColor by animateColorAsState(
         targetValue = if (showStrikethrough) {
@@ -599,7 +647,14 @@ private fun CompletedSwipeRow(
         } else {
             colorScheme.onSurface
         },
-        animationSpec = tween(durationMillis = 160),
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Emphasis,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "completedRestoreTitleColor",
     )
     val completedAtText = COMPLETED_ROW_TIME_FORMATTER
@@ -750,20 +805,16 @@ private fun CompletedSwipeRow(
                                 ImageVector.vectorResource(R.drawable.ic_lucide_circle)
                             },
                             contentDescription = stringResource(R.string.label_undo_complete),
-                            tint = if (showCompletedCheckmark) {
-                                TdayTaskCompleteAccent
-                            } else {
-                                colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                            },
+                            tint = restoreToggleTint,
                             enabled = !isRestoring,
                             onClick = {
                                 TdayHaptics.toggle(view, on = false)
                                 closeSwipeSlot()
                                 coroutineScope.launch {
                                     restorePhase = CompletedRestorePhase.Unchecked
-                                    delay(COMPLETED_RESTORE_STEP_MS)
+                                    delay(COMPLETED_RESTORE_UNCHECK_TO_UNSTRIKE_MS)
                                     restorePhase = CompletedRestorePhase.Unstruck
-                                    delay(COMPLETED_RESTORE_STEP_MS)
+                                    delay(COMPLETED_RESTORE_UNSTRIKE_TO_FADE_MS)
                                     restorePhase = CompletedRestorePhase.Fading
                                     delay(COMPLETED_RESTORE_FADE_MS)
                                     onUncomplete()
@@ -778,18 +829,23 @@ private fun CompletedSwipeRow(
                         ) {
                             Text(
                                 text = item.title,
+                                // Drawn rather than declared, the same as every other task
+                                // row: `TextDecoration.LineThrough` is a boolean, so the
+                                // beat the user asked for — the rule coming off — happened
+                                // in one frame in the middle of a 780ms sequence whose
+                                // every other beat was tweened. `taskStrikethrough` argues
+                                // the mechanism where it lives.
+                                modifier = Modifier.taskStrikethrough(
+                                    progress = titleStrikeProgress,
+                                    layout = titleLayoutResult,
+                                    color = titleColor,
+                                    thickness = TdayDimens.BorderWidthThick,
+                                ),
                                 color = titleColor,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                // Real per-line strikethrough crosses out every line of a
-                                // wrapped title instead of one rule down the middle, the
-                                // same as the task list's own row.
-                                textDecoration = if (showStrikethrough) {
-                                    TextDecoration.LineThrough
-                                } else {
-                                    TextDecoration.None
-                                },
                                 maxLines = 2,
+                                onTextLayout = { titleLayoutResult = it },
                             )
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(5.dp),
@@ -892,12 +948,28 @@ private fun CompletedCircularToggleIcon(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(24.dp),
-        )
+        // Crossed over rather than swapped, for the reason the task list's own
+        // toggle gives: here the glyph is the whole control, so a one-frame swap
+        // is the control hard-cutting.
+        Crossfade(
+            targetState = imageVector,
+            animationSpec = if (rememberTdayMotionEnabled()) {
+                tween(
+                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    easing = TdayMotionTokens.Easings.Standard,
+                )
+            } else {
+                snap()
+            },
+            label = "completedRestoreToggleGlyph",
+        ) { glyph ->
+            Icon(
+                imageVector = glyph,
+                contentDescription = contentDescription.takeIf { glyph == imageVector },
+                tint = tint,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }
 

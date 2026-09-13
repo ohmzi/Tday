@@ -18,8 +18,8 @@
   },
   "android": {
     "_source": "android-compose/app/src/main/java/com/ohmz/tday/compose, *.kt",
-    "_tween": "durationMillis = <n>, or tween(<n>. 35 when the token layer landed; one came off in Phase 6 when the root dock's tab tint stopped crossfading on a hand-written 180 and joined the create button and the feed body under them on the Quick rung, and four more when the staged check-off moved onto the rungs — the three rows' fades onto Change, plus one 320 that was computed every frame and drawn by nobody.",
-    "tween": 30,
+    "_tween": "durationMillis = <n>, or tween(<n>. 35 when the token layer landed; one came off in Phase 6 when the root dock's tab tint stopped crossfading on a hand-written 180 and joined the create button and the feed body under them on the Quick rung, and five more when the staged check-off moved onto the rungs — the three rows' fades onto Change, the Completed screen's title colour onto Emphasis when it stopped being the one Android row still on 180/180, plus one 320 that was computed every frame and drawn by nobody.",
+    "tween": 29,
     "_spring": "dampingRatio = <n> or stiffness = <n>, written out. Compose's Spring.StiffnessMediumLow and friends are library defaults rather than decisions — the audit found Android's 400 to be exactly that — so they are not counted and moving onto one is not progress.",
     "spring": 10,
     "_pressScale": "a scale literal in [0.90, 1.0) on a line that also says scale or press. This catches a few enter-scales alongside the press ones (EnterStartScale = 0.92f); they are the same family and the same PRs will touch them, so the over-count is honest rather than convenient.",
