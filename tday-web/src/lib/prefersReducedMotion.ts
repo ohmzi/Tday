@@ -45,9 +45,17 @@ export function prefersReducedMotion(): boolean {
   return reduceMotionQuery()?.matches ?? false;
 }
 
+/**
+ * The store half of [usePrefersReducedMotion]: calls back whenever the platform
+ * preference flips, and hands back the detach.
+ *
+ * Where the query cannot be asked there is nothing to subscribe to and the value
+ * can never change, so the unsubscribe is a deliberate no-op rather than an
+ * oversight.
+ */
 function subscribe(onChange: () => void): () => void {
   const query = reduceMotionQuery();
-  if (!query) return () => {};
+  if (!query) return () => undefined;
   query.addEventListener("change", onChange);
   return () => query.removeEventListener("change", onChange);
 }
