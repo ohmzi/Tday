@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 /**
  * The single collapse/expand state machine backing every scope's "Earlier"
@@ -16,11 +17,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * (see `TODAY_EARLIER_EXIT_MS` / `.tday-empty-exit` in globals.css) — so the
  * visual exit and the hand-off are sequenced by construction: one number,
  * read twice, not two guesses tuned to land close together.
+ *
+ * Under reduced motion there is no such window: the hand-off collapses to the
+ * plain immediate toggle and `handoffPending` never goes true at all. See the
+ * expand branch for why that is the only honest reading of the preference.
  */
 export function useEarlierExpandHandoff(exitMs: number) {
   const [expanded, setExpandedState] = useState(false);
   const [handoffPending, setHandoffPending] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Subscribed rather than read at tap time: the preference decides what this
+  // hook's own returned `toggle` will do, so a mid-session flip has to reach
+  // the callback the header is already holding.
+  const reducedMotion = usePrefersReducedMotion();
 
   const clearPending = useCallback(() => {
     if (timeoutRef.current != null) {
@@ -46,11 +55,19 @@ export function useEarlierExpandHandoff(exitMs: number) {
       // the Android review caught from a second tap during the exit beat.
       if (handoffPending) return;
 
-      if (!expanded && illustrationShowing) {
+      if (!expanded && illustrationShowing && !reducedMotion) {
         // Requirement 3: hide the illustration first (it starts exiting the
         // instant `handoffPending` flips true — see
         // `shouldShowTodayEmptyIllustration`) and only reveal Earlier's rows
         // once that exit has actually finished playing.
+        //
+        // `!reducedMotion` is load-bearing, not defensive. `.tday-empty-exit`
+        // is `animation: none` under the preference (globals.css), so there is
+        // nothing left for this timer to wait for: the beat it holds open stops
+        // being a sequenced exit and becomes `exitMs` of a static illustration
+        // followed by the whole screen changing in one frame — the half-drawn
+        // pause rule 5 of `docs/motion.md` exists to forbid, arrived at from
+        // the other side. Removing the trip has to remove the wait with it.
         setHandoffPending(true);
         clearPending();
         timeoutRef.current = setTimeout(() => {
@@ -61,16 +78,16 @@ export function useEarlierExpandHandoff(exitMs: number) {
         return;
       }
 
-      // Collapsing, or expanding with no illustration to hand off from:
-      // immediate. Also defensively clears any stale pending flag/timer —
-      // the exact class of bug the iOS review found, where a hand-off flag
-      // set on expand was never cleared back to false on the paths that
-      // should have reset it.
+      // Collapsing, expanding with no illustration to hand off from, or any
+      // toggle at all under reduced motion: immediate. Also defensively clears
+      // any stale pending flag/timer — the exact class of bug the iOS review
+      // found, where a hand-off flag set on expand was never cleared back to
+      // false on the paths that should have reset it.
       clearPending();
       setHandoffPending(false);
       setExpandedState((value) => !value);
     },
-    [clearPending, expanded, exitMs, handoffPending],
+    [clearPending, expanded, exitMs, handoffPending, reducedMotion],
   );
 
   /** Expands or collapses immediately, bypassing the hand-off entirely — for
