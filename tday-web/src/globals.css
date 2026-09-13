@@ -630,18 +630,61 @@
   to { opacity: 1; transform: none; }
 }
 
+/* The slot the scene sits in, as opposed to the ink on it.
+
+   `.tday-empty-exit` below animates paint. Its box used to hold all 42vh of the
+   slot for the whole beat and then be released in the single frame the hand-off
+   swapped Earlier's rows in — a motion, then a jump, and the jump the larger of
+   the two. The track closes under the fade instead, so the page has taken the
+   space back by the time the rows arrive and the swap frame has nothing left to
+   move.
+
+   A grid with one 1fr row is the only interpolable spelling of "as tall as
+   whatever is inside it": `height` cannot be animated away from `auto`, and a
+   measured pixel height would want re-measuring every time the copy inside
+   rewraps. Same track the completed row closes on its way out
+   (`TodoItemContainer`), down to the pair of declarations the child needs while
+   it runs: a grid item that is not a scroll container keeps its own content
+   height as the track's floor, so without them the track would have nothing to
+   shrink to. They are scoped to the exit rather than left on, so the resting
+   scene clips nothing. */
+.tday-empty-slot {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--tday-duration-scene) var(--tday-empty-sink-ease);
+}
+
+.tday-empty-exit > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+:root {
+  /* Named once because the sink and the track closing under it have to ride the
+     same curve: two curves on one departure read as two things happening to the
+     scene rather than as the scene leaving. Deliberately not `Scene`'s curve
+     read backwards — see the non-token table in docs/motion.md. */
+  --tday-empty-sink-ease: cubic-bezier(0.3, 0, 0.4, 1);
+}
+
 /* The exit mirror of `.tday-empty-enter`, played only during an "Earlier"
    hand-off (requirement 3 of the Earlier section — Today originally, since
-   generalized to every other scope with its own Earlier bucket): the caller
-   sets `animation-duration` inline from `TODAY_EARLIER_EXIT_MS`
-   (`todayEarlierIllustration.ts`) — the SAME constant that gates the delay
-   before Earlier's rows are told to appear — so the visual exit and that
-   hand-off are one number, read twice, not two independently tuned to look
-   close together. */
+   generalized to every other scope with its own Earlier bucket). Only ever
+   applied to a `.tday-empty-slot`, which is what lets it close the track.
+
+   `--tday-duration-scene` is the rung `TODAY_EARLIER_EXIT_MS`
+   (`todayEarlierIllustration.ts`) sits on: that constant gates the delay before
+   Earlier's rows are told to appear, these two draw the exit that delay is
+   waiting for, and all three read the one generated rung — a duration bound for
+   a stylesheet wants the token and only a `setTimeout` wants the integer
+   (`src/lib/motion.ts`). One number, read twice, not two tuned to look close
+   together. */
 .tday-empty-exit {
   animation-name: tday-empty-sink;
-  animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1);
+  animation-duration: var(--tday-duration-scene);
+  animation-timing-function: var(--tday-empty-sink-ease);
   animation-fill-mode: both;
+  grid-template-rows: 0fr;
 }
 
 @keyframes tday-empty-sink {
@@ -688,13 +731,17 @@
   .tday-empty-sparkle { animation: none; opacity: 1; }
   /* Drawn where it lands, with no trip to get there. */
   .tday-empty-enter { animation: none; }
-  /* Held fully visible rather than switched off mid-air. Mostly unreachable
-     now: `useEarlierExpandHandoff` reads the same preference and takes its
-     immediate branch, so `earlierHandoffPending` — the only thing that ever
-     applies this class — never goes true in the first place. What is left is
-     the hand-off already in flight when the preference flips mid-beat, whose
-     timer is not cancelled; this is what stops that one sinking through. */
-  .tday-empty-exit { animation: none; }
+  /* Held fully visible rather than switched off mid-air, and its slot held open
+     underneath it. Mostly unreachable now: `useEarlierExpandHandoff` reads the
+     same preference and takes its immediate branch, so `earlierHandoffPending`
+     — the only thing that ever applies this class — never goes true in the
+     first place. What is left is the hand-off already in flight when the
+     preference flips mid-beat, whose timer is not cancelled; this is what stops
+     that one sinking through. The track stays open for the same reason: shutting
+     it with no trip to carry it would take the scene off the screen and leave
+     the rest of that beat holding nothing, which is the destination of the
+     hand-off and not the destination of this scene. */
+  .tday-empty-exit { animation: none; grid-template-rows: 1fr; }
   /* `useFadeUnmount` itself skips its own delay under reduced motion (see its
      own doc comment), so these never actually get applied for long — this is
      just the same belt-and-braces as the pair above. */

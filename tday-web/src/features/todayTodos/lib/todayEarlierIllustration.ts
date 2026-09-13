@@ -1,3 +1,5 @@
+import { DURATION_MS } from "@/lib/motion";
+
 /**
  * The "Earlier" bucket (overdue tasks tucked under an otherwise-empty or
  * non-empty screen, collapsed by default) and its interaction with the "all
@@ -15,18 +17,25 @@
  */
 
 /**
- * Requirement 3's hand-off duration: the illustration's own exit animation
- * (`.tday-empty-exit` in globals.css, given this exact value inline via
- * `animationDuration`) and the delay before Earlier's rows are actually told
- * to appear (`useEarlierExpandHandoff`) are driven by this ONE constant, not
- * two numbers independently tuned to look close enough — so the two are
- * sequenced by construction. Shared by every scope below, not retuned per
- * screen — see this module's own doc comment for why that is deliberate.
+ * Requirement 3's hand-off duration: the illustration's own exit — the scene
+ * sinking and the slot under it closing, one motion on one rung
+ * (`.tday-empty-slot` / `.tday-empty-exit` in globals.css) — and the delay
+ * before Earlier's rows are actually told to appear
+ * (`useEarlierExpandHandoff`) are driven by this ONE rung, not by numbers
+ * independently tuned to look close enough, so they are sequenced by
+ * construction. Shared by every scope below, not retuned per screen — see this
+ * module's own doc comment for why that is deliberate.
  *
- * Matches `.tday-empty-enter`'s own 520ms arrival (globals.css): the exit
- * mirrors the scene's entrance rather than inventing an unrelated number.
+ * The stylesheet names the rung rather than taking this number: a duration
+ * bound for CSS wants `var(--tday-duration-*)` and only a timer wants the
+ * integer (`src/lib/motion.ts` says so, and `taskCompletionTiming.ts` splits
+ * the same value the same way). Both spellings resolve to the one generated
+ * token, so the timer and the exit it is waiting for cannot drift apart.
+ *
+ * `Scene`, which is what the 520 this held by hand always was: the exit mirrors
+ * `.tday-empty-enter`'s own arrival rather than inventing an unrelated number.
  */
-export const TODAY_EARLIER_EXIT_MS = 520;
+export const TODAY_EARLIER_EXIT_MS = DURATION_MS.scene;
 
 /**
  * The Overdue/Earlier ROWS' own fade duration — deliberately a separate,
