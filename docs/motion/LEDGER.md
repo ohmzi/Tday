@@ -267,6 +267,23 @@ Restore it from git history rather than adjusting the number.
 ### PR 17b — the web modal exit
 
 - [x] `web-modal-has-no-exit` — `if (!isOpen) return null`; 8 call sites blink out · web · Sev 3 · M · Gate V
+  - **Ticked by PR G7, which was one call site short.** G7 counted its eight as five confirmation
+    dialogs plus three conditional mounts — but two of those three are the *containers* around
+    `CreateModal` / `EditModal`, not `<Modal>` sites of their own. Eight files render `<Modal>`:
+    the five confirmations, `CreateModal`, `EditModal`, and `DataTransferCard.tsx`, which is the
+    one G7 never opened. Its portal was fixed for free by `Modal.tsx`; its body was not. The
+    card's open flag is `pending !== null` and its body is `pending`'s dry-run preview, so
+    answering it cleared both at once and the card spent its whole 200 ms exit offering to import
+    zero items. Retained the last non-null bundle — the shape G7 gave `ConfirmRescheduleRecurring`
+    for the same reason.
+    Covered by `tests/unit/data-transfer-confirm-exit.test.tsx`, which asserts what is inside the
+    portal while it leaves rather than that it is still there.
+  - **Not this row:** `ConfirmDelete` / `ConfirmDeleteAll` gate on presence correctly, but they
+    are rendered by `CalendarTaskRow` and their destructive buttons call `deleteMutate`, which
+    prunes the `calendarTodo` cache on the spot — the row unmounts and takes the portal with it
+    before a frame of the exit paints. Cancel animates; Delete still does not. The fix is to hoist
+    them to `CalendarClient` beside `ConfirmRescheduleRecurring`, and the calendar delete dialog
+    already belongs to **PR 25c**, so it is left there rather than half-done here.
 
 ### PR 51 — three web surfaces with no transition at all
 
