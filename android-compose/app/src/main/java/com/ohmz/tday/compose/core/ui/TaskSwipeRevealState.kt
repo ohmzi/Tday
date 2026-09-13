@@ -103,6 +103,17 @@ class TaskSwipeRevealState internal constructor(
         private set
 
     /**
+     * Bumped by every drag, and read by [playHint] either side of its hold.
+     *
+     * Asking `isDragging` after the fact only ever sees a finger that is *still*
+     * down. A flick is 60-100 ms of contact, so one can land, open the row and
+     * be gone again entirely inside the hint's 150 ms hold — at which point a
+     * live re-read says "no finger" and the hint slams the row the user just
+     * opened shut. A counter remembers the interference instead of sampling it.
+     */
+    private var dragGeneration = 0
+
+    /**
      * Under a finger this asks about the finger; otherwise it asks where the row
      * is headed, not where it currently is — a row settling closed has already
      * given up its swipe slot.
@@ -115,6 +126,7 @@ class TaskSwipeRevealState internal constructor(
         // a close, the tail of a hint — stops here and the row continues from
         // wherever that animation had got to.
         isDragging = true
+        dragGeneration++
         release = null
         offsetX = (offsetX + deltaPx).coerceIn(-maxElasticDragPx, 0f)
     }
@@ -140,9 +152,13 @@ class TaskSwipeRevealState internal constructor(
         if (isHinting || isDragging) return
         isHinting = true
         try {
+            val generation = dragGeneration
             settleTo(-hintOffsetPx, 0f)
             delay(SWIPE_HINT_MS)
-            if (isDragging) return
+            // A finger that came and went inside the hold counts as much as one
+            // that is still there: either way the row is no longer the hint's to
+            // move.
+            if (isDragging || dragGeneration != generation) return
             settleTo(0f, 0f)
             delay(SWIPE_HINT_SETTLE_MS)
         } finally {
@@ -233,5 +249,11 @@ fun animateTaskSwipeOffsetAsState(
             state.onReleaseSettled(release)
         }
     }
+    // This line is the defect site. Reinstating an `animateFloatAsState` here —
+    // or anything else that interposes a clock between the finger and the draw —
+    // brings back the ~141 ms trail, and no gate in this repository can see it:
+    // there is no Compose harness on the unit-test source set (`ui-test-junit4`
+    // is androidTest-only and androidTest is compiled but never run). The only
+    // thing watching it is the PR 19 row in docs/verification/phase-3-device-pass.md.
     return remember(state) { derivedStateOf { state.offsetX } }
 }

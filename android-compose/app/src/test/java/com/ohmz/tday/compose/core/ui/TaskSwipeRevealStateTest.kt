@@ -264,6 +264,35 @@ class TaskSwipeRevealStateTest {
     }
 
     @Test
+    fun `a flick that lands and lifts inside the hold leaves the row it opened open`() = runTest {
+        val state = state()
+        val hint = launch { state.playHint() }
+        advanceTimeBy(50)
+        runCurrent()
+        assertTrue(state.isHinting)
+
+        // A flick is 60-100 ms of contact: down, across, gone — all of it inside
+        // the hint's 150 ms hold. By the time the hint wakes up there is no
+        // finger left to see, so asking `isDragging` then answers "no" and the
+        // return leg used to slam the just-opened row shut.
+        state.dragBy(-30f)
+        state.settle(velocityPxPerSecond = -1600f)
+        assertFalse(state.isDragging)
+        assertEquals(-revealWidthPx, state.restOffsetX, 0f)
+
+        advanceTimeBy(200)
+        runCurrent()
+
+        assertEquals(-revealWidthPx, state.restOffsetX, 0f)
+        assertTrue(state.isOpenOrDragging)
+
+        hint.join()
+        assertFalse(state.isHinting)
+        assertEquals(-revealWidthPx, state.restOffsetX, 0f)
+        assertTrue(state.isOpenOrDragging)
+    }
+
+    @Test
     fun `a second hint cannot start while the first is still running`() = runTest {
         val state = state()
         val first = launch { state.playHint() }

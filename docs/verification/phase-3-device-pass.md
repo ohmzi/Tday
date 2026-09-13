@@ -154,3 +154,23 @@ cycle that exists. See `README.md`, "iOS: three cycles, for the whole programme"
               for the whole gesture; the hint's 150 ms return never runs.
       Fails:  the row is yanked back to zero under the thumb part-way through the drag, so the swipe
               has to be started again from closed.
+
+- [ ] **PR 19 · android · Calendar task row tracks the finger** — Calendar tab, a day with at least
+      one task, that day's task list on screen.
+      Do:     drag a task row left at a steady speed to about half the reveal width, stop the thumb
+              dead without lifting, then lift (repeat by tapping a closed row to fire the peek hint
+              and putting the thumb straight back on it mid-peek).
+      Watch:  the Calendar row behaves exactly as the Today row in the first three checks — welded to
+              the thumb with no 141 ms of catch-up, releasing from the pixel the thumb left and open
+              in roughly 300 ms, and abandoning the peek's 150 ms return the moment the thumb lands.
+      Fails:  the Calendar row lags the thumb, or is yanked back to zero under it mid-drag, while the
+              Today row does neither — the Calendar tab is still running its own copy of the old spring.
+
+- [ ] **PR 19 · android · Swipe hint yields to a flick that has already ended** — Today, a closed task
+      row, nothing else open.
+      Do:     tap the row to fire the peek hint and, while the peek is still out (inside 150 ms), flick
+              it left hard and take the thumb straight off the glass.
+      Watch:  the row opens on the flick and STAYS open with its action pills revealed; the hint's
+              150 ms return leg never runs, even though no finger is on the row when it would have.
+      Fails:  the row opens and is then slammed shut roughly 150 ms later with nothing touching it,
+              and the next tap closes an already-closed row instead of firing a fresh peek.
