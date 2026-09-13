@@ -1,4 +1,4 @@
-# The motion programme ledger — 109 rows
+# The motion programme ledger — 205 rows
 
 ## WHY THIS FILE EXISTS, AND WHY IT IS A COMMITTED FILE
 
@@ -7,11 +7,11 @@ work lived in a context window and in `/tmp`. Both are volatile, so a death was 
 is the opposite of both: it is a tracked file on a branch, which means a dead session costs at
 most one PR, and `git diff` on this file is the entire progress report.
 
-It is also the only place the 109 rows exist as one list. The audit that produced them and the
+It is also the only place these rows exist as one list. The audit that produced them and the
 execution plan that sequenced them are working papers that live outside the repo; nothing in CI,
 nothing in review and nobody reading `develop` can see them. So if a row is not written here, it
 is not dropped loudly — it is dropped silently, which is how a motion audit becomes a motion
-anecdote. **A truncated ledger is worse than no ledger, because it looks finished.** All 109 rows
+anecdote. **A truncated ledger is worse than no ledger, because it looks finished.** All rows
 are present below; the counts in the next section are the assertion, and the `grep` at the end of
 it is how you check.
 
@@ -111,9 +111,14 @@ collapses, not deletions:
 |---|---|
 | Defect rows — 25 + 23 + 23, with two internal merges cancelled by two promotions | 71 |
 | Opportunity rows — 57, of which 34 collapse into 15 cross-client rows (14 groups, one splitting in two) | 38 |
-| **Ledger rows below** | **109** |
+| **Ledger rows, first pass** | **109** |
 | Less the 3 cross-ledger duplicates, which tick in pairs | −3 |
 | **Distinct units of work** | **106** |
+| Long-tail pass — audit findings re-derived in source | 163 |
+| …already tracked above under a different id | −67 |
+| …unresolved, needs a device | 1 |
+| **…survived as genuinely new** | **95** |
+| **Ledger rows below, total** | **205** |
 | Plus programme infrastructure — the web CI gate (W0) and the eight guardrail PRs (G1–G8) | +9 PRs |
 
 So the 19 are this: **34 client-specific opportunity findings became 15 rows that fix all three
@@ -133,12 +138,12 @@ Ledger rows are the only checkboxes whose text starts with a backticked id, so t
 without counting the infrastructure lines:
 
 ```bash
-grep -c '^- \[[ x]\] `' docs/motion/LEDGER.md   # 109 — must never change
+grep -c '^- \[[ x]\] `' docs/motion/LEDGER.md   # 205 — must never shrink
 grep -c '^- \[x\] `'    docs/motion/LEDGER.md   # rows closed so far
 grep -c '^- ↳'          docs/motion/LEDGER.md   # 29 pointer lines into split rows
 ```
 
-If the first number is ever not 109, a row was edited away and the programme has silently shrunk.
+If the first number ever shrinks, a row was edited away and the programme has silently lost work.
 Restore it from git history rather than adjusting the number.
 
 ---
@@ -593,3 +598,347 @@ Restore it from git history rather than adjusting the number.
 ### PR 60 — one celebration ordering
 
 - [ ] `celebration-ordering-decision` — **[CORRECTION]** see §4.5 — Android has *both* orderings; web is missing a leg, not on the opposite model · and+web · Impact O3 · S · Gate D
+---
+
+## Long-tail pass — 95 rows recovered from the killed audit
+
+These come from the 2026-09-12 audit's Map phase, which produced findings its Verify phase never
+reached. 163 of them were re-derived in source in a later pass: **67 turned out to be already tracked
+above under a different id**, 1 could not be settled without a device, and **95 survived as genuinely
+new**. None is severity 4 — the severity-4 tier had already been verified and is carried in the rows
+above. 79 of the 163 were graded lower than originally filed, and 12 carried citations pointing at
+lines that do not exist, so treat the original severities in any recovered document as inflated.
+
+Rows are grouped by root cause, so one heading is one PR. Numbering continues from the existing plan.
+
+
+### PR 120 — android dock spring chases spring
+
+- [ ] `android:home-dock#6` — 6 · and · Sev 3 · M · Gate G
+
+### PR 121 — completed restore phase never reset
+
+- [ ] `ios:completed-settings-guide#completed-restore-stuck-invisible` — completed restore stuck invisible · ios · Sev 3 · M · Gate X
+
+### PR 122 — create sheet keyboard layout
+
+- [ ] `ios:sheets-swipe-pull#10` — 10 · ios · Sev 3 · M · Gate D
+
+### PR 123 — restore phase never reset on failure
+
+- [ ] `android:completed-toast-swipe#restore-stuck-on-failure` — restore stuck on failure · and · Sev 3 · S · Gate J
+
+### PR 124 — search capsule morph
+
+- [ ] `web:floater-dashboards#6` — 6 · web · Sev 3 · M · Gate V
+
+### PR 125 — segmented selection multi speed
+
+- [ ] `android:sheets#segmented-thumb-lag` — segmented thumb lag · and · Sev 3 · XS · Gate G
+
+### PR 126 — selector overlay orphaned transition
+
+- [ ] `ios:todo-list#1` — 1 · ios · Sev 3 · XS · Gate G
+
+### PR 127 — sheet dismiss teardown not deferred
+
+- [ ] `android:sheets#members-close-cut` — members close cut · and · Sev 3 · S · Gate G
+  - citation corrected: /home/ohmz/StudioProjects/Tday/android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/ManageMembersSheet.kt:224 (the finding's `file` drops `app/src/main/java/com/ohmz/tday/compose/`; line 220 opens the TdaySheetHeader block, the defect is on 224)
+
+### PR 128 — android root search overlay handover
+
+- [ ] `android:home-dock#7` — 7 · and · Sev 2 · M · Gate G
+
+### PR 129 — auth panel swap outruns card
+
+- [ ] `android:nav-settings#8` — 8 · and · Sev 2 · XS · Gate D
+
+### PR 130 — auth validation message unanimated
+
+- [ ] `ios:completed-settings-guide#auth-error-message-jump` — auth error message jump · ios · Sev 2 · S · Gate G
+
+### PR 131 — calendar cell and chrome state animation
+
+- [ ] `android:calendar#today-pill-label-pops-two-width-animators` — today pill label pops two width animators · and · Sev 2 · S · Gate D
+- [ ] `android:calendar#week-cell-selection-snaps-month-cell-animates` — week cell selection snaps month cell animates · and · Sev 2 · S · Gate G
+- [ ] `android:calendar#chevrons-blink-dim-on-every-page` — chevrons blink dim on every page · and · Sev 1 · XS · Gate D
+
+### PR 132 — calendar day list feed motion
+
+- [ ] `android:calendar#empty-scene-and-heading-swap-without-motion` — empty scene and heading swap without motion · and · Sev 2 · S · Gate G
+- [ ] `android:calendar#rows-no-placement-and-off-clock-fades` — rows no placement and off clock fades · and · Sev 2 · XS · Gate G
+
+### PR 133 — calendar empty branch swap cut
+
+- [ ] `ios:calendar#tasks-to-empty-swap-snaps` — tasks to empty swap snaps · ios · Sev 2 · S · Gate G
+
+### PR 134 — calendar today jump dropped mid page
+
+- [ ] `ios:calendar#today-jump-dropped-while-paging` — today jump dropped while paging · ios · Sev 2 · S · Gate G
+
+### PR 135 — car surface motion gaps
+
+- [ ] `android:completed-toast-swipe#car-list-no-item-animation` — car list no item animation · and · Sev 2 · XS · Gate G
+- [ ] `android:completed-toast-swipe#car-loading-content-cut` — car loading content cut · and · Sev 2 · S · Gate G
+- [ ] `android:completed-toast-swipe#car-header-cuts` — car header cuts · and · Sev 1 · XS · Gate D
+
+### PR 136 — celebration ordering decision
+
+- [ ] `ios:todo-list#9` — 9 · ios · Sev 2 · S · Gate G
+
+### PR 137 — completed row transition off transaction
+
+- [ ] `ios:completed-settings-guide#completed-collapse-two-clocks` — completed collapse two clocks · ios · Sev 2 · XS · Gate G
+
+### PR 138 — completion choreography
+
+- [ ] `ios:todo-list#4` — 4 · ios · Sev 2 · S · Gate D
+
+### PR 139 — completion row fade vocabulary
+
+- [ ] `web:rows-completion-css#row-fade-no-lift` — row fade no lift · web · Sev 2 · S · Gate V
+
+### PR 140 — dashboard list row placement
+
+- [ ] `web:floater-dashboards#13` — 13 · web · Sev 2 · S · Gate V
+
+### PR 141 — disclosure expand collapse
+
+- [ ] `android:nav-settings#5` — 5 · and · Sev 2 · XS · Gate D
+- [ ] `ios:todo-list#12` — 12 · ios · Sev 1 · XS · Gate G
+
+### PR 142 — drag lift and drop
+
+- [ ] `ios:todo-list#3` — 3 · ios · Sev 2 · S · Gate G
+
+### PR 143 — drop placeholder off clock
+
+- [ ] `android:todo-list#drop-placeholder-own-clock` — drop placeholder own clock · and · Sev 2 · XS · Gate J
+
+### PR 144 — earlier celebrate window exit
+
+- [ ] `android:todo-list#expanded-celebration-exit-rows-lag-header` — expanded celebration exit rows lag header · and · Sev 2 · S · Gate D
+
+### PR 145 — earlier collapse has no handoff
+
+- [ ] `android:todo-list#collapse-earlier-rows-fade-under-expanding-scene` — collapse earlier rows fade under expanding scene · and · Sev 2 · S · Gate J
+
+### PR 146 — earlier handoff exit duration
+
+- [ ] `android:todo-list#earlier-handoff-exit-150ms-vs-siblings` — earlier handoff exit 150ms vs siblings · and · Sev 2 · S · Gate J
+
+### PR 147 — earlier scene celebration hold
+
+- [ ] `android:todo-list#inline-celebration-hold-is-a-dead-gap` — inline celebration hold is a dead gap · and · Sev 2 · XS · Gate J
+
+### PR 148 — feed section header add remove fade
+
+- [ ] `android:todo-list#section-headers-cut-on-add-remove` — section headers cut on add remove · and · Sev 2 · S · Gate J
+
+### PR 149 — feed section header fade parity
+
+- [ ] `android:completed-toast-swipe#completed-header-pops` — completed header pops · and · Sev 2 · S · Gate G
+
+### PR 150 — gate overlay arrival
+
+- [ ] `android:nav-settings#2` — 2 · and · Sev 2 · S · Gate D
+
+### PR 151 — guide search filter unanimated
+
+- [ ] `ios:completed-settings-guide#guide-search-results-cut` — guide search results cut · ios · Sev 2 · S · Gate G
+
+### PR 152 — in sheet confirm height swap
+
+- [ ] `web:floater-dashboards#9` — 9 · web · Sev 2 · S · Gate V
+
+### PR 153 — interruptible transitions not keyframes
+
+- [ ] `web:rows-completion-css#enter-and-exit-race-on-nested-wrappers` — enter and exit race on nested wrappers · web · Sev 2 · M · Gate V
+- [ ] `web:rows-completion-css#rows-fade-keyframes-pop-on-rapid-toggle` — rows fade keyframes pop on rapid toggle · web · Sev 2 · S · Gate G
+
+### PR 154 — ios calendar cell state unanimated
+
+- [ ] `ios:calendar#day-cell-highlight-snaps` — day cell highlight snaps · ios · Sev 2 · S · Gate G
+
+### PR 155 — ios calendar completion phase reset ghost
+
+- [ ] `ios:calendar#completion-phase-reset-ghosts-row` — completion phase reset ghosts row · ios · Sev 2 · XS · Gate G
+
+### PR 156 — ios calendar mode layer identity churn
+
+- [ ] `ios:calendar#mode-switch-outgoing-layer-is-a-fresh-pager` — mode switch outgoing layer is a fresh pager · ios · Sev 2 · M · Gate G
+
+### PR 157 — ios header snap double motion
+
+- [ ] `ios:sheets-swipe-pull#8` — 8 · ios · Sev 2 · M · Gate D
+
+### PR 158 — ios highlight reclears collapsed sections
+
+- [ ] `ios:todo-list#11` — 11 · ios · Sev 2 · XS · Gate G
+
+### PR 159 — ios sheet state change unanimated
+
+- [ ] `ios:sheets-swipe-pull#2` — 2 · ios · Sev 2 · XS · Gate G
+- [ ] `ios:sheets-swipe-pull#3` — 3 · ios · Sev 2 · XS · Gate G
+- [ ] `ios:sheets-swipe-pull#12` — 12 · ios · Sev 1 · XS · Gate G
+
+### PR 160 — ios timeline untransacted writes
+
+- [ ] `ios:todo-list#6` — 6 · ios · Sev 2 · S · Gate G
+- [ ] `ios:todo-list#7` — 7 · ios · Sev 2 · XS · Gate G
+- [ ] `ios:todo-list#10` — 10 · ios · Sev 1 · XS · Gate G
+
+### PR 161 — press affordance unification
+
+- [ ] `android:home-dock#4` — 4 · and · Sev 2 · S · Gate G
+  - citation corrected: android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/RootFeedDock.kt:127-140
+- [ ] `android:home-dock#5` — 5 · and · Sev 1 · S · Gate G
+
+### PR 162 — pull refresh pill min visible
+
+- [ ] `ios:sheets-swipe-pull#9` — 9 · ios · Sev 2 · S · Gate G
+
+### PR 163 — route change handover
+
+- [ ] `web:rows-completion-css#root-view-transition-vs-route-fade` — root view transition vs route fade · web · Sev 2 · S · Gate G
+- [ ] `android:nav-settings#10` — 10 · and · Sev 1 · XS · Gate G
+
+### PR 164 — search bar morph snaps
+
+- [ ] `android:nav-settings#3` — 3 · and · Sev 2 · M · Gate D
+
+### PR 165 — search results overlay pop
+
+- [ ] `ios:home-dock#3` — 3 · ios · Sev 2 · M · Gate G
+
+### PR 166 — search swap items no feed motion
+
+- [ ] `android:todo-list#search-swap-items-have-no-enter-exit` — search swap items have no enter exit · and · Sev 2 · S · Gate J
+  - citation corrected: android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:1786 (the `if (scopedSearchHasNoResults)`; the cited 1787 is the `item(` on the next line). The second site, 1747, is exact.
+
+### PR 167 — settings search filter unanimated
+
+- [ ] `ios:completed-settings-guide#settings-search-filter-cuts` — settings search filter cuts · ios · Sev 2 · S · Gate G
+
+### PR 168 — settings toggle reveal unanimated
+
+- [ ] `ios:completed-settings-guide#settings-toggle-reveals-jump` — settings toggle reveals jump · ios · Sev 2 · S · Gate G
+
+### PR 169 — sheet content swap unanimated
+
+- [ ] `android:sheets#members-content-jump` — members content jump · and · Sev 2 · S · Gate D
+  - citation corrected: /home/ohmz/StudioProjects/Tday/android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/ManageMembersSheet.kt:235 (same malformed path as the sibling finding; the line itself is correct)
+
+### PR 170 — sheet lifecycle sequencing
+
+- [ ] `web:floater-dashboards#7` — 7 · web · Sev 2 · S · Gate V
+- [ ] `web:floater-dashboards#8` — 8 · web · Sev 2 · S · Gate V
+
+### PR 171 — sheet nested resize curve mismatch
+
+- [ ] `android:sheets#create-schedule-row-race` — create schedule row race · and · Sev 2 · S · Gate D
+
+### PR 172 — swipe reveal offset model
+
+- [ ] `ios:sheets-swipe-pull#6` — 6 · ios · Sev 2 · M · Gate D
+- [ ] `ios:sheets-swipe-pull#7` — 7 · ios · Sev 2 · S · Gate G
+
+### PR 173 — theme mode not applied outside nav tree
+
+- [ ] `android:nav-settings#12` — 12 · and · Sev 2 · S · Gate D
+
+### PR 174 — toast host motion
+
+- [ ] `android:completed-toast-swipe#toast-drag-two-stage-exit` — toast drag two stage exit · and · Sev 2 · S · Gate D
+- [ ] `android:completed-toast-swipe#toast-enter-exit-asymmetric` — toast enter exit asymmetric · and · Sev 2 · S · Gate G
+- [ ] `android:completed-toast-swipe#toast-replace-cut` — toast replace cut · and · Sev 2 · S · Gate G
+
+### PR 175 — toggle dependent state snaps
+
+- [ ] `android:nav-settings#7` — 7 · and · Sev 2 · XS · Gate D
+
+### PR 176 — web app index skeleton double chrome
+
+- [ ] `web:shell-sidebar-settings#4` — 4 · web · Sev 2 · S · Gate V
+  - citation corrected: tday-web/src/components/app/AppShellSkeleton.tsx:36-39 (dock placeholder); tday-web/src/pages/AppHomeRedirectPage.tsx:24-26; tday-web/src/components/app/NativeAppShell.tsx:37-40; tday-web/src/components/app/RootDock.tsx:105
+
+### PR 177 — web dock pill measure and first paint
+
+- [ ] `web:shell-sidebar-settings#2` — 2 · web · Sev 2 · S · Gate G
+  - citation corrected: tday-web/src/components/app/RootDock.tsx:81-92 (the measure effect), :122 (pill class), :159-163 (button transition + min-width)
+- [ ] `web:shell-sidebar-settings#3` — 3 · web · Sev 2 · S · Gate G
+  - citation corrected: tday-web/src/components/app/RootDock.tsx:65 (pillStyle init), :81-92 (post-paint measure), :122 (unconditional transition-all)
+
+### PR 178 — web root feed search overlay cut
+
+- [ ] `web:shell-sidebar-settings#9` — 9 · web · Sev 2 · XS · Gate V
+
+### PR 179 — web secondary list mutations uncued
+
+- [ ] `web:shell-sidebar-settings#12` — 12 · web · Sev 2 · M · Gate V
+- [ ] `web:shell-sidebar-settings#8` — 8 · web · Sev 1 · M · Gate V
+
+### PR 180 — wizard step chip state snaps
+
+- [ ] `android:nav-settings#9` — 9 · and · Sev 2 · XS · Gate J
+
+### PR 181 — calendar select date bypasses pager
+
+- [ ] `android:calendar#adjacent-month-tap-snaps-grid` — adjacent month tap snaps grid · and · Sev 1 · M · Gate D
+
+### PR 182 — centered selector overlay transition node
+
+- [ ] `ios:completed-settings-guide#settings-overlay-scrim-scaled` — settings overlay scrim scaled · ios · Sev 1 · XS · Gate D
+
+### PR 183 — completion timing 160 contract
+
+- [ ] `ios:home-dock#9` — 9 · ios · Sev 1 · XS · Gate G
+
+### PR 184 — dock collapse threshold hysteresis
+
+- [ ] `android:home-dock#10` — 10 · and · Sev 1 · S · Gate G
+
+### PR 185 — fab accent crossfade
+
+- [ ] `ios:home-dock#6` — 6 · ios · Sev 1 · XS · Gate D
+
+### PR 186 — hero search morph single spec
+
+- [ ] `ios:home-dock#10` — 10 · ios · Sev 1 · XS · Gate G
+
+### PR 187 — ios calendar pager page list churn
+
+- [ ] `ios:calendar#page-rebuild-between-current-and-next-month` — page rebuild between current and next month · ios · Sev 1 · M · Gate G
+
+### PR 188 — loading to content crossfade
+
+- [ ] `android:nav-settings#11` — 11 · and · Sev 1 · XS · Gate D
+
+### PR 189 — member roster row motion
+
+- [ ] `web:floater-dashboards#10` — 10 · web · Sev 1 · M · Gate V
+
+### PR 190 — numeric count transition
+
+- [ ] `android:home-dock#9` — 9 · and · Sev 1 · XS · Gate G
+- [ ] `web:floater-dashboards#15` — 15 · web · Sev 1 · S · Gate V
+
+### PR 191 — search filter reflow unanimated
+
+- [ ] `android:nav-settings#4` — 4 · and · Sev 1 · S · Gate D
+
+### PR 192 — settings silenced dim uncrossfaded
+
+- [ ] `ios:completed-settings-guide#settings-reminders-dim-snaps` — settings reminders dim snaps · ios · Sev 1 · XS · Gate G
+
+### PR 193 — web segmented pill timing divergence
+
+- [ ] `web:shell-sidebar-settings#13` — 13 · web · Sev 1 · XS · Gate G
+
+### PR 194 — web settings inline editor affordance cut
+
+- [ ] `web:shell-sidebar-settings#7` — 7 · web · Sev 1 · XS · Gate V
+
+### Unresolved — needs a device, not work yet
+
+- [ ] `ios:completed-settings-guide#settings-notifications-toggle-bounce` — settings notifications toggle bounce · ios · **unresolved** · Gate D
