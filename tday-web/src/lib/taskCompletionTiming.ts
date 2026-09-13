@@ -45,6 +45,12 @@ export const TASK_COMPLETION_COLLAPSE_MS = DURATION_MS.emphasis;
  * and pruning while it is still running would put back the jump this whole sequence exists to
  * take out. That costs web the difference between the two rungs — still comfortably inside the
  * undo toast's 5s, which is the only other clock this one has to stay clear of.
+ *
+ * Which also makes this total conditional, and both rows cut it short under reduced motion: with
+ * no collapse to outlast there is nothing for the last leg to be waiting for, and a wait left
+ * standing in front of a destination already drawn is the fifth idiom rule broken from the other
+ * side. The cut is made where the timers arm, not here — this is the length of the animation, and
+ * the animation is what is missing.
  */
 export const TASK_COMPLETION_TOTAL_MS =
   TASK_COMPLETION_CHECK_TO_STRIKE_MS +
