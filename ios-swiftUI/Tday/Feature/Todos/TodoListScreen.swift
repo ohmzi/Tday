@@ -4996,6 +4996,10 @@ private struct ListSettingsSheet: View {
 
     private func submit() {
         guard canSave else { return }
+        // The landing, not the press: the header's ✓ gives the control tap every
+        // button gives, and the save that goes through earns the success pulse —
+        // the same order `CreateTaskSheet.submit` uses.
+        HapticManager.completion()
         onSubmit(trimmedName, color, iconKey)
         dismiss()
     }

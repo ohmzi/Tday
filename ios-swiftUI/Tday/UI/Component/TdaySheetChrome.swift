@@ -80,10 +80,12 @@ struct TdaySheetActionButton: View {
     var body: some View {
         Button {
             // Both heads of the bar are a control being tapped, confirm included:
-            // the *landing* is what earns `completion()`, and the screens that
-            // have one already fire it (`CreateTaskSheet.submit`). Branching on
-            // the accent here fired a success pulse on the press and a second
-            // one a moment later when the save returned.
+            // the *landing* is what earns `completion()`, and all three sheets
+            // with a confirm that does something fire it there —
+            // `CreateTaskSheet.submit`, `CreateListSheet.onConfirm`,
+            // `ListSettingsSheet.submit`. Branching on the accent here fired a
+            // success pulse on the press and a second one a moment later when
+            // the save returned.
             HapticManager.buttonPress()
             action()
         } label: {
