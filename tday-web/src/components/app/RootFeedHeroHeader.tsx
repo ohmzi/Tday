@@ -1,6 +1,6 @@
 import { Ellipsis, Leaf, ListPlus, Moon, Search, Sun, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DURATION_MS, EASE } from "@/lib/motion";
 import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 import { cn } from "@/lib/utils";
@@ -156,6 +156,20 @@ export const rootFeedHeaderButtonClass =
 
 const floaterAccent = "#4D8F83";
 
+/**
+ * How long the time-of-day mark may be stale for. Not a motion value and not on
+ * the ladder — nothing moves when it fires. It is a plain minute because that is
+ * the period iOS gives the `TimelineView` it reads the same glyph off, and the
+ * one Android's `MARK_CLOCK_TICK_MS` polls on.
+ */
+const MARK_CLOCK_TICK_MS = 60_000;
+
+/** Whether the wall clock says it is daytime right now. */
+function isDaytimeNow(): boolean {
+  const hour = new Date().getHours();
+  return hour >= 6 && hour < 18;
+}
+
 type Props = {
   title: string;
   mark: RootFeedHeroMark;
@@ -218,10 +232,21 @@ export default function RootFeedHeroHeader({
   searchOpenRef.current = searchOpen;
   hasQueryRef.current = hasQuery;
 
-  const isDaytime = (() => {
-    const hour = new Date().getHours();
-    return hour >= 6 && hour < 18;
-  })();
+  // Sampled on a timer, not during render. A render-time read is only ever as
+  // fresh as the last render, and nothing on this header guarantees one — a
+  // session left open across 18:00 keeps the sun up until something unrelated
+  // re-renders. iOS reads the glyph off `TimelineView(.periodic(from: .now, by:
+  // 60))` and Android polls the same minute from the same unaligned start, so all
+  // three turn the glyph over on the same boundary. Nothing animates when it
+  // fires and nothing should: the change happens once a day while nobody is
+  // looking at the header.
+  const [isDaytime, setIsDaytime] = useState(isDaytimeNow);
+  useEffect(() => {
+    // The Floater's leaf never changes, so it does not get a clock.
+    if (mark === "floaterLeaf") return;
+    const timer = window.setInterval(() => setIsDaytime(isDaytimeNow()), MARK_CLOCK_TICK_MS);
+    return () => window.clearInterval(timer);
+  }, [mark]);
 
   const scrollToTop = useCallback(() => {
     scrollerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
