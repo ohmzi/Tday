@@ -131,8 +131,9 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   an "Earlier" bucket's rows — and it is deliberately not on this rung: an exit that hands a slot to an arrival answers
   to that arrival's length, not to the length of the scene it undoes, and
   `todayEarlierIllustration.ts` writes the argument out where the constant is.
-  Nor is this rung for route or tab handovers: `globals.css` argues in place for
-  why anything longer there reads as a stall. Anchors:
+  Nor is this rung for route or tab handovers: those are `Enter`, and
+  `globals.css` argues in place for why anything longer there reads as a stall.
+  Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:372`,
   `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:272`,
   `tday-web/src/globals.css:608`.

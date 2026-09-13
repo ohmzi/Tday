@@ -879,6 +879,53 @@ Restore it from git history rather than adjusting the number.
 ### PR 55 — the web route hand-over
 
 - ↳ part 1 of 2 of `route-change-handover` — `.tday-route-fade` 140 → 200 ms; adopt React Router `viewTransition`. Box lives under **PR 31**.
+  - **The 140 came with a written argument and half of it survives, so the half that survives is
+    restated at the call site rather than deleted.** `globals.css` said the route fade is short
+    because "this sits between a tap and the screen the user asked for, and anything longer reads
+    as lag", and against the long end — `Scene`, or Android's own 360 — that is still exactly
+    right. What it could not defend was 140 in particular. It named no rung, so nothing downstream
+    could tell a decision from a number somebody liked; and the lag it was written against is the
+    wait in front of the destination, not the length of the fade — the arriving screen is laid out
+    and hit-testable from its first frame, so this animation never sits between a tap and its
+    answer. A thing arriving with no reason to be another length is `Enter`. `docs/motion.md`'s
+    `Scene` bullet pointed at that argument and now says which rung it points AT.
+  - **The view transition is not a second fade, it is the half `RouteFade` could not afford.**
+    That component's standing argument is that only the arriving screen fades because fading the
+    leaving one means holding its whole tree mounted — live queries, realtime subscriptions and
+    focus effects running in duplicate for those milliseconds. A view transition hands the leaving
+    screen back as a flat snapshot, which is the one thing that argument was missing, at none of
+    its cost. So the two paths COMPOSE rather than switch: `.tday-route-fade` fades the arrival on
+    every browser, and where `document.startViewTransition` exists the snapshot fades out over the
+    top of it. Nothing detects which path it is on and there is no branch in the markup — a
+    browser without view transitions sees exactly what it saw before, at 200 ms.
+  - Composing is what shapes the three UA overrides, and none of them has a local symptom if it is
+    deleted — the transition still runs and still looks like a route change. `new` must NOT animate:
+    it renders the arriving screen live, so `.tday-route-fade` is already fading up inside it and
+    the UA's own opacity curve on top of that is a fade of a fade. `old` is therefore the half that
+    moves, so it needs `z-index`, because the UA paints `new` last and an opaque `new` hides the
+    outgoing half completely. And the blend must be `normal`: `plus-lighter` is what keeps the UA's
+    symmetric crossfade from dipping, and over two layers each opaque at one end it blows the screen
+    out to white. What is left is a fade THROUGH the constant background — which is the fade
+    `RouteFade` already describes, now with the outgoing screen in it.
+  - The opt-in lives in `src/lib/navigation.tsx`, the app's one navigation chokepoint (38 importers;
+    the only direct `react-router-dom` links left are the landing, 404 and route-error pages, none
+    of which is inside the app shell). It asks the same question `RouteFade` asks — **pathname**, not
+    the full location — because a view transition snapshots the whole document, so one started for a
+    task-focus query param would crossfade a page with itself, which is the flash `RouteFade`
+    already declines to draw. `back()` gets no opt-in and cannot have one: `navigate(-1)` takes a
+    delta rather than a destination, and the browser's own back button never comes through this
+    module, so a POP keeps the path that exists everywhere.
+  - Reduced motion: `.tday-route-fade` is off as before, and the outgoing snapshot is taken off
+    outright rather than merely un-animated — an un-animated `old` is opaque and on top, and would
+    hold the screen the user just left for the frame the transition takes to end. The destination is
+    the whole of the finished state at a route change.
+  - One literal retired and the ceiling lowered with it: `web.cssMsLiteral` 3 → 2. The keyframe was
+    renamed with it, `fade-in` → `tday-route-fade-in`, so the pair reads as a pair and matches the
+    prefix every other keyframe in the file carries.
+  - `tests/guardrails/route-handover.test.ts` is the gate, and it reads the stylesheet rather than a
+    render for a reason jsdom makes unavoidable: there are no view transitions to start there, so a
+    rendered assertion could only ever see the path that was already present. It fails on `6774e5c2`
+    on the rung and on all three overrides being absent.
 
 ### PR 26 — two iOS feed cuts
 
