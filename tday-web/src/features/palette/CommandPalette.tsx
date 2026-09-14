@@ -204,7 +204,7 @@ export default function CommandPalette({ open, onOpenChange, onOpenBrainDump }: 
                       onMouseEnter={() => setSelectedIndex(index)}
                       onClick={() => entry.run()}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-foreground",
+                        "flex w-full items-center gap-3 rounded-sm px-3 py-2 text-left text-sm text-foreground",
                         isSelected && "bg-card-muted",
                       )}
                     >

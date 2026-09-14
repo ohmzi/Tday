@@ -124,3 +124,18 @@ Rows from Android and web PRs of Phases 5 and 6 belong in this file too, alongsi
       Fails:  only the light tap, with no pulse behind it. Creating a list would then feel weaker
               than creating a task, which is the same event, and saving settings weaker than saving
               a task.
+
+## Web
+
+- [ ] **PR 23 · web · The custom list's Earlier bucket slides when the scene lands** — a phone, a
+      custom list holding exactly one task due today and at least two overdue ones, with Earlier
+      collapsed, so its header is the block sitting under the scene.
+      Do:     tick that last current task off, and watch the Earlier header rather than the paper.
+      Watch:  the header slides down over 320 ms into the place the 42vh scene pushes it to, and
+              the first confetti appears only once it has arrived — travel, then burst, then the
+              scene rising through it.
+      Fails:  the header is already in its new place on the frame the row disappears, which is the
+              defect this closes and is what the other three feeds looked like before Phase 5. Also
+              a fail: the burst firing while the header is still moving, which is the placement lead
+              not reaching `EmptyState`; or the header sliding at all with Reduce Motion on, where
+              it must simply be drawn where it ends up.
