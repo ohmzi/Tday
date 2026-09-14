@@ -45,6 +45,7 @@ import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
 import com.ohmz.tday.compose.ui.component.ThemedDatePickerDialog
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -81,8 +82,8 @@ fun MorningSweepScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 18.dp)
-                .padding(bottom = 32.dp),
+                .padding(horizontal = TdayDimens.ContentPaddingHorizontal)
+                .padding(bottom = TdayDimens.Spacing4xl),
         ) {
             TdayHeroTitleBlock(
                 title = stringResource(R.string.sweep_title),
@@ -98,11 +99,11 @@ fun MorningSweepScreen(
                     color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 48.dp),
+                        .padding(vertical = SweepDoneVerticalInset),
                 )
             } else {
                 SweepCard(card = card, remaining = uiState.cards.size)
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(SweepCardActionGap))
 
                 SweepAction(R.drawable.ic_lucide_alarm_clock, stringResource(R.string.sweep_today)) {
                     viewModel.moveToToday(card)
@@ -120,7 +121,7 @@ fun MorningSweepScreen(
                     viewModel.letGo(card)
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(TdayDimens.SpacingLg))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -174,19 +175,19 @@ fun MorningSweepScreen(
 private fun SweepCard(card: TodoItem, remaining: Int) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusLg),
         color = colorScheme.surface,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.06f)),
+        border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.06f)),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
+        Column(modifier = Modifier.padding(TdayDimens.SpacingXxl)) {
             Text(
                 text = card.title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = colorScheme.onSurface,
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(TdayDimens.SpacingXs))
             val dueText = card.due?.let { due ->
                 due.atZone(ZoneId.systemDefault()).format(
                     DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()),
@@ -206,25 +207,28 @@ private fun SweepCard(card: TodoItem, remaining: Int) {
 private fun SweepAction(icon: Int, label: String, onClick: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusMd),
         color = colorScheme.surface,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.06f)),
+        border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.06f)),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 8.dp)
+            .padding(bottom = TdayDimens.SpacingMd)
             .clickable(onClick = onClick),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+            modifier = Modifier.padding(
+                horizontal = SweepActionHorizontalPadding,
+                vertical = SweepActionVerticalPadding,
+            ),
         ) {
             Icon(
                 imageVector = ImageVector.vectorResource(icon),
                 contentDescription = null,
                 tint = colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(SweepActionIconSize),
             )
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(TdayDimens.SpacingLg))
             Text(
                 text = label,
                 style = MaterialTheme.typography.titleMedium,
@@ -236,6 +240,23 @@ private fun SweepAction(icon: Int, label: String, onClick: () -> Unit) {
 }
 
 private const val SWEEP_TITLE_COLLAPSE_DISTANCE_DP = 180f
+
+// What the sweep draws that the scale has no rung for. The card and the action rows corner on
+// `RadiusLg` and `RadiusMd` and inset on the spacing steps; these are the leftovers.
+
+/** How far the "nothing left to sweep" line sits off the hero title once the cards run out. */
+private val SweepDoneVerticalInset = 48.dp
+
+/** The gap under the card, wider than the one between the actions so the choices read as a set. */
+private val SweepCardActionGap = 16.dp
+
+// One action row's interior, named as a pair so a later edit cannot move one half onto a step and
+// leave the other behind.
+private val SweepActionHorizontalPadding = 16.dp
+private val SweepActionVerticalPadding = 13.dp
+
+/** The action's glyph, under `IconSm` because the label beside it carries the row. */
+private val SweepActionIconSize = 18.dp
 
 /** Overdue's accent — sweeping is what you do with what has slipped. */
 private val TdaySweepAccent = Color(0xFFDA7661)
