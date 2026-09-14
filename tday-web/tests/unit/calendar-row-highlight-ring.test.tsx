@@ -8,8 +8,12 @@
  * two ways from one className — a ring under `sm`, a background tint above it — and the two are
  * never on screen together, so a reviewer reading the row on a desktop sees the tint fade in and
  * has no way to notice that the ring beside it in the same string cut in one frame. Tailwind
- * draws `ring-2` as a `box-shadow`, `box-shadow` was missing from the element's inline
+ * draws a ring as a `box-shadow`, `box-shadow` was missing from the element's inline
  * transition list, and a transition list is a whitelist: everything not named in it is exempt.
+ *
+ * The ring the row draws is inset since PR 25d — an outset one was clipped away by the row's own
+ * collapse wrapper. `row-highlight-ring-clip.test.tsx` owns that half, across all three rows;
+ * this file still owns the clock, and only its spelling of the ring moved.
  *
  * So the assertions are structural, and they are about the whitelist rather than about a
  * duration. jsdom applies no stylesheet and runs no animation; what it can hold is that the
@@ -99,9 +103,9 @@ describe("the highlight a deep link leaves on a calendar row", () => {
   it("draws the ring and the tint on the element that declares the transition", () => {
     renderRow(true);
 
-    // One className, two renderings of one mark: `ring-2` below `sm`, `bg-accent/5` above it.
-    // The ring is a box-shadow, which is the whole reason the omission was invisible.
-    expect(foreground().className).toContain("ring-2");
+    // One className, two renderings of one mark: an inset ring below `sm`, `bg-accent/5` above
+    // it. The ring is a box-shadow, which is the whole reason the omission was invisible.
+    expect(foreground().className).toContain("inset-ring-2");
     expect(foreground().className).toContain("sm:bg-accent/5");
     expect(foreground().style.transition).toContain("box-shadow");
   });
@@ -124,9 +128,15 @@ describe("the highlight a deep link leaves on a calendar row", () => {
     // The transition is declared unconditionally, which is what lets the mark fade OUT as well —
     // an assertion worth making because the obvious cheap fix is to add `box-shadow` next to the
     // ring's own className and leave the arrival animated and the departure a cut.
+    //
+    // What the un-highlighted row no longer lacks is the ring itself: PR 25d draws it inset and
+    // draws it on both sides, so that the mark lights up at a fixed width instead of growing one
+    // — geometry on a rung that is for paint — and so that no shadow utility landing here later
+    // can flip `--tw-inset-ring-shadow` off its non-inset initial mid-transition. So the absent
+    // thing is the colour.
     renderRow(false);
 
-    expect(foreground().className).not.toContain("ring-2");
+    expect(foreground().className).not.toContain("inset-ring-accent");
     expect(foreground().style.transition).toContain("box-shadow");
   });
 });

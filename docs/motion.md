@@ -189,7 +189,7 @@ silently retime the confetti on all three clients.
 - **`CelebrationLead`.** One site per client:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:391`,
   `ios-swiftUI/Tday/Core/UI/TdayConfetti.swift:381`,
-  `tday-web/src/globals.css:873`. Web's is the one that shows the two delays
+  `tday-web/src/globals.css:976`. Web's is the one that shows the two delays
   adding: `.tday-empty-enter-celebrating` is
   `calc(var(--tday-celebration-start, 0s) + var(--tday-delay-celebration-lead))`,
   where the first term is whatever `PlacementLead` the host handed over. What the
@@ -228,8 +228,8 @@ against `animation-core`'s bytecode rather than assumed.
   declarations on web — `.tday-empty-enter` at `tday-web/src/globals.css:608`,
   `.tday-surface-enter` at `:789` and `.tday-surface-exit` at `:795`. iOS
   expresses the same arrival with `.easeOut` and is not on this curve yet.
-- **`Gesture`.** Four sites, all web: `tday-web/src/globals.css:299` (the press
-  ripple) and `:401` (the press itself, which is in `@layer tday-press` so that
+- **`Gesture`.** Four sites, all web: `tday-web/src/globals.css:328` (the press
+  ripple) and `:430` (the press itself, which is in `@layer tday-press` so that
   a `transition-colors` on a shadcn Button cannot put the app's most common
   button back on Tailwind's default ease),
   `tday-web/src/features/calendar/style/calendar-styles.css:32` and `:36`
@@ -301,7 +301,7 @@ bar button than on a full-width row.
 - **`Row`.** 2 Android press sites; 2 on iOS
   (`ios-swiftUI/Tday/Feature/Onboarding/OnboardingWizardOverlay.swift:1347` and
   `:1359`); 6 `active:scale-[0.985]` on web, plus the global press rule at
-  `tday-web/src/globals.css:323`, which reads the token rather than writing
+  `tday-web/src/globals.css:352`, which reads the token rather than writing
   0.985 out again and stays in `@layer base` on purpose — a call site pressing
   to its own depth has to be able to beat it.
 
@@ -545,7 +545,7 @@ change pixels or destroy an argument that is worth more than the tidiness.
 | `TdayPullRefresh`'s specs | `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdayPullRefresh.kt:196` (0.72 damping), `:241` (220 ms), `:253` (1050 ms wave) | A pull-to-refresh is driven by the finger, not by a clock: the release spring is looser than anything in the vocabulary on purpose, and the wave is a loop rather than a transition |
 | The swipe sampler's two windows | `tday-web/src/lib/swipeGesture.ts` (100 ms velocity window, 16 ms floor under it) | Neither is a motion anybody watches: they are how long a release is measured over, and how little evidence is too little. The window is Android's `VelocityTracker` horizon, solved by people with far more device data than this repo has; the floor is one frame at 60 Hz, the same fact the five-rung ladder is built on, read for the other half of what it says — a finger cannot be observed to do anything inside one frame, so a distance divided by a sub-frame gap is the platform's event delivery and not a flick |
 | `pressedScale * revealScale` | `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskSwipeActionButton.kt:48`; `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/calendar/CalendarScreen.kt:2840` | The 0.92 f here is **one factor of a composed transform**, multiplied by the reveal scale before it reaches the screen. The press-scale tokens are the whole scale a finger sees; this is not the same quantity and must not be given the same name |
-| The sheet scrim's `0.40` / `0.68` | `ios-swiftUI/Tday/UI/Theme/TdayTheme.swift:76`; `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdaySheetChrome.kt:111`; `tday-web/src/globals.css:553` and `:625` (`--sheet-scrim`) | Not a duration, a curve or a spring, so it has no home in the generated layer and is not going to get one — `MotionTokens.kt` is the source of truth for *time*, and an alpha would be the first thing in it that is not. It is written down here instead, because a value three clients agree on byte for byte with nothing in any build checking that they do is exactly what rots quietly: 0.40 light and 0.68 dark, written out natively on iOS and Android and carried on web as `--sheet-scrim` since PR 41a, which is when web stopped having four alphas of its own. Web's token is worth having and the native spellings are not missing one — the client with four overlay systems needs a name for the shade, and two clients with one sheet chrome each do not |
+| The sheet scrim's `0.40` / `0.68` | `ios-swiftUI/Tday/UI/Theme/TdayTheme.swift:76`; `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdaySheetChrome.kt:111`; `tday-web/src/globals.css:582` and `:654` (`--sheet-scrim`) | Not a duration, a curve or a spring, so it has no home in the generated layer and is not going to get one — `MotionTokens.kt` is the source of truth for *time*, and an alpha would be the first thing in it that is not. It is written down here instead, because a value three clients agree on byte for byte with nothing in any build checking that they do is exactly what rots quietly: 0.40 light and 0.68 dark, written out natively on iOS and Android and carried on web as `--sheet-scrim` since PR 41a, which is when web stopped having four alphas of its own. Web's token is worth having and the native spellings are not missing one — the client with four overlay systems needs a name for the shade, and two clients with one sheet chrome each do not |
 
 ---
 
