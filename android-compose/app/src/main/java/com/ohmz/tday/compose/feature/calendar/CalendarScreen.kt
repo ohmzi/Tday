@@ -1,16 +1,20 @@
 package com.ohmz.tday.compose.feature.calendar
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -572,7 +576,20 @@ fun CalendarScreen(
                                 data = mapOf("mode" to mode.name.lowercase()),
                             )
                             selectedViewKey = mode.name
-                            if (mode != CalendarViewMode.MONTH) {
+                            if (mode == CalendarViewMode.MONTH &&
+                                selectedViewMode != CalendarViewMode.MONTH
+                            ) {
+                                // The grid opens on the selected date's month.
+                                // This was written on the way OUT of Month, which
+                                // was invisible while the grid vanished in one
+                                // frame — but the card is composed for the whole
+                                // cross now, so an exit write re-paged the grid to
+                                // another month while it was still fully opaque.
+                                // Written on entry, the only card that reads it is
+                                // the one coming in, and nothing reads it between
+                                // the two taps: `searchRange` only consults the
+                                // visible month in Month mode, and picking a date
+                                // in Week or Day moves it anyway.
                                 visibleMonthIso = YearMonth.from(selectedDate).toString()
                             }
                         },
@@ -580,75 +597,123 @@ fun CalendarScreen(
                 }
 
                 item {
+                    val viewModeMotionEnabled = rememberTdayMotionEnabled()
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .animateContentSize(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow,
-                                ),
+                                // A month grid collapsing to a week strip is a
+                                // card finding its height, which is what Settle
+                                // is for. What it replaces was never chosen:
+                                // both docs/motion.md and the budget fixture's
+                                // `android._spring` note say on the record that
+                                // StiffnessMediumLow here was a library default.
+                                animationSpec = if (viewModeMotionEnabled) {
+                                    TdayMotionTokens.Springs.settle()
+                                } else {
+                                    snap()
+                                },
                             )
                             .calendarCardChrome(),
                     ) {
-                        when (selectedViewMode) {
-                            CalendarViewMode.MONTH -> CalendarMonthCard(
-                                visibleMonth = visibleMonth,
-                                minNavigableMonth = minNavigableMonth,
-                                canGoPrevMonth = visibleMonth > minNavigableMonth,
-                                selectedDate = selectedDate,
-                                today = today,
-                                tasksByDate = plottedTasksByDate,
-                                draggedTodo = draggedCalendarTodo,
-                                activeDropDate = activeDropDate,
-                                dropTargets = calendarDropTargetBounds,
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onVisibleMonthChanged = { targetMonth ->
-                                    if (targetMonth >= minNavigableMonth) {
-                                        visibleMonthIso = targetMonth.toString()
-                                    }
-                                },
-                                onSelectDate = ::selectDate,
-                                onDropDateChanged = { date ->
-                                    activeDropDateIso = date?.toString()
-                                },
-                                onMoveTaskToDate = ::requestTaskReschedule,
-                                resolveTodo = resolveTodoForDrop,
-                            )
+                        // The height above is animated; the content inside it was
+                        // not, so the grid was replaced by the strip in one frame
+                        // while the card around it was still travelling. Crossing
+                        // the two over fixes that, and the cross is deliberately
+                        // shorter than the spring: the eye lands on a resolved
+                        // grid inside a still-settling card rather than on two
+                        // ghosted grids. Both branches hand back `using null`,
+                        // because the height is already owned above: every
+                        // SizeTransform, clipping or not, carries a default
+                        // 400-stiffness spring on the AnimatedContent's own size,
+                        // and a 250 spring chasing that is not a card finding its
+                        // height, it is two springs negotiating. Null, the inner
+                        // box is simply the tapped mode's height on the frame it
+                        // changes, and the card's own clip is the one edge that
+                        // moves — the outgoing grid is drawn where it was and
+                        // that edge travels down across it.
+                        AnimatedContent(
+                            targetState = selectedViewMode,
+                            transitionSpec = {
+                                if (viewModeMotionEnabled) {
+                                    fadeIn(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Enter,
+                                            easing = TdayMotionTokens.Easings.Enter,
+                                        ),
+                                    ) togetherWith fadeOut(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Quick,
+                                            easing = TdayMotionTokens.Easings.Exit,
+                                        ),
+                                    ) using null
+                                } else {
+                                    // Motion off still means the mode the user
+                                    // asked for, drawn at its own height, now.
+                                    EnterTransition.None togetherWith ExitTransition.None using null
+                                }
+                            },
+                            label = "calendarViewMode",
+                        ) { viewMode ->
+                            when (viewMode) {
+                                CalendarViewMode.MONTH -> CalendarMonthCard(
+                                    visibleMonth = visibleMonth,
+                                    minNavigableMonth = minNavigableMonth,
+                                    canGoPrevMonth = visibleMonth > minNavigableMonth,
+                                    selectedDate = selectedDate,
+                                    today = today,
+                                    tasksByDate = plottedTasksByDate,
+                                    draggedTodo = draggedCalendarTodo,
+                                    activeDropDate = activeDropDate,
+                                    dropTargets = calendarDropTargetBounds,
+                                    canSelectDate = ::canNavigateTo,
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
+                                    onVisibleMonthChanged = { targetMonth ->
+                                        if (targetMonth >= minNavigableMonth) {
+                                            visibleMonthIso = targetMonth.toString()
+                                        }
+                                    },
+                                    onSelectDate = ::selectDate,
+                                    onDropDateChanged = { date ->
+                                        activeDropDateIso = date?.toString()
+                                    },
+                                    onMoveTaskToDate = ::requestTaskReschedule,
+                                    resolveTodo = resolveTodoForDrop,
+                                )
 
-                            CalendarViewMode.WEEK -> CalendarWeekCard(
-                                selectedDate = selectedDate,
-                                minNavigableMonth = minNavigableMonth,
-                                today = today,
-                                tasksByDate = plottedTasksByDate,
-                                draggedTodo = draggedCalendarTodo,
-                                activeDropDate = activeDropDate,
-                                dropTargets = calendarDropTargetBounds,
-                                canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onSelectDate = ::selectDate,
-                                onDropDateChanged = { date ->
-                                    activeDropDateIso = date?.toString()
-                                },
-                                onMoveTaskToDate = ::requestTaskReschedule,
-                                resolveTodo = resolveTodoForDrop,
-                            )
+                                CalendarViewMode.WEEK -> CalendarWeekCard(
+                                    selectedDate = selectedDate,
+                                    minNavigableMonth = minNavigableMonth,
+                                    today = today,
+                                    tasksByDate = plottedTasksByDate,
+                                    draggedTodo = draggedCalendarTodo,
+                                    activeDropDate = activeDropDate,
+                                    dropTargets = calendarDropTargetBounds,
+                                    canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
+                                    canSelectDate = ::canNavigateTo,
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
+                                    onSelectDate = ::selectDate,
+                                    onDropDateChanged = { date ->
+                                        activeDropDateIso = date?.toString()
+                                    },
+                                    onMoveTaskToDate = ::requestTaskReschedule,
+                                    resolveTodo = resolveTodoForDrop,
+                                )
 
-                            CalendarViewMode.DAY -> CalendarDayCard(
-                                selectedDate = selectedDate,
-                                minNavigableMonth = minNavigableMonth,
-                                today = today,
-                                tasksByDate = plottedTasksByDate,
-                                canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onSelectDate = ::selectDate,
-                            )
+                                CalendarViewMode.DAY -> CalendarDayCard(
+                                    selectedDate = selectedDate,
+                                    minNavigableMonth = minNavigableMonth,
+                                    today = today,
+                                    tasksByDate = plottedTasksByDate,
+                                    canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
+                                    canSelectDate = ::canNavigateTo,
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
+                                    onSelectDate = ::selectDate,
+                                )
+                            }
                         }
                     }
                 }

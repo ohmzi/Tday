@@ -460,6 +460,27 @@ animates.
               incomplete at the BOTTOM edge is expected; one sliced at the TOP, under the header,
               is the fail above.
 
+- [ ] **PR 42e · and · The calendar's mode switch crosses instead of cutting** — Calendar, with
+      several tasks plotted across the month so the month card and the week strip are visibly
+      different heights.
+      Do:     swipe the month grid one month forward FIRST, so the visible month is not the selected
+              date's, then tap Week, then Month, then Week again, watching the middle of the card
+              rather than the tabs above it. Then turn the app's Settings → "Reduce motion" on (or
+              the system's "Remove animations") and do the same four gestures.
+      Watch:  the grid crosses into the strip over 200 ms — for that moment both are on screen at
+              partial alpha — while the card around them settles to its new height on the Settle
+              spring, which is the slower of the two. At no point is there a frame with the new
+              content already solid at the old height.
+      Fails:  a one-frame swap of the content inside a card that is still travelling, which is the
+              defect this closes; the outgoing grid changing MONTH as it fades — the dates and the
+              month title above them re-drawing to the selected date's month while the grid is
+              still opaque, which is why the swipe is the first step; the outgoing grid cut off by
+              a fast edge of its own on the way out, which would mean the container started
+              animating its own size again; or the card bouncing as it lands, which Settle does not
+              do.
+      Also:   with Reduce motion on, the mode that was tapped is simply there on the next frame at
+              its own height — no cross, and no wait where the cross would have been.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
