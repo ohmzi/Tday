@@ -83,6 +83,16 @@ enum TodoTimelineMetrics {
     static let minimalRowIndicatorSize: CGFloat = 14
     static let minimalRowTrailingIndicatorPadding: CGFloat = 24
     static let minimalRowVerticalPadding: CGFloat = 8
+    /// Between the toggle and the text column, and between the lines inside it.
+    /// Named here rather than left at the call sites because the loading
+    /// placeholder has to be built at them too, and a number a placeholder copies
+    /// is a number that stays right until somebody adjusts the row.
+    static let minimalRowContentSpacing: CGFloat = 12
+    static let minimalRowTextSpacing: CGFloat = 4
+    /// How far the toggle's reported first-text-baseline sits below its centre, so
+    /// it stays on line one of a title that wraps. Part of the row's height, not a
+    /// decoration: the guide is what stands the button proud of the text column.
+    static let minimalRowBaselineNudge: CGFloat = 5
     static let sameDateTaskSpacing: CGFloat = 2
     static let sectionTopSpacing: CGFloat = 6
     static let sectionHeaderBottomPadding: CGFloat = 2
@@ -146,6 +156,57 @@ enum TodoTimelineMetrics {
         guard end > start else { return value >= end ? 1 : 0 }
         return RootFeedHeroHeaderMetrics.stagger(value - start, to: end - start)
     }
+}
+
+/// What the loading placeholder has to be, to be these two rows.
+///
+/// Kept beside `TodoTimelineMetrics` rather than in `TdayTaskRowSkeleton.swift`
+/// for the reason the file itself gives: a set built from anything other than the
+/// constants its row is drawn with is a copy, and a copy is right until the day
+/// somebody edits the row. `TdayTaskRowSkeletonMetrics.today` is built the same
+/// way, next to Today's own numbers.
+///
+/// Two sets and not one because these are two rows. They agree on nearly
+/// everything and disagree on the thing that decides their height: a task list
+/// hangs its toggle off the title's first baseline so it stays on line one of a
+/// title that wraps, and Completed simply centres its own.
+extension TdayTaskRowSkeletonMetrics {
+
+    /// `TodoListScreen.minimalTimelineRow`.
+    static let minimalTimeline = TdayTaskRowSkeletonMetrics(
+        contentSpacing: TodoTimelineMetrics.minimalRowContentSpacing,
+        checkSlot: TodoTimelineMetrics.minimalRowToggleFrame,
+        checkGlyph: TodoTimelineMetrics.minimalRowToggleSize,
+        textSpacing: TodoTimelineMetrics.minimalRowTextSpacing,
+        titleFontSize: TodoTimelineMetrics.minimalRowTitleSize,
+        subtitleFontSize: TodoTimelineMetrics.minimalRowSubtitleSize,
+        metaIcon: TodoTimelineMetrics.minimalRowIndicatorSize,
+        metaTrailingPadding: TodoTimelineMetrics.minimalRowTrailingIndicatorPadding,
+        verticalPadding: TodoTimelineMetrics.minimalRowVerticalPadding,
+        // The timeline rows carry no horizontal padding of their own: the List's
+        // `listRowInsets` already hold them off both edges, and the placeholder is
+        // given the same insets at its call site. Today's 4 pt here would put the
+        // bars 4 pt to the right of the rows that replace them.
+        horizontalPadding: 0,
+        rowAlignment: .firstTextBaseline,
+        checkBaselineNudge: TodoTimelineMetrics.minimalRowBaselineNudge
+    )
+
+    /// `CompletedScreen`'s history row, which is the same row centred.
+    static let completedTimeline = TdayTaskRowSkeletonMetrics(
+        contentSpacing: TodoTimelineMetrics.minimalRowContentSpacing,
+        checkSlot: TodoTimelineMetrics.minimalRowToggleFrame,
+        checkGlyph: TodoTimelineMetrics.minimalRowToggleSize,
+        textSpacing: TodoTimelineMetrics.minimalRowTextSpacing,
+        titleFontSize: TodoTimelineMetrics.minimalRowTitleSize,
+        subtitleFontSize: TodoTimelineMetrics.minimalRowSubtitleSize,
+        metaIcon: TodoTimelineMetrics.minimalRowIndicatorSize,
+        metaTrailingPadding: TodoTimelineMetrics.minimalRowTrailingIndicatorPadding,
+        verticalPadding: TodoTimelineMetrics.minimalRowVerticalPadding,
+        horizontalPadding: 0,
+        rowAlignment: .center,
+        checkBaselineNudge: nil
+    )
 }
 
 /// Layout guards for the "all done" illustration in `watermarkedModeContent` —
@@ -841,6 +902,19 @@ struct TodoListScreen: View {
 
     private var showsListSearchEmptyState: Bool {
         isSearchingList && timelineItems.isEmpty && !viewModel.isLoading
+    }
+
+    /// The first load of this screen's own scope, and only that.
+    ///
+    /// `isLoading` had two consumers here and neither of them drew anything: the
+    /// pull-to-refresh pill, which is about a refresh the user asked for, and the
+    /// two empty-state gates, which use it to keep "nothing here" from being said
+    /// about a scope nobody has finished counting yet. So the answer to "still
+    /// loading" was a blank feed. The search cases stay out of it — a live query
+    /// answers for itself, and a placeholder under a query the user is typing
+    /// would flash three grey rows per keystroke.
+    private var showsTimelineSkeleton: Bool {
+        viewModel.isLoading && timelineItems.isEmpty && !isSearchingList && !showFloaterTaskHomeSearchResults
     }
 
     private var isTodayMode: Bool {
@@ -2798,6 +2872,30 @@ struct TodoListScreen: View {
                         }
                     }
 
+                    if showsTimelineSkeleton {
+                        // Today stacks its placeholder over its rows so the two share one
+                        // slot; a `List` has no such move — its sections are siblings by
+                        // construction, and a `Section` cannot be overlaid on the ones after
+                        // it. So this one is above the rows it hands over to, and whether the
+                        // feed reflows as they swap depends on something source cannot settle:
+                        // SwiftUI holds a removing view in the layout, while a `List` on iOS
+                        // resolves the same change as a UIKit batch update that animates the
+                        // delete and the inserts into their final places together. The two
+                        // look different, and only a device can say which one this is — so it
+                        // is a line in docs/verification/phase-9-device-pass.md rather than a
+                        // claim here.
+                        Section {
+                            // `.minimalTimeline`, not the default: this feed's row
+                            // is not Today's, and a placeholder built at the other
+                            // one runs a line taller and sits 4 pt to its right.
+                            TdayTaskRowSkeletonGroup(metrics: .minimalTimeline)
+                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                                .listRowBackground(colors.background)
+                                .listRowSeparator(.hidden)
+                                .transition(.opacity)
+                        }
+                    }
+
                     // A query that matches nothing keeps its own counsel: the
                     // section headers would otherwise stay behind with nothing
                     // under them, a floater list's empty header included.
@@ -2878,6 +2976,26 @@ struct TodoListScreen: View {
                 .environment(\.defaultMinListRowHeight, 1)
                 .disableVerticalScrollBounce(!pullRefreshEnabled)
                 .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)
+                // The placeholder's hand-over, on the List rather than on the
+                // branch that holds it: inside a `List` the modifiers written
+                // around an `if` are handed down to the rows themselves and leave
+                // with them, so the removal would have no transaction to run in.
+                //
+                // BELOW the travel, and that order is the whole of it. Both values
+                // change in the same update — the first page landing is what
+                // empties `showsTimelineSkeleton` and what fills
+                // `timelineItemAnimationKey` — and where two `.animation(_:value:)`
+                // both fire at once the one nearest the content wins. Written
+                // above, this modifier was the outer of the two and the travel
+                // overrode it, so the one frame it exists for ran at Emphasis: the
+                // dissolve took the long way round, which is exactly what the rung
+                // split is meant to stop. A modifier whose value did not change
+                // leaves the transaction alone, so the travel still carries every
+                // other update to this list.
+                .animation(
+                    tdayAnimation(TdayTaskRowSkeleton.crossfade),
+                    value: showsTimelineSkeleton
+                )
                 // The feed's travel, and only the travel: every row the key
                 // change merely moves rides this transaction, while the rows it
                 // adds and removes override it from their own transition legs
@@ -2958,7 +3076,7 @@ struct TodoListScreen: View {
         let isSelected = selectedTodoIDs.contains(todo.id)
 
         return VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: TodoTimelineMetrics.minimalRowContentSpacing) {
                 Button {
                     if isSelecting {
                         toggleSelection(of: todo)
@@ -2978,10 +3096,10 @@ struct TodoListScreen: View {
                 )
                 // Keep the toggle on the first line of a multi-line title.
                 .alignmentGuide(.firstTextBaseline) { dimension in
-                    dimension[VerticalAlignment.center] + 5
+                    dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: TodoTimelineMetrics.minimalRowTextSpacing) {
                     TodoTimelineTaskTitle(
                         text: todo.title,
                         isCompleted: showStrikethrough,
@@ -3025,7 +3143,7 @@ struct TodoListScreen: View {
                     .padding(.trailing, TodoTimelineMetrics.minimalRowTrailingIndicatorPadding)
                     // Keep the trailing indicators on the first line too.
                     .alignmentGuide(.firstTextBaseline) { dimension in
-                        dimension[VerticalAlignment.center] + 5
+                        dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
                     }
                 }
             }

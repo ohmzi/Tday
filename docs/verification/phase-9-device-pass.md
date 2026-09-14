@@ -37,3 +37,40 @@ anything at all. That gap is what these rows are.
               again. There is no burst at all, and the empty-day scene is simply there at its
               resting position — no lead, no wait where the burst would have been. The list is still
               finished, and the screen must say so on the next frame.
+
+- [ ] **PR 40c · ios · The feeds load into rows, not a blank frame** — needs a genuinely cold feed,
+      so the request is slow enough to see: airplane mode off but a throttled connection, or the
+      dev server paused for a second. Three screens, and all three: Today (the scheduled home), a
+      task list, and Completed.
+      Do:     force-quit, reopen, and watch each feed from the first frame. Then pull-to-refresh a
+              feed that already has rows on it.
+      Watch:  three grey rows in the slot the real rows are about to take, breathing. When the data
+              lands they dissolve while the rows come up — one hand-over, both halves on one clock.
+              A pull-to-refresh over existing rows shows the pill and keeps the rows; it must never
+              replace them with grey bars.
+      Fails:  the pulse reading as a flicker rather than as breathing — it is a 260 ms tween that
+              autoreverses, so a round trip is about half a second, and this row is the only thing
+              that can say whether that is right; a seam in the middle of the hand-over, where the
+              bars are gone before the rows are solid or still showing behind them; and grey bars
+              appearing under a search query the user is typing.
+      Height: the placeholder is built at the metrics of the row it stands in for, and there are two
+              such rows — Today's, and the timeline row a task list and Completed share, which is
+              8 pt of vertical padding to Today's 10 and hangs its toggle off the title's first
+              baseline. So on each of the three feeds, at the moment the content lands, the rows
+              must come up at the height the bars were and nothing may resize by a line. Worth a
+              second pass at the largest Dynamic Type, where the bars are sized from the live font
+              and any remaining mismatch is at its widest.
+      Slot:   on Today the bars are stacked over the rows, so **nothing above or below them moves**
+              — the category board under the feed must be perfectly still through the whole
+              hand-over. A task list and Completed cannot be stacked the same way: their placeholder
+              is a `Section` above the row sections, and whether the feed reflows as they swap
+              depends on whether `List` resolves the change as a SwiftUI removal (which holds the
+              bars' height for the length of the dissolve, so everything below is shoved down and
+              snaps back) or as a UIKit batch update (which animates both halves into their final
+              places at once). Source cannot settle that and this row is where it gets settled: if
+              the two List feeds shove and snap, say so — the fix is to stop removing the section
+              and start collapsing it, and it is a follow-up, not a tweak.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, cold-open each feed
+              again. The placeholder is there, fully drawn and perfectly still — never parked at the
+              faded end of its own pulse — and when the data lands the rows are simply there on the
+              next frame. No fade, and no wait where the fade would have been.
