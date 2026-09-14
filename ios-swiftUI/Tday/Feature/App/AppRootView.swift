@@ -24,6 +24,14 @@ struct AppRootView: View {
     // Optional biometric gate, default OFF. When disabled every member below is inert.
     @State private var appLock = AppLockController()
     @Environment(\.scenePhase) private var scenePhase
+    /// The namespace the six home tiles and the screens they open are matched in.
+    ///
+    /// Owned here because this is the one view that contains both ends: the tiles are
+    /// built inside `ScheduledTaskHomeScreen`, the destinations by `destinationView(for:)`
+    /// below, and a `@Namespace` only matches views that share the one instance. It is
+    /// published into the environment rather than passed down — see `ZoomNavigation.swift`
+    /// for why a parameter chain through two private types was not the way to spend it.
+    @Namespace private var zoomNamespace
     /// The app's one motion gate — see `TdayMotionEnvironment.swift`. Every
     /// `.animation` in this view's body passes its spec through it, so Reduce Motion
     /// refuses the trip in one place rather than at each of them. It resolves against
@@ -220,7 +228,12 @@ struct AppRootView: View {
                     .navigationBarBackButtonHidden(true)
                     .toolbar(.hidden, for: .navigationBar)
                     .navigationDestination(for: AppRoute.self) { route in
+                        // One site covers every push. `tdayZoomDestination` reads the route's
+                        // own source id, so the six home tiles grow into their screens and
+                        // everything else falls through to the stock push without a list here
+                        // to keep in step with the one in `ZoomNavigation.swift`.
                         destinationView(for: route)
+                            .tdayZoomDestination(route)
                     }
                     .onChange(of: appViewModel.navigationPath) { _, path in
                         normalizeRootNavigationPath(path)
@@ -373,6 +386,9 @@ struct AppRootView: View {
                         value: showOnboardingOverlay
                     )
                 }
+                // Above the stack, so both ends read the same namespace: the root feed's
+                // tiles inside it, and the destinations `.navigationDestination` builds.
+                .environment(\.tdayZoomNamespace, zoomNamespace)
                 .navigationInteractivePopGesture()
                 // The snackbar overlays the NavigationStack itself, not the
                 // stack's root content: toasts scheduled while a destination

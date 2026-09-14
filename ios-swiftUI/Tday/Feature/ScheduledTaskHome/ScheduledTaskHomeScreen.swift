@@ -952,6 +952,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileScheduled",
                     title: L("Scheduled"),
                     count: scheduledCount,
+                    zoomRoute: .scheduledTodos,
                     action: onOpenScheduled
                 )
 
@@ -961,6 +962,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TilePriority",
                     title: L("Priority"),
                     count: priorityCount,
+                    zoomRoute: .priorityTodos,
                     action: onOpenPriority
                 )
             }
@@ -972,6 +974,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileOverdue",
                     title: L("Overdue"),
                     count: overdueCount,
+                    zoomRoute: .overdueTodos,
                     action: onOpenOverdue
                 )
 
@@ -981,6 +984,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileAll",
                     title: L("All"),
                     count: allCount,
+                    zoomRoute: .allTodos(highlightTodoId: nil),
                     action: onOpenAll
                 )
             }
@@ -992,6 +996,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileComplete",
                     title: L("Completed"),
                     count: completedCount,
+                    zoomRoute: .completed,
                     action: onOpenCompleted
                 )
 
@@ -1001,6 +1006,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileCalendar",
                     title: L("Calendar"),
                     count: calendarCount,
+                    zoomRoute: .calendar,
                     action: onOpenCalendar
                 )
             }
@@ -1015,6 +1021,13 @@ private struct ScheduledTaskHomeCategoryTile: View {
     let watermark: String?
     let title: String
     let count: Int
+    /// The route this tile pushes, carried alongside the closure that pushes it.
+    ///
+    /// The closure is opaque — a `() -> Void` the board was handed — so it cannot be
+    /// asked where it goes, and the zoom needs an id both ends agree on. Stored rather
+    /// than derived from `icon` or `title`: the title is localised and the icon is an
+    /// asset name, and neither is the thing `AppRootView` keys its destination on.
+    let zoomRoute: AppRoute
     let action: () -> Void
 
     @Environment(\.tdayAnimation) private var tdayAnimation
@@ -1099,6 +1112,10 @@ private struct ScheduledTaskHomeCategoryTile: View {
             .contentShape(shape)
         }
         .buttonStyle(ScheduledTaskHomeTileButtonStyle())
+        // The rectangle the pushed screen grows out of. On iOS 17, under Reduce Motion,
+        // or for any route with no source id this resolves to nothing at all and the push
+        // is the stock slide — see `ZoomNavigation.swift`.
+        .tdayZoomSource(zoomRoute)
     }
 }
 
