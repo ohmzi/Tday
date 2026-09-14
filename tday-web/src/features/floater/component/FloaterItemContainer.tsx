@@ -257,7 +257,15 @@ export default function FloaterItemContainer({
             // overflow-hidden on a single-line floater. Desktop is unaffected.
             "relative z-10 flex min-h-[54px] items-center justify-between gap-3 px-1 py-2.5 sm:min-h-0",
             "sm:rounded-lg",
-            highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
+            // The deep-link mark, inset so the wrapper's clip cannot eat it, and declared on both
+            // sides so only its colour travels. Both halves are argued in full on the identical
+            // pair in `TodoItemContainer`. The clip is least escapable here of the three: the
+            // `min-h-[54px]` above exists precisely because this row's box is what the swipe pills
+            // are kept inside.
+            "inset-ring-2",
+            highlighted
+              ? "rounded-lg inset-ring-accent/25 sm:bg-accent/5 sm:inset-ring-transparent"
+              : "inset-ring-transparent",
           )}
         >
           <div className="flex min-w-0 items-start gap-3">

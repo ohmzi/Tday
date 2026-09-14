@@ -231,7 +231,7 @@ export default function ForgotPasswordPanel({
           strokeWidth={1.5}
         />
         <div className="relative flex min-w-0 items-center gap-3">
-          <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-2xl bg-white/[0.18]">
+          <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-lg bg-white/[0.18]">
             <ShieldQuestion className="h-[23px] w-[23px] text-white" strokeWidth={2.25} />
           </div>
           <p className="truncate text-[21px] font-bold leading-tight text-white">Reset password</p>
@@ -317,7 +317,7 @@ export default function ForgotPasswordPanel({
       {step === "success" && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
               <Check className="h-5 w-5" strokeWidth={3} />
             </span>
             <p className="text-[16px] font-extrabold text-foreground">Password changed</p>
