@@ -375,3 +375,26 @@ animates.
               again. The placeholder is there, fully drawn and perfectly still — never parked at the
               faded end of its own pulse — and when the data lands the rows are simply there on the
               next frame. No fade, and no wait where the fade would have been.
+
+- [ ] **PR 8g · ios · Eleven springs changed their spelling and not their shape** — a build of the
+      app with a signed-out start, so the onboarding wizard is reachable. No throttling and no
+      settings to change; this row is the one in the file whose whole claim is that it looks
+      identical to the last build.
+      Do:     step forward and back through the wizard (mode → server → login, then into create
+              account and into security questions), and take both flow exits out of it — "Back" out
+              of the security-questions step and "Change setup". Then open and close the search bar
+              on Settings and on the Guide, twice each. Then from the sign-in card open "Forgot
+              password" and move between its steps.
+      Watch:  nothing new. Every one of those is the same short, barely-bouncing spring it has
+              always been — the panel swaps under about a third of a second with a single soft
+              settle at the end, the search bar snaps open at that same weight, and the
+              forgot-password card changes step the same way the wizard's does. The eleven sites now
+              read the numbers out of the token rather than writing them down, so a difference of
+              any kind is the bug.
+      Fails:  anything that reads slower, looser or bouncier than it did — that would mean a call
+              site picked up a spring that is not Snappy. A step that hard-cuts instead of springing
+              is the other half of the same failure: a `withAnimation` that stopped opening a
+              transaction at all. Both of these are per-site, so name the screen.
+      Why:    iOS does not compile on the machine this was written on, so the only gates it passed
+              are textual — the literal counter fell by exactly the twenty-two it should have — and
+              xctest in CI. Neither of those can see a spring play.

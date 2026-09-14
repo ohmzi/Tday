@@ -158,7 +158,7 @@ struct HelpGuideScreen: View {
 
     private func openSearch() {
         HapticManager.buttonPress()
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             searchExpanded = true
         }
     }
@@ -168,7 +168,7 @@ struct HelpGuideScreen: View {
     private func closeSearch() {
         HapticManager.buttonPress()
         searchFieldFocused = false
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             searchExpanded = false
         }
         query = ""
