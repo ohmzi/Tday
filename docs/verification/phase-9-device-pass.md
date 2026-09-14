@@ -311,6 +311,33 @@ animates.
               checked by eye. An engine that decided not to fire `transitionend` for a 1 ms
               transition would show exactly the failure above with every automated gate green.
 
+- [ ] **PR 59 · web · The hero header stays crisp through a long scroll** — a mid-range Android
+      phone in Chrome, not a desktop emulating one: this row is about what a real GPU does with a
+      layer it rasterises once and reuses, and a laptop has the headroom to hide it. Both root
+      feeds, Today and Anytime, each with enough tasks to flick through several screens.
+      Do:     drag the top 78 px of the feed slowly up and down so the hero mark, title and search
+              capsule morph continuously for several seconds without a pause, then flick hard and
+              let it settle. Repeat with the phone's own text size turned up, where the title is
+              largest and a bad raster is easiest to see. Then stop scrolling, wait two seconds,
+              and start again — that second pass is the one that runs after the hints have been
+              dropped, and it has to look like the first.
+      Watch:  the three pieces morph smoothly throughout, and the text in the title is as crisp at
+              the end of a long scroll as at the start of it and as it is at rest.
+      Fails:  the hero title going soft, fuzzy or fringed while scrolling and snapping back crisp
+              when the scroll stops, which is a layer rasterised once at the wrong scale and
+              reused — the specific cost of these hints, and the reason they are dropped 200 ms
+              after the last scroll frame rather than held. Also a stutter on the first frame of
+              the second pass, which would mean the drop is too eager.
+      Note:   there is no automated gate for any of this and there cannot be. `will-change` changes
+              no pixel by definition — it changes when the compositor allocates, which is a
+              property of a GPU and a driver. Rule F of `motion-reachability-web.test.ts` proves
+              only that this is the one hint in the app and that it clears what it sets; it is set
+              in JavaScript, where even that cannot watch it happen. This row is the whole of the
+              evidence that the change did not cost anything.
+              Nothing to check on the dock, the bulk bar or the search panel: the nine stylesheet
+              hints that would have made those a device question were removed before this shipped,
+              and the ledger row argues why.
+
 ## Android
 
 - [ ] **PR 39b · android · The burst is paper, and it still fits the celebrate window** — any list
