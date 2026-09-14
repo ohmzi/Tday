@@ -188,6 +188,50 @@ struct TdayCenteredSelectorCard<Content: View>: View {
 }
 
 extension View {
+    /// The app's own bottom-sheet presentation: a `fullScreenCover` put up and torn
+    /// down with animations suppressed, so every visible frame of the entrance and
+    /// the exit belongs to `TdayBottomSheetPresentationHost` above.
+    ///
+    /// iOS runs **two** sheet mechanisms and they are not to be merged. This one is
+    /// applied at nine sites across four screens — seven of them through
+    /// `createTaskSheet(…)`, the thin pair of wrappers `CreateTaskSheet.swift` puts
+    /// over it, and two of them directly, for the create-list sheet — and between
+    /// them they present exactly two sheets, `CreateTaskSheet` and `CreateListSheet`.
+    /// UIKit's `.sheet` + `presentationDetents` has six: Morning Sweep's date picker,
+    /// the two summary sheets, promote-floater, list settings and members.
+    ///
+    /// What decides which is **whose the height is**, not whether there is a keyboard
+    /// — list settings and members have text fields too. A sheet on this modifier is
+    /// sized by its own content, so nothing above it will move it off a keyboard;
+    /// the host opts out of SwiftUI's avoidance (`.ignoresSafeArea(.keyboard)`) and
+    /// computes `keyboardBottomInset` itself, which is the only way the lift can be
+    /// clamped to `TdaySheetMetrics.maximumScreenHeightFraction` instead of pushing a
+    /// tall card off the top of the screen. Owning the presentation is also what buys
+    /// the two things `animateOut()` does: resign first responder on the one funnel
+    /// every dismissal reaches, and hold the cover up for `exitDuration` after the
+    /// card has gone, so a confirm can leave on the same slide as the X.
+    ///
+    /// A sheet on the native mechanism has a height that is a *choice* —
+    /// `.medium`/`.large`, or one measured detent — and UIKit's detents come with the
+    /// system's drag-to-dismiss and its own keyboard handling. Migrating those six
+    /// would throw both away to gain an inset none of them needs, and no machine on
+    /// this branch can compile the result.
+    ///
+    /// So the unification is of the **chrome**, and that part is mostly already done:
+    /// every sheet on either mechanism wears `TdaySheetHeader` over
+    /// `colors.bottomSheetBackground`, and the corner radius agrees at 34 everywhere
+    /// it is stated — `TdaySheetMetrics.sheetCornerRadius` on this side,
+    /// `presentationCornerRadius(34)` on the native one, which takes a value and not
+    /// a token.
+    ///
+    /// Two pieces are not shared, and both are UIKit's rather than anybody's choice.
+    /// The **scrim**: `colors.bottomSheetScrim` is drawn by this host and by the
+    /// hand-rolled overlays that follow it, while a presented `.sheet` is dimmed by
+    /// UIKit, which SwiftUI gives no way to recolour. And the **radius** on the three
+    /// native sheets that state none — Morning Sweep's date picker, promote-floater,
+    /// and the scheduled-home summary — which take UIKit's default instead of 34.
+    /// The radius is worth closing where it is one line; the scrim is not closable
+    /// without owning the presentation, which is the trade this comment refuses.
     func tdayBottomSheetPresentation<SheetContent: View>(
         isPresented: Binding<Bool>,
         @ViewBuilder content: @escaping () -> SheetContent

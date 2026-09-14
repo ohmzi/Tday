@@ -1247,7 +1247,61 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 41c — the iOS sheet language and drag-to-dismiss
 
-- [ ] `sheet-presentation-unification` — Four overlay systems on web, two on iOS, two on Android — one sheet language, one scrim, one set of timings · all · Impact O3 · L · Gate V + J + D + TF — **final part (3 of 3)**; PR 41a, PR 41b carried the rest
+- [x] `sheet-presentation-unification` — Four overlay systems on web, two on iOS, two on Android — one sheet language, one scrim, one set of timings · all · Impact O3 · L · Gate V + J + D + TF — **final part (3 of 3)**; PR 41a, PR 41b carried the rest
+  - **Ticked here by the fourth unit, not by the third PR.** Four units close this row: PR 41a's
+    `--sheet-scrim` and the web sheet timings; PR 41b's `TdaySheetMotion` and its scrim moving onto
+    the card's clock; PR 41b's confirm cut, carried over from PR 15a; and this one, which is the
+    iOS third and is paperwork on purpose. `ios-sheet-drag-to-dismiss` below is a separate row and
+    does not gate this box.
+  - **The row's iOS half — `cardIn → 0.46/0.82` — is superseded, and writing it back would have
+    cost more than it bought.** `TdaySheetChrome.swift:271` already reads
+    `static let cardIn = TdayMotion.settle`, which is response 0.40 / dampingFraction 0.86, and
+    `docs/motion.md:277-280` names that exact line as the `Settle` rung's **one** anchoring site in
+    the repo. Putting 0.46/0.82 there would strand `Settle` with zero call sites, add 2 to
+    `ios.spring` — measured at 98 against a ceiling of 98 — and spend `Gesture`'s 0.82 damping on a
+    presentation rather than on a release, which is the one thing that damping is for. The 0.82 is
+    not wasted: unit 41c-b spends it on the drag release, where a finger has actually let go.
+  - **The two mechanisms are named in the file that owns one of them, and the plan's counts were
+    wrong on both sides of the split.** iOS applies this modifier at **nine** sites across four
+    screens — `TodoListScreen`, `ScheduledTaskHomeScreen`, `CalendarScreen` and `CompletedScreen`,
+    seven of them through the `createTaskSheet(…)` wrappers and two directly for create-list — not
+    four: the plan was counting `CreateTaskSheet.swift:617` and `:626`, which are the wrappers' own
+    bodies, as application sites.
+    UIKit's `.sheet` + `presentationDetents` has **six**, not seven: `ManageMembersSheet.swift:150`
+    is the presented view's own detents, and the presentation is `TodoListScreen.swift:1722`.
+    And the rule is not "the custom one has a keyboard" — list settings and members both carry
+    `TextField`s. It is **whose the height is**: a sheet sized by its own content has nothing above
+    it that will lift it off a keyboard, so the host opts out of SwiftUI's avoidance and computes
+    `keyboardBottomInset` itself, which is what lets the lift be clamped to
+    `maximumScreenHeightFraction` instead of pushing a tall card off the top. A detent sheet's
+    height is a choice UIKit already owns, and detents come with the system drag-to-dismiss.
+    Migrating those six would throw both away for an inset none of them needs, on a branch with no
+    Swift compiler. The argument now lives above `tdayBottomSheetPresentation` rather than in this
+    file, because the next person to ask the question will be reading the modifier.
+  - **The chrome is nearly one, and the plan named the wrong piece as the shared one.** Every sheet
+    on either mechanism wears `TdaySheetHeader` over `colors.bottomSheetBackground`, and the corner
+    radius agrees at 34 everywhere it is stated — `TdaySheetMetrics.sheetCornerRadius` on the custom
+    side, `presentationCornerRadius(34)` at `ManageMembersSheet.swift:152` and
+    `TodoListScreen.swift:2381`/`:5136`. Three native sheets state none at all (Morning Sweep's date
+    picker, promote-floater, the scheduled-home summary) and take UIKit's default; that is a
+    one-line gap and is written down above the modifier rather than closed here, since closing it is
+    a pixel change no gate on this branch can look at. The **scrim** is the piece the plan had
+    backwards:
+    `colors.bottomSheetScrim` has eight call sites on iOS and not one of them is a `.sheet`, because
+    UIKit dims a presented sheet itself and SwiftUI exposes no way to recolour that. So all six
+    native sheets are close to the app's scrim by luck, and matching them exactly would mean owning
+    their presentation — the trade this row refuses. What *is* a genuine
+    three-client agreement is the colour itself: `Color.black.opacity(isDark ? 0.68 : 0.40)` at
+    `TdayTheme.swift:76` is byte-for-byte `TdaySheetChrome.kt:111` on Android and, since PR 41a,
+    web's `--sheet-scrim`. That is a colour with no generated token and nothing in any build
+    watching it, so it is now a row in `docs/motion.md`'s deliberate non-tokens table — the one
+    place in the repo where a fact like that can be read on purpose instead of by accident.
+  - **No literal added or retired, and nothing here can be seen by a device.** All eight budget
+    counters are untouched: the only Swift change is a doc comment, and `stripComments` is what the
+    budget counts through. The gate is `motion-reachability-ios.test.ts` and `motion-parity.test.ts`,
+    both of which read Swift as text and would fail on a broken constant or a raised ceiling.
+    No new device row — PR 41a's and PR 41b's rows in `phase-9-device-pass.md` already carry every
+    frame this box is accountable for, and this unit changes none of them.
 - [ ] `ios-sheet-drag-to-dismiss` — the app's most-used sheet cannot be swiped down; no grabber · ios · Impact O4 · M · Gate TF
 
 ### PR 42a…42g — seven polish PRs, one surface each
