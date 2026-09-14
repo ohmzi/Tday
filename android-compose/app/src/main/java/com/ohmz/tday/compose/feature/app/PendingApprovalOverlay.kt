@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -31,6 +30,28 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
+import com.ohmz.tday.compose.ui.theme.TdayDimens
+
+// What this overlay draws that the scale has no rung for. The card's corner is not among them: it
+// has always drawn the 30 that `TdaySheetDefaults.OverlayShape` names, which is the same corner the
+// list overlay draws.
+
+/** How wide the card is allowed to grow before the message starts running. */
+private val ApprovalCardMaxWidth = 430.dp
+
+/** The gap between the things stacked inside the card. 16 sits between `SpacingXl` and
+ *  `SpacingXxl`. */
+private val CardContentSpacing = 16.dp
+
+/** Android's minimum touch target, claimed as a fixed height by "Check status". The target, not the
+ *  drawing, which is why it is not a spacing rung. */
+private val PrimaryButtonHeight = 48.dp
+
+// The spinner that stands in for the button's label while the status check is in flight. Under
+// `IconSm` because it is drawn inside the button's text slot.
+private val ButtonSpinnerSize = 18.dp
+private val ButtonSpinnerStroke = 2.dp
 
 /**
  * Persistent "waiting for admin approval" holding screen. Shown on every launch while a
@@ -49,22 +70,22 @@ fun PendingApprovalOverlay(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.45f))
-            .padding(24.dp),
+            .padding(TdayDimens.Spacing3xl),
         contentAlignment = Alignment.Center,
     ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 430.dp),
-            shape = RoundedCornerShape(30.dp),
+                .widthIn(max = ApprovalCardMaxWidth),
+            shape = TdaySheetDefaults.OverlayShape,
             colors = CardDefaults.cardColors(containerColor = colorScheme.background),
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(TdayDimens.Spacing3xl),
+                verticalArrangement = Arrangement.spacedBy(CardContentSpacing),
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
@@ -93,7 +114,7 @@ fun PendingApprovalOverlay(
                 Button(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
+                        .height(PrimaryButtonHeight),
                     enabled = !isChecking,
                     onClick = onCheckStatus,
                     colors = ButtonDefaults.buttonColors(
@@ -103,8 +124,8 @@ fun PendingApprovalOverlay(
                 ) {
                     if (isChecking) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(ButtonSpinnerSize),
+                            strokeWidth = ButtonSpinnerStroke,
                             color = colorScheme.onPrimary,
                         )
                     } else {

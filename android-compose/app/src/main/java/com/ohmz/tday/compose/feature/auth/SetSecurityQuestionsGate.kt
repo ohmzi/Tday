@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -36,6 +35,29 @@ import androidx.compose.ui.window.DialogProperties
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.core.model.SecurityQuestion
+import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
+import com.ohmz.tday.compose.ui.theme.TdayDimens
+
+// What the gate draws that the scale has no rung for. The card's corner is not among them: it has
+// always drawn the 28 that `TdaySheetDefaults.CardShape` names, which is the same corner the
+// create-task dialog's card draws.
+
+/** The card's interior. Between `ContentPaddingHorizontal` and `Spacing3xl`, and it is this
+ *  dialog's inset rather than a page margin, so it is named here. */
+private val DialogPadding = 20.dp
+
+/** The shield above the title. Larger than `IconXl` because it is the gate's illustration, not an
+ *  icon beside a label. */
+private val GateIconSize = 32.dp
+
+/** Android's minimum touch target, claimed as a fixed height by the one button that dismisses the
+ *  gate. The target, not the drawing. */
+private val PrimaryButtonHeight = 48.dp
+
+// The spinner that stands in for the Save label while the answers are in flight. Under `IconSm`
+// because it is drawn inside the button's text slot.
+private val ButtonSpinnerSize = 18.dp
+private val ButtonSpinnerStroke = 2.dp
 
 /**
  * Blocking prompt shown to accounts created before security questions existed.
@@ -84,20 +106,20 @@ fun SetSecurityQuestionsGate(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()),
-            shape = RoundedCornerShape(28.dp),
+            shape = TdaySheetDefaults.CardShape,
             colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(DialogPadding),
+                verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
             ) {
                 Icon(
                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_shield),
                     contentDescription = null,
                     tint = colorScheme.primary,
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(GateIconSize),
                 )
                 Text(
                     text = stringResource(R.string.security_questions_gate_title),
@@ -168,7 +190,7 @@ fun SetSecurityQuestionsGate(
                 Button(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
+                        .height(PrimaryButtonHeight),
                     enabled = questionId1 != null &&
                             questionId2 != null &&
                             questionId3 != null &&
@@ -221,8 +243,8 @@ fun SetSecurityQuestionsGate(
                 ) {
                     if (saving) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(ButtonSpinnerSize),
+                            strokeWidth = ButtonSpinnerStroke,
                             color = colorScheme.onPrimary,
                         )
                     } else {

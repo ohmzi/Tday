@@ -128,6 +128,40 @@ private val CompletedTimelineHeaderBodySpacing = 2.dp
 private val CompletedTimelineCollapsedSectionSpacing = 4.dp
 private val CompletedSwipeRowHeight = 56.dp
 
+// The rest of what this screen draws that the scale has no rung for, named here rather than
+// snapped onto a neighbouring step. Nearly all of it is one task row, and the names are the ones
+// the calendar's and the root feed's copies of that row already carry — three copies of the same
+// row that nothing will ever move together unless they answer to the same vocabulary first.
+
+/** The section header's chevron. Named apart from the trailing badges at the same 18, because
+ *  one is a control and the others are read-only marks, and nothing would resize both. */
+private val CompletedSectionChevronSize = 18.dp
+
+// The pills behind a swiped row: Edit + Copy + Delete, at the 3-pill width used elsewhere.
+private val CompletedSwipeRevealWidth = 256.dp
+private val CompletedSwipeActionSpacing = 16.dp
+
+// A history row's content: the title column's inset, the meta line under it, its trailing badges.
+private val CompletedRowTitleStartPadding = 10.dp
+private val CompletedRowMetaSpacing = 5.dp
+private val CompletedRowMetaIconSize = 13.dp
+private val CompletedRowTrailingIconSize = 18.dp
+
+// The restore toggle. The ripple is bounded, so its radius is half the circle it fills: change one
+// without the other and the ripple either stops short of the edge or is clipped by it.
+private val CompletedRestoreToggleSize = 28.dp
+private val CompletedRestoreToggleRippleRadius = 14.dp
+private val CompletedRestoreToggleIconSize = 24.dp
+
+/** How far a restoring row lifts as it fades — the rise the calendar and the root feed play when a
+ *  task leaves in the other direction. */
+private val CompletedRestoreRiseOffsetY = (-10).dp
+
+// The toolbar's circular buttons, which are Settings' and the calendar's button copied again.
+// The press sink they used to name here went with the hand-written press: `tdayPressable`
+// owns it now, as `TdayPress.SinkOffset`.
+private val CompletedBarButtonIconSize = 22.dp
+
 /**
  * The check-off's beats, run backwards — the same four every task row in every
  * client plays, only in the direction that puts a task back.
@@ -277,8 +311,12 @@ fun CompletedScreen(
                     state = listState,
                     // No top padding: the hero item reserves the bar's height
                     // itself, so the scroll offset is a clean count from the top.
-                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 2.dp),
-                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                    contentPadding = PaddingValues(
+                        start = TdayDimens.ContentPaddingHorizontal,
+                        end = TdayDimens.ContentPaddingHorizontal,
+                        bottom = TdayDimens.SpacingXxs,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingNone),
                 ) {
                     tdayHeroTitleItem(
                         title = completedTitle,
@@ -308,7 +346,11 @@ fun CompletedScreen(
                                         fadeOutSpec = null,
                                     )
                                     .padding(
-                                        top = if (sectionIndex == 0) 0.dp else CompletedTimelineSectionTopSpacing,
+                                        top = if (sectionIndex == 0) {
+                                            TdayDimens.SpacingNone
+                                        } else {
+                                            CompletedTimelineSectionTopSpacing
+                                        },
                                         bottom = if (isCollapsed) {
                                             CompletedTimelineCollapsedSectionSpacing
                                         } else {
@@ -409,7 +451,7 @@ fun CompletedScreen(
                                     accentColor = COMPLETED_TITLE_COLOR,
                                     title = stringResource(R.string.scheduled_task_home_search_no_results),
                                     description = stringResource(R.string.search_no_results_body),
-                                    modifier = Modifier.padding(vertical = 24.dp),
+                                    modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
                                 )
                             } else {
                                 TdayEmptyState(
@@ -417,7 +459,7 @@ fun CompletedScreen(
                                     accentColor = COMPLETED_TITLE_COLOR,
                                     title = stringResource(R.string.completed_empty),
                                     description = stringResource(R.string.completed_empty_body),
-                                    modifier = Modifier.padding(vertical = 24.dp),
+                                    modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
                                 )
                             }
                         }
@@ -449,7 +491,7 @@ fun CompletedScreen(
                         }
                     }
 
-                    item { Spacer(modifier = Modifier.height(96.dp)) }
+                    item { Spacer(modifier = Modifier.height(TdayDimens.BottomScrollSpacer)) }
                 }
             }
 
@@ -597,8 +639,8 @@ private fun CompletedTimelineSectionHeader(
                 },
                 tint = chevronColor,
                 modifier = Modifier
-                    .padding(start = 6.dp)
-                    .size(18.dp)
+                    .padding(start = TdayDimens.SpacingSm)
+                    .size(CompletedSectionChevronSize)
                     .graphicsLayer { rotationZ = collapseChevronRotation },
             )
         }
@@ -622,7 +664,8 @@ private fun CompletedSwipeRow(
     val coroutineScope = rememberCoroutineScope()
     // Edit + Copy + Delete: matches the 3-pill width used elsewhere (see
     // SwipeTaskRow.revealWidth).
-    val swipeRevealState = rememberTaskSwipeRevealState(item.id, revealWidth = 256.dp)
+    val swipeRevealState =
+        rememberTaskSwipeRevealState(item.id, revealWidth = CompletedSwipeRevealWidth)
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
     val copyContext = LocalContext.current
@@ -682,7 +725,7 @@ private fun CompletedSwipeRow(
         label = "completedRestoreRowScale",
     )
     val rowOffsetY by animateDpAsState(
-        targetValue = if (isFading) (-10).dp else 0.dp,
+        targetValue = if (isFading) CompletedRestoreRiseOffsetY else TdayDimens.SpacingNone,
         animationSpec = if (restoreMotionEnabled) {
             tween(
                 durationMillis = COMPLETED_RESTORE_FADE_MS.toInt(),
@@ -750,7 +793,7 @@ private fun CompletedSwipeRow(
     val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
     val priorityIcon = priorityIconFor(item.priority)
     val showPriorityIcon = priorityIcon != null
-    val rowShape = RoundedCornerShape(16.dp)
+    val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
     val foregroundColor = colorScheme.background
     LaunchedEffect(openSwipeTaskId, item.id) {
         if (openSwipeTaskId != null && openSwipeTaskId != item.id && swipeRevealState.isOpenOrDragging) {
@@ -767,7 +810,7 @@ private fun CompletedSwipeRow(
                 scaleY = rowScale
                 translationY = rowOffsetY.toPx()
             },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs),
     ) {
         Box(
             modifier = Modifier
@@ -777,8 +820,8 @@ private fun CompletedSwipeRow(
                 Row(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .padding(end = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        .padding(end = TdayDimens.SpacingXxs),
+                    horizontalArrangement = Arrangement.spacedBy(CompletedSwipeActionSpacing),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TaskSwipeActionButton(
@@ -873,12 +916,17 @@ private fun CompletedSwipeRow(
                         },
                     shape = rowShape,
                     colors = CardDefaults.cardColors(containerColor = foregroundColor),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = TdayDimens.CardElevationDefault,
+                    ),
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                            .padding(
+                                horizontal = TdayDimens.SpacingXs,
+                                vertical = TdayDimens.SpacingXxs,
+                            ),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         CompletedCircularToggleIcon(
@@ -917,7 +965,7 @@ private fun CompletedSwipeRow(
                         Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(start = 10.dp),
+                                .padding(start = CompletedRowTitleStartPadding),
                         ) {
                             Text(
                                 text = item.title,
@@ -940,7 +988,7 @@ private fun CompletedSwipeRow(
                                 onTextLayout = { titleLayoutResult = it },
                             )
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                horizontalArrangement = Arrangement.spacedBy(CompletedRowMetaSpacing),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 if (item.isFloater) {
@@ -952,14 +1000,14 @@ private fun CompletedSwipeRow(
                                         imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_leaf),
                                         contentDescription = stringResource(R.string.root_feed_tab_floater),
                                         tint = TdayFloaterAccent,
-                                        modifier = Modifier.size(13.dp),
+                                        modifier = Modifier.size(CompletedRowMetaIconSize),
                                     )
                                 }
                                 Icon(
                                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_clock),
                                     contentDescription = null,
                                     tint = colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
-                                    modifier = Modifier.size(13.dp),
+                                    modifier = Modifier.size(CompletedRowMetaIconSize),
                                 )
                                 Text(
                                     text = completedAtText,
@@ -972,8 +1020,8 @@ private fun CompletedSwipeRow(
 
                         if (showPriorityIcon) {
                             Row(
-                                modifier = Modifier.padding(end = 24.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(end = TdayDimens.Spacing3xl),
+                                horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 if (showListIndicator) {
@@ -981,7 +1029,7 @@ private fun CompletedSwipeRow(
                                         imageVector = tdayListIconForKey(listMeta?.iconKey),
                                         contentDescription = stringResource(R.string.label_task_list),
                                         tint = listIndicatorColor,
-                                        modifier = Modifier.size(18.dp),
+                                        modifier = Modifier.size(CompletedRowTrailingIconSize),
                                     )
                                 }
                                 Icon(
@@ -989,7 +1037,7 @@ private fun CompletedSwipeRow(
                                         ?: ImageVector.vectorResource(R.drawable.ic_lucide_flag),
                                     contentDescription = stringResource(R.string.label_priority_task),
                                     tint = tdayPriorityColor(item.priority),
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(CompletedRowTrailingIconSize),
                                 )
                             }
                         } else if (showListIndicator) {
@@ -998,8 +1046,8 @@ private fun CompletedSwipeRow(
                                 contentDescription = stringResource(R.string.label_task_list),
                                 tint = listIndicatorColor,
                                 modifier = Modifier
-                                    .padding(end = 24.dp)
-                                    .size(18.dp),
+                                    .padding(end = TdayDimens.Spacing3xl)
+                                    .size(CompletedRowTrailingIconSize),
                             )
                         }
                     }
@@ -1009,7 +1057,7 @@ private fun CompletedSwipeRow(
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
+                    .height(TdayDimens.BorderWidth)
                     .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
             )
         }
@@ -1027,14 +1075,14 @@ private fun CompletedCircularToggleIcon(
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
-            .size(28.dp)
+            .size(CompletedRestoreToggleSize)
             .clip(CircleShape)
             .clickable(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 14.dp,
+                    radius = CompletedRestoreToggleRippleRadius,
                 ),
                 onClick = onClick,
             ),
@@ -1059,7 +1107,7 @@ private fun CompletedCircularToggleIcon(
                 imageVector = glyph,
                 contentDescription = contentDescription.takeIf { glyph == imageVector },
                 tint = tint,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(CompletedRestoreToggleIconSize),
             )
         }
     }
@@ -1094,7 +1142,7 @@ private fun CompletedBarButton(
         colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.BarButtonElevation,
-            pressedElevation = 0.dp,
+            pressedElevation = TdayDimens.CardElevationDefault,
         ),
     ) {
         Box(
@@ -1105,7 +1153,7 @@ private fun CompletedBarButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(CompletedBarButtonIconSize),
             )
         }
     }

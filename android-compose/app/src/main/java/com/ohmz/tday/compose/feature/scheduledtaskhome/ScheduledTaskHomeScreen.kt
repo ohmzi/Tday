@@ -199,6 +199,72 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 
+// What this screen draws that the scale has no rung for. Named here rather than snapped
+// onto a neighbouring step, because the differences are the point: 3 dp against 2 dp is
+// the whole distinction between a selected colour swatch and a selected icon one, and a
+// rung minted for one call site is a rung nobody can reason about.
+
+/** How flat a pressed card presses, against each surface's own resting elevation below.
+ *  The sink that used to stand beside it went with the hand-rolled press animations:
+ *  `tdayPressable` owns the offset now. */
+private val PressedCardElevation = 2.dp
+
+/** The target a finger gets where the control drawn inside it is smaller than a finger. */
+private val MinTouchTargetSize = 48.dp
+
+// The search overlay: a card hung under the field, and the result rows inside it.
+private val SearchResultsOverlayElevation = 8.dp
+private val SearchResultsMaxHeight = 320.dp
+private val SearchResultRowVerticalPadding = 9.dp
+private val SearchResultRowSpacing = 10.dp
+private val SearchResultIconSize = 17.dp
+
+// The summary sheet's spinner. This app's progress indicators run 18 to 32 dp with no
+// agreement between them, so this one says what it is instead of claiming an icon size.
+private val SummarySpinnerSize = 20.dp
+private val SummarySpinnerStroke = 2.dp
+
+// The create-list sheet: the icon preview, then the colour and icon pickers under it.
+private val CreateListCardSpacing = 16.dp
+private val ListIconPreviewSize = 86.dp
+private val ListIconPreviewGlyphSize = 42.dp
+private val ListOptionSwatchSize = 48.dp
+private val ListOptionRippleRadius = 24.dp
+private val ListIconOptionSpacing = 10.dp
+
+/** The colour swatch rings heavier because the ring is all it has: a selected icon option
+ *  also tints its fill and its glyph. */
+private val ListColorSwatchSelectedOutline = 3.dp
+private val ListIconSwatchSelectedOutline = 2.dp
+
+// A today task row: the swipe pills behind it, its completion toggle, its trailing badges.
+private val SwipeRevealWidth = 256.dp
+private val SwipeActionSpacing = 16.dp
+private val TaskRowMinHeight = 58.dp
+private val CompletionToggleRippleRadius = 24.dp
+private val CompletionToggleIconSize = 24.dp
+private val RowTrailingIconSize = 18.dp
+private val TaskCompletionRiseOffsetY = (-10).dp
+
+// The category tiles and the list rows below them.
+private val CategoryGridSpacing = 10.dp
+private val FeedCardHorizontalPadding = 16.dp
+private val TodayCardElevation = 9.dp
+private val ListRowElevation = 8.dp
+private val ListRowHeight = 70.dp
+private val ListRowIconSlotSize = 32.dp
+private val ListRowIconSize = 24.dp
+private val ListRowSharedBadgeSize = 16.dp
+
+/** The oversized list glyph behind the row, hung off the right edge and half out of frame. */
+private val ListRowWatermarkOffsetX = 14.dp
+private val ListRowWatermarkOffsetY = 8.dp
+private val ListRowWatermarkSize = 82.dp
+
+/** The feed's tail. Not BottomScrollSpacer: that rung is 96 dp, and lifting this screen's
+ *  scroll limit by 16 dp would be a visual change rather than a migration. */
+private val FeedBottomSpacer = 80.dp
+
 // Maps a domain TodoItem onto the shared sort key so this feed orders tasks
 // through the one TaskSortEngine (identical order to every other T'Day surface).
 private fun TodoItem.toTaskSortKey(): TaskSortKey = TaskSortKey(
@@ -513,11 +579,11 @@ fun ScheduledTaskHomeScreen(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = 18.dp,
-                            end = 18.dp,
-                            bottom = 18.dp,
+                            start = TdayDimens.ContentPaddingHorizontal,
+                            end = TdayDimens.ContentPaddingHorizontal,
+                            bottom = TdayDimens.SpacingXxl,
                         ),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
                     ) {
                     item(key = "root-feed-header-spacer") {
                         // Reserves the pinned header's space. The feed scrolls
@@ -569,7 +635,7 @@ fun ScheduledTaskHomeScreen(
                     item(key = "scheduled-task-home-category-grid") {
                         Column(
                             modifier = scheduledTaskHomeDisplacedItemMotion(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(CategoryGridSpacing),
                         ) {
                             CategoryGrid(
                                 overdueCount = overdueCount,
@@ -671,14 +737,14 @@ fun ScheduledTaskHomeScreen(
                         }
                     }
 
-                    item { Spacer(Modifier.height(80.dp)) }
+                    item { Spacer(Modifier.height(FeedBottomSpacer)) }
                         }
                     }
 
                     val searchBarRect = searchBarBounds
                     if (showSearchResultsOverlay && searchBarRect != null) {
                         val overlayLeft = with(density) { (searchBarRect.left - rootInRoot.x).toDp() }
-                        val overlayTop = with(density) { (searchBarRect.bottom - rootInRoot.y).toDp() } + 8.dp
+                        val overlayTop = with(density) { (searchBarRect.bottom - rootInRoot.y).toDp() } + TdayDimens.SpacingMd
                         val overlayWidth = with(density) { searchBarRect.width.toDp() }
                         Card(
                             modifier = Modifier
@@ -688,15 +754,18 @@ fun ScheduledTaskHomeScreen(
                                 .onGloballyPositioned { coordinates ->
                                     searchResultsBounds = coordinates.boundsInRoot()
                                 },
-                            shape = RoundedCornerShape(22.dp),
-                            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.2f)),
+                            shape = RoundedCornerShape(TdayDimens.RadiusField),
+                            border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.2f)),
                             colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = SearchResultsOverlayElevation),
                         ) {
                             if (searchResults.isEmpty()) {
                                 Text(
                                     text = stringResource(R.string.scheduled_task_home_search_no_results),
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                    modifier = Modifier.padding(
+                                        horizontal = TdayDimens.SpacingXl,
+                                        vertical = TdayDimens.SpacingLg,
+                                    ),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = colorScheme.onSurfaceVariant,
                                 )
@@ -704,8 +773,8 @@ fun ScheduledTaskHomeScreen(
                                 LazyColumn(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .heightIn(max = 320.dp),
-                                    contentPadding = PaddingValues(vertical = 4.dp),
+                                        .heightIn(max = SearchResultsMaxHeight),
+                                    contentPadding = PaddingValues(vertical = TdayDimens.SpacingXs),
                                 ) {
                                     itemsIndexed(
                                         items = searchResults,
@@ -718,20 +787,23 @@ fun ScheduledTaskHomeScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .semantics(mergeDescendants = true) {}
-                                                .heightIn(min = 48.dp)
+                                                .heightIn(min = MinTouchTargetSize)
                                                 .clickable {
                                                     TdayHaptics.buttonPress(view)
                                                     openTaskFromSearch(todo.id)
                                                 }
-                                                .padding(horizontal = 12.dp, vertical = 9.dp),
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                .padding(
+                                                    horizontal = TdayDimens.SpacingLg,
+                                                    vertical = SearchResultRowVerticalPadding,
+                                                ),
+                                            horizontalArrangement = Arrangement.spacedBy(SearchResultRowSpacing),
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Icon(
                                                 imageVector = listIcon,
                                                 contentDescription = null,
                                                 tint = listTint.copy(alpha = 0.92f),
-                                                modifier = Modifier.size(17.dp),
+                                                modifier = Modifier.size(SearchResultIconSize),
                                             )
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
@@ -759,8 +831,8 @@ fun ScheduledTaskHomeScreen(
                                             Spacer(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .height(1.dp)
-                                                    .padding(horizontal = 12.dp)
+                                                    .height(TdayDimens.BorderWidth)
+                                                    .padding(horizontal = TdayDimens.SpacingLg)
                                                     .background(
                                                         colorScheme.outlineVariant.copy(
                                                             alpha = 0.45f
@@ -935,8 +1007,11 @@ private fun ScheduledTaskHomeSummaryBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(
+                    horizontal = TdayDimens.ContentPaddingHorizontal,
+                    vertical = TdayDimens.ContentPaddingVertical,
+                ),
+            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
         ) {
             TdaySheetHeader(
                 title = stringResource(R.string.todos_summary_title),
@@ -949,12 +1024,12 @@ private fun ScheduledTaskHomeSummaryBottomSheet(
             if (isLoading) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(SummarySpinnerSize),
+                        strokeWidth = SummarySpinnerStroke,
                     )
                     Text(
                         text = stringResource(R.string.todos_summary_loading),
@@ -967,8 +1042,8 @@ private fun ScheduledTaskHomeSummaryBottomSheet(
             if (!summaryText.isNullOrBlank()) {
                 TdaySheetCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                     ) {
                         Text(
                             text = summaryText,
@@ -1146,8 +1221,11 @@ private fun CreateListBottomSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .navigationBarsPadding()
-                                .padding(horizontal = 18.dp, vertical = 14.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                                .padding(
+                                    horizontal = TdayDimens.ContentPaddingHorizontal,
+                                    vertical = TdayDimens.ContentPaddingVertical,
+                                ),
+                            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
                         ) {
                             TdaySheetHeader(
                                 title = stringResource(R.string.scheduled_task_home_new_list),
@@ -1176,14 +1254,14 @@ private fun CreateListBottomSheet(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 18.dp, vertical = 18.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    .padding(horizontal = TdayDimens.SpacingXxl, vertical = TdayDimens.SpacingXxl),
+                                verticalArrangement = Arrangement.spacedBy(CreateListCardSpacing),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(86.dp)
-                                        .clip(RoundedCornerShape(999.dp))
+                                        .size(ListIconPreviewSize)
+                                        .clip(RoundedCornerShape(TdayDimens.RadiusFull))
                                         .background(selectedAccent),
                                     contentAlignment = Alignment.Center,
                                 ) {
@@ -1191,7 +1269,7 @@ private fun CreateListBottomSheet(
                                         imageVector = selectedIcon,
                                         contentDescription = null,
                                         tint = Color.White,
-                                        modifier = Modifier.size(42.dp),
+                                        modifier = Modifier.size(ListIconPreviewGlyphSize),
                                     )
                                 }
 
@@ -1209,11 +1287,15 @@ private fun CreateListBottomSheet(
                                         .onFocusChanged { nameFieldFocused = it.isFocused },
                                     decorationBox = { innerTextField ->
                                         Box(
+                                            // RadiusRow and not RadiusField, which is the rung
+                                            // a text field would otherwise take: this one has
+                                            // always been drawn at 16 dp, and rounding it up to
+                                            // 22 would be a visual change rather than a name.
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .clip(RoundedCornerShape(16.dp))
+                                                .clip(RoundedCornerShape(TdayDimens.RadiusRow))
                                                 .background(TdaySheetDefaults.controlSurfaceColor())
-                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                                .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingLg),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             if (listName.isBlank()) {
@@ -1237,19 +1319,19 @@ private fun CreateListBottomSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .horizontalScroll(rememberScrollState())
-                                    .padding(horizontal = 14.dp, vertical = 14.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                                horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
                             ) {
                                 TdayListColorOptions.forEach { option ->
                                     val selected = listColor == option.key
                                     val interactionSource = remember { MutableInteractionSource() }
                                     Box(
                                         modifier = Modifier
-                                            .size(48.dp)
+                                            .size(ListOptionSwatchSize)
                                             .clip(CircleShape)
                                             .background(option.color)
                                             .border(
-                                                width = if (selected) 3.dp else 0.dp,
+                                                width = if (selected) ListColorSwatchSelectedOutline else TdayDimens.SpacingNone,
                                                 color = if (selected) colorScheme.onBackground.copy(
                                                     alpha = 0.32f
                                                 ) else Color.Transparent,
@@ -1259,7 +1341,7 @@ private fun CreateListBottomSheet(
                                                 interactionSource = interactionSource,
                                                 indication = ripple(
                                                     bounded = true,
-                                                    radius = 24.dp,
+                                                    radius = ListOptionRippleRadius,
                                                 ),
                                             ) {
                                                 TdayHaptics.selection(view)
@@ -1276,8 +1358,8 @@ private fun CreateListBottomSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .horizontalScroll(rememberScrollState())
-                                    .padding(horizontal = 14.dp, vertical = 14.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                                horizontalArrangement = Arrangement.spacedBy(ListIconOptionSpacing),
                             ) {
                                 TdayListIconOptions.forEach { option ->
                                     val selected = listIconKey == option.key
@@ -1286,7 +1368,7 @@ private fun CreateListBottomSheet(
                                         stringResource(R.string.scheduled_task_home_list_icon_option, option.key)
                                     Box(
                                         modifier = Modifier
-                                            .size(48.dp)
+                                            .size(ListOptionSwatchSize)
                                             .clip(CircleShape)
                                             .background(
                                                 if (selected) {
@@ -1296,7 +1378,7 @@ private fun CreateListBottomSheet(
                                                 },
                                             )
                                             .border(
-                                                width = if (selected) 2.dp else 0.dp,
+                                                width = if (selected) ListIconSwatchSelectedOutline else TdayDimens.SpacingNone,
                                                 color = if (selected) selectedAccent.copy(alpha = 0.55f) else Color.Transparent,
                                                 shape = CircleShape,
                                             )
@@ -1304,7 +1386,7 @@ private fun CreateListBottomSheet(
                                                 interactionSource = interactionSource,
                                                 indication = ripple(
                                                     bounded = true,
-                                                    radius = 24.dp,
+                                                    radius = ListOptionRippleRadius,
                                                 ),
                                             ) {
                                                 TdayHaptics.selection(view)
@@ -1322,7 +1404,7 @@ private fun CreateListBottomSheet(
                             }
                         }
 
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(TdayDimens.SpacingXs))
                         }
                     }
                 }
@@ -1353,7 +1435,7 @@ private fun MyListsHeader(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
     ) {
          Text(
             text = stringResource(R.string.scheduled_task_home_my_lists),
@@ -1412,10 +1494,10 @@ private fun ScheduledTaskHomeTodayCard(
         // behind its back; handing it the two ends instead says the same thing
         // in the API's own terms.
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 9.dp,
-            pressedElevation = 2.dp
+            defaultElevation = TodayCardElevation,
+            pressedElevation = PressedCardElevation
         ),
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusCard),
     ) {
         Box(
             modifier = Modifier
@@ -1441,7 +1523,7 @@ private fun ScheduledTaskHomeTodayCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = FeedCardHorizontalPadding, vertical = TdayDimens.SpacingXl),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1489,7 +1571,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
     val coroutineScope = rememberCoroutineScope()
     // Edit + Copy + Delete: matches the 3-pill width used elsewhere (see
     // SwipeTaskRow.revealWidth).
-    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = 256.dp)
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = SwipeRevealWidth)
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
     val copyContext = LocalContext.current
@@ -1538,7 +1620,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
         label = "scheduledTaskHomeTodayCompletionAlpha",
     )
     val completionOffsetY by animateDpAsState(
-        targetValue = if (completionFading) (-10).dp else 0.dp,
+        targetValue = if (completionFading) TaskCompletionRiseOffsetY else TdayDimens.SpacingNone,
         animationSpec = if (motionEnabled) {
             tween(
                 durationMillis = SCHEDULED_TASK_COMPLETION_FADE_MS.toInt(),
@@ -1591,7 +1673,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
     var noteLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     val dueText = todo.due?.let(SCHEDULED_TASK_HOME_TODAY_DUE_FORMATTER::format)
-    val rowShape = RoundedCornerShape(16.dp)
+    val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
     val priorityIcon = priorityIconFor(todo.priority)
@@ -1624,14 +1706,14 @@ private fun ScheduledTaskHomeTodayTaskRow(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 58.dp)
+                .heightIn(min = TaskRowMinHeight)
                 .height(IntrinsicSize.Min),
         ) {
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(end = TdayDimens.SpacingXxs),
+                horizontalArrangement = Arrangement.spacedBy(SwipeActionSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TaskSwipeActionButton(
@@ -1726,23 +1808,23 @@ private fun ScheduledTaskHomeTodayTaskRow(
                     },
                 shape = rowShape,
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs)
                         .semantics(mergeDescendants = true) {},
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
                         modifier = Modifier
-                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                            .sizeIn(minWidth = MinTouchTargetSize, minHeight = MinTouchTargetSize)
                             .wrapContentSize(Alignment.Center)
                             .clip(CircleShape)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
-                                indication = ripple(bounded = true, radius = 24.dp),
+                                indication = ripple(bounded = true, radius = CompletionToggleRippleRadius),
                                 enabled = !pendingCompletion,
                             ) {
                                 if (!pendingCompletion) {
@@ -1805,7 +1887,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                 // have TalkBack announce the control twice.
                                 contentDescription = toggleLabel.takeIf { glyph == toggleGlyph },
                                 tint = toggleTint,
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(CompletionToggleIconSize),
                             )
                         }
                     }
@@ -1813,8 +1895,8 @@ private fun ScheduledTaskHomeTodayTaskRow(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                            .padding(start = TdayDimens.SpacingXs),
+                        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
                     ) {
                         Text(
                             text = todo.title,
@@ -1873,8 +1955,8 @@ private fun ScheduledTaskHomeTodayTaskRow(
 
                     if (listMeta != null || priorityIcon != null) {
                         Row(
-                            modifier = Modifier.padding(end = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(end = TdayDimens.SpacingLg),
+                            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             if (listMeta != null) {
@@ -1882,7 +1964,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                     imageVector = tdayListIconForKey(listMeta.iconKey),
                                     contentDescription = null,
                                     tint = listIndicatorColor,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(RowTrailingIconSize),
                                 )
                             }
                             if (priorityIcon != null) {
@@ -1890,7 +1972,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                     imageVector = priorityIcon,
                                     contentDescription = stringResource(R.string.label_priority_task),
                                     tint = tdayPriorityColor(todo.priority),
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(RowTrailingIconSize),
                                 )
                             }
                         }
@@ -1919,8 +2001,8 @@ private fun CategoryGrid(
     val colorScheme = MaterialTheme.colorScheme
     val completedColor = completedTileColor(colorScheme)
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFD98F4B),
@@ -1940,7 +2022,7 @@ private fun CategoryGrid(
                 onClick = onOpenPriority,
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFE06F66),
@@ -1960,7 +2042,7 @@ private fun CategoryGrid(
                 onClick = onOpenAll,
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = completedColor,
@@ -2016,7 +2098,7 @@ private fun ListRow(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(70.dp)
+            .height(ListRowHeight)
             .semantics(mergeDescendants = true) {}
             .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
         onClick = {
@@ -2024,11 +2106,11 @@ private fun ListRow(
             onClick()
         },
         interactionSource = interactionSource,
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusCard),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 8.dp,
-            pressedElevation = 2.dp,
+            defaultElevation = ListRowElevation,
+            pressedElevation = PressedCardElevation,
         ),
     ) {
         Box(
@@ -2076,27 +2158,27 @@ private fun ListRow(
                 tint = lerp(containerColor, Color.White, 0.34f).copy(alpha = 0.42f),
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .offset(x = 14.dp, y = 8.dp)
-                    .size(82.dp),
+                    .offset(x = ListRowWatermarkOffsetX, y = ListRowWatermarkOffsetY)
+                    .size(ListRowWatermarkSize),
             )
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = FeedCardHorizontalPadding, vertical = TdayDimens.SpacingLg),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        modifier = Modifier.size(32.dp),
+                        modifier = Modifier.size(ListRowIconSlotSize),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(ListRowIconSize),
                         )
                     }
                     Column {
@@ -2115,8 +2197,8 @@ private fun ListRow(
                                     contentDescription = stringResource(R.string.members_title),
                                     tint = Color.White.copy(alpha = 0.85f),
                                     modifier = Modifier
-                                        .padding(start = 8.dp)
-                                        .size(16.dp),
+                                        .padding(start = TdayDimens.SpacingMd)
+                                        .size(ListRowSharedBadgeSize),
                                 )
                             }
                         }

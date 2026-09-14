@@ -172,6 +172,8 @@ private val CalendarCardHeaderHorizontalPadding = 6.dp
 private val CalendarCardNavButtonWidth = 40.dp
 private val CalendarCardNavButtonHeight = 36.dp
 private val CalendarCardNavIconSize = 28.dp
+private val CalendarCardNavButtonRadius = 12.dp
+private val CalendarCardNavButtonRippleRadius = 20.dp
 private val CalendarCardHorizontalPadding = 16.dp
 private val CalendarMonthCardTopPadding = 16.dp
 private val CalendarMonthCardBottomPadding = 20.dp
@@ -186,6 +188,7 @@ private val CalendarMonthDayNumberWidth = 34.dp
 private val CalendarMonthDayNumberHeight = 24.dp
 private val CalendarMonthTaskCountHeight = 13.dp
 private val CalendarMonthTaskDotSize = 4.6.dp
+private val CalendarMonthDayCellContentSpacing = 1.dp
 private val CalendarMonthHeaderTitleSize = 21.sp
 private val CalendarPeriodHeaderTitleSize = 21.sp
 private val CalendarDaySummaryTitleSize = 25.sp
@@ -193,9 +196,41 @@ private val CalendarDaySummaryCountSize = 18.sp
 private val CalendarPeriodCardPageHeight = 78.dp
 private val CalendarPeriodWeekDayCellHeight = 72.dp
 private val CalendarPeriodPageHorizontalGutter = 2.dp
+private val CalendarPeriodCardTopPadding = 16.dp
 private val CalendarPeriodCardBottomPadding = 18.dp
+private val CalendarWeekDayCellContentSpacing = 3.dp
 private val CalendarTaskListSameDateSpacing = 2.dp
 private val CalendarTaskRowHeight = 56.dp
+private val CalendarTaskCompletionRiseOffsetY = (-10).dp
+private val CalendarTaskRowTitleStartPadding = 10.dp
+private val CalendarRowTrailingIconSize = 18.dp
+private val CalendarSwipeRevealWidth = 256.dp
+private val CalendarSwipeActionSpacing = 16.dp
+private val CalendarSwipeActionMinWidth = 60.dp
+private val CalendarSwipeActionButtonWidth = 56.dp
+private val CalendarSwipeActionButtonHeight = 34.dp
+private val CalendarSwipeActionIconSize = 21.dp
+private val CalendarCompletionToggleTouchTarget = 48.dp
+private val CalendarCompletionToggleRippleRadius = 24.dp
+private val CalendarCompletionToggleIconSize = 24.dp
+private val CalendarBarButtonIconSize = 22.dp
+
+// The drag preview rides under the finger, not beside it: the pointer is offset
+// into the card so the task being carried is the thing the hand is over.
+private val CalendarDragPreviewAnchorX = 130.dp
+private val CalendarDragPreviewAnchorY = 34.dp
+private val CalendarDragPreviewMinWidth = 220.dp
+private val CalendarDragPreviewMaxWidth = 280.dp
+private val CalendarDragPreviewContentSpacing = 10.dp
+private val CalendarDragPreviewIconSize = 22.dp
+
+// Four states of one day-cell outline, and they are deliberately off any spacing
+// scale: 0.2 dp apart is what separates today from selected when both are drawn
+// at once, so a rung that rounded them would make two states one.
+private val CalendarDayCellBorderDropTarget = 2.dp
+private val CalendarDayCellBorderSelected = 1.6.dp
+private val CalendarDayCellBorderToday = 1.4.dp
+private val CalendarDayCellBorderPressed = 1.2.dp
 
 /**
  * The tick landing, then the strike beginning — the check-off's first gap.
@@ -558,8 +593,12 @@ fun CalendarScreen(
                     state = listState,
                     // No top padding: the hero item reserves the bar's height
                     // itself, so the scroll offset is a clean count from the top.
-                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 2.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(
+                        start = TdayDimens.ContentPaddingHorizontal,
+                        end = TdayDimens.ContentPaddingHorizontal,
+                        bottom = TdayDimens.SpacingXxs,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
                 ) {
                 tdayHeroTitleItem(
                     title = calendarTitle,
@@ -736,7 +775,7 @@ fun CalendarScreen(
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(horizontal = 4.dp),
+                            modifier = Modifier.padding(horizontal = TdayDimens.SpacingXs),
                         )
                     }
                 }
@@ -768,9 +807,13 @@ fun CalendarScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(
-                                        start = 4.dp,
-                                        top = if (index == 0) 0.dp else 14.dp,
-                                        bottom = 6.dp,
+                                        start = TdayDimens.SpacingXs,
+                                        top = if (index == 0) {
+                                            TdayDimens.SpacingNone
+                                        } else {
+                                            TdayDimens.SpacingXl
+                                        },
+                                        bottom = TdayDimens.SpacingSm,
                                     ),
                                 )
                             }
@@ -806,7 +849,7 @@ fun CalendarScreen(
                                 )
                                 .padding(
                                     bottom = if (index == listedTasks.lastIndex) {
-                                        0.dp
+                                        TdayDimens.SpacingNone
                                     } else {
                                         CalendarTaskListSameDateSpacing
                                     },
@@ -858,7 +901,7 @@ fun CalendarScreen(
                                 accentColor = CalendarAccentPurple,
                                 title = stringResource(R.string.scheduled_task_home_search_no_results),
                                 description = stringResource(R.string.search_no_results_body),
-                                modifier = Modifier.padding(vertical = 12.dp),
+                                modifier = Modifier.padding(vertical = TdayDimens.SpacingLg),
                             )
                         } else {
                             TdayEmptyState(
@@ -866,7 +909,7 @@ fun CalendarScreen(
                                 accentColor = CalendarAccentPurple,
                                 title = stringResource(R.string.calendar_no_pending),
                                 description = stringResource(R.string.calendar_no_pending_body),
-                                modifier = Modifier.padding(vertical = 12.dp),
+                                modifier = Modifier.padding(vertical = TdayDimens.SpacingLg),
                             )
                         }
                     }
@@ -899,7 +942,7 @@ fun CalendarScreen(
                     }
                 }
 
-                    item { Spacer(modifier = Modifier.height(96.dp)) }
+                    item { Spacer(modifier = Modifier.height(TdayDimens.BottomScrollSpacer)) }
                 }
             }
 
@@ -908,9 +951,11 @@ fun CalendarScreen(
                     modifier = Modifier
                         .offset {
                             val localPosition = drag.position - calendarDragContainerOrigin
+                            val anchorX = with(density) { CalendarDragPreviewAnchorX.toPx() }
+                            val anchorY = with(density) { CalendarDragPreviewAnchorY.toPx() }
                             IntOffset(
-                                x = (localPosition.x - with(density) { 130.dp.toPx() }).roundToInt(),
-                                y = (localPosition.y - with(density) { 34.dp.toPx() }).roundToInt(),
+                                x = (localPosition.x - anchorX).roundToInt(),
+                                y = (localPosition.y - anchorY).roundToInt(),
                             )
                         }
                         .zIndex(20f),
@@ -1075,7 +1120,7 @@ private fun CalendarCreateTaskFab(
         Icon(
             imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
             contentDescription = stringResource(R.string.action_create_task),
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(TdayDimens.FabIconSize),
         )
     }
 }
@@ -1120,7 +1165,7 @@ private fun Modifier.calendarCardChrome(): Modifier {
             shape = shape,
         )
         .border(
-            width = 1.dp,
+            width = TdayDimens.BorderWidth,
             color = strokeColor,
             shape = shape,
         )
@@ -1257,18 +1302,18 @@ private fun CalendarWeekCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
                     start = CalendarCardHorizontalPadding,
-                    top = 16.dp,
+                    top = CalendarPeriodCardTopPadding,
                     end = CalendarCardHorizontalPadding,
                     bottom = CalendarPeriodCardBottomPadding,
                 ),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
         ) {
             Row(
                 modifier = Modifier
@@ -1329,7 +1374,7 @@ private fun CalendarWeekCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = CalendarPeriodPageHorizontalGutter),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingSm),
                 ) {
                     weekDays.forEach { day ->
                         val isSelected = day == selectedDate
@@ -1394,10 +1439,10 @@ private fun CalendarWeekDayCell(
         else -> Color.Transparent
     }
     val borderWidth = when {
-        isDropTarget -> 2.dp
-        isSelected -> 1.6.dp
-        isToday -> 1.4.dp
-        else -> 0.dp
+        isDropTarget -> CalendarDayCellBorderDropTarget
+        isSelected -> CalendarDayCellBorderSelected
+        isToday -> CalendarDayCellBorderToday
+        else -> TdayDimens.SpacingNone
     }
     val stateTint = when {
         isDropTarget -> colorScheme.error
@@ -1433,22 +1478,22 @@ private fun CalendarWeekDayCell(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(CalendarPeriodWeekDayCellHeight),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(TdayDimens.RadiusRow),
             colors = CardDefaults.cardColors(containerColor = containerColor),
             border = BorderStroke(
                 width = borderWidth,
                 color = borderColor,
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
             enabled = isEnabled,
             onClick = onClick,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = TdayDimens.SpacingSm),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                verticalArrangement = Arrangement.spacedBy(CalendarWeekDayCellContentSpacing),
             ) {
                 Text(
                     text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
@@ -1638,18 +1683,18 @@ private fun CalendarDayCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
                     start = CalendarCardHorizontalPadding,
-                    top = 16.dp,
+                    top = CalendarPeriodCardTopPadding,
                     end = CalendarCardHorizontalPadding,
                     bottom = CalendarPeriodCardBottomPadding,
                 ),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
         ) {
             Row(
                 modifier = Modifier
@@ -1705,10 +1750,10 @@ private fun CalendarDayCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(TdayDimens.RadiusRow))
                         .background(Color.Transparent)
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                        .padding(horizontal = TdayDimens.SpacingSm, vertical = TdayDimens.SpacingXs),
+                    verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
                 ) {
                     Text(
                         text = displayDate.format(
@@ -1785,7 +1830,7 @@ private fun CalendarBarButton(
         colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.BarButtonElevation,
-            pressedElevation = 0.dp,
+            pressedElevation = TdayDimens.CardElevationDefault,
         ),
     ) {
         Box(
@@ -1796,7 +1841,7 @@ private fun CalendarBarButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(CalendarBarButtonIconSize),
             )
         }
     }
@@ -1824,11 +1869,15 @@ private fun CalendarTodayButton(
 
     val containerColor = CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.22f else 0.12f)
     val buttonBorder = BorderStroke(
-        1.dp,
+        TdayDimens.BorderWidth,
         CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.62f else 0.48f),
     )
     val horizontalPadding by animateDpAsState(
-        targetValue = if (showLabel) 18.dp else 0.dp,
+        targetValue = if (showLabel) {
+            TdayDimens.SpacingXxl
+        } else {
+            TdayDimens.SpacingNone
+        },
         label = "calendarTodayButtonPadding",
     )
 
@@ -1851,7 +1900,7 @@ private fun CalendarTodayButton(
         // accented pill that grows a label, and that is deliberate.
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.BarButtonElevation,
-            pressedElevation = 0.dp,
+            pressedElevation = TdayDimens.CardElevationDefault,
         ),
     ) {
         Row(
@@ -1866,7 +1915,7 @@ private fun CalendarTodayButton(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_calendar),
                 contentDescription = contentDescription,
                 tint = CalendarAccentPurple,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(TdayDimens.IconLg),
             )
             if (showLabel) {
                 Text(
@@ -1875,7 +1924,7 @@ private fun CalendarTodayButton(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(start = TdayDimens.SpacingMd),
                 )
             }
         }
@@ -1984,7 +2033,7 @@ private fun CalendarMonthCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
     ) {
         Column(
             modifier = Modifier
@@ -2074,7 +2123,7 @@ private fun CalendarMonthCard(
                     monthDays.chunked(7).forEach { week ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(0.dp),
+                            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingNone),
                         ) {
                             week.forEach { cell ->
                                 val taskCount = tasksByDate[cell.date]?.size ?: 0
@@ -2125,7 +2174,7 @@ private fun MiniCalendarNavButton(
         modifier = Modifier
             .width(CalendarCardNavButtonWidth)
             .height(CalendarCardNavButtonHeight)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(CalendarCardNavButtonRadius))
             .background(
                 color = if (enabled && isPressed) {
                     colorScheme.surfaceVariant.copy(alpha = 0.6f)
@@ -2138,7 +2187,7 @@ private fun MiniCalendarNavButton(
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 20.dp,
+                    radius = CalendarCardNavButtonRippleRadius,
                 ),
                 onClick = onClick,
             ),
@@ -2200,11 +2249,11 @@ private fun CalendarDayCell(
         label = "calendarMonthDateCellBorder",
     )
     val targetCellBorderWidth = when {
-        isDropTarget -> 2.dp
-        isSelected -> 1.6.dp
-        isToday -> 1.4.dp
-        isPressed && isEnabled -> 1.2.dp
-        else -> 0.dp
+        isDropTarget -> CalendarDayCellBorderDropTarget
+        isSelected -> CalendarDayCellBorderSelected
+        isToday -> CalendarDayCellBorderToday
+        isPressed && isEnabled -> CalendarDayCellBorderPressed
+        else -> TdayDimens.SpacingNone
     }
     val cellBorderWidth by animateDpAsState(
         targetValue = targetCellBorderWidth,
@@ -2216,7 +2265,7 @@ private fun CalendarDayCell(
         isToday -> CalendarTodayBlue
         else -> CalendarAccentPurple
     }
-    val cellShape = RoundedCornerShape(16.dp)
+    val cellShape = RoundedCornerShape(TdayDimens.RadiusRow)
     val dayTextColor = when {
         isDropTarget || isSelected || isToday -> stateTint
         cell.isCurrentMonth -> colorScheme.onSurface
@@ -2264,7 +2313,10 @@ private fun CalendarDayCell(
                     shape = cellShape,
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.spacedBy(
+                CalendarMonthDayCellContentSpacing,
+                Alignment.CenterVertically,
+            ),
         ) {
             Box(
                 modifier = Modifier
@@ -2284,7 +2336,7 @@ private fun CalendarDayCell(
             Row(
                 modifier = Modifier.height(CalendarMonthTaskCountHeight),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
             ) {
                 if (taskCount > 0 && isEnabled) {
                     Box(
@@ -2319,14 +2371,14 @@ private fun CalendarTaskDragPreview(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
-    val previewShape = RoundedCornerShape(18.dp)
+    val previewShape = RoundedCornerShape(TdayDimens.RadiusLg)
     // The pick-up itself. This card used to be composed straight into its final
     // size and elevation, so the one frame that says "the app has your task"
     // never existed; [TdayDragLift] argues the rise and its two ends.
     val lift by TdayDragLift.rememberProgress(rememberTdayMotionEnabled())
     Card(
         modifier = modifier
-            .sizeIn(minWidth = 220.dp, maxWidth = 280.dp)
+            .sizeIn(minWidth = CalendarDragPreviewMinWidth, maxWidth = CalendarDragPreviewMaxWidth)
             .graphicsLayer {
                 val scale = TdayDragLift.scaleAt(lift)
                 scaleX = scale
@@ -2336,23 +2388,26 @@ private fun CalendarTaskDragPreview(
         // Opaque. A card the finger is holding is not a card the user may not
         // have, and partial alpha is what this app says everywhere else.
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        border = BorderStroke(TdayDimens.BorderWidth, colorScheme.outlineVariant.copy(alpha = 0.55f)),
         elevation = CardDefaults.cardElevation(defaultElevation = TdayDragLift.elevationAt(lift)),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(
+                horizontal = TdayDimens.SpacingXl,
+                vertical = CalendarDragPreviewContentSpacing,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(CalendarDragPreviewContentSpacing),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle),
                 contentDescription = null,
                 tint = colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(CalendarDragPreviewIconSize),
             )
             Column(
                 modifier = Modifier.weight(1f, fill = false),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
             ) {
                 Text(
                     text = todo.title,
@@ -2376,7 +2431,7 @@ private fun CalendarTaskDragPreview(
                     imageVector = tdayListIconForKey(listMeta.iconKey),
                     contentDescription = null,
                     tint = tdayListAccentColor(listMeta.color),
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(CalendarRowTrailingIconSize),
                 )
             }
             priorityIconFor(todo.priority)?.let { priorityIcon ->
@@ -2384,7 +2439,7 @@ private fun CalendarTaskDragPreview(
                     imageVector = priorityIcon,
                     contentDescription = null,
                     tint = tdayPriorityColor(todo.priority),
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(CalendarRowTrailingIconSize),
                 )
             }
         }
@@ -2416,7 +2471,7 @@ private fun CalendarTodoRow(
     val coroutineScope = rememberCoroutineScope()
     // Edit + Copy + Delete: matches the 3-pill width used elsewhere (see
     // SwipeTaskRow.revealWidth).
-    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = 256.dp)
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = CalendarSwipeRevealWidth)
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
     val copyContext = LocalContext.current
@@ -2463,7 +2518,11 @@ private fun CalendarTodoRow(
         label = "calendarTaskCompletionAlpha",
     )
     val completionOffsetY by animateDpAsState(
-        targetValue = if (completionFading) (-10).dp else 0.dp,
+        targetValue = if (completionFading) {
+            CalendarTaskCompletionRiseOffsetY
+        } else {
+            TdayDimens.SpacingNone
+        },
         animationSpec = if (motionEnabled) {
             tween(
                 durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
@@ -2536,7 +2595,7 @@ private fun CalendarTodoRow(
     val priorityIcon = priorityIconFor(todo.priority)
     val showPriorityIcon = priorityIcon != null
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
-    val rowShape = RoundedCornerShape(16.dp)
+    val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
     val foregroundColor = colorScheme.background
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     LaunchedEffect(openSwipeTaskId, todo.id) {
@@ -2553,7 +2612,7 @@ private fun CalendarTodoRow(
                 translationY = completionOffsetY.toPx()
             }
             .semantics(mergeDescendants = true) { },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs),
     ) {
         Box(
             modifier = Modifier
@@ -2564,8 +2623,8 @@ private fun CalendarTodoRow(
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(end = TdayDimens.SpacingXxs),
+                horizontalArrangement = Arrangement.spacedBy(CalendarSwipeActionSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CalendarSwipeActionButton(
@@ -2698,12 +2757,12 @@ private fun CalendarTodoRow(
                     },
                 shape = rowShape,
                 colors = CardDefaults.cardColors(containerColor = foregroundColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                        .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CalendarCompletionToggleIcon(
@@ -2747,7 +2806,7 @@ private fun CalendarTodoRow(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = 10.dp),
+                            .padding(start = CalendarTaskRowTitleStartPadding),
                     ) {
                         Text(
                             text = todo.title,
@@ -2792,8 +2851,8 @@ private fun CalendarTodoRow(
                     }
                     if (showListIndicator || showPriorityIcon) {
                         Row(
-                            modifier = Modifier.padding(end = 24.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(end = TdayDimens.Spacing3xl),
+                            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             if (showListIndicator) {
@@ -2801,7 +2860,7 @@ private fun CalendarTodoRow(
                                     imageVector = tdayListIconForKey(listMeta?.iconKey),
                                     contentDescription = stringResource(R.string.label_task_list),
                                     tint = listIndicatorColor,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(CalendarRowTrailingIconSize),
                                 )
                             }
                             if (priorityIcon != null) {
@@ -2809,7 +2868,7 @@ private fun CalendarTodoRow(
                                     imageVector = priorityIcon,
                                     contentDescription = stringResource(R.string.label_priority_task),
                                     tint = tdayPriorityColor(todo.priority),
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(CalendarRowTrailingIconSize),
                                 )
                             }
                         }
@@ -2821,7 +2880,7 @@ private fun CalendarTodoRow(
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
+                    .height(TdayDimens.BorderWidth)
                     .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
             )
         }
@@ -2860,7 +2919,11 @@ private fun CalendarCompletedTodoRow(
         label = "calendarCompletedRestoreAlpha",
     )
     val rowOffsetY by animateDpAsState(
-        targetValue = if (fading) (-10).dp else 0.dp,
+        targetValue = if (fading) {
+            CalendarTaskCompletionRiseOffsetY
+        } else {
+            TdayDimens.SpacingNone
+        },
         animationSpec = if (restoreMotionEnabled) {
             tween(
                 durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
@@ -2924,7 +2987,7 @@ private fun CalendarCompletedTodoRow(
     val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
     val priorityIcon = priorityIconFor(item.priority)
     val showPriorityIcon = priorityIcon != null
-    val rowShape = RoundedCornerShape(16.dp)
+    val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
 
     Column(
         modifier = Modifier
@@ -2934,7 +2997,7 @@ private fun CalendarCompletedTodoRow(
                 translationY = rowOffsetY.toPx()
             }
             .semantics(mergeDescendants = true) { },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs),
     ) {
         Card(
             modifier = Modifier
@@ -2942,12 +3005,12 @@ private fun CalendarCompletedTodoRow(
                 .height(CalendarTaskRowHeight),
             shape = rowShape,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CalendarCompletionToggleIcon(
@@ -2989,7 +3052,7 @@ private fun CalendarCompletedTodoRow(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = 10.dp),
+                        .padding(start = CalendarTaskRowTitleStartPadding),
                 ) {
                     Text(
                         text = item.title,
@@ -3015,8 +3078,8 @@ private fun CalendarCompletedTodoRow(
                 }
                 if (showPriorityIcon) {
                     Row(
-                        modifier = Modifier.padding(end = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(end = TdayDimens.Spacing3xl),
+                        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (showListIndicator) {
@@ -3024,7 +3087,7 @@ private fun CalendarCompletedTodoRow(
                                 imageVector = tdayListIconForKey(listMeta?.iconKey),
                                 contentDescription = stringResource(R.string.label_task_list),
                                 tint = listIndicatorColor,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(CalendarRowTrailingIconSize),
                             )
                         }
                         Icon(
@@ -3032,7 +3095,7 @@ private fun CalendarCompletedTodoRow(
                                 ?: ImageVector.vectorResource(R.drawable.ic_lucide_flag),
                             contentDescription = stringResource(R.string.label_priority_task),
                             tint = tdayPriorityColor(item.priority),
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(CalendarRowTrailingIconSize),
                         )
                     }
                 } else if (showListIndicator) {
@@ -3041,8 +3104,8 @@ private fun CalendarCompletedTodoRow(
                         contentDescription = stringResource(R.string.label_task_list),
                         tint = listIndicatorColor,
                         modifier = Modifier
-                            .padding(end = 24.dp)
-                            .size(18.dp),
+                            .padding(end = TdayDimens.Spacing3xl)
+                            .size(CalendarRowTrailingIconSize),
                     )
                 }
             }
@@ -3051,7 +3114,7 @@ private fun CalendarCompletedTodoRow(
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
+                .height(TdayDimens.BorderWidth)
                 .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
         )
     }
@@ -3084,7 +3147,7 @@ private fun CalendarSwipeActionButton(
 
     Column(
         modifier = Modifier
-            .sizeIn(minWidth = 60.dp)
+            .sizeIn(minWidth = CalendarSwipeActionMinWidth)
             .graphicsLayer {
                 alpha = easedReveal
                 val revealScale = 0.38f + (0.62f * easedReveal)
@@ -3092,17 +3155,20 @@ private fun CalendarSwipeActionButton(
                 scaleY = pressedScale * revealScale
             },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs),
     ) {
         Card(
-            modifier = Modifier.size(width = 56.dp, height = 34.dp),
+            modifier = Modifier.size(
+                width = CalendarSwipeActionButtonWidth,
+                height = CalendarSwipeActionButtonHeight,
+            ),
             onClick = onClick,
             interactionSource = interactionSource,
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(TdayDimens.RadiusLg),
             colors = CardDefaults.cardColors(containerColor = background),
             elevation = CardDefaults.cardElevation(
-                defaultElevation = 0.dp,
-                pressedElevation = 0.dp,
+                defaultElevation = TdayDimens.CardElevationDefault,
+                pressedElevation = TdayDimens.CardElevationDefault,
             ),
         ) {
             Box(
@@ -3113,7 +3179,7 @@ private fun CalendarSwipeActionButton(
                     imageVector = icon,
                     contentDescription = contentDescription,
                     tint = tint,
-                    modifier = Modifier.size(21.dp),
+                    modifier = Modifier.size(CalendarSwipeActionIconSize),
                 )
             }
         }
@@ -3138,14 +3204,17 @@ private fun CalendarCompletionToggleIcon(
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .sizeIn(
+                minWidth = CalendarCompletionToggleTouchTarget,
+                minHeight = CalendarCompletionToggleTouchTarget,
+            )
             .clip(CircleShape)
             .clickable(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 24.dp,
+                    radius = CalendarCompletionToggleRippleRadius,
                 ),
                 onClick = onClick,
             ),
@@ -3170,7 +3239,7 @@ private fun CalendarCompletionToggleIcon(
                 imageVector = glyph,
                 contentDescription = contentDescription.takeIf { glyph == imageVector },
                 tint = tint,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(CalendarCompletionToggleIconSize),
             )
         }
     }
