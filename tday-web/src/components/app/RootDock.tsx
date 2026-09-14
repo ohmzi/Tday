@@ -320,7 +320,14 @@ export default function RootDock({
               and within about five of the floor for "Floater" — so on the way IN
               the floor never binds and the tab has its width in the first frame,
               at any duration. The floor earns its keep on the way OUT, where the
-              label is hidden and 48px is all the content asks for. */}
+              label is hidden and 48px is all the content asks for.
+
+              Not a token — see docs/motion.md. The curve, unlike the rung, has
+              nothing to be a token WITH: it is a hard-out with no counterpart on
+              Android or iOS, both of which express this dock with a spring. It is
+              the third and last of web's orphan curves, and with the other two
+              argued where they are written the ceiling and the list of sites are
+              now the same three. */}
           <div
             ref={pillRef}
             className="pointer-events-none absolute left-1.5 top-1.5 rounded-[20px] bg-card shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)] transition-all duration-emphasis ease-[cubic-bezier(0.25,1,0.5,1)]"

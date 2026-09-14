@@ -197,3 +197,52 @@ private enum RootFeedDockMetrics {
     static let height: CGFloat = 60
     static let fontSize: CGFloat = 14.5
 }
+
+/// Where a root feed's dock folds down to its pill, and where it opens back up again.
+///
+/// Two thresholds and not one. A single comparison flips on its own boundary point, so a
+/// feed resting exactly at `collapseThreshold` — which is where a feed near the top of its
+/// content ends up, a scroll view settling a point either way out of its own deceleration,
+/// or a finger parked there — strobes the dock between `RootFeedDockMetrics.collapsedWidth`
+/// and `RootFeedDockMetrics.width` for as long as it rests. The 20 points between the two
+/// numbers below are the dead band that swallows that hover. It costs a deliberate scroll
+/// back to the top nothing: such a scroll passes both edges inside one gesture.
+///
+/// `collapseThreshold` is not ours alone. Android declares the same 44 at
+/// `RootFeedDockCollapse.CollapseThreshold` in
+/// `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/RootFeedDock.kt`,
+/// and web at `ROOT_DOCK_COLLAPSE_PX` in `tday-web/src/lib/rootDockCollapse.ts`. Moving it
+/// here moves one client of three, and a dock that folds at three different distances is
+/// three docks. It is declared once per client for the same reason: the two root feeds each
+/// carried a copy of the literal, which is how the number was one fold point on paper and two
+/// the moment anybody touched one of them.
+enum RootFeedDockCollapse {
+
+    /// How far a feed has to travel before its dock gives up its labels.
+    static let collapseThreshold: CGFloat = 44
+
+    /// How far back up it has to come before the dock gets them back.
+    static let expandThreshold: CGFloat = 24
+
+    /// The dock's next folded state, given the one it is already in.
+    ///
+    /// `previous` is what makes the dead band a dead band rather than a second threshold
+    /// nobody reaches: it picks which edge is being tested. Ask this without it — with a
+    /// standalone comparison, the way both feeds used to — and the band has no effect at
+    /// all, because the answer at any offset is then the same whichever side the dock
+    /// arrived from.
+    ///
+    /// Android's object takes the feed's first visible index as well, since a lazy list
+    /// reports the offset within that item rather than the distance travelled and a long
+    /// scroll would otherwise read as a short one. A `UIScrollView`'s content offset is the
+    /// travel itself, so there is nothing here to correct for.
+    ///
+    /// The clamp is for the call sites rather than for the arithmetic: both edges are
+    /// positive, so a rubber-banded offset above the top loses either comparison with or
+    /// without it. It is here so that the callers that were each spelling `max(offset, 0)`
+    /// in front of their own comparison have one less thing to keep in step.
+    static func next(previous: Bool, offset: CGFloat) -> Bool {
+        let travelled = max(offset, 0)
+        return previous ? travelled > expandThreshold : travelled > collapseThreshold
+    }
+}

@@ -238,6 +238,10 @@ fun TdayPullToRefreshIndicator(
     val visible = isRefreshing || waveFrozen || distanceFraction > 0f
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
+        // not a token — see docs/motion.md. Part of the same finger-driven
+        // sequence as the release spring above: the pill fades against the pull
+        // it is riding, not against the ladder, and a rung here would have it
+        // arriving on a clock while everything around it answers the thumb.
         animationSpec = tween(durationMillis = 220),
         label = "pullRefreshAlpha",
     )
@@ -250,6 +254,10 @@ fun TdayPullToRefreshIndicator(
             initialValue = 0f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
+                // not a token — see docs/motion.md. A loop has a period, not a
+                // duration: 1050 is how long one sweep of the bars takes to come
+                // round again, and every rung on the ladder measures how long a
+                // change takes to finish. This one never finishes.
                 animation = tween(durationMillis = 1050, easing = LinearEasing),
             ),
             label = "pullRefreshWavePhase",
