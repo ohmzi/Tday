@@ -38,9 +38,12 @@ The counting rules are part of the evidence, because a count nobody can
 reproduce is an assertion:
 
 - **An Android tween** is one `tween(…)` construction whose duration resolves to
-  the rung, following `const val` indirection — most of `Emphasis`'s fifteen are
-  spelled `CREATE_TASK_SHEET_MOTION_MS`, not `320`. A number quoted inside a
-  comment is not a call site.
+  the rung, following `const val` indirection — ten of `Emphasis`'s fifteen were
+  spelled `CREATE_TASK_SHEET_MOTION_MS` or `CREATE_LIST_SHEET_MOTION_MS` at the
+  census, not `320`. Four of those ten are `TdaySheetMotion.cardIn()` now, two
+  are a `Durations.Emphasis` sheet resize written out, and four left the rung
+  altogether with the card's exit. A number quoted inside a comment is not a
+  call site.
 - **A web transition utility** is a `transition` or `transition-<property>` class
   in a class string. It "names a duration" when a `duration-*` class appears in
   the same string literal. `transition-none` disables a transition rather than
@@ -98,12 +101,16 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   `ios-swiftUI/Tday/Feature/Guide/HelpGuideScreen.swift:225`,
   `tday-web/src/globals.css:146`.
 - **`Enter` (200).** 52 web `duration-200` utilities and 7 iOS sites (5 in the
-  app, 2 in the widget extension); **zero** on Android. This rung is 200 and not
-  190 because 190 matches two hand-written Android tweens
+  app, 2 in the widget extension); **zero** on Android at the census. The first
+  two Android sites are the hand-built sheets' dim in both directions —
+  `TdaySheetMotion.scrimIn()` and `scrimOut()`, one construction each — which is
+  the rung being reached for rather than the census moving. This rung is 200 and
+  not 190 because 190 matched two hand-written Android tweens
   (`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:54`,
   `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/completed/CompletedScreen.kt:290`, plus one conditional branch at
-  `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdaySegmentedSlider.kt:181`) against 200's 57 across two
-  clients. Anchors: `tday-web/src/components/settings/SettingsPage.tsx:287`,
+  `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdaySegmentedSlider.kt:181`) against 200's 57 in the two
+  apps proper (52 web plus the 5 iOS app sites, the widget extension's two
+  aside). Anchors: `tday-web/src/components/settings/SettingsPage.tsx:287`,
   `ios-swiftUI/Tday/Feature/Onboarding/OnboardingWizardOverlay.swift:123`.
 - **`Change` (260).** 3 Android tweens, 8 iOS `.easeInOut(duration: 0.26)`, and
   2 on web, both named constants — thirteen sites across all three clients, with
@@ -118,9 +125,18 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
   `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3044`,
   `tday-web/src/lib/taskCompletionTiming.ts:36`.
-- **`Emphasis` (320).** 15 Android tweens (eleven of them reached through the
-  two create-sheet constants and `TdayFeedItemMotion.PlacementMillis` rather
-  than written out), 5 iOS, 1 on web. Long enough to be followed with the eye.
+- **`Emphasis` (320).** 15 Android tweens at the census (eleven of them reached
+  through a named constant rather than written out), 5 iOS, 1 on web. Long
+  enough to be followed with the eye. Ten of those eleven were the two
+  create-sheet constants, and both are gone: `TdaySheetMotion` holds the
+  hand-built sheets' four specs now, and it spends this rung on the card's
+  *arrival* only — the card's exit answers to `Change`, which is the nearer rung
+  to iOS's own 0.24 and the one that keeps an exit from outlasting its enter.
+  The two content resizes those constants also drove stayed here, naming
+  `Durations.Emphasis` directly: a sheet changing height is geometry, but it is
+  not the sheet arriving, and tying it to the card's spec would retime it the
+  next time the arrival moves. The eleventh is still
+  `TdayFeedItemMotion.PlacementMillis`.
   Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskStrikethrough.kt:63`,
   `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:286`,

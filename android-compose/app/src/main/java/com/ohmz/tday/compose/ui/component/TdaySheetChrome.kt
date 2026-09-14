@@ -123,6 +123,12 @@ object TdaySheetDefaults {
     }
 }
 
+/**
+ * The Material3 half of Android's two sheet mechanisms: this one brings its own animated
+ * scrim and its own card timing, so it names no specs. The other half — the hand-built
+ * `AnimatedVisibility`-inside-a-`Dialog` sheets, where the scrim and the card are separate
+ * composables that have to be told to agree — runs on `TdaySheetMotion`.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TdayModalBottomSheet(

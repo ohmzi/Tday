@@ -144,6 +144,7 @@ import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.TdaySheetMotion
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
@@ -1007,8 +1008,8 @@ private fun CreateListBottomSheet(
     }
     var nameFieldFocused by remember { mutableStateOf(false) }
     // The same two-step dismissal the create-task sheet uses: start the exit, and tell the
-    // caller only once it has finished, so the 320 ms slide out is not cut off by the host
-    // Dialog leaving the composition on the frame of the tap.
+    // caller only once it has finished, so TdaySheetMotion's slide out is not cut off by
+    // the host Dialog leaving the composition on the frame of the tap.
     //
     // The keyboard goes at the end of that, with the caller's onDismiss, for the same
     // reason it does over there: clearing focus first drops `useTypingHeight` below, which
@@ -1037,8 +1038,12 @@ private fun CreateListBottomSheet(
         } else {
             CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION
         }).coerceAtMost(maxSheetHeight),
+        // Emphasis rather than TdaySheetMotion.cardIn(): this is the card changing height
+        // under a keyboard, not the card arriving. Same rung today — a size change is
+        // geometry either way — but keeping it off the card's spec means a retime of the
+        // arrival cannot silently retime the keyboard climb as well.
         animationSpec = tween(
-            durationMillis = CREATE_LIST_SHEET_MOTION_MS,
+            durationMillis = TdayMotionTokens.Durations.Emphasis,
             easing = FastOutSlowInEasing,
         ),
         label = "createListSheetHeight",
@@ -1060,19 +1065,28 @@ private fun CreateListBottomSheet(
             modifier = Modifier
                 .fillMaxSize(),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(sheetScrimColor)
-                    // No indication: a dismiss tap on the scrim is a gesture at the sheet,
-                    // not a press of a full-screen button, and the default ripple draws
-                    // itself across the entire window on the way out.
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = startDismiss,
-                    ),
-            )
+            // Same chrome as the create-task sheet, and now the same four specs: the scrim
+            // fades with the card instead of being drawn and undrawn with the Dialog
+            // window. `visible` and not `visibleState` — see SheetDismissState.visible.
+            AnimatedVisibility(
+                visible = sheetDismiss.visible,
+                enter = fadeIn(animationSpec = TdaySheetMotion.scrimIn()),
+                exit = fadeOut(animationSpec = TdaySheetMotion.scrimOut()),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(sheetScrimColor)
+                        // No indication: a dismiss tap on the scrim is a gesture at the
+                        // sheet, not a press of a full-screen button, and the default
+                        // ripple draws itself across the entire window on the way out.
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = startDismiss,
+                        ),
+                )
+            }
 
             AnimatedVisibility(
                 visibleState = sheetDismiss.transition,
@@ -1080,19 +1094,13 @@ private fun CreateListBottomSheet(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth(),
                 enter = slideInVertically(
-                    animationSpec = tween(
-                        durationMillis = CREATE_LIST_SHEET_MOTION_MS,
-                        easing = FastOutSlowInEasing,
-                    ),
+                    animationSpec = TdaySheetMotion.cardIn(),
                     initialOffsetY = { fullHeight -> fullHeight },
-                ) + fadeIn(animationSpec = tween(durationMillis = CREATE_LIST_SHEET_MOTION_MS)),
+                ) + fadeIn(animationSpec = TdaySheetMotion.cardIn()),
                 exit = slideOutVertically(
-                    animationSpec = tween(
-                        durationMillis = CREATE_LIST_SHEET_MOTION_MS,
-                        easing = FastOutSlowInEasing,
-                    ),
+                    animationSpec = TdaySheetMotion.cardOut(),
                     targetOffsetY = { fullHeight -> fullHeight },
-                ) + fadeOut(animationSpec = tween(durationMillis = CREATE_LIST_SHEET_MOTION_MS)),
+                ) + fadeOut(animationSpec = TdaySheetMotion.cardOut()),
             ) {
                 Surface(
                     modifier = Modifier
@@ -2262,7 +2270,6 @@ private const val SCHEDULED_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
 private const val CREATE_LIST_SHEET_MAX_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
 private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
-private const val CREATE_LIST_SHEET_MOTION_MS = 320
 
 /**
  * How long the search surface is left standing after a result is tapped — not a

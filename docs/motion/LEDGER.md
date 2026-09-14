@@ -1169,7 +1169,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 41b — the Android sheet language
 
-- ↳ part 2 of 3 of `sheet-presentation-unification` — `TdaySheetMotion` from iOS's 4 specs; animate the scrim; two sheet mechanisms. Box lives under **PR 41c**.
+- ↳ part 2 of 3 of `sheet-presentation-unification` — `TdaySheetMotion` from iOS's 4 specs (card exit 320 → `Change`, both directions off `Standard`); the scrim fades with its card instead of with the `Dialog` window; both create-sheet constants retired; `TdayModalBottomSheet` named as the other mechanism. Also carries PR 15a's deferred confirm cut, per the note under **PR 15a**. Box lives under **PR 41c**.
 
 ### PR 41c — the iOS sheet language and drag-to-dismiss
 
