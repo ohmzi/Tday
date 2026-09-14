@@ -129,6 +129,17 @@ animates.
               than its own enter; or the calendar `Modal` fades out only part-way before the card
               is cut away, which is the JavaScript half of its exit having drifted from the CSS.
 
+- [ ] **PR G7 · web · The page dims with the panel, not ahead of it** — a phone, light AND dark
+      (the scrim's two alphas differ, and the early-finish is easier to catch on the lighter one).
+      Do:     open the right-hand `Sheet` from the More tab, watch only the page BEHIND the panel,
+              then close it and watch the same thing. Repeat once at 1/4 speed if the browser's
+              animation inspector offers it — the whole margin here is about a tenth of a second.
+      Watch:  the page reaches its full dim at the moment the panel stops moving, and starts coming
+              back only as the panel leaves — the two halves finish together in both directions.
+      Fails:  the page is fully dark while the panel is still sliding in — that is the 0.15 s
+              library fallback still winning, which means the utility is not reaching tw-animate's
+              `animation-duration`; or the page is bright again with the panel still on screen.
+
 - [ ] **PR 39a · web · The burst is paper, and the apex is not cut** — any list with exactly one
       task left on it, so completing it empties the list and celebrates. Run it twice: once in a
       tall window, and once with the browser window short enough that the empty state is at its
@@ -177,6 +188,155 @@ animates.
               is now its own ledger row (`web-infinite-scroll-skeleton`). PR 40a has since landed,
               so its `TaskRowSkeletonGroup` is in the tree — the strip simply does not draw it yet,
               so there is still nothing to check here, and the row above is not asking about it.
+
+- [ ] **PR 8i · web · The dock selects one object, and the pill takes the direct route** — a
+      DESKTOP window, or any viewport at `sm` and wider: below that no tab changes width and there
+      is nothing to see. The dock with the More tab visible, standing on any tab but the one you
+      are about to tap.
+      Do:     tap a different tab and watch the tab you are moving AWAY from, and the pill. Once at
+              full speed and once with the browser's animation inspector at 1/4, if it offers one.
+      Watch:  the tab you left narrows to its icon over about a third of a second, 320 ms, sliding
+              the tabs beside it along with it, and the pill travels and stretches alongside them
+              and stops when they do. One journey: at 1/4 speed the pill settles onto its mark
+              from about five pixels past it, which is momentum, not a return trip.
+      Fails:  the pill setting off past the arriving tab and coming back from the far side — 56px
+              out and back, unmistakable even at full speed. That is the follower in `RootDock`
+              not running, and it is what the 260 ms sample this row retired looked like. Also a
+              fail: the tab you left snapping to its icon in one frame, which is `min-width`
+              having fallen out of the press layer's `transition-property` list in `globals.css`
+              — the call site cannot restore it.
+      Note:   the arriving tab is NOT what to watch. Its label makes it wider than the 104px floor,
+              so it reaches its width in the first frame at any duration — that is measured, not
+              a defect. jsdom computes no layout, so the suite can prove both elements spell
+              `duration-emphasis` and can say nothing about whether they arrive together.
+
+- [ ] **PR 8i · web · The dock tab still answers a finger** — the same dock, any width; a touch
+      screen if there is one, since this is the press and not the hover.
+      Do:     press and hold a dock tab, then release, without changing tabs.
+      Watch:  it squashes and dips under the finger and comes back on release. It now takes 320 ms
+              rather than 200 — one duration covers every property the press layer animates on
+              this element, and the tab's `min-width` had to come up to Emphasis to pair with the
+              pill.
+      Fails:  the squash reading as the tab thinking about it rather than answering — a press that
+              is still arriving when the finger has gone. If it does, the pairing is not worth its
+              price and the tab needs a press duration the pill does not share.
+
+- [ ] **PR 8i · web · The install banner leaves faster than it arrived** — iOS Safari, or any
+      browser where the PWA install prompt fires; the banner has to be on screen, which on Chrome
+      means a site not already installed.
+      Do:     let the banner slide up, then tap its X and watch the banner, not the page.
+      Watch:  it rises over about a third of a second and is gone in about half that — 320 ms in,
+              150 ms out — and it is fully gone before its space is reclaimed, never cut away
+              mid-fade.
+      Fails:  the banner vanishing between frames with no slide-out at all, which would mean
+              `BANNER_EXIT_MS` and the closed-state class have drifted apart again and the node is
+              being unmounted before its animation runs; or an exit that takes as long as the
+              arrival, which is the class not reaching tw-animate's `animation-duration`.
+
+- [ ] **PR 8j · web · The calendar's view switcher and the view it switched arrive together** — any
+      viewport; the Calendar screen, standing on Month.
+      Do:     tap Week, then Day, then back to Month, watching the WHITE THUMB behind the labels and
+              the grid below it at the same time. Once at full speed and once at 1/4 in the
+              browser's animation inspector if it offers one.
+      Watch:  the thumb slides a segment and the grid slides in from the side, and both stop on the
+              same frame — about a third of a second, 320 ms. The card's height settles with them;
+              it was already on that rung.
+      Fails:  the thumb arriving first and the grid still travelling under a switcher that has
+              already finished — one tap reading as two events. That is the 300 ms this row
+              retired, and 20 ms is at the edge of what the eye catches at full speed, which is why
+              the 1/4 pass is part of the row rather than a nicety.
+      Note:   jsdom computes no layout, so the suite can prove the thumb spells `duration-emphasis`
+              and the keyframes spell `--tday-duration-emphasis`, and can say nothing about whether
+              the two play as one. Not a fail: the OTHER two segmented controls in the app — the
+              Completed tab strip and Settings' two switchers — still move their thumbs over 200 ms.
+              That is deliberate and argued at the call site; they have no grid moving beside them.
+
+- [ ] **PR 57a · web · The dock folds down to the tab you are on, and holds still at the fold** — a
+      phone-width viewport; Today, and again on the Anytime feed, each with enough tasks to scroll.
+      Do:     scroll down slowly past the first 44 px and keep going; scroll back to the top; then
+              park a finger just past the fold without moving it and leave it there; then, with the
+              dock folded, tap the dock once and wait without touching anything else. Finally
+              scroll a long Settings page and the Guide.
+      Watch:  as the feed passes 44 px the tabs you are not on are swallowed into the capsule from
+              their trailing edge and the capsule closes around the tab you are on, over about a
+              third of a second — 320 ms, the rung its pill and its tabs already share. The icons
+              are clipped, not squeezed. A finger resting at the fold leaves the dock exactly where
+              it is. Scrolling back up opens it again well before the top of the feed arrives. One
+              tap on the folded dock opens it where it stands — no navigation, no jump to the top —
+              and it closes itself again about 2.4 s later if nothing is chosen.
+      Fails:  the capsule reaching its folded width in a single frame instead of gliding (the press
+              layer deletes a `width` transition declared on a button, which is why the collapse is
+              on a wrapper); an icon squashing on the way out; a stub of a closed tab left inside
+              the capsule — folded, the dock is the one tab and the capsule's own 7 px either side
+              of it, 62 px on a phone, and nothing else; the dock flickering between its two
+              shapes while a finger rests near the fold, which is the whole reason there are two
+              thresholds; a tap on the folded dock jumping the feed to the top or switching tab;
+              the dock folding on Settings or the Guide, where it is the way out rather than in
+              the way.
+      Note:   jsdom computes no layout, so the suite can prove the fold's four answers and which
+              classes each tab carries, and can say nothing about whether the capsule glides. The
+              collapse is a `1fr` → `0fr` grid track — the same interpolable spelling of "as wide
+              as what is inside it" the collapsing task rows use on the other axis — and it has
+              never been seen playing.
+      Pill:   the white pill under the active tab makes the trip with it, and the Anytime feed is
+              where that is worth standing on — there the tab that closes is to the LEFT of the
+              one you are on, so the active tab slides 52 px inwards while the capsule shuts around
+              it. The pill is re-measured once a frame for the length of the fold rather than
+              sprung to a computed slot the way Android's selector is, so what to watch for is a
+              pill that arrives after the tab has stopped or overshoots and comes back — not one
+              parked in the open dock's slot, which is what the suite now pins.
+
+- [ ] **PR 57b · web · The folded dock is folded, not half-folded** — the same phone-width
+      viewport and the same two feeds, with reduce-motion on (Chromium: DevTools → Rendering →
+      **Emulate CSS prefers-reduced-motion: reduce**; or the OS setting, which is the one a real
+      user has). The Anytime feed is where to spend the time: there the tab that closes is to the
+      LEFT of the one you are on, so the fold moves the active tab 52 px without changing which
+      tab is active.
+      Do:     scroll past 44 px, then back to the top, then past it again. At a desktop width,
+              also switch tabs with the dock open.
+      Watch:  the dock is its folded shape on the next frame — no glide, no half-closed capsule —
+              and the white pill is UNDER the one tab that is left, flush inside the 62 px
+              capsule. The same in reverse: the open dock arrives already open with the pill under
+              the active tab. Nothing travels at any point, and nothing needs a second gesture to
+              settle.
+      Fails:  the pill parked to the RIGHT of the tab it marks, or clipped to a sliver against the
+              capsule's border — the defect this PR is for. With motion off there is no follower
+              re-reading the tab's rect, so the only thing that can correct the measurement taken
+              as the fold committed is the transition's own completion; a pill in the wrong slot
+              means that never arrived. Also a fail: anything gliding, which would mean the 1 ms
+              floor is not reaching this subtree, and a pill that snaps to the right slot only
+              once you touch the dock again.
+      Note:   `globals.css` floors transitions to 1 ms rather than to zero precisely so the
+              completion still reports itself, and this row is the only place that bargain is
+              checked by eye. An engine that decided not to fire `transitionend` for a 1 ms
+              transition would show exactly the failure above with every automated gate green.
+
+- [ ] **PR 59 · web · The hero header stays crisp through a long scroll** — a mid-range Android
+      phone in Chrome, not a desktop emulating one: this row is about what a real GPU does with a
+      layer it rasterises once and reuses, and a laptop has the headroom to hide it. Both root
+      feeds, Today and Anytime, each with enough tasks to flick through several screens.
+      Do:     drag the top 78 px of the feed slowly up and down so the hero mark, title and search
+              capsule morph continuously for several seconds without a pause, then flick hard and
+              let it settle. Repeat with the phone's own text size turned up, where the title is
+              largest and a bad raster is easiest to see. Then stop scrolling, wait two seconds,
+              and start again — that second pass is the one that runs after the hints have been
+              dropped, and it has to look like the first.
+      Watch:  the three pieces morph smoothly throughout, and the text in the title is as crisp at
+              the end of a long scroll as at the start of it and as it is at rest.
+      Fails:  the hero title going soft, fuzzy or fringed while scrolling and snapping back crisp
+              when the scroll stops, which is a layer rasterised once at the wrong scale and
+              reused — the specific cost of these hints, and the reason they are dropped 200 ms
+              after the last scroll frame rather than held. Also a stutter on the first frame of
+              the second pass, which would mean the drop is too eager.
+      Note:   there is no automated gate for any of this and there cannot be. `will-change` changes
+              no pixel by definition — it changes when the compositor allocates, which is a
+              property of a GPU and a driver. Rule F of `motion-reachability-web.test.ts` proves
+              only that this is the one hint in the app and that it clears what it sets; it is set
+              in JavaScript, where even that cannot watch it happen. This row is the whole of the
+              evidence that the change did not cost anything.
+              Nothing to check on the dock, the bulk bar or the search panel: the nine stylesheet
+              hints that would have made those a device question were removed before this shipped,
+              and the ledger row argues why.
 
 ## Android
 
@@ -310,6 +470,431 @@ animates.
               the card has gone, which is the activity's own transparent window still standing there
               waiting for a sync.
 
+- [ ] **PR 9b · and · The hero circle buttons travel instead of blinking** — the root feed, for the
+      "Create list" and "More" circles in the header and then the close circle inside the expanded
+      search capsule, and any list-detail screen for the back chevron.
+      Do:     press and HOLD each of the four, watching the circle rather than the ripple, then let
+              go. Repeat with Settings → "Reduce motion" on (or the system's "Remove animations").
+      Watch:  the circle shrinks and sinks about 2 dp while the finger is down, and comes back when
+              it lifts — a short trip each way rather than a state change, and one that no longer
+              finishes before the ripple has started. These are bar buttons, so the squash is 0.94
+              where they used to type 0.93 for themselves; that difference is a hair and the travel
+              is the point.
+      Fails:  the squash landing in one frame and leaving in one, which is the old `if (pressed)`
+              inside `graphicsLayer` — it reads as a blink under a ripple still fading. Also a fail:
+              the circle sinking without shrinking, or shrinking about a corner rather than its own
+              centre, which is the offset and the layer applied in the wrong order. Also a fail, and
+              only the Reduce-motion pass can see it: no press showing at all, which would be the
+              destination thrown away along with the trip, or a press that still takes time to
+              arrive.
+      Known:  the compact close button inside the search capsule is transparent and unelevated by
+              design, so its press is the squash and the sink with no shadow moving behind it.
+              The search capsule itself — the wide button sitting between the title and the two
+              circles — is not one of the four. It is still on plain `Card` elevation with no press
+              scale, so it ripples and flattens and does not travel. Expected: no Phase 9 unit
+              migrates it.
+
+- [ ] **PR 9b · and · The create button answers a finger, and it does not jump at sign-in** — both
+      root feeds (scheduled and Anytime), then the car surface, then the onboarding wizard.
+      Do:     press and HOLD the blue "+" circle in the bottom-right of each root feed, watching the
+              circle rather than the ripple, and let go. Repeat on the car surface, where the same
+              button is drawn at a forced size in a row of controls. Then sign out far enough to
+              reach the onboarding wizard, look at the blurred feed behind it, and sign back in
+              watching the bottom-right corner through the hand-over.
+      Watch:  the circle shrinks and sinks about 2 dp under the finger and comes back when it lifts
+              — the same trip the header circles make, a little deeper: a FAB presses to 0.93 where
+              a bar button presses to 0.94. Behind the wizard the backdrop is the app's own layout:
+              the dock in the bottom-left AND one "+" circle in the bottom-right, both inert. Signing
+              in changes the feed under that circle while the circle itself stays put.
+      Fails:  the button not moving at all, which is the bug this row closes — it was handed an
+              interaction source and never read it. Also a fail: the button jumping sideways or up
+              as it presses, or the navigation-bar gap under it changing, which would be the press
+              applied inside the padding instead of outside it. On the car surface, the circle
+              changing the spacing of the controls beside it. Behind the wizard, a bottom-right
+              corner with NO "+" circle in it. And at sign-in, the circle popping, sliding or
+              flashing twice as the two feeds cross-fade — that would be the backdrop's button
+              sitting at different padding from the live one.
+      Known:  the two root feeds draw the same button from the same place, so they cannot disagree;
+              if one presses and the other does not, the fault is above this button. On the car
+              surface the button carries a forced `FabSize`, so the press has to move the drawing
+              inside that fixed slot and nothing else. The backdrop's circle is a real
+              `RootCreateTaskButton` and will press under a finger even though it opens nothing;
+              that is cosmetic and not a fail.
+
+- [ ] **PR 9b · and · The leaf screens' bar buttons travel, and a disabled sheet action still does
+      not** — Guide, Calendar, Completed, Latest release and Settings for the round buttons in the
+      top bar; then any sheet with a confirm in its header, and the "Manage members" sheet for the
+      row-shaped action.
+      Do:     press and HOLD each round button in the top bar of Guide, Calendar, Completed, Latest
+              release and Settings in turn, watching the circle rather than the ripple, and let go.
+              On Calendar also hold the purple "Today" pill twice: once with the title down, where
+              it shows the word, and once after scrolling the title up, where it has shrunk to a
+              circle. Then open a sheet and hold its confirm action with the sheet in a state that
+              allows confirming, and hold it again with that action greyed out. Finally open
+              "Manage members" and hold one of the wide action rows. Repeat the round buttons with
+              Settings → "Reduce motion" on.
+      Watch:  the circle shrinks and sinks about 2 dp while the finger is down and comes back when
+              it lifts — a short trip each way rather than a state change. The "Today" pill makes
+              the same trip without changing width, in either of its two shapes. The sheet's
+              confirm travels 1 dp rather than 2 — it is a bordered square inside the sheet's own
+              chrome, and iOS sinks its toolbar buttons a point for the same reason — and its
+              shadow softens as it goes. The members row squashes and does NOT sink.
+      Fails:  a button that does not move at all, or one that shrinks without sinking, or one
+              whose drop gets smaller as it squashes — that last is the sink drawn inside the
+              scale layer rather than outside it. Also a fail: the greyed-out confirm moving at
+              all, which is the `enabled` gate gone; it must stay exactly where it is however hard
+              it is held, while the enabled action beside it travels. Also a fail: the "Today"
+              pill's label jumping or its width snapping as the finger lands, which would be the
+              press applied outside `animateContentSize` rather than inside it. Also a fail: the
+              members row dropping 2 dp, which would be the default sink arriving at a site that
+              never had one. And under Reduce motion, a circle that shows no press at all, or one
+              that still takes time to arrive.
+      Known:  the buttons press a hair less deeply than they used to — 0.94 where each of these
+              screens typed 0.93 for itself — so they now match the hero circles migrated ahead of
+              them instead of sitting a hundredth deeper for no reason. That difference is not
+              something to look for; the travel is. The sheet action's elevation still steps
+              2/8/5 dp across pressed, enabled and disabled, which is its own animation and not
+              this one.
+
+- [ ] **PR 9b · and · Four classes of surface press to four different depths** — this is the row
+      that says whether the press vocabulary was worth having. One device, one sitting, all five
+      surfaces in a row so the depths are compared against each other rather than each against a
+      memory.
+      Do:     press and HOLD, in this order, letting go between each: a category card on the root
+              feed; a list row under it on the Floater home; the round create button at the bottom
+              of a task list; a "Members" or "Share" tile in a list's settings sheet, and the
+              "Delete list" bar under them; then each end of a segmented slider — first the segment
+              already selected, then the one that is not. Repeat the lot with Settings →
+              "Reduce motion" on.
+      Watch:  four depths, and they must be TELLABLE APART held side by side. The create button
+              travels furthest and is the only thing on screen with nothing beside it to be
+              measured against. The category card and the settings tiles sink less. The list row
+              and the slider barely move at all — a full-width row that travels reads as the list
+              shifting. The card and the row both drop about 2 dp as they shrink; the two settings
+              tiles and the delete bar squash WITHOUT sinking.
+      Fails:  four surfaces that all look like one number, which is the defect this closes coming
+              back. A settings tile dropping while the tile beside it holds still — the pair must
+              stay aligned, so neither sinks. A card or a row whose shadow no longer softens as it
+              goes down: the lift is `cardElevation`'s two ends now rather than a hand-animated
+              third leg, and if it has stopped moving, that hand-off is what to look at. On the
+              slider, the selected segment's label sliding against the pill under it as the finger
+              lands — label and pill are on one depth now and must travel as one object — and the
+              UNSELECTED segment's halo, which grows INTO view and is deliberately not a press;
+              it should still bloom outwards, not sink.
+      Known:  the slider's segment label presses a half-hundredth shallower than it did, onto the
+              selector's own depth. Not something to look for on its own; the label-against-pill
+              question above is. The slider is also the one surface here that reads no motion
+              preference at all: both its press scales keep an explicit spring because each is
+              coupled to the offset that slides the selector, so with "Reduce motion" on the label
+              and the pill still take that spring's time to get down. Expected, not a fail. The
+              card's and the row's shadow is `cardElevation`'s now, which Material animates on a
+              spec of its own that the preference does not reach, so the lift keeps travelling
+              while the scale and the sink snap.
+      Also:   with **Reduce motion** on, the four surfaces on the shared press modifier — the card,
+              the row, the create button, and the settings tiles with the delete bar — arrive
+              pressed on the next frame and leave on the next frame: no travel, and exactly as far
+              down as before. One that shows no press at all is a fail; so is one that still takes
+              time to get there. The slider is not one of the four — see Known, and do not log it
+              against this line.
+
+- [ ] **PR 42a · and · Morning Sweep deals the next card instead of swapping it** — Morning Sweep,
+      with at least three carried-over overdue tasks waiting, so there are cards to deal and a
+      finish line to reach.
+      Do:     tap **Tomorrow**, twice. Then triage the rest until the last card is gone.
+      Watch:  the card you have dealt with slides about a quarter of the screen LEFT and fades as it
+              goes, over 150 ms, while the next one comes in from the right over 200 ms and settles.
+              The whole stack travels as one thing — the card, the five action rows and the
+              Skip / Sweep-all row arrive together, not six times. After the last card the finish
+              line fades up into the space rather than appearing on the frame the card left.
+      Fails:  the next stack drawn complete in one frame with no travel at all, which is the state
+              this screen shipped in. Also a fail: the outgoing card taking as long as the incoming
+              one or longer, which reads as the app hesitating over a decision already made; the
+              tally on the leaving card ticking down while it leaves; and "all swept" flashing up
+              when you OPEN Morning Sweep with cards waiting, which is the finish line playing
+              before the deck has been read.
+      Also:   with Settings → **Reduce motion** on (or the system's "Remove animations"), tap
+              Tomorrow again. The next card is simply there, at its own height, on the next frame —
+              no slide, no fade, and no frame where the panel is caught mid-resize. The finish line
+              is the same: there, or not there.
+
+- [ ] **PR 42b · and · The account forms grow instead of being cut open** — Settings → Account, on a
+      signed-in account that has security questions configured, so all three forms have something
+      to draw.
+      Do:     open Change name, close it; then Change password, close it; then Change security
+              questions, close it. Watch the form's FIRST field rather than the button that opened
+              it, then do it again watching the bottom edge.
+      Watch:  the first field is pinned under the header from the first frame and does not travel —
+              the form grows DOWNWARDS out of its header over 320 ms, and the edge that moves is the
+              bottom one. The alpha rises WITH the growth, so the revealed edge is never a hard cut.
+              Closing folds it back up into the header over 150 ms — shorter than the open, and it
+              should not be worth watching.
+      Fails:  the form's LAST row (Save/Cancel) arriving first and the first field's label sliding
+              down into place last — that is the bottom anchor this closes, and it is the one thing
+              to look for. Growth with no alpha under it, so a hard edge travels down the outline
+              of a field: the expand running without the fade. Alpha with no growth — the form at
+              full height and only then fading. Or a close that takes as long as the open.
+      Known:  `expandVertically` clips, and it still does: the form is revealed through a cut, not
+              drawn overflowing. So the bottom edge does pass across whatever is at it, and at some
+              instant that is a field outline or a line of text. The fade is what keeps that from
+              reading as a saw — it is the moving edge, at low alpha, arriving. A glyph momentarily
+              incomplete at the BOTTOM edge is expected; one sliced at the TOP, under the header,
+              is the fail above.
+
+- [ ] **PR 42d · and · The onboarding wizard says which way it moved** — a fresh install, or the
+      app signed out so the wizard comes up at the Mode step.
+      Do:     tap **Self-hosted** to go to Server, then **Change setup** to come back to Mode, then
+              Self-hosted again. Connect to a server, and from the sign-in panel tap
+              **Change setup** once more.
+      Watch:  going forward, the arriving panel comes in from the RIGHT over 200 ms while the one
+              it replaces leaves to the LEFT over 150 ms; coming back, both directions reverse. The
+              panel that is leaving is always the quicker of the two. The three chips above do not
+              slide with it — they stay put and only their own fill changes.
+      Fails:  both panels simply dissolving into each other with no travel, which is the default
+              spec this screen shipped on; the two directions looking identical, so Back and
+              Continue are indistinguishable; or a taller panel clipped square across the bottom
+              while it travels, which is the size transform clipping.
+      Also:   the connect spinner and the "signing you in" panel must NOT slide. Watch the hop from
+              Server to sign-in specifically — it goes Server → connecting → sign-in, and both of
+              those hops are a crossfade in place with no sideways movement at all. A slide there,
+              and especially a BACKWARD slide as the spinner goes away, is the wizard claiming the
+              user moved a step when they did not.
+      Also:   with Settings → **Reduce motion** on (or the system's "Remove animations"), walk Mode
+              → Server → Mode again. Each panel is simply there on the next frame at its own full
+              height — no slide, no fade, and no frame where the card is caught mid-resize.
+
+- [ ] **PR 42e · and · The calendar's mode switch crosses instead of cutting** — Calendar, with
+      several tasks plotted across the month so the month card and the week strip are visibly
+      different heights.
+      Do:     swipe the month grid one month forward FIRST, so the visible month is not the selected
+              date's, then tap Week, then Month, then Week again, watching the middle of the card
+              rather than the tabs above it. Then turn the app's Settings → "Reduce motion" on (or
+              the system's "Remove animations") and do the same four gestures.
+      Watch:  the grid crosses into the strip over 200 ms — for that moment both are on screen at
+              partial alpha — while the card around them settles to its new height on the Settle
+              spring, which is the slower of the two. At no point is there a frame with the new
+              content already solid at the old height.
+      Fails:  a one-frame swap of the content inside a card that is still travelling, which is the
+              defect this closes; the outgoing grid changing MONTH as it fades — the dates and the
+              month title above them re-drawing to the selected date's month while the grid is
+              still opaque, which is why the swipe is the first step; the outgoing grid cut off by
+              a fast edge of its own on the way out, which would mean the container started
+              animating its own size again; or the card bouncing as it lands, which Settle does not
+              do.
+      Also:   with Reduce motion on, the mode that was tapped is simply there on the next frame at
+              its own height — no cross, and no wait where the cross would have been.
+
+- [ ] **PR 42g · and · The error card joins the feed it lands in** — needs a load that actually
+      fails, so: airplane mode ON before opening the screen, then off again for the retry. Four
+      surfaces, and all four: a task list (Todos), Calendar, Completed, and the root feed's task
+      tab.
+      Do:     with airplane mode on, open each of the four so the retry card appears at the bottom
+              of the feed. Pick a short or empty list on each, so the BOTTOM OF THE FEED is on
+              screen when the error lands — the card is appended last, and Compose runs no
+              appearance animation for an item that arrives below the fold, so scrolling down
+              afterwards shows nothing either way. Then turn airplane mode off and tap Retry.
+      Watch:  the card fades up over ~190 ms rather than arriving in one frame, and on Retry fades
+              out over ~150 ms rather than being cut. Its placement only shows when something
+              ABOVE it changes, so add one case on Calendar and Completed: with the card up, make
+              a mutation fail so the empty-state or skeleton item leaves from above it — the card
+              should glide down into the freed slot rather than jump.
+      Fails:  the card appearing or vanishing in one frame; or the card landing in the wrong slot
+              and then sliding to the right one, which would mean the key is colliding with
+              something else in the list. Nothing below the card should move — the only thing
+              under it is an invisible spacer, and it is not animated.
+      Note:   the root feed's task tab fades on the same ~190/~150 as the other three since 8k,
+              but still takes its PLACEMENT from a spring rather than the 320 ms tween, so its
+              glide is allowed to read slightly softer. What must be true on all four is that the
+              card never jumps.
+      Also:   with Reduce motion on, repeat all four. The card is simply there, at the bottom of
+              the feed, on the frame the error arrives, and gone on the frame the retry succeeds —
+              no fade, and no wait where the fade would have been.
+
+- [ ] **PR 8k · and · The calendar's day list moves at the same speed as every other feed** —
+      Calendar, on a day that already has three or four tasks on it, so a row leaving has
+      neighbours to be seen against. The change is ten milliseconds on each leg, which is under
+      what the eye can time on its own — so this row is comparative, not absolute.
+      Do:     tick a task off the day list and watch it go; then add one to the same day (or
+              re-open it from Completed) and watch it arrive. Then do exactly the same thing on
+              Completed, on the same device, within a few seconds — that feed has been on these
+              numbers all along and is the reference.
+      Watch:  the two FADES read as the same feed — a row arrives a touch more slowly than it
+              leaves on both, and neither one feels brisker than the other.
+      Fails:  the calendar reading noticeably crisper than Completed, which would mean the old
+              180/140 is still in the tree somewhere. Also a fail, and the one worth looking for
+              because it is what a swapped pair would look like: a row LINGERING on its way out —
+              the departure must stay the shorter of the two.
+      Note:   the two feeds differ on PLACEMENT by design, so compare the fade legs and nothing
+              else. Completed glides the rows below a departure into the freed gap over 320 ms;
+              the calendar passes `placementSpec = null`, so its rows take their new slots in one
+              frame and only its error card glides. Both are the tree as it stands — neither is a
+              fail on this row.
+      Also:   these two fades are `Modifier.animateItem`'s, which Compose times for itself, so the
+              app's Settings → "Reduce motion" cannot reach them and leaving it on proves nothing
+              here. Use the system's "Remove animations" (or Developer options' animation scales
+              at 0): a ticked row is then simply gone on the next frame and an added one simply
+              there — no fade, and no pause where the fade was. With the system at 1x and only the
+              app switch on the fades still play; that gap is the `reduced-motion-coverage` box's,
+              not this row's.
+
+- [ ] **PR 8k · and · The root feed's tiles settle with the row that displaced them** — the root
+      feed's task tab, on the Today card with at least two tasks under it and the category grid
+      and a list row or two visible below.
+      Do:     tick a task off the Today card and watch the grid and the list rows underneath,
+              not the row you ticked. Then undo it, or add one back, and watch the same blocks.
+      Watch:  the row fades out and the blocks below follow it up on a spring — that spring is
+              this feed's own and has not changed. What changed is the row's own fade, which is
+              now the 150 ms every other feed leaves on; the departure should still finish before
+              the blocks below it have stopped moving.
+      Fails:  the row still on screen after the grid has settled — that would be the fade
+              outlasting the placement, which is the ordering `TdayFeedItemMotion` is built to
+              rule out. Also a fail: the blocks jumping a row height in one frame, which is the
+              keys coming off rather than anything to do with these timings.
+
+- [ ] **PR 8l · and · The drop placeholder opens at the speed of the feed it opens in** — a
+      timeline list (Today or All) with at least two dated sections and three or four tasks under
+      the one you drag into, so the gap has neighbours to be seen against. This is a retiming of
+      two legs, not three: the placeholder's fades were 150 in and 120 out of its own and are the
+      feed's 190 and 150 now. Its placement leg took the feed's 320 in the same change and is the
+      leg you cannot see here — nothing displaces the gap while it is up — so what is on the
+      screen is those two fades against rows that were already gliding on 320.
+      Do:     long-press a task, drag it over another day's section and hold there without
+              dropping. Watch the gap fade in while the rows below it move down. Then drag back
+              out of that section and watch it fade out as they close over it. Do it again, and
+              this time watch only the gap.
+      Watch:  the gap fades in at the pace of a row arriving — it is the same 190 — and fades out
+              at the pace of a row leaving. The rows under it glide on their own 320 and settle
+              after the gap has finished filling; that lag is what every arriving row in this
+              feed does, and it is what passing looks like here.
+      Fails:  the gap blinking in or out, a fade too quick to follow, which is the placeholder
+              back on its own 150/120; or the placeholder still drawn after the rows have closed
+              over the space it had.
+      Note:   the section header's bottom spacing moved onto the same rung in this unit. Do not
+              go looking for it: the only two values it takes are 2 dp and 4 dp, so the whole
+              travel is 2 dp and no duration is legible in it. Naming Emphasis there is for the
+              next size that gets animated off that line, not for this one.
+
+- [ ] **PR 31 · android · Every screen hands over at the same length** — a device, anywhere
+      with depth: Today → a list → a task, Settings → Account, the Guide, the Latest release
+      screen. Include the cold launch, which is the splash handing over to the first real
+      screen, and include at least one Settings sub-screen, because those routes each used to
+      name a transition of their own and now inherit the graph's.
+      Do:     walk in three or four screens deep and back out again with the system back
+              gesture, watching the toolbar row rather than the body. Then kill the app and
+              cold-launch it, watching the splash give way. Then sign out and back in, which is
+              the auth routes. Do the whole walk once more at normal reading speed rather than
+              at test speed.
+      Watch:  every hand-over is the same length — 200 ms in and 200 ms out, one fade in place,
+              nothing sliding. Going in should feel like it decelerates into the new screen and
+              coming out like it leaves promptly; that is the only difference between the two
+              directions and it is a curve, not a length. The splash and the Settings
+              sub-screens are indistinguishable from an ordinary push.
+      Fails:  a route that is visibly longer or shorter than the ones either side of it — the
+              defect this row exists for, and the splash is where it was worst at 300 against
+              360. Also a fail: the back chevron or the action cluster appearing to travel
+              sideways, which would mean a slide has come back; the outgoing screen still
+              legible under the arriving one, which at 200 ms should not read as a crossfade
+              with two screens in it; or a hand-over that now feels rushed enough that the
+              screen appears before you have finished the gesture — that is the one judgement
+              call here, and the argument against it is at `navigationEnterTransition`.
+      Also:   with Settings → Motion → Reduce motion ON — the in-app switch, NOT the developer
+              options animator scale — every route change is a cut: the destination is fully
+              drawn on the first frame, on the way in and on the way out, including the cold
+              launch. This is the half that did not work before this unit, so it is the half
+              worth the most attention. A screen caught half-faded, or a fade that still plays
+              at any length, is a fail. Then check the animator scale at Off as well, which
+              worked before and must still.
+      Also:   still with the in-app switch ON, tap a search result from the scheduled home and
+              from a root feed search {D} two waits existed only to cover the fade this unit now
+              cuts, and they move with it. The search surface must come down at once rather
+              than sitting over the task for a quarter of a second swallowing taps, and the
+              highlighted row must be scrolled to and flashed immediately rather than after a
+              third of a second of a destination that is already fully drawn. Either pause
+              surviving is the wait kept with the motion removed, which is the failure the
+              gate was supposed to end.
+
+- [ ] **PR 31b · android · The back gesture says how far you have pulled** — a device on Android 13
+      or later with the system back set to GESTURE navigation (Settings → System → Gestures), not the
+      three-button bar. Any screen with depth under it: Today → a list → a task, or Settings → Account.
+      Do:     drag slowly from the left edge and HOLD your thumb still partway across. Move it back
+              towards the edge without lifting, then out again. Then let go past the threshold, and
+              on a second run let go early so it snaps back. Do the whole thing again from the right
+              edge.
+      Watch:  the screen you are dragging is the only thing that moves. It slides right and shrinks
+              as you pull, tracking your thumb both ways — holding still holds the screen still, and
+              pulling back un-does the travel. At the far end it has gone about a quarter of the
+              width across and is about a tenth smaller. Letting go past the threshold carries it the
+              rest of the way; letting go early returns it. The screen arriving underneath does NOT
+              travel: it fades up in place, and the back chevron and the action cluster stay exactly
+              where they are throughout.
+      Fails:  the drag showing nothing but two screens crossfading, which is the defect and is what
+              every build before this one did. Also a fail: the arriving screen sliding too (the
+              toolbar would visibly travel, which is the thing the NavHost comment refuses); the
+              dragged screen not tracking backwards when you pull back towards the edge; or the
+              recede being so slight you cannot tell a 30 % pull from a 70 % one.
+      Depth:  the one judgement call in this row, and the reason it exists. 0.90 was chosen to match
+              the recede the SYSTEM plays when back leaves the app, so compare them back to back:
+              drag back from the home screen's own app-to-home gesture, then drag back inside the
+              app, and say whether the two read as one gesture. If the in-app one is visibly
+              shallower or deeper, the number is wrong and `PREDICTIVE_BACK_MIN_SCALE` is the one
+              place to change it.
+      Button: tap the toolbar's back chevron rather than dragging, on the same screens. The exit is
+              the same 200 ms slide-and-recede a released scrub finishes on — one back, not two.
+              A chevron that still plain-fades while the drag slides means the wiring reached the
+              gesture and not the slot.
+      Also:   with **Settings → Motion → Reduce motion** ON — the in-app switch, not the developer
+              options animator scale — drag from the edge again. There is no recede and no travel at
+              any point of the drag; the destination is simply drawn finished. A screen caught part
+              way off the side, or one that scrubs and then cuts, is a fail.
+
+- [ ] **PR 184a · and · The dock folds once instead of flickering at the fold point** — both root
+      feeds (the scheduled home and the Anytime/list feed), each with enough tasks to scroll well
+      past the header.
+      Do:     scroll down slowly until the dock folds to its pill and hold the finger still there;
+              then lift, let the list settle under its own fling, and scroll back up in small
+              increments, watching where it opens.
+      Watch:  one crossing each way. It folds about 44 dp in and stays folded with a finger parked
+              at that distance, and while the list rocks a pixel either way as a fling settles. On
+              the way back up it opens about 20 dp higher than it folded, so the two events are
+              visibly at different heights rather than at the same one.
+      Fails:  the pill and the capsule alternating under a held finger, or on the last frames of a
+              fling — that is the single-threshold behaviour this row exists to catch; and, the
+              other way, a deliberate scroll all the way to the top arriving with the dock still
+              folded, which would mean the release edge sits too low to be reached.
+      Also:   a feed too short to scroll must never fold the dock, including while an overscroll
+              bounces it past the top — check with a list of one or two tasks. And scroll hard on
+              both feeds with a frame-rate overlay up: the fold point is read off the scroll
+              outside composition now, so a fling must not be costing the screen a recomposition
+              per frame.
+
+- [ ] **PR G2 · and · A toast leaves when it is asked to, and not before** — any screen that puts a
+      toast up with an Undo on it: delete a task from a list, which is the toast with the most to
+      lose. Five gestures, one toast each; work quickly, the auto-dismiss window is the clock.
+      Do:     (1) press the middle of the card and let go without meaning to move. (2) Take it down
+              about a centimetre — a third of the card's own height — and let go slowly. (3) From
+              rest, flick it down hard and let go at once, without taking it far. (4) Take it down
+              a centimetre and then flick it back UP before letting go. (5) Swipe straight across
+              the card, sideways.
+      Watch:  (1) and (4) leave the card on screen and spring it back to where it sat — the same
+              return a half-opened task row makes when you let go of it, on the same spring
+              (0.82 / 340), carrying whatever speed it had. (2) and (3) throw it off the bottom in
+              160 ms and the Undo goes with it. (5) does not move the card at all. Under the finger
+              the card still fades towards 45 % and shrinks 3 % over the first 96 dp, exactly as it
+              did before.
+      Fails:  the card leaving on (1) — that is the old "any downward pixel commits", which is the
+              whole point of this row. Also a fail: (4) dismissing, which means an upward flick is
+              being read as distance already given up. Also a fail: a refused card arriving back at
+              rest in one frame instead of springing, or snapping home and then springing from
+              there — that is the hand-off between the finger and the spring going through zero.
+              Also a fail: (5) dragging the card sideways-and-down, or eating a swipe meant for the
+              screen underneath.
+      Known:  (3)'s flick leaves on the same fixed 160 ms accelerating exit as (2)'s slow drag, so
+              a hard throw hangs for a frame or two at lift-off before the card goes. The speed is
+              carried into the refusal spring only; making the exit answer it is
+              `toast-drag-two-stage-exit`, and it is not a fail here. A toast that is already past
+              the threshold when something else claims the pointer still commits. A cancelled drag reaches the app as a release with no velocity, so it
+              is judged on distance like any other release; that is argued at `TdayToastDismissState`
+              and pinned by a test, and is not what this row is looking for.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
@@ -375,3 +960,265 @@ animates.
               again. The placeholder is there, fully drawn and perfectly still — never parked at the
               faded end of its own pulse — and when the data lands the rows are simply there on the
               next frame. No fade, and no wait where the fade would have been.
+
+- [ ] **PR 41c · ios · The create sheet can be pulled down, and says so** — the root feed, on a
+      phone. Both sheets on the custom mechanism: the create-task sheet (the + button) and the
+      create-list sheet, which is the one whose contents scroll.
+      Do:     open the create-task sheet and pull it down slowly until it goes. Open it again and
+              flick it down 40 pt or so, fast. A third time, drag it two thirds of the way down and
+              then walk it most of the way back up before letting go. Then open the create-list
+              sheet and try to scroll its colour and icon rows.
+      Watch:  a 36 × 5 bar at the top of the card, the same one iOS draws on its own sheets. The
+              card tracks the finger exactly while it is down, and a released drag that commits
+              carries on and leaves on the same curve the scrim tap leaves on — the two must be
+              indistinguishable, because they are the same code path. A quarter of the card's own
+              height is where a slow pull commits; the flick commits long before that. The walked-
+              back drag springs home on the Gesture spring, with a little overshoot rather than a
+              snap. On the create-list sheet the scrolling regions still scroll and the header and
+              the margins still drag the card.
+      Fails:  the grabber reading as a second header — too dark, too far down, or crowding the
+              title and the two round buttons under it, which start 14 pt below the top edge. Also
+              a fail: the card oscillating or stuttering under the finger (that is the drag being
+              measured in local space, which the global coordinate space here exists to prevent);
+              a committed drag that snaps the card home first and then plays the exit; the
+              walked-back drag dismissing anyway; and the create-list sheet refusing to scroll
+              because the card's drag has taken the gesture.
+      Keyboard: open the create-task sheet, tap into the title field so the keyboard lifts the card,
+              and drag from there. The keyboard must go down as the drag begins, not at the release
+              — and the card must not jump or fight the inset collapsing under it. This is the one
+              interaction source cannot answer: the inset is animated on the keyboard's own
+              ~0.25 s curve while the finger is still moving the card.
+      Selector: on the create-task sheet, open List, then Priority, then Due date. The grabber must
+              fade out as the picker's dim comes up and fade back as it goes — never sit lit on top
+              of the dim — and while the picker is open a downward drag anywhere on the dim must do
+              nothing at all. A fail: the drag dismissing the whole sheet and losing what was typed,
+              where a tap on those same pixels only closes the picker. The picker's own rows and its
+              tap-to-close must still work throughout; this stands the card's drag down, not the
+              layer over it.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, repeat the first three.
+              The card still follows the finger — a surface under a thumb is direct manipulation and
+              is not what the setting turns off — and a refused drag is simply home on the next
+              frame rather than springing. A committed drag still dismisses, and the card crossfades
+              out where the full-motion build slides it. The grabber still fades under a picker,
+              on both settings: that is a dim arriving over it rather than anything travelling, and
+              it has to leave at the same rate the dim comes up.
+
+- [ ] **PR 8g · ios · Eleven springs changed their spelling and not their shape** — a build of the
+      app with a signed-out start, so the onboarding wizard is reachable. No throttling and no
+      settings to change; this row is the one in the file whose whole claim is that it looks
+      identical to the last build.
+      Do:     step forward and back through the wizard (mode → server → login, then into create
+              account and into security questions), and take both flow exits out of it — "Back" out
+              of the security-questions step and "Change setup". Then open and close the search bar
+              on Settings and on the Guide, twice each. Then from the sign-in card open "Forgot
+              password" and move between its steps.
+      Watch:  nothing new. Every one of those is the same short, barely-bouncing spring it has
+              always been — the panel swaps under about a third of a second with a single soft
+              settle at the end, the search bar snaps open at that same weight, and the
+              forgot-password card changes step the same way the wizard's does. The eleven sites now
+              read the numbers out of the token rather than writing them down, so a difference of
+              any kind is the bug.
+      Fails:  anything that reads slower, looser or bouncier than it did — that would mean a call
+              site picked up a spring that is not Snappy. A step that hard-cuts instead of springing
+              is the other half of the same failure: a `withAnimation` that stopped opening a
+              transaction at all. Both of these are per-site, so name the screen.
+      Why:    iOS does not compile on the machine this was written on, so the only gates it passed
+              are textual — the literal counter fell by exactly the twenty-two it should have — and
+              xctest in CI. Neither of those can see a spring play.
+
+- [ ] **PR 8h · ios · The four feed screens' search bars now name the spring they always used** — a
+      signed-in build with enough history that Completed and the calendar have rows to filter. Same
+      shape of row as 8g's above: its whole claim is that nothing looks different.
+      Do:     open and close the search bar twice on each of the four feeds — Todos (both of them:
+              the list's own search and the floater task home's), Completed, Calendar, and the
+              scheduled-task home. Type into one and close it from the X as well as from the back
+              gesture, so the close path runs with a populated field and with an empty one.
+      Watch:  the bar expands and collapses at exactly the weight it did before — a short spring,
+              one soft settle, no overshoot worth naming — and the feed under it reflows at the same
+              moment it always did. Query text still clears on close, which is the behaviour the
+              comment next to each of these functions promises and is untouched here.
+      Fails:  any of the eight reading slower, looser or bouncier than its siblings, which would
+              mean a call site picked up one of the 0.24/0.9 or 0.26/0.9 springs these same files
+              still carry. A bar that hard-cuts open instead of springing is the other failure: a
+              `withAnimation` that stopped opening a transaction. Both are per-site, so name the
+              feed and say open or close.
+      Why:    no Swift toolchain here, so the gates this passed are textual — `ios.spring` fell by
+              exactly the sixteen literals that came off, and `TdayMotion.snappy` reads the same
+              0.28/0.86 out of `TdayMotionGenerated` — plus xctest in CI. Neither can watch a search
+              bar open.
+
+- [ ] **PR 8m · ios · Two rungs stopped being spelled as numbers, and nothing retimed** — any build,
+      signed in or not; the guide is reachable without an account and the wizard is what a fresh
+      install opens on. The narrowest row in this batch: five `duration:` numbers became
+      `TdayMotion.Durations.quick` and `.enter`, which hold the same 0.15 and 0.2, so every frame
+      should be the frame it was.
+      Do:     open Help & Guide and expand and collapse four or five topic cards, including one
+              long enough to push the cards below it well down the screen. Then delete and
+              reinstall, or sign out, and walk the onboarding wizard through a connect, a sign-in
+              with a wrong password, and a security-question step, so each of the four loading
+              flags actually flips.
+      Watch:  a topic card opens and closes in about a sixth of a second, eased at both ends, with
+              the cards below it sliding rather than jumping. In the wizard, the spinner and the
+              content it replaces cross in about a fifth of a second on each of the four
+              transitions, at the same weight as the step change beside them.
+      Fails:  a loading swap that reads noticeably faster or slower — the only way that happens is
+              a site picking up the wrong rung. Motion that leaves a longer tail than it did is the
+              more likely shape of the mistake: it would mean a site moved onto
+              `TdayMotion.standard(duration:)` instead of keeping SwiftUI's `.easeInOut`, which
+              this unit deliberately did not do.
+      Note:   the Guide half of this row has since been overtaken. PR 42c retimed the topic card to
+              320 ms on the Standard curve on purpose, so a card that no longer opens in a sixth of
+              a second is 42c working, not this unit failing — check the card against 42c's row
+              below and this row against the wizard only.
+      Why:    no Swift toolchain here, so this unit's gates are textual — `ios.easeDuration` fell by
+              exactly the five literals that came off, and both constants read out of
+              `TdayMotionGenerated` at the values the call sites had typed — plus xctest in CI.
+              Neither can watch a card expand.
+
+- [ ] **PR 42c · ios · The Guide's topic card stops opening at the speed of a button press** — any
+      build; the guide is reachable without an account. Best on a topic long enough that opening it
+      pushes the cards under it well down the screen — "What's new" entries are usually the longest.
+      Do:     open Help & Guide, expand a long topic, then expand a second one so the first collapses
+              in the same transaction. Do it once more watching only the chevron.
+      Watch:  the card grows over about a third of a second, not the sixth it used to take, and the
+              cards below it travel with it rather than being shoved. The chevron turns on that same
+              clock — one transaction drives both, so they start and stop together. The curve has a
+              shorter tail than the one it replaces, so the longer motion should not also read as a
+              slower one: it should settle rather than coast.
+      Fails:  a card that still snaps open — that is the old 150 ms, and it means the transaction did
+              not pick up the new spec. A chevron that turns on a different clock from the box, which
+              would mean the rotation left the transaction. And a motion that reads sluggish at the
+              end rather than settling: that is `.easeInOut`'s longer tail, so the curve did not move
+              with the rung.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, expand and collapse the
+              same topics. The body is simply there, fully drawn, on the frame of the tap, and the
+              chevron is already turned — no growth, and no wait where the growth would have been.
+              Collapsing is the same in reverse: the card is at its closed height immediately.
+      Why:    there is no Swift toolchain on the machine this was written on, so nothing here was
+              built. The guardrails prove the transaction still exists and that the budget did not
+              move; only a device can say whether 320 ms on Standard is the right length for this
+              card, which is the whole of the `disclosure-expand-collapse` claim on iOS.
+
+- [ ] **PR 42f · ios · The counts roll their digits instead of swapping them** — any build with a
+      handful of scheduled tasks and at least two lists that have tasks on them, plus one Anytime
+      list on the Todos screen. Checked twice, the second time with Reduce Motion on.
+      Do:     on the root feed task tab, create a task first. Creating rewrites the cache and the
+              dashboard summary at once, so the big date-card count rolls up on the spot, along
+              with the tile and list-row counts for whatever the new task lands under — put one
+              under a category tile (Today, Priority, Overdue) and one on a named list, so a 26 pt
+              tile count and a 22 pt list-row count each move too. Then complete a task, and keep
+              the screen up while you do: completing stages the row out of the list immediately
+              but does not rewrite the summary those three counts read, so the number does not
+              move on the tick. It rolls down about eight and a half seconds later, when the Undo
+              snackbar's window closes and the completion commits. Then the Todos screen and a
+              floater list card, which is the one exception — that count is tallied off the rows
+              held in memory, so it drops on the frame the row leaves.
+      Watch:  each count's digits roll over about a quarter of a second — the old glyph travelling
+              out as the new one travels in, in the same slot — rather than one number replacing
+              another between two frames. The 34 pt one on the date card is the one to judge; the
+              others are the same motion at a size where it is easy to miss. Nothing beside a
+              count moves while it rolls: the date label, the tile title and the list name hold
+              still, and neither card nor row changes height.
+      Fails:  a count that hard-swaps at the moment it changes — that is the modifier not reaching
+              the label. Silence after a tick on the three summary-backed counts is not that: the
+              new number is not due yet, and the swap to watch for there is the one that lands
+              when the Undo window closes. A whole
+              number cross-dissolving as one blurry block instead of per-digit, which would mean
+              `.numericText` is not what is playing. A count that rolls noticeably longer than the
+              row's own check-off fade beside it, which would mean it picked up `Emphasis` rather
+              than `Change`. And a two-digit count where only one digit moves and the layout
+              jitters sideways as the width changes.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, create and complete
+              again on all four surfaces, on the same clock as above. The new number is simply
+              there, whole, on the frame the count changed — no roll, and no pause where the roll
+              would have been.
+      Why:    there is no Swift toolchain on the machine this was written on, so none of it was
+              built. `motion-reachability-ios` pins the pair textually — each of the four labels
+              carries `.contentTransition(.numericText(`, an `.animation(_:value:)` keyed on
+              `count`, and a spec that opens on `tdayAnimation` — and the budget did not move. No
+              static rule can see the roll itself: whether SwiftUI plays it per-digit, whether 260
+              is the right length for it and whether it reads at 34 pt are the whole of the claim,
+              and only a screen answers them.
+
+- [ ] **PR 32a · ios · The splash hands over to the first screen instead of being cut out** — a
+      cold launch, which means force-quitting the app between every run: this is the one motion
+      here that only plays on a launch that had no process to return to. Checked twice, the second
+      time with Reduce Motion on, and worth doing once on a device slow enough (or a network poor
+      enough) that the splash is up for more than a blink.
+      Do:     swipe the app out of the app switcher, wait a beat, and launch it from the home
+              screen. Watch the moment the splash stops being on screen — not the launch itself.
+              Repeat it signed in with a workspace, and again in local mode, which reaches the
+              same boundary by a different bootstrap. Then launch once more and hold a finger down
+              on the splash while it is up: that pins it (`isLaunchSplashHeld`), so the bootstrap
+              can finish underneath and the hand-over plays when the finger lifts instead.
+      Watch:  the splash fades away while the first screen fades up in its place, over about a
+              fifth of a second, and the two halves overlap — at no point is the screen empty or
+              showing both at full strength. The first screen is complete when it appears: the
+              feed, the dock and the create button are all where they belong rather than arriving
+              after it. The held-finger launch does the same thing on release, once, not twice.
+      Fails:  the splash disappearing between two frames with the feed simply there — that is the
+              transaction not reaching the arms, and it is exactly what this row exists to catch.
+              A fade that is visibly longer than a route change inside the app, which would mean
+              the rung drifted. A splash that dims out and leaves the screen blank before the app
+              arrives, which would mean the two halves are running one after the other rather than
+              across each other. And the held-finger case playing the fade twice, or playing it on
+              the press rather than on the release, which would mean the boundary is keyed on the
+              two properties separately rather than on `showsLaunchSplash`.
+      Also:   watch the TAGLINE across the whole splash, on the same launches. It is drawn by two
+              different view instances — `TdayApp`'s while `AppContainer` builds, `AppRootView`'s
+              until the bootstrap finishes — and `launchTagline` is a process-wide global so both
+              draw the same one. It must not change at any point while the splash is up; a line
+              that swaps part-way through is that global having gone back to being per-view state,
+              and it puts a hard cut on the one boundary above this that has nothing to fade it.
+              A different line on the NEXT launch is correct and expected.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, cold launch again. The
+              first screen is simply there, whole and finished, on the frame the bootstrap
+              completes — no fade, and no pause where the fade would have been. A launch that
+              takes measurably longer with the setting on is the fifth idiom rule broken from the
+              side nobody watches.
+      Why:    there is no Swift toolchain on the machine this was written on, so none of it was
+              built. `launch-handover.test.ts` pins the shape textually — a `.transition` on each
+              arm naming its curve, the `Group`'s `.animation(_:value:)` keyed on
+              `showsLaunchSplash`, both resolving through `tdayAnimation`, and no numeric duration
+              in the block — and the budget did not move. What no static rule can see is whether
+              SwiftUI actually plays a `Group`'s two arms across each other on a cold launch, when
+              the first frame of the app is also the first frame of a bootstrap that has just
+              finished. That, and whether 200 ms is the right length for the one motion every user
+              sees, are the whole of the claim.
+
+- [ ] **PR 32b · ios · The six home tiles zoom into the screens they open** — an iOS **18** device
+      or simulator, on the scheduled home. Then the same build on an iOS **17** one, which is the
+      half nothing here can check: the deployment target is 17.0 and both APIs are 18.0, so the
+      whole feature is behind an `#available` branch that no machine in this repo can execute.
+      Do:     tap each of the six category tiles in turn — Scheduled, Priority, Overdue, All,
+              Completed, Calendar — and watch the push, then swipe back from the left edge and
+              watch the return. Then open **All** a second way: type into the home screen's search
+              field and tap a result, which pushes the same All screen with a highlight id.
+      Watch:  the pressed tile grows into the screen it opens, from its own rectangle and its own
+              corner radius, and the back swipe shrinks it home to the same tile. The other five
+              tiles stay where they are. The search result does NOT zoom — it pushes with the
+              stock slide, because nothing on screen was pressed to reach it.
+      Fails:  a stock slide on any of the six, which means the source and the destination did not
+              agree on an id and SwiftUI fell back without saying so — the one failure mode of
+              this unit that reports nothing anywhere. A screen growing out of the WRONG tile,
+              which is `zoomRoute` and `action` disagreeing at a construction. The interactive
+              back swipe losing the zoom and dropping to a slide only on the way back. And the
+              search-result arrival zooming out of the All tile, which is the animation claiming
+              the user pressed something they did not.
+      Also:   on an **iOS 17** device, run the same six taps. Every one of them is the stock push,
+              the screens are correct, and nothing is missing or misdrawn — the availability
+              branch is the one thing in this unit that compiles nowhere if it is wrong and is
+              checked by nothing on the machine this was written on.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, tap three of the six.
+              Each is the stock push: the platform's own substitute for a large-amplitude travel,
+              which still puts the finished screen in front of the user and adds no wait
+              (`docs/motion.md`'s fifth idiom rule). A tap that is slower with the setting on, or
+              one that still zooms, is the gate not reaching one of the two halves.
+      Why:    there is no Swift toolchain here, so none of this was built. `ZoomNavigationTests`
+              pins the id table in CI — six routes, six distinct ids, and none for a highlighted
+              All arrival — and `launch-handover.test.ts` pins the wiring textually: both APIs
+              under `#available(iOS 18.0, *)`, each tile publishing the id of the route its own
+              closure pushes, one namespace, one destination site. What none of it can see is
+              whether SwiftUI actually finds the source rectangle for a tile that lives three
+              levels inside a `ScrollView` in a private struct two files from the destination —
+              which is the entire feature.

@@ -1,16 +1,20 @@
 package com.ohmz.tday.compose.feature.calendar
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -116,6 +120,7 @@ import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TdayDragLift
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
@@ -133,6 +138,7 @@ import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
@@ -208,7 +214,6 @@ private val CalendarCompletionToggleTouchTarget = 48.dp
 private val CalendarCompletionToggleRippleRadius = 24.dp
 private val CalendarCompletionToggleIconSize = 24.dp
 private val CalendarBarButtonIconSize = 22.dp
-private val CalendarBarButtonPressOffsetY = 2.dp
 
 // The drag preview rides under the finger, not beside it: the pointer is offset
 // into the card so the task being carried is the thing the hand is over.
@@ -611,7 +616,20 @@ fun CalendarScreen(
                                 data = mapOf("mode" to mode.name.lowercase()),
                             )
                             selectedViewKey = mode.name
-                            if (mode != CalendarViewMode.MONTH) {
+                            if (mode == CalendarViewMode.MONTH &&
+                                selectedViewMode != CalendarViewMode.MONTH
+                            ) {
+                                // The grid opens on the selected date's month.
+                                // This was written on the way OUT of Month, which
+                                // was invisible while the grid vanished in one
+                                // frame — but the card is composed for the whole
+                                // cross now, so an exit write re-paged the grid to
+                                // another month while it was still fully opaque.
+                                // Written on entry, the only card that reads it is
+                                // the one coming in, and nothing reads it between
+                                // the two taps: `searchRange` only consults the
+                                // visible month in Month mode, and picking a date
+                                // in Week or Day moves it anyway.
                                 visibleMonthIso = YearMonth.from(selectedDate).toString()
                             }
                         },
@@ -619,75 +637,123 @@ fun CalendarScreen(
                 }
 
                 item {
+                    val viewModeMotionEnabled = rememberTdayMotionEnabled()
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .animateContentSize(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow,
-                                ),
+                                // A month grid collapsing to a week strip is a
+                                // card finding its height, which is what Settle
+                                // is for. What it replaces was never chosen:
+                                // both docs/motion.md and the budget fixture's
+                                // `android._spring` note say on the record that
+                                // StiffnessMediumLow here was a library default.
+                                animationSpec = if (viewModeMotionEnabled) {
+                                    TdayMotionTokens.Springs.settle()
+                                } else {
+                                    snap()
+                                },
                             )
                             .calendarCardChrome(),
                     ) {
-                        when (selectedViewMode) {
-                            CalendarViewMode.MONTH -> CalendarMonthCard(
-                                visibleMonth = visibleMonth,
-                                minNavigableMonth = minNavigableMonth,
-                                canGoPrevMonth = visibleMonth > minNavigableMonth,
-                                selectedDate = selectedDate,
-                                today = today,
-                                tasksByDate = plottedTasksByDate,
-                                draggedTodo = draggedCalendarTodo,
-                                activeDropDate = activeDropDate,
-                                dropTargets = calendarDropTargetBounds,
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onVisibleMonthChanged = { targetMonth ->
-                                    if (targetMonth >= minNavigableMonth) {
-                                        visibleMonthIso = targetMonth.toString()
-                                    }
-                                },
-                                onSelectDate = ::selectDate,
-                                onDropDateChanged = { date ->
-                                    activeDropDateIso = date?.toString()
-                                },
-                                onMoveTaskToDate = ::requestTaskReschedule,
-                                resolveTodo = resolveTodoForDrop,
-                            )
+                        // The height above is animated; the content inside it was
+                        // not, so the grid was replaced by the strip in one frame
+                        // while the card around it was still travelling. Crossing
+                        // the two over fixes that, and the cross is deliberately
+                        // shorter than the spring: the eye lands on a resolved
+                        // grid inside a still-settling card rather than on two
+                        // ghosted grids. Both branches hand back `using null`,
+                        // because the height is already owned above: every
+                        // SizeTransform, clipping or not, carries a default
+                        // 400-stiffness spring on the AnimatedContent's own size,
+                        // and a 250 spring chasing that is not a card finding its
+                        // height, it is two springs negotiating. Null, the inner
+                        // box is simply the tapped mode's height on the frame it
+                        // changes, and the card's own clip is the one edge that
+                        // moves — the outgoing grid is drawn where it was and
+                        // that edge travels down across it.
+                        AnimatedContent(
+                            targetState = selectedViewMode,
+                            transitionSpec = {
+                                if (viewModeMotionEnabled) {
+                                    fadeIn(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Enter,
+                                            easing = TdayMotionTokens.Easings.Enter,
+                                        ),
+                                    ) togetherWith fadeOut(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Quick,
+                                            easing = TdayMotionTokens.Easings.Exit,
+                                        ),
+                                    ) using null
+                                } else {
+                                    // Motion off still means the mode the user
+                                    // asked for, drawn at its own height, now.
+                                    EnterTransition.None togetherWith ExitTransition.None using null
+                                }
+                            },
+                            label = "calendarViewMode",
+                        ) { viewMode ->
+                            when (viewMode) {
+                                CalendarViewMode.MONTH -> CalendarMonthCard(
+                                    visibleMonth = visibleMonth,
+                                    minNavigableMonth = minNavigableMonth,
+                                    canGoPrevMonth = visibleMonth > minNavigableMonth,
+                                    selectedDate = selectedDate,
+                                    today = today,
+                                    tasksByDate = plottedTasksByDate,
+                                    draggedTodo = draggedCalendarTodo,
+                                    activeDropDate = activeDropDate,
+                                    dropTargets = calendarDropTargetBounds,
+                                    canSelectDate = ::canNavigateTo,
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
+                                    onVisibleMonthChanged = { targetMonth ->
+                                        if (targetMonth >= minNavigableMonth) {
+                                            visibleMonthIso = targetMonth.toString()
+                                        }
+                                    },
+                                    onSelectDate = ::selectDate,
+                                    onDropDateChanged = { date ->
+                                        activeDropDateIso = date?.toString()
+                                    },
+                                    onMoveTaskToDate = ::requestTaskReschedule,
+                                    resolveTodo = resolveTodoForDrop,
+                                )
 
-                            CalendarViewMode.WEEK -> CalendarWeekCard(
-                                selectedDate = selectedDate,
-                                minNavigableMonth = minNavigableMonth,
-                                today = today,
-                                tasksByDate = plottedTasksByDate,
-                                draggedTodo = draggedCalendarTodo,
-                                activeDropDate = activeDropDate,
-                                dropTargets = calendarDropTargetBounds,
-                                canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onSelectDate = ::selectDate,
-                                onDropDateChanged = { date ->
-                                    activeDropDateIso = date?.toString()
-                                },
-                                onMoveTaskToDate = ::requestTaskReschedule,
-                                resolveTodo = resolveTodoForDrop,
-                            )
+                                CalendarViewMode.WEEK -> CalendarWeekCard(
+                                    selectedDate = selectedDate,
+                                    minNavigableMonth = minNavigableMonth,
+                                    today = today,
+                                    tasksByDate = plottedTasksByDate,
+                                    draggedTodo = draggedCalendarTodo,
+                                    activeDropDate = activeDropDate,
+                                    dropTargets = calendarDropTargetBounds,
+                                    canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
+                                    canSelectDate = ::canNavigateTo,
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
+                                    onSelectDate = ::selectDate,
+                                    onDropDateChanged = { date ->
+                                        activeDropDateIso = date?.toString()
+                                    },
+                                    onMoveTaskToDate = ::requestTaskReschedule,
+                                    resolveTodo = resolveTodoForDrop,
+                                )
 
-                            CalendarViewMode.DAY -> CalendarDayCard(
-                                selectedDate = selectedDate,
-                                minNavigableMonth = minNavigableMonth,
-                                today = today,
-                                tasksByDate = plottedTasksByDate,
-                                canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onSelectDate = ::selectDate,
-                            )
+                                CalendarViewMode.DAY -> CalendarDayCard(
+                                    selectedDate = selectedDate,
+                                    minNavigableMonth = minNavigableMonth,
+                                    today = today,
+                                    tasksByDate = plottedTasksByDate,
+                                    canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
+                                    canSelectDate = ::canNavigateTo,
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
+                                    onSelectDate = ::selectDate,
+                                )
+                            }
                         }
                     }
                 }
@@ -754,16 +820,32 @@ fun CalendarScreen(
                         }
                         CalendarTodoRow(
                             modifier = Modifier
+                                // The day list is a task feed, so it takes the feed's
+                                // own clock. It used to run 180 in and 140 out — ten
+                                // milliseconds under [TdayFeedItemMotion] on each leg,
+                                // naming no rung and shared with nothing, which is
+                                // exactly the drift that object exists to stop. Rule 1
+                                // still holds across the swap: 150 out stays shorter
+                                // than 190 in.
+                                //
+                                // `placementSpec` stays null, and that is the one
+                                // thing this list does NOT take from the object. It is
+                                // not that nothing is displaced: completing, deleting
+                                // or rescheduling a task off the selected date each
+                                // remove exactly one keyed row, so today the rows
+                                // below a departure take their new slots in a single
+                                // frame while the departing one fades over 150 — the
+                                // same clock splitting that [TdayFeedItemMotion]'s
+                                // header argues against, and that `CompletedScreen`,
+                                // on the same object, does not have. Left standing
+                                // rather than fixed in passing: this unit is retiring
+                                // drifted literals, and starting to animate something
+                                // this feed has never animated is a behaviour change
+                                // that needs its own argument and its own device pass.
                                 .animateItem(
-                                    fadeInSpec = tween(
-                                        durationMillis = 180,
-                                        easing = FastOutSlowInEasing,
-                                    ),
+                                    fadeInSpec = TdayFeedItemMotion.FadeIn,
                                     placementSpec = null,
-                                    fadeOutSpec = tween(
-                                        durationMillis = 140,
-                                        easing = FastOutSlowInEasing,
-                                    ),
+                                    fadeOutSpec = TdayFeedItemMotion.FadeOut,
                                 )
                                 .padding(
                                     bottom = if (index == listedTasks.lastIndex) {
@@ -833,11 +915,29 @@ fun CalendarScreen(
                     }
                 }
 
+                // Keyed, because a load failure genuinely adds and removes a row
+                // here and `animateItem` cannot animate either on an item whose
+                // identity is its index. It takes [TdayFeedItemMotion] whole —
+                // the rows above it take its two fades but pass
+                // `placementSpec = null` (argued there, and not because they are
+                // never displaced), while this card is the one item on this feed
+                // that already glides to whatever slot the rows above leave it
+                // in.
                 uiState.errorMessage?.let { message ->
-                    item {
+                    item(key = "error-retry", contentType = "error_retry") {
+                        val errorCardMotionEnabled = rememberTdayMotionEnabled()
                         com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                             message = message,
                             onRetry = onRefresh,
+                            modifier = if (errorCardMotionEnabled) {
+                                Modifier.animateItem(
+                                    fadeInSpec = TdayFeedItemMotion.FadeIn,
+                                    placementSpec = TdayFeedItemMotion.Placement,
+                                    fadeOutSpec = TdayFeedItemMotion.FadeOut,
+                                )
+                            } else {
+                                Modifier
+                            },
                         )
                     }
                 }
@@ -1717,27 +1817,10 @@ private fun CalendarBarButton(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "calendarBarButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) {
-            CalendarBarButtonPressOffsetY
-        } else {
-            TdayDimens.SpacingNone
-        },
-        label = "calendarBarButtonOffsetY",
-    )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -1781,7 +1864,6 @@ private fun CalendarTodayButton(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
     val showLabel = collapseProgress().coerceIn(0f, 1f) < 0.5f
 
@@ -1789,18 +1871,6 @@ private fun CalendarTodayButton(
     val buttonBorder = BorderStroke(
         TdayDimens.BorderWidth,
         CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.62f else 0.48f),
-    )
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "calendarTodayButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) {
-            CalendarBarButtonPressOffsetY
-        } else {
-            TdayDimens.SpacingNone
-        },
-        label = "calendarTodayButtonOffsetY",
     )
     val horizontalPadding by animateDpAsState(
         targetValue = if (showLabel) {
@@ -1813,11 +1883,7 @@ private fun CalendarTodayButton(
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar)
             .animateContentSize(),
         onClick = {
             TdayHaptics.buttonPress(view)

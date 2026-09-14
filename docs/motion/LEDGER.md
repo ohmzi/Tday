@@ -196,7 +196,7 @@ Restore it from git history rather than adjusting the number.
     that suite already statically reads Kotlin on Linux and runs on every PR, so these rows read `Gate G`
     rather than `Gate J`. The four rules and the canary are 9 tests, ~0.5 s.
 - [x] `and-toast-exit-never-plays` — toast content lambda returns null the frame `visible` flips · and · Sev 3 · XS · Gate G+D
-- [ ] `and-toast-drag-dismiss-has-no-threshold` — drag-dismiss commits on any downward movement (1 px twitch) · and · Sev 2 · S · Gate J+D
+- [x] `and-toast-drag-dismiss-has-no-threshold` — drag-dismiss commits on any downward movement (1 px twitch) · and · Sev 2 · S · Gate J+D
 
 ### PR G3 — Rule B, write-once visibility flag
 
@@ -229,12 +229,36 @@ Restore it from git history rather than adjusting the number.
 - [ ] *infra* — `tests/guardrails/motion-exit-animations.test.ts` (5 rules) **+ 4 fixes** · web · S · Gate G
 - ↳ part 1 of 2 of `web-dead-motion-code` — delete `.animate-scroll-left` (`globals.css:300`) + `.animate-task-complete` (`:529`). Box lives under **PR 18**.
 - [x] `web-centered-selector-has-no-exit` — Radix unmounts overlay + card on the same frame · web · Sev 3 · XS · Gate G
-- [ ] `web-sheet-overlay-outruns-panel` — overlay has no duration → 0.15 s fallback vs panel's 300/500 ms · web · Sev 2 · XS · Gate G
+- [x] `web-sheet-overlay-outruns-panel` — overlay has no duration → 0.15 s fallback vs the panel's Emphasis-in/Enter-out · web · Sev 2 · XS · Gate G
+  - Row text corrected: it said "panel's 300/500 ms", which **PR 41a** retired. 41a put the panel on
+    `Emphasis`-in/`Enter`-out and left the scrim on the library fallback, so the gap narrowed from
+    350/150 ms to 170/50 ms and stayed the same defect. The scrim takes the panel's own two rungs
+    rather than a pair of its own — it is that panel's backdrop, not a surface someone watches. That
+    is the one place this declines the ladder's `Quick`-on-the-way-out reading, and declines what the
+    native sheets do: `TdaySheetMotion.scrimOut()` is `Enter` against a card exiting on `Change`, so
+    their scrim may leave first; this panel exits on `Enter` too, so a `Quick` scrim would hand the
+    page back bright with the panel still crossing it. Both rungs are named utilities, so
+    `web.durationUtility` does not move. Both halves of the clause that followed were restated on the
+    develop merge that brought this row in: the ceiling is **0**, not the 47 41a lowered it to —
+    8i and 8j emptied `tday-web/src` of `duration-<n>` outright — and the remainder is no longer
+    PR 41c's to inherit, because 41c has closed. What survives unchanged is the part that is still
+    true of the tree: this closes the sheet's own web leg, not the row above it, and `dialog.tsx:21`
+    is still a bare `animate-in`/`animate-out` scrim on the 0.15 s fallback, 50 ms short of the
+    `duration-enter` its own card names at `:44`. It is web's one untimed scrim and it is now
+    **unowned** — booked to no open PR — which is exactly the state this line exists to keep
+    visible.
 - [x] *new, not one of the 109* — `InstallPromptBanner.tsx:8` — `return null` against `animate-in slide-in-from-bottom-4` at `:14` · web · Sev 2 · XS · Gate G
 
 ### PR G8 — pbxproj registration and the zero-test assertion
 
-- [ ] *infra* — pbxproj-registration guardrail + `ios-tests.yml` zero-test assertion · ios · XS · Gate G
+- [x] *infra* — pbxproj-registration guardrail + `ios-tests.yml` zero-test assertion · ios · XS · Gate G
+  - **Both legs close the same hole from opposite sides: a Swift file that is not in the build, and a test run that is not a run.** `project.yml` says in its own first line that it does not generate the project and that the pbxproj is hand-maintained, and the pbxproj carries no `fileSystemSynchronized` group, so there is no fallback membership anywhere. Every machine this programme's work happens on has no Xcode. A `.swift` file added on one of them is invisible to the build until three objects are written by hand, and invisible does not look like a broken build — it looks like nothing at all. The two Phase 9 rows that book "**pbxproj registration**" as a manual step — `confetti-kinematics`' iOS part under PR 39d, `skeleton-loading-vocabulary`'s under PR 40b — were booking it against nothing; they are now booked against a check.
+  - **The guardrail resolves the object graph instead of grepping the `in Sources` comment, because the comment is written twice and only one of them compiles anything.** Every registered file carries that comment once on its `PBXBuildFile` declaration and once inside a phase's `files` list; a build file declared and never listed is precisely the half-registration being hunted, and a grep scores it as a pass. `ios-target-membership.test.ts` walks the phases, follows each id through its `PBXBuildFile` to its `PBXFileReference`, and asserts in both directions — a registered file that has been deleted from disk breaks the Xcode build exactly as hard, and the reverse check cost one rule. Two more fall out of the same parse for free: an id in a phase that resolves to nothing, and a source whose reference sits in no `PBXGroup` — which still builds, and which nobody can find in the navigator to edit.
+  - **Per-target membership is deliberately not asserted, and the reason is not the one the scoping note gave.** The note assumed `Tday/` files are shared into the widget and watch targets; they are not — the six Sources phases hold 145 build files between them and 145 distinct sources (Tday 114, TdayTests 26, and one or two apiece for the share extension, widget, watch widget and watch), so every file today belongs to exactly one target. The argument survives the correction and gets stronger: a per-target map would be a second copy of a decision the pbxproj already records, it would need editing every time a file moves, and a file in the wrong target fails the build loudly. Unregistered is the failure that is silent, and "registered somewhere" is what catches it.
+  - **It lands green and it bites.** 146 `.swift` on disk, minus `ios-swiftUI/Package.swift` — an SPM manifest SwiftPM reads and the target graph never does, excluded by exact path rather than a `Package*` glob so a real `PackageDefaults.swift` cannot slip out on a name match — against 145 registered. A file dropped into `Tday/Core/UI/` and left unregistered was confirmed to fail rule 2 by name. The canary is the lesson `motion-reachability-android.test.ts` writes down at its own foot: floors of 100 files and 100 registered entries, plus an exact 6 on the phase count, so a moved directory or a pbxproj format Apple changes reports itself rather than passing on an empty set. It runs on every iOS PR already — `web.yml`'s filter matches `ios-swiftUI/` for exactly this class of reason.
+  - **Leg 2 is the floor iOS was the only client without.** `test-without-building` exits 0 when nothing it ran failed, and running nothing clears that bar, so a scheme edit that drops `TdayTests` from the TestAction is a green run over an empty suite — on the one client nobody here can run locally. `android.yml` sums `tests=` across the JUnit XML and refuses zero; `web.yml` reads `numTotalTests` and refuses zero; this reads the result bundle the job was already writing. `xcresulttool get test-results summary` is the Xcode 16 CLI rather than the deprecated `get --path --format json`, matched to the Xcode the `IOS_XCODE_VERSION` variable selects two steps above. An unreadable bundle fails rather than skips, and a missing key is reported as a moved schema rather than defaulted to zero — a check that learned nothing must not be able to say everything is fine, which is the whole defect and not a milder version of it.
+  - **The count is a step of its own so the run page can tell an empty suite from a red one.** It runs when the tests failed and not when the compile did, because there is no bundle after a failed compile and a second error about a missing file would only point away from the first. The number feeds the existing `Summarise` table, which now reports tests/passed/failed/skipped the way android.yml's does and says "all N tests passed" instead of "every test passed".
+  - **What a local machine cannot say.** Leg 1 runs here and is green. Leg 2 has no macOS runner behind it: its five branches — bundle present, readable, numeric, zero, and non-zero — were exercised against a stubbed `xcrun`, and the `Summarise` rendering against each combination of step outcomes, but whether `xcresulttool` on the pinned Xcode emits `totalTestCount` under that spelling is something only the next iOS PR can confirm. It fails loudly rather than quietly if it does not.
 
 ## Phase 2 — the one-line sweeps (iOS batch 1 + web presence)
 
@@ -291,7 +315,7 @@ Restore it from git history rather than adjusting the number.
 
 - [x] `ios-calendar-empty-state-blanked-by-isloading` — pull-to-refresh blanks the empty state for the whole sync · ios · Sev 3 · S · Gate G+TF
   - **The row's trigger is wrong; the gate it names is real.** Pull-to-refresh is not wired on this
-    screen either — `pullRefreshEnabled` defaults to false and `AppRootView.swift:450` builds
+    screen either — `pullRefreshEnabled` defaults to false and `AppRootView.swift:680` builds
     `CalendarScreen` without it — so the gesture cannot be what blanks anything. The defect is
     `CalendarScreen.swift:606`, `} else if !viewModel.isLoading {` in front of
     `calendarDayEmptyState`, and `isLoading` is raised only by `refresh()`: a force sync over a
@@ -443,35 +467,35 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 8f — the one-line default-duration change
 
-- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **one line, its own PR** · web · XS · Gate D
+- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **DROPPED, not deferred**; the box stays open because the change was not made and will not be. Four committed places now forbid it: `docs/motion.md` makes "Do not rebind Tailwind's default transition duration" idiom rule 3, `docs/CODING_STANDARDS.md:209` says "never rebind", `tday-web/src/globals.css:239-242` argues it in place at the one declaration block that would have carried it (~159 bare `transition-*` sites riding an un-overridden 150 ms, which is exactly `Quick`, so they are on the vocabulary for free), and `motion-budget.json`'s `_excluded.notCountedOnPurpose` excludes those same utilities on those same grounds. The value no longer names anything either: `4c941b1c` moved `Enter` 190 → 200 because 190 matched 2 sites against 200's 57. Rule 3 landed in `bc521d0d`, inside Phase 4's own PR #204 — the same PR that would have carried 8f — so this is a decision taken at the time, not a lapse · web · XS · Gate n/a — dropped
 
 ## Phase 5 — web primitives, in dependency order
 
 ### PR 24c — hoist the reduced-motion helper; it lands first
 
-- [ ] `web-prefers-reduced-motion-helper` — hoist out of `useFadeUnmount.ts:8-11`; **land first, 2 rows block on it** · web · Sev 2 · S · Gate V
-- [ ] `web-earlier-handoff-ignores-reduced-motion` — reduced-motion users get 520 ms of static illustration then everything at once · web · Sev 3 · S · Gate V
+- [x] `web-prefers-reduced-motion-helper` — hoist out of `useFadeUnmount.ts:8-11`; **land first, 2 rows block on it** · web · Sev 2 · S · Gate V
+- [x] `web-earlier-handoff-ignores-reduced-motion` — reduced-motion users get 520 ms of static illustration then everything at once · web · Sev 3 · S · Gate V
 
 ### PR 22a — completed rows collapse their box
 
-- [ ] `web-completed-row-box-does-not-collapse` — row fades ink but holds full height to 780 ms · web · Sev 3 · M · Gate V+D
+- [x] `web-completed-row-box-does-not-collapse` — row fades ink but holds full height to 780 ms · web · Sev 3 · M · Gate V+D
 
 ### PR 22b — FLIP placement for the web feed
 
-- [ ] `web-feed-rows-have-no-placement` — no FLIP anywhere in `tday-web`; every neighbour of a removed row teleports · web · Sev 3 · L · Gate V+D
-- [ ] `web-today-section-wrapper-drops-gap` — Today section wrapper unmounts with its gap (~70 px) · web · Sev 2 · XS · Gate V
+- [x] `web-feed-rows-have-no-placement` — no FLIP anywhere in `tday-web`; every neighbour of a removed row teleports · web · Sev 3 · L · Gate V+D
+- [x] `web-today-section-wrapper-drops-gap` — Today section wrapper unmounts with its gap (~70 px) · web · Sev 2 · XS · Gate V
 - ↳ part 1 of 2 of `feed-item-motion-parity` — `src/lib/feedItemMotion.ts` mirroring `TdayFeedItemMotion.kt`. Box lives under **PR 47**.
 
 ### PR 23 — empty-state slots stop claiming their height in one frame
 
-- [ ] `web-empty-state-slot-claims-42vh-in-one-frame` — the 42vh slot is claimed the same frame the last row is pruned · web · Sev 3 · M · Gate V+D
-- [ ] `web-floater-empty-arrival-displaces-tiles` — ~33 vh of uncued jump, on the confetti frame — largest in the set · web · Sev 4 · M · Gate V+D
-- [ ] `web-empty-state-anchor-citation-fix` — ledger hygiene: `EmptyState.tsx:163` does not exist — the file is 161 lines. Verified anchors: the slot is `:54` (`min-h-[42vh]`, inside the wrapper at `:52-57`), the scene's own 520 ms arrival is `:60-65` (`.tday-empty-enter` / `.tday-empty-enter-celebrating`), and `:158` is the confetti the arrival sits above the wrapper to avoid fading with · web · Sev 1 · XS · Gate doc
+- [x] `web-empty-state-slot-claims-42vh-in-one-frame` — the 42vh slot is claimed the same frame the last row is pruned · web · Sev 3 · M · Gate V+D · four screens draw this scene inline; the three scoped feeds took their travel in Phase 5 and the custom list was the one that was missed, so the row closes in Phase 9 on `ListContainer`'s own `useRowPlacement` wrapper and the placement lead in front of its celebration
+- [x] `web-floater-empty-arrival-displaces-tiles` — ~33 vh of uncued jump, on the confetti frame — largest in the set · web · Sev 4 · M · Gate V+D
+- [x] `web-empty-state-anchor-citation-fix` — ledger hygiene: `EmptyState.tsx:163` did not exist when this row was written, and the anchors that replaced it have since drifted again as the file grew 161 → 180 lines — twice now, so cite by class name as well as by line. Against the tree: the slot is `min-h-[42vh]` at `:64`, inside the wrapper at `:62-67`; the scene's own 520 ms arrival is the inner wrapper at `:70-80`, `.tday-empty-enter` at `:72` and `.tday-empty-enter-celebrating` at `:73`; and the confetti that arrival sits above the wrapper to avoid fading with is `:175-177`, mounted at `:176` · web · Sev 1 · XS · Gate doc
 
 ### PR 24a — the Earlier hand-off animates height, not just paint
 
-- [ ] `web-earlier-handoff-height-jump` — the EXPAND hand-off animates paint only: the scene fades and sinks while its box holds all 42vh, which the page then takes back in the single frame Earlier's rows arrive in. The collapse tap's own two jumps 260 ms apart — this row's original wording — are a different mechanism and belong to `web-earlier-collapse-has-no-handoff` in PR 24b, which is where they are counted: a collapse takes no hand-off at all, so nothing here reaches it · web · Sev 4 · M · Gate V+D
-- [ ] `web-earlier-exit-520ms-dead-wait` — `TODAY_EARLIER_EXIT_MS` 520 → **220**; update `today-earlier-illustration.test.ts:165-172` same commit · web · Sev 3 · S · Gate V
+- [x] `web-earlier-handoff-height-jump` — the EXPAND hand-off animates paint only: the scene fades and sinks while its box holds all 42vh, which the page then takes back in the single frame Earlier's rows arrive in. The collapse tap's own two jumps 260 ms apart — this row's original wording — are a different mechanism and belong to `web-earlier-collapse-has-no-handoff` in PR 24b, which is where they are counted: a collapse takes no hand-off at all, so nothing here reaches it · web · Sev 4 · M · Gate V+D
+- [x] `web-earlier-exit-520ms-dead-wait` — `TODAY_EARLIER_EXIT_MS` 520 → **200** (`Enter`), not the 220 the audit asked for: 220 is iOS's `EarlierIllustrationHandoff.exitDuration` and is not a rung, and the ladder has nothing between 200 and 260 on purpose — 320 and 260 are both ruled out because a departure must not outlast or match the 260 arrival it is making room for (the argument in full at `todayEarlierIllustration.ts:48-62`). Pinned at `tests/unit/today-earlier-illustration.test.ts:338`, with the invariant that chose the rung at `:347` — not `:165-172` as this row used to say · web · Sev 3 · S · Gate V
 
 ### PR 24b — the Earlier collapse gets the expand’s hand-off
 
@@ -488,20 +512,73 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 29 — the Android hero search morph
 
-- [ ] `and-hero-search-morph-snaps` — capsule jumps pill→full width in one frame, 3 siblings blink to alpha 0 · and · Sev 4 · S · Gate D
-- [ ] `and-hero-mark-clock-frozen` — sun/moon samples the hour once in a keyless `remember` · and · Sev 2 · S · Gate J+D
+- [x] `and-hero-search-morph-snaps` — capsule jumps pill→full width in one frame, 3 siblings blink to alpha 0 · and · Sev 4 · S · Gate D
+  - **A fraction animates; the geometry is lerped from it.** `openFraction` is the only animated
+    value (`Emphasis`, because what changes is where the capsule is and how big it is). Animating
+    the width and the offset themselves would look identical and is not: both are also
+    scroll-derived, so a tween on them would put the whole fold a tween behind the finger. The
+    three controls the field takes the row from — the mark and the two round buttons — clear on
+    `Quick` through one `searchClearAlpha` helper, so no site can pick its own length for the same
+    departure.
+  - **Where this phase's device rows went, once, for all ten of them.** `docs/verification/README.md`
+    runs Phases 5 and 6 as one sitting, so there is no `phase-6-device-pass.md` and every row below
+    is in `phase-5-device-pass.md` — including the iOS thirds, since TF1 is the cycle that runs the
+    parity pairs side by side and it has not been cut. That file grew an `## Android` and a `## Web`
+    section it did not have; PR 23 arrived on the same merge with a `## Web` section of its own, and
+    its one row now sits at the foot of this one — a Phase 5 leg rather than one of the parity
+    pairs, as the note above it there says. **Written and unrun** is the state these ten rows are
+    in: unverified, which is cheap, and not unscheduled, which is not.
+- [x] `and-hero-mark-clock-frozen` — sun/moon samples the hour once in a keyless `remember` · and · Sev 2 · S · Gate J+D
+  - **The band is now reachable by a test, and the hour is re-read.** `isDaytimeHour` is split off
+    the clock read so a JVM test can push a 5 and an 18 through the boundary —
+    `RootFeedHeroMarkClockTest`, green — and the glyph polls on the same unaligned minute iOS's
+    `TimelineView(.periodic(…, by: 60))` gives it. Nothing animates, deliberately: the turnover
+    happens once a day while nobody is watching the header. `J` green locally; `D` written and
+    unrun, and its setup names both ways of reaching the boundary, because that is the whole cost
+    of the check.
 
 ### PR 29w — the web hero search capsule
 
-- [ ] `web-hero-search-capsule-snaps` — width + translateX written imperatively, no transition, no crossfade · web · Sev 3 · S · Gate V+D
-- [ ] `web-hero-title-opacity-transition-fights-raf` — 200 ms CSS transition on the element the rAF rewrites every frame · web · Sev 2 · XS · Gate V
-- [ ] `web-hero-capsule-relayout-one-frame-late` — input can paint clipped inside the old 56 px pill (PLAUSIBLE, not confirmed) · web · Sev 2 · XS · Gate D
+- [x] `web-hero-search-capsule-snaps` — width + translateX written imperatively, no transition, no crossfade · web · Sev 3 · S · Gate V+D
+  - **Armed the way a placement is armed, not by adding a transition.** A CSS transition on
+    `width`/`transform` would also catch every scroll frame of the fold, where the rAF rewrites
+    both continuously. So the morph measures where the capsule was, lets the rAF write where it
+    goes, and plays the gap back through `Element.animate` on `Emphasis` — the title's fade rides
+    `Quick` with the controls. `V` is `hero-search-capsule-morph.test.tsx`, which stubs `animate`
+    and asserts the rungs by token rather than by number; green.
+- [x] `web-hero-title-opacity-transition-fights-raf` — 200 ms CSS transition on the element the rAF rewrites every frame · web · Sev 2 · XS · Gate V
+  - **No device row, and that is the correct answer rather than an omission.** The transition is
+    gone from the node the scroll rewrites and the open/close step is played back explicitly
+    instead, so the outcome is binary and `V` can tell the two apart. A row asking somebody to look
+    at a fade that no longer fights anything would cost eye-time and prove nothing.
+- [x] `web-hero-capsule-relayout-one-frame-late` — input can paint clipped inside the old 56 px pill (PLAUSIBLE, not confirmed) · web · Sev 2 · XS · Gate D
+  - **The fix is a `useLayoutEffect`, and the device row is the only thing that can close the
+    filing.** Routing the open through a synthetic scroll event left the capsule's width unordered
+    against the paint of the commit that changed its contents, so whether the expanded field ever
+    showed clipped came down to where the browser put a frame. It is written synchronously now.
+    The row says in its own text that observing the defect on this build is a finding rather than
+    a new filing — a PLAUSIBLE row is closed by a look, in one direction or the other. Written and
+    unrun.
 
 ### PR 27 — the root feed tab swap, Android and iOS
 
-- [ ] `and-ios-root-feed-tab-swap-uncrossfaded` — root feed body swaps in one frame while the dock pill springs · and+ios · Sev 4 · S · Gate D+TF
-- [ ] `root-feed-tab-switch-transition` — The root feed tab switch — the app's most-used interaction — is a hard cut on both native clients while the dock selector that triggered it springs across · and+ios · Impact O4 · S · Gate D+TF
-  - **Duplicate of `and-ios-root-feed-tab-swap-uncrossfaded` (§2.2).** §2.2 dissolves a three-way tangle here: this row is the root-feed **body** inside a single route (`TdayApp.kt:1103-1126`), not the NavHost route transition (`TdayApp.kt:1942-1955`, wired at `:335-338`) that PR 31 retimes to 160/110. Different surfaces — give the tab swap its own spec and do not reuse `NAV_FADE_*`. Ticks with its twin.
+- [x] `and-ios-root-feed-tab-swap-uncrossfaded` — root feed body swaps in one frame while the dock pill springs · and+ios · Sev 4 · S · Gate D+TF
+  - **One rung on both clients, and it is `Quick`.** Nothing in the body travels — the arriving
+    feed is drawn in the slot the leaving one had — so the geometry rule keeps it off `Emphasis`,
+    and a handover shorter than the selector's spring is the point: a body still resolving after
+    the control it answers has landed reads as lag. Two device rows, one per client, written as a
+    pair to be run side by side; unrun, and TF1 has not been cut.
+- [x] `root-feed-tab-switch-transition` — The root feed tab switch — the app's most-used interaction — is a hard cut on both native clients while the dock selector that triggered it springs across · and+ios · Impact O4 · S · Gate D+TF
+  - **Duplicate of `and-ios-root-feed-tab-swap-uncrossfaded` (§2.2).** §2.2 dissolves a three-way tangle here: this row is the root-feed **body** inside a single route, not the NavHost route transition (`navigationEnterTransition` / `navigationExitTransition` in `TdayApp.kt`, wired at the NavHost) that PR 31 retimes. Different surfaces — give the tab swap its own spec. **The 160/110 this note used to name is not what PR 31 landed**, and the correction is worth keeping rather than quietly overwriting: that pair was written before the ladder and is the only place in the repo either number ever appeared, and neither is a rung. Both directions are `Durations.Enter` now, which is what `docs/motion.md`'s `Scene` bullet had already asserted in prose and what `.tday-route-fade` had already been doing since PR 55. `NAV_FADE_IN_DURATION_MS` and `NAV_FADE_OUT_DURATION_MS` are gone with it, so there is nothing left here to reuse by name. Ticks with its twin.
+  - **Ticked with its twin, on its twin's device rows.** The spec stayed its own: the swap
+    names `Quick` for itself — `RootFeedContent`'s `Crossfade` in `TdayApp.kt` and
+    `AppRootView.swift:173` — and never reached for the NavHost's constants. The clause that
+    stood here, that `NAV_FADE_IN/OUT` were untouched at 360/240, was true when it was written
+    and is not now: PR 31 landed on the same merge as this tick, both nav directions are
+    `Durations.Enter`, and both constants are deleted. That changes nothing about this row —
+    nothing here ever read them — but a sentence naming two dead constants is the kind of
+    paperwork this ledger exists to not leave lying around. No rows of its own — two filings
+    of one behaviour get one check, not two.
 
 ### PR 28 — the Android onboarding blur and overlay
 
@@ -509,15 +586,41 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 46 — the iOS half of the same overlay
 
-- [ ] `and-onboarding-blur-and-overlay-snap` — Android: the onboarding blur goes 14dp→0dp in one frame, the wizard card pops, and the locked feed hard-swaps for the real one · and+ios · Sev 3 · M · Gate D + TF — **final part (2 of 2)**; PR 28 carried the rest
+- [x] `and-onboarding-blur-and-overlay-snap` — Android: the onboarding blur goes 14dp→0dp in one frame, the wizard card pops, and the locked feed hard-swaps for the real one · and+ios · Sev 3 · M · Gate D + TF — **final part (2 of 2)**; PR 28 carried the rest
+  - **Three surfaces on one clock, and a fourth deliberately held out of it.** Blur, wizard and the
+    locked-feed crossfade all run `Quick`/`Standard` on Android; iOS says the same thing in one
+    transaction over blur, scale and wizard. The floating controls are handed `.animation(nil)` on
+    that value precisely so the duck below cannot be driven through an event nothing else moves in.
+  - **The cold start is in both device rows as a `Known:`, not as a fail.** Neither client plays an
+    enter for a first composition that is already true, and that is the behaviour wanted rather
+    than a limit worked around — an insertion with nothing before it has nothing to hand over from.
+    A reviewer who does not know that files it as a defect, which is a row costing more than it
+    saves. Written and unrun.
 
 ### PR 30 — the dock and FAB duck instead of vanishing
 
-- [ ] `dock-fab-duck-not-vanish` — dock + FAB pop out of existence in one frame on all three clients · all · Impact O3 · S · Gate D+TF
+- [x] `dock-fab-duck-not-vanish` — dock + FAB pop out of existence in one frame on all three clients · all · Impact O3 · S · Gate D+TF
+  - **The fade is not decoration on any of the three.** A slide by the control's own height clears
+    its box and not the gesture-bar or home-indicator strip under it, so opacity is what makes the
+    thing gone rather than parked. Android and iOS spell the rung as the `Settle` spring; web, with
+    no spring runtime, spells it as `Emphasis` on the `Gesture` easing.
+  - **Web carries one observation the native clients cannot need.** `BulkSelectionBar` rises into
+    the slot the dock and the create button are leaving and both are painted above it, so for the
+    whole exit a tap aimed at the bar could land on chrome that is already on its way out;
+    `useDuckPresence` reports `interactive` off `present` for that reason. Which action is at risk
+    is a matter of where the chrome sits at phone width: the create button is pinned right over
+    Delete, the dock pinned left over Complete. It gets a device row of its own — a tap DURING the
+    duck, which is the only window the hazard exists in, aimed at both ends of the bar. Four rows
+    across three clients, written and unrun.
 
 ### PR 58 — the Android FAB accent crossfade
 
-- [ ] `android-fab-accent-crossfade` — FAB snaps accent while the dock 8 lines away crossfades at 180 ms · and · Impact O2 · XS · Gate D
+- [x] `android-fab-accent-crossfade` — FAB snaps accent while the dock 8 lines away crossfades at 180 ms · and · Impact O2 · XS · Gate D
+  - **The 180 went too.** The row asked for the button to stop cutting; leaving the dock on a
+    written 180 that is not a rung would have made three surfaces of one handover run on two
+    clocks. Both are `Quick` now, the same rung the body crosses on, and the accent is hoisted out
+    of the visibility gate so a button that ducks back in already wears the tab's colour instead of
+    arriving blue and then turning green. Device row written and unrun.
 
 ### PR 12a — Android completion choreography
 
@@ -526,16 +629,40 @@ Restore it from git history rather than adjusting the number.
 ### PR 12b — web completion choreography
 
 - ↳ part 2 of 3 of `completion-choreography` — 3 of 5 row types hardcode 280/620/960 against Today's 160/360/260. Box lives under **PR 12c**.
-- [ ] `web-checkbox-pointer-and-spring` — most-tapped control fires its pop on `onMouseDown`; touch gets the weakest feedback · web · Impact O3 · S · Gate V
-- [ ] `web-strike-notes-mismatch` — the comment claims one mechanism; the notes use a bare `line-through` · web · Impact O3 · XS · Gate V
+- [x] `web-checkbox-pointer-and-spring` — most-tapped control fires its pop on `onMouseDown`; touch gets the weakest feedback · web · Impact O3 · S · Gate V
+  - **`V` arrived after the fix did.** The control moved to pointer events in Phase 6 and the
+    assertions that pin it — `pointerdown` pops, a bare `mousedown` does not, the squash is the
+    press rung — landed in `todo-checkbox-pointer.test.tsx` this phase. Green. No device row: a
+    class is applied or it is not, and jsdom can see which.
+- [x] `web-strike-notes-mismatch` — the comment claims one mechanism; the notes use a bare `line-through` · web · Impact O3 · XS · Gate V
+  - **Both halves of the row are struck by `.task-strike` now, so the comment is true.** A rule
+    that snaps on under one that fades in reads as two edits to one task. The notes' beat is
+    covered by the row-completion tests; the *look* of it is not a separate check, it is the web
+    third of the completion row's device check below.
 
 ### PR 12c — iOS completion choreography
 
-- [ ] `completion-choreography` — One completion choreography across the three clients: Android flips three states instantly inside a 780ms wait, web runs three rogue rhythms, iOS Calendar fires the wrong haptic and no sound at all · all · Impact O4 · M · Gate J + D + V + X + TF — **final part (3 of 3)**; PR 12a, PR 12b carried the rest
+- [x] `completion-choreography` — One completion choreography across the three clients: Android flips three states instantly inside a 780ms wait, web runs three rogue rhythms, iOS Calendar fires the wrong haptic and no sound at all · all · Impact O4 · M · Gate J + D + V + X + TF — **final part (3 of 3)**; PR 12a, PR 12b carried the rest
+  - **The strike was the beat with no motion in it, and it is the beat the device rows watch.**
+    `TextDecoration.LineThrough` is a boolean; the rule now sweeps on `Emphasis`, one rule per line
+    on a wrapped title, and web fades `text-decoration-color` over the same rung on title and notes
+    together. Same four beats on all three clients — 160, the strike, 360, the ink out on `Change`.
+  - **iOS's Calendar row was the odd one out twice over.** It fired the plain tap where the other
+    rows fire the completion pulse, and it drew the whole sequence in silence — the one place in
+    the app where finishing something made no sound. Both are in its device row, because a haptic
+    and a sound are exactly the kind of thing `xctest` compiles and cannot hear. Three rows, one
+    per client, written to be run together and unrun.
 
 ### PR 47 — iOS feed item motion
 
-- [ ] `feed-item-motion-parity` — Bring iOS and web onto Android's TdayFeedItemMotion — web has no list motion at all, iOS uses one symmetric 220ms curve for insert, move and remove · ios+web · Impact O4 · M · Gate V + X — **final part (2 of 2)**; PR 22b carried the rest
+- [x] `feed-item-motion-parity` — Bring iOS and web onto Android's TdayFeedItemMotion — web has no list motion at all, iOS uses one symmetric 220ms curve for insert, move and remove · ios+web · Impact O4 · M · Gate V + X — **final part (2 of 2)**; PR 22b carried the rest
+  - **No number was copied across, which is what makes the three files readable against each
+    other.** `feedItemMotion.ts` and `TdayFeedItemMotion.swift` name the rung each Android constant
+    mirrors rather than restating `190`/`320`/`150`, so a rung that moves in `MotionTokens.kt`
+    moves on every client at once — and the one place the mirror is not a copy (Android's 190
+    against the `Enter` rung) is argued in the file rather than silently rounded. `V` is
+    `use-row-placement.test.tsx`, `X` is `TdayFeedItemMotionTests.swift`; both green. The displaced
+    rows travelling is already checked by PR 22b's own device row, so this half needs none.
 
 ## Phase 7 — remaining web areas
 
@@ -662,20 +789,65 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 25d — the highlight ring is clipped away by the row's own collapse wrapper
 
-- [ ] *new, not one of the 109* — below `sm` the ring is drawn outset on a child whose border box **is** the wrapper's clip box, so the mark a deep link leaves on a row is ~95 % invisible on a phone · web · Sev 2 · S · Gate V+D
+- [x] *new, not one of the 109* — below `sm` the ring is drawn outset on a child whose border box **is** the wrapper's clip box, so the mark a deep link leaves on a row is ~95 % invisible on a phone · web · Sev 2 · S · Gate V+D
   - Found while fixing `web-calendar-highlight-ring-cuts`, which now fades a ring almost nobody can
     see. Identical in all three row types carrying
     `highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0"` —
-    `CalendarClient.tsx:799`, `TodoItemContainer.tsx:390`, `FloaterItemContainer.tsx:298` — because
+    `CalendarClient.tsx:896`, `TodoItemContainer.tsx:406`, `FloaterItemContainer.tsx:267` — because
     all three sit in the same `grid-rows-[1fr] overflow-hidden sm:overflow-visible` wrapper, which
     predates the programme (09225a04).
   - Not the one-line `inset-ring` swap it looks like, which is why it is `S`. The wrapper's clip is
     load-bearing — it is what lets the 1fr track actually close below `sm` — and `sm:ring-0` means
-    whatever lands has to leave the desktop tint byte-identical. Three shapes are open: an inset
+    whatever lands has to leave the desktop tint byte-identical. Three shapes were open: an inset
     ring, the ring moved onto the wrapper, or the clip applied only while `removing`, which is the
-    trade `TodoItemContainer.tsx:374` already argues for the foreground child's own `overflow` and
+    trade `TodoItemContainer.tsx:359` already argues for the foreground child's own `overflow` and
     for exactly this reason. Whichever wins, it is one change in three files or it is a fourth way
     these rows differ from each other.
+  - **The inset ring won**, spelled `inset-ring-2` / `inset-ring-accent/25` — its own utility in
+    Tailwind 4, not v3's `ring-inset` modifier, and compiled against the installed 4.2.2 rather
+    than read off a changelog. It stays a `box-shadow`, so it rides the whitelist leg PR 25b added
+    and the clip keeps doing the two jobs that make it unmovable.
+  - **The ring on the wrapper was rejected** because it escapes the clip by leaving the clock
+    behind. `HIGHLIGHT_SETTLE` is written into the foreground child's inline `style` as part of
+    `swipeTransition` (`useSwipeRow.ts:51`); the wrapper declares no transition at all, so the ring
+    would arrive there as a cut — `web-calendar-highlight-ring-cuts` reopened by its own follow-up —
+    unless the clock were duplicated onto a second node, which is a second place for it to drift.
+  - **Clipping only while `removing` was rejected** for more than the row above credits. The clip
+    is not only what lets the 1fr track close: it is also what contains the swipe. The foreground
+    child is translated up to -210px under a finger, and `FloaterItemContainer.tsx:255` already
+    records that this same clip is what the mobile `min-h-[54px]` exists to keep the swipe pills
+    out of. Removing it outside `removing` would trade a clipped ring for a row painting over its
+    neighbours.
+  - The shape is a ternary, not a second `&&`, and that is the one piece of this that a diff reads
+    as noise. Two things forced it. Tailwind emits `inset-ring-transparent` *after*
+    `inset-ring-accent/25` in the utilities layer, so a row carrying both resolves to the invisible
+    one; and the ring has to be declared on **both** sides of `highlighted`, for two reasons that
+    are *not* "it would cut". It would not. An unmarked row of any of the three declares no
+    `box-shadow` at all — nothing in its class string is a ring or shadow utility, and the only
+    `box-shadow` rule in `globals.css` outside the drag keyframe is the `:active` press — so it
+    computes to `none`, and CSS pads a `none` against the other list adopting its `inset` flags.
+    Measured in headless Chromium against the installed 4.2.2 with `transition: box-shadow 1000ms
+    linear`, `inset-ring-2` hung off `highlighted` interpolates: spread 0.27px at t+150ms, 1.17px
+    at t+600ms, 2px at the end. The same comment already stands in this tree at `globals.css:1282`
+    for the drag overlay. What is wrong with it is that *growing a ring is geometry*, and geometry
+    is `Emphasis` by rule 2 while this mark rides the `Quick` leg of `swipeTransition` next to the
+    desktop tint; a mark lighting up should move paint, which is what a fixed 2px ring changing
+    only its alpha does. And declaring both sides is defensive against the real cut:
+    `--tw-inset-ring-shadow` initialises **non**-inset, so the first `shadow-*`, ring or press rule
+    to leave a composite `box-shadow` on the resting row makes the flags disagree and the property
+    stops transitioning at all — the same measurement, with `ring-0` added to the from-state, holds
+    2px flat from t+150ms. That is `web-calendar-highlight-ring-cuts` back with every gate green,
+    one utility away. Only the colour moves.
+  - Desktop is byte-identical by construction: `sm:inset-ring-transparent` replaces `sm:ring-0`,
+    and a variant always sorts after the utility it varies. No new duration, curve or ms literal,
+    so `motion-budget.json` is untouched.
+  - Restores an existing mark rather than introducing a behaviour, so no `GuideTopic`,
+    `sinceVersion`, locale strings or `:shared:exportGuideContent` re-run.
+  - `calendar-row-highlight-ring.test.tsx` is PR 25b's and asserted the ring by the literal
+    `ring-2`, which is a substring of `inset-ring-2` and so would have passed on the defect and on
+    the fix alike. It now names the inset spelling, and its "no ring when unmarked" assertion is
+    about the absent *colour*, the ring itself being unconditional. The new coverage is
+    `row-highlight-ring-clip.test.tsx`, which holds all three rows against one string.
 
 ### PR 49 — the drawer placeholder matches the surface it precedes
 
@@ -721,7 +893,61 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 50 — the nested confirm drawer’s double scrim
 
-- [ ] `web-nested-confirm-drawer-double-scrim` — two `black/80` scrims compose to ~96 % black, both close in one frame · web · Sev 2 · M · Gate D
+- [x] `web-nested-confirm-drawer-double-scrim` — two `black/80` scrims compose to ~96 % black, both close in one frame · web · Sev 2 · M · Gate D
+  - **Two defects, one stack.** The calendar's confirm sheet is a SIBLING of the form sheet it
+    covers — `EditDrawer` renders `ConfirmCancelEditDrawer` beside its own `Drawer` rather than
+    inside it — so two vaul roots put two portals and two scrims over the same pixels, and opacity
+    composes: `black/80` twice over resolves to 96 % black, darker than any surface in the app, so
+    raising a confirm sheet read as the page changing colour scheme. A scrim that finds one already
+    up now draws no dim of its own (`drawer.tsx:185-199`). The node stays, and stays catching
+    pointers — it is what a tap outside the sheet lands on and what vaul releases a drag against.
+    Only the dim is dropped.
+  - **The registry is keyed on the caller's OPEN flag, not on the scrim being in the document**
+    (`drawer.tsx:57`, `:77-83`, `:113`). This is the line that looks wrong in a diff — the document
+    is right there and the flag is a second source of truth — and it is the fix. Radix's `Presence`
+    holds a closed overlay until an `animationend`, so a drawer registered by MOUNT stays
+    registered for the whole `DRAWER_EXIT_MS`. A second sheet opened inside that window — two
+    calendar rows tapped in the same third of a second, or a sheet reopened off the one just
+    dismissed — found a scrim "already up" that was on its way OUT, declined to dim, and then
+    stayed undimmed for its whole life, because the answer below is taken once and never revisited.
+    Registering on the flag drops the entry on the frame the drawer is told to close, while the
+    scrim it belongs to is still fading, so a "yes" taken here is always about a sheet that is
+    staying.
+  - **Nestedness is decided once, in a layout effect, and never revised** (`drawer.tsx:165-178`) —
+    the other line that reads as a bug. Recomputing when the sheet underneath leaves is the more
+    principled rule and would look worse: two stacked sheets are normally dismissed together, so
+    the nested scrim would turn from transparent to 80 % black for the last few frames of its own
+    exit, and a flash on the way out is most of what this row exists to remove. A layout effect
+    rather than render, because a double-invoked render asks twice and, more to the point, asks
+    before the commit the answer belongs to; effect and state both land before paint, so the first
+    frame is already the right one. And the question is "any drawer but mine" rather than "more
+    than one drawer", because whether this scrim's own root has registered by the time it runs
+    depends on which commit vaul mounts the portal in — asked this way it has the same answer
+    either way.
+  - **The second leg is the half that took both sheets away at once.** `useModalPresence` — 200 ms
+    at the time, since moved to Quick by PR 41a — was gating a drawer whose exit travels out
+    through the bottom edge, which is position changing, which is Emphasis by the geometry rule.
+    The window ran out mid-slide: the calendar's form sheet was pulled halfway down, with the
+    confirm sheet stacked on it going in the same frame. `DRAWER_EXIT_MS` (`drawer.tsx:24`) and
+    `useDrawerPresence` (`:39`) are the drawer's own clock, and `CalendarClient.tsx:636` and
+    `:1078` read it; `globals.css:1462-1486` plays vaul's own exit animation on that same rung,
+    each selector carrying one attribute more than the injected rule it outranks, so no
+    `!important` is needed. One number read twice cannot drift, which is the `MODAL_EXIT_MS`
+    arrangement exactly. The enter deliberately keeps vaul's injected half-second: the identical
+    0.5s is also written inline as the transition a released drag settles on, so retiming the way
+    in without the way a drag lands would split one gesture in two.
+  - The gate is `tests/unit/nested-drawer-scrim.test.tsx`, and it asserts the RULE rather than the
+    shade — which is what let the shade move underneath it when PR 41a put every scrim on
+    `--sheet-scrim` (0.40 light / 0.68 dark). The arithmetic is gentler now; doubling is still
+    doubling. The awkward part is that jsdom computes no animation, so Radix drops every closed
+    overlay on the spot and the hazard cannot occur there at all: the file spies on
+    `getComputedStyle` to report vaul's own `fadeIn`/`fadeOut`, which is the only way to put a
+    scrim through the moment the one beneath it is still leaving. Six cases cover the stack — only
+    scrim, second scrim, the one beneath going away, the stack emptying and dimming again, a sheet
+    opened while the last is still sliding out, and a drawer opened from its own `DrawerTrigger`
+    with no flag at all. A seventh compares the exit's two halves, which live in different
+    languages and cannot see each other: it reads the rung out of `globals.css` and checks it
+    against `DRAWER_EXIT_MS` and the vocabulary, never against itself.
 
 ### PR 20 — velocity and rubber-banding on the web swipe
 
@@ -852,15 +1078,26 @@ Restore it from git history rather than adjusting the number.
   - **The property list displaces `transition-all` too, and no closed list is a superset of `all`.**
     It IS a superset of the two named utilities — `transition-colors` adds
     outline-color/text-decoration-color/fill/stroke, `transition-transform` adds transform/rotate,
-    so displacing either costs the call site nothing. `transition-all` is on 19 class strings and
-    the list has to be checked against them one at a time: on all but one the properties actually in
-    flight (translate, scale, background-color, color, opacity, box-shadow) are already in it. The
-    exception is the dock tab, `RootDock.tsx:185`, `sm:min-w-[104px]` when selected against
-    `sm:min-w-12` when not — measured in Chromium against the compiled stylesheet, it went from
-    easing over 200 ms to reaching 104 px in the first frame, beside an indicator pill that is a
-    `pointer-events-none` div this selector does not match and so still glides for 300 ms. That is
-    this unit's own defect shape relocated, and it would have taken the written argument at
-    `RootDock.tsx:101` — the re-measure timed against "the tab width transition (200ms)" — with it.
+    so displacing either costs the call site nothing. `transition-all` was on 19 class strings when
+    this was checked and is on 21 in the tree today — develop's 8i added two, both plain `div`s in
+    `RootDock.tsx` (`:330`, `:384`) that the pressable selector does not match, so neither changes
+    the answer — and the list has to be checked against them one at a time: on all but one the
+    properties actually in flight (translate, scale, background-color, color, opacity, box-shadow)
+    are already in it. The exception is the dock tab, `RootDock.tsx:439`, `sm:min-w-[104px]` when
+    selected against `sm:min-w-12` when not — measured in Chromium against the compiled stylesheet,
+    it went from easing over its rung to reaching 104 px in the first frame, beside an indicator
+    pill that is a `pointer-events-none` div this selector does not match and so still glides for
+    the whole of it.
+    That rung is Emphasis, 320 ms, on both of them now: the tab's class string at `:435` and the
+    pill's at `:326` each spell `duration-emphasis`. This paragraph was written against a tab on
+    `duration-200` and a pill on `duration-300` — two numbers develop's 8i retired in favour of the
+    one rung on the merge that brought this file up to date — so the gap the property list would
+    open is 320 against a single frame rather than 200 against 300: wider than it was, not narrower.
+    That is this unit's own defect shape relocated. The written argument it would have taken with it
+    is gone on its own account: 8i deleted the re-measure timed against "the tab width transition
+    (200ms)" — the comment this row used to cite at `RootDock.tsx:101` — and put a per-frame
+    rect-follower in its place, argued at `RootDock.tsx:174-193`.
+
     `min-width` is therefore in the list, and it has to be there rather than at the call site: a
     `transition-[min-width]` on the button is displaced by this same declaration, and the
     `!important` that would beat it is the escalation the layer exists to retire. `width` and
@@ -1126,20 +1363,123 @@ Restore it from git history rather than adjusting the number.
 ### PR 8g…8n — token call-site migration, one directory per PR
 
 - [ ] `motion-token-layer` — No client has a motion token layer — durations and easings live in ~99/168/10-curve piles of literals, and all three theme files define colour and type but not time · all · Impact O4 · L · Gate J + X + V + G — **final part (6 of 6)**; PR 7/8a, PR 8b, PR 8c, PR 8d, PR 8e carried the rest
+  - **8i — `tday-web/src/components/` is empty of `duration-<n>`, and the box stays open on purpose.** Twenty-eight utilities came off; the web ceiling is 19 and every survivor is in `src/features/` or `src/pages/`, which is 8j's directory. The box cannot be ticked here: it is the single checkbox for all eight of 8g…8n by the "rows split across several PRs" convention above, and 8j…8n have not landed. Ticking it at 8i would assert that Android's feeds and iOS's Snappy sites are migrated too.
+  - **Twenty-three of the twenty-eight are a renaming and not a retiming, and the ratchet cannot tell them apart.** `duration-200` already IS the `Enter` rung, so spelling it `duration-enter` moves no pixel — but the counter drops by 23 all the same, which is the whole reason the budget note records what came off rather than only the number. What changes is legibility: a reviewer can now see which sites chose a length and which merely typed one.
+  - **The dock's pill and its tabs were the one real defect in the set, and the rung alone did not fix it.** The pill ran on 300 and the tabs under it on 200; both are geometry under rule 2 and both are `Emphasis` now. But the thing the pairing times is not the arriving tab, which is what `sm:min-w-[104px]` looks like it should be: that tab's label makes it wider than the 104px floor — 128px for "Scheduled", within about five of the floor for "Floater", measured in Chromium against the built stylesheet — so the floor never binds on the way in and the tab has its width in the first frame at any duration. What runs for 320 ms is the DEPARTING tab collapsing to `sm:min-w-12` once its label is hidden, and the slide it gives every tab to its right. Re-measured in the same harness, matching the rungs closed about a third of the gap and left two thirds: the pill's target was sampled once at `rAF` and again on a hand-written 260 ms timer, so it set off for where the arriving tab stood BEFORE the collapse, 56px past its destination, and turned round when the timer fired. It now follows the tab's rect once a frame for the length of the rung, which turns that into one journey — the pill settles onto its mark from about five pixels past it, the way an ease-out chasing a moving target does, and is within a pixel of rest on the frame the tabs stop on. One duration covers everything the press layer animates on that tab, so its hover tint and press squash come up to Emphasis with the width; that is conceded at the call site and has a device row of its own. `globals.css` and `press-affordance-cascade.test.ts` each describe the old pairing in place and both still say "300 ms" for the pill; neither file is in this unit's scope.
+  - **`MobileSearchHeader`'s bar is on a rung that times nothing, and says so.** It was the third site naming no rung, and the first reading of it — `justify-between` → `justify-stretch` redistributes every child, therefore rule 2, therefore `Emphasis` — is wrong: `justify-content` is a discrete property, a parent cannot animate where its children land, and in Chromium the bar's second child moves 778px on the first frame under a 320 ms `transition-all`. The 300 it replaced timed exactly as much. It is `Enter` now by the ladder's default clause rather than by a geometry argument it cannot support, and the comment says which — the declaration stays for the bar's own background, and animating the redistribution would mean a transition on each child, which is a larger change than a one-frame reflow is asking for.
+  - **`BANNER_EXIT_MS` moved with its own class, for `MODAL_EXIT_MS`'s reason.** The install banner's exit is read twice — by `data-[state=closed]:duration-quick` and by `useFadeUnmount` — and a rung named on one side only half-plays it. `Quick` rather than `Enter` because an offer being declined is exactly the rung's case: something leaving that nobody is meant to watch go.
+  - **8j — `tday-web/src` is empty of `duration-<n>`, and the web ceiling is 0.** Nineteen utilities came off `src/features/` and `src/pages/`, the two directories 8i left, and the counter is now a floor as well as a ceiling: there is no `duration-<n>` anywhere in the web tree outside comment prose, so the next one written is new by construction and turns the ratchet red without anyone having to work out what the number used to be. The box still cannot be ticked — it is the one checkbox for all of 8g…8n, and 8k…8n have not landed — but the web half of the row is finished here.
+  - **The brief's arithmetic was stale, and the direction it was stale in matters.** It asked for 30 → 11 on the strength of eleven survivors in `src/components/ui/` — `sheet.tsx`, `dialog.tsx`, `Modal.tsx` and `sheet-chrome/CenteredSelectorOverlay.tsx` — assigned to PR 41a. 41a has since landed and took all eleven, and 8i then took the ceiling to 19. Counted rather than transcribed, the floor for this group is 0, and writing 11 would have left a ceiling with eleven slots of headroom in it that nothing is ever going to fill: a ratchet with slack is not a ratchet.
+  - **Eighteen of the nineteen are a renaming; the nineteenth is the defect.** Fourteen `duration-200` became `duration-enter` byte-identically across the calendar, the two native dashboards, the Completed tab strip, the list header's edit button and the summary button. `BlogsPage`'s four 300s named no rung and are `Change`: nothing on that page changes position or size, which rules `Emphasis` out under rule 2, and `Change` rather than `Enter` because a hover reveal is the reader's own pointer played back where it already is and is meant to be watched finishing. The comment there is honest about which of the four actually toggle on hover — the excerpt's opacity and the footer link's colour — and which currently cover only a theme swap, which is the same in-place case and therefore the same rung.
+  - **The calendar's view slider was running a control and the view it picks on two different clocks.** The thumb travels a full segment on every view change, so rule 2 puts it on `Emphasis` on geometry alone — but the reason it is worth a device row is that the tap does not only move the thumb: `changeView` sets `slideDirection` and bumps `animKey` in the same call, so the grid below plays `cal-native-slide-from-*`, and `calendar-styles.css` has run both of those keyframes on `--tday-duration-emphasis` since Phase 7. The 300 meant the switcher stopped 20 ms before the view it switched, in one gesture, every time — one tap arriving as two events, which is the same defect Phase 7 fixed between the slide and the height box and the same sentence its comment already carries. The height box was already on the rung; the thumb is the third half that was never brought over. `calendar-pager-height.test.tsx` now asserts the thumb's rung next to the slide's, and `CalendarViewSlider` is exported for that: a counter at zero forbids a literal and is satisfied by any rung name, so a rename back to `duration-enter` would re-open the 20ms gap with every guardrail green.
+  - **Two thumbs that travel were deliberately left on `Enter`, and the split is a rule rather than a mood.** `CompletedContainer`'s tab thumb and `SettingsPage`'s two switchers are one segmented-control shape, all three already sitting exactly on 200. Rule 2 would move them, and this unit does not, because a site that already sits on a rung is renamed and a site that named no rung is adjudicated — that is 8i's line and holding it is what keeps a migration from becoming an unreviewed retiming. Retiming one of the three would give the app two segmented controls answering a tap at different lengths; retiming all three is a visible change to a control shape and needs its own argument and its own device row. The calendar's thumb is promoted not because it is a thumb but because it named no rung AND has a grid moving beside it. Conceded at the call site in `CompletedContainer.tsx`.
 
 ### PR 9a/9b — `Modifier.tdayPressable` and the 17 hand-rolled triplets
 
-- [ ] `press-affordance-unification` — One press affordance: Android hand-rolls the scale/offset/elevation triplet 17 times at 7 different scales, and on web any `transition-*` utility silently deletes the global press squash · and+web · Impact O3 · M · Gate TF + D — **final part (3 of 3)**; PR 10, PR 54 carried the rest
+- [ ] `press-affordance-unification` — One press affordance: Android hand-rolls the scale/offset/elevation triplet 17 times at 7 different scales, and on web any `transition-*` utility silently deletes the global press squash · and+web · Impact O3 · M · Gate TF + D — **final part (3 of 3)**; PR 10, PR 54 carried the rest — **the Android half is complete as of 9b4**, which took the last live triplets: `TodoListScreen`'s list FAB, Today header button, Floater list row and two list-settings tiles; `CategoryCard`; and `TdaySegmentedSlider`'s two press scales, the only two that name the token without moving onto the modifier — the selector is not a surface reading its own press and both share a spring with the offset that slides them. `android.pressScale` is 8, and the ceiling and the survivors are now the same eight sites, listed by name in `motion-budget.json`; none of the eight is a press site inventing a depth. Still unticked because this box is `and+web` and 9b5 owns the tick — what is left for it is the guardrail, not more call sites
+- [x] `and-root-fab-has-no-press-scale` — the root FAB threads an `interactionSource` into its Card and never calls `collectIsPressedAsState`; the 0.93 scale + 2 dp offset path built for it is gated off by `showCreateTaskButton = false` · and · Sev 2 · S · Gate G+D
+- [ ] `and-hero-circle-buttons-press-scale-unanimated` — two hero buttons compute a 0.93 scale from a bare `if (pressed)` inside `graphicsLayer`, and the `PressableIconButton` written for exactly this has zero call sites · and · Sev 1 · S · Gate G+D — **both halves landed**: 9b2 put both buttons on `Modifier.tdayPressable` at `PressScales.Bar`, so the animation exists, and 9b3 deleted `PressableIconButton` — the unused duplicate of exactly that press — so there is no longer a second, unanimated answer to this defect sitting in the tree. Left unticked for 9b5, which owns the tick; do not go looking for the function, it is gone
 
 ### PR 31 — the Android route hand-over and predictive back
 
-- [ ] `route-change-handover` — Route change: Android crossfades at 360/240ms, web at 140ms, and web's own comment says the long one reads as lag — pick the number once · and+web · Impact O3 · M · Gate V + D — **final part (2 of 2)**; PR 55 carried the rest
-- [ ] `android-predictive-back-scrub` — edge drag scrubs a pure crossfade — communicates nothing · and · Impact O3 · S · Gate D
+- [x] `route-change-handover` — Route change: Android crossfades at 360/240ms, web at 140ms, and web's own comment says the long one reads as lag — pick the number once · and+web · Impact O3 · M · Gate V + D — **final part (2 of 2)**; PR 55 carried the rest
+  - **The half of web's argument that survived there survives here, and it is restated at the
+    Android call site rather than re-derived.** A route fade sits between a tap and the screen the
+    user asked for, and anything longer reads as lag — which is exactly right against the long end,
+    and 360 IS the long end that argument was written against. What 360 could not defend was 360:
+    it named no rung, so nothing downstream could tell a decision from a number somebody liked. A
+    thing arriving with no reason to be another length is `Enter`, and both directions take it.
+  - **One length and two curves, which is the model web was already running.** `.tday-route-fade`
+    and `::view-transition-old(root)` are both `var(--tday-duration-enter)` and differ only in
+    `--tday-ease-enter` against `--tday-ease-exit`. Android now says the same thing with one
+    `Durations.Enter` and the two Compose built-ins, which `docs/motion.md`'s easing table records
+    as the `Enter` and `Exit` tokens byte for byte and `TdayMotionTokensTest` pins — so they stay
+    written as built-ins at their call sites, which is what that table says to do with them.
+  - **Not 160/110.** The note at §2.2's PR 27 row said this PR would retime to that pair. It
+    predates the ladder, neither number is a rung, and those two digits appear nowhere else in the
+    repo; `docs/motion.md`'s `Scene` bullet had meanwhile been asserting `Enter` for route and tab
+    handovers in prose, and `globals.css` had been doing it since PR 55. Three sources and one of
+    them was wrong, so the wrong one is corrected rather than followed — and `TdayMotionTokens.kt`
+    was a fourth, its `Scene` doc calling route handovers `[Quick]`.
+  - **Five routes were restating the default and one of them was the reason a gate could not be
+    wired.** The splash and the two legacy auth entry points each wrote their own `tween(300)`; the
+    `settingsEnterTransition`/`settingsExitTransition` pair, which had been an alias for the
+    navigation pair since the sheet rise came out of it, was spelled across five more composables.
+    Every one of those overrides said what the NavHost already said, so deleting them retimes
+    nothing visible — but until they were gone, a preference answered at the NavHost was a
+    preference five routes ignored. There is now exactly one place a route fade is described.
+  - **Reduce Motion is the behaviour change in here, and it is the whole of it.** Compose's animator
+    scale already zeroes these transitions, so the system setting was never the gap; Phase 8's
+    in-app switch (`ReduceMotionPreferenceStore`, read through `rememberTdayMotionEnabled()`) is
+    something Compose knows nothing about, and the NavHost was the last surface in the app deaf to
+    it. The boolean is hoisted above the NavHost because the four lambdas are
+    `AnimatedContentTransitionScope` receivers and not composables — read it inside one and it does
+    not compile, which is the failure mode this hoist is worth naming for. `EnterTransition.None`
+    and `ExitTransition.None` draw the destination finished, which is the fifth idiom rule: the
+    whole of a route change's finished state is the screen the user asked for.
+  - **Gating the hand-over moved two waits with it, and that was not optional.** `TodoListScreen`'s
+    380 ms settle before a navigated-to search result is scrolled to, and `ScheduledTaskHomeScreen`'s
+    260 ms hold before the search surface comes down, both existed to cover this exact fade and both
+    read `rememberSystemMotionScale()` precisely because the fade used to ignore the switch. Each
+    comment said so and said which day it moved; this is that day. Left where they were, a Reduce
+    Motion user would have got the cut AND the full wait {D} a fully drawn destination sitting there
+    doing nothing, which is `docs/motion.md`'s fifth rule broken the way it is usually broken. The
+    other three waits in `TodoListScreen` stay on the device's clock and the hoist is split in two
+    rather than flipped, because what they cover {D} `animateItem` placement, `SwipeTaskRow`'s
+    highlight pulses {D} is still ungated. `SEARCH_RESULT_NAV_SETTLE_DELAY_MS`'s doc claimed the
+    navigation into the screen for both of its call sites; only one of them navigates, the floater's
+    settling on the feed closing over its own results card, and the doc says that now.
+  - Six literals retired and the ceiling lowered with them: `android.tween` 16 → 10, which is the
+    six `tween(300)`. The two `NAV_FADE_*_DURATION_MS` constants went too and are worth naming
+    precisely because they did NOT move the counter — a named constant never matched a grep for
+    literals, which is the honest limit of the ratchet and the reason the 360 was carried in
+    `docs/motion.md`'s non-tokens table instead. That table's 340–420 band is down to two entries
+    now, and its line refs were stale by a few hundred lines besides.
+  - `tests/guardrails/route-handover.test.ts` gains the Android half, in the same file as the CSS
+    half deliberately: a route change is one decision the two clients have to keep making the same
+    way, and split across two files the next hand to retime one has no reason to open the other. It
+    is a text read for the reason the CSS half is — there is no Compose runtime in vitest, so
+    nothing there can play a NavHost transition or ask what one resolved to. What it can see is
+    every way this could be undone while still animating: the rung written back out as a number,
+    one of the four wirings dropped, the two curves collapsed into one, or the gate removed. That
+    last one is asserted at the wiring rather than at the hoist, because a `rememberTdayMotionEnabled()`
+    line is not rare in `TdayApp.kt` {D} two screens further down hold one {D} and a whole-file search
+    for it would have stayed green with the graph's gate deleted outright.
+- [x] `android-predictive-back-scrub` — edge drag scrubs a pure crossfade — communicates nothing · and · Impact O3 · S · Gate D
+  - **The gesture was already live, already seeked, and had nothing to say.** `enableOnBackInvokedCallback`
+    has been on since the manifest was written and `navigation-compose` 2.8.5 drives `popExitTransition`
+    from a `SeekableTransitionState`, so the finger has always been scrubbing this spec rather than
+    watching it play. What it was scrubbing was 31a's crossfade, which is the one spec that cannot be
+    scrubbed: two screens at half opacity read the same at a third of the pull and at two thirds of it,
+    so the gesture could report neither how far it had come nor whether letting go would commit it.
+    `navigationPopExitTransition` gives it a quarter-width travel and a recede to 0.90 to report with.
+  - **It does not reopen the NavHost's toolbar argument, and the wiring is where that is visible.**
+    Only `popExitTransition` moved. `popEnterTransition` is still `navigationEnterTransition`, so the
+    arriving screen still fades where it stands and the back chevron and the action cluster are still
+    handed to their counterparts rather than carried 18 % sideways and dropped back — which is the
+    half of the :336-347 comment that was ever about travel. Push is untouched in both directions:
+    forward has no gesture to answer, so it has no direction to express.
+  - **Same rung, same curve as the committed exit, on purpose.** This slot also plays whole when back
+    arrives as a button press, so a scrub released at the threshold and a back button tapped now land
+    on one animation instead of two. `Durations.Enter` and `FastOutLinearInEasing`, both named.
+  - **The ceiling did not move, and that is the finding.** The brief costed this at `android.pressScale`
+    31 → 32; the ceiling was 8 by the time it was written (9b1–9b4 had taken it there) and it is still
+    8 after this. `PREDICTIVE_BACK_MIN_SCALE` never matched the counter: the regex wants `[Ss]cale`
+    beside the literal and a SCREAMING_SNAKE constant spells it `SCALE`. Raising a ceiling for a literal
+    no measurement can see would have been a number contradicted by the next run, so the escape is
+    recorded instead — in the fixture's own note, in `docs/motion.md`'s non-tokens table, and in a
+    guardrail that asserts the marker comment is still at the declaration. Precedent: 31a recorded the
+    two `NAV_FADE_*` constants escaping `android.tween` exactly this way.
+  - **Reduce Motion gets a cut and not a held recede.** `ExitTransition.None`, like the other three,
+    reading the same hoisted `rememberTdayMotionEnabled()`. A screen that cannot animate must still be
+    gone rather than parked at 0.9 scale halfway off the side.
+  - Gate D. There is no device in this session and a scrub is the one thing in the programme that
+    cannot be read off source: `docs/verification/phase-9-device-pass.md` carries the row, unticked.
 
 ### PR 32 — iOS cold launch and zoom navigation
 
-- [ ] `ios-cold-launch-fade` — splash → first screen is a hard cut, every launch · ios · Impact O4 · S · Gate TF
-- [ ] `ios-zoom-navigation-transition` — six home tiles push with the stock slide; zero shared elements in the target · ios · Impact O4 · M · Gate X+TF
+- [x] `ios-cold-launch-fade` — splash → first screen is a hard cut, every launch · ios · Impact O4 · S · Gate TF — the boundary is a transaction now. `AppRootView`'s outermost `Group` was a bare `if` with no `.transition` on either arm and nothing to key one on, so the splash was cut out from under the first screen on every launch — the one motion in the app that every user sees. The condition is hoisted into `showsLaunchSplash` so `.animation(_:value:)` has a single `Equatable` value to watch: a bootstrap that finishes while a finger is still holding the splash down is one arrival, not an arrival and then a second one. The two arms crossfade on `Enter`, the arriving app on the Enter curve and the departing splash on Exit — web's own pairing, where `.tday-route-fade` and `::view-transition-old(root)` are both `var(--tday-duration-enter)` on `--tday-ease-enter` / `--tday-ease-exit` — and the rung is PR 55's argument one boundary further out: a first screen is a thing arriving with nothing arguing for another length, and the wait this fade could be accused of sitting in front of is the bootstrap, which is what flipped the value it runs on. SwiftUI cannot carry two curves through one `.animation(_:value:)`, so the curves sit per-arm on the `.transition`s and the `Group`'s own modifier is the transaction they are inert without. `TdayApp`'s `Group` one level up is deliberately left bare and now says so: `appContainer` arrives long before the bootstrap does, so the arm it switches to is `AppRootView` still drawing `AppLaunchSplashView` — that boundary is splash → splash. It was not yet invisible, though, and saying it was is what the bare `Group` needed to be true: the two splashes are two structural positions, so two identities, so the `@State` tagline re-rolled across the swap and 89 launches in 90 hard-cut one line to another on the one screen where both sides are meant to be the same pixels. The tagline is now the process-wide `launchTagline` — a lazy global is one draw per launch, which is the lifetime it always wanted — and with the logo a static `Canvas` and nothing else on the screen varying, the outer boundary is a boundary between identical frames and needs no fade. Reduce Motion needs no branch of its own; `tdayAnimation(…)` returns nil, the arms still swap, and the app is drawn finished in the frame the bootstrap completes (fifth idiom rule). The gate is a new guardrail, `tests/guardrails/launch-handover.test.ts`, which reads the Swift as text for the reason `route-handover.test.ts` gives about jsdom and one worse — no Swift toolchain where vitest runs, and no way to render a SwiftUI hierarchy from node — and holds the five things that have no local symptom when they go missing: the one keyed value, a `.transition` on each arm naming its curve and its rung, the transaction on the `Group`, the gate rather than a returning `reduceMotion ?` ternary, and no numeric duration anywhere in the block. The two arm rules are depth-bounded to the arm's own modifier chain rather than its subtree: the app arm is a `NavigationStack` over three feed screens that carry `.transition`s of their own, so a scan that accepted any `.transition(` down there would go green on the launch fade having been moved onto a tab swap — written, readable, and on a node no launch touches, which is the Phase-7 shape this file exists to not repeat. Four of its six rules land red on the parent commit, and moving the app-arm modifier onto a child lands the third. No literal added or retired: `duration: TdayMotion.Durations.enter` puts no digit after the colon, so `ios.easeDuration` holds at 22 (PR 32a)
+- [x] `ios-zoom-navigation-transition` — six home tiles push with the stock slide; zero shared elements in the target · ios · Impact O4 · M · Gate X+TF — the six tiles grow into what they open now. iOS 18 pairs `.matchedTransitionSource(id:in:)` on a source with `.navigationTransition(.zoom(sourceID:in:))` on a destination, and the category board is the one place in this tree that qualifies: six large distinct rectangles, each counting the list its screen is about. Three things kept it from being two modifiers written at the call sites. The deployment target is 17.0 and is not moving, so both APIs sit behind `#available(iOS 18.0, *)` and iOS 17 comes out the far side with the stock push. The tiles are built inside a private struct in `ScheduledTaskHomeScreen.swift` and the destinations by `AppRootView.destinationView(for:)` two files away, so the `Namespace.ID` travels in the environment rather than down a parameter chain through two private types — the call Phase 8 made for the motion gate, for the same reason. And the two ends have to agree on a string, which is what `AppRoute.zoomSourceID` is: one exhaustive switch, read by the tile that publishes and by the destination that asks, so a renamed case is a compile error rather than a transition that quietly stopped happening. `.allTodos` is the case that needed an argument about it — a highlight id means the arrival came from the home screen's own search results or a deep link, and the All tile is on screen either way, so zooming out of it would be the animation claiming the user pressed something they did not. Reduce Motion is the fourth condition on both halves: a zoom is the large-amplitude travel Apple's guidance names, and the substitute is the platform's own stock push, which draws the finished screen and adds no wait (fifth idiom rule). The X gate is `ZoomNavigationTests` — six routes carry ids, the six are distinct, a highlighted All arrival carries none — and the local proof is `launch-handover.test.ts`, extended with a sibling block because this is the same view's other unasked-for navigation boundary and is unbuildable here for the same reason: both APIs under the availability check, one namespace, one destination site, and each tile publishing the id of the route its OWN closure pushes, which is the failure that leaves every other rule green while a screen grows out of the wrong rectangle. Neither zoom API takes a length, so no counter moved.
 
 ### PR 38 — the confetti spec, into the repo
 
@@ -1247,22 +1587,247 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 41c — the iOS sheet language and drag-to-dismiss
 
-- [ ] `sheet-presentation-unification` — Four overlay systems on web, two on iOS, two on Android — one sheet language, one scrim, one set of timings · all · Impact O3 · L · Gate V + J + D + TF — **final part (3 of 3)**; PR 41a, PR 41b carried the rest
-- [ ] `ios-sheet-drag-to-dismiss` — the app's most-used sheet cannot be swiped down; no grabber · ios · Impact O4 · M · Gate TF
+- [x] `sheet-presentation-unification` — Four overlay systems on web, two on iOS, two on Android — one sheet language, one scrim, one set of timings · all · Impact O3 · L · Gate V + J + D + TF — **final part (3 of 3)**; PR 41a, PR 41b carried the rest
+  - **Ticked here by the fourth unit, not by the third PR.** Four units close this row: PR 41a's
+    `--sheet-scrim` and the web sheet timings; PR 41b's `TdaySheetMotion` and its scrim moving onto
+    the card's clock; PR 41b's confirm cut, carried over from PR 15a; and this one, which is the
+    iOS third and is paperwork on purpose. `ios-sheet-drag-to-dismiss` below is a separate row and
+    does not gate this box.
+  - **One web scrim outlives the tick, and the box stays ticked anyway.** The develop merge that
+    closed this unit also brought in G7's `web-sheet-overlay-outruns-panel`, which records that
+    `dialog.tsx:21` still draws its scrim with a bare `animate-in`/`animate-out` on the library's
+    0.15 s fallback while the card at `:44` names `duration-enter` — and books that remainder here.
+    It is not a fourth part of this row: all four parts named above are in the tree, the dialog's
+    scrim is already the shared `bg-sheet-scrim` so the row's "one scrim" holds, and what is left
+    is one overlay system's timing rather than a sheet language. The tick therefore stands and the
+    remainder does not travel with it: it is unowned, and the G7 row is where it is written down.
+    "One set of timings" in the row text above should be read as four overlay systems reduced to
+    one language with that single exception outstanding, not as every web scrim being on a rung.
+  - **The row's iOS half — `cardIn → 0.46/0.82` — is superseded, and writing it back would have
+    cost more than it bought.** `TdaySheetChrome.swift:271` already reads
+    `static let cardIn = TdayMotion.settle`, which is response 0.40 / dampingFraction 0.86, and
+    `docs/motion.md`'s `Settle` bullet names that exact line as the rung's **one** anchoring site in
+    the repo. Putting 0.46/0.82 there would strand `Settle` with zero call sites, add 2 to
+    `ios.spring` — measured at 98 against a ceiling of 98 when this was argued, and 60 against 60
+    after 8g and 8h, so zero headroom either way — and spend `Gesture`'s 0.82 damping on a
+    presentation rather than on a release, which is the one thing that damping is for. The 0.82 is
+    not wasted: unit 41c-b spends it on the drag release, where a finger has actually let go.
+  - **The two mechanisms are named in the file that owns one of them, and the plan's counts were
+    wrong on both sides of the split.** iOS applies this modifier at **nine** sites across four
+    screens — `TodoListScreen`, `ScheduledTaskHomeScreen`, `CalendarScreen` and `CompletedScreen`,
+    seven of them through the `createTaskSheet(…)` wrappers and two directly for create-list — not
+    four: the plan was counting `CreateTaskSheet.swift:623` and `:632`, which are the wrappers' own
+    bodies, as application sites.
+    UIKit's `.sheet` + `presentationDetents` has **six**, not seven: `ManageMembersSheet.swift:150`
+    is the presented view's own detents, and the presentation is `TodoListScreen.swift:1730`.
+    And the rule is not "the custom one has a keyboard" — list settings and members both carry
+    `TextField`s. It is **whose the height is**: a sheet sized by its own content has nothing above
+    it that will lift it off a keyboard, so the host opts out of SwiftUI's avoidance and computes
+    `keyboardBottomInset` itself, which is what lets the lift be clamped to
+    `maximumScreenHeightFraction` instead of pushing a tall card off the top. A detent sheet's
+    height is a choice UIKit already owns, and detents come with the system drag-to-dismiss.
+    Migrating those six would throw both away for an inset none of them needs, on a branch with no
+    Swift compiler. The argument now lives above `tdayBottomSheetPresentation` rather than in this
+    file, because the next person to ask the question will be reading the modifier.
+  - **The chrome is nearly one, and the plan named the wrong piece as the shared one.** Every sheet
+    on either mechanism wears `TdaySheetHeader` over `colors.bottomSheetBackground`, and the corner
+    radius agrees at 34 everywhere it is stated — `TdaySheetMetrics.sheetCornerRadius` on the custom
+    side, `presentationCornerRadius(34)` at `ManageMembersSheet.swift:152` and
+    `TodoListScreen.swift:2389`/`:5144`. Three native sheets state none at all (Morning Sweep's date
+    picker, promote-floater, the scheduled-home summary) and take UIKit's default; that is a
+    one-line gap and is written down above the modifier rather than closed here, since closing it is
+    a pixel change no gate on this branch can look at. The **scrim** is the piece the plan had
+    backwards:
+    `colors.bottomSheetScrim` has eight call sites on iOS and not one of them is a `.sheet`, because
+    UIKit dims a presented sheet itself and SwiftUI exposes no way to recolour that. So all six
+    native sheets are close to the app's scrim by luck, and matching them exactly would mean owning
+    their presentation — the trade this row refuses. What *is* a genuine
+    three-client agreement is the colour itself: `Color.black.opacity(isDark ? 0.68 : 0.40)` at
+    `TdayTheme.swift:76` is byte-for-byte `TdaySheetChrome.kt:110` on Android and, since PR 41a,
+    web's `--sheet-scrim`. That is a colour with no generated token and nothing in any build
+    watching it, so it is now a row in `docs/motion.md`'s deliberate non-tokens table — the one
+    place in the repo where a fact like that can be read on purpose instead of by accident.
+  - **No literal added or retired, and nothing here can be seen by a device.** All eight budget
+    counters are untouched: the only Swift change is a doc comment, and `stripComments` is what the
+    budget counts through. The gate is `motion-reachability-ios.test.ts` and `motion-parity.test.ts`,
+    both of which read Swift as text and would fail on a broken constant or a raised ceiling.
+    No new device row — PR 41a's and PR 41b's rows in `phase-9-device-pass.md` already carry every
+    frame this box is accountable for, and this unit changes none of them.
+- [x] `ios-sheet-drag-to-dismiss` — the app's most-used sheet cannot be swiped down; no grabber · ios · Impact O4 · M · Gate TF
+  - **The rule is a projection, and it is the only part a test can hold.** `TdaySheetDragToDismiss`
+    is a free enum beside `TdayKeyboardFrameProbe`, for the same reason that one is: what the card
+    does under a finger is one addition to an offset, but what a *release* means is a decision, and
+    a decision inside a `body` is one nothing can ask a question of. It reuses web's argument rather
+    than inventing a second one — `swipeGesture.ts`'s `projectedRest`, written up at LEDGER.md:731-736
+    — that a position-only rule reads the last frame of a gesture as though it were the end of one.
+    SwiftUI hands the projection over ready made in `predictedEndTranslation`, so unlike web there
+    was no sampler to build, only a threshold to name.
+  - **The toast's rule was the wrong one to copy, on both halves.** `AppRootView.swift:1042` spells
+    `translation > 30 || predictedEndTranslation > 90`. The `||` is what lets a long drag that is
+    already being walked back through, and a flat 30 pt says nothing on a card whose height runs
+    from about half the screen to `maximumScreenHeightFraction` of it — the same 30 pt is a decisive
+    pull on the short create-floater card and a twitch on the tall create-task one. A quarter of the
+    card's own height is the same gesture on both, and a flick is projected past it rather than
+    dragged there. What the toast *did* hand over is the coordinate space: `.global`, with the
+    comment at `:964-968` explaining that a locally measured drag feeds the card's own offset back
+    into the translation and oscillates. This is the second site of that, not a second discovery.
+  - **The release goes through `dismiss()` and nothing else.** Not an `animateOut()` of its own:
+    that funnel is what resigns the keyboard and times the deferred teardown, and a second exit
+    written at the gesture is a second thing to keep in step with it. `dragTranslation` is
+    deliberately *not* reset on a commit, so the exit carries on from where the finger left the card
+    instead of snapping it home first. A refused drag springs back on `TdayMotion.gesture` —
+    response 0.34 / dampingFraction 0.82, the rung `docs/motion.md`'s spring table defines as a surface
+    continuing under its own momentum after a finger lets go, and the place the 0.82 the
+    `sheet-presentation-unification` row above declined to spend on an *arrival* actually belongs.
+  - **The keyboard resigns at the gesture and not at the dismissal, and that is the trap.**
+    `keyboardBottomInset` lifts the card while a field is focused, so a resign that waited for the
+    release would collapse the lift underneath a card the finger was already moving — PR 15b's
+    Android failure and PR 44's `ios-selector-pops-while-card-slides` are the same shape. Resigning
+    on the first `onChanged` spends the collapse in the direction the finger is already going (the
+    inset is subtracted, so losing it drops the card) and gets it over with while the drag is young.
+    It is guarded on `keyboardFrame` rather than on a flag of its own: the first resign makes
+    `keyboardWillHide` fire, which nils the frame, so the check stops answering without anything
+    having to remember it already ran. A drag can be refused, so this resign is not a duplicate of
+    `animateOut()`'s — it has to happen before either outcome is known.
+  - **The grabber is the chrome's, not each caller's**, so both sheets on this mechanism get it
+    across all nine application sites at once. An overlay rather than a row above the content,
+    because the card's background and its clip shape belong to the content: a row inserted in the
+    host would sit in the transparent strip *above* the card. 36 × 5 at 5 pt from the top is UIKit's
+    own grabber to the point — the native mechanism's six sheets are handed exactly that bar, and
+    four of them currently answer `presentationDragIndicator(.hidden)`, so the app refuses the
+    affordance on both mechanisms today. Whichever way that gets settled, the two should not
+    disagree by a pixel at the one place a user looks to find out whether a sheet can be pulled.
+  - **The gesture is on the whole card and `.gesture`, not `.highPriorityGesture`.** A gesture
+    declared on an ancestor yields to one declared inside it, which is what should leave
+    `CreateListSheet`'s `ScrollView` scrolling under a card that still drags by its header and its
+    margins — the same division of a sheet UIKit makes. Source cannot settle that and the device row
+    says so.
+  - **Chrome applied to the content is chrome drawn over whatever the content draws over itself**,
+    and `CreateTaskSheet`'s centred selector is exactly that: a full scrim and a picker declared
+    *inside* the view this host is handed. So the grabber landed lit on top of the dim, and the
+    ancestor drag stayed live over the scrim's pixels — whose only competing recognizer is a
+    `.onTapGesture`, which does not claim a 10 pt pan. A pull downward on the dim discarded a
+    half-written task where a tap on the same pixels only closes the picker. Fixed the way z-order
+    has to be fixed when the layers are declared in two files: the content reports that it is
+    covered (`tdaySheetContentIsCovered`, a preference rather than an environment value because the
+    direction is inward-out) and the chrome stands down for as long as it is — the bar crossfades
+    out on `scrimIn`/`scrimOut`, and the drag is masked to `.subviews` so the picker's own rows and
+    its tap-to-close keep working. Not `.none`: the layer doing the covering is made of the
+    content's own subviews. The alternative — moving the grabber inside the content's clip — would
+    have put it back on each of the nine callers, which is the thing the chrome exists to stop.
+    Not routed through `tdayAnimation`: the layer doing the covering keeps its own crossfade under
+    Reduce Motion, for the reason `TdayCenteredSelectorMotion` writes out, and giving the setting to
+    one half of one crossfade is what would make the bar and the dim read as two surfaces.
+    `CreateTaskSheet.swift:242`'s allowlist key in `motion-reachability-ios.test.ts` moved to `:248`
+    with the lines it names; that table is keyed by exact `path:line` and tracking it is the cost of
+    inserting anything above a known site.
+  - **No literal added or retired; all eight budget counters are untouched.** The release names
+    `TdayMotion.gesture` rather than writing a spring, so it adds to neither `ios.spring` nor
+    `ios.easeDuration`, both of which have zero headroom. Those two read 98/98 and 27/27 when this
+    was written and read **60/60 and 22/22** in the merged tree: 8g and 8h took thirty-eight
+    longhand Snappy springs off between them and 8m took five `duration:` digits off, and
+    `motion-budget.json` came down by exactly those amounts in the same commits. Same zero headroom,
+    one batch further migrated — this unit still writes neither. The three geometry numbers (10 pt
+    of slop, a 0.25 fraction, the 36 × 5 bar) are gesture and layout rather than motion and are on
+    no counter. Seven cases in `TdaySheetChromeMotionTests.swift`, which is already registered in
+    the pbxproj; the fourth of them — a 300 pt drag with a 90 pt projection — is the one a
+    position-only rule fails, which is what makes the others worth having. Whether the released card
+    settles on the same curve the scrim tap leaves on, and whether the grabber reads as a second
+    header, are the TestFlight row in `phase-9-device-pass.md`.
 
 ### PR 42a…42g — seven polish PRs, one surface each
 
 - *(container row — the seven rows below are the work: Morning Sweep · Android Settings inline forms · iOS Help Guide · Android onboarding steps · Android calendar mode switch · iOS numeric counts · Android error card)*
-- [ ] `android-morning-sweep-motion` — 241 lines, zero `animate*`, bare-`Text` finish · and · Impact O3 · S · Gate D
-- [ ] `disclosure-expand-collapse` — Expand/collapse has no shared spec: Android slices glyphs mid-growth, iOS runs the app's fastest curve at 150ms, web snaps the height and swaps two chevron glyphs · all · Impact O3 · M · Gate V + D + TF — **final part (2 of 2)**; PR 56 carried the rest
-- [ ] `android-onboarding-step-direction` — ordered steps crossfade on Compose's default spec · and · Impact O2 · S · Gate D
-- [ ] `android-calendar-mode-content-cut` — content hard-cuts inside a container whose height is springing · and · Impact O3 · S · Gate D
-- [ ] `ios-numeric-count-transition` — four plain `Text("\(count)")`, one at 34 pt; zero `contentTransition` in the codebase · ios · Impact O3 · S · Gate TF
-- [ ] `android-error-card-feed-motion` — error card pops mid-feed, two directories from the spec that fixes it · and · Impact O2 · XS · Gate D
+- [x] `android-morning-sweep-motion` — 241 lines, zero `animate*`, bare-`Text` finish · and · Impact O3 · S · Gate D
+- [x] `disclosure-expand-collapse` — Expand/collapse has no shared spec: Android slices glyphs mid-growth, iOS runs the app's fastest curve at 150ms, web snaps the height and swaps two chevron glyphs · all · Impact O3 · M · Gate V + D + TF — **final part (2 of 2)**; PR 56 carried the rest
+  - **The Android half, as of 42b.** Settings' three inline account forms (name, password, security
+    questions) each wrapped themselves in a bare `AnimatedVisibility(enter = expandVertically(),
+    exit = shrinkVertically())` — no spec, so they ran on Compose's default spring, and no fade, so
+    the travelling clip edge was the only thing describing the growth and it sawed through the
+    `OutlinedTextField` labels and the password dots. All three now name
+    `TdayDisclosureMotion.Enter` / `.Exit`, the app's one disclosure spec: fade AND expand on
+    `Emphasis` because the box changes size, fade AND shrink on `Quick` because an exit is never
+    longer than the enter it undoes, and both anchored to `Alignment.Top` — `expandVertically`
+    defaults to `expandFrom = Alignment.Bottom`, which bottom-aligns the content in the growing box
+    and slides it down through a stationary cut, so the row's complaint was literally that the first
+    field's label arrived last and sliced. Anchored to the top the content never moves and the cut
+    travels away along the arriving bottom edge. No literal is added or retired, so all eight budget
+    counters are untouched.
+  - **The iOS third, as of 42c.** `HelpGuideScreen`'s topic card ran the one transaction that
+    grows it — the chevron's rotation and the body's insert — on `.easeInOut(duration: 0.15)`, which
+    is the app's fastest rung driving the largest thing on the screen. It is
+    `TdayMotion.standard(duration: TdayMotion.Durations.emphasis)` now: a card that changes how big
+    it is is geometry, and rule 2 of `docs/motion.md` decides that boundary by geometry rather than
+    by importance, so it lands on the same rung web's height box already answers to. The curve
+    changed with it and is the half a reviewer has to look at — SwiftUI's `.easeInOut` is (0.42, 0,
+    0.58, 1) against Standard's (0.4, 0, 0.2, 1), and at 320 ms the tail is what reads. The
+    transaction stays inside `withAnimation` because the body is inserted by an `if`, and it passes
+    through `tdayAnimation`, so Reduce Motion draws the open card finished on the frame of the tap
+    instead of shortening the trip. No literal is added or retired: the site already named its rung,
+    so `ios.easeDuration` neither sees the old value nor the new one and the budget is untouched.
+  - **The box ticks here, on the merge that put the last two thirds in the same tree.** It is an
+    `all` row in three parts and the parts landed apart: web's `AnimatedHeight` came out of the
+    onboarding wizard under PR 56, Android's three Settings forms under 42b, iOS's Guide card under
+    42c — and 42b and 42c were built on separate branches, each writing that it was waiting for the
+    other. Neither was wrong; both are in the tree now, so the box is ticked on the merge rather
+    than by either unit. Its `V` and `D` and `TF` gates are unchanged by that: the device and
+    TestFlight rows are written and unrun in `phase-9-device-pass.md`, one per client.
+- [x] `android-onboarding-step-direction` — ordered steps crossfade on Compose's default spec · and · Impact O2 · S · Gate D
+- [x] `android-calendar-mode-content-cut` — content hard-cuts inside a container whose height is springing · and · Impact O3 · S · Gate D — the mode card's `Box` animated its own height and the `when` inside it did not, so the month grid was replaced by the week strip in one frame while the card around it was still travelling. That `when` now sits inside an `AnimatedContent` keyed on the tapped mode and reading its own lambda parameter, crossing over on `Enter` in / `Quick` out — deliberately shorter than the height change, so the eye lands on a resolved grid inside a still-settling card rather than on two ghosted ones — `using null`, because the height belongs to the `animateContentSize` above it and every `SizeTransform` carries a default 400-stiffness spring on the `AnimatedContent`'s own size, which would leave the Settle spring chasing a moving child instead of answering a step. The tab handler stopped resetting the visible month on the way OUT of Month too: the card is composed for the whole cross now, so that write re-paged the departing grid to another month while it was still fully opaque — it fires on entry to Month instead, where the only card that reads it is the one arriving. The height itself came off `spring(DampingRatioNoBouncy, StiffnessMediumLow)` onto `Springs.settle()`: a card finding its height is what Settle is for, and both `docs/motion.md` and the budget fixture's `android._spring` note already say on the record that the 400 it replaces was a library default rather than a decision anybody made. Motion off is `EnterTransition.None togetherWith ExitTransition.None using null` over a `snap()` height, so the mode the user tapped is simply there, at its own height. No counter moves: both stiffnesses it retires were named constants the `android.spring` regex never saw, and the two tweens it adds name rungs
+- [x] `ios-numeric-count-transition` — four plain `Text("\(count)")`, one at 34 pt; zero `contentTransition` in the codebase · ios · Impact O3 · S · Gate TF — all four roll now: `.contentTransition(.numericText(value:))` under `.animation(_:value:)` keyed on the count itself, on `Change` (260). Rule 2 of `docs/motion.md` puts them there — a count dropping after the user ticks a task is their own edit replayed in place, with the label neither moving nor resizing — and the digit roll is what makes 260 read as a number counting down rather than as a smear, which a crossfade of that length would be. The gate passes through `tdayAnimation`, so Reduce Motion draws the new number on the frame it changed. A `.contentTransition` outside a transaction is inert and looks exactly like a fix, so `motion-reachability-ios` now holds the pair together: every `Text("\(count)")` has to carry the roll, an `.animation(_:value:)` keyed on `count`, and a spec that opens on `tdayAnimation`. No literal added or retired: `duration: TdayMotion.Durations.change` puts no digit after the colon, so `ios.easeDuration` holds at 22 (PR 42f)
+- [x] `android-error-card-feed-motion` — error card pops mid-feed, two directories from the spec that fixes it · and · Impact O2 · XS · Gate D — the defect had four byte-identical copies, not one: `TodoListScreen`, `CalendarScreen`, `CompletedScreen` and `ScheduledTaskHomeScreen` each ended their feed with a bare, KEYLESS `item { ErrorRetryCard(...) }`. Keyless is the whole of it — `Modifier.animateItem` cannot animate an add or a remove on an item whose identity is its index, so even a correct spec there would have been dead code, which is why every one of them now reads `item(key = "error-retry", contentType = "error_retry")` before it reads anything else. Each card then takes ALL THREE specs rather than placement alone, which is the call `TdayFeedItemMotion`'s header makes for it: the displaced blocks that file argues about — the category grid, the Completed tile, the list rows — are only ever MOVED by a completion, while this card is genuinely added and removed by a load failing and a retry succeeding, so it is the one item on these feeds that a fade actually describes. It lands on its own feed's clock rather than on a single imported one: `TodoListScreen` goes through that file's existing `feedItemMotion` helper, `CompletedScreen` and `CalendarScreen` name `TdayFeedItemMotion.FadeIn`/`.Placement`/`.FadeOut` (which `CompletedScreen`'s own rows already spell out by hand at the same 190/320/150), and `ScheduledTaskHomeScreen` reuses its file-private `ScheduledTaskHomeItem*` specs so the card settles on the same spring as the rows above it. Reduced motion is routed at all four, which needed saying at the fourth: `timelineAnimationsEnabled` in `TodoListScreen` is a FIRST-FRAME gate, not the preference — it only says the feed has settled enough to animate — so the card reads `rememberTdayMotionEnabled()` itself and is simply drawn in place when motion is off, with no wait in front of it. Two of the four sit inside a search-gated branch, so a live query takes the body away in one frame and leaves the card fading alone over the blank; both call sites say on the record that this is accepted rather than gated — an error banner and a live query rarely coexist, and a gate read inside the item lambda could never fire, since the item is only ever composed while the flag is false. No literal is added or retired: every spec named already existed. All eight budget counters are untouched
 
 ### PR 43a — the web radius scale becomes monotonic
 
 - ↳ part 1 of 3 of `dimension-radius-token-adoption` — **correctness**: `rounded-xl` (12 px) renders smaller than `rounded-md` (14 px). Box lives under **PR 43c…43n**.
+  - **A rename, not a revalue.** `globals.css` declared three of Tailwind v4's eight radius keys
+    and left the other five to `tailwindcss/theme.css`, where they are scaled against a `--radius`
+    a quarter of ours — which is the whole of the defect: `xl` was never chosen to be 12 px, it was
+    simply never chosen. Lifting `--radius-xl` above `md` would have been the obvious fix and the
+    wrong one: it moves the rendered corner at 33 sites, and folding `2xl` onto `lg` moves 84 more,
+    which is most of the app under a row whose gate is V + J and has no device pass to spend. So
+    the five distinct corners the app actually draws — 2, 12, 14, 16, 24 — took the five bottom
+    rungs and the call sites were renamed onto them: `rounded-xl`→`rounded-sm` (35), `2xl`→`lg`
+    (84), `3xl`→`xl` (6). Every rendered corner is byte-identical. `2xl` and `3xl` retire to
+    `initial` rather than being left undeclared, because undeclared is exactly the state that put
+    12 px above 14 px.
+  - **Rule B is the one that would have caught it**, and it is the reason the new suite exists
+    rather than a lint on class names. Sorting the rungs somebody remembered to declare (rule A)
+    proves only that the remembered half is monotonic; `tests/guardrails/radius-ladder.test.ts`
+    rule B demands that every `--radius-*` key Tailwind ships appears in the `@theme inline` block
+    at all, with a value or with `initial`, and reads that key list off `node_modules` so a
+    Tailwind upgrade that adds a ninth rung fails here instead of quietly reopening the hole. All
+    three rules were verified by mutation — dropping `--radius-4xl`, restoring `xl` to Tailwind's
+    `0.75rem`, and putting one `rounded-2xl` back on `card.tsx` each turn the suite red by name.
+  - **`xs` keeps Tailwind's `0.125rem` and does not become the `2px` its call sites spell.** The
+    unit was scoped to write `2px`, which is what the two `rounded-[2px]` sites and the one
+    `rounded-xs` render today — but only at a 16 px root, and the app pins no root font size. A
+    rename that quietly stops tracking the user's text size for anyone who has changed it is no
+    longer a rename, and the point of declaring the rung is that it is declared, not that it is
+    respelled.
+  - **`public/` is a call site too, and rule C now walks it.** Two of the 35 `rounded-xl`
+    renames are `<pre>` blocks in the blog articles under `public/content/blog/`, which
+    `BlogArticlePage` fetches and injects into a routed page under this same stylesheet. Left in
+    `src`-only scope they would have been the one place the rename was not byte-identical — 12 px
+    before, 24 px after — and they are also the one place a retired name fails in silence: no
+    compiler reads them, so `rounded-2xl` there would emit no rule at all and the corner would
+    simply go square with nothing anywhere to report it. Rule C walks `public/` alongside `src/`
+    and strips `<!-- -->` rather than `//`, so an offender sitting after an `https://` on the same
+    line cannot hide behind a blanked URL. Mutated both ways to confirm it bites.
+  - **Three mentions of `rounded-2xl` survive under `src/`, all of them prose**, in
+    `TaskRowSkeleton`, `AppShellSkeleton` and `ManageMembersSheet` — each describing a card that
+    used to be drawn and no longer is. Rewriting them would have the comments claim the old card
+    was spelled with a name it never had. Rule C blanks comments before counting, the way
+    `reduced-motion-floor` does and for the same reason it gives: prose about a defect is not the
+    defect.
+  - **Two assertions next door would have gone vacuous and were repaired in the same commit.**
+    `tests/unit/task-row-skeleton.test.tsx` and `app-shell-skeleton.test.tsx` each pinned their
+    skeleton to the row by asserting it does NOT spell `rounded-2xl` — a string that, after this
+    unit, exists nowhere, so both would have passed forever without checking anything. They now
+    name the card's 16 px corner by its new spelling, and because the row legitimately carries
+    `sm:rounded-lg`, both match a bare token rather than a substring. The 60 arbitrary
+    `rounded-[Npx]` sites are untouched: folding them onto the ladder moves pixels, which is 43c's
+    problem and not this row's.
 
 ### PR 43b — the missing `TdayDimens` steps and the lint that holds them
 
@@ -1280,17 +1845,94 @@ Restore it from git history rather than adjusting the number.
 - ↳ 43i — `guide/HelpGuideScreen.kt`: **49 anonymous `.dp` → 0**, its `CEILINGS` entry with it, and not a pixel of the How-To guide moves. 30 land on a rung that already held their exact value — `RadiusLg` on the topic card, `RadiusSm` on the inline-code block, `BorderWidth` on the card's hairline outline and on the 1 dp rule under an expanded header, `CardElevationDefault` on the bar button's pressed elevation, `SpacingNone` on the resting half of that button's press pair, `Spacing4xl` on the content tail, `Spacing3xl` on the no-results inset, and the spacing steps on every remaining padding, gap and arrangement. The other 19 become 16 named `private val`s at the file head in the `LatestReleaseScreen`/`SettingsScreen` idiom, including a `PressedSurfaceOffsetY` that is once more the same name and the same 2 dp as the root feed's, and a `BarButtonIconSize` that is the same name and the same 22 dp as Settings', because the two bar buttons are the same copied button. **Nothing was rounded onto a neighbouring step.** The page margin is the one worth naming: the guide has always inset 16 where every other page insets `ContentPaddingHorizontal`'s 18, so it is `PageHorizontalPadding` rather than a redraw of every card edge on the screen. The step-number circle is 20 and is not `IconSm`, because it holds a digit and not a glyph — the same argument 43f made for the wizard's spinner. The trailing chevron's 18 is named apart from the topic tile's glyph at 18, because nothing would move both. `PillRadius` is 6 and claims no radius rung: `RadiusSm`'s 8 would read square on a badge that small. Two corrections to this row as scoped: the brief's 49 raw `.dp` are 49 *anonymous* `.dp` by `FeatureDimensBudgetTest`'s own rule, which is the number the ceiling counts, and the file's one existing `private const val` is a Float collapse distance at the foot, not a Dp — so the new block takes the head, as `LatestReleaseScreen` does with the identical pair. The count of 2 existing `TdayDimens` references was right. Every rendered dimension is byte-identical, checked by resolving each new name back to its value and diffing all 51 sites in order, so no device pass is owed. Ceiling driven red before it was trusted — one `.padding(7.dp)` on the expanded card's column fails assertion A with `holds 1 anonymous .dp against a ceiling of 0`. Box stays under this heading until 43n.
 - ↳ 43j — `completed/CompletedScreen.kt`: **37 anonymous `.dp` → 0**, its `CEILINGS` entry with it, and not a pixel of the history screen moves. 22 land on a rung that already held their exact value — `ContentPaddingHorizontal` for the list's page margin, the spacing steps for every remaining padding, gap and arrangement, `SpacingNone` for the list's zero item gap, the first section's suppressed top inset and the resting half of both animated offsets, `Spacing3xl` for the empty state's vertical inset and the trailing badges', `BottomScrollSpacer` for the tail past the FAB, `BorderWidth` for the date divider, `CardElevationDefault` for the flat row card and the bar button's pressed elevation, and `RadiusRow` for `rowShape` — a history row is a row in a scrolling list, which is what 43b minted that rung for. The other 15 become 13 named `private val`s beside the six the file already had, under this file's own `Completed` prefix and carrying the names the calendar's and the root feed's copies of this same task row already use: the swipe reveal width and pill spacing, the title column's inset, the meta line's gap and glyph size, the trailing badge size, the restore toggle's three, the fade's rise offset, and the bar button's press offset and glyph. **Nothing was rounded onto a neighbouring step.** The meta line's clock and leaf are 13 dp and stay 13; the restore toggle's circle is 28 and is not `IconLg`, because it is the tap target around a 24 dp glyph rather than a glyph itself; the ripple inside it is 14 and is named beside the circle it is bounded to, since half of 28 is the only value that neither stops short of the edge nor is clipped by it. Three corrections to the unit as it was scoped: `rowShape` is at :742, not :670; the file holds **37** anonymous `.dp`, not 45 raw ones — 37 is what `FeatureDimensBudgetTest` was already seeded at, and 45 counts the six named `private val`s and their references; and there is no 190 ms tween at :290 to protect — the restore fade reads `TdayMotionTokens.Durations.Change`, and the 190 that `docs/motion.md:110` cites at that line is the fade a completed row plays as it enters the list — `animateItem(fadeInSpec = tween(190, FastOutSlowInEasing))`, which now sits at :381 and was already at :340 before this commit. The section header's own `animateItem` passes `fadeInSpec = null`, so the disclosure a collapsed section opens is the rows' fade and not a tween of the header's own. Ceiling driven red before it was trusted — one `.padding(7.dp)` on the row's content `Row` fails assertion A with `holds 1 anonymous .dp against a ceiling of 0`. Box stays under this heading until 43n.
 - ↳ 43k — `todos/ManageMembersSheet.kt`: **41 anonymous `.dp` → 0**, its `CEILINGS` entry with it, and not a pixel of the share sheet moves. 32 land on something that already held their exact value, and three of those are not `TdayDimens` references but `TdaySheetDefaults.HorizontalPadding`, `VerticalPadding` and `SectionSpacing` — the sheet chrome's own page margin and section gap, which resolve to `ContentPaddingHorizontal`, `ContentPaddingVertical` and `SpacingXl` and had **zero call sites app-wide** before this, the same dormancy 43g found in the `// Title bar` block. A sheet's margin is the sheet layer's to name, and going straight to the scale under it would have left those three unused for a ninth file. The other 29 are rungs: `RadiusXl` on the 24 dp Share and Leave buttons — drawn at 24 since they were written, so `RadiusCard`'s 26 would be a redraw, which is the argument 43h made for `SettingsSectionCard`; `BorderWidthThick` on both 1.5 dp strokes; `CardElevationDefault` on all four flat-card elevations including the action button's pressed one; and the spacing steps on every remaining padding, gap and arrangement. The other 9 become 9 named `private val`s in the `SettingsScreen`/`HelpGuideScreen` idiom, sited between the view model and the sheet composable rather than at the file head — this is the first file in 43c…43n that opens with a class, and geometry reads at the head of the render path, not above a `StateFlow`. **Nothing was rounded onto a neighbouring step.** The search field corners at 16 and takes `RadiusRow`: `RadiusField` is 22 and would be a redraw, and 43e had already made this exact call on the create-list name field — the same `BasicTextField`, the same `decorationBox` `Box`, the same `controlSurfaceColor()`, the same `SpacingXl`/`SpacingLg` interior, the same 16. This row first minted a private `SearchFieldRadius` instead, on 43f's argument that a rung naming rows and cells stops meaning anything the moment something else borrows its number; that argument is about a glyph badge and does not reach a control a sibling unit had already answered, and two copies of one field cannot take two different names for one corner. The constant is gone and the call site carries the reasoning 43e's does. The avatar circle is 40 and is not `FabIconSize`'s 40, which measures the glyph inside a floating action button. The loading spinner is 28 and is not `IconLg`, because it is not an icon — 43f's spinner argument again. The remove X at 18 and the add + at 16 are both under `IconSm` and are named apart, because nothing would resize both. The role pill's 10/5 and the action button's 16/14 are each one control's interior and are named as pairs even where one half matches a rung, so no later edit can move one of them across a step and leave the other behind; the add pill and its `Already a member` twin, by contrast, keep the same `SpacingLg`/`SpacingSm` pair at both sites, which is what holds the two states to one footprint. Two corrections to the unit as it was scoped: the two long-tail rows this file carries are at :1338 and :1522 of this ledger, not :1199 and :1383; and their citations into the file — :224 and :235 — were displaced by this commit's new constant block and are retargeted to :260 and :274 in it, since a citation is only independently fixable while it still points at the defect. Every rendered dimension is byte-identical, checked by resolving each new name back to its value and diffing all 41 sites in order, so no device pass is owed. Ceiling driven red before it was trusted — one `.padding(7.dp)` on the avatar fails assertion A with `feature/todos/ManageMembersSheet.kt holds 1 anonymous .dp against a ceiling of 0`. Box stays under this heading until 43n.
-- ↳ 43l — the auth and app-overlay tail — `auth/ForgotPasswordPanel.kt`, `auth/SetSecurityQuestionsGate.kt`, `auth/ForgotPasswordScreen.kt`, `auth/SecurityQuestionPicker.kt`, `app/UpdateRequiredOverlay.kt` and `app/PendingApprovalOverlay.kt`: **49 anonymous `.dp` → 0** across six files in one session, their six `CEILINGS` entries with them, and not a pixel of the reset flow, the questions gate or either blocking overlay moves. Twenty land on something that already held their exact value, and four of those are not `TdayDimens` references but shapes from `TdaySheetDefaults` — the reason this tail was worth doing together. Four surfaces here draw a card corner by hand at 28, 28, 30 and 34, which reads as four accidents until you notice the sheet layer already names three of them: `CardShape` is 28 (the gate's dialog card and the update overlay's), `OverlayShape` is 30 (the pending-approval card, the same corner `TodoListScreen` draws its overlay at) and `DialogShape` is `RadiusSheet`'s 34 (the standalone reset card, which wraps the very panel the login dialog embeds — drawing the dialog's own corner on a full screen is what the file comment says it is for). That is 43k's argument a second time: a card's corner is the surface layer's to name, and reaching past it to the scale underneath would have spelled one shared shape three different ways. The other 16 are rungs, and `RadiusField` takes six of them — all four text fields in the reset panel and both fields in the picker, which is the point of the tail: 22 is **one shared field corner, not six coincidences**, and the picker is the proof, since it is rendered **six times** — three by the gate and three by the settings editor — so two rung references answer for all six. The onboarding wizard's three question fields are not among those six: the wizard does not import this composable but carries a file-private copy of it at `OnboardingWizardOverlay.kt:1324`, and its call sites pass a `fieldColors` and a `modifier` that the shared picker has no parameters for, so they could never have resolved here. 43f had already put that copy's two corners on the rung. `RadiusField` does now draw every security-question field in the app, but through **four references across two copies** rather than two across one — which is still 22 as one shared field corner, and is also the clearer argument for deleting the duplicate: the leftover copy is 43n's, since collapsing two composables into one is a refactor and not a migration. The rest are the spacing steps — `SpacingLg`, `SpacingMd`, `SpacingSm` on the panel's arrangements and its back-link gap, `Spacing3xl` on both overlays' 24 dp insets and the update card's horizontal margin — and `BorderWidth` on the reset card's hairline. `SecurityQuestionPicker.kt` reaches zero on rungs alone and loses its `dp` import. The other 29 become 27 named `private val`s in the `SettingsScreen`/`ManageMembersSheet` idiom, at each file's head. **Nothing was rounded onto a neighbouring step.** 48 is Android's minimum touch target and is named `PrimaryButtonHeight` in three files rather than snapped to a spacing rung — it is the target, not the drawing, which is `MinTouchTargetHeight`'s argument in 43h; that it is now spelled out in four files is a candidate for the scale, but minting a rung is 43b's job and no unit after it may. Both overlays' 16 dp stacking gap sits between `SpacingXl` and `SpacingXxl` and is `CardContentSpacing`, as it is in 43h. The spinners are under `IconSm` at 18 and 24 and are not icons — 43f's and 43k's argument again — and each is named apart from the glyph it replaces: the reset panel's back arrow is also 18 and nothing would resize both. The update card's 28 dp corner and its 28 dp interior are named apart for the same reason. The reset screen's `20`/`24` page inset is one margin and is named as a pair even though the vertical half matches `Spacing3xl`, which is 43k's pairing rule, and the panel's own 20 dp inset inside that card is named a third time rather than borrowed. Two corrections to the unit as it was scoped: it is **49** literals and not 46 — the unit's own per-file figures sum to 49, and `ForgotPasswordScreen.kt` carries two of them on one line (`.padding(horizontal = 20.dp, vertical = 24.dp)`); and the six `CEILINGS` entries are lowered to 0 and kept, not deleted. A kept 0 and a deleted key are the same ratchet — assertion A holds `0 <= 0` exactly as hard as assertion C holds an unlisted file — and eight units before this one have parked their migrated files at the head of the zero group, so deleting six of them here would have made the map mean two different things at once. Every rendered dimension is byte-identical, checked by resolving each new name back to its value and diffing all 49 sites in order, so no device pass is owed. Ceilings driven red before they were trusted — one `.padding(7.dp)` on the reset panel's root `Column` fails assertion A with `feature/auth/ForgotPasswordPanel.kt holds 1 anonymous .dp against a ceiling of 0`; the picker could not be used for that proof, because it no longer imports `dp` and the poison would not compile, which is its own kind of green. Box stays under this heading until 43n; five files under `feature/` still hold anonymous `.dp`.
+- ↳ 43l — the auth and app-overlay tail — `auth/ForgotPasswordPanel.kt`, `auth/SetSecurityQuestionsGate.kt`, `auth/ForgotPasswordScreen.kt`, `auth/SecurityQuestionPicker.kt`, `app/UpdateRequiredOverlay.kt` and `app/PendingApprovalOverlay.kt`: **49 anonymous `.dp` → 0** across six files in one session, their six `CEILINGS` entries with them, and not a pixel of the reset flow, the questions gate or either blocking overlay moves. Twenty land on something that already held their exact value, and four of those are not `TdayDimens` references but shapes from `TdaySheetDefaults` — the reason this tail was worth doing together. Four surfaces here draw a card corner by hand at 28, 28, 30 and 34, which reads as four accidents until you notice the sheet layer already names three of them: `CardShape` is 28 (the gate's dialog card and the update overlay's), `OverlayShape` is 30 (the pending-approval card, the same corner `TodoListScreen` draws its overlay at) and `DialogShape` is `RadiusSheet`'s 34 (the standalone reset card, which wraps the very panel the login dialog embeds — drawing the dialog's own corner on a full screen is what the file comment says it is for). That is 43k's argument a second time: a card's corner is the surface layer's to name, and reaching past it to the scale underneath would have spelled one shared shape three different ways. The other 16 are rungs, and `RadiusField` takes six of them — all four text fields in the reset panel and both fields in the picker, which is the point of the tail: 22 is **one shared field corner, not six coincidences**, and the picker is the proof, since it is rendered **six times** — three by the gate and three by the settings editor — so two rung references answer for all six. The onboarding wizard's three question fields are not among those six: the wizard does not import this composable but carries a file-private copy of it at `OnboardingWizardOverlay.kt:1424`, and its call sites pass a `fieldColors` and a `modifier` that the shared picker has no parameters for, so they could never have resolved here. 43f had already put that copy's two corners on the rung. `RadiusField` does now draw every security-question field in the app, but through **four references across two copies** rather than two across one — which is still 22 as one shared field corner, and is also the clearer argument for deleting the duplicate: the leftover copy is 43n's, since collapsing two composables into one is a refactor and not a migration. The rest are the spacing steps — `SpacingLg`, `SpacingMd`, `SpacingSm` on the panel's arrangements and its back-link gap, `Spacing3xl` on both overlays' 24 dp insets and the update card's horizontal margin — and `BorderWidth` on the reset card's hairline. `SecurityQuestionPicker.kt` reaches zero on rungs alone and loses its `dp` import. The other 29 become 27 named `private val`s in the `SettingsScreen`/`ManageMembersSheet` idiom, at each file's head. **Nothing was rounded onto a neighbouring step.** 48 is Android's minimum touch target and is named `PrimaryButtonHeight` in three files rather than snapped to a spacing rung — it is the target, not the drawing, which is `MinTouchTargetHeight`'s argument in 43h; that it is now spelled out in four files is a candidate for the scale, but minting a rung is 43b's job and no unit after it may. Both overlays' 16 dp stacking gap sits between `SpacingXl` and `SpacingXxl` and is `CardContentSpacing`, as it is in 43h. The spinners are under `IconSm` at 18 and 24 and are not icons — 43f's and 43k's argument again — and each is named apart from the glyph it replaces: the reset panel's back arrow is also 18 and nothing would resize both. The update card's 28 dp corner and its 28 dp interior are named apart for the same reason. The reset screen's `20`/`24` page inset is one margin and is named as a pair even though the vertical half matches `Spacing3xl`, which is 43k's pairing rule, and the panel's own 20 dp inset inside that card is named a third time rather than borrowed. Two corrections to the unit as it was scoped: it is **49** literals and not 46 — the unit's own per-file figures sum to 49, and `ForgotPasswordScreen.kt` carries two of them on one line (`.padding(horizontal = 20.dp, vertical = 24.dp)`); and the six `CEILINGS` entries are lowered to 0 and kept, not deleted. A kept 0 and a deleted key are the same ratchet — assertion A holds `0 <= 0` exactly as hard as assertion C holds an unlisted file — and eight units before this one have parked their migrated files at the head of the zero group, so deleting six of them here would have made the map mean two different things at once. Every rendered dimension is byte-identical, checked by resolving each new name back to its value and diffing all 49 sites in order, so no device pass is owed. Ceilings driven red before they were trusted — one `.padding(7.dp)` on the reset panel's root `Column` fails assertion A with `feature/auth/ForgotPasswordPanel.kt holds 1 anonymous .dp against a ceiling of 0`; the picker could not be used for that proof, because it no longer imports `dp` and the poison would not compile, which is its own kind of green. Box stays under this heading until 43n; five files under `feature/` still hold anonymous `.dp`.
 - ↳ 43m — the car, sweep, lock and widget-config tail — `car/CarTaskSurfaceScreen.kt`, `sweep/MorningSweepScreen.kt`, `widget/WidgetListConfigurationActivity.kt`, `lock/AppLock.kt` and `guide/GuideHelpLink.kt`: **48 anonymous `.dp` → 0** across five files in one session, the four `CEILINGS` entries that existed with them, and not a pixel of the car surface, the morning sweep, the widget's list picker, the lock cover or the contextual "?" moves. 25 land on a rung that already held their exact value — `RadiusField` on the car's mode-slider track, which is the first **segmented track** to claim the rung its KDoc names; `RadiusSm` on the car's task row and `RadiusLg`/`RadiusMd` on the sweep's card and its five action rows; `BorderWidth` on all four hairlines; `ContentPaddingHorizontal` on the sweep's page margin and `Spacing4xl` on its tail and on the lock cover's inset; `Spacing3xl` on both of the picker's 24 dp insets; `SpacingNone` on the resting half of the slider's animated offset; and the spacing steps on every remaining padding, gap and arrangement. The other 23 become 23 named `private val`s — at the file head in the `LatestReleaseScreen` idiom for the car, in the file's own foot block beside `TdaySweepAccent` for the sweep, because a block cannot hold two conventions and that one was already written, and at the head of the render path rather than the file's for the picker and the lock cover, which open with an Activity and with pure logic respectively — 43k's siting argument. **Nothing was rounded onto a neighbouring step.** The car's mode slider is the one worth reading: its track is `RadiusField`'s 22 but its selector's 18 is named `CarModeSelectorRadius`, because 18 here is the track's corner inset by the `SpacingXs` the track pads and is concentric with it — it follows the track, not a radius step, and `RadiusLg` would have frozen the wrong one of the two. Its 112 is not the dock's `RootFeedDockTabWidth`, which measures **one** tab against this control's two; its 48 is Android's minimum touch target claimed as a height, which is 43h's and 43l's argument again; its 22 dp tab glyph is past `IconSm` because the glyph is the tab's whole label, and the sweep's 18 dp action glyph is under it because the label beside it carries the row. The car row's `16`/`14` and the sweep action's `16`/`13` are each one control's interior and are named as pairs even where a half matches a rung, which is 43k's pairing rule; the picker's section header takes the same treatment, and its 16 is `ListItem`'s own gutter rather than a page margin, because the header has to hang over the rows under it. Three corrections to the unit as it was scoped. It is **48** literals and not the 51 the brief totalled — its own per-file figures sum to 48. There are **four** `CEILINGS` entries to lower and not five: `WidgetListConfigurationActivity.kt` never had one, because `feature/widget/` is exempt from the walk, so its six `.dp` were held by no budget at all — which is the reason it is carved back **in by name** here rather than seeded, the map being a backlog that takes no deposits. The carve-in is two lines of the walk and a paragraph under "The widget exemption": that file sits in `feature/widget/` because it *configures* a widget, but it renders a Material picker into an Activity of ours that no launcher ever composites, so the RemoteViews argument `WidgetCornerRadiusTest` enforces does not reach it, and a directory is the wrong shape for an argument about what draws the pixels. The argument covers `WidgetCreateTaskActivity.kt` word for word — the "+" sheet, the one `ShareReceiverActivity` presents too — so it is carved in beside the picker rather than left for the next reader to notice; it counts **0** today, so it lands at a hard zero for free, and new geometry drawn there is visible to the ratchet this unit just tightened instead of slipping under it. Those two are the whole carve-in: everything else under `widget/` paints through Glance. 43n's question — `TaskWidgetDesign.kt`, the only file under `widget/` carrying any `.dp` at all — is left exactly as it was. And the four ceilings are lowered to 0 and kept rather than deleted, on 43l's argument: a kept 0 and a deleted key are the same ratchet, and nine units have now parked their migrated files in the zero group. Every rendered dimension is byte-identical, checked by resolving each new name back to its value and diffing all 50 sites in order — the two `TdayDimens` references the car screen already carried included — so no device pass is owed. Ceilings driven red before they were trusted: one `.padding(7.dp)` on the car's mode-slider track fails assertion A with `feature/car/CarTaskSurfaceScreen.kt holds 1 anonymous .dp against a ceiling of 0`, and one on the picker's avatar fails assertion **C** with `WidgetListConfigurationActivity.kt=1` — the second is the proof the carve-in reaches the file, since before it nothing under `widget/` could fail anything. Box stays under this heading until 43n; one file under `feature/` still holds anonymous `.dp`, and it is `TodoListScreen.kt`.
 - ↳ 43n — the Glance widget exemption, **settled**: `feature/widget/` stays out of the `TdayDimens` rule permanently, and the `TODO(43n)` in `FeatureDimensBudgetTest` is replaced by the argument for it plus a **fourth assertion** that freezes the subtree at its measured **77** anonymous `.dp` — down only, on a ceiling's terms. The split the unit was scoped to make — radius out, spacing in — has nothing to cut, and that is the first correction to the record: `TaskWidgetDesign.kt` contains **no `RoundedCornerShape` and no radius at all**. A Glance surface is painted with `background(ImageProvider(R.drawable.…))`, so the widget's corners live in `res/values/dimens.xml` where `WidgetCornerRadiusTest` already pins them against the launcher's enforced clip; narrowing the exemption to `RoundedCornerShape(` lines would have narrowed it to the empty set and put all 77 in. The second correction is that those 77 are not "ordinary layout values with no host constraint". **55 of them are two hard external contracts.** `TaskWidgetResponsiveSizes` and `taskWidgetLayoutFor`'s 208/140/220 breakpoints are the launcher's own cell grid — Glance offers the sizes, the host picks, and the thresholds have to agree with the set offered. The `taskWidgetMetrics` table is a **cross-platform parity contract** and the file says so in a comment: inset 14, top 13, bottom 11, header 42, spacing 7, row 22 on 3 are the same numbers `WidgetLayoutMetrics` holds in `ios-swiftUI/TdayWidget/TodayTasksWidget.swift`, verified line by line, in a file that has never heard of `TdayDimens` — and `taskWidgetVisibleRowCount` divides by them to decide how many rows fit, so they are a solver's inputs, not decoration. The same three insets are spelled a **third** time as `14dp`/`13dp`/`11dp` in `layout/widget_*_loading.xml`, because that static `initialLayout` is what a host shows until the first composition and the handoff is meant to be invisible. So routing widget dp through `TdayDimens` would hand an Android-only rename of the spacing scale the power to move an iOS widget, a RemoteViews handoff and a launcher's grid: `WidgetCornerRadiusTest`'s argument about radius, one layer out and with more surfaces on the far side of it. The brief's counter-argument — that a permanently unlinted 77-literal file is the hole a later PR walks through — is answered without taking the scale to it: out of the rule is **not** out of a budget. The fourth assertion sums the exempt subtree and holds it at 77, so "not on the scale" cannot become where new geometry goes, and a value that should be neither a rung nor frozen has the way out every other file has — a named `private val Dp`. Measured, not transcribed: 77 is the same counting rule run over the subtree, and `TaskWidgetDesign.kt` is the only file under `widget/` that carries a single `.dp` — the other 27 count zero. Driven red before it was trusted: one `+ 0.dp` on COMPACT's `contentSpacing` fails with `widget/ holds 78 anonymous .dp against a frozen 77`. No source file changes, so no pixel moves and no device pass is owed; `:app:compileDebugKotlin` and `:app:testDebugUnitTest` are green at **496 tests** — `FeatureDimensBudgetTest` now 4, `WidgetCornerRadiusTest` 7 and `TaskWidgetDesignTest` 5 — and no motion counter moves, the guardrail walking `main/` only and this unit touching a test. Box stays under this heading: one file under `feature/` still holds anonymous `.dp`, and it is `TodoListScreen.kt`.
 
 ### PR 57a/57b — the web dock collapses on scroll
 
-- [ ] `web-dock-scroll-collapse` — web dock never collapses; both native clients do past 44 dp · web · Impact O3 · L · Gate V+D
+- [x] `web-dock-scroll-collapse` — web dock never collapses; both native clients do past 44 dp · web · Impact O3 · L · Gate V+D
+  - **The fold and the pill that travels with it are one commit, so the row is ticked once for
+    both.** Split between 57a and 57b the fold ships visibly broken: the indicator pill is measured
+    off the active tab's rect, and folding the dock moves that rect without changing which tab is
+    selected — on the Anytime feed the tab that closes is the one to its LEFT, so the active tab
+    slides from 59px to 7px off the capsule's edge, measured in Chromium. A pill keyed on selection
+    alone does not lag and recover there; it stays in the open dock's slot for as long as the dock
+    stays folded, most of it outside a 62px capsule that clips. 57b's step 3 is therefore in this
+    commit, and everything else in 57b's brief is still 57b's.
+  - **`px-0` is layout, not motion, and the first draft dropped it with `w-0`.** `min-width: 0`
+    lets a folded tab's CONTENT go to nothing, but `box-sizing: border-box` will not let a box be
+    used narrower than its own padding, so `px-3` surviving the fold leaves a 24px stub of every
+    closed tab inside the capsule — a phone dock folding 114 → 86 instead of 114 → 62, and a
+    desktop one 233 → 177 instead of 233 → 129. `w-0` genuinely cannot go on the button (the press
+    layer deletes a `width` transition declared there); the padding never needed to transition,
+    because the wrapper's `1fr` → `0fr` track is what travels.
+  - **57b's brief was written against a `setTimeout(updatePill, 260)` that 57a had already
+    replaced with a per-frame follower, so its steps 1–3, 5 and 7 were spent or moot before it
+    ran.** What was left is the case neither the follower nor the timer before it ever covered:
+    reduced motion. `updatePill` is called from the effect that COMMITS the fold, and the
+    `getBoundingClientRect` there is what forces the layout that starts the transition — so it
+    reads that transition's first frame, which is the shape the dock is leaving. Re-reading until
+    that stops being true is the follower's whole job, and the follower deliberately does not run
+    when motion is off; so the pill held the open dock's slot for good on exactly the branch with
+    no travel to hide it. A `transitionend` listener on the nav closes it, filtered to two
+    properties: `grid-template-columns`, the fold's own track, and `min-width`, a desktop
+    selection change. The tab row's `gap-1` → `gap-0` moves a tab's rect too and still needs no
+    entry — it rides the same `expanded` flip at the same rung and curve as the track, so the two
+    land together and the track's event is already the last word. The brief's `propertyName === 'width'`
+    would have matched nothing — the press layer deletes a `width` transition declared on the
+    button, which is why the fold is a grid track at all. No counter moves: the fix is an event
+    name and two property names.
 
 ### PR 59 — compositor hints for the always-on blurs
 
-- [ ] `web-compositor-hints-blur` — zero `will-change` in `src/`; 17 always-on backdrop blurs over a scrolling list · web · Impact O2 · S · Gate D
+- [x] `web-compositor-hints-blur` — zero `will-change` in `src/`; 17 always-on backdrop blurs over a scrolling list · web · Impact O2 · S · Gate D
+  - **The row's premise is right and its unit is neither the blur nor the class.** Seventeen
+    `backdrop-blur` sites is the count on the tree, and a `backdrop-filter` is already its own
+    compositor layer everywhere — so hinting a blur *because* it is a blur would buy nothing and
+    cost a texture apiece. The first attempt at this row therefore hinted the classes that MOVE
+    over a scrolling feed instead: the dock and the create button ducking, the bulk bar and the
+    mobile search panel arriving, the empty scene, Earlier's rows, the drag lift. Nine rules, all
+    nine taken back out, and the stylesheet still ships zero.
+  - **A hint bought from a class arrives too late to buy anything.** It only ever pays for the
+    FIRST frame of a motion, and only if it reaches the element before that motion starts. Every
+    one of the nine landed on a node that mounts already carrying it — `BulkSelectionBar` and the
+    search panel are `{flag && …}`, `EmptyState`, `TodayEarlierSection` and the `DragOverlay` card
+    the same — so hint and `animation-name` reached the style system in one recalculation and the
+    engine promoted at the compositing update it was going to promote at anyway. The dock is the
+    sharpest case: `useDuckPresence` hands out `""` until the control has been absent once, so the
+    first duck-out, which is the exact beat this row was scoped for, applies `.tday-duck-exit` with
+    hint and keyframe together.
+  - **And the lifetime was worse than the timing.** `wasEverAbsent` never flips back, so after one
+    trip through selection mode the dock and the create button carry `.tday-duck-enter` for the
+    life of the shell — on the full-width fixed positioning strip, not on the `backdrop-blur-xl`
+    box two levels inside it, so the layer would have been a new one rather than one the blur had
+    already paid for. Under `prefers-reduced-motion` all nine were pure cost: the floor at the top
+    of `globals.css` reaches `animation-duration` and deliberately not `animation-name`, while each
+    block down the file cancels with `animation: none`, which does — a layer held for a keyframe
+    that never runs, for the users who asked for less of exactly this.
+  - **`.tday-route-fade` was scoped in and is deliberately out, on the older argument.** `RouteFade`
+    puts that class on the container every screen is drawn inside, keyed on `pathname`, so it is
+    never absent and never small: a hint there is a permanent full-screen texture — about ten
+    megabytes on a phone — bought with one 200 ms fade. `::view-transition-old(root)` beside it
+    needs nothing either, being a snapshot the compositor already owns. Both are argued in the
+    stylesheet rather than left unmentioned, alongside the nine.
+  - **What ships is the scroll-driven half, which is the only one that genuinely buys a frame.**
+    `RootFeedHeroHeader`'s rAF rewrites width, height and transform on three nodes that are already
+    on the screen un-promoted, which is the only place in the app where a promotion lands
+    mid-gesture. Its hints are taken when a scroll pass begins — a frame before the first write
+    they prepare — and dropped 200 ms after the last frame of it, marked `not a token` where that
+    number is declared. Set ahead, and with a clock to end it: the two things a class on a mounting
+    node cannot offer.
+  - **Rule F of `motion-reachability-web.test.ts` is the ratchet for the next attempt, and it is
+    honest about being one.** It refuses a `will-change` in a rule that declares no `animation`,
+    one whose animation is `infinite`, one whose animation is cancelled under
+    `prefers-reduced-motion` without the hint being cancelled in the same block — that third shape
+    is the one that got past the first review of this row — and one written in any other stylesheet
+    or as a Tailwind utility. Those four read on an empty list today and say so; the assertion that
+    is not a vacuum is the last, which pins the app's single JavaScript hint to `RootFeedHeroHeader`
+    and requires that it clears what it sets. What no test can see is how long a class stays on an
+    element, and the device row is the rest.
 
 ### PR 60 — one celebration ordering
 
@@ -1340,7 +1982,7 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 ### PR 127 — sheet dismiss teardown not deferred
 
 - [ ] `android:sheets#members-close-cut` — members close cut · and · Sev 3 · S · Gate G
-  - citation corrected: /home/ohmz/StudioProjects/Tday/android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/ManageMembersSheet.kt:260 (the finding's `file` drops `app/src/main/java/com/ohmz/tday/compose/`; the defect was on 224 and moved to 260 under 43k's constant block — `TdaySheetHeader` opens at 255 and `onLeftClick = onDismiss` is 259)
+  - citation corrected: /home/ohmz/StudioProjects/Tday/android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/ManageMembersSheet.kt:259 (the finding's `file` drops `app/src/main/java/com/ohmz/tday/compose/`; the defect was on 224, moved to 260 under 43k's constant block, and to 259 when develop's batch 3 merged in and dropped a net line from this file's imports — `TdaySheetHeader` opens at 254 and `onLeftClick = onDismiss` is 258)
 
 ### PR 128 — android root search overlay handover
 
@@ -1410,7 +2052,7 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 
 ### PR 143 — drop placeholder off clock
 
-- [ ] `android:todo-list#drop-placeholder-own-clock` — drop placeholder own clock · and · Sev 2 · XS · Gate J
+- [x] `android:todo-list#drop-placeholder-own-clock` — drop placeholder own clock · and · Sev 2 · XS · Gate J
 
 ### PR 144 — earlier celebrate window exit
 
@@ -1524,7 +2166,7 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 ### PR 169 — sheet content swap unanimated
 
 - [ ] `android:sheets#members-content-jump` — members content jump · and · Sev 2 · S · Gate D
-  - citation corrected: /home/ohmz/StudioProjects/Tday/android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/ManageMembersSheet.kt:274 (same malformed path as the sibling finding; the line was 235 and moved to 274 under 43k's constant block — still the `Box` the loading state swaps out)
+  - citation corrected: /home/ohmz/StudioProjects/Tday/android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/ManageMembersSheet.kt:273 (same malformed path as the sibling finding; the line was 235, moved to 274 under 43k's constant block, and to 273 on the same merge that moved its sibling — still the `Box` the loading state swaps out)
 
 ### PR 170 — sheet lifecycle sequencing
 
@@ -1557,14 +2199,16 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 ### PR 176 — web app index skeleton double chrome
 
 - [ ] `web:shell-sidebar-settings#4` — 4 · web · Sev 2 · S · Gate V
-  - citation corrected: tday-web/src/components/app/AppShellSkeleton.tsx:36-39 (dock placeholder); tday-web/src/pages/AppHomeRedirectPage.tsx:24-26; tday-web/src/components/app/NativeAppShell.tsx:37-40; tday-web/src/components/app/RootDock.tsx:105
+  - citation corrected: tday-web/src/components/app/AppShellSkeleton.tsx:52-54 (the dock placeholder — the audit's :36-39 is the hero tile; the placeholder is the `h-16 w-44 rounded-[25px]` div under the `{/* Dock placeholder */}` comment); tday-web/src/pages/AppHomeRedirectPage.tsx:24-26; tday-web/src/components/app/NativeAppShell.tsx:37-40 (both still exact); tday-web/src/components/app/RootDock.tsx:291 (the real capsule the placeholder is standing in for, `h-16 … rounded-[25px]`) — re-read after develop's 8i rewrote RootDock.tsx from 206 to 483 lines, which is what moved the audit's :105
 
 ### PR 177 — web dock pill measure and first paint
 
 - [ ] `web:shell-sidebar-settings#2` — 2 · web · Sev 2 · S · Gate G
-  - citation corrected: tday-web/src/components/app/RootDock.tsx:81-92 (the measure effect), :122 (pill class), :159-163 (button transition + min-width)
+  - citation corrected: tday-web/src/components/app/RootDock.tsx:161-172 (`updatePill`), :174-226 (the measure effect), :326 (pill class), :435 and :439 (button transition, and the `sm:min-w-[104px]`/`sm:min-w-12` pair). The audit's :81-92 / :122 / :159-163 were read off the pre-8i file and land on unrelated lines in the tree today.
+  - **Probably already closed by develop's 8i — re-check before spending a PR on it.** The defect is the pill measuring a rect that is still moving. 8i replaced the single re-measure on a timer with a follower that calls `updatePill` once per frame for the length of the rung (`:207-225`) and a `transitionend` settle bound to the nav (`:228-258`), so the last word on where the tab stopped comes from the tab rather than from a clock beside it; `tday-web/tests/fixtures/motion-budget.json`'s `_durationUtility` records the same change from the other end. If a device pass confirms it, close this row instead of re-fixing it.
 - [ ] `web:shell-sidebar-settings#3` — 3 · web · Sev 2 · S · Gate G
-  - citation corrected: tday-web/src/components/app/RootDock.tsx:65 (pillStyle init), :81-92 (post-paint measure), :122 (unconditional transition-all)
+  - citation corrected: tday-web/src/components/app/RootDock.tsx:157-160 (the note on writing the pill straight onto the node — there is no `pillStyle` state any more, so the audit's :65 cites something that no longer exists), :174-226 (the post-paint measure), :326 (the unconditional `transition-all`).
+  - **Still open as far as the merged tree shows.** 8i changed how the pill is measured, not when it is measured FIRST: the node at `:326` is rendered with no width, height or transform and nothing gating its `transition-all duration-emphasis`, and the first `updatePill` runs from a `useEffect` — after paint. So the first paint still has the pill grow out of the capsule's top-left corner. Unlike #2 above, the follower does not close this one.
 
 ### PR 178 — web root feed search overlay cut
 
@@ -1593,7 +2237,8 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 
 ### PR 184 — dock collapse threshold hysteresis
 
-- [ ] `android:home-dock#10` — 10 · and · Sev 1 · S · Gate G
+- [x] `android:home-dock#10` — 10 · and · Sev 1 · S · Gate G
+  - the 44 now lives once on Android, at `RootFeedDockCollapse.CollapseThreshold` in `RootFeedDock.kt:122`; web's `rootDockCollapse.ts` landed on develop after this branch was cut and cited the two retired `TodoListScreen.kt`/`ScheduledTaskHomeScreen.kt` line numbers, which is what this row booked for the merge. Repointed there, at the merge: its comment now names the single Android declaration rather than a copy of the literal in each feed. Its three iOS citations were read against the merged tree and are still true, so they are left alone — the point of the row is that the number is declared once per client, and the comment could not say so while it named two Android sites
 
 ### PR 185 — fab accent crossfade
 

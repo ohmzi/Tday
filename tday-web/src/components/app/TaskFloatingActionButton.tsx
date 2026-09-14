@@ -100,7 +100,7 @@ export default function TaskFloatingActionButton({
             "flex h-14 w-14 items-center justify-center gap-2 rounded-full px-0 sm:w-auto sm:px-5",
             "border border-white/60 bg-accent text-white",
             "shadow-[0_18px_34px_-18px_hsl(var(--shadow)/0.65)]",
-            "transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-95",
+            "transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5 active:scale-95",
             className,
           )}
           style={buttonColor ? { backgroundColor: buttonColor } : undefined}

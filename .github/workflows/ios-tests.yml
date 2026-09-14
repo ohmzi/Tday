@@ -246,12 +246,94 @@ jobs:
             -derivedDataPath "${RUNNER_TEMP}/DerivedData" \
             -resultBundlePath "${RUNNER_TEMP}/tests.xcresult"
 
+      # A GREEN xcodebuild IS NOT THE SAME CLAIM AS "THE TESTS PASSED".
+      #
+      # `test-without-building` exits 0 when nothing it ran failed, and running nothing clears
+      # that bar. An edit that drops `TdayTests` from the shared scheme's TestAction, a
+      # `-only-testing:` filter that matches no identifier, a test bundle that built but was not
+      # embedded — each of those is a passing run over an empty suite, and each looks on the run
+      # page exactly like a healthy one.
+      #
+      # Android refuses this (`android.yml` sums `tests=` across the JUnit XML and fails at zero)
+      # and web refuses it (`web.yml` reads vitest's JSON and fails when `numTotalTests` is 0).
+      # iOS was the one client of the three with no floor under it, which is the client where an
+      # empty suite is hardest to notice, because nobody here can run it locally.
+      #
+      # The count is free: the step above already writes `-resultBundlePath`. Reading it is one
+      # `xcresulttool` invocation.
+      #
+      # `get test-results summary` is the Xcode 16 CLI. The older form — `xcresulttool get --path
+      # X --format json`, then digging through `.metrics.testsCount._value` — was deprecated in
+      # Xcode 16 and now needs `--legacy` to work at all. This job pins its Xcode from the
+      # `IOS_XCODE_VERSION` repository variable, so the invocation is pinned to match rather than
+      # written to straddle both eras.
+      #
+      # An unreadable bundle FAILS rather than skips. Every other direction here would mean a
+      # check that learned nothing reporting that everything is fine, which is the bug being
+      # closed, not a milder version of it — the same direction `web.yml` takes when its change
+      # filter cannot resolve a diff.
+      - name: Count the tests that actually ran
+        id: count
+        # Runs when the tests failed, because an empty suite and a red suite are different
+        # diagnoses and the run page should be able to tell them apart. Not when the compile
+        # failed: there is no bundle then, and a second error about a missing file would only
+        # point away from the real one.
+        if: always() && steps.tests.outcome != 'skipped'
+        run: |
+          set -uo pipefail
+          BUNDLE="${RUNNER_TEMP}/tests.xcresult"
+
+          if [ ! -d "${BUNDLE}" ]; then
+            echo "::error::xcodebuild wrote no result bundle at ${BUNDLE}, so there is nothing to count — the run did not get as far as executing a test."
+            exit 1
+          fi
+
+          if ! SUMMARY=$(xcrun xcresulttool get test-results summary --path "${BUNDLE}" --format json 2>&1); then
+            echo "::error::Could not read ${BUNDLE} with 'xcresulttool get test-results summary'. That subcommand arrived in Xcode 16; check what the IOS_XCODE_VERSION repository variable is pinned to."
+            printf '%s\n' "${SUMMARY}" | sed 's/^/  /'
+            exit 1
+          fi
+
+          # `// empty` and not `// 0`: a missing key means the schema moved, and defaulting it to
+          # zero would turn that into the very "0 tests" failure below, sending the reader to look
+          # at the scheme instead of at xcresulttool. jq treats 0 as truthy, so a genuine zero
+          # survives this unchanged.
+          TOTAL=$(printf '%s' "${SUMMARY}" | jq -r '.totalTestCount // empty')
+          PASSED=$(printf '%s' "${SUMMARY}" | jq -r '.passedTests // empty')
+          FAILED=$(printf '%s' "${SUMMARY}" | jq -r '.failedTests // empty')
+          SKIPPED=$(printf '%s' "${SUMMARY}" | jq -r '.skippedTests // empty')
+
+          if ! printf '%s' "${TOTAL}" | grep -qE '^[0-9]+$'; then
+            echo "::error::'xcresulttool get test-results summary' produced no numeric .totalTestCount, so the size of the suite is unknown. An unreadable result bundle is a failure here, not a pass."
+            printf '%s\n' "${SUMMARY}" | head -n 40 | sed 's/^/  /'
+            exit 1
+          fi
+
+          {
+            echo "total=${TOTAL}"
+            echo "passed=${PASSED}"
+            echo "failed=${FAILED}"
+            echo "skipped=${SKIPPED}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "total=${TOTAL} passed=${PASSED} failed=${FAILED} skipped=${SKIPPED}"
+
+          if [ "${TOTAL}" -eq 0 ]; then
+            echo "::error::xcodebuild reported 0 tests — treating that as a broken suite, not a pass. Check that the shared Tday scheme's TestAction still lists TdayTests, and that nothing narrowed this run to a filter matching no identifier."
+            exit 1
+          fi
+
       - name: Summarise
         if: always()
         env:
           SIMULATOR: ${{ steps.simulator.outputs.name }}
           COMPILE: ${{ steps.compile.outcome }}
           TESTS: ${{ steps.tests.outcome }}
+          COUNTED: ${{ steps.count.outcome }}
+          TOTAL: ${{ steps.count.outputs.total }}
+          PASSED: ${{ steps.count.outputs.passed }}
+          FAILED: ${{ steps.count.outputs.failed }}
+          SKIPPED: ${{ steps.count.outputs.skipped }}
         run: |
           {
             echo "### iOS tests — ${GITHUB_REF_NAME}"
@@ -260,7 +342,14 @@ jobs:
             echo "|---|---|"
             echo "| Compile (\`build-for-testing\`, Debug, simulator) | \`${COMPILE:-skipped}\` |"
             echo "| Run (\`test-without-building\` on ${SIMULATOR:-?}) | \`${TESTS:-skipped}\` |"
+            echo "| Count (\`xcresulttool\` on the result bundle) | \`${COUNTED:-skipped}\` |"
             echo ""
+            if [ -n "${TOTAL}" ]; then
+              echo "| tests | passed | failed | skipped |"
+              echo "|------:|-------:|-------:|--------:|"
+              echo "| ${TOTAL} | ${PASSED} | ${FAILED} | ${SKIPPED} |"
+              echo ""
+            fi
             if [ "${COMPILE}" != "success" ]; then
               echo "The \`TdayTests\` bundle did not compile. Note that \`ios-testflight.yml\`"
               echo "would **not** have caught this: \`xcodebuild archive\` builds the app target"
@@ -272,8 +361,14 @@ jobs:
               echo "root \`version.json\` — the test bundle is app-hosted, so \`Bundle.main\` is"
               echo "\`Tday.app\` and those assertions see the real shipped values. A change to"
               echo "\`version.json\` can legitimately invalidate one."
+            elif [ "${COUNTED}" != "success" ]; then
+              echo "\`xcodebuild\` exited 0, but the result bundle does not show a suite that ran."
+              echo "That is not a pass: an empty run clears the same bar a green run does. Check"
+              echo "whether the shared \`Tday\` scheme still lists \`TdayTests\` in its TestAction,"
+              echo "and read the step log above for which of the two this was — nothing to count,"
+              echo "or nothing countable."
             else
-              echo "The \`TdayTests\` bundle compiled and every test passed."
+              echo "The \`TdayTests\` bundle compiled and all ${TOTAL} tests passed."
             fi
             echo ""
             echo "No App Store Connect credentials were used and nothing was signed for"

@@ -50,7 +50,7 @@ export default function WeekInReviewCard() {
   };
 
   return (
-    <div className="mb-3 flex items-start gap-3 rounded-3xl border border-border/60 bg-accent/10 p-4">
+    <div className="mb-3 flex items-start gap-3 rounded-xl border border-border/60 bg-accent/10 p-4">
       <CalendarCheck className="mt-0.5 h-5 w-5 shrink-0 text-accent" strokeWidth={2.4} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-black text-foreground">{t("weekInReview.title")}</p>

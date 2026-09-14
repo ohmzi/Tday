@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@radix-ui/react-dropdown-menu";
 const TodoFormLoading = () => {
   return (
-    <div className="box-border flex h-fit w-full flex-col gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-[0_8px_24px_hsl(var(--shadow)/0.11)]">
+    <div className="box-border flex h-fit w-full flex-col gap-4 rounded-lg border border-border/70 bg-card p-4 shadow-[0_8px_24px_hsl(var(--shadow)/0.11)]">
       <Skeleton className="w-1/4 h-6" />
       <div>
         <Skeleton className="w-2/3 h-4 mb-2" />

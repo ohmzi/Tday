@@ -95,6 +95,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -175,6 +176,7 @@ import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.TdayPress
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.TdayTaskRowMetrics
 import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeleton
@@ -195,9 +197,11 @@ import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.RootFeedDock
+import com.ohmz.tday.compose.ui.component.RootFeedDockCollapse
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
@@ -267,17 +271,13 @@ private val TimelineDateGroupSpacing = 6.dp
 private val TimelineSectionTopSpacing = 6.dp
 private val TimelineHeaderBodySpacing = 2.dp
 private val TimelineCollapsedSectionSpacing = 4.dp
-private val RootFeedDockCollapseThreshold = 44.dp
 
 // What this screen draws that the scale has no rung for. Named here rather than snapped
 // onto a neighbouring step, because the differences are what they say: 21 dp against
 // 23 dp is the ripple of a colour swatch against the ripple of an icon one, and a rung
 // minted for one call site is a rung nobody can reason about.
 
-/** How far a pressed surface sinks — the FAB, the header buttons, a floater list row. */
-private val PressedSurfaceOffsetY = 2.dp
-
-/** ...and how flat it presses, against the row's own resting elevation below. */
+/** How flat a pressed card presses, against the row's own resting elevation below. */
 private val PressedCardElevation = 2.dp
 
 /** The target a finger gets where the control drawn inside it is smaller than a finger. */
@@ -1039,14 +1039,32 @@ fun TodoListScreen( // skipcq: KT-R1006
     val screenScope = rememberCoroutineScope()
     val hasScrollableContent =
         listState.canScrollForward || listState.canScrollBackward
-    val dockCollapseThresholdPx = with(LocalDensity.current) {
-        RootFeedDockCollapseThreshold.roundToPx()
+    val dockCollapsePx = with(LocalDensity.current) {
+        RootFeedDockCollapse.CollapseThreshold.roundToPx()
     }
-    val hasScrolledPastDockCollapseThreshold =
-        listState.firstVisibleItemIndex > 0 ||
-                listState.firstVisibleItemScrollOffset > dockCollapseThresholdPx
-    val dockCollapsed =
-        hasScrollableContent && hasScrolledPastDockCollapseThreshold
+    val dockExpandPx = with(LocalDensity.current) {
+        RootFeedDockCollapse.ExpandThreshold.roundToPx()
+    }
+    // Held rather than derived: which edge applies depends on the answer before it. The
+    // position is sampled in a snapshotFlow instead of in composition because the offset
+    // moves every frame of a fling, and this screen has no business recomposing at that
+    // rate to settle one boolean.
+    var scrolledPastDockFold by remember { mutableStateOf(false) }
+    LaunchedEffect(listState, dockCollapsePx, dockExpandPx) {
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { (index, offsetPx) ->
+            scrolledPastDockFold = RootFeedDockCollapse.next(
+                previous = scrolledPastDockFold,
+                firstVisibleItemIndex = index,
+                scrollOffsetPx = offsetPx,
+                collapsePx = dockCollapsePx,
+                expandPx = dockExpandPx,
+            )
+        }
+    }
+    // A feed too short to scroll never folds the dock, whatever the fold point says.
+    val dockCollapsed = hasScrollableContent && scrolledPastDockFold
     LaunchedEffect(dockCollapsed) {
         onRootDockCollapsedChange(dockCollapsed)
     }
@@ -1057,15 +1075,24 @@ fun TodoListScreen( // skipcq: KT-R1006
         onDispose { onRootControlsVisibleChange(true) }
     }
     val density = LocalDensity.current
-    // Read once for the whole screen, and read as the SYSTEM scale, because every
-    // wait it feeds below covers an animation the in-app switch does not reach: the
-    // two settles wait out the route handover in `TdayApp` and the `animateScrollTo`
-    // that follows it, the two holds wait out `SwipeTaskRow`'s highlight pulses, and
-    // the Earlier hand-off waits out `TdayFeedItemMotion.FadeOut` through
-    // `animateItem`. All four are plain Compose animations on the device's clock. A
-    // wait zeroed while the motion it covers plays on is the fifth idiom rule broken
-    // the other way about — see [effectiveMotionScale]. Each moves back to
-    // `rememberTdayMotionScale` as its animation is gated.
+    // The settle before a search result *navigated to* is scrolled to, on the app's
+    // scale: what it waits out is `navigationEnterTransition` in `TdayApp`, and that
+    // handover answers the in-app switch now as well as the animator scale. Left on
+    // the device's it would be the 380 ms of a tapped result doing nothing that
+    // [SEARCH_RESULT_NAV_SETTLE_DELAY_MS] already names — over a destination drawn
+    // whole on the first frame, for the users who asked for less motion.
+    val navSettleMotionScale = rememberTdayMotionScale()
+    // Every other wait on this screen reads the SYSTEM scale, because each covers an
+    // animation the in-app switch does not reach: the floater settle waits out the
+    // feed re-laying itself under `animateItem` once the results card is dropped from
+    // it (no route changes there — `closeFloaterTaskHomeSearch` is a state flip), the
+    // two holds wait out `SwipeTaskRow`'s ungated highlight pulses, and the Earlier
+    // hand-off waits out `TdayFeedItemMotion.FadeOut`, again through `animateItem`.
+    // The only gate on any of the three is `timelineAnimationsEnabled`, a first-frame
+    // guard rather than a preference. A wait zeroed while the motion it covers plays
+    // on is the fifth idiom rule broken the other way about — see
+    // [effectiveMotionScale]. Each moves to `rememberTdayMotionScale` as its
+    // animation is gated.
     val motionScale = rememberSystemMotionScale()
     val heroCollapse = rememberLazyListHeroTitleCollapse(
         listState = listState,
@@ -1569,15 +1596,6 @@ fun TodoListScreen( // skipcq: KT-R1006
             null
         },
     )
-    val fabPressed by fabInteractionSource.collectIsPressedAsState()
-    val fabScale by animateFloatAsState(
-        targetValue = if (fabPressed) 0.93f else 1f,
-        label = "todoFabScale",
-    )
-    val fabOffsetY by animateDpAsState(
-        targetValue = if (fabPressed) PressedSurfaceOffsetY else TdayDimens.SpacingNone,
-        label = "todoFabOffsetY",
-    )
     val timelineItemSpacing = TimelineDateGroupSpacing
     fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
         // Starts at 1: the hero block holds index 0 on this path, so every row
@@ -1619,7 +1637,9 @@ fun TodoListScreen( // skipcq: KT-R1006
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
         val target = highlightedTodoListTarget(highlightedTodoId)
         if (target != null) {
-            scaledDelay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS, motionScale)
+            // The one settle that is genuinely waiting on a route change: this effect
+            // runs because the screen was navigated to with a row to highlight.
+            scaledDelay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS, navSettleMotionScale)
             val viewportHeight =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
             val estimatedRowHeight =
@@ -1643,6 +1663,8 @@ fun TodoListScreen( // skipcq: KT-R1006
         closeFloaterTaskHomeSearch()
         val target = floaterTaskHomeTodoListTarget(todo.id) ?: return
         screenScope.launch {
+            // Same constant, the other scale: nothing navigates here. What settles is
+            // the feed closing over the results card, so the clock is the feed's.
             scaledDelay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS, motionScale)
             val viewportHeight =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
@@ -1855,12 +1877,6 @@ fun TodoListScreen( // skipcq: KT-R1006
             // selecting; the two must never share it.
             if (showCreateTaskButton && !isViewerList && !selectionActive) {
                 CreateTaskButton(
-                    modifier = Modifier
-                        .offset(y = fabOffsetY)
-                        .graphicsLayer {
-                            scaleX = fabScale
-                            scaleY = fabScale
-                        },
                     interactionSource = fabInteractionSource,
                     backgroundColor = fabColor,
                     onClick = {
@@ -2273,11 +2289,43 @@ fun TodoListScreen( // skipcq: KT-R1006
                         onOpenFloaterList = onOpenFloaterList,
                     )
 
+                    // Keyed, because a load failure genuinely adds and removes a
+                    // row here and `animateItem` cannot animate either on an item
+                    // whose identity is its index. Unlike the blocks above it this
+                    // one takes all three specs: it is added and removed rather
+                    // than merely displaced, which is the one case on this feed a
+                    // fade describes.
+                    //
+                    // Nothing below it travels — this is the last content item and
+                    // only a keyless spacer follows — so the inherited
+                    // [TdayFeedItemMotion.Placement] earns its place in the other
+                    // direction: the skeleton leaving and the empty scene arriving
+                    // change the row count ABOVE the card while it is already up,
+                    // and it should glide into the slot they leave it in rather
+                    // than be re-laid-out into it.
+                    //
+                    // It sits inside the `!showFloaterTaskHomeSearchResults`
+                    // branch, so it does take the fades [displacedFeedItemMotion]
+                    // argues itself out of: opening a live query takes this whole
+                    // body away in one frame and leaves the card fading alone over
+                    // the blank. Accepted, not gated — an error banner and a live
+                    // query rarely coexist, and a gate read inside this lambda
+                    // could never fire, because the item is only ever composed
+                    // while the flag is false.
                     uiState.errorMessage?.let { message ->
-                        item {
+                        item(key = "error-retry", contentType = "error_retry") {
+                            // `timelineAnimationsEnabled` is a first-frame gate,
+                            // not the preference one — it only says the feed has
+                            // settled enough to animate at all — so the card asks
+                            // the preference itself, and motion off draws the card
+                            // where it belongs with no wait in front of it.
+                            val errorCardMotionEnabled = rememberTdayMotionEnabled()
                             com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                                 message = message,
                                 onRetry = onRefresh,
+                                modifier = feedItemMotion(
+                                    timelineAnimationsEnabled && errorCardMotionEnabled,
+                                ),
                             )
                         }
                     }
@@ -3342,19 +3390,17 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
             ) {
                 var placeholderModifier: Modifier = Modifier
                 if (timelineAnimationsEnabled) {
+                    // The placeholder is an item in this feed like any other: it arrives,
+                    // the rows under it move down, and it goes. Three numbers of its own
+                    // bought it nothing except a gap that faded in and out at a different
+                    // speed from everything moving around it. The placement leg is the one
+                    // that never plays here — nothing displaces the gap while it is up —
+                    // and it is taken whole anyway, because a site that adopts two legs of
+                    // three is a site that drifts back off the third.
                     placeholderModifier = placeholderModifier.animateItem(
-                        fadeInSpec = tween(
-                            durationMillis = 150,
-                            easing = FastOutSlowInEasing,
-                        ),
-                        placementSpec = tween(
-                            durationMillis = 260,
-                            easing = FastOutSlowInEasing,
-                        ),
-                        fadeOutSpec = tween(
-                            durationMillis = 120,
-                            easing = FastOutSlowInEasing,
-                        ),
+                        fadeInSpec = TdayFeedItemMotion.FadeIn,
+                        placementSpec = TdayFeedItemMotion.Placement,
+                        fadeOutSpec = TdayFeedItemMotion.FadeOut,
                     )
                 }
                 TimelineDropPlaceholder(
@@ -3836,19 +3882,6 @@ private fun FloaterTaskHomeListRow(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        label = "floaterTaskHomeListRowScale",
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) PressedSurfaceOffsetY else TdayDimens.SpacingNone,
-        label = "floaterTaskHomeListRowOffsetY",
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) PressedCardElevation else ListRowElevation,
-        label = "floaterTaskHomeListRowElevation",
-    )
     val accent = tdayListAccentColor(colorKey)
     val icon = tdayListIconForKey(iconKey)
     val containerColor =
@@ -3860,11 +3893,7 @@ private fun FloaterTaskHomeListRow(
             .fillMaxWidth()
             .height(ListRowHeight)
             .semantics(mergeDescendants = true) {}
-            .offset(y = animatedOffsetY)
-            .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -3872,9 +3901,11 @@ private fun FloaterTaskHomeListRow(
         interactionSource = interactionSource,
         shape = RoundedCornerShape(TdayDimens.RadiusCard),
         colors = CardDefaults.cardColors(containerColor = containerColor),
+        // Was a third `animateDpAsState` off the same press fed into both slots.
+        // `cardElevation` holds exactly this pair and animates between them.
         elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation,
+            defaultElevation = ListRowElevation,
+            pressedElevation = PressedCardElevation,
         ),
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -3989,29 +4020,16 @@ private fun TodayHeaderButton(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
     // The same fill the back button beside it carries. These were painted with
     // `background` and a hairline instead, which on a bar whose own strip is
     // that colour left them as outlines next to a solid white circle.
     val containerColor = tdayBarButtonContainerColor()
     val iconTint = MaterialTheme.colorScheme.onSurface
     val buttonSize = TdayDimens.FabSize
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "todayHeaderButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) PressedSurfaceOffsetY else TdayDimens.SpacingNone,
-        label = "todayHeaderButtonOffsetY",
-    )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -4135,7 +4153,6 @@ private fun SummaryBottomSheet(
 
 @Composable
 private fun CreateTaskButton(
-    modifier: Modifier,
     interactionSource: MutableInteractionSource,
     backgroundColor: Color,
     onClick: () -> Unit,
@@ -4143,7 +4160,11 @@ private fun CreateTaskButton(
     val view = LocalView.current
 
     Card(
-        modifier = modifier,
+        // The press sits with the Card that owns the source rather than being
+        // handed in from the Scaffold slot, which is where `RootCreateTaskButton`
+        // keeps its own. `FabScale`, not `PressScales.Bar`: this is the other of
+        // the two Android FABs that were each spelling 0.93 out.
+        modifier = Modifier.tdayPressable(interactionSource, scale = TdayPress.FabScale),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -4483,18 +4504,17 @@ private fun ListSettingsActionTile(
     val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
-        label = "listSettingsActionTileScale",
-    )
 
     Card(
+        // `offsetY = TdayDimens.SpacingNone`: these two tiles sit side by side inside the
+        // sheet and never had a sink. A tile dropping while the one beside it holds
+        // still reads as the pair misaligning, not as a tile going down.
         modifier = modifier
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(
+                interactionSource,
+                scale = TdayMotionTokens.PressScales.Card,
+                offsetY = TdayDimens.SpacingNone,
+            ),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -4540,19 +4560,17 @@ private fun ListSettingsDeleteButton(
     val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
-        label = "listSettingsDeleteButtonScale",
-    )
 
     Card(
+        // Flat, full width, and the last thing in the sheet: `offsetY =
+        // TdayDimens.SpacingNone` for the same reason the tiles above it take it.
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(
+                interactionSource,
+                scale = TdayMotionTokens.PressScales.Card,
+                offsetY = TdayDimens.SpacingNone,
+            ),
         onClick = {
             // Opens the confirmation, destroys nothing — Cancel is still there.
             // The thud is fired by the dialog's confirm button instead.
@@ -4617,7 +4635,12 @@ private fun TimelineSectionHeader(
     )
     val animatedBottomSpacing by animateDpAsState(
         targetValue = bottomSpacing,
-        animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+        // A spacing is a size, and the rung for a size is Emphasis. The 240 it was
+        // written on named nothing and was shared with nothing.
+        animationSpec = tween(
+            durationMillis = TdayMotionTokens.Durations.Emphasis,
+            easing = FastOutSlowInEasing,
+        ),
         label = "sectionBottomSpacing",
     )
     val baseHeaderColor = if (useMinimalStyle) {
@@ -4727,7 +4750,14 @@ private fun TimelineDropPlaceholder(
                 TimelineDropPlaceholderHeight
             }
         },
-        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        // The box's own size, so the same rung as the section spacing above. It plays
+        // seldom — the one caller always passes `active = true`, which leaves the style
+        // flag as the only thing that can move the target — but 180 named no rung, and
+        // when it does play it must not undercut the placement the rows around it take.
+        animationSpec = tween(
+            durationMillis = TdayMotionTokens.Durations.Emphasis,
+            easing = FastOutSlowInEasing,
+        ),
         label = "timelineDropPlaceholderHeight",
     )
     Box(
@@ -5693,13 +5723,15 @@ private fun searchResultScrollDurationMillis(distancePx: Float): Int =
 /**
  * The wait before a search result is scrolled to — not a token — see docs/motion.md.
  *
- * What it is waiting for is the navigation into this screen: scrolling a list that
- * is still fading in aims at rows whose final positions are not settled yet, and the
- * correction passes below spend themselves chasing the transition rather than the
- * target. [scaledDelay] and not `delay`, because that transition is a Compose
- * animation and therefore already on the animator's clock — at 0x the screen is
- * whole on the first frame and this would be 380 ms of a tapped result doing
- * nothing.
+ * What it is waiting for is the feed stopping: scrolling a list whose rows are still
+ * moving aims at final positions that are not final yet, and the correction passes
+ * below spend themselves chasing the movement rather than the target. Its two call
+ * sites are waiting on different movement — one on the route handover into this
+ * screen, one on the floater feed re-laying itself out once the search card leaves it
+ * — which is why they are handed different scales; [effectiveMotionScale] has the
+ * argument. [scaledDelay] and not `delay` at both, because both are covering Compose
+ * animations: with those refused the screen is whole on the first frame and this
+ * would be 380 ms of a tapped result doing nothing.
  */
 private const val SEARCH_RESULT_NAV_SETTLE_DELAY_MS = 380L
 private const val SEARCH_RESULT_SCROLL_CORRECTION_PASSES = 2
@@ -6156,6 +6188,10 @@ private fun SwipeTaskRow(
         closeSwipeSlot()
         highlightAnim.stop()
         highlightAnim.snapTo(0f)
+        // not a token — see docs/motion.md. Neither leg is on the ladder and neither is
+        // meant to be: the two are timed against each other and against the dark between
+        // them, so that the pulse reads as a heartbeat rather than as two arrivals. The
+        // 620 is longer than Scene, the app's longest motion, which makes it a wait.
         repeat(2) { pulseIndex ->
             highlightAnim.animateTo(
                 targetValue = 0.46f,

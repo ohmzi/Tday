@@ -10,7 +10,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -236,8 +235,11 @@ enum class RootFeedHeroMark {
  * How long the time-of-day mark may be stale for. Not a motion value and not on the
  * ladder: nothing moves when it fires. It is a plain minute because that is the
  * period iOS gives the `TimelineView` it reads the same glyph off.
+ *
+ * `internal` so a JVM test can hold that minute against the other two clients'. A
+ * cadence only agrees with anything from outside the file that writes it.
  */
-private const val MARK_CLOCK_TICK_MS = 60_000L
+internal const val MARK_CLOCK_TICK_MS = 60_000L
 
 /**
  * How long the caret and the keyboard hold off while the capsule grows — not a token
@@ -257,13 +259,25 @@ private const val MARK_CLOCK_TICK_MS = 60_000L
 private const val SEARCH_FOCUS_SETTLE_MS = 300L
 
 /**
+ * Whether an hour of the day falls in the band the sun glyph covers.
+ *
+ * Split off from [isDaytimeNow] rather than inlined into it because the band is the only
+ * part of this that can be wrong, and `Calendar.getInstance()` leaves no seam to push a 5
+ * or an 18 through: a boundary this shape is worth a test and was not reachable by one.
+ *
+ * @param hour An hour of the day, as [Calendar.HOUR_OF_DAY] reports it.
+ * @return Whether that hour is a daytime one.
+ */
+internal fun isDaytimeHour(hour: Int): Boolean = hour in 6..17
+
+/**
  * Whether the wall clock says it is daytime right now. Read at each tick rather than
  * once, which is the whole of the fix below.
  *
  * @return Whether the current hour falls in the daytime band the sun glyph covers.
  */
 private fun isDaytimeNow(): Boolean =
-    Calendar.getInstance().get(Calendar.HOUR_OF_DAY) in 6..17
+    isDaytimeHour(Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
 
 /**
  * Whether the time-of-day mark should be drawing a sun or a moon, re-read as the
@@ -852,17 +866,12 @@ private fun RootFeedHeaderCircleButton(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
     val size = if (compact) 30.dp else RootFeedHeroHeaderMetrics.BarButtonSize
 
     Card(
         modifier = Modifier
             .size(size)
-            .graphicsLayer {
-                val pressScale = if (pressed) 0.93f else 1f
-                scaleX = pressScale
-                scaleY = pressScale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = onClick,
         enabled = enabled,
         shape = CircleShape,
