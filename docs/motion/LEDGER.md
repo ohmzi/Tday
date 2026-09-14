@@ -455,35 +455,35 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 8f — the one-line default-duration change
 
-- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **one line, its own PR** · web · XS · Gate D
+- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **DROPPED, not deferred**; the box stays open because the change was not made and will not be. Four committed places now forbid it: `docs/motion.md:350-357` makes "Do not rebind Tailwind's default transition duration" idiom rule 3, `docs/CODING_STANDARDS.md:209` says "never rebind", `tday-web/src/globals.css:210-213` argues it in place at the one declaration block that would have carried it (~159 bare `transition-*` sites riding an un-overridden 150 ms, which is exactly `Quick`, so they are on the vocabulary for free), and `motion-budget.json`'s `_excluded.notCountedOnPurpose` excludes those same utilities on those same grounds. The value no longer names anything either: `4c941b1c` moved `Enter` 190 → 200 because 190 matched 2 sites against 200's 57. Rule 3 landed in `bc521d0d`, inside Phase 4's own PR #204 — the same PR that would have carried 8f — so this is a decision taken at the time, not a lapse · web · XS · Gate n/a — dropped
 
 ## Phase 5 — web primitives, in dependency order
 
 ### PR 24c — hoist the reduced-motion helper; it lands first
 
-- [ ] `web-prefers-reduced-motion-helper` — hoist out of `useFadeUnmount.ts:8-11`; **land first, 2 rows block on it** · web · Sev 2 · S · Gate V
-- [ ] `web-earlier-handoff-ignores-reduced-motion` — reduced-motion users get 520 ms of static illustration then everything at once · web · Sev 3 · S · Gate V
+- [x] `web-prefers-reduced-motion-helper` — hoist out of `useFadeUnmount.ts:8-11`; **land first, 2 rows block on it** · web · Sev 2 · S · Gate V
+- [x] `web-earlier-handoff-ignores-reduced-motion` — reduced-motion users get 520 ms of static illustration then everything at once · web · Sev 3 · S · Gate V
 
 ### PR 22a — completed rows collapse their box
 
-- [ ] `web-completed-row-box-does-not-collapse` — row fades ink but holds full height to 780 ms · web · Sev 3 · M · Gate V+D
+- [x] `web-completed-row-box-does-not-collapse` — row fades ink but holds full height to 780 ms · web · Sev 3 · M · Gate V+D
 
 ### PR 22b — FLIP placement for the web feed
 
-- [ ] `web-feed-rows-have-no-placement` — no FLIP anywhere in `tday-web`; every neighbour of a removed row teleports · web · Sev 3 · L · Gate V+D
-- [ ] `web-today-section-wrapper-drops-gap` — Today section wrapper unmounts with its gap (~70 px) · web · Sev 2 · XS · Gate V
+- [x] `web-feed-rows-have-no-placement` — no FLIP anywhere in `tday-web`; every neighbour of a removed row teleports · web · Sev 3 · L · Gate V+D
+- [x] `web-today-section-wrapper-drops-gap` — Today section wrapper unmounts with its gap (~70 px) · web · Sev 2 · XS · Gate V
 - ↳ part 1 of 2 of `feed-item-motion-parity` — `src/lib/feedItemMotion.ts` mirroring `TdayFeedItemMotion.kt`. Box lives under **PR 47**.
 
 ### PR 23 — empty-state slots stop claiming their height in one frame
 
 - [x] `web-empty-state-slot-claims-42vh-in-one-frame` — the 42vh slot is claimed the same frame the last row is pruned · web · Sev 3 · M · Gate V+D · four screens draw this scene inline; the three scoped feeds took their travel in Phase 5 and the custom list was the one that was missed, so the row closes in Phase 9 on `ListContainer`'s own `useRowPlacement` wrapper and the placement lead in front of its celebration
-- [ ] `web-floater-empty-arrival-displaces-tiles` — ~33 vh of uncued jump, on the confetti frame — largest in the set · web · Sev 4 · M · Gate V+D
-- [ ] `web-empty-state-anchor-citation-fix` — ledger hygiene: `EmptyState.tsx:163` does not exist — the file is 161 lines. Verified anchors: the slot is `:54` (`min-h-[42vh]`, inside the wrapper at `:52-57`), the scene's own 520 ms arrival is `:60-65` (`.tday-empty-enter` / `.tday-empty-enter-celebrating`), and `:158` is the confetti the arrival sits above the wrapper to avoid fading with · web · Sev 1 · XS · Gate doc
+- [x] `web-floater-empty-arrival-displaces-tiles` — ~33 vh of uncued jump, on the confetti frame — largest in the set · web · Sev 4 · M · Gate V+D
+- [x] `web-empty-state-anchor-citation-fix` — ledger hygiene: `EmptyState.tsx:163` did not exist when this row was written, and the anchors that replaced it have since drifted again as the file grew 161 → 180 lines — twice now, so cite by class name as well as by line. Against the tree: the slot is `min-h-[42vh]` at `:64`, inside the wrapper at `:62-67`; the scene's own 520 ms arrival is the inner wrapper at `:70-80`, `.tday-empty-enter` at `:72` and `.tday-empty-enter-celebrating` at `:73`; and the confetti that arrival sits above the wrapper to avoid fading with is `:175-177`, mounted at `:176` · web · Sev 1 · XS · Gate doc
 
 ### PR 24a — the Earlier hand-off animates height, not just paint
 
-- [ ] `web-earlier-handoff-height-jump` — the EXPAND hand-off animates paint only: the scene fades and sinks while its box holds all 42vh, which the page then takes back in the single frame Earlier's rows arrive in. The collapse tap's own two jumps 260 ms apart — this row's original wording — are a different mechanism and belong to `web-earlier-collapse-has-no-handoff` in PR 24b, which is where they are counted: a collapse takes no hand-off at all, so nothing here reaches it · web · Sev 4 · M · Gate V+D
-- [ ] `web-earlier-exit-520ms-dead-wait` — `TODAY_EARLIER_EXIT_MS` 520 → **220**; update `today-earlier-illustration.test.ts:165-172` same commit · web · Sev 3 · S · Gate V
+- [x] `web-earlier-handoff-height-jump` — the EXPAND hand-off animates paint only: the scene fades and sinks while its box holds all 42vh, which the page then takes back in the single frame Earlier's rows arrive in. The collapse tap's own two jumps 260 ms apart — this row's original wording — are a different mechanism and belong to `web-earlier-collapse-has-no-handoff` in PR 24b, which is where they are counted: a collapse takes no hand-off at all, so nothing here reaches it · web · Sev 4 · M · Gate V+D
+- [x] `web-earlier-exit-520ms-dead-wait` — `TODAY_EARLIER_EXIT_MS` 520 → **200** (`Enter`), not the 220 the audit asked for: 220 is iOS's `EarlierIllustrationHandoff.exitDuration` and is not a rung, and the ladder has nothing between 200 and 260 on purpose — 320 and 260 are both ruled out because a departure must not outlast or match the 260 arrival it is making room for (the argument in full at `todayEarlierIllustration.ts:48-62`). Pinned at `tests/unit/today-earlier-illustration.test.ts:338`, with the invariant that chose the rung at `:347` — not `:165-172` as this row used to say · web · Sev 3 · S · Gate V
 
 ### PR 24b — the Earlier collapse gets the expand’s hand-off
 
