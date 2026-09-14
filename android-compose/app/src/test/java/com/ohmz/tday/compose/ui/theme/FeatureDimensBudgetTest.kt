@@ -138,7 +138,6 @@ class FeatureDimensBudgetTest {
          */
         val CEILINGS: Map<String, Int> = mapOf(
             "todos/TodoListScreen.kt" to 182,
-            "settings/SettingsScreen.kt" to 55,
             "guide/HelpGuideScreen.kt" to 49,
             "todos/ManageMembersSheet.kt" to 41,
             "completed/CompletedScreen.kt" to 37,
@@ -152,6 +151,7 @@ class FeatureDimensBudgetTest {
             "auth/SecurityQuestionPicker.kt" to 3,
             "lock/AppLock.kt" to 3,
             "guide/GuideHelpLink.kt" to 2,
+            "settings/SettingsScreen.kt" to 0,
             "release/LatestReleaseScreen.kt" to 0,
             "calendar/CalendarScreen.kt" to 0,
             "scheduledtaskhome/ScheduledTaskHomeScreen.kt" to 0,
