@@ -1478,7 +1478,53 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 59 — compositor hints for the always-on blurs
 
-- [ ] `web-compositor-hints-blur` — zero `will-change` in `src/`; 17 always-on backdrop blurs over a scrolling list · web · Impact O2 · S · Gate D
+- [x] `web-compositor-hints-blur` — zero `will-change` in `src/`; 17 always-on backdrop blurs over a scrolling list · web · Impact O2 · S · Gate D
+  - **The row's premise is right and its unit is neither the blur nor the class.** Seventeen
+    `backdrop-blur` sites is the count on the tree, and a `backdrop-filter` is already its own
+    compositor layer everywhere — so hinting a blur *because* it is a blur would buy nothing and
+    cost a texture apiece. The first attempt at this row therefore hinted the classes that MOVE
+    over a scrolling feed instead: the dock and the create button ducking, the bulk bar and the
+    mobile search panel arriving, the empty scene, Earlier's rows, the drag lift. Nine rules, all
+    nine taken back out, and the stylesheet still ships zero.
+  - **A hint bought from a class arrives too late to buy anything.** It only ever pays for the
+    FIRST frame of a motion, and only if it reaches the element before that motion starts. Every
+    one of the nine landed on a node that mounts already carrying it — `BulkSelectionBar` and the
+    search panel are `{flag && …}`, `EmptyState`, `TodayEarlierSection` and the `DragOverlay` card
+    the same — so hint and `animation-name` reached the style system in one recalculation and the
+    engine promoted at the compositing update it was going to promote at anyway. The dock is the
+    sharpest case: `useDuckPresence` hands out `""` until the control has been absent once, so the
+    first duck-out, which is the exact beat this row was scoped for, applies `.tday-duck-exit` with
+    hint and keyframe together.
+  - **And the lifetime was worse than the timing.** `wasEverAbsent` never flips back, so after one
+    trip through selection mode the dock and the create button carry `.tday-duck-enter` for the
+    life of the shell — on the full-width fixed positioning strip, not on the `backdrop-blur-xl`
+    box two levels inside it, so the layer would have been a new one rather than one the blur had
+    already paid for. Under `prefers-reduced-motion` all nine were pure cost: the floor at the top
+    of `globals.css` reaches `animation-duration` and deliberately not `animation-name`, while each
+    block down the file cancels with `animation: none`, which does — a layer held for a keyframe
+    that never runs, for the users who asked for less of exactly this.
+  - **`.tday-route-fade` was scoped in and is deliberately out, on the older argument.** `RouteFade`
+    puts that class on the container every screen is drawn inside, keyed on `pathname`, so it is
+    never absent and never small: a hint there is a permanent full-screen texture — about ten
+    megabytes on a phone — bought with one 200 ms fade. `::view-transition-old(root)` beside it
+    needs nothing either, being a snapshot the compositor already owns. Both are argued in the
+    stylesheet rather than left unmentioned, alongside the nine.
+  - **What ships is the scroll-driven half, which is the only one that genuinely buys a frame.**
+    `RootFeedHeroHeader`'s rAF rewrites width, height and transform on three nodes that are already
+    on the screen un-promoted, which is the only place in the app where a promotion lands
+    mid-gesture. Its hints are taken when a scroll pass begins — a frame before the first write
+    they prepare — and dropped 200 ms after the last frame of it, marked `not a token` where that
+    number is declared. Set ahead, and with a clock to end it: the two things a class on a mounting
+    node cannot offer.
+  - **Rule F of `motion-reachability-web.test.ts` is the ratchet for the next attempt, and it is
+    honest about being one.** It refuses a `will-change` in a rule that declares no `animation`,
+    one whose animation is `infinite`, one whose animation is cancelled under
+    `prefers-reduced-motion` without the hint being cancelled in the same block — that third shape
+    is the one that got past the first review of this row — and one written in any other stylesheet
+    or as a Tailwind utility. Those four read on an empty list today and say so; the assertion that
+    is not a vacuum is the last, which pins the app's single JavaScript hint to `RootFeedHeroHeader`
+    and requires that it clears what it sets. What no test can see is how long a class stays on an
+    element, and the device row is the rest.
 
 ### PR 60 — one celebration ordering
 
