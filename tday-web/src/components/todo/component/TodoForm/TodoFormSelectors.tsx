@@ -129,7 +129,7 @@ export default function TaskSelectorOverlays({
             type="time"
             value={format(dateRange.to, "HH:mm")}
             onChange={(e) => onPickTime(e.target.value)}
-            className="w-full rounded-2xl border border-muted-foreground/25 bg-card/40 px-4 py-3 text-2xl font-black tracking-tight text-foreground focus:outline-hidden"
+            className="w-full rounded-lg border border-muted-foreground/25 bg-card/40 px-4 py-3 text-2xl font-black tracking-tight text-foreground focus:outline-hidden"
           />
         </div>
         <SelectorDoneButton onClick={close} label={appDict("save")} />

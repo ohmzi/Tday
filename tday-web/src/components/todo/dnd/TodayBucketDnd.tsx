@@ -240,7 +240,7 @@ export function TodayBucketDroppable({
     <section
       ref={setNodeRef}
       className={cn(
-        "scroll-mt-24 rounded-3xl px-1 transition-all duration-enter",
+        "scroll-mt-24 rounded-xl px-1 transition-all duration-enter",
         isFirst ? sectionTopGapFirst : sectionTopGapFilled,
         isActive && sectionActiveClass,
       )}

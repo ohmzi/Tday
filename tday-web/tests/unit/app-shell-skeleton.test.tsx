@@ -60,7 +60,10 @@ describe("AppShellSkeleton", () => {
     // Both halves, because the drift can come from either side: the group could be
     // swapped back out, or a second hand-written stack could grow beside it.
     expect(container.innerHTML).not.toContain("h-[62px]");
-    expect(container.innerHTML).not.toContain("rounded-2xl");
+    // The card's 16 px corner answers to `rounded-lg` since the radius ladder was
+    // renamed onto its rungs, and the rows this shell renders legitimately carry
+    // `sm:rounded-lg` — so the match is anchored to a bare token, not a substring.
+    expect(container.innerHTML).not.toMatch(/(?<![\w:[-])rounded-lg/);
   });
 
   it("keeps the header, hero and tile placeholders at their own sizes", () => {

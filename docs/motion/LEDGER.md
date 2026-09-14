@@ -1384,6 +1384,54 @@ Restore it from git history rather than adjusting the number.
 ### PR 43a — the web radius scale becomes monotonic
 
 - ↳ part 1 of 3 of `dimension-radius-token-adoption` — **correctness**: `rounded-xl` (12 px) renders smaller than `rounded-md` (14 px). Box lives under **PR 43c…43n**.
+  - **A rename, not a revalue.** `globals.css` declared three of Tailwind v4's eight radius keys
+    and left the other five to `tailwindcss/theme.css`, where they are scaled against a `--radius`
+    a quarter of ours — which is the whole of the defect: `xl` was never chosen to be 12 px, it was
+    simply never chosen. Lifting `--radius-xl` above `md` would have been the obvious fix and the
+    wrong one: it moves the rendered corner at 33 sites, and folding `2xl` onto `lg` moves 84 more,
+    which is most of the app under a row whose gate is V + J and has no device pass to spend. So
+    the five distinct corners the app actually draws — 2, 12, 14, 16, 24 — took the five bottom
+    rungs and the call sites were renamed onto them: `rounded-xl`→`rounded-sm` (35), `2xl`→`lg`
+    (84), `3xl`→`xl` (6). Every rendered corner is byte-identical. `2xl` and `3xl` retire to
+    `initial` rather than being left undeclared, because undeclared is exactly the state that put
+    12 px above 14 px.
+  - **Rule B is the one that would have caught it**, and it is the reason the new suite exists
+    rather than a lint on class names. Sorting the rungs somebody remembered to declare (rule A)
+    proves only that the remembered half is monotonic; `tests/guardrails/radius-ladder.test.ts`
+    rule B demands that every `--radius-*` key Tailwind ships appears in the `@theme inline` block
+    at all, with a value or with `initial`, and reads that key list off `node_modules` so a
+    Tailwind upgrade that adds a ninth rung fails here instead of quietly reopening the hole. All
+    three rules were verified by mutation — dropping `--radius-4xl`, restoring `xl` to Tailwind's
+    `0.75rem`, and putting one `rounded-2xl` back on `card.tsx` each turn the suite red by name.
+  - **`xs` keeps Tailwind's `0.125rem` and does not become the `2px` its call sites spell.** The
+    unit was scoped to write `2px`, which is what the two `rounded-[2px]` sites and the one
+    `rounded-xs` render today — but only at a 16 px root, and the app pins no root font size. A
+    rename that quietly stops tracking the user's text size for anyone who has changed it is no
+    longer a rename, and the point of declaring the rung is that it is declared, not that it is
+    respelled.
+  - **`public/` is a call site too, and rule C now walks it.** Two of the 35 `rounded-xl`
+    renames are `<pre>` blocks in the blog articles under `public/content/blog/`, which
+    `BlogArticlePage` fetches and injects into a routed page under this same stylesheet. Left in
+    `src`-only scope they would have been the one place the rename was not byte-identical — 12 px
+    before, 24 px after — and they are also the one place a retired name fails in silence: no
+    compiler reads them, so `rounded-2xl` there would emit no rule at all and the corner would
+    simply go square with nothing anywhere to report it. Rule C walks `public/` alongside `src/`
+    and strips `<!-- -->` rather than `//`, so an offender sitting after an `https://` on the same
+    line cannot hide behind a blanked URL. Mutated both ways to confirm it bites.
+  - **Three mentions of `rounded-2xl` survive under `src/`, all of them prose**, in
+    `TaskRowSkeleton`, `AppShellSkeleton` and `ManageMembersSheet` — each describing a card that
+    used to be drawn and no longer is. Rewriting them would have the comments claim the old card
+    was spelled with a name it never had. Rule C blanks comments before counting, the way
+    `reduced-motion-floor` does and for the same reason it gives: prose about a defect is not the
+    defect.
+  - **Two assertions next door would have gone vacuous and were repaired in the same commit.**
+    `tests/unit/task-row-skeleton.test.tsx` and `app-shell-skeleton.test.tsx` each pinned their
+    skeleton to the row by asserting it does NOT spell `rounded-2xl` — a string that, after this
+    unit, exists nowhere, so both would have passed forever without checking anything. They now
+    name the card's 16 px corner by its new spelling, and because the row legitimately carries
+    `sm:rounded-lg`, both match a bare token rather than a substring. The 60 arbitrary
+    `rounded-[Npx]` sites are untouched: folding them onto the ladder moves pixels, which is 43c's
+    problem and not this row's.
 
 ### PR 43b — the missing `TdayDimens` steps and the lint that holds them
 

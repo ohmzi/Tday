@@ -332,8 +332,8 @@ All visual tokens are defined as CSS custom properties in `src/globals.css` and 
 
 - **Colors**: Use Tailwind semantic classes (`bg-card`, `text-foreground`, `border-border`, `text-muted-foreground`). Never use inline hex, rgb, or raw `hsl(...)` in component code. If a shadow or overlay needs an opacity variant, use the CSS variable form: `hsl(var(--shadow)/0.08)`.
 - **New colors**: Add the HSL variable in `globals.css` under both `:root` and `.dark`, map it in `@theme inline`, then use the generated Tailwind class.
-- **Spacing/sizing**: Use Tailwind's spacing scale (`p-4`, `gap-3`, `rounded-2xl`). Avoid arbitrary values like `p-[18px]` unless there is no close Tailwind equivalent.
-- **Radius**: Radius tokens are defined in `globals.css` (`--radius`, `--radius-md`, `--radius-sm`) and mapped in `@theme inline`. Use `rounded-lg`, `rounded-md`, `rounded-sm`.
+- **Spacing/sizing**: Use Tailwind's spacing scale (`p-4`, `gap-3`, `rounded-lg`). Avoid arbitrary values like `p-[18px]` unless there is no close Tailwind equivalent.
+- **Radius**: The ladder is five rungs, declared whole in `globals.css` against `--radius` and mapped in `@theme inline`: `rounded-xs` (Tailwind's `0.125rem`), `rounded-sm` (12 px), `rounded-md` (14 px), `rounded-lg` (16 px), `rounded-xl` (24 px). `rounded-2xl`, `rounded-3xl` and `rounded-4xl` are retired to `initial`: they emit no rule, so they draw a square corner rather than a wrong one, and `tests/guardrails/radius-ladder.test.ts` fails on them under `src/` and `public/` alike. A corner the ladder does not have is a rung to add, not a `rounded-[Npx]` to spell.
 
 ```typescript
 // Good: semantic Tailwind tokens
