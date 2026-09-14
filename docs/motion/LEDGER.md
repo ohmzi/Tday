@@ -315,7 +315,7 @@ Restore it from git history rather than adjusting the number.
 
 - [x] `ios-calendar-empty-state-blanked-by-isloading` — pull-to-refresh blanks the empty state for the whole sync · ios · Sev 3 · S · Gate G+TF
   - **The row's trigger is wrong; the gate it names is real.** Pull-to-refresh is not wired on this
-    screen either — `pullRefreshEnabled` defaults to false and `AppRootView.swift:450` builds
+    screen either — `pullRefreshEnabled` defaults to false and `AppRootView.swift:680` builds
     `CalendarScreen` without it — so the gesture cannot be what blanks anything. The defect is
     `CalendarScreen.swift:606`, `} else if !viewModel.isLoading {` in front of
     `calendarDayEmptyState`, and `isLoading` is raised only by `refresh()`: a force sync over a
@@ -1517,7 +1517,7 @@ Restore it from git history rather than adjusting the number.
     wrong on both sides of the split.** iOS applies this modifier at **nine** sites across four
     screens — `TodoListScreen`, `ScheduledTaskHomeScreen`, `CalendarScreen` and `CompletedScreen`,
     seven of them through the `createTaskSheet(…)` wrappers and two directly for create-list — not
-    four: the plan was counting `CreateTaskSheet.swift:617` and `:626`, which are the wrappers' own
+    four: the plan was counting `CreateTaskSheet.swift:623` and `:632`, which are the wrappers' own
     bodies, as application sites.
     UIKit's `.sheet` + `presentationDetents` has **six**, not seven: `ManageMembersSheet.swift:150`
     is the presented view's own detents, and the presentation is `TodoListScreen.swift:1730`.
