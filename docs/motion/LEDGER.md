@@ -1174,7 +1174,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 41a — the web sheet language
 
-- ↳ part 1 of 3 of `sheet-presentation-unification` — one scrim token across 7 spellings; `sheet.tsx` 500→320; drop `slide-in-from-bottom-[48%]`. Box lives under **PR 41c**.
+- ↳ part 1 of 3 of `sheet-presentation-unification` — one `--sheet-scrim` token (0.40 light / 0.68 dark, byte-for-byte what `TdayTheme.swift` and `TdaySheetChrome.kt` already draw) behind `drawer`, `dialog`, `sheet`, `Modal` and `CenteredSelectorOverlay`; the sheet's 500-in/300-out becomes Emphasis/Enter, `Modal` and the centred selector spell Enter-in/Quick-out, and the dialog spells Enter both ways — its single bare `duration-enter` covers both directions, as the bare `duration-200` it replaced did — `MODAL_EXIT_MS` moving to `DURATION_MS.quick` alongside its own class so the exit cannot half-play; `slide-in-from-bottom-[48%]` and `slide-*-bottom-8` dropped, because a centred card arrives where it already is. Eleven `duration-<n>` literals retired and the `web.durationUtility` ceiling lowered 58→47. Two corrections to this row as it was written: the scrim was **5 sites carrying 4 alphas** (0.80 twice, 0.65, 0.50, 0.45), not 7 spellings, and the 48% slide was in `dialog.tsx`, not `sheet.tsx`. PR 50's nested-scrim branch survives untouched — only the dimming half of it moved. Box lives under **PR 41c**.
 
 ### PR 41b — the Android sheet language
 

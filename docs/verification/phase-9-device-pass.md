@@ -84,3 +84,31 @@ The rows below are the half that has to be looked at.
               gutter is 4 px narrower on a phone (`px-4` against the shell's `px-5`). That is
               pre-existing shell geometry this unit did not touch and could not fix without a
               shell per route. Read the step as expected; judge the bars.
+
+- [ ] **PR 41a · web · Every overlay dims the page by the same amount** — a phone, in light mode
+      and again in dark, against the native apps on the same two screens if one is to hand.
+      Do:     open, one after another, a bottom sheet (tap a task to edit it), a confirm dialog
+              (delete a task), the right-hand `Sheet` (the list members panel), a `Modal`
+              (the calendar's delete confirm) and a centred selector (the repeat picker inside
+              an open sheet).
+      Watch:  the page behind them goes exactly as dark each time, and as dark as iOS and Android
+              go — 40% in light, 68% in dark. Five overlays, one shade.
+      Fails:  one of them is visibly heavier or lighter than the others; the dialog and the sheet
+              disagree; or dark mode looks unchanged from before, which would mean the token is
+              resolving to nothing and the scrim is drawing transparent.
+      Known:  the centred selector opens ON TOP of the sheet's scrim and the two compound, so the
+              page under a selector is darker than under anything else. That was true before this
+              row and is not what it is asking about — the vaul nested-scrim registry does not
+              reach a Radix dialog. Judge the five on their own.
+
+- [ ] **PR 41a · web · A sheet arrives and leaves on the ladder** — a phone, light or dark.
+      Do:     open and close the right-hand `Sheet`, then the delete dialog, then the calendar's
+              `Modal`, then the repeat selector.
+      Watch:  the side panel slides in over about a third of a second and leaves faster than it
+              arrived. The three centred surfaces fade and scale into place WITHOUT rising from
+              below — they arrive where they already are. The `Modal` and the selector leave
+              quicker than they came; the delete dialog leaves in the same time it arrived, which
+              is the one rung it declares covering both its directions.
+      Fails:  a centred dialog still travels up from the bottom on open; an exit takes longer
+              than its own enter; or the calendar `Modal` fades out only part-way before the card
+              is cut away, which is the JavaScript half of its exit having drifted from the CSS.

@@ -120,6 +120,11 @@
   --color-nlp: hsl(var(--nlp));
   --color-shadow: hsl(var(--shadow));
 
+  /* The one dim every overlay draws. `hsl()` rather than `hsla()` because
+     `--sheet-scrim` carries its own alpha after a slash; the two-token spelling
+     used by `--color-popover` is for values that do not. */
+  --color-sheet-scrim: hsl(var(--sheet-scrim));
+
   --color-sidebar: hsla(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
   --color-sidebar-primary: hsla(var(--sidebar-primary));
@@ -535,6 +540,18 @@
     --calendar-lime: 169.09 30% 43.14%;
     --calendar-orange: 33 100% 48%;
     --calendar-red: 4 90% 58%;
+
+    /*
+     * The dim behind every sheet, dialog, drawer and centred selector. Not a new
+     * opinion: 0.40 light / 0.68 dark is byte-for-byte what both native clients
+     * already draw — TdayTheme.swift:76 `Color.black.opacity(isDark ? 0.68 : 0.40)`
+     * and TdaySheetChrome.kt:111 `Color.Black.copy(alpha = if (isDarkTheme()) 0.68f
+     * else 0.40f)`. Web was the only client with an opinion of its own, and it had
+     * four of them — 0.80, 0.65, 0.50 and 0.45 across five scrims — so which shade
+     * the page went depended on which overlay system happened to own the surface.
+     */
+    --sheet-scrim: 0 0% 0% / 0.40;
+
     --radius: 1rem;
 
     --background: 222.86 46.67% 97.06%;
@@ -604,6 +621,8 @@
 
   .dark {
     --toast-action: 4 66% 64%;
+    /* Dark leans harder on the scrim than light does, on all three clients. */
+    --sheet-scrim: 0 0% 0% / 0.68;
     --lime: 169.09 30% 50%;
     --calendar-lime: 169.09 30% 43.14%;
     --calendar-red: 4 70% 56%;

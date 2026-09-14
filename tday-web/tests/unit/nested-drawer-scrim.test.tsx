@@ -20,8 +20,10 @@ import { DURATION_MS } from "@/lib/motion";
  * The calendar's confirm drawers are siblings of the form drawer they cover — see
  * `EditDrawer`, which renders `ConfirmCancelEditDrawer` beside its own `Drawer`
  * rather than inside it. Two roots, two portals, two scrims over the same pixels,
- * and `black/80` twice over resolves to 96% black: the confirm sheet arrived on a
- * page several shades darker than any other surface in the app.
+ * and one scrim over another compounds: at the `black/80` this file was written
+ * against, twice over resolved to 96% black, and the confirm sheet arrived on a
+ * page several shades darker than any other surface in the app. The shade is
+ * `bg-sheet-scrim` now and the arithmetic is gentler, but doubling is doubling.
  *
  * What is asserted here is the rule, not the shade — a scrim that finds one
  * already up adds no dim of its own — plus the thing that made the rule awkward
@@ -112,7 +114,7 @@ describe("a drawer scrim over a drawer scrim", () => {
     render(<StackedDrawers formOpen confirmOpen={false} />);
 
     expect(scrims()).toHaveLength(1);
-    expect(scrims()[0].className).toContain("bg-black/80");
+    expect(scrims()[0].className).toContain("bg-sheet-scrim");
     expect(scrims()[0].getAttribute("data-nested-scrim")).toBeNull();
   });
 
@@ -124,10 +126,10 @@ describe("a drawer scrim over a drawer scrim", () => {
     expect(scrims()).toHaveLength(2);
     // The one doing the dimming keeps doing it: this is not a swap of which
     // layer is dark, it is the second layer declining to darken again.
-    expect(beneath.className).toContain("bg-black/80");
+    expect(beneath.className).toContain("bg-sheet-scrim");
     expect(above.getAttribute("data-nested-scrim")).toBe("true");
     expect(above.className).toContain("bg-transparent");
-    expect(above.className).not.toContain("bg-black/80");
+    expect(above.className).not.toContain("bg-sheet-scrim");
   });
 
   it("stays undimmed when the scrim underneath it goes away", () => {
@@ -156,7 +158,7 @@ describe("a drawer scrim over a drawer scrim", () => {
     render(<StackedDrawers formOpen confirmOpen={false} />);
 
     expect(scrims()).toHaveLength(1);
-    expect(scrims()[0].className).toContain("bg-black/80");
+    expect(scrims()[0].className).toContain("bg-sheet-scrim");
     expect(scrims()[0].getAttribute("data-nested-scrim")).toBeNull();
   });
 
@@ -179,7 +181,7 @@ describe("a drawer scrim over a drawer scrim", () => {
 
     const arriving = scrims().find((s) => s.getAttribute("data-state") === "open");
     expect(arriving?.getAttribute("data-nested-scrim")).toBeNull();
-    expect(arriving?.className).toContain("bg-black/80");
+    expect(arriving?.className).toContain("bg-sheet-scrim");
   });
 
   it("counts a drawer that opens from its own trigger", () => {
@@ -215,7 +217,7 @@ describe("a drawer scrim over a drawer scrim", () => {
 
     const [beneath, above] = scrims();
     expect(scrims()).toHaveLength(2);
-    expect(beneath.className).toContain("bg-black/80");
+    expect(beneath.className).toContain("bg-sheet-scrim");
     expect(above.getAttribute("data-nested-scrim")).toBe("true");
     expect(above.className).toContain("bg-transparent");
   });
