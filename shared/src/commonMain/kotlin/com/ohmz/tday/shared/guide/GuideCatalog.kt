@@ -94,6 +94,31 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.DRAG_REORDER)),
         ),
         topic(
+            // After Drag to reorder because it is the same hand doing the same
+            // thing to a different surface, and a reader arrives here already
+            // holding something.
+            //
+            // IOS only, and that is the topic rather than an oversight. Android's
+            // create sheet is a Material `ModalBottomSheet`, which arrives with
+            // the platform's own drag-to-dismiss and its own grabber already
+            // drawn, and web has no bottom sheet to pull at all. iOS is the one
+            // client whose create sheet is hand-rolled — the host drives its own
+            // entrance so the dim does not arrive as a sliding band — and so the
+            // one client that had to be handed the gesture on purpose.
+            //
+            // "grip-vertical" again, one topic after it: a grabber is the handle
+            // that glyph draws, turned on its side. A glyph of its own would mean
+            // an Android vector drawable and an iOS imageset for a topic only one
+            // platform shows, which is the trade Reduce motion below refuses for
+            // the same reason.
+            GuideTopicIds.SWIPE_SHEET_AWAY, GuideSectionId.GESTURES, "grip-vertical",
+            setOf(IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.23",
+            body = listOf(
+                para(GuideTopicIds.SWIPE_SHEET_AWAY),
+                tip(GuideTopicIds.SWIPE_SHEET_AWAY),
+            ),
+        ),
+        topic(
             // Last in Gestures because it is what the section's other topics feel
             // like: the pop and the buzz are the app answering a finger, so a
             // reader arrives here having just met the taps and drags being

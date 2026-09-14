@@ -101,3 +101,123 @@ final class TdayKeyboardFrameProbeTests: XCTestCase {
         XCTAssertGreaterThan(try XCTUnwrap(TdayKeyboardFrameProbe.activeScreenMaxY()), 0)
     }
 }
+
+/// `TdaySheetDragToDismiss` — what a released drag on the sheet card means.
+///
+/// The rule is split off the view for the reason the probe above is: a decision
+/// inside a `body` is a decision nothing can ask a question of, and every one of
+/// the cases below is a gesture that cannot be staged in a unit test but can be
+/// stated as four numbers. What these hold is the one property the rule exists
+/// for — that a release is read as a *projection* and not as a position, which
+/// is the same argument `tday-web/src/lib/swipeGesture.ts` makes for
+/// `projectedRest` on the other client. A position-only rule passes the first
+/// three of these and fails the fourth, which is precisely how the toast's
+/// `translation > 30 || predictedEnd > 90` behaves and why this surface does not
+/// copy it.
+///
+/// What they cannot see is whether a committed drag settles on the same curve
+/// the scrim tap leaves on, or whether the grabber reads as a second header.
+/// Both are TestFlight eye-checks (`docs/verification/phase-9-device-pass.md`).
+final class TdaySheetDragToDismissTests: XCTestCase {
+    /// A create-task sheet on an iPhone 15 Pro: 86 % of an 852 pt screen.
+    private let sheetHeight: CGFloat = 730
+
+    func testAShortSlowDragIsNotADismissal() {
+        // 40 pt of finger with nothing behind it — a hand steadying on the card,
+        // or a pull that thought better of itself.
+        XCTAssertFalse(
+            TdaySheetDragToDismiss.shouldDismiss(
+                translation: 40,
+                predictedEndTranslation: 48,
+                sheetHeight: sheetHeight
+            )
+        )
+    }
+
+    func testAShortFastFlickIs() {
+        // The same 40 pt, thrown. It never reached a quarter of the card and is
+        // not going to be dragged there either; what commits it is that it was
+        // still travelling when the finger left.
+        XCTAssertTrue(
+            TdaySheetDragToDismiss.shouldDismiss(
+                translation: 40,
+                predictedEndTranslation: 320,
+                sheetHeight: sheetHeight
+            )
+        )
+    }
+
+    func testALongSlowDragPastTheFractionIs() {
+        // Carried a quarter of the way down and let go standing still, so the
+        // projection is the position — which is the case where the two rules
+        // agree, and the one a fraction of the card's own height is chosen for.
+        XCTAssertTrue(
+            TdaySheetDragToDismiss.shouldDismiss(
+                translation: 190,
+                predictedEndTranslation: 192,
+                sheetHeight: sheetHeight
+            )
+        )
+    }
+
+    func testALongDragAlreadyBeingWalkedBackIsNot() {
+        // Well past the threshold on position and travelling the other way. This
+        // is the case the whole projection exists for: the user is putting the
+        // card back and the last frame of the gesture says so.
+        XCTAssertFalse(
+            TdaySheetDragToDismiss.shouldDismiss(
+                translation: 300,
+                predictedEndTranslation: 90,
+                sheetHeight: sheetHeight
+            )
+        )
+    }
+
+    func testTheThresholdIsAFractionOfTheCardAndNotAFlatDistance() {
+        // One projection, two cards. The short create-floater sheet lets it go;
+        // the tall create-task sheet does not — which a flat 30 pt could not say,
+        // and is why this rule takes a height at all.
+        let projection: CGFloat = 150
+        XCTAssertTrue(
+            TdaySheetDragToDismiss.shouldDismiss(
+                translation: projection,
+                predictedEndTranslation: projection,
+                sheetHeight: 420
+            )
+        )
+        XCTAssertFalse(
+            TdaySheetDragToDismiss.shouldDismiss(
+                translation: projection,
+                predictedEndTranslation: projection,
+                sheetHeight: sheetHeight
+            )
+        )
+    }
+
+    func testAnUnmeasuredCardRefusesRatherThanDismissingOnTheSlop() {
+        // `contentHeight` is 0 until the first preference lands. A fraction of
+        // nothing is nothing, so an unguarded rule would read the 10 pt of slop
+        // that starts the gesture as a completed dismissal.
+        XCTAssertFalse(
+            TdaySheetDragToDismiss.shouldDismiss(
+                translation: 400,
+                predictedEndTranslation: 600,
+                sheetHeight: 0
+            )
+        )
+    }
+
+    func testAnUpwardDragIsNotADismissalHoweverItEnds() {
+        // The card does not move for an upward pull — it is already at its own
+        // content height — so a gesture that ended above where it started never
+        // moved anything, and the flick it was released with is not an answer to
+        // a question the user asked.
+        XCTAssertFalse(
+            TdaySheetDragToDismiss.shouldDismiss(
+                translation: -60,
+                predictedEndTranslation: 400,
+                sheetHeight: sheetHeight
+            )
+        )
+    }
+}
