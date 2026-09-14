@@ -207,9 +207,15 @@ class FeatureDimensBudgetTest {
          * Seeded by running the rule above over the tree, not transcribed from anywhere. 845 across
          * 19 files; the other 26 files under `feature/` already count zero and are held there by
          * the third assertion.
+         *
+         * Every one of the 19 is now 0 — 43c spent the last of them, `TodoListScreen.kt`'s 182 —
+         * so the map has stopped being a backlog and is doing the third assertion's job for the
+         * files it names. The entries stay anyway: a zero here and a zero there are the same
+         * ratchet, and deleting them would make the next migration look like it started from
+         * nothing rather than from a number somebody drove down.
          */
         val CEILINGS: Map<String, Int> = mapOf(
-            "todos/TodoListScreen.kt" to 182,
+            "todos/TodoListScreen.kt" to 0,
             "auth/ForgotPasswordPanel.kt" to 0,
             "app/UpdateRequiredOverlay.kt" to 0,
             "app/PendingApprovalOverlay.kt" to 0,
