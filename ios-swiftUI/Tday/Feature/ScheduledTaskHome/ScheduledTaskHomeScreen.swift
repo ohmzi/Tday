@@ -562,7 +562,7 @@ struct ScheduledTaskHomeScreen: View {
 
     private func closeSearch() {
         searchFieldFocused = false
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             searchExpanded = false
         }
         searchQuery = ""

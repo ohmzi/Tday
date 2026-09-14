@@ -2631,7 +2631,7 @@ struct TodoListScreen: View {
 
     private func closeFloaterTaskHomeSearch() {
         floaterTaskHomeSearchFieldFocused = false
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             floaterTaskHomeSearchExpanded = false
         }
         floaterTaskHomeSearchQuery = ""
@@ -2639,7 +2639,7 @@ struct TodoListScreen: View {
 
     private func openListSearch() {
         HapticManager.buttonPress()
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             listSearchExpanded = true
         }
     }
@@ -2649,7 +2649,7 @@ struct TodoListScreen: View {
     private func closeListSearch() {
         HapticManager.buttonPress()
         listSearchFieldFocused = false
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             listSearchExpanded = false
         }
         listSearchQuery = ""
