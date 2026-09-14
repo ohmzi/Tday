@@ -1158,13 +1158,14 @@ Restore it from git history rather than adjusting the number.
 
 - [ ] `confetti-kinematics` — Land the recovered confetti physics — linear drag, flip split off rotation, smoothstep fade — on all three clients at once · all · Impact O3 · L · Gate self + V + J + X + G + D + TF — **final part (5 of 5)**; PR 38, PR 39a, PR 39b, PR 39c carried the rest
 
-### PR 40a — the web task-row skeleton
+### PR 40a — the web task-row skeleton and its crossfade
 
 - ↳ part 1 of 4 of `skeleton-loading-vocabulary` — web `TaskRowSkeleton` at `TodoItemContainer`'s own row classes; the `ui/TodoListLoading` re-export shim retired. Box lives under **PR 40c**.
+- ↳ part 2 of 4 of `skeleton-loading-vocabulary` — web `.tday-skeleton-exit`/`.tday-content-enter` on `Enter` + `useSkeletonCrossfade`; the four hand-rolled `animate-pulse` spellings retired and the scheduled root feed given the placeholder its sibling always had. `TodoListLoading`'s four callers (`AllTasksTimelineContainer`, `ListContainer`, `CompletedTodoContainer`, `CompletedFloaterContainer`) stop gating its mount and hand the flag down, so its crossfade is not inert — those four get the fade-out half only, having no single content block to carry `.tday-content-enter`. Box lives under **PR 40c**.
 
 ### PR 40b/40c — the Android and iOS skeletons
 
-- [ ] `skeleton-loading-vocabulary` — one skeleton per client at real row geometry, 190 ms crossfade · all · Impact O4 · M ea · Gate V/J/X
+- [ ] `skeleton-loading-vocabulary` — one skeleton per client at real row geometry, crossfading on the `Enter` rung · all · Impact O4 · M ea · Gate V/J/X
 
 ### PR 40d — the web infinite-scroll sentinel
 

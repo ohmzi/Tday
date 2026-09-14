@@ -80,7 +80,7 @@ const CompletedFloaterContainer = ({
         beneathTitle={tabSwitcher}
       />
 
-      {floaterLoading && <TodoListLoading className="mt-8" />}
+      <TodoListLoading className="mt-8" loading={floaterLoading} />
 
       {!floaterLoading && !isSearching && completedFloaters.length === 0 && (
         <EmptyState
