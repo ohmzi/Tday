@@ -144,6 +144,7 @@ import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.TdaySheetMotion
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
@@ -154,6 +155,7 @@ import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.rememberSheetDismissState
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
@@ -266,13 +268,17 @@ fun ScheduledTaskHomeScreen(
     var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
     var lastHandledCreateTaskRequestKey by rememberSaveable { mutableIntStateOf(0) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
-    val editTargetTodo = remember(editTargetTodoId, uiState.todayTodos) {
-        editTargetTodoId?.let { id -> uiState.todayTodos.firstOrNull { it.id == id } }
-    }
+    val editTargetTodo = rememberEditSheetTarget(
+        id = editTargetTodoId,
+        current = remember(editTargetTodoId, uiState.todayTodos) {
+            editTargetTodoId?.let { id -> uiState.todayTodos.firstOrNull { it.id == id } }
+        },
+    )
     var listName by rememberSaveable { mutableStateOf("") }
     var listColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var listIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
+    var listCreated by rememberSaveable { mutableStateOf(false) }
     var searchResultOpening by rememberSaveable { mutableStateOf(false) }
     val searchResultScope = rememberCoroutineScope()
     val closeSearch = {
@@ -829,10 +835,7 @@ fun ScheduledTaskHomeScreen(
             onParseTaskTitleNlp = onParseTaskTitleNlp,
             onSuggestRepeat = onSuggestRepeat,
             onDismiss = { showCreateTask = false },
-            onCreateTask = { payload ->
-                onCreateTask(payload)
-                showCreateTask = false
-            },
+            onCreateTask = onCreateTask,
         )
     }
 
@@ -858,10 +861,7 @@ fun ScheduledTaskHomeScreen(
             onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = { editTargetTodoId = null },
             onCreateTask = { _ -> },
-            onUpdateTask = { target, payload ->
-                onUpdateTask(target, payload)
-                editTargetTodoId = null
-            },
+            onUpdateTask = onUpdateTask,
         )
     }
 
@@ -873,15 +873,26 @@ fun ScheduledTaskHomeScreen(
             onListColorChange = { listColor = it },
             listIconKey = listIconKey,
             onListIconChange = { listIconKey = it },
-            onDismiss = { showCreateList = false },
+            // The draft is cleared here and not in `onCreate`, and only when a list was
+            // actually made. The sheet is still on screen for the length of its exit now,
+            // so blanking the name at the moment of the tap would be watched: the field
+            // empties and the Create control greys out under the user's finger while the
+            // card is still sliding. Dismissing without creating keeps the draft, as it
+            // always has.
+            onDismiss = {
+                showCreateList = false
+                if (listCreated) {
+                    listName = ""
+                    listColor = TDAY_DEFAULT_LIST_COLOR_KEY
+                    listIconKey = TDAY_DEFAULT_LIST_ICON_KEY
+                    listCreated = false
+                }
+            },
             onCreate = {
                 val normalizedName = capitalizeFirstListLetter(listName).trim()
                 if (normalizedName.isNotBlank()) {
                     onCreateList(normalizedName, listColor, listIconKey)
-                    listName = ""
-                    listColor = TDAY_DEFAULT_LIST_COLOR_KEY
-                    listIconKey = TDAY_DEFAULT_LIST_ICON_KEY
-                    showCreateList = false
+                    listCreated = true
                 }
             },
         )
@@ -1007,8 +1018,8 @@ private fun CreateListBottomSheet(
     }
     var nameFieldFocused by remember { mutableStateOf(false) }
     // The same two-step dismissal the create-task sheet uses: start the exit, and tell the
-    // caller only once it has finished, so the 320 ms slide out is not cut off by the host
-    // Dialog leaving the composition on the frame of the tap.
+    // caller only once it has finished, so TdaySheetMotion's slide out is not cut off by
+    // the host Dialog leaving the composition on the frame of the tap.
     //
     // The keyboard goes at the end of that, with the caller's onDismiss, for the same
     // reason it does over there: clearing focus first drops `useTypingHeight` below, which
@@ -1021,7 +1032,9 @@ private fun CreateListBottomSheet(
             onDismiss()
         },
     )
-    val startDismiss = { sheetDismiss.start() }
+    // Typed `() -> Unit` so the dismiss affordances can discard the answer; only the
+    // confirm below has anything to do with it.
+    val startDismiss: () -> Unit = { sheetDismiss.start() }
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = tdayListAccentColor(listColor)
     val canCreate = listName.isNotBlank()
@@ -1037,8 +1050,12 @@ private fun CreateListBottomSheet(
         } else {
             CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION
         }).coerceAtMost(maxSheetHeight),
+        // Emphasis rather than TdaySheetMotion.cardIn(): this is the card changing height
+        // under a keyboard, not the card arriving. Same rung today — a size change is
+        // geometry either way — but keeping it off the card's spec means a retime of the
+        // arrival cannot silently retime the keyboard climb as well.
         animationSpec = tween(
-            durationMillis = CREATE_LIST_SHEET_MOTION_MS,
+            durationMillis = TdayMotionTokens.Durations.Emphasis,
             easing = FastOutSlowInEasing,
         ),
         label = "createListSheetHeight",
@@ -1060,19 +1077,28 @@ private fun CreateListBottomSheet(
             modifier = Modifier
                 .fillMaxSize(),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(sheetScrimColor)
-                    // No indication: a dismiss tap on the scrim is a gesture at the sheet,
-                    // not a press of a full-screen button, and the default ripple draws
-                    // itself across the entire window on the way out.
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = startDismiss,
-                    ),
-            )
+            // Same chrome as the create-task sheet, and now the same four specs: the scrim
+            // fades with the card instead of being drawn and undrawn with the Dialog
+            // window. `visible` and not `visibleState` — see SheetDismissState.visible.
+            AnimatedVisibility(
+                visible = sheetDismiss.visible,
+                enter = fadeIn(animationSpec = TdaySheetMotion.scrimIn()),
+                exit = fadeOut(animationSpec = TdaySheetMotion.scrimOut()),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(sheetScrimColor)
+                        // No indication: a dismiss tap on the scrim is a gesture at the
+                        // sheet, not a press of a full-screen button, and the default
+                        // ripple draws itself across the entire window on the way out.
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = startDismiss,
+                        ),
+                )
+            }
 
             AnimatedVisibility(
                 visibleState = sheetDismiss.transition,
@@ -1080,19 +1106,13 @@ private fun CreateListBottomSheet(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth(),
                 enter = slideInVertically(
-                    animationSpec = tween(
-                        durationMillis = CREATE_LIST_SHEET_MOTION_MS,
-                        easing = FastOutSlowInEasing,
-                    ),
+                    animationSpec = TdaySheetMotion.cardIn(),
                     initialOffsetY = { fullHeight -> fullHeight },
-                ) + fadeIn(animationSpec = tween(durationMillis = CREATE_LIST_SHEET_MOTION_MS)),
+                ) + fadeIn(animationSpec = TdaySheetMotion.cardIn()),
                 exit = slideOutVertically(
-                    animationSpec = tween(
-                        durationMillis = CREATE_LIST_SHEET_MOTION_MS,
-                        easing = FastOutSlowInEasing,
-                    ),
+                    animationSpec = TdaySheetMotion.cardOut(),
                     targetOffsetY = { fullHeight -> fullHeight },
-                ) + fadeOut(animationSpec = tween(durationMillis = CREATE_LIST_SHEET_MOTION_MS)),
+                ) + fadeOut(animationSpec = TdaySheetMotion.cardOut()),
             ) {
                 Surface(
                     modifier = Modifier
@@ -1120,9 +1140,19 @@ private fun CreateListBottomSheet(
                                 leftContentDescription = stringResource(R.string.action_close),
                                 onLeftClick = startDismiss,
                                 confirmContentDescription = stringResource(R.string.action_create_list),
+                            // Confirm leaves the same way the X does, and the keyboard
+                            // goes with the caller's onDismiss at the end of that — see
+                            // where `sheetDismiss` is built for why it cannot go first.
+                            //
+                            // The exit is claimed BEFORE `onCreate`, and the list is made
+                            // only if this tap is the one that claimed it. The card is
+                            // still on screen and still hit-testable for the whole slide,
+                            // so a second tap on a Create that is deliberately left lit
+                            // would make a second list of the same name.
                             onConfirm = {
-                                dismissKeyboard()
-                                if (canCreate) onCreate()
+                                if (canCreate && sheetDismiss.start()) {
+                                    onCreate()
+                                }
                             },
                             confirmEnabled = canCreate,
                         )
@@ -2262,7 +2292,6 @@ private const val SCHEDULED_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
 private const val CREATE_LIST_SHEET_MAX_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
 private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
-private const val CREATE_LIST_SHEET_MOTION_MS = 320
 
 /**
  * How long the search surface is left standing after a result is tapped — not a

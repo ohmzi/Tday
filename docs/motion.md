@@ -38,9 +38,12 @@ The counting rules are part of the evidence, because a count nobody can
 reproduce is an assertion:
 
 - **An Android tween** is one `tween(…)` construction whose duration resolves to
-  the rung, following `const val` indirection — most of `Emphasis`'s fifteen are
-  spelled `CREATE_TASK_SHEET_MOTION_MS`, not `320`. A number quoted inside a
-  comment is not a call site.
+  the rung, following `const val` indirection — ten of `Emphasis`'s fifteen were
+  spelled `CREATE_TASK_SHEET_MOTION_MS` or `CREATE_LIST_SHEET_MOTION_MS` at the
+  census, not `320`. Four of those ten are `TdaySheetMotion.cardIn()` now, two
+  are a `Durations.Emphasis` sheet resize written out, and four left the rung
+  altogether with the card's exit. A number quoted inside a comment is not a
+  call site.
 - **A web transition utility** is a `transition` or `transition-<property>` class
   in a class string. It "names a duration" when a `duration-*` class appears in
   the same string literal. `transition-none` disables a transition rather than
@@ -98,12 +101,16 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   `ios-swiftUI/Tday/Feature/Guide/HelpGuideScreen.swift:225`,
   `tday-web/src/globals.css:146`.
 - **`Enter` (200).** 52 web `duration-200` utilities and 7 iOS sites (5 in the
-  app, 2 in the widget extension); **zero** on Android. This rung is 200 and not
-  190 because 190 matches two hand-written Android tweens
+  app, 2 in the widget extension); **zero** on Android at the census. The first
+  two Android sites are the hand-built sheets' dim in both directions —
+  `TdaySheetMotion.scrimIn()` and `scrimOut()`, one construction each — which is
+  the rung being reached for rather than the census moving. This rung is 200 and
+  not 190 because 190 matched two hand-written Android tweens
   (`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:54`,
   `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/completed/CompletedScreen.kt:290`, plus one conditional branch at
-  `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdaySegmentedSlider.kt:181`) against 200's 57 across two
-  clients. Anchors: `tday-web/src/components/settings/SettingsPage.tsx:287`,
+  `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdaySegmentedSlider.kt:181`) against 200's 57 in the two
+  apps proper (52 web plus the 5 iOS app sites, the widget extension's two
+  aside). Anchors: `tday-web/src/components/settings/SettingsPage.tsx:287`,
   `ios-swiftUI/Tday/Feature/Onboarding/OnboardingWizardOverlay.swift:123`.
 - **`Change` (260).** 3 Android tweens, 8 iOS `.easeInOut(duration: 0.26)`, and
   2 on web, both named constants — thirteen sites across all three clients, with
@@ -116,14 +123,23 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   which is a call site to settle rather than a reason to widen the rung.
   Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
-  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3044`,
+  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3162`,
   `tday-web/src/lib/taskCompletionTiming.ts:36`.
-- **`Emphasis` (320).** 15 Android tweens (eleven of them reached through the
-  two create-sheet constants and `TdayFeedItemMotion.PlacementMillis` rather
-  than written out), 5 iOS, 1 on web. Long enough to be followed with the eye.
+- **`Emphasis` (320).** 15 Android tweens at the census (eleven of them reached
+  through a named constant rather than written out), 5 iOS, 1 on web. Long
+  enough to be followed with the eye. Ten of those eleven were the two
+  create-sheet constants, and both are gone: `TdaySheetMotion` holds the
+  hand-built sheets' four specs now, and it spends this rung on the card's
+  *arrival* only — the card's exit answers to `Change`, which is the nearer rung
+  to iOS's own 0.24 and the one that keeps an exit from outlasting its enter.
+  The two content resizes those constants also drove stayed here, naming
+  `Durations.Emphasis` directly: a sheet changing height is geometry, but it is
+  not the sheet arriving, and tying it to the card's spec would retime it the
+  next time the arrival moves. The eleventh is still
+  `TdayFeedItemMotion.PlacementMillis`.
   Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskStrikethrough.kt:63`,
-  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:286`,
+  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:347`,
   `tday-web/src/globals.css:579`.
 - **`Scene` (520).** 2 Android, 1 iOS, 2 web at the census. This rung is the
   empty-state illustration **arriving**: all three clients name their site for
@@ -319,11 +335,11 @@ same answer from every reviewer.
 Both rungs, inside one motion — the staged check-off every task row in every
 client plays. The row's content fades where it stands at 260 (`Change`):
 `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
-`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3044`,
+`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3162`,
 `tday-web/src/lib/taskCompletionTiming.ts:36`. The rule crossing out the title
 grows across it, so it takes 320 (`Emphasis`):
 `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskStrikethrough.kt:63`,
-`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:286`,
+`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:347`,
 `tday-web/src/globals.css:579`.
 
 The same beat played backwards — a completed task being restored — stays on
@@ -520,8 +536,8 @@ change pixels or destroy an argument that is worth more than the tidiness.
 | Not a token | Where | Why it is excluded |
 |---|---|---|
 | The 340–420 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/TdayApp.kt:119` (360, nav fade-in); `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5757` (420); `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:199` (340 ms hand-off sleep) | Three values, no two of them the same motion, and nothing that would still be true if they were merged. This row said four until Phase 8's 48, and the fourth was never a fourth motion: `SwipeRevealHintModifier` held a second copy of `revealHint()`'s own hint sequence, sleep included, and went out with the modifier — the same duplication the budget fixture records for that sequence's two springs. The web press ripple sat in the band at 340 ms too and is no longer in it: it grows from a third of its surface to nearly twice it, which rule 2 puts on `Emphasis`, and 320 is that same motion to within a frame. A rung here would sit one frame from `Emphasis` and could not be told from it by eye — exactly the case the five-rung ladder exists to refuse |
-| The 600–620 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5761` (620); `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:136` (0.62 flash delay) | Both are legs of the search-result reveal, timed against the legs either side of them rather than against a ladder. They are longer than `Scene`, which is the app's longest *motion* — these are waits |
-| The iOS sub-frame sequencing constant | `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:133` (0.08 s pre-scroll delay) | Below the two-frame floor the ladder is built on. It orders events; it is not a motion anybody watches. `CompletedScreen.swift`'s 0.1 s was listed here and did not belong: it was the `.easeOut` on a row transition's removal leg, which is a motion somebody watches, and it is now `TdayFeedItemMotion.departure` — a departure that got 50 % longer, deliberately, because this row was the only thing claiming it was a sequencing constant |
+| The 600–620 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5761` (620); `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:146` (0.62 flash delay) | Both are legs of the search-result reveal, timed against the legs either side of them rather than against a ladder. They are longer than `Scene`, which is the app's longest *motion* — these are waits |
+| The iOS sub-frame sequencing constant | `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:143` (0.08 s pre-scroll delay) | Below the two-frame floor the ladder is built on. It orders events; it is not a motion anybody watches. `CompletedScreen.swift`'s 0.1 s was listed here and did not belong: it was the `.easeOut` on a row transition's removal leg, which is a motion somebody watches, and it is now `TdayFeedItemMotion.departure` — a departure that got 50 % longer, deliberately, because this row was the only thing claiming it was a sequencing constant |
 | `cubic-bezier(0.3, 0, 0.4, 1)` | `tday-web/src/globals.css:683` (`--tday-empty-sink-ease`, ridden by `.tday-empty-exit` and by the `.tday-empty-slot` track it closes) | The empty scene *sinking*. Deliberately not `Scene`'s curve read backwards — the exit is played only during an "Earlier" hand-off and is tuned against that hand-off's own timing. Named as a property rather than written twice: the ink and the slot under it have to leave on one curve or they read as two departures |
 | `cubic-bezier(0.25, 1, 0.5, 1)` | `tday-web/src/components/app/RootDock.tsx:122` | The dock's sliding indicator pill. A hard-out curve with no counterpart on Android or iOS, which express the dock with springs |
 | `cubic-bezier(0.22, 0.61, 0.36, 1)` | `tday-web/src/components/ui/AnimatedHeight.tsx:57` | The app's only height transition, declared once in the primitive that owns it — promoted out of the onboarding wizard, where it was written inline. One declaration, one client, and a height animation is the one place a curve's tail is load-bearing against layout. Its 280 ms did not survive the promotion: a box changing size is `Emphasis` by the second idiom rule, and that half was never argued |

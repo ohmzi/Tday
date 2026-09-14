@@ -134,6 +134,7 @@ import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdaySwipeCopyBackground
@@ -403,11 +404,14 @@ fun CalendarScreen(
             openSwipeTaskId = null
         }
     }
-    val editTarget = remember(editTargetId, uiState.items) {
-        editTargetId?.let { targetId ->
-            uiState.items.firstOrNull { it.id == targetId }
-        }
-    }
+    val editTarget = rememberEditSheetTarget(
+        id = editTargetId,
+        current = remember(editTargetId, uiState.items) {
+            editTargetId?.let { targetId ->
+                uiState.items.firstOrNull { it.id == targetId }
+            }
+        },
+    )
     val draggedCalendarTodo = remember(draggedCalendarTodoId, uiState.items) {
         draggedCalendarTodoId?.let { targetId ->
             uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
@@ -893,11 +897,7 @@ fun CalendarScreen(
                 showCreateTaskSheet = false
                 createDueEpochMs = null
             },
-            onCreateTask = { payload ->
-                onCreateTask(payload)
-                showCreateTaskSheet = false
-                createDueEpochMs = null
-            },
+            onCreateTask = onCreateTask,
         )
     }
 
@@ -945,10 +945,7 @@ fun CalendarScreen(
             onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = { editTargetId = null },
             onCreateTask = { _ -> },
-            onUpdateTask = { targetTodo, payload ->
-                onUpdateTask(targetTodo, payload)
-                editTargetId = null
-            },
+            onUpdateTask = onUpdateTask,
         )
     }
 }
