@@ -434,12 +434,40 @@ animates.
               the cards below it sliding rather than jumping. In the wizard, the spinner and the
               content it replaces cross in about a fifth of a second on each of the four
               transitions, at the same weight as the step change beside them.
-      Fails:  a card or a loading swap that reads noticeably faster or slower — the only way that
-              happens is a site picking up the wrong rung. Motion that leaves a longer tail than it
-              did is the more likely shape of the mistake: it would mean a site moved onto
+      Fails:  a loading swap that reads noticeably faster or slower — the only way that happens is
+              a site picking up the wrong rung. Motion that leaves a longer tail than it did is the
+              more likely shape of the mistake: it would mean a site moved onto
               `TdayMotion.standard(duration:)` instead of keeping SwiftUI's `.easeInOut`, which
-              this unit deliberately did not do. Say which of the two screens.
+              this unit deliberately did not do.
+      Note:   the Guide half of this row has since been overtaken. PR 42c retimed the topic card to
+              320 ms on the Standard curve on purpose, so a card that no longer opens in a sixth of
+              a second is 42c working, not this unit failing — check the card against 42c's row
+              below and this row against the wizard only.
       Why:    no Swift toolchain here, so this unit's gates are textual — `ios.easeDuration` fell by
               exactly the five literals that came off, and both constants read out of
               `TdayMotionGenerated` at the values the call sites had typed — plus xctest in CI.
               Neither can watch a card expand.
+
+- [ ] **PR 42c · ios · The Guide's topic card stops opening at the speed of a button press** — any
+      build; the guide is reachable without an account. Best on a topic long enough that opening it
+      pushes the cards under it well down the screen — "What's new" entries are usually the longest.
+      Do:     open Help & Guide, expand a long topic, then expand a second one so the first collapses
+              in the same transaction. Do it once more watching only the chevron.
+      Watch:  the card grows over about a third of a second, not the sixth it used to take, and the
+              cards below it travel with it rather than being shoved. The chevron turns on that same
+              clock — one transaction drives both, so they start and stop together. The curve has a
+              shorter tail than the one it replaces, so the longer motion should not also read as a
+              slower one: it should settle rather than coast.
+      Fails:  a card that still snaps open — that is the old 150 ms, and it means the transaction did
+              not pick up the new spec. A chevron that turns on a different clock from the box, which
+              would mean the rotation left the transaction. And a motion that reads sluggish at the
+              end rather than settling: that is `.easeInOut`'s longer tail, so the curve did not move
+              with the rung.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, expand and collapse the
+              same topics. The body is simply there, fully drawn, on the frame of the tap, and the
+              chevron is already turned — no growth, and no wait where the growth would have been.
+              Collapsing is the same in reverse: the card is at its closed height immediately.
+      Why:    there is no Swift toolchain on the machine this was written on, so nothing here was
+              built. The guardrails prove the transaction still exists and that the budget did not
+              move; only a device can say whether 320 ms on Standard is the right length for this
+              card, which is the whole of the `disclosure-expand-collapse` claim on iOS.
