@@ -397,6 +397,8 @@
     "floaterListEmptyBody": "添加一个浮动任务，它会在这里等你。",
     "noMatchingTasks": "没有匹配的任务",
     "searchEmptyBody": "换个词试试，或者清除搜索。",
+    "scrollForMore": "滚动查看更多",
+    "tasksShownOfTotal": "已显示 {{total}} 项任务中的 {{shown}} 项",
     "todayEmpty": "今天没有任务",
     "todayEmptyBody": "添加今天要做的事，它就会出现在这里。",
     "overdueEmpty": "没有逾期任务",

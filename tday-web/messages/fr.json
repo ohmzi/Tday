@@ -397,6 +397,8 @@
     "floaterListEmptyBody": "Ajoutez une flottante et elle attendra ici.",
     "noMatchingTasks": "Aucune tâche correspondante",
     "searchEmptyBody": "Essayez un autre mot ou effacez la recherche.",
+    "scrollForMore": "Faites défiler pour en voir plus",
+    "tasksShownOfTotal": "{{shown}} tâches sur {{total}} affichées",
     "todayEmpty": "Aucune tâche pour aujourd'hui",
     "todayEmptyBody": "Ajoutez quelque chose pour aujourd'hui et cela apparaîtra ici.",
     "overdueEmpty": "Aucune tâche en retard",

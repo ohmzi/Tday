@@ -397,6 +397,8 @@
     "floaterListEmptyBody": "Adicione um flutuante e ele esperará aqui.",
     "noMatchingTasks": "Nenhuma tarefa correspondente",
     "searchEmptyBody": "Tente outra palavra ou limpe a busca.",
+    "scrollForMore": "Role para ver mais",
+    "tasksShownOfTotal": "Mostrando {{shown}} de {{total}} tarefas",
     "todayEmpty": "Nenhuma tarefa para hoje",
     "todayEmptyBody": "Adicione algo para hoje e aparecerá aqui.",
     "overdueEmpty": "Nenhuma tarefa atrasada",
