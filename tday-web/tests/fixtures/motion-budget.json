@@ -22,8 +22,8 @@
     "tween": 29,
     "_spring": "dampingRatio = <n> or stiffness = <n>, written out. Compose's Spring.StiffnessMediumLow and friends are library defaults rather than decisions — the audit found Android's 400 to be exactly that — so they are not counted and moving onto one is not progress.",
     "spring": 10,
-    "_pressScale": "a scale literal in [0.90, 1.0) on a line that also says scale or press. This catches a few enter-scales alongside the press ones (EnterStartScale = 0.92f); they are the same family and the same PRs will touch them, so the over-count is honest rather than convenient.",
-    "pressScale": 31
+    "_pressScale": "a scale literal in [0.90, 1.0) on a line that also says scale or press. This catches a few enter-scales alongside the press ones (EnterStartScale = 0.92f); they are the same family and the same PRs will touch them, so the over-count is honest rather than convenient. 31 when the ratchet landed, and unmoved until Phase 9's 9b2: the two hero circle buttons — the root feed's search/close pair and the list header's back chevron — each computed a 0.93 of their own from a bare `if (pressed)` inside `graphicsLayer`, so the squash arrived in one frame and left in one under a ripple that took its own time. Both are on `Modifier.tdayPressable` at `PressScales.Bar` now, which is a retune as well as a migration: 0.94, because these are bar buttons and the FAB keeps 0.93.",
+    "pressScale": 29
   },
   "ios": {
     "_source": "ios-swiftUI/Tday, *.swift",

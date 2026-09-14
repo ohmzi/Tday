@@ -310,6 +310,30 @@ animates.
               the card has gone, which is the activity's own transparent window still standing there
               waiting for a sync.
 
+- [ ] **PR 9b · and · The hero circle buttons travel instead of blinking** — the root feed, for the
+      "Create list" and "More" circles in the header and then the close circle inside the expanded
+      search capsule, and any list-detail screen for the back chevron.
+      Do:     press and HOLD each of the four, watching the circle rather than the ripple, then let
+              go. Repeat with Settings → "Reduce motion" on (or the system's "Remove animations").
+      Watch:  the circle shrinks and sinks about 2 dp while the finger is down, and comes back when
+              it lifts — a short trip each way rather than a state change, and one that no longer
+              finishes before the ripple has started. These are bar buttons, so the squash is 0.94
+              where they used to type 0.93 for themselves; that difference is a hair and the travel
+              is the point.
+      Fails:  the squash landing in one frame and leaving in one, which is the old `if (pressed)`
+              inside `graphicsLayer` — it reads as a blink under a ripple still fading. Also a fail:
+              the circle sinking without shrinking, or shrinking about a corner rather than its own
+              centre, which is the offset and the layer applied in the wrong order. Also a fail, and
+              only the Reduce-motion pass can see it: no press showing at all, which would be the
+              destination thrown away along with the trip, or a press that still takes time to
+              arrive.
+      Known:  the compact close button inside the search capsule is transparent and unelevated by
+              design, so its press is the squash and the sink with no shadow moving behind it.
+              The search capsule itself — the wide button sitting between the title and the two
+              circles — is not one of the four. It is still on plain `Card` elevation with no press
+              scale, so it ripples and flattens and does not travel. Expected: no Phase 9 unit
+              migrates it.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
