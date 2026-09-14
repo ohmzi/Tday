@@ -145,7 +145,6 @@ import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySheetMotion
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
-import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
@@ -281,14 +280,14 @@ fun ScheduledTaskHomeScreen(
         searchImeWasVisible = false
         searchResultOpening = false
     }
-    // The SYSTEM scale and not the app's: what this is timed against is the route
-    // handover in `TdayApp`, a `fadeIn(tween(NAV_FADE_IN_DURATION_MS))` that reads
-    // nothing of the preference and so keeps running at the device's scale whatever
-    // the in-app switch says. Handed the app's scale, the switch would zero the wait
-    // and leave the transition — the motion kept, the wait removed, which is the one
-    // way round `docs/motion.md`'s fifth rule nobody looks for. Moves to
-    // `rememberTdayMotionScale` on the day that transition is gated.
-    val searchCloseMotionScale = rememberSystemMotionScale()
+    // The app's scale, because what this is timed against is the route handover in
+    // `TdayApp` and that handover now answers the in-app switch as well as the
+    // animator scale. This val used to read the device's for exactly the opposite
+    // reason, and leaving it there would have broken the same rule from the other
+    // side: the transition cut to nothing while the search surface stayed up for its
+    // full length, swallowing taps, over a task screen already drawn whole. A wait
+    // runs on the clock of the motion it covers — see [effectiveMotionScale].
+    val searchCloseMotionScale = rememberTdayMotionScale()
     val openTaskFromSearch: (String) -> Unit = openTask@{ todoId ->
         if (searchResultOpening) return@openTask
         searchResultOpening = true
@@ -298,8 +297,8 @@ fun ScheduledTaskHomeScreen(
         searchResultScope.launch {
             // Scaled, because what it is waiting out is the push onto the task:
             // tearing the search surface down underneath a transition that is
-            // still running is the jump this wait exists to hide, and with the
-            // device's animations off there is no transition left to hide behind.
+            // still running is the jump this wait exists to hide, and with that
+            // push refused there is no transition left to hide behind.
             scaledDelay(SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS, searchCloseMotionScale)
             closeSearch()
         }

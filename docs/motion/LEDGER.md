@@ -501,7 +501,7 @@ Restore it from git history rather than adjusting the number.
 
 - [ ] `and-ios-root-feed-tab-swap-uncrossfaded` — root feed body swaps in one frame while the dock pill springs · and+ios · Sev 4 · S · Gate D+TF
 - [ ] `root-feed-tab-switch-transition` — The root feed tab switch — the app's most-used interaction — is a hard cut on both native clients while the dock selector that triggered it springs across · and+ios · Impact O4 · S · Gate D+TF
-  - **Duplicate of `and-ios-root-feed-tab-swap-uncrossfaded` (§2.2).** §2.2 dissolves a three-way tangle here: this row is the root-feed **body** inside a single route (`TdayApp.kt:1103-1126`), not the NavHost route transition (`TdayApp.kt:1942-1955`, wired at `:335-338`) that PR 31 retimes to 160/110. Different surfaces — give the tab swap its own spec and do not reuse `NAV_FADE_*`. Ticks with its twin.
+  - **Duplicate of `and-ios-root-feed-tab-swap-uncrossfaded` (§2.2).** §2.2 dissolves a three-way tangle here: this row is the root-feed **body** inside a single route, not the NavHost route transition (`navigationEnterTransition` / `navigationExitTransition` in `TdayApp.kt`, wired at the NavHost) that PR 31 retimes. Different surfaces — give the tab swap its own spec. **The 160/110 this note used to name is not what PR 31 landed**, and the correction is worth keeping rather than quietly overwriting: that pair was written before the ladder and is the only place in the repo either number ever appeared, and neither is a rung. Both directions are `Durations.Enter` now, which is what `docs/motion.md`'s `Scene` bullet had already asserted in prose and what `.tday-route-fade` had already been doing since PR 55. `NAV_FADE_IN_DURATION_MS` and `NAV_FADE_OUT_DURATION_MS` are gone with it, so there is nothing left here to reuse by name. Ticks with its twin.
 
 ### PR 28 — the Android onboarding blur and overlay
 
@@ -1135,7 +1135,69 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 31 — the Android route hand-over and predictive back
 
-- [ ] `route-change-handover` — Route change: Android crossfades at 360/240ms, web at 140ms, and web's own comment says the long one reads as lag — pick the number once · and+web · Impact O3 · M · Gate V + D — **final part (2 of 2)**; PR 55 carried the rest
+- [x] `route-change-handover` — Route change: Android crossfades at 360/240ms, web at 140ms, and web's own comment says the long one reads as lag — pick the number once · and+web · Impact O3 · M · Gate V + D — **final part (2 of 2)**; PR 55 carried the rest
+  - **The half of web's argument that survived there survives here, and it is restated at the
+    Android call site rather than re-derived.** A route fade sits between a tap and the screen the
+    user asked for, and anything longer reads as lag — which is exactly right against the long end,
+    and 360 IS the long end that argument was written against. What 360 could not defend was 360:
+    it named no rung, so nothing downstream could tell a decision from a number somebody liked. A
+    thing arriving with no reason to be another length is `Enter`, and both directions take it.
+  - **One length and two curves, which is the model web was already running.** `.tday-route-fade`
+    and `::view-transition-old(root)` are both `var(--tday-duration-enter)` and differ only in
+    `--tday-ease-enter` against `--tday-ease-exit`. Android now says the same thing with one
+    `Durations.Enter` and the two Compose built-ins, which `docs/motion.md`'s easing table records
+    as the `Enter` and `Exit` tokens byte for byte and `TdayMotionTokensTest` pins — so they stay
+    written as built-ins at their call sites, which is what that table says to do with them.
+  - **Not 160/110.** The note at §2.2's PR 27 row said this PR would retime to that pair. It
+    predates the ladder, neither number is a rung, and those two digits appear nowhere else in the
+    repo; `docs/motion.md`'s `Scene` bullet had meanwhile been asserting `Enter` for route and tab
+    handovers in prose, and `globals.css` had been doing it since PR 55. Three sources and one of
+    them was wrong, so the wrong one is corrected rather than followed — and `TdayMotionTokens.kt`
+    was a fourth, its `Scene` doc calling route handovers `[Quick]`.
+  - **Five routes were restating the default and one of them was the reason a gate could not be
+    wired.** The splash and the two legacy auth entry points each wrote their own `tween(300)`; the
+    `settingsEnterTransition`/`settingsExitTransition` pair, which had been an alias for the
+    navigation pair since the sheet rise came out of it, was spelled across five more composables.
+    Every one of those overrides said what the NavHost already said, so deleting them retimes
+    nothing visible — but until they were gone, a preference answered at the NavHost was a
+    preference five routes ignored. There is now exactly one place a route fade is described.
+  - **Reduce Motion is the behaviour change in here, and it is the whole of it.** Compose's animator
+    scale already zeroes these transitions, so the system setting was never the gap; Phase 8's
+    in-app switch (`ReduceMotionPreferenceStore`, read through `rememberTdayMotionEnabled()`) is
+    something Compose knows nothing about, and the NavHost was the last surface in the app deaf to
+    it. The boolean is hoisted above the NavHost because the four lambdas are
+    `AnimatedContentTransitionScope` receivers and not composables — read it inside one and it does
+    not compile, which is the failure mode this hoist is worth naming for. `EnterTransition.None`
+    and `ExitTransition.None` draw the destination finished, which is the fifth idiom rule: the
+    whole of a route change's finished state is the screen the user asked for.
+  - **Gating the hand-over moved two waits with it, and that was not optional.** `TodoListScreen`'s
+    380 ms settle before a navigated-to search result is scrolled to, and `ScheduledTaskHomeScreen`'s
+    260 ms hold before the search surface comes down, both existed to cover this exact fade and both
+    read `rememberSystemMotionScale()` precisely because the fade used to ignore the switch. Each
+    comment said so and said which day it moved; this is that day. Left where they were, a Reduce
+    Motion user would have got the cut AND the full wait {D} a fully drawn destination sitting there
+    doing nothing, which is `docs/motion.md`'s fifth rule broken the way it is usually broken. The
+    other three waits in `TodoListScreen` stay on the device's clock and the hoist is split in two
+    rather than flipped, because what they cover {D} `animateItem` placement, `SwipeTaskRow`'s
+    highlight pulses {D} is still ungated. `SEARCH_RESULT_NAV_SETTLE_DELAY_MS`'s doc claimed the
+    navigation into the screen for both of its call sites; only one of them navigates, the floater's
+    settling on the feed closing over its own results card, and the doc says that now.
+  - Six literals retired and the ceiling lowered with them: `android.tween` 16 → 10, which is the
+    six `tween(300)`. The two `NAV_FADE_*_DURATION_MS` constants went too and are worth naming
+    precisely because they did NOT move the counter — a named constant never matched a grep for
+    literals, which is the honest limit of the ratchet and the reason the 360 was carried in
+    `docs/motion.md`'s non-tokens table instead. That table's 340–420 band is down to two entries
+    now, and its line refs were stale by a few hundred lines besides.
+  - `tests/guardrails/route-handover.test.ts` gains the Android half, in the same file as the CSS
+    half deliberately: a route change is one decision the two clients have to keep making the same
+    way, and split across two files the next hand to retime one has no reason to open the other. It
+    is a text read for the reason the CSS half is — there is no Compose runtime in vitest, so
+    nothing there can play a NavHost transition or ask what one resolved to. What it can see is
+    every way this could be undone while still animating: the rung written back out as a number,
+    one of the four wirings dropped, the two curves collapsed into one, or the gate removed. That
+    last one is asserted at the wiring rather than at the hoist, because a `rememberTdayMotionEnabled()`
+    line is not rare in `TdayApp.kt` {D} two screens further down hold one {D} and a whole-file search
+    for it would have stayed green with the graph's gate deleted outright.
 - [ ] `android-predictive-back-scrub` — edge drag scrubs a pure crossfade — communicates nothing · and · Impact O3 · S · Gate D
 
 ### PR 32 — iOS cold launch and zoom navigation
