@@ -78,6 +78,32 @@ one of them still animates.
               direction — Create going grey or the card stopping under the finger, which would mean
               the refusal is being drawn instead of just applied.
 
+- [ ] **PR 40b · and · The feed hands over from a skeleton instead of from the word "Loading"** —
+      a cold start on the root feed's flat modes (Anytime, a list feed, Priority — anything that
+      is not the sectioned Today timeline) and on Completed. Force-stop the app first, and do one
+      pass in airplane mode so the placeholder is on screen long enough to look at.
+      Do:     open the screen and watch the first paint, then watch the frame the tasks arrive on.
+              Repeat both on Completed. Then turn Settings → "Reduce motion" on (or the system's
+              "Remove animations") and do it again.
+      Watch:  three grey rows in the feed's own shape — a 48 dp circle, two bars where the title
+              and the subtitle go, a hairline under each — breathing gently between full strength
+              and faint. When the data lands the placeholder fades AND retracts together over
+              200 ms while the real rows take the space: the feed should slide up into the slot,
+              not appear and then jump. TalkBack should announce "Loading…" once when the
+              placeholder appears.
+      Fails:  the placeholder sitting at full height while it fades and the feed then jumping up
+              by three rows — that is the fade running without the shrink. Also a fail: the rows
+              landing at a different height than the bars they replaced, which means the skeleton
+              and `TodayTodoRow` have come apart on geometry. Also a fail: the placeholder
+              flickering rather than breathing (a pulse restarting instead of reversing). Also a
+              fail, and the one only the Reduce-motion pass can see: the placeholder sitting at
+              45% opacity instead of full strength, or the skeleton being cut away instead of the
+              feed simply being there. Also a fail, and the one that outlives the load: a strip of
+              dead space left under the header once the rows have settled — about one row-gap
+              wide, and still there a minute later. That is the placeholder's lazy item left
+              mounted after its exit finished, and a spaced `LazyColumn` charges for it whether or
+              not it draws anything.
+
 - [ ] **PR 41b · and · The widget create sheet does not lose the task it is animating out** — a
       Today widget and a Floater widget on the home screen.
       Do:     tap the widget's "+", type a title, tap Create. Repeat on a cold start, with the app's
