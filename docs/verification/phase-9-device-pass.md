@@ -610,6 +610,40 @@ animates.
               surviving is the wait kept with the motion removed, which is the failure the
               gate was supposed to end.
 
+- [ ] **PR 31b · android · The back gesture says how far you have pulled** — a device on Android 13
+      or later with the system back set to GESTURE navigation (Settings → System → Gestures), not the
+      three-button bar. Any screen with depth under it: Today → a list → a task, or Settings → Account.
+      Do:     drag slowly from the left edge and HOLD your thumb still partway across. Move it back
+              towards the edge without lifting, then out again. Then let go past the threshold, and
+              on a second run let go early so it snaps back. Do the whole thing again from the right
+              edge.
+      Watch:  the screen you are dragging is the only thing that moves. It slides right and shrinks
+              as you pull, tracking your thumb both ways — holding still holds the screen still, and
+              pulling back un-does the travel. At the far end it has gone about a quarter of the
+              width across and is about a tenth smaller. Letting go past the threshold carries it the
+              rest of the way; letting go early returns it. The screen arriving underneath does NOT
+              travel: it fades up in place, and the back chevron and the action cluster stay exactly
+              where they are throughout.
+      Fails:  the drag showing nothing but two screens crossfading, which is the defect and is what
+              every build before this one did. Also a fail: the arriving screen sliding too (the
+              toolbar would visibly travel, which is the thing the NavHost comment refuses); the
+              dragged screen not tracking backwards when you pull back towards the edge; or the
+              recede being so slight you cannot tell a 30 % pull from a 70 % one.
+      Depth:  the one judgement call in this row, and the reason it exists. 0.90 was chosen to match
+              the recede the SYSTEM plays when back leaves the app, so compare them back to back:
+              drag back from the home screen's own app-to-home gesture, then drag back inside the
+              app, and say whether the two read as one gesture. If the in-app one is visibly
+              shallower or deeper, the number is wrong and `PREDICTIVE_BACK_MIN_SCALE` is the one
+              place to change it.
+      Button: tap the toolbar's back chevron rather than dragging, on the same screens. The exit is
+              the same 200 ms slide-and-recede a released scrub finishes on — one back, not two.
+              A chevron that still plain-fades while the drag slides means the wiring reached the
+              gesture and not the slot.
+      Also:   with **Settings → Motion → Reduce motion** ON — the in-app switch, not the developer
+              options animator scale — drag from the edge again. There is no recede and no travel at
+              any point of the drag; the destination is simply drawn finished. A screen caught part
+              way off the side, or one that scrubs and then cuts, is a fail.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on

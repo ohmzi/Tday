@@ -14,7 +14,9 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -54,6 +56,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -126,6 +129,21 @@ import dev.chrisbanes.haze.haze
 import io.sentry.android.navigation.SentryNavigationListener
 
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
+
+// How far the screen a predictive-back drag has hold of recedes by the end of that drag.
+//
+// not a token — see docs/motion.md. The press scales are the nearest thing in the vocabulary
+// and they are a different quantity: they grade by surface class, and they grade the wrong
+// way for this — the table's own rule is that SMALLER surfaces move further, so extending it
+// past `Row`'s 0.985 to a whole screen gives a recede of nothing at all. That rule is about a
+// surface squashing under the finger that is on it. This is a screen being carried off the
+// side, and the number's job is to report how far the drag has got, not how hard it is being
+// pressed. Same distinction the table already draws for `pressedScale * revealScale`.
+//
+// A tenth, because that is the recede the platform itself plays when a back gesture takes the
+// whole app away, and an in-app back that pulls a smaller distance than the system's would
+// make the two gestures read as two different things on the same edge of the same screen.
+private const val PREDICTIVE_BACK_MIN_SCALE = 0.90f
 
 // How far out of focus the app is pushed behind the onboarding wizard. A radius, not a
 // motion spec: what the vocabulary fixes is how long it takes to get here, not how far.
@@ -348,12 +366,18 @@ fun TdayApp(
                     // on both screens, moving. Fading in place hands each button over
                     // to its counterpart instead of travelling it there and back.
                     //
-                    // Directional transitions go with it: there is no direction left to
-                    // express once nothing moves, so push and pop share one pair.
+                    // Directional transitions go with it wherever the change is COMMITTED:
+                    // there is no direction left to express once nothing moves, so three of
+                    // the four slots below share one pair. The fourth is the one the system
+                    // SEEKS against a finger rather than plays, and a seeked crossfade is a
+                    // progress report nobody can read — see `navigationPopExitTransition`.
+                    // The screen being dragged off is the only thing that moves, and the
+                    // arriving screen still fades in place, so the hand-over argument above
+                    // survives in the half it was written about.
                     enterTransition = { navigationEnterTransition(motionEnabled) },
                     exitTransition = { navigationExitTransition(motionEnabled) },
                     popEnterTransition = { navigationEnterTransition(motionEnabled) },
-                    popExitTransition = { navigationExitTransition(motionEnabled) },
+                    popExitTransition = { navigationPopExitTransition(motionEnabled) },
                 ) {
                     splashAndAuthRoutes(
                         startupTagline = startupTagline,
@@ -2148,7 +2172,9 @@ private fun OnAppForegroundResume(
 }
 
 /**
- * The route hand-over: one length, two curves, and the same pair on push and pop.
+ * The route hand-over: one length, two curves, and the same pair everywhere the change is
+ * already committed. The fourth wiring left this pair for a gesture; see
+ * [navigationPopExitTransition].
  *
  * The 360 this replaced carried half an argument and the half survives. A route fade sits
  * between a tap and the screen the user asked for, and anything longer than that reads as
@@ -2163,7 +2189,7 @@ private fun OnAppForegroundResume(
  * curves byte for byte — `docs/motion.md`'s easing table says so and `TdayMotionTokensTest`
  * pins it — so they are left where they are written rather than renamed for the look of it.
  *
- * There is nothing below these two: the splash, the auth screens and Settings each used to
+ * There is nothing below these three: the splash, the auth screens and Settings each used to
  * restate a transition here, and every one of them was restating this one. A route that
  * names its own hand-over is a route that drifts off the rung, and — the reason it matters
  * more than tidiness — a route that escapes a gate wired at the NavHost.
@@ -2196,6 +2222,53 @@ private fun navigationExitTransition(motionEnabled: Boolean): ExitTransition =
                 easing = FastOutLinearInEasing,
             ),
         )
+    }
+
+/**
+ * The one direction left, and the only transition of the four a finger can hold open.
+ *
+ * [navigationEnterTransition]'s argument is about a route change that has already been
+ * COMMITTED: both screens are going to swap whatever happens, so there is nothing for a
+ * direction to tell anybody and a fade in place is the honest description. A predictive-back
+ * scrub is the case that argument does not reach. `enableOnBackInvokedCallback` is on in the
+ * manifest and `navigation-compose` drives this slot from a `SeekableTransitionState`, so
+ * mid-drag the user is not watching a transition play — they are watching this spec's own
+ * progress, scrubbed to wherever their thumb is. A crossfade is the one spec that cannot be
+ * scrubbed: two screens at half opacity look identical at a third of the pull and at two
+ * thirds of it, so the gesture can say neither how far it has come nor whether letting go
+ * now commits it or throws it back.
+ *
+ * Hence travel and a recede, on the screen the finger has hold of and on nothing else. The
+ * arriving screen keeps [navigationEnterTransition] and still fades where it stands, which is
+ * exactly what leaves the NavHost's toolbar argument intact: the back chevron and the action
+ * cluster are still handed to their counterparts rather than carried sideways and dropped
+ * back. Push is not touched at all — the forward direction has no gesture to answer.
+ *
+ * Same rung and same curve as the committed exit, deliberately: this slot also plays whole
+ * when back arrives as a button press rather than as a drag, and a scrub that released into a
+ * different animation than the button would have played is two backs instead of one. The
+ * quarter width is a travel and not a distance anybody measures, so it is written here rather
+ * than named; [PREDICTIVE_BACK_MIN_SCALE] is the number that needed an argument and carries
+ * one.
+ */
+private fun navigationPopExitTransition(motionEnabled: Boolean): ExitTransition =
+    if (!motionEnabled) {
+        ExitTransition.None
+    } else {
+        // Two tweens for one spec, because Compose types an animation by what it animates and
+        // the slide moves an `IntOffset` while the other two move a `Float`. The rung and the
+        // curve are the part that has to stay identical; the objects cannot be.
+        val fade = tween<Float>(
+            durationMillis = TdayMotionTokens.Durations.Enter,
+            easing = FastOutLinearInEasing,
+        )
+        val travel = tween<IntOffset>(
+            durationMillis = TdayMotionTokens.Durations.Enter,
+            easing = FastOutLinearInEasing,
+        )
+        fadeOut(animationSpec = fade) +
+            slideOutHorizontally(animationSpec = travel) { it / 4 } +
+            scaleOut(animationSpec = fade, targetScale = PREDICTIVE_BACK_MIN_SCALE)
     }
 
 @Composable
