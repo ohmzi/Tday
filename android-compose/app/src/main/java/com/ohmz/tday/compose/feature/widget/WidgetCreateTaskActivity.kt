@@ -15,7 +15,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -32,7 +31,6 @@ import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -145,7 +143,6 @@ internal fun WidgetCreateTaskSurface(
     val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
     val todoViewModel: TodoListViewModel = hiltViewModel()
     val todoUiState by todoViewModel.uiState.collectAsStateWithLifecycle()
-    val submitScope = rememberCoroutineScope()
     var submitting by remember { mutableStateOf(false) }
 
     val mode = createTarget.mode
@@ -181,36 +178,25 @@ internal fun WidgetCreateTaskSurface(
                 } else {
                     null
                 },
-                // The sheet now plays a 320 ms exit before it hands the dismissal back, and
-                // it only starts one dismissal. So a dismissal must be REFUSED while a
-                // submit is in flight, not accepted and then dropped here: dropping it
-                // would leave the card gone, the activity still up, and the user looking at
-                // a bare full-screen scrim that answers nothing. Refused, the sheet stays
-                // drawn until the submit's own onExit takes the activity down.
-                dismissEnabled = !submitting,
+                // One clock ends this activity, and it is the card's. Confirming plays the
+                // sheet's exit now, like every other way out of it, and this activity is
+                // the window that exit is drawn in — the submit used to `finish()` in a
+                // `finally`, which cuts the slide off part-way, and waiting for the submit
+                // instead left the window standing invisible and touch-swallowing over the
+                // user's own home screen for as long as a forced sync takes. The write does
+                // not need this window: `submitDetached` runs it on the submitter's own
+                // process-lifetime scope, which is what the sheet's exit is now free to
+                // outrun.
                 onDismiss = onExit,
                 onCreateTask = { payload ->
+                    // The sheet refuses a repeat confirm of its own accord now — `start()`
+                    // latches and the confirm is dropped if it is not the tap that claimed
+                    // the exit — so this flag is belt and braces against a second payload.
+                    // It still has a job of its own: the back handler below is off while a
+                    // submit is in flight.
                     if (!submitting) {
                         submitting = true
-                        submitScope.launch {
-                            // `submitting` is never cleared and every dismiss affordance is
-                            // refused while it is true, so a submitter that throws would
-                            // strand the user on a sheet that answers nothing. The exit runs
-                            // either way; the failure still propagates.
-                            try {
-                                when (createTarget) {
-                                    WidgetCreateTarget.TODAY -> {
-                                        widgetCreateTaskSubmitter.submitTodayTask(payload, appWidgetId)
-                                    }
-
-                                    WidgetCreateTarget.FLOATER -> {
-                                        widgetCreateTaskSubmitter.submitFloaterTask(payload, appWidgetId)
-                                    }
-                                }
-                            } finally {
-                                onExit()
-                            }
-                        }
+                        widgetCreateTaskSubmitter.submitDetached(createTarget, payload, appWidgetId)
                     }
                 },
             )
