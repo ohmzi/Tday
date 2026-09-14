@@ -361,6 +361,41 @@ animates.
               `RootCreateTaskButton` and will press under a finger even though it opens nothing;
               that is cosmetic and not a fail.
 
+- [ ] **PR 9b · and · The leaf screens' bar buttons travel, and a disabled sheet action still does
+      not** — Guide, Calendar, Completed, Latest release and Settings for the round buttons in the
+      top bar; then any sheet with a confirm in its header, and the "Manage members" sheet for the
+      row-shaped action.
+      Do:     press and HOLD each round button in the top bar of Guide, Calendar, Completed, Latest
+              release and Settings in turn, watching the circle rather than the ripple, and let go.
+              On Calendar also hold the purple "Today" pill twice: once with the title down, where
+              it shows the word, and once after scrolling the title up, where it has shrunk to a
+              circle. Then open a sheet and hold its confirm action with the sheet in a state that
+              allows confirming, and hold it again with that action greyed out. Finally open
+              "Manage members" and hold one of the wide action rows. Repeat the round buttons with
+              Settings → "Reduce motion" on.
+      Watch:  the circle shrinks and sinks about 2 dp while the finger is down and comes back when
+              it lifts — a short trip each way rather than a state change. The "Today" pill makes
+              the same trip without changing width, in either of its two shapes. The sheet's
+              confirm travels 1 dp rather than 2 — it is a bordered square inside the sheet's own
+              chrome, and iOS sinks its toolbar buttons a point for the same reason — and its
+              shadow softens as it goes. The members row squashes and does NOT sink.
+      Fails:  a button that does not move at all, or one that shrinks without sinking, or one
+              whose drop gets smaller as it squashes — that last is the sink drawn inside the
+              scale layer rather than outside it. Also a fail: the greyed-out confirm moving at
+              all, which is the `enabled` gate gone; it must stay exactly where it is however hard
+              it is held, while the enabled action beside it travels. Also a fail: the "Today"
+              pill's label jumping or its width snapping as the finger lands, which would be the
+              press applied outside `animateContentSize` rather than inside it. Also a fail: the
+              members row dropping 2 dp, which would be the default sink arriving at a site that
+              never had one. And under Reduce motion, a circle that shows no press at all, or one
+              that still takes time to arrive.
+      Known:  the buttons press a hair less deeply than they used to — 0.94 where each of these
+              screens typed 0.93 for itself — so they now match the hero circles migrated ahead of
+              them instead of sitting a hundredth deeper for no reason. That difference is not
+              something to look for; the travel is. The sheet action's elevation still steps
+              2/8/5 dp across pressed, enabled and disabled, which is its own animation and not
+              this one.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
