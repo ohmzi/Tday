@@ -1,10 +1,8 @@
 package com.ohmz.tday.compose.feature.todos
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,7 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -54,6 +51,8 @@ import com.ohmz.tday.compose.core.data.list.ShareListKind
 import com.ohmz.tday.compose.core.model.ListMemberDto
 import com.ohmz.tday.compose.core.model.UserSearchResultDto
 import com.ohmz.tday.compose.core.ui.TdayHaptics
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
@@ -586,19 +585,19 @@ private fun MembersSheetActionButton(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
-        label = "membersSheetActionButtonScale",
-    )
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(
+                interactionSource,
+                scale = TdayMotionTokens.PressScales.Card,
+                // No sink. This row is flat — `defaultElevation = 0.dp` below — so it
+                // has no shadow to drop out from under, and it is the full width of the
+                // sheet: the same 2 dp that reads as a circle going down reads as the
+                // sheet's content shifting when a bar that wide takes it.
+                offsetY = 0.dp,
+            ),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()

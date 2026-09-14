@@ -133,6 +133,7 @@ import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
@@ -1671,23 +1672,10 @@ private fun CalendarBarButton(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "calendarBarButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "calendarBarButtonOffsetY",
-    )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -1731,7 +1719,6 @@ private fun CalendarTodayButton(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
     val showLabel = collapseProgress().coerceIn(0f, 1f) < 0.5f
 
@@ -1740,14 +1727,6 @@ private fun CalendarTodayButton(
         1.dp,
         CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.62f else 0.48f),
     )
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "calendarTodayButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "calendarTodayButtonOffsetY",
-    )
     val horizontalPadding by animateDpAsState(
         targetValue = if (showLabel) 18.dp else 0.dp,
         label = "calendarTodayButtonPadding",
@@ -1755,11 +1734,7 @@ private fun CalendarTodayButton(
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar)
             .animateContentSize(),
         onClick = {
             TdayHaptics.buttonPress(view)
