@@ -648,3 +648,223 @@ animates.
               out where the full-motion build slides it. The grabber still fades under a picker,
               on both settings: that is a dim arriving over it rather than anything travelling, and
               it has to leave at the same rate the dim comes up.
+
+- [ ] **PR 8g · ios · Eleven springs changed their spelling and not their shape** — a build of the
+      app with a signed-out start, so the onboarding wizard is reachable. No throttling and no
+      settings to change; this row is the one in the file whose whole claim is that it looks
+      identical to the last build.
+      Do:     step forward and back through the wizard (mode → server → login, then into create
+              account and into security questions), and take both flow exits out of it — "Back" out
+              of the security-questions step and "Change setup". Then open and close the search bar
+              on Settings and on the Guide, twice each. Then from the sign-in card open "Forgot
+              password" and move between its steps.
+      Watch:  nothing new. Every one of those is the same short, barely-bouncing spring it has
+              always been — the panel swaps under about a third of a second with a single soft
+              settle at the end, the search bar snaps open at that same weight, and the
+              forgot-password card changes step the same way the wizard's does. The eleven sites now
+              read the numbers out of the token rather than writing them down, so a difference of
+              any kind is the bug.
+      Fails:  anything that reads slower, looser or bouncier than it did — that would mean a call
+              site picked up a spring that is not Snappy. A step that hard-cuts instead of springing
+              is the other half of the same failure: a `withAnimation` that stopped opening a
+              transaction at all. Both of these are per-site, so name the screen.
+      Why:    iOS does not compile on the machine this was written on, so the only gates it passed
+              are textual — the literal counter fell by exactly the twenty-two it should have — and
+              xctest in CI. Neither of those can see a spring play.
+
+- [ ] **PR 8h · ios · The four feed screens' search bars now name the spring they always used** — a
+      signed-in build with enough history that Completed and the calendar have rows to filter. Same
+      shape of row as 8g's above: its whole claim is that nothing looks different.
+      Do:     open and close the search bar twice on each of the four feeds — Todos (both of them:
+              the list's own search and the floater task home's), Completed, Calendar, and the
+              scheduled-task home. Type into one and close it from the X as well as from the back
+              gesture, so the close path runs with a populated field and with an empty one.
+      Watch:  the bar expands and collapses at exactly the weight it did before — a short spring,
+              one soft settle, no overshoot worth naming — and the feed under it reflows at the same
+              moment it always did. Query text still clears on close, which is the behaviour the
+              comment next to each of these functions promises and is untouched here.
+      Fails:  any of the eight reading slower, looser or bouncier than its siblings, which would
+              mean a call site picked up one of the 0.24/0.9 or 0.26/0.9 springs these same files
+              still carry. A bar that hard-cuts open instead of springing is the other failure: a
+              `withAnimation` that stopped opening a transaction. Both are per-site, so name the
+              feed and say open or close.
+      Why:    no Swift toolchain here, so the gates this passed are textual — `ios.spring` fell by
+              exactly the sixteen literals that came off, and `TdayMotion.snappy` reads the same
+              0.28/0.86 out of `TdayMotionGenerated` — plus xctest in CI. Neither can watch a search
+              bar open.
+
+- [ ] **PR 8m · ios · Two rungs stopped being spelled as numbers, and nothing retimed** — any build,
+      signed in or not; the guide is reachable without an account and the wizard is what a fresh
+      install opens on. The narrowest row in this batch: five `duration:` numbers became
+      `TdayMotion.Durations.quick` and `.enter`, which hold the same 0.15 and 0.2, so every frame
+      should be the frame it was.
+      Do:     open Help & Guide and expand and collapse four or five topic cards, including one
+              long enough to push the cards below it well down the screen. Then delete and
+              reinstall, or sign out, and walk the onboarding wizard through a connect, a sign-in
+              with a wrong password, and a security-question step, so each of the four loading
+              flags actually flips.
+      Watch:  a topic card opens and closes in about a sixth of a second, eased at both ends, with
+              the cards below it sliding rather than jumping. In the wizard, the spinner and the
+              content it replaces cross in about a fifth of a second on each of the four
+              transitions, at the same weight as the step change beside them.
+      Fails:  a loading swap that reads noticeably faster or slower — the only way that happens is
+              a site picking up the wrong rung. Motion that leaves a longer tail than it did is the
+              more likely shape of the mistake: it would mean a site moved onto
+              `TdayMotion.standard(duration:)` instead of keeping SwiftUI's `.easeInOut`, which
+              this unit deliberately did not do.
+      Note:   the Guide half of this row has since been overtaken. PR 42c retimed the topic card to
+              320 ms on the Standard curve on purpose, so a card that no longer opens in a sixth of
+              a second is 42c working, not this unit failing — check the card against 42c's row
+              below and this row against the wizard only.
+      Why:    no Swift toolchain here, so this unit's gates are textual — `ios.easeDuration` fell by
+              exactly the five literals that came off, and both constants read out of
+              `TdayMotionGenerated` at the values the call sites had typed — plus xctest in CI.
+              Neither can watch a card expand.
+
+- [ ] **PR 42c · ios · The Guide's topic card stops opening at the speed of a button press** — any
+      build; the guide is reachable without an account. Best on a topic long enough that opening it
+      pushes the cards under it well down the screen — "What's new" entries are usually the longest.
+      Do:     open Help & Guide, expand a long topic, then expand a second one so the first collapses
+              in the same transaction. Do it once more watching only the chevron.
+      Watch:  the card grows over about a third of a second, not the sixth it used to take, and the
+              cards below it travel with it rather than being shoved. The chevron turns on that same
+              clock — one transaction drives both, so they start and stop together. The curve has a
+              shorter tail than the one it replaces, so the longer motion should not also read as a
+              slower one: it should settle rather than coast.
+      Fails:  a card that still snaps open — that is the old 150 ms, and it means the transaction did
+              not pick up the new spec. A chevron that turns on a different clock from the box, which
+              would mean the rotation left the transaction. And a motion that reads sluggish at the
+              end rather than settling: that is `.easeInOut`'s longer tail, so the curve did not move
+              with the rung.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, expand and collapse the
+              same topics. The body is simply there, fully drawn, on the frame of the tap, and the
+              chevron is already turned — no growth, and no wait where the growth would have been.
+              Collapsing is the same in reverse: the card is at its closed height immediately.
+      Why:    there is no Swift toolchain on the machine this was written on, so nothing here was
+              built. The guardrails prove the transaction still exists and that the budget did not
+              move; only a device can say whether 320 ms on Standard is the right length for this
+              card, which is the whole of the `disclosure-expand-collapse` claim on iOS.
+
+- [ ] **PR 42f · ios · The counts roll their digits instead of swapping them** — any build with a
+      handful of scheduled tasks and at least two lists that have tasks on them, plus one Anytime
+      list on the Todos screen. Checked twice, the second time with Reduce Motion on.
+      Do:     on the root feed task tab, create a task first. Creating rewrites the cache and the
+              dashboard summary at once, so the big date-card count rolls up on the spot, along
+              with the tile and list-row counts for whatever the new task lands under — put one
+              under a category tile (Today, Priority, Overdue) and one on a named list, so a 26 pt
+              tile count and a 22 pt list-row count each move too. Then complete a task, and keep
+              the screen up while you do: completing stages the row out of the list immediately
+              but does not rewrite the summary those three counts read, so the number does not
+              move on the tick. It rolls down about eight and a half seconds later, when the Undo
+              snackbar's window closes and the completion commits. Then the Todos screen and a
+              floater list card, which is the one exception — that count is tallied off the rows
+              held in memory, so it drops on the frame the row leaves.
+      Watch:  each count's digits roll over about a quarter of a second — the old glyph travelling
+              out as the new one travels in, in the same slot — rather than one number replacing
+              another between two frames. The 34 pt one on the date card is the one to judge; the
+              others are the same motion at a size where it is easy to miss. Nothing beside a
+              count moves while it rolls: the date label, the tile title and the list name hold
+              still, and neither card nor row changes height.
+      Fails:  a count that hard-swaps at the moment it changes — that is the modifier not reaching
+              the label. Silence after a tick on the three summary-backed counts is not that: the
+              new number is not due yet, and the swap to watch for there is the one that lands
+              when the Undo window closes. A whole
+              number cross-dissolving as one blurry block instead of per-digit, which would mean
+              `.numericText` is not what is playing. A count that rolls noticeably longer than the
+              row's own check-off fade beside it, which would mean it picked up `Emphasis` rather
+              than `Change`. And a two-digit count where only one digit moves and the layout
+              jitters sideways as the width changes.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, create and complete
+              again on all four surfaces, on the same clock as above. The new number is simply
+              there, whole, on the frame the count changed — no roll, and no pause where the roll
+              would have been.
+      Why:    there is no Swift toolchain on the machine this was written on, so none of it was
+              built. `motion-reachability-ios` pins the pair textually — each of the four labels
+              carries `.contentTransition(.numericText(`, an `.animation(_:value:)` keyed on
+              `count`, and a spec that opens on `tdayAnimation` — and the budget did not move. No
+              static rule can see the roll itself: whether SwiftUI plays it per-digit, whether 260
+              is the right length for it and whether it reads at 34 pt are the whole of the claim,
+              and only a screen answers them.
+
+- [ ] **PR 32a · ios · The splash hands over to the first screen instead of being cut out** — a
+      cold launch, which means force-quitting the app between every run: this is the one motion
+      here that only plays on a launch that had no process to return to. Checked twice, the second
+      time with Reduce Motion on, and worth doing once on a device slow enough (or a network poor
+      enough) that the splash is up for more than a blink.
+      Do:     swipe the app out of the app switcher, wait a beat, and launch it from the home
+              screen. Watch the moment the splash stops being on screen — not the launch itself.
+              Repeat it signed in with a workspace, and again in local mode, which reaches the
+              same boundary by a different bootstrap. Then launch once more and hold a finger down
+              on the splash while it is up: that pins it (`isLaunchSplashHeld`), so the bootstrap
+              can finish underneath and the hand-over plays when the finger lifts instead.
+      Watch:  the splash fades away while the first screen fades up in its place, over about a
+              fifth of a second, and the two halves overlap — at no point is the screen empty or
+              showing both at full strength. The first screen is complete when it appears: the
+              feed, the dock and the create button are all where they belong rather than arriving
+              after it. The held-finger launch does the same thing on release, once, not twice.
+      Fails:  the splash disappearing between two frames with the feed simply there — that is the
+              transaction not reaching the arms, and it is exactly what this row exists to catch.
+              A fade that is visibly longer than a route change inside the app, which would mean
+              the rung drifted. A splash that dims out and leaves the screen blank before the app
+              arrives, which would mean the two halves are running one after the other rather than
+              across each other. And the held-finger case playing the fade twice, or playing it on
+              the press rather than on the release, which would mean the boundary is keyed on the
+              two properties separately rather than on `showsLaunchSplash`.
+      Also:   watch the TAGLINE across the whole splash, on the same launches. It is drawn by two
+              different view instances — `TdayApp`'s while `AppContainer` builds, `AppRootView`'s
+              until the bootstrap finishes — and `launchTagline` is a process-wide global so both
+              draw the same one. It must not change at any point while the splash is up; a line
+              that swaps part-way through is that global having gone back to being per-view state,
+              and it puts a hard cut on the one boundary above this that has nothing to fade it.
+              A different line on the NEXT launch is correct and expected.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, cold launch again. The
+              first screen is simply there, whole and finished, on the frame the bootstrap
+              completes — no fade, and no pause where the fade would have been. A launch that
+              takes measurably longer with the setting on is the fifth idiom rule broken from the
+              side nobody watches.
+      Why:    there is no Swift toolchain on the machine this was written on, so none of it was
+              built. `launch-handover.test.ts` pins the shape textually — a `.transition` on each
+              arm naming its curve, the `Group`'s `.animation(_:value:)` keyed on
+              `showsLaunchSplash`, both resolving through `tdayAnimation`, and no numeric duration
+              in the block — and the budget did not move. What no static rule can see is whether
+              SwiftUI actually plays a `Group`'s two arms across each other on a cold launch, when
+              the first frame of the app is also the first frame of a bootstrap that has just
+              finished. That, and whether 200 ms is the right length for the one motion every user
+              sees, are the whole of the claim.
+
+- [ ] **PR 32b · ios · The six home tiles zoom into the screens they open** — an iOS **18** device
+      or simulator, on the scheduled home. Then the same build on an iOS **17** one, which is the
+      half nothing here can check: the deployment target is 17.0 and both APIs are 18.0, so the
+      whole feature is behind an `#available` branch that no machine in this repo can execute.
+      Do:     tap each of the six category tiles in turn — Scheduled, Priority, Overdue, All,
+              Completed, Calendar — and watch the push, then swipe back from the left edge and
+              watch the return. Then open **All** a second way: type into the home screen's search
+              field and tap a result, which pushes the same All screen with a highlight id.
+      Watch:  the pressed tile grows into the screen it opens, from its own rectangle and its own
+              corner radius, and the back swipe shrinks it home to the same tile. The other five
+              tiles stay where they are. The search result does NOT zoom — it pushes with the
+              stock slide, because nothing on screen was pressed to reach it.
+      Fails:  a stock slide on any of the six, which means the source and the destination did not
+              agree on an id and SwiftUI fell back without saying so — the one failure mode of
+              this unit that reports nothing anywhere. A screen growing out of the WRONG tile,
+              which is `zoomRoute` and `action` disagreeing at a construction. The interactive
+              back swipe losing the zoom and dropping to a slide only on the way back. And the
+              search-result arrival zooming out of the All tile, which is the animation claiming
+              the user pressed something they did not.
+      Also:   on an **iOS 17** device, run the same six taps. Every one of them is the stock push,
+              the screens are correct, and nothing is missing or misdrawn — the availability
+              branch is the one thing in this unit that compiles nowhere if it is wrong and is
+              checked by nothing on the machine this was written on.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, tap three of the six.
+              Each is the stock push: the platform's own substitute for a large-amplitude travel,
+              which still puts the finished screen in front of the user and adds no wait
+              (`docs/motion.md`'s fifth idiom rule). A tap that is slower with the setting on, or
+              one that still zooms, is the gate not reaching one of the two halves.
+      Why:    there is no Swift toolchain here, so none of this was built. `ZoomNavigationTests`
+              pins the id table in CI — six routes, six distinct ids, and none for a highlighted
+              All arrival — and `launch-handover.test.ts` pins the wiring textually: both APIs
+              under `#available(iOS 18.0, *)`, each tile publishing the id of the route its own
+              closure pushes, one namespace, one destination site. What none of it can see is
+              whether SwiftUI actually finds the source rectangle for a tile that lives three
+              levels inside a `ScrollView` in a private struct two files from the destination —
+              which is the entire feature.
