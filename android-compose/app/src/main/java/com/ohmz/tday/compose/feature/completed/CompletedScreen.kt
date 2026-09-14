@@ -297,12 +297,14 @@ fun CompletedScreen(
                         item(key = "completed-header-${section.key}") {
                             CompletedTimelineSectionHeader(
                                 modifier = Modifier
+                                    // Placement and nothing else: a month header is
+                                    // never added or removed by a check-off, only
+                                    // displaced by one. That is [TdayFeedItemMotion]'s
+                                    // rule 1, which this site was already obeying by
+                                    // hand at the same 320.
                                     .animateItem(
                                         fadeInSpec = null,
-                                        placementSpec = tween(
-                                            durationMillis = 320,
-                                            easing = FastOutSlowInEasing,
-                                        ),
+                                        placementSpec = TdayFeedItemMotion.Placement,
                                         fadeOutSpec = null,
                                     )
                                     .padding(
@@ -337,18 +339,9 @@ fun CompletedScreen(
                                     CompletedSwipeRow(
                                         modifier = Modifier
                                             .animateItem(
-                                                fadeInSpec = tween(
-                                                    durationMillis = 190,
-                                                    easing = FastOutSlowInEasing,
-                                                ),
-                                                placementSpec = tween(
-                                                    durationMillis = 320,
-                                                    easing = FastOutSlowInEasing,
-                                                ),
-                                                fadeOutSpec = tween(
-                                                    durationMillis = 150,
-                                                    easing = FastOutSlowInEasing,
-                                                ),
+                                                fadeInSpec = TdayFeedItemMotion.FadeIn,
+                                                placementSpec = TdayFeedItemMotion.Placement,
+                                                fadeOutSpec = TdayFeedItemMotion.FadeOut,
                                             )
                                             .padding(
                                                 bottom = completedTaskBottomSpacing(
@@ -434,9 +427,9 @@ fun CompletedScreen(
                     // row here and `animateItem` cannot animate either on an item
                     // whose identity is its index. All three specs, not placement
                     // alone: the card is added and removed rather than displaced,
-                    // and [TdayFeedItemMotion] is the same clock the rows above
-                    // spell out by hand — a card that appears in one frame while
-                    // its neighbours are mid-travel is the defect.
+                    // and [TdayFeedItemMotion] is the clock the rows above it
+                    // name too — a card that appears in one frame while its
+                    // neighbours are mid-travel is the defect.
                     uiState.errorMessage?.let { message ->
                         item(key = "error-retry", contentType = "error_retry") {
                             val errorCardMotionEnabled = rememberTdayMotionEnabled()

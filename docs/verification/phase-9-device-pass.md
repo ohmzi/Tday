@@ -499,12 +499,54 @@ animates.
               and then sliding to the right one, which would mean the key is colliding with
               something else in the list. Nothing below the card should move — the only thing
               under it is an invisible spacer, and it is not animated.
-      Note:   the root feed's task tab runs its own clock — ~180/~140 ms and a spring placement
-              rather than the 320 ms tween — so it is allowed to read slightly softer than the
-              other three. What must be true on all four is that the card never jumps.
+      Note:   the root feed's task tab fades on the same ~190/~150 as the other three since 8k,
+              but still takes its PLACEMENT from a spring rather than the 320 ms tween, so its
+              glide is allowed to read slightly softer. What must be true on all four is that the
+              card never jumps.
       Also:   with Reduce motion on, repeat all four. The card is simply there, at the bottom of
               the feed, on the frame the error arrives, and gone on the frame the retry succeeds —
               no fade, and no wait where the fade would have been.
+
+- [ ] **PR 8k · and · The calendar's day list moves at the same speed as every other feed** —
+      Calendar, on a day that already has three or four tasks on it, so a row leaving has
+      neighbours to be seen against. The change is ten milliseconds on each leg, which is under
+      what the eye can time on its own — so this row is comparative, not absolute.
+      Do:     tick a task off the day list and watch it go; then add one to the same day (or
+              re-open it from Completed) and watch it arrive. Then do exactly the same thing on
+              Completed, on the same device, within a few seconds — that feed has been on these
+              numbers all along and is the reference.
+      Watch:  the two FADES read as the same feed — a row arrives a touch more slowly than it
+              leaves on both, and neither one feels brisker than the other.
+      Fails:  the calendar reading noticeably crisper than Completed, which would mean the old
+              180/140 is still in the tree somewhere. Also a fail, and the one worth looking for
+              because it is what a swapped pair would look like: a row LINGERING on its way out —
+              the departure must stay the shorter of the two.
+      Note:   the two feeds differ on PLACEMENT by design, so compare the fade legs and nothing
+              else. Completed glides the rows below a departure into the freed gap over 320 ms;
+              the calendar passes `placementSpec = null`, so its rows take their new slots in one
+              frame and only its error card glides. Both are the tree as it stands — neither is a
+              fail on this row.
+      Also:   these two fades are `Modifier.animateItem`'s, which Compose times for itself, so the
+              app's Settings → "Reduce motion" cannot reach them and leaving it on proves nothing
+              here. Use the system's "Remove animations" (or Developer options' animation scales
+              at 0): a ticked row is then simply gone on the next frame and an added one simply
+              there — no fade, and no pause where the fade was. With the system at 1x and only the
+              app switch on the fades still play; that gap is the `reduced-motion-coverage` box's,
+              not this row's.
+
+- [ ] **PR 8k · and · The root feed's tiles settle with the row that displaced them** — the root
+      feed's task tab, on the Today card with at least two tasks under it and the category grid
+      and a list row or two visible below.
+      Do:     tick a task off the Today card and watch the grid and the list rows underneath,
+              not the row you ticked. Then undo it, or add one back, and watch the same blocks.
+      Watch:  the row fades out and the blocks below follow it up on a spring — that spring is
+              this feed's own and has not changed. What changed is the row's own fade, which is
+              now the 150 ms every other feed leaves on; the departure should still finish before
+              the blocks below it have stopped moving.
+      Fails:  the row still on screen after the grid has settled — that would be the fade
+              outlasting the placement, which is the ordering `TdayFeedItemMotion` is built to
+              rule out. Also a fail: the blocks jumping a row height in one frame, which is the
+              keys coming off rather than anything to do with these timings.
 
 ## iOS
 

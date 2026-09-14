@@ -140,6 +140,7 @@ import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySheetMotion
@@ -530,9 +531,9 @@ fun ScheduledTaskHomeScreen(
                         ) { _, todo ->
                             ScheduledTaskHomeTodayTaskRow(
                                 modifier = Modifier.animateItem(
-                                    fadeInSpec = ScheduledTaskHomeItemFadeIn,
+                                    fadeInSpec = TdayFeedItemMotion.FadeIn,
                                     placementSpec = ScheduledTaskHomeItemPlacement,
-                                    fadeOutSpec = ScheduledTaskHomeItemFadeOut,
+                                    fadeOutSpec = TdayFeedItemMotion.FadeOut,
                                 ),
                                 todo = todo,
                                 lists = uiState.summary.lists,
@@ -623,9 +624,9 @@ fun ScheduledTaskHomeScreen(
                     // is NOT a case for [scheduledTaskHomeDisplacedItemMotion]:
                     // the grid and the list rows are only ever moved by a
                     // completion, this card is added and removed by a load, so it
-                    // wants the fades that block argues itself out of — on this
-                    // screen's own clock, so it lands with its neighbours rather
-                    // than against them.
+                    // wants the fades that block argues itself out of, and it
+                    // takes its placement from the same spring, so it lands with
+                    // its neighbours rather than against them.
                     //
                     // That block's other half does reach here, though: this item
                     // is inside the `!showSearchResultsOverlay` branch, so typing
@@ -642,9 +643,9 @@ fun ScheduledTaskHomeScreen(
                                 onRetry = onRefresh,
                                 modifier = if (errorCardMotionEnabled) {
                                     Modifier.animateItem(
-                                        fadeInSpec = ScheduledTaskHomeItemFadeIn,
+                                        fadeInSpec = TdayFeedItemMotion.FadeIn,
                                         placementSpec = ScheduledTaskHomeItemPlacement,
-                                        fadeOutSpec = ScheduledTaskHomeItemFadeOut,
+                                        fadeOutSpec = TdayFeedItemMotion.FadeOut,
                                     )
                                 } else {
                                     Modifier
@@ -2127,23 +2128,26 @@ private fun ListRow(
 }
 
 /**
- * This feed's item motion, in one place so a row and everything its departure
- * moves travel together.
+ * The one thing about this feed's item motion that is this feed's own: how a
+ * displaced block travels.
  *
  * The Today rows already left on this spring; the tiles and list rows under them
  * had no keys, so every completion re-keyed them by index and they jumped a row
  * height in a single frame while the row above was still gliding away. Same
  * defect as the floater home's empty-state snap, an order of magnitude smaller —
  * this screen never draws an empty scene, so there is no gap to open.
+ *
+ * It stays a spring rather than joining [TdayFeedItemMotion.Placement] because a
+ * spring on Compose's own `StiffnessMediumLow` is a library default rather than
+ * a number anybody here chose, and retiming it is a decision about how this feed
+ * settles, not the drift this file's fades were fixed for. The fades ARE that
+ * drift: they were 180 in and 140 out, ten milliseconds under every other task
+ * feed and named by nothing, and they are [TdayFeedItemMotion]'s now.
  */
-private val ScheduledTaskHomeItemFadeIn =
-    tween<Float>(durationMillis = 180, easing = FastOutSlowInEasing)
 private val ScheduledTaskHomeItemPlacement = spring<IntOffset>(
     dampingRatio = Spring.DampingRatioNoBouncy,
     stiffness = Spring.StiffnessMediumLow,
 )
-private val ScheduledTaskHomeItemFadeOut =
-    tween<Float>(durationMillis = 140, easing = FastOutSlowInEasing)
 
 /**
  * The same spring, for a block a completion *moves* but never adds or removes.
