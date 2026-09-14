@@ -1130,6 +1130,8 @@ Restore it from git history rather than adjusting the number.
 ### PR 9a/9b — `Modifier.tdayPressable` and the 17 hand-rolled triplets
 
 - [ ] `press-affordance-unification` — One press affordance: Android hand-rolls the scale/offset/elevation triplet 17 times at 7 different scales, and on web any `transition-*` utility silently deletes the global press squash · and+web · Impact O3 · M · Gate TF + D — **final part (3 of 3)**; PR 10, PR 54 carried the rest
+- [ ] `and-root-fab-has-no-press-scale` — the root FAB threads an `interactionSource` into its Card and never calls `collectIsPressedAsState`; the 0.93 scale + 2 dp offset path built for it is gated off by `showCreateTaskButton = false` · and · Sev 2 · S · Gate G+D
+- [ ] `and-hero-circle-buttons-press-scale-unanimated` — two hero buttons compute a 0.93 scale from a bare `if (pressed)` inside `graphicsLayer`, and the `PressableIconButton` written for exactly this has zero call sites · and · Sev 1 · S · Gate G+D
 
 ### PR 31 — the Android route hand-over and predictive back
 
