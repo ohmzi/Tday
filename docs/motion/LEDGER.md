@@ -393,14 +393,17 @@ Restore it from git history rather than adjusting the number.
     seven in screens; `WidgetCreateTaskActivity.kt:171` is an eighth the row does not count (its host
     is an Activity, not a composition flag) and it is carried by the same change, as is the create-LIST
     sheet named alongside it in `RULE_B_PENDING_FIX`, now empty.
-  - Still cutting after this, and not part of this row: the CONFIRM path. Tapping Create or Save runs
-    the caller's `onCreateTask`/`onUpdateTask`, and every one of them clears the composition flag on
-    the same frame — `CalendarScreen.kt:874` and `:926`, `ScheduledTaskHomeScreen.kt:818`, `:847` and
-    `:868` (create-list), `TodoListScreen.kt:2391` and `:2497`, `CompletedScreen.kt:456`. This row's
-    text is `sheetVisible` never set false, which is what was fixed; but confirming is the commonest
-    way a user leaves this sheet, so the sheet still cuts more often than it slides. It belongs to
-    **PR 41b / `sheet-presentation-unification`**, which unifies the sheet chrome and is the place to
-    route submit through `startDismiss` as well.
+  - Still cutting after this, and not part of this row: the CONFIRM path. Tapping Create or Save ran
+    the caller's `onCreateTask`/`onUpdateTask`, and every one of them cleared the composition flag on
+    the same frame — the create and edit lambdas in `CalendarScreen`, `ScheduledTaskHomeScreen`
+    (including the create-LIST sheet's `onCreate`), `TodoListScreen` and `CompletedScreen`. This
+    row's text is `sheetVisible` never set false, which is what was fixed; but confirming is the
+    commonest way a user leaves this sheet, so the sheet still cut more often than it slid. It
+    belonged to **PR 41b / `sheet-presentation-unification`**, which unifies the sheet chrome and is
+    the place to route submit through `startDismiss` as well.
+    **Discharged there** — see the confirm-path sub-bullet under **PR 41b**. The eight call sites
+    named above are line-less here on purpose: PR 41b deleted the lines, so a reader chasing a
+    number would be chasing a frame of the tree that no longer exists.
 - [x] `and-sheet-scrim-ripple-on-dismiss` — full-screen Material ripple on a dismiss tap · and · Sev 2 · XS · Gate D
 
 ### PR 15b — the create sheet’s IME height stops leaping
@@ -1167,7 +1170,13 @@ Restore it from git history rather than adjusting the number.
 ### PR 40b/40c — the Android and iOS skeletons
 
 - ↳ part 4 of 5 of `skeleton-loading-vocabulary` — iOS `TdayTaskRowSkeleton` + xctest + **pbxproj registration**, built at the two sets of row metrics the feeds actually draw (`TdayTaskRowMetrics` for Today, `TodoTimelineMetrics` for a task list and Completed) rather than at one pleasing set of grey blocks; the three feeds that drew nothing at all while loading — `ScheduledTaskHomeScreen`, `TodoListScreen`, `CompletedScreen` — now stand rows in the slot and crossfade to content, and sit flat and full-alpha under Reduce Motion. Box lives under **PR 40b**.
-- [ ] `skeleton-loading-vocabulary` — one skeleton per client at real row geometry, crossfading on the `Enter` rung · all · Impact O4 · M ea · Gate V/J/X — **final part (5 of 5)**; web (PR 40a, parts 1–3) and iOS (PR 40c) have both landed, so Android is the only part still outstanding and it is what ticks this box. The box was written to live under PR 40c as the last of the five; iOS landed ahead of Android, so it moved to PR 40b rather than ticking early.
+- ↳ part 5 of 5 of `skeleton-loading-vocabulary` — Android `TdayTaskRowSkeleton` + `TdayTaskRowMetrics` at `TodayTodoRow`'s own geometry; the timeline's `surfaceVariant` card and Completed's `displaySmall` word both retire; JVM test. Renumbered from `part 2 of 3` on the merge with `develop`: the web unit split into three parts of its own and iOS took a fourth, so this is the fifth and last. Box lives under **PR 40b**, directly below, and this is the part that ticks it.
+  - **The row text said 190 and 190 is the wrong number.** It is `TdayFeedItemMotion.FadeInMillis`, a hand-written Android literal that `docs/motion.md` settled against the ladder in favour of 200, and that both other clients' feed-motion mirrors name in writing as the value which owes the move. A new site wired to it would have made that literal harder to retire while looking correct. The hand-over is `TdayMotionTokens.Durations.Enter`, on `Standard` — the curve, because a hand-over runs both halves off one clock and neither a decelerate nor an accelerate describes that.
+  - **The hand-over is a paired fade and shrink, not a `Crossfade`.** Two lazy items are stacked, never layered, so the skeleton and the feed it gives way to can no more cross-fade over each other than two paragraphs can. A `Crossfade`'s `Box` holds the largest composed child for the whole transition, and on the timeline the skeleton sits ABOVE the rows: the feed would land, sit pushed down by three rows' worth of placeholder for 200 ms, and then jump. That is the pop this unit removes, moved later and made larger. `AnimatedVisibility` with `fadeOut` and `shrinkVertically` on one spec is what the Earlier scene in the same `LazyColumn` already does, and it is the answer here too. Both items are hidden by `visible` rather than removed by their guard — an item its guard has already taken out of the list has no exit left to play — and both are mounted for a WINDOW rather than unconditionally: `Arrangement.spacedBy` is charged per item and not per drawn pixel, so a placeholder left mounted for the sake of its exit goes on costing the flat feed `TimelineDateGroupSpacing` under its header for the whole of the loaded state. `rememberTdayTaskRowSkeletonMounted` closes the window one hand-over after `visible` drops, on `scaledDelay` so the wait leaves with the motion it covers.
+  - **The rung owes an argument, and the argument is already in `docs/motion.md`.** A paired fade and shrink is geometry, and the second idiom rule reads geometry as `Emphasis` — but the doc writes the exception where it discusses the tree's one other slot hand-off: an exit that hands a slot to an arrival answers to that arrival's length, not to the length of the thing it undoes. Nothing here takes a new slot, and 320 would make the placeholder outlast the feed it is uncovering. Web's `TODAY_EARLIER_EXIT_MS = DURATION_MS.enter` is the same call reached by the same sentence, and it rules out 320 in as many words. `Enter` stands; what was missing was this paragraph.
+  - **Compose does not freeze an infinite transition where it stopped it.** At animator duration scale 0 `InfiniteTransition` calls `skipToEnd()`, which assigns the `TargetBasedAnimation`'s TARGET — so a pulse running `RestingAlpha` down to `DimmedAlpha` sat pinned at 45 % for the whole load on exactly the devices that asked for less motion, which is the fifth idiom rule broken twice over. Turning the tween round only moves the bug: the INITIAL value is what a host that never delivers a frame holds, so one orientation is legible when frames stop and the other when the scale is 0. The ends stay bright-to-faint and `TdayTaskRowSkeleton.frozenAlpha` answers the scale-0 case by drawing a constant with no transition composed at all — the system scale and not the app's, because an `InfiniteTransition` obeys the recomposer's `MotionDurationScale` and the in-app switch cannot reach it.
+  - **`label_loading` stays, with one reader instead of two.** Bars say nothing to TalkBack, so replacing the two words with shapes would have removed the only thing on either screen a screen reader could report. The group carries the string as one merged node with a polite live region, which is the announcement the `Text` used to make by being text. `EmptyCompletedState` went the other way and was deleted: the loading call was its only caller, and the real empty state next to it is `TdayEmptyState`.
+- [x] `skeleton-loading-vocabulary` — one skeleton per client at real row geometry, handed over on the `Enter` rung · all · Impact O4 · M ea · Gate V/J/X — **final part (5 of 5)**; web (PR 40a, parts 1–3), iOS (PR 40c) and now Android (PR 40b, part 5) have all landed, so every part of this row is in the tree and the box ticks on the merge that brought the last of them together. The box was written to live under PR 40c as the last of the five; iOS landed ahead of Android, so it moved to PR 40b rather than ticking early. The row read `crossfading` until this merge and now reads `handed over`: web and iOS dissolve two layered views, and Android cannot — its placeholder and its feed are two stacked items in one `LazyColumn` — so it pairs a fade with a shrink on the same `Enter` spec instead, which is the argument under part 5. The three device rows this owes are all still open in `docs/verification/phase-9-device-pass.md`.
 
 ### PR 40d — the web infinite-scroll sentinel
 
@@ -1180,7 +1189,61 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 41b — the Android sheet language
 
-- ↳ part 2 of 3 of `sheet-presentation-unification` — `TdaySheetMotion` from iOS's 4 specs; animate the scrim; two sheet mechanisms. Box lives under **PR 41c**.
+- ↳ part 2 of 3 of `sheet-presentation-unification` — `TdaySheetMotion` from iOS's 4 specs (card exit 320 → `Change`, both directions off `Standard`); the scrim fades with its card instead of with the `Dialog` window; both create-sheet constants retired; `TdayModalBottomSheet` named as the other mechanism. Also carries PR 15a's deferred confirm cut, per the note under **PR 15a**. Box lives under **PR 41c**.
+  - **PR 15a's deferred confirm cut is discharged.** `submitTask()` OPENS on
+    `sheetDismiss.start()` and returns if the exit was already claimed. The eight confirm lambdas
+    stop clearing the flag that composes the `Dialog`: teardown belongs to `onDismiss` alone, which
+    is the end of the exit, so the commonest way out of this sheet now leaves the same way the X
+    does. The create-LIST sheet's `onCreate` goes the same way, and its draft reset moves to the
+    host's `onDismiss` behind a `listCreated` flag, because blanking the name on the frame of the tap
+    is now something the user watches happen: the field empties and Create greys out under their
+    finger while the card is still sliding. A dismissal that created nothing keeps its draft, as
+    before.
+  - **The claim comes first because the payload must be refusable a second time.** Putting the
+    confirm inside the slide is what makes the card readable on the way out, and it leaves Create
+    lit and hit-testable for the whole 260 ms — deliberately, since greying a control the user is
+    still looking at would be them watching it go dead under their finger. So `start()` answers now:
+    true to the tap that claimed the exit, false to every one after it, and the confirm drops the
+    tap it cannot claim. Without that a second tap mid-slide hands the caller a second payload, and
+    `createTodo` mints a fresh local id per call — a duplicate task, queued as its own create and
+    synced to every device. The old shape was immune to this only by accident, because the host tore
+    the composition down on the frame of the tap. The same answer closes the older half of the same
+    window, from PR 15a: after the X is tapped, Create used to stay live for the length of the exit
+    and could still create the task the user had just cancelled.
+  - **Two things had to move that the deferral did not name, and both are the same defect one level
+    up.** The edit hosts resolve their target by looking an id up in the feed they are showing and
+    compose the sheet inside `target?.let { … }`; that was safe only while the confirm tore the sheet
+    down on the frame of the tap. Saving an edit that moves the task out of the feed underneath it —
+    a due date pushed off today, a list changed — drops the row while the card is still sliding and
+    the `let` stops composing, so the host cuts the sheet in place of the callback. `rememberEditSheetTarget`
+    retains the row the sheet was opened on until the id itself goes null, which is the host's own
+    teardown. And the widget create surface is an Activity, not a flag: its submit used to `finish()`
+    in a `finally`, which would now cut the slide, while exiting on the slide alone would have
+    cancelled a composition-scoped write and lost the task. So the write stops being
+    composition-scoped — `WidgetCreateTaskSubmitter.submitDetached` runs it on the singleton's own
+    process-lifetime scope, the way `WidgetRefresher` already runs its renders — and the card is the
+    only clock that ends the activity. Holding the window for the write instead was the first shape
+    tried, and it is worse than it sounds: `createTodo` does its local write and its widget repaint
+    first and then AWAITS a forced sync, so the user got the slide and then a fully transparent,
+    touch-swallowing window standing over their own home screen for as long as a connection probe
+    takes, with the new task already painted into the widget behind it. Nothing is lost by letting
+    the window go: the local write and its replayable `CREATE_TODO` mutation are committed within a
+    frame or two of the tap, and a sync cut short is the case pending-mutation replay exists for.
+  - **`dismissEnabled` is gone rather than bypassed.** It existed so the widget could refuse a
+    dismissal while a submit was in flight, because its own `finish()` could drop one that the sheet
+    had already latched. That host leaves with the card now, so there is nothing left to refuse — and
+    the veto could never have covered a confirm anyway: `submitTask` reaches `start()` inside the
+    same click that sets the host's flag, a frame before the refusal composes. A first confirm is
+    not a gesture a host is entitled to refuse; the user has committed. A repeat confirm of a sheet
+    that is already leaving is a different gesture, and the sheet refuses that one itself.
+  - No literal is added or retired, so all eight budget counters are untouched. `RULE_B_PENDING_FIX`
+    stays empty. The unit test is on `SheetDismissState` itself and pins two things the endpoints do
+    not show: the gap the defect lives in — `dismissing` true while `gone` is still false — and the
+    latch, by asserting on what `start()` ANSWERS, since a latch that did nothing would leave the
+    same `dismissing` and the same `targetState` behind as one that works. It cannot see the wiring
+    it exists for: there is no Compose test runtime on this module's JVM classpath, so that the
+    confirm opens on `start()` and drops the tap it is refused, and that no host still clears its own
+    flag, are read — and carry a device row.
 
 ### PR 41c — the iOS sheet language and drag-to-dismiss
 
