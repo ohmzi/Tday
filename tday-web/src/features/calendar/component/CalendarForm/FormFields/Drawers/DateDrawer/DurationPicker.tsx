@@ -41,7 +41,7 @@ export default function DurationPicker({
     return (
         <div className="flex flex-col gap-8 p-6">
             <div className="flex flex-col gap-4">
-                <div className="group relative flex flex-col gap-3 bg-secondary/20 p-5 rounded-3xl border-2 border-transparent focus-within:border-lime transition-all">
+                <div className="group relative flex flex-col gap-3 bg-secondary/20 p-5 rounded-xl border-2 border-transparent focus-within:border-lime transition-all">
                     <div className="flex justify-between items-center">
                         <span className="text-xs font-bold uppercase text-muted-foreground">Due</span>
                         <span className="text-xs font-medium text-muted-foreground/60">{formatDateFull(dateRange.to)}</span>

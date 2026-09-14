@@ -424,6 +424,39 @@
       "searchBody": "把任务拖成你想要的顺序。 你的列表会保持你设定的顺序。上下拖动任务，按照你思考的方式来安排你的一天。"
     },
     {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "向下滑动关闭卡片",
+      "summary": "把新建任务卡片往下拉即可关闭。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "新建任务卡片顶部的小横条表示它可以向下拉。拖动时卡片会跟随手指；下拉约四分之一后松手就会关闭，效果与点击它后面的暗色区域完全相同。快速轻甩同样有效——判断依据是你正要去往何处，而不是松手时停在哪里。中途改主意的话，卡片会弹回原位。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "如果卡片内容可以滚动，请从卡片顶部拖动：中间部分属于列表。"
+          ]
+        }
+      ],
+      "searchTitle": "向下滑动关闭卡片",
+      "searchKeywords": "滑动, 拖动, 下拉, 关闭, 取消, 卡片, 手柄, 手势, 向下, swipe, drag, dismiss, sheet",
+      "searchBody": "把新建任务卡片往下拉即可关闭。 新建任务卡片顶部的小横条表示它可以向下拉。拖动时卡片会跟随手指；下拉约四分之一后松手就会关闭，效果与点击它后面的暗色区域完全相同。快速轻甩同样有效——判断依据是你正要去往何处，而不是松手时停在哪里。中途改主意的话，卡片会弹回原位。 如果卡片内容可以滚动，请从卡片顶部拖动：中间部分属于列表。"
+    },
+    {
       "id": "floaters-vs-todos",
       "section": "ORGANIZING",
       "sectionOrder": 3,

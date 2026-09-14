@@ -38,7 +38,7 @@ export default function PendingApprovalScreen({
         <div className="absolute inset-0 bg-background/45" />
       </div>
 
-      <div className="relative z-10 w-full max-w-md rounded-3xl border border-border bg-background p-6 shadow-2xl">
+      <div className="relative z-10 w-full max-w-md rounded-xl border border-border bg-background p-6 shadow-2xl">
         <div className="flex items-center gap-2">
           <Hourglass className="h-5 w-5 text-primary" strokeWidth={2.5} />
           <h2 className="text-xl font-black text-foreground">Waiting for approval</h2>

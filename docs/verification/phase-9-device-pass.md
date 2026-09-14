@@ -129,6 +129,17 @@ animates.
               than its own enter; or the calendar `Modal` fades out only part-way before the card
               is cut away, which is the JavaScript half of its exit having drifted from the CSS.
 
+- [ ] **PR G7 · web · The page dims with the panel, not ahead of it** — a phone, light AND dark
+      (the scrim's two alphas differ, and the early-finish is easier to catch on the lighter one).
+      Do:     open the right-hand `Sheet` from the More tab, watch only the page BEHIND the panel,
+              then close it and watch the same thing. Repeat once at 1/4 speed if the browser's
+              animation inspector offers it — the whole margin here is about a tenth of a second.
+      Watch:  the page reaches its full dim at the moment the panel stops moving, and starts coming
+              back only as the panel leaves — the two halves finish together in both directions.
+      Fails:  the page is fully dark while the panel is still sliding in — that is the 0.15 s
+              library fallback still winning, which means the utility is not reaching tw-animate's
+              `animation-duration`; or the page is bright again with the panel still on screen.
+
 - [ ] **PR 39a · web · The burst is paper, and the apex is not cut** — any list with exactly one
       task left on it, so completing it empties the list and celebrates. Run it twice: once in a
       tall window, and once with the browser window short enough that the empty state is at its
@@ -177,6 +188,155 @@ animates.
               is now its own ledger row (`web-infinite-scroll-skeleton`). PR 40a has since landed,
               so its `TaskRowSkeletonGroup` is in the tree — the strip simply does not draw it yet,
               so there is still nothing to check here, and the row above is not asking about it.
+
+- [ ] **PR 8i · web · The dock selects one object, and the pill takes the direct route** — a
+      DESKTOP window, or any viewport at `sm` and wider: below that no tab changes width and there
+      is nothing to see. The dock with the More tab visible, standing on any tab but the one you
+      are about to tap.
+      Do:     tap a different tab and watch the tab you are moving AWAY from, and the pill. Once at
+              full speed and once with the browser's animation inspector at 1/4, if it offers one.
+      Watch:  the tab you left narrows to its icon over about a third of a second, 320 ms, sliding
+              the tabs beside it along with it, and the pill travels and stretches alongside them
+              and stops when they do. One journey: at 1/4 speed the pill settles onto its mark
+              from about five pixels past it, which is momentum, not a return trip.
+      Fails:  the pill setting off past the arriving tab and coming back from the far side — 56px
+              out and back, unmistakable even at full speed. That is the follower in `RootDock`
+              not running, and it is what the 260 ms sample this row retired looked like. Also a
+              fail: the tab you left snapping to its icon in one frame, which is `min-width`
+              having fallen out of the press layer's `transition-property` list in `globals.css`
+              — the call site cannot restore it.
+      Note:   the arriving tab is NOT what to watch. Its label makes it wider than the 104px floor,
+              so it reaches its width in the first frame at any duration — that is measured, not
+              a defect. jsdom computes no layout, so the suite can prove both elements spell
+              `duration-emphasis` and can say nothing about whether they arrive together.
+
+- [ ] **PR 8i · web · The dock tab still answers a finger** — the same dock, any width; a touch
+      screen if there is one, since this is the press and not the hover.
+      Do:     press and hold a dock tab, then release, without changing tabs.
+      Watch:  it squashes and dips under the finger and comes back on release. It now takes 320 ms
+              rather than 200 — one duration covers every property the press layer animates on
+              this element, and the tab's `min-width` had to come up to Emphasis to pair with the
+              pill.
+      Fails:  the squash reading as the tab thinking about it rather than answering — a press that
+              is still arriving when the finger has gone. If it does, the pairing is not worth its
+              price and the tab needs a press duration the pill does not share.
+
+- [ ] **PR 8i · web · The install banner leaves faster than it arrived** — iOS Safari, or any
+      browser where the PWA install prompt fires; the banner has to be on screen, which on Chrome
+      means a site not already installed.
+      Do:     let the banner slide up, then tap its X and watch the banner, not the page.
+      Watch:  it rises over about a third of a second and is gone in about half that — 320 ms in,
+              150 ms out — and it is fully gone before its space is reclaimed, never cut away
+              mid-fade.
+      Fails:  the banner vanishing between frames with no slide-out at all, which would mean
+              `BANNER_EXIT_MS` and the closed-state class have drifted apart again and the node is
+              being unmounted before its animation runs; or an exit that takes as long as the
+              arrival, which is the class not reaching tw-animate's `animation-duration`.
+
+- [ ] **PR 8j · web · The calendar's view switcher and the view it switched arrive together** — any
+      viewport; the Calendar screen, standing on Month.
+      Do:     tap Week, then Day, then back to Month, watching the WHITE THUMB behind the labels and
+              the grid below it at the same time. Once at full speed and once at 1/4 in the
+              browser's animation inspector if it offers one.
+      Watch:  the thumb slides a segment and the grid slides in from the side, and both stop on the
+              same frame — about a third of a second, 320 ms. The card's height settles with them;
+              it was already on that rung.
+      Fails:  the thumb arriving first and the grid still travelling under a switcher that has
+              already finished — one tap reading as two events. That is the 300 ms this row
+              retired, and 20 ms is at the edge of what the eye catches at full speed, which is why
+              the 1/4 pass is part of the row rather than a nicety.
+      Note:   jsdom computes no layout, so the suite can prove the thumb spells `duration-emphasis`
+              and the keyframes spell `--tday-duration-emphasis`, and can say nothing about whether
+              the two play as one. Not a fail: the OTHER two segmented controls in the app — the
+              Completed tab strip and Settings' two switchers — still move their thumbs over 200 ms.
+              That is deliberate and argued at the call site; they have no grid moving beside them.
+
+- [ ] **PR 57a · web · The dock folds down to the tab you are on, and holds still at the fold** — a
+      phone-width viewport; Today, and again on the Anytime feed, each with enough tasks to scroll.
+      Do:     scroll down slowly past the first 44 px and keep going; scroll back to the top; then
+              park a finger just past the fold without moving it and leave it there; then, with the
+              dock folded, tap the dock once and wait without touching anything else. Finally
+              scroll a long Settings page and the Guide.
+      Watch:  as the feed passes 44 px the tabs you are not on are swallowed into the capsule from
+              their trailing edge and the capsule closes around the tab you are on, over about a
+              third of a second — 320 ms, the rung its pill and its tabs already share. The icons
+              are clipped, not squeezed. A finger resting at the fold leaves the dock exactly where
+              it is. Scrolling back up opens it again well before the top of the feed arrives. One
+              tap on the folded dock opens it where it stands — no navigation, no jump to the top —
+              and it closes itself again about 2.4 s later if nothing is chosen.
+      Fails:  the capsule reaching its folded width in a single frame instead of gliding (the press
+              layer deletes a `width` transition declared on a button, which is why the collapse is
+              on a wrapper); an icon squashing on the way out; a stub of a closed tab left inside
+              the capsule — folded, the dock is the one tab and the capsule's own 7 px either side
+              of it, 62 px on a phone, and nothing else; the dock flickering between its two
+              shapes while a finger rests near the fold, which is the whole reason there are two
+              thresholds; a tap on the folded dock jumping the feed to the top or switching tab;
+              the dock folding on Settings or the Guide, where it is the way out rather than in
+              the way.
+      Note:   jsdom computes no layout, so the suite can prove the fold's four answers and which
+              classes each tab carries, and can say nothing about whether the capsule glides. The
+              collapse is a `1fr` → `0fr` grid track — the same interpolable spelling of "as wide
+              as what is inside it" the collapsing task rows use on the other axis — and it has
+              never been seen playing.
+      Pill:   the white pill under the active tab makes the trip with it, and the Anytime feed is
+              where that is worth standing on — there the tab that closes is to the LEFT of the
+              one you are on, so the active tab slides 52 px inwards while the capsule shuts around
+              it. The pill is re-measured once a frame for the length of the fold rather than
+              sprung to a computed slot the way Android's selector is, so what to watch for is a
+              pill that arrives after the tab has stopped or overshoots and comes back — not one
+              parked in the open dock's slot, which is what the suite now pins.
+
+- [ ] **PR 57b · web · The folded dock is folded, not half-folded** — the same phone-width
+      viewport and the same two feeds, with reduce-motion on (Chromium: DevTools → Rendering →
+      **Emulate CSS prefers-reduced-motion: reduce**; or the OS setting, which is the one a real
+      user has). The Anytime feed is where to spend the time: there the tab that closes is to the
+      LEFT of the one you are on, so the fold moves the active tab 52 px without changing which
+      tab is active.
+      Do:     scroll past 44 px, then back to the top, then past it again. At a desktop width,
+              also switch tabs with the dock open.
+      Watch:  the dock is its folded shape on the next frame — no glide, no half-closed capsule —
+              and the white pill is UNDER the one tab that is left, flush inside the 62 px
+              capsule. The same in reverse: the open dock arrives already open with the pill under
+              the active tab. Nothing travels at any point, and nothing needs a second gesture to
+              settle.
+      Fails:  the pill parked to the RIGHT of the tab it marks, or clipped to a sliver against the
+              capsule's border — the defect this PR is for. With motion off there is no follower
+              re-reading the tab's rect, so the only thing that can correct the measurement taken
+              as the fold committed is the transition's own completion; a pill in the wrong slot
+              means that never arrived. Also a fail: anything gliding, which would mean the 1 ms
+              floor is not reaching this subtree, and a pill that snaps to the right slot only
+              once you touch the dock again.
+      Note:   `globals.css` floors transitions to 1 ms rather than to zero precisely so the
+              completion still reports itself, and this row is the only place that bargain is
+              checked by eye. An engine that decided not to fire `transitionend` for a 1 ms
+              transition would show exactly the failure above with every automated gate green.
+
+- [ ] **PR 59 · web · The hero header stays crisp through a long scroll** — a mid-range Android
+      phone in Chrome, not a desktop emulating one: this row is about what a real GPU does with a
+      layer it rasterises once and reuses, and a laptop has the headroom to hide it. Both root
+      feeds, Today and Anytime, each with enough tasks to flick through several screens.
+      Do:     drag the top 78 px of the feed slowly up and down so the hero mark, title and search
+              capsule morph continuously for several seconds without a pause, then flick hard and
+              let it settle. Repeat with the phone's own text size turned up, where the title is
+              largest and a bad raster is easiest to see. Then stop scrolling, wait two seconds,
+              and start again — that second pass is the one that runs after the hints have been
+              dropped, and it has to look like the first.
+      Watch:  the three pieces morph smoothly throughout, and the text in the title is as crisp at
+              the end of a long scroll as at the start of it and as it is at rest.
+      Fails:  the hero title going soft, fuzzy or fringed while scrolling and snapping back crisp
+              when the scroll stops, which is a layer rasterised once at the wrong scale and
+              reused — the specific cost of these hints, and the reason they are dropped 200 ms
+              after the last scroll frame rather than held. Also a stutter on the first frame of
+              the second pass, which would mean the drop is too eager.
+      Note:   there is no automated gate for any of this and there cannot be. `will-change` changes
+              no pixel by definition — it changes when the compositor allocates, which is a
+              property of a GPU and a driver. Rule F of `motion-reachability-web.test.ts` proves
+              only that this is the one hint in the app and that it clears what it sets; it is set
+              in JavaScript, where even that cannot watch it happen. This row is the whole of the
+              evidence that the change did not cost anything.
+              Nothing to check on the dock, the bulk bar or the search panel: the nine stylesheet
+              hints that would have made those a device question were removed before this shipped,
+              and the ledger row argues why.
 
 ## Android
 
@@ -310,6 +470,77 @@ animates.
               the card has gone, which is the activity's own transparent window still standing there
               waiting for a sync.
 
+- [ ] **PR 42a · and · Morning Sweep deals the next card instead of swapping it** — Morning Sweep,
+      with at least three carried-over overdue tasks waiting, so there are cards to deal and a
+      finish line to reach.
+      Do:     tap **Tomorrow**, twice. Then triage the rest until the last card is gone.
+      Watch:  the card you have dealt with slides about a quarter of the screen LEFT and fades as it
+              goes, over 150 ms, while the next one comes in from the right over 200 ms and settles.
+              The whole stack travels as one thing — the card, the five action rows and the
+              Skip / Sweep-all row arrive together, not six times. After the last card the finish
+              line fades up into the space rather than appearing on the frame the card left.
+      Fails:  the next stack drawn complete in one frame with no travel at all, which is the state
+              this screen shipped in. Also a fail: the outgoing card taking as long as the incoming
+              one or longer, which reads as the app hesitating over a decision already made; the
+              tally on the leaving card ticking down while it leaves; and "all swept" flashing up
+              when you OPEN Morning Sweep with cards waiting, which is the finish line playing
+              before the deck has been read.
+      Also:   with Settings → **Reduce motion** on (or the system's "Remove animations"), tap
+              Tomorrow again. The next card is simply there, at its own height, on the next frame —
+              no slide, no fade, and no frame where the panel is caught mid-resize. The finish line
+              is the same: there, or not there.
+
+- [ ] **PR 42d · and · The onboarding wizard says which way it moved** — a fresh install, or the
+      app signed out so the wizard comes up at the Mode step.
+      Do:     tap **Self-hosted** to go to Server, then **Change setup** to come back to Mode, then
+              Self-hosted again. Connect to a server, and from the sign-in panel tap
+              **Change setup** once more.
+      Watch:  going forward, the arriving panel comes in from the RIGHT over 200 ms while the one
+              it replaces leaves to the LEFT over 150 ms; coming back, both directions reverse. The
+              panel that is leaving is always the quicker of the two. The three chips above do not
+              slide with it — they stay put and only their own fill changes.
+      Fails:  both panels simply dissolving into each other with no travel, which is the default
+              spec this screen shipped on; the two directions looking identical, so Back and
+              Continue are indistinguishable; or a taller panel clipped square across the bottom
+              while it travels, which is the size transform clipping.
+      Also:   the connect spinner and the "signing you in" panel must NOT slide. Watch the hop from
+              Server to sign-in specifically — it goes Server → connecting → sign-in, and both of
+              those hops are a crossfade in place with no sideways movement at all. A slide there,
+              and especially a BACKWARD slide as the spinner goes away, is the wizard claiming the
+              user moved a step when they did not.
+      Also:   with Settings → **Reduce motion** on (or the system's "Remove animations"), walk Mode
+              → Server → Mode again. Each panel is simply there on the next frame at its own full
+              height — no slide, no fade, and no frame where the card is caught mid-resize.
+
+- [ ] **PR G2 · and · A toast leaves when it is asked to, and not before** — any screen that puts a
+      toast up with an Undo on it: delete a task from a list, which is the toast with the most to
+      lose. Five gestures, one toast each; work quickly, the auto-dismiss window is the clock.
+      Do:     (1) press the middle of the card and let go without meaning to move. (2) Take it down
+              about a centimetre — a third of the card's own height — and let go slowly. (3) From
+              rest, flick it down hard and let go at once, without taking it far. (4) Take it down
+              a centimetre and then flick it back UP before letting go. (5) Swipe straight across
+              the card, sideways.
+      Watch:  (1) and (4) leave the card on screen and spring it back to where it sat — the same
+              return a half-opened task row makes when you let go of it, on the same spring
+              (0.82 / 340), carrying whatever speed it had. (2) and (3) throw it off the bottom in
+              160 ms and the Undo goes with it. (5) does not move the card at all. Under the finger
+              the card still fades towards 45 % and shrinks 3 % over the first 96 dp, exactly as it
+              did before.
+      Fails:  the card leaving on (1) — that is the old "any downward pixel commits", which is the
+              whole point of this row. Also a fail: (4) dismissing, which means an upward flick is
+              being read as distance already given up. Also a fail: a refused card arriving back at
+              rest in one frame instead of springing, or snapping home and then springing from
+              there — that is the hand-off between the finger and the spring going through zero.
+              Also a fail: (5) dragging the card sideways-and-down, or eating a swipe meant for the
+              screen underneath.
+      Known:  (3)'s flick leaves on the same fixed 160 ms accelerating exit as (2)'s slow drag, so
+              a hard throw hangs for a frame or two at lift-off before the card goes. The speed is
+              carried into the refusal spring only; making the exit answer it is
+              `toast-drag-two-stage-exit`, and it is not a fail here. A toast that is already past
+              the threshold when something else claims the pointer still commits. A cancelled drag reaches the app as a release with no velocity, so it
+              is judged on distance like any other release; that is argued at `TdayToastDismissState`
+              and pinned by a test, and is not what this row is looking for.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
@@ -375,6 +606,48 @@ animates.
               again. The placeholder is there, fully drawn and perfectly still — never parked at the
               faded end of its own pulse — and when the data lands the rows are simply there on the
               next frame. No fade, and no wait where the fade would have been.
+
+- [ ] **PR 41c · ios · The create sheet can be pulled down, and says so** — the root feed, on a
+      phone. Both sheets on the custom mechanism: the create-task sheet (the + button) and the
+      create-list sheet, which is the one whose contents scroll.
+      Do:     open the create-task sheet and pull it down slowly until it goes. Open it again and
+              flick it down 40 pt or so, fast. A third time, drag it two thirds of the way down and
+              then walk it most of the way back up before letting go. Then open the create-list
+              sheet and try to scroll its colour and icon rows.
+      Watch:  a 36 × 5 bar at the top of the card, the same one iOS draws on its own sheets. The
+              card tracks the finger exactly while it is down, and a released drag that commits
+              carries on and leaves on the same curve the scrim tap leaves on — the two must be
+              indistinguishable, because they are the same code path. A quarter of the card's own
+              height is where a slow pull commits; the flick commits long before that. The walked-
+              back drag springs home on the Gesture spring, with a little overshoot rather than a
+              snap. On the create-list sheet the scrolling regions still scroll and the header and
+              the margins still drag the card.
+      Fails:  the grabber reading as a second header — too dark, too far down, or crowding the
+              title and the two round buttons under it, which start 14 pt below the top edge. Also
+              a fail: the card oscillating or stuttering under the finger (that is the drag being
+              measured in local space, which the global coordinate space here exists to prevent);
+              a committed drag that snaps the card home first and then plays the exit; the
+              walked-back drag dismissing anyway; and the create-list sheet refusing to scroll
+              because the card's drag has taken the gesture.
+      Keyboard: open the create-task sheet, tap into the title field so the keyboard lifts the card,
+              and drag from there. The keyboard must go down as the drag begins, not at the release
+              — and the card must not jump or fight the inset collapsing under it. This is the one
+              interaction source cannot answer: the inset is animated on the keyboard's own
+              ~0.25 s curve while the finger is still moving the card.
+      Selector: on the create-task sheet, open List, then Priority, then Due date. The grabber must
+              fade out as the picker's dim comes up and fade back as it goes — never sit lit on top
+              of the dim — and while the picker is open a downward drag anywhere on the dim must do
+              nothing at all. A fail: the drag dismissing the whole sheet and losing what was typed,
+              where a tap on those same pixels only closes the picker. The picker's own rows and its
+              tap-to-close must still work throughout; this stands the card's drag down, not the
+              layer over it.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, repeat the first three.
+              The card still follows the finger — a surface under a thumb is direct manipulation and
+              is not what the setting turns off — and a refused drag is simply home on the next
+              frame rather than springing. A committed drag still dismisses, and the card crossfades
+              out where the full-motion build slides it. The grabber still fades under a picker,
+              on both settings: that is a dim arriving over it rather than anything travelling, and
+              it has to leave at the same rate the dim comes up.
 
 - [ ] **PR 8g · ios · Eleven springs changed their spelling and not their shape** — a build of the
       app with a signed-out start, so the onboarding wizard is reachable. No throttling and no
