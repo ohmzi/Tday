@@ -467,7 +467,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 8f — the one-line default-duration change
 
-- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **DROPPED, not deferred**; the box stays open because the change was not made and will not be. Four committed places now forbid it: `docs/motion.md:359-366` makes "Do not rebind Tailwind's default transition duration" idiom rule 3, `docs/CODING_STANDARDS.md:209` says "never rebind", `tday-web/src/globals.css:239-242` argues it in place at the one declaration block that would have carried it (~159 bare `transition-*` sites riding an un-overridden 150 ms, which is exactly `Quick`, so they are on the vocabulary for free), and `motion-budget.json`'s `_excluded.notCountedOnPurpose` excludes those same utilities on those same grounds. The value no longer names anything either: `4c941b1c` moved `Enter` 190 → 200 because 190 matched 2 sites against 200's 57. Rule 3 landed in `bc521d0d`, inside Phase 4's own PR #204 — the same PR that would have carried 8f — so this is a decision taken at the time, not a lapse · web · XS · Gate n/a — dropped
+- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **DROPPED, not deferred**; the box stays open because the change was not made and will not be. Four committed places now forbid it: `docs/motion.md` makes "Do not rebind Tailwind's default transition duration" idiom rule 3, `docs/CODING_STANDARDS.md:209` says "never rebind", `tday-web/src/globals.css:239-242` argues it in place at the one declaration block that would have carried it (~159 bare `transition-*` sites riding an un-overridden 150 ms, which is exactly `Quick`, so they are on the vocabulary for free), and `motion-budget.json`'s `_excluded.notCountedOnPurpose` excludes those same utilities on those same grounds. The value no longer names anything either: `4c941b1c` moved `Enter` 190 → 200 because 190 matched 2 sites against 200's 57. Rule 3 landed in `bc521d0d`, inside Phase 4's own PR #204 — the same PR that would have carried 8f — so this is a decision taken at the time, not a lapse · web · XS · Gate n/a — dropped
 
 ## Phase 5 — web primitives, in dependency order
 
@@ -569,10 +569,16 @@ Restore it from git history rather than adjusting the number.
     the control it answers has landed reads as lag. Two device rows, one per client, written as a
     pair to be run side by side; unrun, and TF1 has not been cut.
 - [x] `root-feed-tab-switch-transition` — The root feed tab switch — the app's most-used interaction — is a hard cut on both native clients while the dock selector that triggered it springs across · and+ios · Impact O4 · S · Gate D+TF
-  - **Duplicate of `and-ios-root-feed-tab-swap-uncrossfaded` (§2.2).** §2.2 dissolves a three-way tangle here: this row is the root-feed **body** inside a single route (`TdayApp.kt:1103-1126`), not the NavHost route transition (`TdayApp.kt:1942-1955`, wired at `:335-338`) that PR 31 retimes to 160/110. Different surfaces — give the tab swap its own spec and do not reuse `NAV_FADE_*`. Ticks with its twin.
-  - **Ticked with its twin, on its twin's device rows.** The spec stayed its own: `NAV_FADE_IN/OUT`
-    are untouched at 360/240 and the swap names `Quick` for itself. No rows of its own — two
-    filings of one behaviour get one check, not two.
+  - **Duplicate of `and-ios-root-feed-tab-swap-uncrossfaded` (§2.2).** §2.2 dissolves a three-way tangle here: this row is the root-feed **body** inside a single route, not the NavHost route transition (`navigationEnterTransition` / `navigationExitTransition` in `TdayApp.kt`, wired at the NavHost) that PR 31 retimes. Different surfaces — give the tab swap its own spec. **The 160/110 this note used to name is not what PR 31 landed**, and the correction is worth keeping rather than quietly overwriting: that pair was written before the ladder and is the only place in the repo either number ever appeared, and neither is a rung. Both directions are `Durations.Enter` now, which is what `docs/motion.md`'s `Scene` bullet had already asserted in prose and what `.tday-route-fade` had already been doing since PR 55. `NAV_FADE_IN_DURATION_MS` and `NAV_FADE_OUT_DURATION_MS` are gone with it, so there is nothing left here to reuse by name. Ticks with its twin.
+  - **Ticked with its twin, on its twin's device rows.** The spec stayed its own: the swap
+    names `Quick` for itself — `RootFeedContent`'s `Crossfade` in `TdayApp.kt` and
+    `AppRootView.swift:173` — and never reached for the NavHost's constants. The clause that
+    stood here, that `NAV_FADE_IN/OUT` were untouched at 360/240, was true when it was written
+    and is not now: PR 31 landed on the same merge as this tick, both nav directions are
+    `Durations.Enter`, and both constants are deleted. That changes nothing about this row —
+    nothing here ever read them — but a sentence naming two dead constants is the kind of
+    paperwork this ledger exists to not leave lying around. No rows of its own — two filings
+    of one behaviour get one check, not two.
 
 ### PR 28 — the Android onboarding blur and overlay
 
@@ -1370,12 +1376,105 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 9a/9b — `Modifier.tdayPressable` and the 17 hand-rolled triplets
 
-- [ ] `press-affordance-unification` — One press affordance: Android hand-rolls the scale/offset/elevation triplet 17 times at 7 different scales, and on web any `transition-*` utility silently deletes the global press squash · and+web · Impact O3 · M · Gate TF + D — **final part (3 of 3)**; PR 10, PR 54 carried the rest
+- [ ] `press-affordance-unification` — One press affordance: Android hand-rolls the scale/offset/elevation triplet 17 times at 7 different scales, and on web any `transition-*` utility silently deletes the global press squash · and+web · Impact O3 · M · Gate TF + D — **final part (3 of 3)**; PR 10, PR 54 carried the rest — **the Android half is complete as of 9b4**, which took the last live triplets: `TodoListScreen`'s list FAB, Today header button, Floater list row and two list-settings tiles; `CategoryCard`; and `TdaySegmentedSlider`'s two press scales, the only two that name the token without moving onto the modifier — the selector is not a surface reading its own press and both share a spring with the offset that slides them. `android.pressScale` is 8, and the ceiling and the survivors are now the same eight sites, listed by name in `motion-budget.json`; none of the eight is a press site inventing a depth. Still unticked because this box is `and+web` and 9b5 owns the tick — what is left for it is the guardrail, not more call sites
+- [x] `and-root-fab-has-no-press-scale` — the root FAB threads an `interactionSource` into its Card and never calls `collectIsPressedAsState`; the 0.93 scale + 2 dp offset path built for it is gated off by `showCreateTaskButton = false` · and · Sev 2 · S · Gate G+D
+- [ ] `and-hero-circle-buttons-press-scale-unanimated` — two hero buttons compute a 0.93 scale from a bare `if (pressed)` inside `graphicsLayer`, and the `PressableIconButton` written for exactly this has zero call sites · and · Sev 1 · S · Gate G+D — **both halves landed**: 9b2 put both buttons on `Modifier.tdayPressable` at `PressScales.Bar`, so the animation exists, and 9b3 deleted `PressableIconButton` — the unused duplicate of exactly that press — so there is no longer a second, unanimated answer to this defect sitting in the tree. Left unticked for 9b5, which owns the tick; do not go looking for the function, it is gone
 
 ### PR 31 — the Android route hand-over and predictive back
 
-- [ ] `route-change-handover` — Route change: Android crossfades at 360/240ms, web at 140ms, and web's own comment says the long one reads as lag — pick the number once · and+web · Impact O3 · M · Gate V + D — **final part (2 of 2)**; PR 55 carried the rest
-- [ ] `android-predictive-back-scrub` — edge drag scrubs a pure crossfade — communicates nothing · and · Impact O3 · S · Gate D
+- [x] `route-change-handover` — Route change: Android crossfades at 360/240ms, web at 140ms, and web's own comment says the long one reads as lag — pick the number once · and+web · Impact O3 · M · Gate V + D — **final part (2 of 2)**; PR 55 carried the rest
+  - **The half of web's argument that survived there survives here, and it is restated at the
+    Android call site rather than re-derived.** A route fade sits between a tap and the screen the
+    user asked for, and anything longer reads as lag — which is exactly right against the long end,
+    and 360 IS the long end that argument was written against. What 360 could not defend was 360:
+    it named no rung, so nothing downstream could tell a decision from a number somebody liked. A
+    thing arriving with no reason to be another length is `Enter`, and both directions take it.
+  - **One length and two curves, which is the model web was already running.** `.tday-route-fade`
+    and `::view-transition-old(root)` are both `var(--tday-duration-enter)` and differ only in
+    `--tday-ease-enter` against `--tday-ease-exit`. Android now says the same thing with one
+    `Durations.Enter` and the two Compose built-ins, which `docs/motion.md`'s easing table records
+    as the `Enter` and `Exit` tokens byte for byte and `TdayMotionTokensTest` pins — so they stay
+    written as built-ins at their call sites, which is what that table says to do with them.
+  - **Not 160/110.** The note at §2.2's PR 27 row said this PR would retime to that pair. It
+    predates the ladder, neither number is a rung, and those two digits appear nowhere else in the
+    repo; `docs/motion.md`'s `Scene` bullet had meanwhile been asserting `Enter` for route and tab
+    handovers in prose, and `globals.css` had been doing it since PR 55. Three sources and one of
+    them was wrong, so the wrong one is corrected rather than followed — and `TdayMotionTokens.kt`
+    was a fourth, its `Scene` doc calling route handovers `[Quick]`.
+  - **Five routes were restating the default and one of them was the reason a gate could not be
+    wired.** The splash and the two legacy auth entry points each wrote their own `tween(300)`; the
+    `settingsEnterTransition`/`settingsExitTransition` pair, which had been an alias for the
+    navigation pair since the sheet rise came out of it, was spelled across five more composables.
+    Every one of those overrides said what the NavHost already said, so deleting them retimes
+    nothing visible — but until they were gone, a preference answered at the NavHost was a
+    preference five routes ignored. There is now exactly one place a route fade is described.
+  - **Reduce Motion is the behaviour change in here, and it is the whole of it.** Compose's animator
+    scale already zeroes these transitions, so the system setting was never the gap; Phase 8's
+    in-app switch (`ReduceMotionPreferenceStore`, read through `rememberTdayMotionEnabled()`) is
+    something Compose knows nothing about, and the NavHost was the last surface in the app deaf to
+    it. The boolean is hoisted above the NavHost because the four lambdas are
+    `AnimatedContentTransitionScope` receivers and not composables — read it inside one and it does
+    not compile, which is the failure mode this hoist is worth naming for. `EnterTransition.None`
+    and `ExitTransition.None` draw the destination finished, which is the fifth idiom rule: the
+    whole of a route change's finished state is the screen the user asked for.
+  - **Gating the hand-over moved two waits with it, and that was not optional.** `TodoListScreen`'s
+    380 ms settle before a navigated-to search result is scrolled to, and `ScheduledTaskHomeScreen`'s
+    260 ms hold before the search surface comes down, both existed to cover this exact fade and both
+    read `rememberSystemMotionScale()` precisely because the fade used to ignore the switch. Each
+    comment said so and said which day it moved; this is that day. Left where they were, a Reduce
+    Motion user would have got the cut AND the full wait {D} a fully drawn destination sitting there
+    doing nothing, which is `docs/motion.md`'s fifth rule broken the way it is usually broken. The
+    other three waits in `TodoListScreen` stay on the device's clock and the hoist is split in two
+    rather than flipped, because what they cover {D} `animateItem` placement, `SwipeTaskRow`'s
+    highlight pulses {D} is still ungated. `SEARCH_RESULT_NAV_SETTLE_DELAY_MS`'s doc claimed the
+    navigation into the screen for both of its call sites; only one of them navigates, the floater's
+    settling on the feed closing over its own results card, and the doc says that now.
+  - Six literals retired and the ceiling lowered with them: `android.tween` 16 → 10, which is the
+    six `tween(300)`. The two `NAV_FADE_*_DURATION_MS` constants went too and are worth naming
+    precisely because they did NOT move the counter — a named constant never matched a grep for
+    literals, which is the honest limit of the ratchet and the reason the 360 was carried in
+    `docs/motion.md`'s non-tokens table instead. That table's 340–420 band is down to two entries
+    now, and its line refs were stale by a few hundred lines besides.
+  - `tests/guardrails/route-handover.test.ts` gains the Android half, in the same file as the CSS
+    half deliberately: a route change is one decision the two clients have to keep making the same
+    way, and split across two files the next hand to retime one has no reason to open the other. It
+    is a text read for the reason the CSS half is — there is no Compose runtime in vitest, so
+    nothing there can play a NavHost transition or ask what one resolved to. What it can see is
+    every way this could be undone while still animating: the rung written back out as a number,
+    one of the four wirings dropped, the two curves collapsed into one, or the gate removed. That
+    last one is asserted at the wiring rather than at the hoist, because a `rememberTdayMotionEnabled()`
+    line is not rare in `TdayApp.kt` {D} two screens further down hold one {D} and a whole-file search
+    for it would have stayed green with the graph's gate deleted outright.
+- [x] `android-predictive-back-scrub` — edge drag scrubs a pure crossfade — communicates nothing · and · Impact O3 · S · Gate D
+  - **The gesture was already live, already seeked, and had nothing to say.** `enableOnBackInvokedCallback`
+    has been on since the manifest was written and `navigation-compose` 2.8.5 drives `popExitTransition`
+    from a `SeekableTransitionState`, so the finger has always been scrubbing this spec rather than
+    watching it play. What it was scrubbing was 31a's crossfade, which is the one spec that cannot be
+    scrubbed: two screens at half opacity read the same at a third of the pull and at two thirds of it,
+    so the gesture could report neither how far it had come nor whether letting go would commit it.
+    `navigationPopExitTransition` gives it a quarter-width travel and a recede to 0.90 to report with.
+  - **It does not reopen the NavHost's toolbar argument, and the wiring is where that is visible.**
+    Only `popExitTransition` moved. `popEnterTransition` is still `navigationEnterTransition`, so the
+    arriving screen still fades where it stands and the back chevron and the action cluster are still
+    handed to their counterparts rather than carried 18 % sideways and dropped back — which is the
+    half of the :336-347 comment that was ever about travel. Push is untouched in both directions:
+    forward has no gesture to answer, so it has no direction to express.
+  - **Same rung, same curve as the committed exit, on purpose.** This slot also plays whole when back
+    arrives as a button press, so a scrub released at the threshold and a back button tapped now land
+    on one animation instead of two. `Durations.Enter` and `FastOutLinearInEasing`, both named.
+  - **The ceiling did not move, and that is the finding.** The brief costed this at `android.pressScale`
+    31 → 32; the ceiling was 8 by the time it was written (9b1–9b4 had taken it there) and it is still
+    8 after this. `PREDICTIVE_BACK_MIN_SCALE` never matched the counter: the regex wants `[Ss]cale`
+    beside the literal and a SCREAMING_SNAKE constant spells it `SCALE`. Raising a ceiling for a literal
+    no measurement can see would have been a number contradicted by the next run, so the escape is
+    recorded instead — in the fixture's own note, in `docs/motion.md`'s non-tokens table, and in a
+    guardrail that asserts the marker comment is still at the declaration. Precedent: 31a recorded the
+    two `NAV_FADE_*` constants escaping `android.tween` exactly this way.
+  - **Reduce Motion gets a cut and not a held recede.** `ExitTransition.None`, like the other three,
+    reading the same hoisted `rememberTdayMotionEnabled()`. A screen that cannot animate must still be
+    gone rather than parked at 0.9 scale halfway off the side.
+  - Gate D. There is no device in this session and a scrub is the one thing in the programme that
+    cannot be read off source: `docs/verification/phase-9-device-pass.md` carries the row, unticked.
 
 ### PR 32 — iOS cold launch and zoom navigation
 
@@ -1507,7 +1606,7 @@ Restore it from git history rather than adjusting the number.
   - **The row's iOS half — `cardIn → 0.46/0.82` — is superseded, and writing it back would have
     cost more than it bought.** `TdaySheetChrome.swift:271` already reads
     `static let cardIn = TdayMotion.settle`, which is response 0.40 / dampingFraction 0.86, and
-    `docs/motion.md:286-289` names that exact line as the `Settle` rung's **one** anchoring site in
+    `docs/motion.md`'s `Settle` bullet names that exact line as the rung's **one** anchoring site in
     the repo. Putting 0.46/0.82 there would strand `Settle` with zero call sites, add 2 to
     `ios.spring` — measured at 98 against a ceiling of 98 when this was argued, and 60 against 60
     after 8g and 8h, so zero headroom either way — and spend `Gesture`'s 0.82 damping on a
@@ -1544,7 +1643,7 @@ Restore it from git history rather than adjusting the number.
     native sheets are close to the app's scrim by luck, and matching them exactly would mean owning
     their presentation — the trade this row refuses. What *is* a genuine
     three-client agreement is the colour itself: `Color.black.opacity(isDark ? 0.68 : 0.40)` at
-    `TdayTheme.swift:76` is byte-for-byte `TdaySheetChrome.kt:111` on Android and, since PR 41a,
+    `TdayTheme.swift:76` is byte-for-byte `TdaySheetChrome.kt:110` on Android and, since PR 41a,
     web's `--sheet-scrim`. That is a colour with no generated token and nothing in any build
     watching it, so it is now a row in `docs/motion.md`'s deliberate non-tokens table — the one
     place in the repo where a fact like that can be read on purpose instead of by accident.
@@ -1577,7 +1676,7 @@ Restore it from git history rather than adjusting the number.
     written at the gesture is a second thing to keep in step with it. `dragTranslation` is
     deliberately *not* reset on a commit, so the exit carries on from where the finger left the card
     instead of snapping it home first. A refused drag springs back on `TdayMotion.gesture` —
-    response 0.34 / dampingFraction 0.82, the rung `docs/motion.md:267` defines as a surface
+    response 0.34 / dampingFraction 0.82, the rung `docs/motion.md`'s spring table defines as a surface
     continuing under its own momentum after a finger lets go, and the place the 0.82 the
     `sheet-presentation-unification` row above declined to spend on an *arrival* actually belongs.
   - **The keyboard resigns at the gesture and not at the dismissal, and that is the trap.**
@@ -1640,12 +1739,43 @@ Restore it from git history rather than adjusting the number.
 
 - *(container row — the seven rows below are the work: Morning Sweep · Android Settings inline forms · iOS Help Guide · Android onboarding steps · Android calendar mode switch · iOS numeric counts · Android error card)*
 - [x] `android-morning-sweep-motion` — 241 lines, zero `animate*`, bare-`Text` finish · and · Impact O3 · S · Gate D
-- [ ] `disclosure-expand-collapse` — Expand/collapse has no shared spec: Android slices glyphs mid-growth, iOS runs the app's fastest curve at 150ms, web snaps the height and swaps two chevron glyphs · all · Impact O3 · M · Gate V + D + TF — **final part (2 of 2)**; PR 56 carried the rest
-  - **The iOS third is in; the box waits on Android.** `HelpGuideScreen`'s topic card ran the one transaction that grows it — the chevron's rotation and the body's insert — on `.easeInOut(duration: 0.15)`, which is the app's fastest rung driving the largest thing on the screen. It is `TdayMotion.standard(duration: TdayMotion.Durations.emphasis)` now: a card that changes how big it is is geometry, and rule 2 of `docs/motion.md` decides that boundary by geometry rather than by importance, so it lands on the same rung web's height box already answers to. The curve changed with it and is the half a reviewer has to look at — SwiftUI's `.easeInOut` is (0.42, 0, 0.58, 1) against Standard's (0.4, 0, 0.2, 1), and at 320 ms the tail is what reads. The transaction stays inside `withAnimation` because the body is inserted by an `if`, and it passes through `tdayAnimation`, so Reduce Motion draws the open card finished on the frame of the tap instead of shortening the trip. No literal is added or retired: the site already named its rung, so `ios.easeDuration` neither sees the old value nor the new one and the budget is untouched. Android's mid-growth glyph slice is what the box is still open for.
+- [x] `disclosure-expand-collapse` — Expand/collapse has no shared spec: Android slices glyphs mid-growth, iOS runs the app's fastest curve at 150ms, web snaps the height and swaps two chevron glyphs · all · Impact O3 · M · Gate V + D + TF — **final part (2 of 2)**; PR 56 carried the rest
+  - **The Android half, as of 42b.** Settings' three inline account forms (name, password, security
+    questions) each wrapped themselves in a bare `AnimatedVisibility(enter = expandVertically(),
+    exit = shrinkVertically())` — no spec, so they ran on Compose's default spring, and no fade, so
+    the travelling clip edge was the only thing describing the growth and it sawed through the
+    `OutlinedTextField` labels and the password dots. All three now name
+    `TdayDisclosureMotion.Enter` / `.Exit`, the app's one disclosure spec: fade AND expand on
+    `Emphasis` because the box changes size, fade AND shrink on `Quick` because an exit is never
+    longer than the enter it undoes, and both anchored to `Alignment.Top` — `expandVertically`
+    defaults to `expandFrom = Alignment.Bottom`, which bottom-aligns the content in the growing box
+    and slides it down through a stationary cut, so the row's complaint was literally that the first
+    field's label arrived last and sliced. Anchored to the top the content never moves and the cut
+    travels away along the arriving bottom edge. No literal is added or retired, so all eight budget
+    counters are untouched.
+  - **The iOS third, as of 42c.** `HelpGuideScreen`'s topic card ran the one transaction that
+    grows it — the chevron's rotation and the body's insert — on `.easeInOut(duration: 0.15)`, which
+    is the app's fastest rung driving the largest thing on the screen. It is
+    `TdayMotion.standard(duration: TdayMotion.Durations.emphasis)` now: a card that changes how big
+    it is is geometry, and rule 2 of `docs/motion.md` decides that boundary by geometry rather than
+    by importance, so it lands on the same rung web's height box already answers to. The curve
+    changed with it and is the half a reviewer has to look at — SwiftUI's `.easeInOut` is (0.42, 0,
+    0.58, 1) against Standard's (0.4, 0, 0.2, 1), and at 320 ms the tail is what reads. The
+    transaction stays inside `withAnimation` because the body is inserted by an `if`, and it passes
+    through `tdayAnimation`, so Reduce Motion draws the open card finished on the frame of the tap
+    instead of shortening the trip. No literal is added or retired: the site already named its rung,
+    so `ios.easeDuration` neither sees the old value nor the new one and the budget is untouched.
+  - **The box ticks here, on the merge that put the last two thirds in the same tree.** It is an
+    `all` row in three parts and the parts landed apart: web's `AnimatedHeight` came out of the
+    onboarding wizard under PR 56, Android's three Settings forms under 42b, iOS's Guide card under
+    42c — and 42b and 42c were built on separate branches, each writing that it was waiting for the
+    other. Neither was wrong; both are in the tree now, so the box is ticked on the merge rather
+    than by either unit. Its `V` and `D` and `TF` gates are unchanged by that: the device and
+    TestFlight rows are written and unrun in `phase-9-device-pass.md`, one per client.
 - [x] `android-onboarding-step-direction` — ordered steps crossfade on Compose's default spec · and · Impact O2 · S · Gate D
-- [ ] `android-calendar-mode-content-cut` — content hard-cuts inside a container whose height is springing · and · Impact O3 · S · Gate D
+- [x] `android-calendar-mode-content-cut` — content hard-cuts inside a container whose height is springing · and · Impact O3 · S · Gate D — the mode card's `Box` animated its own height and the `when` inside it did not, so the month grid was replaced by the week strip in one frame while the card around it was still travelling. That `when` now sits inside an `AnimatedContent` keyed on the tapped mode and reading its own lambda parameter, crossing over on `Enter` in / `Quick` out — deliberately shorter than the height change, so the eye lands on a resolved grid inside a still-settling card rather than on two ghosted ones — `using null`, because the height belongs to the `animateContentSize` above it and every `SizeTransform` carries a default 400-stiffness spring on the `AnimatedContent`'s own size, which would leave the Settle spring chasing a moving child instead of answering a step. The tab handler stopped resetting the visible month on the way OUT of Month too: the card is composed for the whole cross now, so that write re-paged the departing grid to another month while it was still fully opaque — it fires on entry to Month instead, where the only card that reads it is the one arriving. The height itself came off `spring(DampingRatioNoBouncy, StiffnessMediumLow)` onto `Springs.settle()`: a card finding its height is what Settle is for, and both `docs/motion.md` and the budget fixture's `android._spring` note already say on the record that the 400 it replaces was a library default rather than a decision anybody made. Motion off is `EnterTransition.None togetherWith ExitTransition.None using null` over a `snap()` height, so the mode the user tapped is simply there, at its own height. No counter moves: both stiffnesses it retires were named constants the `android.spring` regex never saw, and the two tweens it adds name rungs
 - [x] `ios-numeric-count-transition` — four plain `Text("\(count)")`, one at 34 pt; zero `contentTransition` in the codebase · ios · Impact O3 · S · Gate TF — all four roll now: `.contentTransition(.numericText(value:))` under `.animation(_:value:)` keyed on the count itself, on `Change` (260). Rule 2 of `docs/motion.md` puts them there — a count dropping after the user ticks a task is their own edit replayed in place, with the label neither moving nor resizing — and the digit roll is what makes 260 read as a number counting down rather than as a smear, which a crossfade of that length would be. The gate passes through `tdayAnimation`, so Reduce Motion draws the new number on the frame it changed. A `.contentTransition` outside a transaction is inert and looks exactly like a fix, so `motion-reachability-ios` now holds the pair together: every `Text("\(count)")` has to carry the roll, an `.animation(_:value:)` keyed on `count`, and a spec that opens on `tdayAnimation`. No literal added or retired: `duration: TdayMotion.Durations.change` puts no digit after the colon, so `ios.easeDuration` holds at 22 (PR 42f)
-- [ ] `android-error-card-feed-motion` — error card pops mid-feed, two directories from the spec that fixes it · and · Impact O2 · XS · Gate D
+- [x] `android-error-card-feed-motion` — error card pops mid-feed, two directories from the spec that fixes it · and · Impact O2 · XS · Gate D — the defect had four byte-identical copies, not one: `TodoListScreen`, `CalendarScreen`, `CompletedScreen` and `ScheduledTaskHomeScreen` each ended their feed with a bare, KEYLESS `item { ErrorRetryCard(...) }`. Keyless is the whole of it — `Modifier.animateItem` cannot animate an add or a remove on an item whose identity is its index, so even a correct spec there would have been dead code, which is why every one of them now reads `item(key = "error-retry", contentType = "error_retry")` before it reads anything else. Each card then takes ALL THREE specs rather than placement alone, which is the call `TdayFeedItemMotion`'s header makes for it: the displaced blocks that file argues about — the category grid, the Completed tile, the list rows — are only ever MOVED by a completion, while this card is genuinely added and removed by a load failing and a retry succeeding, so it is the one item on these feeds that a fade actually describes. It lands on its own feed's clock rather than on a single imported one: `TodoListScreen` goes through that file's existing `feedItemMotion` helper, `CompletedScreen` and `CalendarScreen` name `TdayFeedItemMotion.FadeIn`/`.Placement`/`.FadeOut` (which `CompletedScreen`'s own rows already spell out by hand at the same 190/320/150), and `ScheduledTaskHomeScreen` reuses its file-private `ScheduledTaskHomeItem*` specs so the card settles on the same spring as the rows above it. Reduced motion is routed at all four, which needed saying at the fourth: `timelineAnimationsEnabled` in `TodoListScreen` is a FIRST-FRAME gate, not the preference — it only says the feed has settled enough to animate — so the card reads `rememberTdayMotionEnabled()` itself and is simply drawn in place when motion is off, with no wait in front of it. Two of the four sit inside a search-gated branch, so a live query takes the body away in one frame and leaves the card fading alone over the blank; both call sites say on the record that this is accepted rather than gated — an error banner and a live query rarely coexist, and a gate read inside the item lambda could never fire, since the item is only ever composed while the flag is false. No literal is added or retired: every spec named already existed. All eight budget counters are untouched
 
 ### PR 43a — the web radius scale becomes monotonic
 
@@ -1910,7 +2040,7 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 
 ### PR 143 — drop placeholder off clock
 
-- [ ] `android:todo-list#drop-placeholder-own-clock` — drop placeholder own clock · and · Sev 2 · XS · Gate J
+- [x] `android:todo-list#drop-placeholder-own-clock` — drop placeholder own clock · and · Sev 2 · XS · Gate J
 
 ### PR 144 — earlier celebrate window exit
 
@@ -2095,7 +2225,8 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 
 ### PR 184 — dock collapse threshold hysteresis
 
-- [ ] `android:home-dock#10` — 10 · and · Sev 1 · S · Gate G
+- [x] `android:home-dock#10` — 10 · and · Sev 1 · S · Gate G
+  - the 44 now lives once on Android, at `RootFeedDockCollapse.CollapseThreshold` in `RootFeedDock.kt:122`; web's `rootDockCollapse.ts` landed on develop after this branch was cut and cited the two retired `TodoListScreen.kt`/`ScheduledTaskHomeScreen.kt` line numbers, which is what this row booked for the merge. Repointed there, at the merge: its comment now names the single Android declaration rather than a copy of the literal in each feed. Its three iOS citations were read against the merged tree and are still true, so they are left alone — the point of the row is that the number is declared once per client, and the comment could not say so while it named two Android sites
 
 ### PR 185 — fab accent crossfade
 

@@ -1,7 +1,6 @@
 package com.ohmz.tday.compose.feature.scheduledtaskhome
 
 import androidx.activity.compose.BackHandler
-import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
@@ -31,7 +30,6 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -89,6 +87,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -142,11 +141,11 @@ import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySheetMotion
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
-import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
@@ -154,6 +153,7 @@ import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.rememberSheetDismissState
@@ -161,6 +161,7 @@ import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.ui.component.RootFeedDock
+import com.ohmz.tday.compose.ui.component.RootFeedDockCollapse
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSheetContent
 import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
@@ -234,7 +235,6 @@ fun ScheduledTaskHomeScreen(
     onSummarize: () -> Unit = {},
     summaryAvailable: Boolean = true,
     showRootFeedDock: Boolean = true,
-    showCreateTaskButton: Boolean = true,
     pullRefreshEnabled: Boolean = true,
     createTaskRequestKey: Int = 0,
     onCreateTaskRequestHandled: (Int) -> Unit = {},
@@ -246,16 +246,6 @@ fun ScheduledTaskHomeScreen(
     val colorScheme = MaterialTheme.colorScheme
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val fabInteractionSource = remember { MutableInteractionSource() }
-    val fabPressed by fabInteractionSource.collectIsPressedAsState()
-    val fabScale by animateFloatAsState(
-        targetValue = if (fabPressed) 0.93f else 1f,
-        label = "fabScale",
-    )
-    val fabOffsetY by animateDpAsState(
-        targetValue = if (fabPressed) 2.dp else 0.dp,
-        label = "fabOffsetY",
-    )
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val imeVisible = WindowInsets.isImeVisible
@@ -292,14 +282,14 @@ fun ScheduledTaskHomeScreen(
         searchImeWasVisible = false
         searchResultOpening = false
     }
-    // The SYSTEM scale and not the app's: what this is timed against is the route
-    // handover in `TdayApp`, a `fadeIn(tween(NAV_FADE_IN_DURATION_MS))` that reads
-    // nothing of the preference and so keeps running at the device's scale whatever
-    // the in-app switch says. Handed the app's scale, the switch would zero the wait
-    // and leave the transition — the motion kept, the wait removed, which is the one
-    // way round `docs/motion.md`'s fifth rule nobody looks for. Moves to
-    // `rememberTdayMotionScale` on the day that transition is gated.
-    val searchCloseMotionScale = rememberSystemMotionScale()
+    // The app's scale, because what this is timed against is the route handover in
+    // `TdayApp` and that handover now answers the in-app switch as well as the
+    // animator scale. This val used to read the device's for exactly the opposite
+    // reason, and leaving it there would have broken the same rule from the other
+    // side: the transition cut to nothing while the search surface stayed up for its
+    // full length, swallowing taps, over a task screen already drawn whole. A wait
+    // runs on the clock of the motion it covers — see [effectiveMotionScale].
+    val searchCloseMotionScale = rememberTdayMotionScale()
     val openTaskFromSearch: (String) -> Unit = openTask@{ todoId ->
         if (searchResultOpening) return@openTask
         searchResultOpening = true
@@ -309,8 +299,8 @@ fun ScheduledTaskHomeScreen(
         searchResultScope.launch {
             // Scaled, because what it is waiting out is the push onto the task:
             // tearing the search surface down underneath a transition that is
-            // still running is the jump this wait exists to hide, and with the
-            // device's animations off there is no transition left to hide behind.
+            // still running is the jump this wait exists to hide, and with that
+            // push refused there is no transition left to hide behind.
             scaledDelay(SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS, searchCloseMotionScale)
             closeSearch()
         }
@@ -381,7 +371,8 @@ fun ScheduledTaskHomeScreen(
     val listState = rememberLazyListState()
     val hasScrollableContent =
         listState.canScrollForward || listState.canScrollBackward
-    val dockCollapseThresholdPx = with(density) { RootFeedDockCollapseThreshold.roundToPx() }
+    val dockCollapsePx = with(density) { RootFeedDockCollapse.CollapseThreshold.roundToPx() }
+    val dockExpandPx = with(density) { RootFeedDockCollapse.ExpandThreshold.roundToPx() }
     val headerCollapsePx = with(density) { RootFeedHeroHeaderMetrics.CollapseDistance.toPx() }
     // The header draws the refresh pill itself, so it can fly in from the top
     // and hover in front of the title instead of being painted underneath the
@@ -399,11 +390,26 @@ fun ScheduledTaskHomeScreen(
             (listState.firstVisibleItemScrollOffset / headerCollapsePx).coerceIn(0f, 1f)
         }
     }
-    val hasScrolledPastDockCollapseThreshold =
-        listState.firstVisibleItemIndex > 0 ||
-                listState.firstVisibleItemScrollOffset > dockCollapseThresholdPx
-    val dockCollapsed =
-        hasScrollableContent && hasScrolledPastDockCollapseThreshold
+    // Held rather than derived: which edge applies depends on the answer before it. The
+    // position is sampled in a snapshotFlow instead of in composition because the offset
+    // moves every frame of a fling, and this screen has no business recomposing at that
+    // rate to settle one boolean.
+    var scrolledPastDockFold by remember { mutableStateOf(false) }
+    LaunchedEffect(listState, dockCollapsePx, dockExpandPx) {
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { (index, offsetPx) ->
+            scrolledPastDockFold = RootFeedDockCollapse.next(
+                previous = scrolledPastDockFold,
+                firstVisibleItemIndex = index,
+                scrollOffsetPx = offsetPx,
+                collapsePx = dockCollapsePx,
+                expandPx = dockExpandPx,
+            )
+        }
+    }
+    // A feed too short to scroll never folds the dock, whatever the fold point says.
+    val dockCollapsed = hasScrollableContent && scrolledPastDockFold
     LaunchedEffect(dockCollapsed) {
         onRootDockCollapsedChange(dockCollapsed)
     }
@@ -434,25 +440,7 @@ fun ScheduledTaskHomeScreen(
         }
     }
 
-    Scaffold(
-        containerColor = colorScheme.background,
-        floatingActionButton = {
-            if (showCreateTaskButton) {
-                CreateTaskButton(
-                    modifier = Modifier
-                        .offset(y = fabOffsetY)
-                        .graphicsLayer {
-                            scaleX = fabScale
-                            scaleY = fabScale
-                        },
-                    interactionSource = fabInteractionSource,
-                    onClick = {
-                        showCreateTask = true
-                    },
-                )
-            }
-        },
-    ) { padding ->
+    Scaffold(containerColor = colorScheme.background) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
             val isDaytime = rememberIsDaytime()
             EmptyTaskWatermark(
@@ -560,9 +548,9 @@ fun ScheduledTaskHomeScreen(
                         ) { _, todo ->
                             ScheduledTaskHomeTodayTaskRow(
                                 modifier = Modifier.animateItem(
-                                    fadeInSpec = ScheduledTaskHomeItemFadeIn,
+                                    fadeInSpec = TdayFeedItemMotion.FadeIn,
                                     placementSpec = ScheduledTaskHomeItemPlacement,
-                                    fadeOutSpec = ScheduledTaskHomeItemFadeOut,
+                                    fadeOutSpec = TdayFeedItemMotion.FadeOut,
                                 ),
                                 todo = todo,
                                 lists = uiState.summary.lists,
@@ -647,11 +635,38 @@ fun ScheduledTaskHomeScreen(
                         }
                     }
 
+                    // Keyed, because a load failure genuinely adds and removes a
+                    // row here and `animateItem` cannot animate either on an item
+                    // whose identity is its index. The one item on this feed that
+                    // is NOT a case for [scheduledTaskHomeDisplacedItemMotion]:
+                    // the grid and the list rows are only ever moved by a
+                    // completion, this card is added and removed by a load, so it
+                    // wants the fades that block argues itself out of, and it
+                    // takes its placement from the same spring, so it lands with
+                    // its neighbours rather than against them.
+                    //
+                    // That block's other half does reach here, though: this item
+                    // is inside the `!showSearchResultsOverlay` branch, so typing
+                    // takes the Today card, the grid and the rows in one frame and
+                    // leaves this card fading out alone over the blank. Accepted,
+                    // not gated — an error banner and a live query rarely coexist,
+                    // and a gate read inside this lambda could never fire, because
+                    // the item is only ever composed while the flag is false.
                     uiState.errorMessage?.let { message ->
-                        item {
+                        item(key = "error-retry", contentType = "error_retry") {
+                            val errorCardMotionEnabled = rememberTdayMotionEnabled()
                             com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                                 message = message,
                                 onRetry = onRefresh,
+                                modifier = if (errorCardMotionEnabled) {
+                                    Modifier.animateItem(
+                                        fadeInSpec = TdayFeedItemMotion.FadeIn,
+                                        placementSpec = ScheduledTaskHomeItemPlacement,
+                                        fadeOutSpec = TdayFeedItemMotion.FadeOut,
+                                    )
+                                } else {
+                                    Modifier
+                                },
                             )
                         }
                     }
@@ -1317,45 +1332,6 @@ private fun CreateListBottomSheet(
 }
 
 @Composable
-private fun CreateTaskButton(
-    modifier: Modifier,
-    interactionSource: MutableInteractionSource,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    val fabBlue = Color(0xFF6EA8E1)
-    val fabBlueBorder = Color(0xFF3D7FEA).copy(alpha = 0.58f)
-
-    Card(
-        modifier = modifier,
-        onClick = {
-            TdayHaptics.buttonPress(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        border = BorderStroke(1.dp, fabBlueBorder),
-        colors = CardDefaults.cardColors(containerColor = fabBlue),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = TdayDimens.FabElevation,
-            pressedElevation = TdayDimens.FabPressedElevation,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.size(TdayDimens.FabSize),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
-                contentDescription = stringResource(R.string.action_create_task),
-                tint = Color.White,
-                modifier = Modifier.size(40.dp),
-            )
-        }
-    }
-}
-
-@Composable
 private fun rememberIsDaytime(): Boolean {
     val hour = remember { mutableIntStateOf(LocalTime.now().hour) }
 
@@ -1388,65 +1364,6 @@ private fun MyListsHeader(modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-private fun PressableIconButton(
-    @DrawableRes icon: Int,
-    contentDescription: String,
-    tint: Color,
-    compact: Boolean = false,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    val colorScheme = MaterialTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "scheduledTaskHomeIconButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "scheduledTaskHomeIconButtonOffsetY",
-    )
-    val buttonSize = if (compact) 30.dp else TdayDimens.FabSize
-    val defaultElevation = if (compact) 0.dp else TdayDimens.FabElevation
-    val pressedElevation = if (compact) 0.dp else TdayDimens.FabPressedElevation
-
-    Card(
-        modifier = Modifier
-            .size(buttonSize)
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
-        onClick = {
-            TdayHaptics.buttonPress(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = if (compact) RoundedCornerShape(999.dp) else CircleShape,
-        border = if (compact) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f)),
-        colors = CardDefaults.cardColors(containerColor = if (compact) Color.Transparent else colorScheme.background),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = defaultElevation,
-            pressedElevation = pressedElevation,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(if (compact) 24.dp else 22.dp),
-            )
-        }
-    }
-}
-
 /**
  * The check-off's beats, the same four every task row in every client plays:
  * the tick lands, the rule crosses the task, the ink leaves, the row is handed
@@ -1475,19 +1392,6 @@ private fun ScheduledTaskHomeTodayCard(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        label = "todayCardScale"
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "todayCardOffsetY"
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 9.dp,
-        label = "todayCardElevation"
-    )
     val dateLabel = remember { SCHEDULED_TASK_HOME_TODAY_DATE_FORMATTER.format(Instant.now()) }
     val color = Color(0xFF6EA8E1)
 
@@ -1495,17 +1399,21 @@ private fun ScheduledTaskHomeTodayCard(
         modifier = Modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {}
-            .offset(y = animatedOffsetY)
-            .graphicsLayer { scaleX = animatedScale; scaleY = animatedScale },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
         colors = CardDefaults.cardColors(containerColor = color),
+        // The elevation is Material's to animate now. It was a third
+        // `animateDpAsState` fed into BOTH slots, which is a way of telling
+        // `CardDefaults` that this card has one elevation and then animating it
+        // behind its back; handing it the two ends instead says the same thing
+        // in the API's own terms.
         elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation
+            defaultElevation = 9.dp,
+            pressedElevation = 2.dp
         ),
         shape = RoundedCornerShape(26.dp),
     ) {
@@ -2095,19 +2003,6 @@ private fun ListRow(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        label = "listRowScale",
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "listRowOffsetY",
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 8.dp,
-        label = "listRowElevation",
-    )
     val animatedCount by animateIntAsState(
         targetValue = count,
         animationSpec = tween(durationMillis = 220),
@@ -2123,11 +2018,7 @@ private fun ListRow(
             .fillMaxWidth()
             .height(70.dp)
             .semantics(mergeDescendants = true) {}
-            .offset(y = animatedOffsetY)
-            .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -2136,8 +2027,8 @@ private fun ListRow(
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation,
+            defaultElevation = 8.dp,
+            pressedElevation = 2.dp,
         ),
     ) {
         Box(
@@ -2254,23 +2145,26 @@ private fun ListRow(
 }
 
 /**
- * This feed's item motion, in one place so a row and everything its departure
- * moves travel together.
+ * The one thing about this feed's item motion that is this feed's own: how a
+ * displaced block travels.
  *
  * The Today rows already left on this spring; the tiles and list rows under them
  * had no keys, so every completion re-keyed them by index and they jumped a row
  * height in a single frame while the row above was still gliding away. Same
  * defect as the floater home's empty-state snap, an order of magnitude smaller —
  * this screen never draws an empty scene, so there is no gap to open.
+ *
+ * It stays a spring rather than joining [TdayFeedItemMotion.Placement] because a
+ * spring on Compose's own `StiffnessMediumLow` is a library default rather than
+ * a number anybody here chose, and retiming it is a decision about how this feed
+ * settles, not the drift this file's fades were fixed for. The fades ARE that
+ * drift: they were 180 in and 140 out, ten milliseconds under every other task
+ * feed and named by nothing, and they are [TdayFeedItemMotion]'s now.
  */
-private val ScheduledTaskHomeItemFadeIn =
-    tween<Float>(durationMillis = 180, easing = FastOutSlowInEasing)
 private val ScheduledTaskHomeItemPlacement = spring<IntOffset>(
     dampingRatio = Spring.DampingRatioNoBouncy,
     stiffness = Spring.StiffnessMediumLow,
 )
-private val ScheduledTaskHomeItemFadeOut =
-    tween<Float>(durationMillis = 140, easing = FastOutSlowInEasing)
 
 /**
  * The same spring, for a block a completion *moves* but never adds or removes.
@@ -2299,7 +2193,6 @@ private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
  * what it is timed against is the navigation leaving this screen, not a rung.
  */
 private const val SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS = 260L
-private val RootFeedDockCollapseThreshold = 44.dp
 
 @Composable
 private fun priorityIconFor(priority: String): ImageVector? {

@@ -10,7 +10,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -867,17 +866,12 @@ private fun RootFeedHeaderCircleButton(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
     val size = if (compact) 30.dp else RootFeedHeroHeaderMetrics.BarButtonSize
 
     Card(
         modifier = Modifier
             .size(size)
-            .graphicsLayer {
-                val pressScale = if (pressed) 0.93f else 1f
-                scaleX = pressScale
-                scaleY = pressScale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = onClick,
         enabled = enabled,
         shape = CircleShape,
