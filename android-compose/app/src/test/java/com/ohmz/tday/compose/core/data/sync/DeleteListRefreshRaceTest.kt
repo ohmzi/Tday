@@ -39,7 +39,8 @@ import retrofit2.Response
  * refresh makes it go away for good": [ListRepository.stageDeleteList] prunes the
  * list from the cache immediately but — by design, so Undo needs no network trace
  * — records no real DELETE_LIST pending mutation until the delayed commit fires
- * ~8.5s later (see `UndoableDeleteCoordinator.COMMIT_DELAY_MS`). Before this fix,
+ * ~8.5s later on a device with no accessibility timeout set, and longer on one
+ * that has (see `undoCommitDelayMillis`). Before this fix,
  * [SyncManager.mergeRemoteWithLocal]'s resurrection guard only recognized a REAL
  * pending DELETE_LIST mutation, so a pull-to-refresh landing inside that window
  * wrote the still-server-side list straight back into the cache; only the

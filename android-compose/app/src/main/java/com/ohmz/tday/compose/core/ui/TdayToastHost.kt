@@ -46,6 +46,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.dismiss
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -238,6 +242,39 @@ private fun TdayToastCard(
                 color = colorScheme.outlineVariant.copy(alpha = if (isDark) 0.52f else 0.72f),
                 shape = toastShape,
             )
+            // The drag below is the only way to send a toast away early, and a drag is
+            // reachable by exactly one kind of user. This publishes the same escape as
+            // ACTION_DISMISS, which is what TalkBack's dismiss gesture and Switch
+            // Access's menu look for — the difference between "wait it out" and "put it
+            // away" for anyone not driving the screen with a fingertip. It matters most
+            // where there is nothing to wait out: a user whose accessibility timeout
+            // asks for no timeout at all gets a toast that never leaves on its own (see
+            // AccessibilityTimeout.kt), and this is how they close it. No label is
+            // passed, so the platform's own localised "Dismiss" is announced rather than
+            // a string this repo would have to translate into every locale to say the
+            // same word.
+            //
+            // The live region is what makes the extra seconds worth anything. A toast
+            // arriving is a newly composed subtree, which the framework reports as
+            // TYPE_WINDOW_CONTENT_CHANGED and TalkBack does not speak; without this the
+            // longer window buys a screen-reader user more time to reach a card nobody
+            // told them was there, so it only helps if they happen to be exploring the
+            // bottom of the screen when it lands. Polite rather than Assertive because
+            // the delete they just made is still being read out and the toast is a
+            // report of it, not an interruption of it — and because the Undo it carries
+            // is an offer that holds for the whole window, not an alarm.
+            //
+            // Merging is what makes both of those reachable rather than merely present.
+            // An un-merged container is not something a screen reader stops on — focus
+            // would land on the message Text inside it and the dismiss would sit on a
+            // node nobody visits, which is an accessibility affordance that exists only
+            // in the source. Merged, the card is one stop that reads the message and
+            // offers the dismiss. The Undo button keeps its own stop: `clickable` is
+            // itself a merging node, and a merge does not reach through one.
+            .semantics(mergeDescendants = true) {
+                liveRegion = LiveRegionMode.Polite
+                dismiss { onDismissState(); true }
+            }
             .pointerInput(toast.id) {
                 detectDragGestures(
                     onDragStart = {

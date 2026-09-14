@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -61,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.interactiveTimeoutMillis
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
@@ -92,6 +94,13 @@ private val RootFeedDockInnerPadding = TdayDimens.RootFeedDockInnerPadding
 private val RootFeedDockTabWidth = TdayDimens.RootFeedDockTabWidth
 private val RootFeedDockExpandedWidth =
     (RootFeedDockTabWidth * RootFeedTabs.size) + (RootFeedDockInnerPadding * 2)
+
+/**
+ * How long the dock stays open after a tap has opened it, for a user who has asked
+ * Android for nothing. A base rather than the window itself — see
+ * [interactiveTimeoutMillis].
+ */
+private const val RootFeedDockTapExpansionMs = 2_400L
 private val RootFeedDockShape = RoundedCornerShape(TdayDimens.RootFeedDockRadius)
 private val RootFeedDockSelectorShape = RoundedCornerShape(TdayDimens.RootFeedDockSelectorRadius)
 
@@ -166,6 +175,7 @@ fun RootFeedDock(
     var expandedByTap by remember { mutableStateOf(false) }
     val expanded = !collapsed || expandedByTap
     val view = LocalView.current
+    val context = LocalContext.current
     val expansionProgress by animateFloatAsState(
         targetValue = if (expanded) 1f else 0f,
         animationSpec = spring(
@@ -216,7 +226,17 @@ fun RootFeedDock(
     }
     LaunchedEffect(expandedByTap) {
         if (expandedByTap) {
-            delay(2400)
+            // Same question the Undo toast asks, on the same screen: something opened
+            // itself for the user and will take itself away whether or not they got to
+            // it. 2.4s is the shortest such window in the app, so a user who told
+            // Settings they need thirty seconds to act was watching the dock close
+            // while they were still travelling to the tab — and unlike the toast there
+            // is no second chance on screen, only the same tap again. Read when the
+            // dock opens rather than at composition, because that is when the window
+            // starts and the user can have changed the setting since. Not scaled with
+            // motion: this is dwell time, not a duration anyone watches. See
+            // AccessibilityTimeout.kt.
+            delay(interactiveTimeoutMillis(context, RootFeedDockTapExpansionMs))
             expandedByTap = false
         }
     }
