@@ -59,6 +59,7 @@ import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -183,6 +184,38 @@ class ManageMembersViewModel @Inject constructor(
     }
 }
 
+// What this sheet draws that the scale has no rung for. Named here rather than snapped onto a
+// neighbouring step: every one of them is a near miss, and a near miss is exactly what a name is
+// for — the next edit either moves the named thing or moves the rung, and it can no longer do
+// both by accident.
+
+/** The circle carrying a member's initial. 40 is not `FabIconSize`'s 40: that one measures the
+ *  glyph inside a floating action button, and nothing would ever resize both. */
+private val MemberAvatarSize = 40.dp
+
+/** The spinner the member list stands behind while it loads. Not `IconLg`'s 28, because it is not
+ *  an icon — it is the indicator drawn where the rows will be. */
+private val LoadingSpinnerSize = 28.dp
+
+/** The gap between the search field and what it found. Falls between SpacingMd and SpacingLg. */
+private val SearchResultsSpacing = 10.dp
+
+/** The X that drops a member, drawn under `IconSm` so it reads as a control and not as content. */
+private val RemoveMemberIconSize = 18.dp
+
+/** The plus inside the add pill, sized against the label beside it rather than the icon scale. */
+private val AddMemberIconSize = 16.dp
+
+// EDITOR / VIEWER / OWNER. One pill's proportions, so the two move together or not at all.
+private val RolePillHorizontalPadding = 10.dp
+private val RolePillVerticalPadding = 5.dp
+
+// Share and Leave, the full-width buttons a non-owner gets. One button's interior: the horizontal
+// inset has no rung and the vertical one does, and splitting them across a name and a rung is how
+// a button ends up padded 16 by something that moved 14.
+private val ActionButtonHorizontalPadding = 16.dp
+private val ActionButtonVerticalPadding = 14.dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManageMembersSheet(
@@ -213,8 +246,11 @@ fun ManageMembersSheet(
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(
+                    horizontal = TdaySheetDefaults.HorizontalPadding,
+                    vertical = TdaySheetDefaults.VerticalPadding,
+                ),
+            verticalArrangement = Arrangement.spacedBy(TdaySheetDefaults.SectionSpacing),
         ) {
             TdaySheetHeader(
                 title = stringResource(R.string.members_title),
@@ -229,16 +265,21 @@ fun ManageMembersSheet(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                        .padding(
+                            horizontal = TdayDimens.SpacingXl,
+                            vertical = TdayDimens.SpacingMd,
+                        ),
                 ) {
                     if (uiState.isLoading) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 18.dp),
+                                .padding(vertical = TdayDimens.SpacingXxl),
                             contentAlignment = Alignment.Center,
                         ) {
-                            CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(LoadingSpinnerSize),
+                            )
                         }
                     } else {
                         uiState.owner?.let { owner ->
@@ -274,7 +315,7 @@ fun ManageMembersSheet(
                     style = MaterialTheme.typography.bodyMedium,
                     color = colorScheme.error,
                     fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.padding(horizontal = 4.dp),
+                    modifier = Modifier.padding(horizontal = TdayDimens.SpacingXs),
                 )
             }
 
@@ -284,8 +325,11 @@ fun ManageMembersSheet(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                            .padding(
+                                horizontal = TdayDimens.SpacingXl,
+                                vertical = TdayDimens.SpacingXl,
+                            ),
+                        verticalArrangement = Arrangement.spacedBy(SearchResultsSpacing),
                     ) {
                         BasicTextField(
                             value = uiState.searchQuery,
@@ -299,13 +343,23 @@ fun ManageMembersSheet(
                             modifier = Modifier.fillMaxWidth(),
                             decorationBox = { innerTextField ->
                                 Box(
+                                    // RadiusRow and not RadiusField, which is the rung a text
+                                    // field would otherwise take: this one has always been drawn
+                                    // at 16 dp, and rounding it up to 22 would be a visual change
+                                    // rather than a name. The create-list name field in
+                                    // ScheduledTaskHomeScreen is the same control — same
+                                    // decorationBox, same controlSurfaceColor(), same 16 — and
+                                    // takes the same rung; the two cannot answer this differently.
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(
                                             TdaySheetDefaults.controlSurfaceColor(),
-                                            RoundedCornerShape(16.dp),
+                                            RoundedCornerShape(TdayDimens.RadiusRow),
                                         )
-                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                        .padding(
+                                            horizontal = TdayDimens.SpacingXl,
+                                            vertical = TdayDimens.SpacingLg,
+                                        ),
                                 ) {
                                     if (uiState.searchQuery.isBlank()) {
                                         Text(
@@ -327,7 +381,7 @@ fun ManageMembersSheet(
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 4.dp),
+                                    modifier = Modifier.padding(horizontal = TdayDimens.SpacingXs),
                                 )
                             } else {
                                 val memberIds = buildSet {
@@ -370,7 +424,7 @@ fun ManageMembersSheet(
                 )
             }
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(TdayDimens.SpacingXs))
         }
     }
 }
@@ -387,13 +441,13 @@ private fun MemberRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(vertical = TdayDimens.SpacingMd),
+        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(MemberAvatarSize)
                 .background(colorScheme.primary.copy(alpha = 0.15f), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
@@ -424,7 +478,7 @@ private fun MemberRow(
             RolePill(text = stringResource(R.string.share_role_owner), selected = true)
         } else if (canManage) {
             val isEditor = member.role.equals("EDITOR", ignoreCase = true)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingSm)) {
                 RolePill(
                     text = stringResource(R.string.share_role_editor),
                     selected = isEditor,
@@ -441,7 +495,7 @@ private fun MemberRow(
                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                     contentDescription = stringResource(R.string.members_remove),
                     tint = colorScheme.error,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(RemoveMemberIconSize),
                 )
             }
         } else {
@@ -469,7 +523,7 @@ private fun RolePill(
         enabled = onClick != null,
         shape = RoundedCornerShape(50),
         border = BorderStroke(
-            width = 1.5.dp,
+            width = TdayDimens.BorderWidthThick,
             color = if (selected) {
                 colorScheme.primary.copy(alpha = 0.55f)
             } else {
@@ -488,14 +542,19 @@ private fun RolePill(
                 TdaySheetDefaults.controlSurfaceColor()
             },
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = TdayDimens.CardElevationDefault,
+        ),
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelLarge,
             color = if (selected) colorScheme.primary else colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            modifier = Modifier.padding(
+                horizontal = RolePillHorizontalPadding,
+                vertical = RolePillVerticalPadding,
+            ),
         )
     }
 }
@@ -513,8 +572,8 @@ private fun SearchResultRow(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(if (alreadyMember) 0.6f else 1f)
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(vertical = TdayDimens.SpacingXs),
+        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -537,7 +596,10 @@ private fun SearchResultRow(
                 style = MaterialTheme.typography.labelLarge,
                 color = colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.ExtraBold,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.padding(
+                    horizontal = TdayDimens.SpacingLg,
+                    vertical = TdayDimens.SpacingSm,
+                ),
             )
         } else {
             Card(
@@ -550,18 +612,23 @@ private fun SearchResultRow(
                 colors = CardDefaults.cardColors(
                     containerColor = colorScheme.primary.copy(alpha = 0.15f),
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = TdayDimens.CardElevationDefault,
+                ),
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(
+                        horizontal = TdayDimens.SpacingLg,
+                        vertical = TdayDimens.SpacingSm,
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingSm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
                         contentDescription = null,
                         tint = colorScheme.primary,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(AddMemberIconSize),
                     )
                     Text(
                         text = stringResource(R.string.members_add_action),
@@ -604,16 +671,22 @@ private fun MembersSheetActionButton(
             onClick()
         },
         interactionSource = interactionSource,
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.5.dp, border),
+        shape = RoundedCornerShape(TdayDimens.RadiusXl),
+        border = BorderStroke(TdayDimens.BorderWidthThick, border),
         colors = CardDefaults.cardColors(containerColor = container),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = TdayDimens.CardElevationDefault,
+            pressedElevation = TdayDimens.CardElevationDefault,
+        ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(
+                    horizontal = ActionButtonHorizontalPadding,
+                    vertical = ActionButtonVerticalPadding,
+                ),
+            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
