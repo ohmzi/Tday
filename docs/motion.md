@@ -225,13 +225,13 @@ against `animation-core`'s bytecode rather than assumed.
 - **`Exit`.** 7 `FastOutLinearInEasing` on Android; zero `ease-in` utilities on
   web today.
 - **`Scene`.** `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:375`, and three
-  declarations on web — `.tday-empty-enter` at `tday-web/src/globals.css:608`,
-  `.tday-surface-enter` at `:789` and `.tday-surface-exit` at `:795`. iOS
+  declarations on web — `.tday-empty-enter` at `tday-web/src/globals.css:961`,
+  `.tday-surface-enter` at `:1231` and `.tday-surface-exit` at `:1237`. iOS
   expresses the same arrival with `.easeOut` and is not on this curve yet.
-- **`Gesture`.** Four sites, all web: `tday-web/src/globals.css:328` (the press
-  ripple) and `:430` (the press itself, which is in `@layer tday-press` so that
-  a `transition-colors` on a shadcn Button cannot put the app's most common
-  button back on Tailwind's default ease),
+- **`Gesture`.** Four sites, all web: `tday-web/src/globals.css:392` (the press
+  ripple) and `:494` (the press itself, which is in `@layer tday-press`, opened
+  at `:454`, so that a `transition-colors` on a shadcn Button cannot put the
+  app's most common button back on Tailwind's default ease),
   `tday-web/src/features/calendar/style/calendar-styles.css:32` and `:36`
   (calendar paging). Android and iOS express the same intent with the
   **Gesture spring**, which is a different thing under a shared name.
