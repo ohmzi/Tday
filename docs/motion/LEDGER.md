@@ -476,7 +476,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 23 — empty-state slots stop claiming their height in one frame
 
-- [ ] `web-empty-state-slot-claims-42vh-in-one-frame` — the 42vh slot is claimed the same frame the last row is pruned · web · Sev 3 · M · Gate V+D
+- [x] `web-empty-state-slot-claims-42vh-in-one-frame` — the 42vh slot is claimed the same frame the last row is pruned · web · Sev 3 · M · Gate V+D · four screens draw this scene inline; the three scoped feeds took their travel in Phase 5 and the custom list was the one that was missed, so the row closes in Phase 9 on `ListContainer`'s own `useRowPlacement` wrapper and the placement lead in front of its celebration
 - [ ] `web-floater-empty-arrival-displaces-tiles` — ~33 vh of uncued jump, on the confetti frame — largest in the set · web · Sev 4 · M · Gate V+D
 - [ ] `web-empty-state-anchor-citation-fix` — ledger hygiene: `EmptyState.tsx:163` does not exist — the file is 161 lines. Verified anchors: the slot is `:54` (`min-h-[42vh]`, inside the wrapper at `:52-57`), the scene's own 520 ms arrival is `:60-65` (`.tday-empty-enter` / `.tday-empty-enter-celebrating`), and `:158` is the confetti the arrival sits above the wrapper to avoid fading with · web · Sev 1 · XS · Gate doc
 
