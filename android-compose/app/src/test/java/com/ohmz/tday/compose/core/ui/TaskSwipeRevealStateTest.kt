@@ -168,7 +168,7 @@ class TaskSwipeRevealStateTest {
 
     @Test
     fun `the release spring is the converted iOS release spec`() {
-        // SwipeActions.swift:368 — .interactiveSpring(response: 0.34, dampingFraction: 0.82).
+        // SwipeActions.swift:353 — .interactiveSpring(response: 0.34, dampingFraction: 0.82).
         // response is the undamped period, so stiffness is (2 * PI / 0.34)^2 ~= 341.
         assertEquals(0.82f, TaskSwipeMotion.Release.dampingRatio, 0f)
         assertEquals(340f, TaskSwipeMotion.Release.stiffness, 0f)
