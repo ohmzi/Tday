@@ -129,6 +129,17 @@ animates.
               than its own enter; or the calendar `Modal` fades out only part-way before the card
               is cut away, which is the JavaScript half of its exit having drifted from the CSS.
 
+- [ ] **PR G7 · web · The page dims with the panel, not ahead of it** — a phone, light AND dark
+      (the scrim's two alphas differ, and the early-finish is easier to catch on the lighter one).
+      Do:     open the right-hand `Sheet` from the More tab, watch only the page BEHIND the panel,
+              then close it and watch the same thing. Repeat once at 1/4 speed if the browser's
+              animation inspector offers it — the whole margin here is about a tenth of a second.
+      Watch:  the page reaches its full dim at the moment the panel stops moving, and starts coming
+              back only as the panel leaves — the two halves finish together in both directions.
+      Fails:  the page is fully dark while the panel is still sliding in — that is the 0.15 s
+              library fallback still winning, which means the utility is not reaching tw-animate's
+              `animation-duration`; or the page is bright again with the panel still on screen.
+
 - [ ] **PR 39a · web · The burst is paper, and the apex is not cut** — any list with exactly one
       task left on it, so completing it empties the list and celebrates. Run it twice: once in a
       tall window, and once with the browser window short enough that the empty state is at its
@@ -177,6 +188,155 @@ animates.
               is now its own ledger row (`web-infinite-scroll-skeleton`). PR 40a has since landed,
               so its `TaskRowSkeletonGroup` is in the tree — the strip simply does not draw it yet,
               so there is still nothing to check here, and the row above is not asking about it.
+
+- [ ] **PR 8i · web · The dock selects one object, and the pill takes the direct route** — a
+      DESKTOP window, or any viewport at `sm` and wider: below that no tab changes width and there
+      is nothing to see. The dock with the More tab visible, standing on any tab but the one you
+      are about to tap.
+      Do:     tap a different tab and watch the tab you are moving AWAY from, and the pill. Once at
+              full speed and once with the browser's animation inspector at 1/4, if it offers one.
+      Watch:  the tab you left narrows to its icon over about a third of a second, 320 ms, sliding
+              the tabs beside it along with it, and the pill travels and stretches alongside them
+              and stops when they do. One journey: at 1/4 speed the pill settles onto its mark
+              from about five pixels past it, which is momentum, not a return trip.
+      Fails:  the pill setting off past the arriving tab and coming back from the far side — 56px
+              out and back, unmistakable even at full speed. That is the follower in `RootDock`
+              not running, and it is what the 260 ms sample this row retired looked like. Also a
+              fail: the tab you left snapping to its icon in one frame, which is `min-width`
+              having fallen out of the press layer's `transition-property` list in `globals.css`
+              — the call site cannot restore it.
+      Note:   the arriving tab is NOT what to watch. Its label makes it wider than the 104px floor,
+              so it reaches its width in the first frame at any duration — that is measured, not
+              a defect. jsdom computes no layout, so the suite can prove both elements spell
+              `duration-emphasis` and can say nothing about whether they arrive together.
+
+- [ ] **PR 8i · web · The dock tab still answers a finger** — the same dock, any width; a touch
+      screen if there is one, since this is the press and not the hover.
+      Do:     press and hold a dock tab, then release, without changing tabs.
+      Watch:  it squashes and dips under the finger and comes back on release. It now takes 320 ms
+              rather than 200 — one duration covers every property the press layer animates on
+              this element, and the tab's `min-width` had to come up to Emphasis to pair with the
+              pill.
+      Fails:  the squash reading as the tab thinking about it rather than answering — a press that
+              is still arriving when the finger has gone. If it does, the pairing is not worth its
+              price and the tab needs a press duration the pill does not share.
+
+- [ ] **PR 8i · web · The install banner leaves faster than it arrived** — iOS Safari, or any
+      browser where the PWA install prompt fires; the banner has to be on screen, which on Chrome
+      means a site not already installed.
+      Do:     let the banner slide up, then tap its X and watch the banner, not the page.
+      Watch:  it rises over about a third of a second and is gone in about half that — 320 ms in,
+              150 ms out — and it is fully gone before its space is reclaimed, never cut away
+              mid-fade.
+      Fails:  the banner vanishing between frames with no slide-out at all, which would mean
+              `BANNER_EXIT_MS` and the closed-state class have drifted apart again and the node is
+              being unmounted before its animation runs; or an exit that takes as long as the
+              arrival, which is the class not reaching tw-animate's `animation-duration`.
+
+- [ ] **PR 8j · web · The calendar's view switcher and the view it switched arrive together** — any
+      viewport; the Calendar screen, standing on Month.
+      Do:     tap Week, then Day, then back to Month, watching the WHITE THUMB behind the labels and
+              the grid below it at the same time. Once at full speed and once at 1/4 in the
+              browser's animation inspector if it offers one.
+      Watch:  the thumb slides a segment and the grid slides in from the side, and both stop on the
+              same frame — about a third of a second, 320 ms. The card's height settles with them;
+              it was already on that rung.
+      Fails:  the thumb arriving first and the grid still travelling under a switcher that has
+              already finished — one tap reading as two events. That is the 300 ms this row
+              retired, and 20 ms is at the edge of what the eye catches at full speed, which is why
+              the 1/4 pass is part of the row rather than a nicety.
+      Note:   jsdom computes no layout, so the suite can prove the thumb spells `duration-emphasis`
+              and the keyframes spell `--tday-duration-emphasis`, and can say nothing about whether
+              the two play as one. Not a fail: the OTHER two segmented controls in the app — the
+              Completed tab strip and Settings' two switchers — still move their thumbs over 200 ms.
+              That is deliberate and argued at the call site; they have no grid moving beside them.
+
+- [ ] **PR 57a · web · The dock folds down to the tab you are on, and holds still at the fold** — a
+      phone-width viewport; Today, and again on the Anytime feed, each with enough tasks to scroll.
+      Do:     scroll down slowly past the first 44 px and keep going; scroll back to the top; then
+              park a finger just past the fold without moving it and leave it there; then, with the
+              dock folded, tap the dock once and wait without touching anything else. Finally
+              scroll a long Settings page and the Guide.
+      Watch:  as the feed passes 44 px the tabs you are not on are swallowed into the capsule from
+              their trailing edge and the capsule closes around the tab you are on, over about a
+              third of a second — 320 ms, the rung its pill and its tabs already share. The icons
+              are clipped, not squeezed. A finger resting at the fold leaves the dock exactly where
+              it is. Scrolling back up opens it again well before the top of the feed arrives. One
+              tap on the folded dock opens it where it stands — no navigation, no jump to the top —
+              and it closes itself again about 2.4 s later if nothing is chosen.
+      Fails:  the capsule reaching its folded width in a single frame instead of gliding (the press
+              layer deletes a `width` transition declared on a button, which is why the collapse is
+              on a wrapper); an icon squashing on the way out; a stub of a closed tab left inside
+              the capsule — folded, the dock is the one tab and the capsule's own 7 px either side
+              of it, 62 px on a phone, and nothing else; the dock flickering between its two
+              shapes while a finger rests near the fold, which is the whole reason there are two
+              thresholds; a tap on the folded dock jumping the feed to the top or switching tab;
+              the dock folding on Settings or the Guide, where it is the way out rather than in
+              the way.
+      Note:   jsdom computes no layout, so the suite can prove the fold's four answers and which
+              classes each tab carries, and can say nothing about whether the capsule glides. The
+              collapse is a `1fr` → `0fr` grid track — the same interpolable spelling of "as wide
+              as what is inside it" the collapsing task rows use on the other axis — and it has
+              never been seen playing.
+      Pill:   the white pill under the active tab makes the trip with it, and the Anytime feed is
+              where that is worth standing on — there the tab that closes is to the LEFT of the
+              one you are on, so the active tab slides 52 px inwards while the capsule shuts around
+              it. The pill is re-measured once a frame for the length of the fold rather than
+              sprung to a computed slot the way Android's selector is, so what to watch for is a
+              pill that arrives after the tab has stopped or overshoots and comes back — not one
+              parked in the open dock's slot, which is what the suite now pins.
+
+- [ ] **PR 57b · web · The folded dock is folded, not half-folded** — the same phone-width
+      viewport and the same two feeds, with reduce-motion on (Chromium: DevTools → Rendering →
+      **Emulate CSS prefers-reduced-motion: reduce**; or the OS setting, which is the one a real
+      user has). The Anytime feed is where to spend the time: there the tab that closes is to the
+      LEFT of the one you are on, so the fold moves the active tab 52 px without changing which
+      tab is active.
+      Do:     scroll past 44 px, then back to the top, then past it again. At a desktop width,
+              also switch tabs with the dock open.
+      Watch:  the dock is its folded shape on the next frame — no glide, no half-closed capsule —
+              and the white pill is UNDER the one tab that is left, flush inside the 62 px
+              capsule. The same in reverse: the open dock arrives already open with the pill under
+              the active tab. Nothing travels at any point, and nothing needs a second gesture to
+              settle.
+      Fails:  the pill parked to the RIGHT of the tab it marks, or clipped to a sliver against the
+              capsule's border — the defect this PR is for. With motion off there is no follower
+              re-reading the tab's rect, so the only thing that can correct the measurement taken
+              as the fold committed is the transition's own completion; a pill in the wrong slot
+              means that never arrived. Also a fail: anything gliding, which would mean the 1 ms
+              floor is not reaching this subtree, and a pill that snaps to the right slot only
+              once you touch the dock again.
+      Note:   `globals.css` floors transitions to 1 ms rather than to zero precisely so the
+              completion still reports itself, and this row is the only place that bargain is
+              checked by eye. An engine that decided not to fire `transitionend` for a 1 ms
+              transition would show exactly the failure above with every automated gate green.
+
+- [ ] **PR 59 · web · The hero header stays crisp through a long scroll** — a mid-range Android
+      phone in Chrome, not a desktop emulating one: this row is about what a real GPU does with a
+      layer it rasterises once and reuses, and a laptop has the headroom to hide it. Both root
+      feeds, Today and Anytime, each with enough tasks to flick through several screens.
+      Do:     drag the top 78 px of the feed slowly up and down so the hero mark, title and search
+              capsule morph continuously for several seconds without a pause, then flick hard and
+              let it settle. Repeat with the phone's own text size turned up, where the title is
+              largest and a bad raster is easiest to see. Then stop scrolling, wait two seconds,
+              and start again — that second pass is the one that runs after the hints have been
+              dropped, and it has to look like the first.
+      Watch:  the three pieces morph smoothly throughout, and the text in the title is as crisp at
+              the end of a long scroll as at the start of it and as it is at rest.
+      Fails:  the hero title going soft, fuzzy or fringed while scrolling and snapping back crisp
+              when the scroll stops, which is a layer rasterised once at the wrong scale and
+              reused — the specific cost of these hints, and the reason they are dropped 200 ms
+              after the last scroll frame rather than held. Also a stutter on the first frame of
+              the second pass, which would mean the drop is too eager.
+      Note:   there is no automated gate for any of this and there cannot be. `will-change` changes
+              no pixel by definition — it changes when the compositor allocates, which is a
+              property of a GPU and a driver. Rule F of `motion-reachability-web.test.ts` proves
+              only that this is the one hint in the app and that it clears what it sets; it is set
+              in JavaScript, where even that cannot watch it happen. This row is the whole of the
+              evidence that the change did not cost anything.
+              Nothing to check on the dock, the bulk bar or the search panel: the nine stylesheet
+              hints that would have made those a device question were removed before this shipped,
+              and the ledger row argues why.
 
 ## Android
 

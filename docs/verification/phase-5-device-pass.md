@@ -347,3 +347,20 @@ viewport.
       Fails:  the notes' rule snapping on under a title's rule that fades — two edits to one task,
               and the defect this PR names. Also a fail: the row being pruned while its box is
               still closing, which puts back the jump the sequence exists to remove.
+
+PR 23's row below is not one of the pairs. It is the fourth leg of a Phase 5 row — the three
+scoped feeds took their placement travel then and the custom list was the one that was missed — so
+it lands in this file's Web section with the Phase 6 rows and has no twin to run it beside.
+
+- [ ] **PR 23 · web · The custom list's Earlier bucket slides when the scene lands** — a phone, a
+      custom list holding exactly one task due today and at least two overdue ones, with Earlier
+      collapsed, so its header is the block sitting under the scene.
+      Do:     tick that last current task off, and watch the Earlier header rather than the paper.
+      Watch:  the header slides down over 320 ms into the place the 42vh scene pushes it to, and
+              the first confetti appears only once it has arrived — travel, then burst, then the
+              scene rising through it.
+      Fails:  the header is already in its new place on the frame the row disappears, which is the
+              defect this closes and is what the other three feeds looked like before Phase 5. Also
+              a fail: the burst firing while the header is still moving, which is the placement lead
+              not reaching `EmptyState`; or the header sliding at all with Reduce Motion on, where
+              it must simply be drawn where it ends up.

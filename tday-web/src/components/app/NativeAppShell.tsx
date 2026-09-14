@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { usePathname } from "@/lib/navigation";
 import MoreNavigationSheet from "./MoreNavigationSheet";
-import RootDock from "./RootDock";
+import RootDock, { activeDockTab } from "./RootDock";
 import TaskFloatingActionButton from "./TaskFloatingActionButton";
 import InstallPromptBanner from "./InstallPromptBanner";
 import ForcePasswordChangeGate from "./ForcePasswordChangeGate";
@@ -10,6 +10,7 @@ import SetSecurityQuestionsGate from "./SetSecurityQuestionsGate";
 import { useNativeRouteCounts } from "./nativeRouteConfig";
 import { usePrefetchRoutes } from "@/hooks/usePrefetchRoutes";
 import { useDuckPresence } from "@/hooks/useDuckPresence";
+import { useRootDockCollapsed } from "@/hooks/useRootDockCollapsed";
 import { useBulkSelectionActive } from "@/lib/bulk/bulk-selection-signal";
 
 export default function NativeAppShell({
@@ -43,6 +44,16 @@ export default function NativeAppShell({
   const dock = useDuckPresence(!bulkSelecting);
   const taskFab = useDuckPresence(showTaskFab && !moreOpen);
 
+  // Only the two root feeds fold the dock. Android and iOS drive `collapsed`
+  // from `TodoListScreen` and `ScheduledTaskHomeScreen` and from nowhere else,
+  // and the distinction is not "does this route scroll" — Settings scrolls too.
+  // It is that a feed is the thing the dock is FOR: on a feed the dock is in the
+  // way of what you came to read, and everywhere else it is the way back out.
+  // Asked through `RootDock`'s own rule rather than a second copy of the path
+  // matching, so the shell can never think a route is a feed while the dock,
+  // which would then be folding with no tab selected in it, does not.
+  const dockCollapsed = useRootDockCollapsed(activeDockTab(pathname) !== "more");
+
   return (
     <div className="relative flex h-screen min-h-screen overflow-hidden bg-background text-foreground">
       <div className="relative z-0 flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -54,6 +65,7 @@ export default function NativeAppShell({
           moreOpen={moreOpen}
           duckClassName={dock.className}
           duckInteractive={dock.interactive}
+          collapsed={dockCollapsed}
         />
       )}
       {taskFab.mounted && (

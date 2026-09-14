@@ -197,9 +197,38 @@
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  /* The radius ladder, whole. It used to be three lines — `lg`, `md`, `sm` —
+     and Tailwind supplied the other five from `theme.css:397-404`, which is how
+     `rounded-xl` came to render 12px while `rounded-md` rendered 14px: a rung
+     that is not declared is a rung the framework picks, and it picked one that
+     sorts below the rung under it. So the whole namespace is declared here, the
+     unused keys included, rather than half of it.
+
+     Five rungs, because five distinct corners are what the app actually draws —
+     2, 12, 14, 16, 24. `2xl` and `3xl` are gone as names and not as pixels: the
+     fix was a rename at the call sites, not a revalue here. Lifting `--radius-xl`
+     above `md` would have moved the rendered corner at 35 sites and, with `2xl`
+     folded onto `lg`, at 84 more — most of the app, and a device pass this row
+     does not have. Renaming leaves every corner byte-identical and costs a diff,
+     the two `<pre>` blocks in `public/content/blog` included: they ride the same
+     stylesheet and rule C walks them for exactly that reason.
+
+     It is also the same argument the easings below make: a value that already
+     has a name does not get a second one. `lg` and `2xl` both meaning 16px was
+     exactly that, and one of them had to go.
+
+     `xs` keeps Tailwind's own `0.125rem` rather than the `2px` the two
+     `rounded-[2px]` sites spell, so that declaring the rung stays a pure
+     declaration — the app pins no root font size, and `2px` would diverge from
+     what renders today for anyone who has changed theirs. */
+  --radius-xs: 0.125rem;
+  --radius-sm: calc(var(--radius) - 4px); /* 12px */
+  --radius-md: calc(var(--radius) - 2px); /* 14px */
+  --radius-lg: var(--radius); /* 16px */
+  --radius-xl: calc(var(--radius) + 8px); /* 24px */
+  --radius-2xl: initial;
+  --radius-3xl: initial;
+  --radius-4xl: initial;
 
   /* The two easings Tailwind does not already ship, and only those two. Its own
      `--ease-in-out`, `--ease-out` and `--ease-in` (theme.css:434-436) are
@@ -851,6 +880,80 @@
   0%, 100% { opacity: 0.3; transform: scale(0.7); }
   50% { opacity: 1; transform: scale(1); }
 }
+
+/* ── Compositor hints, and why this stylesheet has none ──
+   `will-change` is a promise, not a decoration: a standing instruction to keep
+   an element on its own compositor layer, which on a phone is a texture the size
+   of the element held for as long as the declaration applies — about ten
+   megabytes for a full-screen one. This block was written to spend some of that
+   on the surfaces that move while a feed scrolls under them: the dock and the
+   create button ducking, the bulk bar and the mobile search panel arriving, the
+   empty scene, Earlier's rows, the card a finger is carrying. Nine rules took a
+   hint and gave it back, and this is the argument for why, because the next
+   person to reach for one will reach for exactly those nine.
+
+   A hint buys the FIRST frame of a motion and nothing after it, and only when it
+   reaches the element BEFORE that motion starts. An engine composites a
+   keyframed `opacity` or `transform` on its own; what it will not do is build the
+   layer until the animation begins, and that build is paid for in the frame the
+   user is watching it begin. Set the hint in the same style recalculation as the
+   `animation-name` and there is no earlier frame for it to have built in — the
+   engine promotes at the one compositing update it was going to promote at
+   anyway, and all that is left of the hint is the texture.
+
+   That is every rule below, without exception. `.tday-surface-*` lands on a bar
+   and a panel that are `{flag && …}`, so they mount already carrying it;
+   `.tday-rows-*`, `.tday-empty-*` and the drag lift mount the same way. And
+   `useDuckPresence` hands out `""` until the dock has been absent once, so the
+   very first duck-out — the one beat this was scoped for, the dock leaving
+   through the bottom edge while the bulk bar rises into its slot over a feed
+   that has not stopped — applies `.tday-duck-exit` with hint and keyframe
+   together. There is no frame between them to promote in.
+
+   The lifetime half is worse than the timing half. A hint's life is its CLASS's
+   life, and nothing here takes a class off when a keyframe finishes: the `-exit`
+   halves go with their node a rung later (`useFadeUnmount`, `useDuckPresence`)
+   and the `-enter` halves are applied at mount and stay until the surface does.
+   `wasEverAbsent` never flips back, so once a user has entered selection mode
+   once the dock and the create button carry `.tday-duck-enter` for the life of
+   the shell — and those classes sit on the full-width fixed positioning strip,
+   not on the `backdrop-blur-xl` box two levels inside it, so the layer would be
+   a new one rather than one the blur had already paid for. A permanent always-on
+   layer, bought with a frame that was never for sale.
+
+   `prefers-reduced-motion` turns what is left into pure cost. The floor at the
+   top of this file reaches `animation-duration`, `-iteration-count` and
+   `-delay`; it deliberately does not reach `animation-name`, and every block
+   below cancels its own motion with `animation: none`, which does. So a hinted
+   class under that preference is a layer reserved for a keyframe that never
+   runs, held for as long as the surface is drawn.
+
+   Two of the nine would have been wrong even with the timing right, and they are
+   the ones worth naming because they look like candidates. `.task-strike` and
+   `.task-unstrike` animate `text-decoration-color`, which is paint: there is no
+   layer to run it on, so the promotion would still repaint every frame of the
+   strike. `.tday-empty-scene` and `.tday-empty-sparkle` run `infinite`, which is
+   an always-on hint wearing an animation's clothes. `.tday-route-fade` is the
+   largest version of the same mistake — `RouteFade` puts that class on the
+   container every screen is drawn inside and keys it on `pathname`, so it is
+   never absent and never small — and `::view-transition-old(root)` beside it
+   needs nothing either, being a flat image the compositor already owns, which
+   the route-change block below says in as many words.
+
+   The app's one hint is in JavaScript instead, in `RootFeedHeroHeader`: three
+   nodes whose width, height and transform are rewritten every frame of a scroll
+   pass, hinted when the pass starts — a frame before the first write it prepares
+   — and dropped `HINT_IDLE_MS` after its last frame. Set ahead, and with a clock
+   to end it: the two things a class on a mounting node cannot offer.
+
+   Rule F of `tests/guardrails/motion-reachability-web.test.ts` is the ratchet
+   for the next attempt rather than a guard over this one. A `will-change` here
+   may only sit in a rule that also declares an `animation`, never in one that
+   runs `infinite`, and never in one whose animation is cancelled under
+   `prefers-reduced-motion` without the hint being cancelled in the same block —
+   that last shape is the one that got past review here. All three read on an
+   empty list today and say so. What no test can see is how long a class stays on
+   an element, which is the paragraph above and is the reviewer's job. */
 
 /* The scene's own arrival. The frame before it is the row the user just ticked
    off leaving the screen, and a state that simply appears in that gap reads as

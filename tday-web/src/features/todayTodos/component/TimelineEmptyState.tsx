@@ -39,10 +39,12 @@ export default function TimelineEmptyState({
   celebrate: boolean;
   /**
    * How long the celebration waits for the page to settle before any of it plays
-   * (see `EmptyState`'s own doc). `AllTasksTimelineContainer` passes the travel its
-   * own children take to reach their new slots, because this scene claims its 42vh
-   * out of the page they sit in; `ListContainer` omits it, because nothing on a list
-   * screen moves when this mounts.
+   * (see `EmptyState`'s own doc). Both callers pass the travel their own children
+   * take to reach their new slots, because this scene claims its 42vh out of a page
+   * those children sit in — the list screen included, where Earlier's block goes on
+   * rendering underneath it for as long as the list holds overdue tasks. The zero
+   * default is `EmptyState`'s own, kept here so the two contracts stay the same
+   * shape; every caller that comes through this component spends the lead.
    */
   celebrationStartDelayMs?: number;
   /** Which half of the swap is mid-exit, if either (see `useEarlierExpandHandoff`). */
