@@ -275,7 +275,7 @@ unchanged.
   is what bought one. **Do not round 340 to the arithmetic 342**: it would break
   the Android site that already matches.
 - **`Settle`.** One anchoring site today,
-  `ios-swiftUI/Tday/UI/Component/TdaySheetChrome.swift:227` (`cardIn`). Android
+  `ios-swiftUI/Tday/UI/Component/TdaySheetChrome.swift:271` (`cardIn`). Android
   has no exact match — `Spring.StiffnessLow` is 200 f and `StiffnessMediumLow`
   is 400 f, and this rung sits between them on purpose.
 
@@ -545,6 +545,7 @@ change pixels or destroy an argument that is worth more than the tidiness.
 | `TdayPullRefresh`'s specs | `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdayPullRefresh.kt:196` (0.72 damping), `:241` (220 ms), `:253` (1050 ms wave) | A pull-to-refresh is driven by the finger, not by a clock: the release spring is looser than anything in the vocabulary on purpose, and the wave is a loop rather than a transition |
 | The swipe sampler's two windows | `tday-web/src/lib/swipeGesture.ts` (100 ms velocity window, 16 ms floor under it) | Neither is a motion anybody watches: they are how long a release is measured over, and how little evidence is too little. The window is Android's `VelocityTracker` horizon, solved by people with far more device data than this repo has; the floor is one frame at 60 Hz, the same fact the five-rung ladder is built on, read for the other half of what it says — a finger cannot be observed to do anything inside one frame, so a distance divided by a sub-frame gap is the platform's event delivery and not a flick |
 | `pressedScale * revealScale` | `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskSwipeActionButton.kt:48`; `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/calendar/CalendarScreen.kt:2840` | The 0.92 f here is **one factor of a composed transform**, multiplied by the reveal scale before it reaches the screen. The press-scale tokens are the whole scale a finger sees; this is not the same quantity and must not be given the same name |
+| The sheet scrim's `0.40` / `0.68` | `ios-swiftUI/Tday/UI/Theme/TdayTheme.swift:76`; `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdaySheetChrome.kt:111`; `tday-web/src/globals.css:553` and `:625` (`--sheet-scrim`) | Not a duration, a curve or a spring, so it has no home in the generated layer and is not going to get one — `MotionTokens.kt` is the source of truth for *time*, and an alpha would be the first thing in it that is not. It is written down here instead, because a value three clients agree on byte for byte with nothing in any build checking that they do is exactly what rots quietly: 0.40 light and 0.68 dark, written out natively on iOS and Android and carried on web as `--sheet-scrim` since PR 41a, which is when web stopped having four alphas of its own. Web's token is worth having and the native spellings are not missing one — the client with four overlay systems needs a name for the shade, and two clients with one sheet chrome each do not |
 
 ---
 
