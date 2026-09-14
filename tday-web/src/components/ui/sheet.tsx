@@ -23,7 +23,15 @@ const SheetOverlay = React.forwardRef<
       ref={ref}
       data-slot="sheet-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-sheet-scrim",
+        // The scrim carried no duration at all, so it ran on tw-animate's 0.15s fallback:
+        // a rung nobody chose, against a panel on two that were. It takes the panel's own
+        // pair instead, because it is that panel's backdrop and not a surface of its own —
+        // the page is dim exactly when the panel has landed and bright exactly when it has
+        // gone. Quick is the ladder's rung for something leaving that nobody watches, and
+        // it is what the native sheets hand their scrim; it loses here because their card
+        // exits on Change, above it, while this panel exits on Enter — a Quick scrim would
+        // give the page back with the panel still crossing it.
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:duration-enter data-[state=open]:duration-emphasis fixed inset-0 z-50 bg-sheet-scrim",
         className
       )}
       {...props}

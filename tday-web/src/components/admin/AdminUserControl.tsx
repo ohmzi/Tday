@@ -69,7 +69,7 @@ const PendingApprovalRow = ({
 }: PendingApprovalRowProps) => {
   const busy = actionUserId === user.id;
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-muted/20 p-3.5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="truncate text-[1.05rem] font-black text-foreground">
           {user.name?.trim() || user.username}
@@ -125,7 +125,7 @@ const ApprovedUserRow = ({
   const resetRequested = Boolean(user.pendingAdminReset);
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-muted/20 p-3.5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="truncate text-[1.05rem] font-black text-foreground">
           {user.name?.trim() || user.username}
@@ -225,7 +225,7 @@ const AdminPageHeader = () => (
 const VersionLinkRow = () => (
   <Link
     href="/app/admin/version"
-    className="group flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-muted/20 px-4 py-4 transition-colors hover:border-accent/35 hover:bg-muted/30 active:opacity-70"
+    className="group flex items-center justify-between gap-4 rounded-lg border border-border/70 bg-muted/20 px-4 py-4 transition-colors hover:border-accent/35 hover:bg-muted/30 active:opacity-70"
   >
     <div className="min-w-0">
       <div className="flex items-center gap-2 text-[1.05rem] font-black text-foreground">
@@ -258,7 +258,7 @@ const PendingApprovalsContent = ({
 
   if (pendingUsers.length === 0) {
     return (
-      <p className="rounded-2xl border border-border/70 bg-muted/25 px-3.5 py-3 text-sm font-extrabold text-muted-foreground">
+      <p className="rounded-lg border border-border/70 bg-muted/25 px-3.5 py-3 text-sm font-extrabold text-muted-foreground">
         No pending users.
       </p>
     );
@@ -302,7 +302,7 @@ const ApprovedUsersContent = ({
 
   if (approvedUsers.length === 0) {
     return (
-      <p className="rounded-2xl border border-border/70 bg-muted/25 px-3.5 py-3 text-sm font-extrabold text-muted-foreground">
+      <p className="rounded-lg border border-border/70 bg-muted/25 px-3.5 py-3 text-sm font-extrabold text-muted-foreground">
         No approved users.
       </p>
     );
@@ -557,7 +557,7 @@ export default function AdminUserControl() {
               It is shown only once. They will be required to set a new password the next time they sign in.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-sm border border-border/70 bg-muted/30 px-3 py-2">
             <code className="min-w-0 flex-1 break-all font-mono text-sm text-foreground">
               {resetResult?.password}
             </code>

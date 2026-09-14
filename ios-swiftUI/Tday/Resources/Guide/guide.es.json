@@ -424,6 +424,39 @@
       "searchBody": "arrastra las tareas al orden que quieras. tus listas conservan el orden que les des. arrastra una tarea arriba o abajo para organizar tu dia tal como lo piensas."
     },
     {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Desliza la tarjeta para cerrarla",
+      "summary": "Arrastra hacia abajo la tarjeta de nueva tarea para cerrarla.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "La pequeña barra de la parte superior de la tarjeta de nueva tarea indica que puedes arrastrarla hacia abajo. Al arrastrarla sigue tu dedo; suéltala pasado aproximadamente un cuarto del recorrido y se cierra, igual que si tocaras la zona oscurecida que hay detrás. Un impulso rápido también cuenta: lo que importa es hacia dónde ibas, no dónde soltaste. Y si te arrepientes a mitad de camino, vuelve a su sitio."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Si el contenido de una tarjeta se desplaza, arrástrala desde arriba: el centro pertenece a la lista."
+          ]
+        }
+      ],
+      "searchTitle": "desliza la tarjeta para cerrarla",
+      "searchKeywords": "deslizar, arrastrar, cerrar, descartar, tarjeta, hoja, tirador, gesto, hacia abajo",
+      "searchBody": "arrastra hacia abajo la tarjeta de nueva tarea para cerrarla. la pequena barra de la parte superior de la tarjeta de nueva tarea indica que puedes arrastrarla hacia abajo. al arrastrarla sigue tu dedo; sueltala pasado aproximadamente un cuarto del recorrido y se cierra, igual que si tocaras la zona oscurecida que hay detras. un impulso rapido tambien cuenta: lo que importa es hacia donde ibas, no donde soltaste. y si te arrepientes a mitad de camino, vuelve a su sitio. si el contenido de una tarjeta se desplaza, arrastrala desde arriba: el centro pertenece a la lista."
+    },
+    {
       "id": "floaters-vs-todos",
       "section": "ORGANIZING",
       "sectionOrder": 3,

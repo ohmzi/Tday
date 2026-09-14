@@ -261,3 +261,34 @@ cycles, for the whole programme".
               release, with no ripple at all — including on a Save button, which is the half that
               used to go on animating under the setting because its own `transition-colors`
               outranked the floor.
+
+- [ ] **PR 50 · web · One dim for two sheets, and both of them leave** — the calendar on a phone, a
+      task open in the edit sheet with an unsaved edit typed into it, so the cancel-confirm sheet
+      can actually be reached.
+      Do:     tap the sheet's close control to raise the confirm sheet over it, then confirm.
+              Repeat, dismissing the confirm alone with its Cancel button; and once more by tapping
+              the scrim above it.
+      Watch:  the page behind the two sheets is exactly as dark with the confirm sheet up as it was
+              with only the form sheet up. When both go, they both TRAVEL out through the bottom
+              edge over 320 ms.
+      Fails:  the page visibly darkening a second time as the confirm sheet arrives, which is the
+              defect. Also a fail: either sheet vanishing on one frame instead of sliding; the
+              confirm sheet's backdrop turning black for the last frames of its own exit as the form
+              leaves underneath it; or a tap above the confirm sheet no longer dismissing it — the
+              transparent scrim still has to catch pointers.
+
+- [ ] **PR 25d · web · The deep-link mark is a whole ring, not four corners** — a phone, and a link
+      or a search result that lands on a specific task in each of the three feeds: the calendar day
+      list, the Today/scheduled list, and the Anytime list.
+      Do:     follow the link and watch the row it lands on — all three feeds, because this is one
+              string in three files and a fourth spelling is exactly what it is there to prevent.
+              Then swipe that same row open while it is still marked.
+      Watch:  a continuous 2px accent ring around the whole row, all four edges, fading in over
+              150 ms rather than appearing. It travels with the row under the swipe and stays
+              inside the row's box.
+      Fails:  only the four rounded corners tinted, or a ring along three edges — the defect. Also
+              a fail: the ring arriving whole on one frame instead of fading, which means the inset
+              shadow stopped interpolating against the unmarked state; or the swipe now painting
+              outside the row's box, which would mean the clip went with the outset ring.
+      Also:   on a desktop window the mark is still the flat `bg-accent/5` tint with no ring at
+              all, on every one of the three feeds.

@@ -29,6 +29,8 @@ import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
 import SummaryButton from "@/features/summary/SummaryButton";
 import { useShareListAsText } from "@/hooks/use-share-list";
 import { useIsLocalMode } from "@/hooks/useAppMode";
+import { useRowPlacement } from "@/hooks/useRowPlacement";
+import { DELAY_MS } from "@/lib/motion";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
@@ -102,6 +104,7 @@ const ListContainer = ({ id }: { id: string }) => {
     const isViewer = myRole === "VIEWER";
     const sharedByLabel = listMetaData[id]?.ownerUsername;
     const shareListAsText = useShareListAsText({ listName, todos: listTodos });
+    const placementRef = useRowPlacement<HTMLDivElement>();
 
     return (
         <TodoMutationProvider
@@ -123,7 +126,17 @@ const ListContainer = ({ id }: { id: string }) => {
                 // where they came from from the screen instead.
                 scopeListId={id}
             >
-                <div className="mb-20">
+                {/* The page's children travel when one of them takes a new slot — the
+                    leg of this the three scoped feeds already had. The empty scene is
+                    `min-h-[42vh]`, so the frame that prunes the last CURRENT task also
+                    hands that block of the screen to a scene that was not there before,
+                    and the `TimelineSections` block below it — which goes on rendering
+                    for as long as the list holds overdue tasks, because `showEmpty`
+                    counts only the non-Earlier ones (`useListEmptyState`) — was put in
+                    its new place in that same frame. The scene's own arrival is
+                    unchanged and stays on the Scene rung; this is the Emphasis one the
+                    geometry asks for, because a slot is a position. */}
+                <div ref={placementRef} className="mb-20">
                     <ScreenWatermark icon={getListIcon(listMetaData[id]?.iconKey)} color={listAccent} />
                     {/* The list's own icon leads the header, so the edit/members
                         control moves into the pinned bar where the other screens
@@ -162,7 +175,7 @@ const ListContainer = ({ id }: { id: string }) => {
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        className="h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
+                                        className="h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-enter hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
                                         onClick={() =>
                                             myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
                                         }
@@ -212,6 +225,15 @@ const ListContainer = ({ id }: { id: string }) => {
                             accentColor={listAccent}
                             isDayDone={false}
                             celebrate={celebrate}
+                            // Drawn inline, so mounting it is what puts Earlier's block
+                            // into its new slot (the travel the wrapper above owns). The
+                            // burst waits that out instead of firing across it, and the
+                            // scene's own lead is added on top — travel, then burst, then
+                            // scene. Passed unconditionally, as the scoped screens pass
+                            // it: whether anything is left below is a fact about what the
+                            // list happens to hold, and timing the celebration off that
+                            // would make the same tick celebrate at two different speeds.
+                            celebrationStartDelayMs={DELAY_MS.placementLead}
                             earlierHandoff={earlierHandoff}
                             locale={locale}
                             emptyTitle="listEmpty"

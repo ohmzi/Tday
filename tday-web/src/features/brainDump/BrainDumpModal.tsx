@@ -120,13 +120,13 @@ export default function BrainDumpModal({
               onChange={(e) => setText(e.target.value)}
               rows={7}
               placeholder={t("brainDump.placeholder")}
-              className="w-full resize-none rounded-2xl border border-border/60 bg-muted/40 p-3 text-sm font-semibold text-foreground focus:outline-hidden"
+              className="w-full resize-none rounded-lg border border-border/60 bg-muted/40 p-3 text-sm font-semibold text-foreground focus:outline-hidden"
             />
             <Button
               type="button"
               disabled={brainDump.isPending || !text.trim()}
               onClick={parse}
-              className="h-11 w-full rounded-2xl font-black"
+              className="h-11 w-full rounded-lg font-black"
             >
               {brainDump.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -157,7 +157,7 @@ export default function BrainDumpModal({
                       )
                     }
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-2xl border p-2.5 text-left transition",
+                      "flex w-full items-center gap-2.5 rounded-lg border p-2.5 text-left transition",
                       item.selected
                         ? "border-accent/50 bg-accent/10"
                         : "border-border/50 bg-muted/30 opacity-60",
@@ -190,7 +190,7 @@ export default function BrainDumpModal({
                 type="button"
                 variant="outline"
                 onClick={reset}
-                className="h-11 flex-1 rounded-2xl font-black"
+                className="h-11 flex-1 rounded-lg font-black"
               >
                 {t("brainDump.back")}
               </Button>
@@ -198,7 +198,7 @@ export default function BrainDumpModal({
                 type="button"
                 disabled={creating || selectedCount === 0}
                 onClick={create}
-                className="h-11 flex-1 rounded-2xl font-black"
+                className="h-11 flex-1 rounded-lg font-black"
               >
                 {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {t("brainDump.add", { count: selectedCount })}

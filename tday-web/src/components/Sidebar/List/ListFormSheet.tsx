@@ -216,7 +216,7 @@ export default function ListFormSheet({
               }}
               placeholder={appDict("listName")}
               className={cn(
-                "h-14 w-full rounded-2xl border-transparent bg-muted/60 text-center text-xl font-extrabold focus-visible:ring-0",
+                "h-14 w-full rounded-lg border-transparent bg-muted/60 text-center text-xl font-extrabold focus-visible:ring-0",
                 nameColorClass,
               )}
             />
@@ -289,7 +289,7 @@ export default function ListFormSheet({
                     onOpenChange(false);
                     onManageMembers();
                   }}
-                  className="flex items-center justify-center gap-2 rounded-2xl border border-border/70 bg-muted/60 px-4 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
+                  className="flex items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/60 px-4 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
                 >
                   <Users className="h-4 w-4 stroke-[2.4]" />
                   {appDict("members")}
@@ -303,7 +303,7 @@ export default function ListFormSheet({
                     onOpenChange(false);
                     onShareList();
                   }}
-                  className="flex items-center justify-center gap-2 rounded-2xl border border-border/70 bg-muted/60 px-4 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
+                  className="flex items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/60 px-4 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
                 >
                   <Share2 className="h-4 w-4 stroke-[2.4]" />
                   {appDict("share")}
@@ -315,7 +315,7 @@ export default function ListFormSheet({
 
         {isEditing && list ? (
           confirmingDelete ? (
-            <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
               <p className="text-sm font-extrabold text-destructive">
                 Delete &ldquo;{normalizeListName(list.name) || list.name}&rdquo; and all of
                 its tasks? This can&apos;t be undone.
@@ -325,7 +325,7 @@ export default function ListFormSheet({
                   type="button"
                   variant="outline"
                   onClick={() => { hapticConfirm(); setConfirmingDelete(false); }}
-                  className="rounded-2xl border-border/70 bg-card px-5 font-black"
+                  className="rounded-lg border-border/70 bg-card px-5 font-black"
                 >
                   Keep list
                 </Button>
@@ -333,7 +333,7 @@ export default function ListFormSheet({
                   type="button"
                   variant="destructive"
                   onClick={() => handleDeleteList(list.id)}
-                  className="rounded-2xl px-5 font-black"
+                  className="rounded-lg px-5 font-black"
                 >
                   {appDict("deleteList")}
                 </Button>
@@ -343,7 +343,7 @@ export default function ListFormSheet({
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
             >
               <Trash2 className="h-4 w-4 stroke-[2.4]" />
               {appDict("deleteList")}

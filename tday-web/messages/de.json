@@ -1010,6 +1010,13 @@
         "keywords": "ziehen, umsortieren, verschieben, sortieren, reihenfolge, anordnen",
         "body": "Deine Listen behalten die Reihenfolge, die du ihnen gibst. Zieh eine Aufgabe nach oben oder unten, um deinen Tag so anzuordnen, wie du ihn dir vorstellst."
       },
+      "swipe-sheet-away": {
+        "title": "Karte nach unten wegziehen",
+        "summary": "Zieh die Karte für neue Aufgaben nach unten, um sie zu schließen.",
+        "keywords": "wischen, ziehen, schließen, verwerfen, karte, blatt, griff, geste, nach unten",
+        "body": "Der kleine Balken oben auf der Karte für neue Aufgaben heißt: Du kannst sie nach unten ziehen. Zieh sie, und sie folgt deinem Finger; lass etwa ab einem Viertel des Weges los, und sie schließt sich — genau so, als hättest du auf den abgedunkelten Bereich dahinter getippt. Ein kurzer Schwung zählt ebenfalls: Entscheidend ist, wohin du unterwegs warst, nicht wo du losgelassen hast. Und ein Zug, den du dir anders überlegst, federt an seinen Platz zurück.",
+        "tip": "Wenn sich der Inhalt einer Karte scrollen lässt, zieh sie oben an: Die Mitte gehört der Liste."
+      },
       "sound-and-vibration": {
         "title": "Ton und Vibration",
         "summary": "Schalte den Abschlusston, die Vibration oder beides aus.",

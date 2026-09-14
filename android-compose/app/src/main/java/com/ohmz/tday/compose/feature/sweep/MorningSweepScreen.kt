@@ -1,5 +1,15 @@
 package com.ohmz.tday.compose.feature.sweep
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,7 +53,9 @@ import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.ui.component.ThemedDatePickerDialog
 import java.time.Instant
 import java.time.ZoneId
@@ -70,6 +82,7 @@ fun MorningSweepScreen(
 
     val colorScheme = MaterialTheme.colorScheme
     val card = uiState.cards.firstOrNull()
+    val motionEnabled = rememberTdayMotionEnabled()
     val scrollState = rememberScrollState()
     val heroCollapse = rememberScrollHeroTitleCollapse(scrollState = scrollState)
 
@@ -90,54 +103,122 @@ fun MorningSweepScreen(
                 accentColor = TdaySweepAccent,
                 collapseProgress = heroCollapse.progress,
             )
-            if (card == null) {
-                Text(
-                    text = stringResource(R.string.sweep_done),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 48.dp),
-                )
-            } else {
-                SweepCard(card = card, remaining = uiState.cards.size)
-                Spacer(Modifier.height(16.dp))
-
-                SweepAction(R.drawable.ic_lucide_alarm_clock, stringResource(R.string.sweep_today)) {
-                    viewModel.moveToToday(card)
-                }
-                SweepAction(R.drawable.ic_lucide_calendar_clock, stringResource(R.string.sweep_tomorrow)) {
-                    viewModel.moveToTomorrow(card)
-                }
-                SweepAction(R.drawable.ic_lucide_calendar, stringResource(R.string.sweep_pick_date)) {
-                    pickingDateForId = card.id
-                }
-                SweepAction(R.drawable.ic_lucide_waves, stringResource(R.string.sweep_float)) {
-                    viewModel.makeFloater(card)
-                }
-                SweepAction(R.drawable.ic_lucide_trash, stringResource(R.string.sweep_let_go)) {
-                    viewModel.letGo(card)
-                }
-
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(onClick = { viewModel.skip(card) }) {
+            // Nothing is dealt until the deck has been read. Without the guard the first
+            // composition — cards still empty, `load()` not yet run — is the finish line,
+            // and opening the screen would play "all swept" out sideways before the first
+            // card arrived.
+            if (uiState.loaded) {
+                // A tap replaces one whole card with the next one. That is a thing
+                // ARRIVING, not a thing changing size, so the incoming half is Enter and
+                // not Emphasis; the outgoing half is Quick because the first idiom rule
+                // caps an exit at the enter it undoes, and a card that has been dealt with
+                // is an absence nobody is meant to watch go. The finish line takes the same
+                // Enter and is deliberately NOT Scene: Scene is the full-bleed empty-state
+                // illustration rung and names the three sites it owns; this is a line of
+                // text.
+                //
+                // Keyed on the id, stated as the card. The key is what keeps an unrelated
+                // redraw of the task in front of the user from dealing it again; carrying
+                // the card itself as the state is what lets the outgoing frame draw the
+                // card that is leaving, since `advancePast` has already struck it off
+                // `uiState.cards` and looking it up there would find the finish line.
+                AnimatedContent(
+                    targetState = card,
+                    contentKey = { it?.id },
+                    transitionSpec = {
+                        if (motionEnabled) {
+                            slideInHorizontally(
+                                animationSpec = tween(
+                                    durationMillis = TdayMotionTokens.Durations.Enter,
+                                    easing = TdayMotionTokens.Easings.Enter,
+                                ),
+                            ) { it / 4 } + fadeIn(
+                                tween(
+                                    durationMillis = TdayMotionTokens.Durations.Enter,
+                                    easing = TdayMotionTokens.Easings.Enter,
+                                ),
+                            ) togetherWith slideOutHorizontally(
+                                animationSpec = tween(
+                                    durationMillis = TdayMotionTokens.Durations.Quick,
+                                    easing = TdayMotionTokens.Easings.Exit,
+                                ),
+                            ) { -it / 4 } + fadeOut(
+                                tween(
+                                    durationMillis = TdayMotionTokens.Durations.Quick,
+                                    easing = TdayMotionTokens.Easings.Exit,
+                                ),
+                            ) using SizeTransform(clip = false)
+                        } else {
+                            // `using null` as well as the two Nones: the default size
+                            // transform is a spring, and leaving it on would keep the
+                            // trip the preference asked to remove.
+                            EnterTransition.None togetherWith ExitTransition.None using null
+                        }
+                    },
+                    label = "morningSweepCard",
+                ) { dealt ->
+                    if (dealt == null) {
                         Text(
-                            text = stringResource(R.string.sweep_skip),
+                            text = stringResource(R.string.sweep_done),
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold,
-                            color = colorScheme.onSurfaceVariant,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 48.dp),
                         )
-                    }
-                    Button(onClick = { viewModel.sweepAllToToday() }) {
-                        Text(
-                            text = stringResource(R.string.sweep_all_to_today),
-                            fontWeight = FontWeight.ExtraBold,
-                        )
+                    } else {
+                        // Counted once, when this card was dealt. The card on its way out
+                        // has already been struck off `cards`, and its tally is the one
+                        // thing on it the eye can still follow — it must not tick down
+                        // while it leaves.
+                        val remaining = remember(dealt.id) { uiState.cards.size }
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            SweepCard(card = dealt, remaining = remaining)
+                            Spacer(Modifier.height(16.dp))
+
+                            SweepAction(
+                                icon = R.drawable.ic_lucide_alarm_clock,
+                                label = stringResource(R.string.sweep_today),
+                            ) { viewModel.moveToToday(dealt) }
+                            SweepAction(
+                                icon = R.drawable.ic_lucide_calendar_clock,
+                                label = stringResource(R.string.sweep_tomorrow),
+                            ) { viewModel.moveToTomorrow(dealt) }
+                            SweepAction(
+                                icon = R.drawable.ic_lucide_calendar,
+                                label = stringResource(R.string.sweep_pick_date),
+                            ) { pickingDateForId = dealt.id }
+                            SweepAction(
+                                icon = R.drawable.ic_lucide_waves,
+                                label = stringResource(R.string.sweep_float),
+                            ) { viewModel.makeFloater(dealt) }
+                            SweepAction(
+                                icon = R.drawable.ic_lucide_trash,
+                                label = stringResource(R.string.sweep_let_go),
+                            ) { viewModel.letGo(dealt) }
+
+                            Spacer(Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                TextButton(onClick = { viewModel.skip(dealt) }) {
+                                    Text(
+                                        text = stringResource(R.string.sweep_skip),
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Button(onClick = { viewModel.sweepAllToToday() }) {
+                                    Text(
+                                        text = stringResource(R.string.sweep_all_to_today),
+                                        fontWeight = FontWeight.ExtraBold,
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

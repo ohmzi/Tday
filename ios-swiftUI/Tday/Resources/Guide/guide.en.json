@@ -424,6 +424,39 @@
       "searchBody": "drag tasks into the order you want. your lists keep the order you give them. drag a task up or down to arrange your day the way you think about it."
     },
     {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Swipe a sheet away",
+      "summary": "Pull the new-task sheet down to close it.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "The small bar at the top of the new-task sheet means the card can be pulled down. Drag it and it follows your finger; let go once you are about a quarter of the way down and it closes, exactly as if you had tapped the dimmed area behind it. A quick flick counts too — the sheet goes by where you were heading rather than where you let go — and a pull you think better of springs back into place."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "On a sheet whose contents scroll, drag it by the top: the middle of the card belongs to the list."
+          ]
+        }
+      ],
+      "searchTitle": "swipe a sheet away",
+      "searchKeywords": "swipe, drag, pull, dismiss, close, sheet, grabber, handle, gesture, swipe down",
+      "searchBody": "pull the new-task sheet down to close it. the small bar at the top of the new-task sheet means the card can be pulled down. drag it and it follows your finger; let go once you are about a quarter of the way down and it closes, exactly as if you had tapped the dimmed area behind it. a quick flick counts too — the sheet goes by where you were heading rather than where you let go — and a pull you think better of springs back into place. on a sheet whose contents scroll, drag it by the top: the middle of the card belongs to the list."
+    },
+    {
       "id": "floaters-vs-todos",
       "section": "ORGANIZING",
       "sectionOrder": 3,

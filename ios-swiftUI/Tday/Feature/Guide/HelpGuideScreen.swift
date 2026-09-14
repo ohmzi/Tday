@@ -9,6 +9,9 @@ struct HelpGuideScreen: View {
     var initialTopic: String?
 
     @Environment(\.tdayColors) private var colors
+    /// Gates the topic card's expand/collapse — the one transaction on this screen
+    /// whose travel is a box growing rather than a bar sliding open.
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     @State private var artifact = GuideArtifact.empty
     @State private var query = ""
@@ -158,7 +161,7 @@ struct HelpGuideScreen: View {
 
     private func openSearch() {
         HapticManager.buttonPress()
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             searchExpanded = true
         }
     }
@@ -168,7 +171,7 @@ struct HelpGuideScreen: View {
     private func closeSearch() {
         HapticManager.buttonPress()
         searchFieldFocused = false
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             searchExpanded = false
         }
         query = ""
@@ -222,7 +225,32 @@ struct HelpGuideScreen: View {
     private func topicCard(_ topic: GuideTopicDTO) -> some View {
         let expanded = expandedId == topic.id
         return VStack(alignment: .leading, spacing: 0) {
-            Button(action: { withAnimation(.easeInOut(duration: 0.15)) { expandedId = expanded ? nil : topic.id } }) {
+            // Emphasis, because the card changes how big it is. `docs/motion.md` settles
+            // Change against Emphasis on geometry rather than on importance, and one
+            // transaction here drives both halves of a size change: the chevron's
+            // rotation below and the body's insert underneath it, which pushes every
+            // card below this one down the screen. Quick is the rung for the app
+            // answering a finger that is still on it — right for the tap, and 150 ms
+            // for the travel it opened was the whole of this row's iOS complaint.
+            //
+            // The curve moves with the rung, and that is a second visible change rather
+            // than a side effect. SwiftUI's `.easeInOut` is (0.42, 0, 0.58, 1) against
+            // Standard's (0.4, 0, 0.2, 1), so this site was never on the unmarked curve
+            // — it only read as though it were. At 320 ms the tail is the part the eye
+            // follows, and Standard's is the shorter one: it is what keeps a longer
+            // motion from also reading as a slower one.
+            //
+            // Under Reduce Motion the gate passes no animation, so the card is drawn at
+            // its finished height with the body already in it on the frame of the tap —
+            // `docs/motion.md`'s fifth idiom rule. The mutation stays inside
+            // `withAnimation` rather than moving to an `.animation(_:value:)` modifier,
+            // because the body is inserted by an `if` and a modifier written inside the
+            // branch it animates cannot open the transaction that would play it.
+            Button(action: {
+                withAnimation(tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis))) {
+                    expandedId = expanded ? nil : topic.id
+                }
+            }) {
                 HStack(spacing: 12) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10).fill(colors.primary.opacity(0.10)).frame(width: 36, height: 36)

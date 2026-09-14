@@ -212,9 +212,9 @@ function TopicRow({
         onClick={onToggle}
         aria-expanded={expanded}
         data-no-press
-        className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3.5 rounded-2xl px-2 py-3 text-left transition-colors hover:bg-muted-foreground/5 active:bg-muted-foreground/10"
+        className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3.5 rounded-lg px-2 py-3 text-left transition-colors hover:bg-muted-foreground/5 active:bg-muted-foreground/10"
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted/70">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-muted/70">
           <GuideIcon name={topic.icon} className="size-5 stroke-[2.4] text-accent" />
         </span>
         <span className="min-w-0 flex-1">
@@ -314,7 +314,7 @@ function BodyBlock({ type, texts }: { type: string; texts: string[] }) {
       );
     case "TIP":
       return (
-        <p className="rounded-2xl border-l-2 border-accent bg-accent/[0.06] px-3.5 py-2.5 text-sm font-bold text-muted-foreground">
+        <p className="rounded-lg border-l-2 border-accent bg-accent/[0.06] px-3.5 py-2.5 text-sm font-bold text-muted-foreground">
           {text}
         </p>
       );
@@ -328,7 +328,7 @@ function BodyBlock({ type, texts }: { type: string; texts: string[] }) {
       );
     case "EXAMPLE":
       return (
-        <p className="rounded-2xl bg-muted/70 px-3.5 py-2.5 font-mono text-sm font-bold text-foreground">
+        <p className="rounded-lg bg-muted/70 px-3.5 py-2.5 font-mono text-sm font-bold text-foreground">
           {text}
         </p>
       );

@@ -101,7 +101,7 @@ export function MorningSweepSheet({
   };
 
   const actionClass =
-    "flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left text-sm font-bold text-card-foreground transition-colors hover:bg-muted";
+    "flex w-full items-center gap-3 rounded-sm border border-border bg-card px-4 py-3 text-left text-sm font-bold text-card-foreground transition-colors hover:bg-muted";
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -113,7 +113,7 @@ export function MorningSweepSheet({
         {card ? (
           <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8">
             {/* The card under triage */}
-            <div className="rounded-2xl border border-border bg-card px-5 py-4">
+            <div className="rounded-lg border border-border bg-card px-5 py-4">
               <div className="flex items-center gap-2">
                 <p className="min-w-0 flex-1 text-base font-black text-card-foreground">
                   {card.title}
@@ -145,7 +145,7 @@ export function MorningSweepSheet({
                 <input
                   type="date"
                   autoFocus
-                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm font-bold text-card-foreground"
+                  className="w-full rounded-sm border border-border bg-card px-4 py-3 text-sm font-bold text-card-foreground"
                   onChange={(event) => {
                     const picked = event.target.valueAsDate;
                     if (picked) move(card, duePreservingTimeOn(card.due, picked));
