@@ -123,7 +123,6 @@ enum TodoTimelineMetrics {
         heroMarkTopGap + heroMarkBox + heroMarkBottomGap + expandedTitleHeight
     static let timelineBottomSpacerHeight: CGFloat = 120
     static let floaterTaskHomeBottomSpacerHeight: CGFloat = 12
-    static let rootDockCollapseThreshold: CGFloat = 44
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
     static let topBarButtonSpacing: CGFloat = 8
@@ -621,6 +620,12 @@ struct TodoListScreen: View {
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var headerScroll = RootFeedHeaderScrollState()
     @State private var rootDockCollapsed = false
+    /// The same answer as `rootDockCollapsed`, for the modes that have no root
+    /// feed header to observe the scroll for them. It exists because the fold
+    /// point has a dead band and a dead band needs the previous answer: this
+    /// screen's own scroll offset arrives as a number, and the side of the fold
+    /// it puts the dock on cannot be recovered from that number alone.
+    @State private var legacyRootDockCollapsed = false
     @State private var titleScrollToTopRequestID = 0
     @State private var completionPhases: [String: TodoCompletionPhase] = [:]
     @State private var flashTodoId: String?
@@ -1138,7 +1143,7 @@ struct TodoListScreen: View {
         // invalidate this screen's body; other modes still use @State.
         usesRootFeedHeader
             ? rootDockCollapsed
-            : max(timelineScrollOffset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold
+            : legacyRootDockCollapsed
     }
 
     private var minimalTimelineBottomSpacerHeight: CGFloat {
@@ -1631,7 +1636,10 @@ struct TodoListScreen: View {
         }
         .onChange(of: timelineScrollOffset, initial: true) { _, offset in
             guard !usesRootFeedHeader else { return }
-            onRootDockCollapsedChange(max(offset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold)
+            let collapsed = RootFeedDockCollapse.next(previous: legacyRootDockCollapsed, offset: offset)
+            guard legacyRootDockCollapsed != collapsed else { return }
+            legacyRootDockCollapsed = collapsed
+            onRootDockCollapsedChange(collapsed)
         }
         .onChange(of: floaterTaskHomeSearchExpanded, initial: true) { _, expanded in
             guard isFloaterTaskHomeScreen else {
@@ -1991,10 +1999,7 @@ struct TodoListScreen: View {
         Color.clear
             .frame(height: RootFeedHeroHeaderMetrics.expandedHeight)
             .background {
-                RootFeedHeaderScrollObserver(
-                    state: headerScroll,
-                    collapseThreshold: TodoTimelineMetrics.rootDockCollapseThreshold
-                ) { collapsed in
+                RootFeedHeaderScrollObserver(state: headerScroll) { collapsed in
                     guard rootDockCollapsed != collapsed else { return }
                     rootDockCollapsed = collapsed
                     onRootDockCollapsedChange(collapsed)

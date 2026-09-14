@@ -1222,3 +1222,33 @@ animates.
               whether SwiftUI actually finds the source rectangle for a tile that lives three
               levels inside a `ScrollView` in a private struct two files from the destination —
               which is the entire feature.
+
+- [ ] **PR 184b · ios · The dock folds once instead of flickering at the fold point** — both root
+      feeds (the scheduled home and the Anytime home), each with enough tasks to scroll well past
+      the hero header. The iOS twin of PR 184a's Android row, and the same defect: one comparison
+      with no memory, on a fold point all three clients share.
+      Do:     scroll down slowly until the dock folds to its pill and hold the finger still there;
+              then lift, let the feed settle out of its own deceleration, and scroll back up in
+              small steps, watching where it opens. Then switch feeds with the dock folded, and
+              switch back.
+      Watch:  one crossing each way. It folds about 44 pt in and stays folded with a finger parked
+              at that distance, and while the feed rocks a point either way as it settles. On the
+              way back up it opens about 20 pt higher than it folded, so the two events are
+              visibly at different heights. Then the other feed: the two share one dock and the
+              one in front of you owns it, so the dock matches the feed you are looking at and
+              not the one you left.
+      Fails:  the pill and the capsule alternating under a held finger, or on the last frames of a
+              settle — the single-threshold behaviour this row exists to catch; and, the other
+              way, a deliberate scroll all the way to the top arriving with the dock still folded,
+              which would mean the release edge is too low to reach. Also a fail: switching feeds
+              leaving the dock in the other feed's state.
+      Also:   the hero header itself must be untouched — the title docking into the bar, the mark
+              fading, the pull-to-refresh pill. The observer that publishes the offset those run
+              on is the one that stopped taking a threshold, and a mistake there shows up in the
+              header rather than in the dock.
+      Why:    there is no Swift toolchain on the machine this was written on, so none of it was
+              built here. `RootFeedDockCollapseTests` pins the fold itself in CI — the four-step
+              fold through 40, 46, 30 and 20, and a bounce above the top — and
+              `ios-target-membership.test.ts` pins that the test is registered in the pbxproj
+              rather than sitting on disk unbuilt. What none of that can see is whether the two
+              feeds still reach the function at all, which is the whole of what this row is for.
