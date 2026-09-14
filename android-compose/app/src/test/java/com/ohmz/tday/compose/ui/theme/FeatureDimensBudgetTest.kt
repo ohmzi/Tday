@@ -10,7 +10,7 @@ import org.junit.Test
  *
  * `TdayDimens` declares a radius scale that 99 `RoundedCornerShape(<n>.dp)` call sites ignore, and
  * that is the small half of it: the screens carry ~845 anonymous `.dp` between them. Migrating them
- * is PR 43c…43n, one screen file per session. This test is what makes that a ratchet instead of a
+ * is PR 43c…43m, one screen file per session. This test is what makes that a ratchet instead of a
  * treadmill — **it does not ask anyone to migrate, it asks that nobody add**. Every seeded file has
  * a ceiling equal to what it holds today, so a migration lowers a number and nothing else can raise
  * one, and a file with no ceiling must hold zero.
@@ -34,10 +34,35 @@ import org.junit.Test
  *
  * ## The widget exemption
  *
- * `feature/widget/` is out of the walk. Its dp are RemoteViews metrics — the Glance runtime and the
- * layouts it replaces have to agree with `res/values/dimens.xml`, which `WidgetCornerRadiusTest`
- * already pins, and `TdayDimens` is not the layer that owns them. TODO(43n): that unit decides
- * whether the exemption is permanent or whether the widget gets a scale of its own.
+ * `feature/widget/` is out of the walk, permanently — 43n's question, answered here so the file
+ * stops carrying it. The split it expected to make, radius out and spacing in, has nothing to cut:
+ * `TaskWidgetDesign.kt` declares no radius at all. A Glance surface is painted with
+ * `background(ImageProvider(R.drawable.…))`, so the widget's corners live in `res/values/dimens.xml`
+ * where `WidgetCornerRadiusTest` pins them against the launcher's own enforced clip. All 77 of its
+ * anonymous `.dp` are sizes and insets, and every one of them answers to something that is not our
+ * scale:
+ *
+ *  - `TaskWidgetResponsiveSizes` and the breakpoints in `taskWidgetLayoutFor` are the host's cell
+ *    grid. Glance offers the set and the launcher picks from it, so the thresholds have to agree
+ *    with the sizes offered, and neither end of that is ours to round to a spacing step;
+ *  - the `taskWidgetMetrics` table is a cross-platform contract and the file says so. Inset 14, top
+ *    13, bottom 11, header 42, spacing 7, row 22 on 3 are the same numbers `WidgetLayoutMetrics`
+ *    holds in `ios-swiftUI/TdayWidget/TodayTasksWidget.swift`, which has never heard of
+ *    `TdayDimens`; `taskWidgetVisibleRowCount` then divides by them to decide how many rows fit, so
+ *    they are a solver's inputs rather than decoration;
+ *  - those same three insets are spelled a third time in `layout/widget_*_loading.xml`, because the
+ *    static `initialLayout` is what a host shows until the first composition and the handoff is
+ *    meant to be invisible.
+ *
+ * Routing any of that through `TdayDimens` would hand an Android-only rename of the spacing scale
+ * the power to move an iOS widget, a RemoteViews handoff and a launcher's grid — which is
+ * `WidgetCornerRadiusTest`'s argument about radius, one layer out and with more surfaces on the far
+ * side of it.
+ *
+ * Out of the scale is not out of a budget, though, or "not on the scale" becomes where new literals
+ * go. The fourth assertion freezes the subtree's total instead, on a ceiling's terms: it may fall,
+ * it may not rise, and a value that should be neither a rung nor frozen has the same way out every
+ * other file has — a named `private val Dp`.
  *
  * Two files are carved back out of it by name. `WidgetListConfigurationActivity.kt` and
  * `WidgetCreateTaskActivity.kt` live in that directory because they belong to a widget's plumbing —
@@ -107,11 +132,36 @@ class FeatureDimensBudgetTest {
         )
     }
 
-    /** Every `.kt` under `feature/` except the exempt ones, keyed by its path below `feature/`. */
-    private fun featureSources(): Map<String, File> =
+    /**
+     * The exemption argues that the widget's dp answer to a launcher, an iOS struct and an XML
+     * layout. It does not argue that a new one may answer to nothing, and a directory nothing
+     * counts is the cheapest place under `feature/` to put geometry. So the exempt subtree carries
+     * a total of its own on a ceiling's terms: the rule that reaches it is different, the ratchet
+     * is the same.
+     */
+    @Test
+    fun `should freeze the exempt subtree rather than leave it uncounted`() {
+        val exempt = allFeatureSources()
+            .filterKeys { it.startsWith("$EXEMPT_SUBTREE/") && it !in EXEMPT_SUBTREE_CARVE_INS }
+        assertTrue("nothing left under $EXEMPT_SUBTREE/ — is the source walk broken?", exempt.isNotEmpty())
+        val actual = exempt.values.sumOf { anonymousDpCount(it) }
+        assertTrue(
+            "$EXEMPT_SUBTREE/ holds $actual anonymous .dp against a frozen $EXEMPT_SUBTREE_FROZEN_DP. " +
+                "It is exempt from TdayDimens, not from being counted: name the new value as a " +
+                "private val Dp, or retire one and LOWER this number in the same commit",
+            actual <= EXEMPT_SUBTREE_FROZEN_DP,
+        )
+    }
+
+    /** Every `.kt` under `feature/`, keyed by its path below `feature/`. */
+    private fun allFeatureSources(): Map<String, File> =
         featureDir.walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .associateBy { it.relativeTo(featureDir).invariantSeparatorsPath }
+
+    /** The same, minus the exempt subtree and plus the files carved back out of it. */
+    private fun featureSources(): Map<String, File> =
+        allFeatureSources()
             .filterKeys { !it.startsWith("$EXEMPT_SUBTREE/") || it in EXEMPT_SUBTREE_CARVE_INS }
 
     /** The counting rule in the class KDoc, in the order it is written there. */
@@ -141,6 +191,12 @@ class FeatureDimensBudgetTest {
             "widget/WidgetListConfigurationActivity.kt",
             "widget/WidgetCreateTaskActivity.kt",
         )
+
+        /**
+         * What the subtree counted on the day the exemption became permanent, measured with the
+         * rule above rather than transcribed: 77, every one of them in `TaskWidgetDesign.kt`.
+         */
+        const val EXEMPT_SUBTREE_FROZEN_DP = 77
 
         val BLOCK_COMMENT = Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL)
         val LINE_COMMENT = Regex("""//.*""")
