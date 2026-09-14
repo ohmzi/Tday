@@ -1010,6 +1010,13 @@
         "keywords": "drag, reorder, move, sort, order, arrange",
         "body": "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
       },
+      "swipe-sheet-away": {
+        "title": "Swipe a sheet away",
+        "summary": "Pull the new-task sheet down to close it.",
+        "keywords": "swipe, drag, pull, dismiss, close, sheet, grabber, handle, gesture, swipe down",
+        "body": "The small bar at the top of the new-task sheet means the card can be pulled down. Drag it and it follows your finger; let go once you are about a quarter of the way down and it closes, exactly as if you had tapped the dimmed area behind it. A quick flick counts too — the sheet goes by where you were heading rather than where you let go — and a pull you think better of springs back into place.",
+        "tip": "On a sheet whose contents scroll, drag it by the top: the middle of the card belongs to the list."
+      },
       "sound-and-vibration": {
         "title": "Sound and vibration",
         "summary": "Turn off the completion pop, the buzz, or both.",

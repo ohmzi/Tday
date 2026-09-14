@@ -1302,7 +1302,83 @@ Restore it from git history rather than adjusting the number.
     both of which read Swift as text and would fail on a broken constant or a raised ceiling.
     No new device row — PR 41a's and PR 41b's rows in `phase-9-device-pass.md` already carry every
     frame this box is accountable for, and this unit changes none of them.
-- [ ] `ios-sheet-drag-to-dismiss` — the app's most-used sheet cannot be swiped down; no grabber · ios · Impact O4 · M · Gate TF
+- [x] `ios-sheet-drag-to-dismiss` — the app's most-used sheet cannot be swiped down; no grabber · ios · Impact O4 · M · Gate TF
+  - **The rule is a projection, and it is the only part a test can hold.** `TdaySheetDragToDismiss`
+    is a free enum beside `TdayKeyboardFrameProbe`, for the same reason that one is: what the card
+    does under a finger is one addition to an offset, but what a *release* means is a decision, and
+    a decision inside a `body` is one nothing can ask a question of. It reuses web's argument rather
+    than inventing a second one — `swipeGesture.ts`'s `projectedRest`, written up at LEDGER.md:731-736
+    — that a position-only rule reads the last frame of a gesture as though it were the end of one.
+    SwiftUI hands the projection over ready made in `predictedEndTranslation`, so unlike web there
+    was no sampler to build, only a threshold to name.
+  - **The toast's rule was the wrong one to copy, on both halves.** `AppRootView.swift:973` spells
+    `translation > 30 || predictedEndTranslation > 90`. The `||` is what lets a long drag that is
+    already being walked back through, and a flat 30 pt says nothing on a card whose height runs
+    from about half the screen to `maximumScreenHeightFraction` of it — the same 30 pt is a decisive
+    pull on the short create-floater card and a twitch on the tall create-task one. A quarter of the
+    card's own height is the same gesture on both, and a flick is projected past it rather than
+    dragged there. What the toast *did* hand over is the coordinate space: `.global`, with the
+    comment at `:964-968` explaining that a locally measured drag feeds the card's own offset back
+    into the translation and oscillates. This is the second site of that, not a second discovery.
+  - **The release goes through `dismiss()` and nothing else.** Not an `animateOut()` of its own:
+    that funnel is what resigns the keyboard and times the deferred teardown, and a second exit
+    written at the gesture is a second thing to keep in step with it. `dragTranslation` is
+    deliberately *not* reset on a commit, so the exit carries on from where the finger left the card
+    instead of snapping it home first. A refused drag springs back on `TdayMotion.gesture` —
+    response 0.34 / dampingFraction 0.82, the rung `docs/motion.md:239` defines as a surface
+    continuing under its own momentum after a finger lets go, and the place the 0.82 the
+    `sheet-presentation-unification` row above declined to spend on an *arrival* actually belongs.
+  - **The keyboard resigns at the gesture and not at the dismissal, and that is the trap.**
+    `keyboardBottomInset` lifts the card while a field is focused, so a resign that waited for the
+    release would collapse the lift underneath a card the finger was already moving — PR 15b's
+    Android failure and PR 44's `ios-selector-pops-while-card-slides` are the same shape. Resigning
+    on the first `onChanged` spends the collapse in the direction the finger is already going (the
+    inset is subtracted, so losing it drops the card) and gets it over with while the drag is young.
+    It is guarded on `keyboardFrame` rather than on a flag of its own: the first resign makes
+    `keyboardWillHide` fire, which nils the frame, so the check stops answering without anything
+    having to remember it already ran. A drag can be refused, so this resign is not a duplicate of
+    `animateOut()`'s — it has to happen before either outcome is known.
+  - **The grabber is the chrome's, not each caller's**, so both sheets on this mechanism get it
+    across all nine application sites at once. An overlay rather than a row above the content,
+    because the card's background and its clip shape belong to the content: a row inserted in the
+    host would sit in the transparent strip *above* the card. 36 × 5 at 5 pt from the top is UIKit's
+    own grabber to the point — the native mechanism's six sheets are handed exactly that bar, and
+    four of them currently answer `presentationDragIndicator(.hidden)`, so the app refuses the
+    affordance on both mechanisms today. Whichever way that gets settled, the two should not
+    disagree by a pixel at the one place a user looks to find out whether a sheet can be pulled.
+  - **The gesture is on the whole card and `.gesture`, not `.highPriorityGesture`.** A gesture
+    declared on an ancestor yields to one declared inside it, which is what should leave
+    `CreateListSheet`'s `ScrollView` scrolling under a card that still drags by its header and its
+    margins — the same division of a sheet UIKit makes. Source cannot settle that and the device row
+    says so.
+  - **Chrome applied to the content is chrome drawn over whatever the content draws over itself**,
+    and `CreateTaskSheet`'s centred selector is exactly that: a full scrim and a picker declared
+    *inside* the view this host is handed. So the grabber landed lit on top of the dim, and the
+    ancestor drag stayed live over the scrim's pixels — whose only competing recognizer is a
+    `.onTapGesture`, which does not claim a 10 pt pan. A pull downward on the dim discarded a
+    half-written task where a tap on the same pixels only closes the picker. Fixed the way z-order
+    has to be fixed when the layers are declared in two files: the content reports that it is
+    covered (`tdaySheetContentIsCovered`, a preference rather than an environment value because the
+    direction is inward-out) and the chrome stands down for as long as it is — the bar crossfades
+    out on `scrimIn`/`scrimOut`, and the drag is masked to `.subviews` so the picker's own rows and
+    its tap-to-close keep working. Not `.none`: the layer doing the covering is made of the
+    content's own subviews. The alternative — moving the grabber inside the content's clip — would
+    have put it back on each of the nine callers, which is the thing the chrome exists to stop.
+    Not routed through `tdayAnimation`: the layer doing the covering keeps its own crossfade under
+    Reduce Motion, for the reason `TdayCenteredSelectorMotion` writes out, and giving the setting to
+    one half of one crossfade is what would make the bar and the dim read as two surfaces.
+    `CreateTaskSheet.swift:242`'s allowlist key in `motion-reachability-ios.test.ts` moved to `:248`
+    with the lines it names; that table is keyed by exact `path:line` and tracking it is the cost of
+    inserting anything above a known site.
+  - **No literal added or retired; all eight budget counters are untouched.** The release names
+    `TdayMotion.gesture` rather than writing a spring, so `ios.spring` stays at 98/98 and
+    `ios.easeDuration` at 27/27, both of which had zero headroom. The three geometry numbers (10 pt
+    of slop, a 0.25 fraction, the 36 × 5 bar) are gesture and layout rather than motion and are on
+    no counter. Seven cases in `TdaySheetChromeMotionTests.swift`, which is already registered in
+    the pbxproj; the fourth of them — a 300 pt drag with a 90 pt projection — is the one a
+    position-only rule fails, which is what makes the others worth having. Whether the released card
+    settles on the same curve the scrim tap leaves on, and whether the grabber reads as a second
+    header, are the TestFlight row in `phase-9-device-pass.md`.
 
 ### PR 42a…42g — seven polish PRs, one surface each
 

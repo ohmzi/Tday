@@ -1010,6 +1010,13 @@
         "keywords": "trascina, riordina, sposta, ordina, ordine, disponi",
         "body": "I tuoi elenchi mantengono l'ordine che imposti. Trascina un'attività in alto o in basso per organizzare la giornata nel modo in cui la pensi."
       },
+      "swipe-sheet-away": {
+        "title": "Trascina giù una scheda per chiuderla",
+        "summary": "Tira verso il basso la scheda della nuova attività per chiuderla.",
+        "keywords": "scorrere, trascinare, tirare, chiudere, annullare, scheda, maniglia, gesto, verso il basso",
+        "body": "La piccola barra in cima alla scheda della nuova attività significa che puoi tirarla verso il basso. Trascinala e segue il tuo dito; lasciala dopo circa un quarto del percorso e si chiude, esattamente come se avessi toccato l'area scurita dietro di essa. Vale anche un colpetto rapido: conta dove stavi andando, non dove hai lasciato. E se ci ripensi a metà strada, torna al suo posto.",
+        "tip": "Se il contenuto di una scheda scorre, trascinala dall'alto: il centro appartiene all'elenco."
+      },
       "sound-and-vibration": {
         "title": "Suono e vibrazione",
         "summary": "Disattiva il suono di completamento, la vibrazione o entrambi.",

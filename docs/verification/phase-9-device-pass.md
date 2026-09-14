@@ -446,3 +446,45 @@ animates.
               again. The placeholder is there, fully drawn and perfectly still — never parked at the
               faded end of its own pulse — and when the data lands the rows are simply there on the
               next frame. No fade, and no wait where the fade would have been.
+
+- [ ] **PR 41c · ios · The create sheet can be pulled down, and says so** — the root feed, on a
+      phone. Both sheets on the custom mechanism: the create-task sheet (the + button) and the
+      create-list sheet, which is the one whose contents scroll.
+      Do:     open the create-task sheet and pull it down slowly until it goes. Open it again and
+              flick it down 40 pt or so, fast. A third time, drag it two thirds of the way down and
+              then walk it most of the way back up before letting go. Then open the create-list
+              sheet and try to scroll its colour and icon rows.
+      Watch:  a 36 × 5 bar at the top of the card, the same one iOS draws on its own sheets. The
+              card tracks the finger exactly while it is down, and a released drag that commits
+              carries on and leaves on the same curve the scrim tap leaves on — the two must be
+              indistinguishable, because they are the same code path. A quarter of the card's own
+              height is where a slow pull commits; the flick commits long before that. The walked-
+              back drag springs home on the Gesture spring, with a little overshoot rather than a
+              snap. On the create-list sheet the scrolling regions still scroll and the header and
+              the margins still drag the card.
+      Fails:  the grabber reading as a second header — too dark, too far down, or crowding the
+              title and the two round buttons under it, which start 14 pt below the top edge. Also
+              a fail: the card oscillating or stuttering under the finger (that is the drag being
+              measured in local space, which the global coordinate space here exists to prevent);
+              a committed drag that snaps the card home first and then plays the exit; the
+              walked-back drag dismissing anyway; and the create-list sheet refusing to scroll
+              because the card's drag has taken the gesture.
+      Keyboard: open the create-task sheet, tap into the title field so the keyboard lifts the card,
+              and drag from there. The keyboard must go down as the drag begins, not at the release
+              — and the card must not jump or fight the inset collapsing under it. This is the one
+              interaction source cannot answer: the inset is animated on the keyboard's own
+              ~0.25 s curve while the finger is still moving the card.
+      Selector: on the create-task sheet, open List, then Priority, then Due date. The grabber must
+              fade out as the picker's dim comes up and fade back as it goes — never sit lit on top
+              of the dim — and while the picker is open a downward drag anywhere on the dim must do
+              nothing at all. A fail: the drag dismissing the whole sheet and losing what was typed,
+              where a tap on those same pixels only closes the picker. The picker's own rows and its
+              tap-to-close must still work throughout; this stands the card's drag down, not the
+              layer over it.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, repeat the first three.
+              The card still follows the finger — a surface under a thumb is direct manipulation and
+              is not what the setting turns off — and a refused drag is simply home on the next
+              frame rather than springing. A committed drag still dismisses, and the card crossfades
+              out where the full-motion build slides it. The grabber still fades under a picker,
+              on both settings: that is a dim arriving over it rather than anything travelling, and
+              it has to leave at the same rate the dim comes up.
