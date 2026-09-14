@@ -251,6 +251,41 @@ animates.
               Completed tab strip and Settings' two switchers — still move their thumbs over 200 ms.
               That is deliberate and argued at the call site; they have no grid moving beside them.
 
+- [ ] **PR 57a · web · The dock folds down to the tab you are on, and holds still at the fold** — a
+      phone-width viewport; Today, and again on the Anytime feed, each with enough tasks to scroll.
+      Do:     scroll down slowly past the first 44 px and keep going; scroll back to the top; then
+              park a finger just past the fold without moving it and leave it there; then, with the
+              dock folded, tap the dock once and wait without touching anything else. Finally
+              scroll a long Settings page and the Guide.
+      Watch:  as the feed passes 44 px the tabs you are not on are swallowed into the capsule from
+              their trailing edge and the capsule closes around the tab you are on, over about a
+              third of a second — 320 ms, the rung its pill and its tabs already share. The icons
+              are clipped, not squeezed. A finger resting at the fold leaves the dock exactly where
+              it is. Scrolling back up opens it again well before the top of the feed arrives. One
+              tap on the folded dock opens it where it stands — no navigation, no jump to the top —
+              and it closes itself again about 2.4 s later if nothing is chosen.
+      Fails:  the capsule reaching its folded width in a single frame instead of gliding (the press
+              layer deletes a `width` transition declared on a button, which is why the collapse is
+              on a wrapper); an icon squashing on the way out; a stub of a closed tab left inside
+              the capsule — folded, the dock is the one tab and the capsule's own 7 px either side
+              of it, 62 px on a phone, and nothing else; the dock flickering between its two
+              shapes while a finger rests near the fold, which is the whole reason there are two
+              thresholds; a tap on the folded dock jumping the feed to the top or switching tab;
+              the dock folding on Settings or the Guide, where it is the way out rather than in
+              the way.
+      Note:   jsdom computes no layout, so the suite can prove the fold's four answers and which
+              classes each tab carries, and can say nothing about whether the capsule glides. The
+              collapse is a `1fr` → `0fr` grid track — the same interpolable spelling of "as wide
+              as what is inside it" the collapsing task rows use on the other axis — and it has
+              never been seen playing.
+      Pill:   the white pill under the active tab makes the trip with it, and the Anytime feed is
+              where that is worth standing on — there the tab that closes is to the LEFT of the
+              one you are on, so the active tab slides 52 px inwards while the capsule shuts around
+              it. The pill is re-measured once a frame for the length of the fold rather than
+              sprung to a computed slot the way Android's selector is, so what to watch for is a
+              pill that arrives after the tab has stopped or overshoots and comes back — not one
+              parked in the open dock's slot, which is what the suite now pins.
+
 ## Android
 
 - [ ] **PR 39b · android · The burst is paper, and it still fits the celebrate window** — any list
