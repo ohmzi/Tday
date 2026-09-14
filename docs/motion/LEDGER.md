@@ -495,20 +495,65 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 29 — the Android hero search morph
 
-- [ ] `and-hero-search-morph-snaps` — capsule jumps pill→full width in one frame, 3 siblings blink to alpha 0 · and · Sev 4 · S · Gate D
-- [ ] `and-hero-mark-clock-frozen` — sun/moon samples the hour once in a keyless `remember` · and · Sev 2 · S · Gate J+D
+- [x] `and-hero-search-morph-snaps` — capsule jumps pill→full width in one frame, 3 siblings blink to alpha 0 · and · Sev 4 · S · Gate D
+  - **A fraction animates; the geometry is lerped from it.** `openFraction` is the only animated
+    value (`Emphasis`, because what changes is where the capsule is and how big it is). Animating
+    the width and the offset themselves would look identical and is not: both are also
+    scroll-derived, so a tween on them would put the whole fold a tween behind the finger. The
+    three controls the field takes the row from — the mark and the two round buttons — clear on
+    `Quick` through one `searchClearAlpha` helper, so no site can pick its own length for the same
+    departure.
+  - **Where this phase's device rows went, once, for all ten of them.** `docs/verification/README.md`
+    runs Phases 5 and 6 as one sitting, so there is no `phase-6-device-pass.md` and every row below
+    is in `phase-5-device-pass.md` — including the iOS thirds, since TF1 is the cycle that runs the
+    parity pairs side by side and it has not been cut. That file grew an `## Android` and a `## Web`
+    section it did not have. **Written and unrun** is the state these ten rows are in: unverified,
+    which is cheap, and not unscheduled, which is not.
+- [x] `and-hero-mark-clock-frozen` — sun/moon samples the hour once in a keyless `remember` · and · Sev 2 · S · Gate J+D
+  - **The band is now reachable by a test, and the hour is re-read.** `isDaytimeHour` is split off
+    the clock read so a JVM test can push a 5 and an 18 through the boundary —
+    `RootFeedHeroMarkClockTest`, green — and the glyph polls on the same unaligned minute iOS's
+    `TimelineView(.periodic(…, by: 60))` gives it. Nothing animates, deliberately: the turnover
+    happens once a day while nobody is watching the header. `J` green locally; `D` written and
+    unrun, and its setup names both ways of reaching the boundary, because that is the whole cost
+    of the check.
 
 ### PR 29w — the web hero search capsule
 
-- [ ] `web-hero-search-capsule-snaps` — width + translateX written imperatively, no transition, no crossfade · web · Sev 3 · S · Gate V+D
-- [ ] `web-hero-title-opacity-transition-fights-raf` — 200 ms CSS transition on the element the rAF rewrites every frame · web · Sev 2 · XS · Gate V
-- [ ] `web-hero-capsule-relayout-one-frame-late` — input can paint clipped inside the old 56 px pill (PLAUSIBLE, not confirmed) · web · Sev 2 · XS · Gate D
+- [x] `web-hero-search-capsule-snaps` — width + translateX written imperatively, no transition, no crossfade · web · Sev 3 · S · Gate V+D
+  - **Armed the way a placement is armed, not by adding a transition.** A CSS transition on
+    `width`/`transform` would also catch every scroll frame of the fold, where the rAF rewrites
+    both continuously. So the morph measures where the capsule was, lets the rAF write where it
+    goes, and plays the gap back through `Element.animate` on `Emphasis` — the title's fade rides
+    `Quick` with the controls. `V` is `hero-search-capsule-morph.test.tsx`, which stubs `animate`
+    and asserts the rungs by token rather than by number; green.
+- [x] `web-hero-title-opacity-transition-fights-raf` — 200 ms CSS transition on the element the rAF rewrites every frame · web · Sev 2 · XS · Gate V
+  - **No device row, and that is the correct answer rather than an omission.** The transition is
+    gone from the node the scroll rewrites and the open/close step is played back explicitly
+    instead, so the outcome is binary and `V` can tell the two apart. A row asking somebody to look
+    at a fade that no longer fights anything would cost eye-time and prove nothing.
+- [x] `web-hero-capsule-relayout-one-frame-late` — input can paint clipped inside the old 56 px pill (PLAUSIBLE, not confirmed) · web · Sev 2 · XS · Gate D
+  - **The fix is a `useLayoutEffect`, and the device row is the only thing that can close the
+    filing.** Routing the open through a synthetic scroll event left the capsule's width unordered
+    against the paint of the commit that changed its contents, so whether the expanded field ever
+    showed clipped came down to where the browser put a frame. It is written synchronously now.
+    The row says in its own text that observing the defect on this build is a finding rather than
+    a new filing — a PLAUSIBLE row is closed by a look, in one direction or the other. Written and
+    unrun.
 
 ### PR 27 — the root feed tab swap, Android and iOS
 
-- [ ] `and-ios-root-feed-tab-swap-uncrossfaded` — root feed body swaps in one frame while the dock pill springs · and+ios · Sev 4 · S · Gate D+TF
-- [ ] `root-feed-tab-switch-transition` — The root feed tab switch — the app's most-used interaction — is a hard cut on both native clients while the dock selector that triggered it springs across · and+ios · Impact O4 · S · Gate D+TF
+- [x] `and-ios-root-feed-tab-swap-uncrossfaded` — root feed body swaps in one frame while the dock pill springs · and+ios · Sev 4 · S · Gate D+TF
+  - **One rung on both clients, and it is `Quick`.** Nothing in the body travels — the arriving
+    feed is drawn in the slot the leaving one had — so the geometry rule keeps it off `Emphasis`,
+    and a handover shorter than the selector's spring is the point: a body still resolving after
+    the control it answers has landed reads as lag. Two device rows, one per client, written as a
+    pair to be run side by side; unrun, and TF1 has not been cut.
+- [x] `root-feed-tab-switch-transition` — The root feed tab switch — the app's most-used interaction — is a hard cut on both native clients while the dock selector that triggered it springs across · and+ios · Impact O4 · S · Gate D+TF
   - **Duplicate of `and-ios-root-feed-tab-swap-uncrossfaded` (§2.2).** §2.2 dissolves a three-way tangle here: this row is the root-feed **body** inside a single route (`TdayApp.kt:1103-1126`), not the NavHost route transition (`TdayApp.kt:1942-1955`, wired at `:335-338`) that PR 31 retimes to 160/110. Different surfaces — give the tab swap its own spec and do not reuse `NAV_FADE_*`. Ticks with its twin.
+  - **Ticked with its twin, on its twin's device rows.** The spec stayed its own: `NAV_FADE_IN/OUT`
+    are untouched at 360/240 and the swap names `Quick` for itself. No rows of its own — two
+    filings of one behaviour get one check, not two.
 
 ### PR 28 — the Android onboarding blur and overlay
 
@@ -516,15 +561,41 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 46 — the iOS half of the same overlay
 
-- [ ] `and-onboarding-blur-and-overlay-snap` — Android: the onboarding blur goes 14dp→0dp in one frame, the wizard card pops, and the locked feed hard-swaps for the real one · and+ios · Sev 3 · M · Gate D + TF — **final part (2 of 2)**; PR 28 carried the rest
+- [x] `and-onboarding-blur-and-overlay-snap` — Android: the onboarding blur goes 14dp→0dp in one frame, the wizard card pops, and the locked feed hard-swaps for the real one · and+ios · Sev 3 · M · Gate D + TF — **final part (2 of 2)**; PR 28 carried the rest
+  - **Three surfaces on one clock, and a fourth deliberately held out of it.** Blur, wizard and the
+    locked-feed crossfade all run `Quick`/`Standard` on Android; iOS says the same thing in one
+    transaction over blur, scale and wizard. The floating controls are handed `.animation(nil)` on
+    that value precisely so the duck below cannot be driven through an event nothing else moves in.
+  - **The cold start is in both device rows as a `Known:`, not as a fail.** Neither client plays an
+    enter for a first composition that is already true, and that is the behaviour wanted rather
+    than a limit worked around — an insertion with nothing before it has nothing to hand over from.
+    A reviewer who does not know that files it as a defect, which is a row costing more than it
+    saves. Written and unrun.
 
 ### PR 30 — the dock and FAB duck instead of vanishing
 
-- [ ] `dock-fab-duck-not-vanish` — dock + FAB pop out of existence in one frame on all three clients · all · Impact O3 · S · Gate D+TF
+- [x] `dock-fab-duck-not-vanish` — dock + FAB pop out of existence in one frame on all three clients · all · Impact O3 · S · Gate D+TF
+  - **The fade is not decoration on any of the three.** A slide by the control's own height clears
+    its box and not the gesture-bar or home-indicator strip under it, so opacity is what makes the
+    thing gone rather than parked. Android and iOS spell the rung as the `Settle` spring; web, with
+    no spring runtime, spells it as `Emphasis` on the `Gesture` easing.
+  - **Web carries one observation the native clients cannot need.** `BulkSelectionBar` rises into
+    the slot the dock and the create button are leaving and both are painted above it, so for the
+    whole exit a tap aimed at the bar could land on chrome that is already on its way out;
+    `useDuckPresence` reports `interactive` off `present` for that reason. Which action is at risk
+    is a matter of where the chrome sits at phone width: the create button is pinned right over
+    Delete, the dock pinned left over Complete. It gets a device row of its own — a tap DURING the
+    duck, which is the only window the hazard exists in, aimed at both ends of the bar. Four rows
+    across three clients, written and unrun.
 
 ### PR 58 — the Android FAB accent crossfade
 
-- [ ] `android-fab-accent-crossfade` — FAB snaps accent while the dock 8 lines away crossfades at 180 ms · and · Impact O2 · XS · Gate D
+- [x] `android-fab-accent-crossfade` — FAB snaps accent while the dock 8 lines away crossfades at 180 ms · and · Impact O2 · XS · Gate D
+  - **The 180 went too.** The row asked for the button to stop cutting; leaving the dock on a
+    written 180 that is not a rung would have made three surfaces of one handover run on two
+    clocks. Both are `Quick` now, the same rung the body crosses on, and the accent is hoisted out
+    of the visibility gate so a button that ducks back in already wears the tab's colour instead of
+    arriving blue and then turning green. Device row written and unrun.
 
 ### PR 12a — Android completion choreography
 
@@ -533,16 +604,40 @@ Restore it from git history rather than adjusting the number.
 ### PR 12b — web completion choreography
 
 - ↳ part 2 of 3 of `completion-choreography` — 3 of 5 row types hardcode 280/620/960 against Today's 160/360/260. Box lives under **PR 12c**.
-- [ ] `web-checkbox-pointer-and-spring` — most-tapped control fires its pop on `onMouseDown`; touch gets the weakest feedback · web · Impact O3 · S · Gate V
-- [ ] `web-strike-notes-mismatch` — the comment claims one mechanism; the notes use a bare `line-through` · web · Impact O3 · XS · Gate V
+- [x] `web-checkbox-pointer-and-spring` — most-tapped control fires its pop on `onMouseDown`; touch gets the weakest feedback · web · Impact O3 · S · Gate V
+  - **`V` arrived after the fix did.** The control moved to pointer events in Phase 6 and the
+    assertions that pin it — `pointerdown` pops, a bare `mousedown` does not, the squash is the
+    press rung — landed in `todo-checkbox-pointer.test.tsx` this phase. Green. No device row: a
+    class is applied or it is not, and jsdom can see which.
+- [x] `web-strike-notes-mismatch` — the comment claims one mechanism; the notes use a bare `line-through` · web · Impact O3 · XS · Gate V
+  - **Both halves of the row are struck by `.task-strike` now, so the comment is true.** A rule
+    that snaps on under one that fades in reads as two edits to one task. The notes' beat is
+    covered by the row-completion tests; the *look* of it is not a separate check, it is the web
+    third of the completion row's device check below.
 
 ### PR 12c — iOS completion choreography
 
-- [ ] `completion-choreography` — One completion choreography across the three clients: Android flips three states instantly inside a 780ms wait, web runs three rogue rhythms, iOS Calendar fires the wrong haptic and no sound at all · all · Impact O4 · M · Gate J + D + V + X + TF — **final part (3 of 3)**; PR 12a, PR 12b carried the rest
+- [x] `completion-choreography` — One completion choreography across the three clients: Android flips three states instantly inside a 780ms wait, web runs three rogue rhythms, iOS Calendar fires the wrong haptic and no sound at all · all · Impact O4 · M · Gate J + D + V + X + TF — **final part (3 of 3)**; PR 12a, PR 12b carried the rest
+  - **The strike was the beat with no motion in it, and it is the beat the device rows watch.**
+    `TextDecoration.LineThrough` is a boolean; the rule now sweeps on `Emphasis`, one rule per line
+    on a wrapped title, and web fades `text-decoration-color` over the same rung on title and notes
+    together. Same four beats on all three clients — 160, the strike, 360, the ink out on `Change`.
+  - **iOS's Calendar row was the odd one out twice over.** It fired the plain tap where the other
+    rows fire the completion pulse, and it drew the whole sequence in silence — the one place in
+    the app where finishing something made no sound. Both are in its device row, because a haptic
+    and a sound are exactly the kind of thing `xctest` compiles and cannot hear. Three rows, one
+    per client, written to be run together and unrun.
 
 ### PR 47 — iOS feed item motion
 
-- [ ] `feed-item-motion-parity` — Bring iOS and web onto Android's TdayFeedItemMotion — web has no list motion at all, iOS uses one symmetric 220ms curve for insert, move and remove · ios+web · Impact O4 · M · Gate V + X — **final part (2 of 2)**; PR 22b carried the rest
+- [x] `feed-item-motion-parity` — Bring iOS and web onto Android's TdayFeedItemMotion — web has no list motion at all, iOS uses one symmetric 220ms curve for insert, move and remove · ios+web · Impact O4 · M · Gate V + X — **final part (2 of 2)**; PR 22b carried the rest
+  - **No number was copied across, which is what makes the three files readable against each
+    other.** `feedItemMotion.ts` and `TdayFeedItemMotion.swift` name the rung each Android constant
+    mirrors rather than restating `190`/`320`/`150`, so a rung that moves in `MotionTokens.kt`
+    moves on every client at once — and the one place the mirror is not a copy (Android's 190
+    against the `Enter` rung) is argued in the file rather than silently rounded. `V` is
+    `use-row-placement.test.tsx`, `X` is `TdayFeedItemMotionTests.swift`; both green. The displaced
+    rows travelling is already checked by PR 22b's own device row, so this half needs none.
 
 ## Phase 7 — remaining web areas
 
