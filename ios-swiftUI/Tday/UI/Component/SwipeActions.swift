@@ -402,6 +402,13 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
                 } else if openRowID.wrappedValue == rowID {
                     openRowID.wrappedValue = nil
                 }
+                // not a token — see docs/motion.md. The pair IS `Gesture`, and
+                // this is the site `TaskSwipeRevealState.kt` converts to Compose
+                // by hand. What keeps it written out is the constructor, not the
+                // numbers: `TdayMotion.gesture` is a plain `.spring`, and this
+                // settle has to survive a second pan landing on the row before it
+                // finishes — `.interactiveSpring` re-aims at the new target
+                // instead of fighting the one in flight.
                 withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
                     offsetX.wrappedValue = shouldOpen ? -revealWidth : 0
                 }

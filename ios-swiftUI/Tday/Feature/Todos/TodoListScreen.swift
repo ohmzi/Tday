@@ -312,6 +312,11 @@ private struct TimelineTaskFlashHighlight: ViewModifier {
         Task { @MainActor in
             strength = 0
             for pulseIndex in 0..<2 {
+                // not a token — see docs/motion.md's 340–420 and 600–620 bands.
+                // Each leg is timed against the sleep directly under it rather
+                // than against the ladder: the flash has to have landed before
+                // the next one is armed, so the duration and the wait are one
+                // number written twice, and a rung would desynchronise them.
                 withAnimation(.easeInOut(duration: 0.42)) {
                     strength = 0.46
                 }

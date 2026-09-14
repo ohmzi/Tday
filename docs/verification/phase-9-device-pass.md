@@ -921,6 +921,24 @@ animates.
               is judged on distance like any other release; that is argued at `TdayToastDismissState`
               and pinned by a test, and is not what this row is looking for.
 
+- [ ] **PR 8g…8n · android · The wizard's step chips still keep up with the step they mark** —
+      onboarding, first run or a reset account, walking forward and then back through the wizard's
+      steps so the chip strip has to hand the highlight over in both directions.
+      Do:     watch the chip strip rather than the panel, and change step quickly — back-to-back,
+              not one step every few seconds.
+      Watch:  the swell is the only thing on the strip with a clock. Colour, border and elevation
+              are a plain `if (highlighted)` on a non-clickable `Card` and land in the frame of
+              the tap; only the 1.02 scale eases, by a fiftieth of the chip's size. It should read
+              as the chip settling into a step the colour has already claimed. Note which way you
+              are going: stepping forward, the chip you leave stays coloured — it is completed —
+              and only shrinks, so backwards is the one direction where a chip loses its colour.
+      Fails:  the swell reads as a bounce, or as a second event after the colour snap rather than
+              as the tail of it; or a fast back-and-forth leaves a chip visibly mid-swell when the
+              next step takes over. The scale ran on a hand-written 180 ms and is `Durations.Enter`
+              (200) now, which is twenty milliseconds longer — the whole question this row asks is
+              whether that is twenty milliseconds nobody can see, which is what the migration
+              claims.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
