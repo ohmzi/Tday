@@ -16,8 +16,6 @@ import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -118,6 +116,7 @@ import com.ohmz.tday.compose.core.notification.isNotificationOsAuthorized
 import com.ohmz.tday.compose.core.notification.notificationToggleAction
 import com.ohmz.tday.compose.core.notification.notificationToggleChecked
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
+import com.ohmz.tday.compose.core.ui.TdayDisclosureMotion
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
@@ -1047,8 +1046,8 @@ private fun AccountNameSection(
 
         AnimatedVisibility(
             visible = isEditing,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
+            enter = TdayDisclosureMotion.Enter,
+            exit = TdayDisclosureMotion.Exit,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -1167,8 +1166,8 @@ private fun AccountPasswordSection(
 
         AnimatedVisibility(
             visible = isEditing,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
+            enter = TdayDisclosureMotion.Enter,
+            exit = TdayDisclosureMotion.Exit,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 AccountPasswordField(
@@ -1344,8 +1343,8 @@ private fun AccountSecurityQuestionsSection(
 
         AnimatedVisibility(
             visible = isEditing,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
+            enter = TdayDisclosureMotion.Enter,
+            exit = TdayDisclosureMotion.Exit,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (configured) {
