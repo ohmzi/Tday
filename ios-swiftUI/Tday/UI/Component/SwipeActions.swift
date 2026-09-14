@@ -18,31 +18,16 @@ struct TodoSwipeExtraAction {
     let action: () -> Void
 }
 
-struct TodoRowAction {
-    let title: String
-    let systemImage: String
-    let tint: Color
-    let role: ButtonRole?
-    let action: () -> Void
-}
-
 extension View {
-    func todoSwipeActions(_ actions: [TodoRowAction]) -> some View {
-        swipeActions {
-            ForEach(Array(actions.enumerated()), id: \.offset) { entry in
-                let item = entry.element
-                Button(role: item.role, action: item.action) {
-                    Label(item.title, systemImage: item.systemImage)
-                }
-                .tint(item.tint)
-            }
-        }
-    }
-
-    func swipeRevealHintOnTap(enabled: Bool = true) -> some View {
-        modifier(SwipeRevealHintModifier(enabled: enabled))
-    }
-
+    /// The app's only row-action gesture, on every task row on every screen.
+    ///
+    /// Hand-rolled rather than SwiftUI's `.swipeActions` for two reasons that
+    /// both survive review: the reveal is a row of pills that fade and scale in
+    /// on a per-pill stagger, which `.swipeActions` has no way to express, and a
+    /// `List` row carrying both would hand the same horizontal drag to two
+    /// recognizers at once. A `UIPanGestureRecognizer` is invisible to the
+    /// accessibility API, so a row whose only way to Edit / Copy / Delete is
+    /// this modifier needs those spelled out as accessibility actions too.
     func todoTrailingSwipeActions(
         rowID: String,
         openRowID: Binding<String?>,
@@ -422,37 +407,6 @@ private struct TodoSwipePillActionButton: View {
         .opacity(Double(easedReveal))
         .scaleEffect(0.38 + (0.62 * easedReveal))
         .allowsHitTesting(easedReveal > 0.8)
-    }
-}
-
-private struct SwipeRevealHintModifier: ViewModifier {
-    let enabled: Bool
-
-    @State private var offsetX: CGFloat = 0
-    @State private var isHinting = false
-
-    func body(content: Content) -> some View {
-        content
-            .offset(x: offsetX)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                guard enabled, !isHinting else {
-                    return
-                }
-
-                isHinting = true
-                Task { @MainActor in
-                    withAnimation(.spring(response: 0.26, dampingFraction: 0.78)) {
-                        offsetX = -28
-                    }
-                    try? await Task.sleep(nanoseconds: 150_000_000)
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.68)) {
-                        offsetX = 0
-                    }
-                    try? await Task.sleep(nanoseconds: 340_000_000)
-                    isHinting = false
-                }
-            }
     }
 }
 
