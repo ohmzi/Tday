@@ -1160,7 +1160,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 40a/b/c — one skeleton per client
 
-- [ ] `skeleton-loading-vocabulary` — one skeleton per client at real row geometry, 190 ms crossfade · all · Impact O4 · M ea · Gate V/J/X
+- [ ] `skeleton-loading-vocabulary` — one skeleton per client at real row geometry, crossfading on the `Enter` rung · all · Impact O4 · M ea · Gate V/J/X — **iOS part landed (PR 40c)**; web (40a) and Android (40b) still owe theirs, and the last of the three ticks this box
 - [ ] `web-infinite-scroll-sentinel` — hardcoded English in a ten-locale app, no `aria-live`, 48 px growth per page · web · Impact O2 · S · Gate V
 
 ### PR 41a — the web sheet language
