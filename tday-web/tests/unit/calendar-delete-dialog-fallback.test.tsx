@@ -157,7 +157,7 @@ describe("the calendar's delete dialog answers the tap that opened it", () => {
 
     tapDelete();
 
-    expect(scrim().className).toContain("bg-black/65");
+    expect(scrim().className).toContain("bg-sheet-scrim");
     expect(placeholder()!.closest(".max-w-lg")).not.toBeNull();
   });
 

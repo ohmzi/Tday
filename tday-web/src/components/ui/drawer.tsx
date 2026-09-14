@@ -193,7 +193,7 @@ const DrawerOverlay = React.forwardRef<
       data-nested-scrim={nested ? "true" : undefined}
       className={cn(
         "fixed inset-0 z-50",
-        nested ? "bg-transparent" : "bg-black/80",
+        nested ? "bg-transparent" : "bg-sheet-scrim",
         className,
       )}
       {...props}
