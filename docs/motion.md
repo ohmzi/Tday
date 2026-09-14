@@ -302,23 +302,48 @@ bar button than on a full-width row.
 | `Card` | `0.97` | Cards and tiles |
 | `Row` | `0.985` | Full-width rows, where more travel would read as the list moving |
 
-- **`Bar`.** One site, and it carries its own argument:
-  `ios-swiftUI/Tday/Core/UI/TaskFloatingActionButton.swift:167`, argued at
-  `:162` — it sat at 0.95, which on a 56 pt circle is half a point of travel,
-  close enough to nothing that the press read as a tap landing rather than as a
-  button going down.
+- **`Bar`.** 10 Android press sites, all of them on
+  `Modifier.tdayPressable` — the round buttons in the top bar of Guide,
+  Calendar, Completed, Latest release and Settings, the calendar's "Today"
+  pill beside one of them, the root feed's search/close pair, the list header's
+  back chevron, the Today header button, and the sheet chrome's toolbar action,
+  which is the one that passes a 1 dp sink instead of the default 2. On iOS it
+  is one modifier, `TdayToolbarButtonEffectModifier`
+  (`ios-swiftUI/Tday/Core/UI/TaskFloatingActionButton.swift:167`), worn by 3
+  sites through `TdayToolbarButtonStyle`. The number is still what that
+  modifier's own argument at `:162` made it: it sat at 0.95, which on a 56 pt
+  circle is half a point of travel, close enough to nothing that the press read
+  as a tap landing rather than as a button going down. This bullet said "one
+  site" until Phase 9's 9b brought the Android half onto it: all ten had typed
+  0.93 for themselves — a depth nothing on Android ever argued for — so every
+  one of them is a retune of a hundredth as well as a migration.
 - **`Card`.** 5 Android press sites; 1 on web
-  (`tday-web/src/components/onboarding/OnboardingWizard.tsx:725`).
-- **`Row`.** 2 Android press sites; 2 on iOS
+  (`tday-web/src/components/onboarding/OnboardingWizard.tsx:725`). It is also
+  `Modifier.tdayPressable`'s default, so it is the depth a surface gets when its
+  author has not decided which class it belongs to — the middle of the three
+  rather than the deepest.
+- **`Row`.** 6 Android press sites: 2 on `Modifier.tdayPressable`, and 4 that
+  name the token without moving onto it — the root dock's selector and tab
+  content and the segmented slider's selector and segment label, each of which
+  is coupled to a spring or an offset that the shared modifier deliberately
+  cannot take. 2 on iOS
   (`ios-swiftUI/Tday/Feature/Onboarding/OnboardingWizardOverlay.swift:1347` and
   `:1359`); 6 `active:scale-[0.985]` on web, plus the global press rule at
-  `tday-web/src/globals.css:352`, which reads the token rather than writing
+  `tday-web/src/globals.css:416`, which reads the token rather than writing
   0.985 out again and stays in `@layer base` on purpose — a call site pressing
   to its own depth has to be able to beat it.
 
-These three are the narrowest part of the vocabulary and the tree is messier
-than they are — nine distinct press literals span 0.92–0.992. See the open
-questions.
+These three are the narrowest part of the vocabulary and the tree is no longer
+much messier than they are: 6 distinct press literals span 0.93–0.99, and
+exactly one of them is Android's. This paragraph said nine spanning 0.92–0.992
+before Phase 9's 9b. Only one of the three that went was a press depth: the
+segmented slider's segment label, which pressed to 0.98 of its own and now
+names `Row` so that it and the pill under it travel as one object. The other
+two never were — 0.92 is the swipe buttons' composed reveal factor and the
+slider's halo, and 0.992 is `AppRootView.swift:227`'s onboarding backdrop, both
+of which the old sentence swept in for being pressed-shaped numbers. What is
+left is the FAB disagreement in the open questions, and web's `[0.99]` and
+`scale-95`, which are that same disagreement's other end.
 
 ---
 
@@ -563,15 +588,23 @@ change pixels or destroy an argument that is worth more than the tidiness.
 
 ## Open questions this PR does not settle
 
-**The FAB press scale disagrees with itself, and `Bar` rests on one site.**
-The FAB is 0.93 on Android
-(`android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:1422`) and on iOS
-(`ios-swiftUI/Tday/Core/UI/TaskFloatingActionButton.swift:224`), but 0.95 on web
-(`tday-web/src/components/app/TaskFloatingActionButton.tsx:81`, via
-`active:scale-95`). Meanwhile the `Bar` token is 0.94 and stands on a single
-call site that carries its own written argument. Nine distinct press literals
-span 0.92–0.992 across the three clients. The press-scale PRs settle that
-spread; this one records it.
+**The FAB press scale disagrees with itself.** The FAB is 0.93 on Android and
+on iOS (`ios-swiftUI/Tday/Core/UI/TaskFloatingActionButton.swift:224`), but
+0.95 on web (`tday-web/src/components/app/TaskFloatingActionButton.tsx:103`,
+via `active:scale-95`). Two clients agreeing to the hundredth against a third
+is the whole of what is left: the Android side is now
+`TdayPress.FabScale`
+(`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayPressable.kt:82`),
+one constant read by both Android FABs rather than two literals with nothing
+tying them together, and its doc argues the extra depth in place — the FAB is
+the one control on screen with nothing beside it to be measured against, so it
+can travel further before the travel reads as a glitch. Promoting 0.93 to a
+fourth `PressScales` entry is the decision this still does not make, and it is
+bigger than it looks: `MotionTokens.kt` generates into three clients, the
+parity test asserts the whole table by value, and web would have to be argued
+onto 0.93 or argued out of the family. The other half of this question —
+"`Bar` rests on one site" — is answered: it carries ten Android sites and the
+iOS toolbar modifier, and the Press scales section has the count.
 
 **Migrating an iOS easing site onto `Standard` or `Enter` is not a zero-pixel
 change.** There are 65 easing sites in `ios-swiftUI/` (46 `.easeInOut`, 14

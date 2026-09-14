@@ -338,6 +338,32 @@ animates.
               hints that would have made those a device question were removed before this shipped,
               and the ledger row argues why.
 
+- [ ] **PR 54 · web · The press is a trip, and a reduced-motion press is not a wait** — the last
+      part of `press-affordance-unification` with no row anywhere, appended by 9b5 as it closes the
+      box. A phone or a narrow desktop window. Needs a shadcn Button (any sheet or dialog confirm),
+      the onboarding wizard's step chip, and the dock at phone width.
+      Do:     press and HOLD a shadcn confirm and let go; then the wizard's step chip; then tap
+              between two dock tabs. Repeat the lot with the OS "Reduce motion" setting on.
+      Watch:  the squash and the 1.5 px drop EASE in and ease back over about 150 ms on the press
+              curve — a short trip each way. The ripple under them takes longer, 320 ms, and that
+              is fine; what must not happen is the geometry finishing before the ripple has
+              started. The chip presses deeper than the confirm — it says 0.97 for
+              itself and is obeyed. The dock tab's width eases open beside the indicator pill
+              rather than reaching its new width ahead of it. Under Reduce motion every one of
+              them arrives pressed on the next frame and leaves on the next frame: no travel, and
+              exactly as far down as before.
+      Fails:  the geometry landing in one frame and leaving in one under a ripple that still takes
+              its time — half an affordance, a jolt under a slow bloom, which is the defect the
+              layer exists to remove. Also a fail: any pressable still easing under Reduce motion,
+              which is the floor being overridden again; the chip pressing to the same depth as the
+              confirm, which would be the scale promoted out of `base`; and the dock tab snapping
+              104 px → 48 px beside a pill that glides, which is `min-width` gone from the list.
+      Why:    jsdom applies no cascade layers and computes no style, so a vitest run can prove the
+              layer is declared and where it is declared — `press-affordance-cascade.test.ts` does
+              exactly that — and can prove nothing about which declaration won in a browser. Every
+              wrong version of this still presses.
+
+
 ## Android
 
 - [ ] **PR 39b · android · The burst is paper, and it still fits the celebrate window** — any list
@@ -1252,3 +1278,22 @@ animates.
               `ios-target-membership.test.ts` pins that the test is registered in the pbxproj
               rather than sitting on disk unbuilt. What none of that can see is whether the two
               feeds still reach the function at all, which is the whole of what this row is for.
+
+- [ ] **PR 10 · ios · The bar buttons go down instead of landing** — the other part of
+      `press-affordance-unification` with no row anywhere, appended by 9b5 as it closes the box.
+      Any build. The round buttons in the top bar that wear `TdayToolbarButtonStyle`: the root
+      feed hero header's pair and the list screen's.
+      Do:     press and HOLD each in turn, watching the circle rather than the ripple, and let go.
+              Then press and hold the create button in the same sitting, so the two depths are
+              compared against each other rather than each against a memory.
+      Watch:  the circle shrinks and sinks about a point while the finger is down — a short trip
+              each way rather than a state change — and the create button beside it travels
+              visibly further and drops twice as far.
+      Fails:  a bar button whose squash cannot be seen at all, which is the 0.95 this replaced:
+              on a 56 pt circle that is half a point of travel and reads as a tap landing rather
+              than a button going down. Also a fail: a bar button dropping 2 pt, which would be
+              the create button's modifier reaching a surface it is not for, and the two depths
+              becoming indistinguishable when pressed one after the other.
+      Why:    there is no Swift toolchain on the machine this was written on. The number is pinned
+              by `motion-parity.test.ts`, which asserts `Bar` is 0.94 in all three generated
+              artifacts, and nothing in the repository can say whether the button wearing it moves.
