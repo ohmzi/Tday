@@ -397,6 +397,8 @@
     "floaterListEmptyBody": "フローターを追加すると、ここで待機します。",
     "noMatchingTasks": "一致するタスクはありません",
     "searchEmptyBody": "別の言葉を試すか、検索をクリアしてください。",
+    "scrollForMore": "スクロールしてさらに表示",
+    "tasksShownOfTotal": "{{total}} 件中 {{shown}} 件のタスクを表示中",
     "todayEmpty": "今日のタスクはありません",
     "todayEmptyBody": "今日のタスクを追加すると、ここに表示されます。",
     "overdueEmpty": "期限超過のタスクはありません",

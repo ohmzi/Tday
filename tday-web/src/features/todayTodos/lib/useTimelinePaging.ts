@@ -92,6 +92,20 @@ export function useTimelinePaging({
 
   const hasMore = !timeline && visibleCount < scopeFilteredItems.length;
 
+  // What the pager has actually revealed — the only thing a reader who cannot
+  // see the rows land has to go on. The sentinel reveals rows that are already
+  // in memory, so nothing is being fetched and there is nothing to wait for;
+  // the fact worth speaking is how much of the scope is now on the page, and
+  // that is a fact that changes on every page, which is the only reason a live
+  // region says anything at all. Null on the first page deliberately: it keeps
+  // the region empty at mount, where a status node that arrives already
+  // carrying its text is announced at the reader's discretion, and makes every
+  // page after it an addition into a region that was already in the document.
+  const pageReveal =
+    !timeline && visibleTimelineItems.length > PAGE_SIZE
+      ? { shown: visibleTimelineItems.length, total: scopeFilteredItems.length }
+      : null;
+
   const selectableTodos = useMemo(
     () =>
       timeline
@@ -147,6 +161,7 @@ export function useTimelinePaging({
     earlierSections,
     regularSections,
     hasMore,
+    pageReveal,
     sentinelRef,
     selectableTodos,
   };

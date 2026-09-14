@@ -123,7 +123,7 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   which is a call site to settle rather than a reason to widen the rung.
   Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
-  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3044`,
+  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3162`,
   `tday-web/src/lib/taskCompletionTiming.ts:36`.
 - **`Emphasis` (320).** 15 Android tweens at the census (eleven of them reached
   through a named constant rather than written out), 5 iOS, 1 on web. Long
@@ -139,7 +139,7 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   `TdayFeedItemMotion.PlacementMillis`.
   Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskStrikethrough.kt:63`,
-  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:286`,
+  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:347`,
   `tday-web/src/globals.css:579`.
 - **`Scene` (520).** 2 Android, 1 iOS, 2 web at the census. This rung is the
   empty-state illustration **arriving**: all three clients name their site for
@@ -181,18 +181,21 @@ silently retime the confetti on all three clients.
   (`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:76`);
   web spends it at the two screens with the same shape, as `EmptyState`'s
   `celebrationStartDelayMs` —
-  `tday-web/src/features/todayTodos/component/AllTasksTimelineContainer.tsx:313`
+  `tday-web/src/features/todayTodos/component/AllTasksTimelineContainer.tsx:326`
   and
-  `tday-web/src/features/floater/component/NativeFloaterTaskHomeDashboard.tsx:218`.
+  `tday-web/src/features/floater/component/NativeFloaterTaskHomeDashboard.tsx:215`.
   The overlay callers on both clients pass nothing, because nothing behind the
   overlay moves. See the open question below.
 - **`CelebrationLead`.** One site per client:
-  `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:388`,
-  `ios-swiftUI/Tday/Core/UI/TdayConfetti.swift:160`,
-  `tday-web/src/globals.css:623`. Web's is the one that shows the two delays
+  `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:391`,
+  `ios-swiftUI/Tday/Core/UI/TdayConfetti.swift:381`,
+  `tday-web/src/globals.css:873`. Web's is the one that shows the two delays
   adding: `.tday-empty-enter-celebrating` is
   `calc(var(--tday-celebration-start, 0s) + var(--tday-delay-celebration-lead))`,
-  where the first term is whatever `PlacementLead` the host handed over.
+  where the first term is whatever `PlacementLead` the host handed over. What the
+  lead is buying time for has a normative file of its own,
+  [`docs/confetti-spec.md`](confetti-spec.md): the flight, the fan and the physics
+  are specified there, and the 320 ms in front of them stays here.
 
 ## Easings
 
@@ -332,11 +335,11 @@ same answer from every reviewer.
 Both rungs, inside one motion — the staged check-off every task row in every
 client plays. The row's content fades where it stands at 260 (`Change`):
 `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
-`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3044`,
+`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3162`,
 `tday-web/src/lib/taskCompletionTiming.ts:36`. The rule crossing out the title
 grows across it, so it takes 320 (`Emphasis`):
 `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskStrikethrough.kt:63`,
-`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:286`,
+`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:347`,
 `tday-web/src/globals.css:579`.
 
 The same beat played backwards — a completed task being restored — stays on
