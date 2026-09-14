@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import TodoListLoading from "@/components/ui/TodoListLoading";
+import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import { useCompletedFloater } from "../query/get-completedFloater";
 import { useGroupedHistory } from "../hooks/useGroupedHistory";
 import GroupedCompletedFloaterContainer from "./GroupedFloaterContainer";

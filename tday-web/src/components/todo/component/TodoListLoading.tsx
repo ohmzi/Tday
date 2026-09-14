@@ -1,5 +1,5 @@
 import React from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
 import { cn } from "@/lib/utils";
 
 type TodoListLoadingProps = {
@@ -7,6 +7,23 @@ type TodoListLoadingProps = {
   heading?: string;
 };
 
+/**
+ * A feed waiting for its tasks: the caller's own title, then rows at the real rows' shape.
+ *
+ * The heading is drawn rather than blocked out because it is already known — the caller
+ * passes it — and a bar of grey standing in for a word already in hand is a placeholder for
+ * nothing. It is not, though, the section header the tasks land under, and the comment that
+ * said so was wrong: the sections spell theirs `text-2xl font-black` at `mt-2` / `mb-1.5`
+ * (`timelineDndClasses.ts`), this block is `text-lg font-semibold` at `mt-5` / `mb-4 mt-1`,
+ * and the difference measures 18 px of vertical step at the handover. On the one caller that
+ * passes a heading the text is the page title `NativePageHeader` has already drawn an inch
+ * above, so nothing replaces this h3 in place — the sections' own labels arrive instead.
+ *
+ * That step is older than the row geometry below it and is not the row geometry's to close,
+ * so it is named in the Phase 9 device pass rather than left for a human to discover and
+ * report as the defect this file just fixed. What the rows look like is
+ * `TaskRowSkeleton`'s argument.
+ */
 const TodoListLoading = ({ className, heading }: TodoListLoadingProps) => {
   return (
     <div className={cn("mt-5", className)}>
@@ -18,27 +35,7 @@ const TodoListLoading = ({ className, heading }: TodoListLoadingProps) => {
           <div className="h-px flex-1 bg-border/70" />
         </div>
       )}
-      <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <div
-            key={`todo-loading-${index}`}
-            className="rounded-2xl border border-border/65 bg-card/95 px-3 py-3 shadow-[0_1px_2px_hsl(var(--shadow)/0.08)]"
-          >
-            <div className="flex items-start gap-3">
-              <div className="mt-1 h-5 w-5 rounded-full border-2 border-border/70" />
-              <div className="min-w-0 flex-1">
-                <Skeleton className="mb-3 h-6 w-1/2" />
-                <Skeleton className="mb-2 h-4 w-[92%]" />
-                <Skeleton className="mb-3 h-4 w-[65%]" />
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-6 w-24 rounded-full" />
-                  <Skeleton className="h-6 w-16 rounded-full" />
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <TaskRowSkeletonGroup count={3} />
     </div>
   );
 };
