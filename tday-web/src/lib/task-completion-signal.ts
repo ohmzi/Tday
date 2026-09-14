@@ -1,3 +1,5 @@
+import { useEffect, useReducer } from "react";
+
 /**
  * When the user last ticked something off.
  *
@@ -7,11 +9,24 @@
  * rendered somewhere else entirely — so the two meet through this, rather than
  * through a prop threaded down every container.
  *
- * Deliberately module state and not a store: nothing renders off it (the empty
- * state reads it on the render the emptied cache already triggered), so a
- * subscription would only add a re-render nobody needs.
+ * Deliberately module state and not a store. The window OPENING needs no
+ * subscription: the completion that opens it is the same mutation that empties
+ * the cache, so the render that notices the list is empty is already on its
+ * way. Only the window CLOSING needs a clock, and it gets one below — a store
+ * would have bought the half that was never the problem.
  */
 let lastCompletionAt = 0;
+
+/**
+ * How long a completion stays recent enough to be the reason a list is empty.
+ *
+ * Not a motion rung and not a candidate for one: nothing animates for four
+ * seconds. It is a wait — the same category `docs/motion.md` puts the 600–620ms
+ * band in — and it is wider than the burst's own flight (`Confetti`'s
+ * `FLIGHT_MS` plus whatever lead its host hands over) precisely so a re-render
+ * mid-flight cannot cut the paper off in mid-air.
+ */
+export const CELEBRATION_WINDOW_MS = 4000;
 
 /** Called by every complete mutation, as it stages the row out of the cache. */
 export function markTaskCompleted() {
@@ -20,11 +35,67 @@ export function markTaskCompleted() {
 
 /**
  * Whether a completion is recent enough that the list emptying now is the same
- * event. The window is wider than the burst's own flight, so a re-render
- * mid-flight cannot cut the paper off in mid-air.
+ * event.
+ *
+ * A read, not a subscription: it answers for the instant it is called and tells
+ * nobody when that answer expires. Correct for a caller whose screen does not
+ * change shape when the window shuts — the two floater feeds, where the scene
+ * is drawn whether or not anything was celebrated and the only thing riding
+ * this is confetti that finished seconds ago. Anything the window actually
+ * KEEPS on screen wants `useTaskJustCompleted` below instead.
  */
-export function taskJustCompleted(windowMs = 4000) {
+export function taskJustCompleted(windowMs = CELEBRATION_WINDOW_MS) {
   return lastCompletionAt !== 0 && Date.now() - lastCompletionAt < windowMs;
+}
+
+/**
+ * Re-renders the caller at the instant an open window runs out.
+ *
+ * A window read as `Date.now() - openedAt < windowMs` has no end of its own: it
+ * stays open until something unrelated re-renders the component and the
+ * comparison happens to come out false. Which means the thing the window was
+ * holding on screen leaves on a keystroke, a refetch or a route change —
+ * whenever one next happens to arrive — and leaves by disappearing, because the
+ * render it disappears on is not about it at all.
+ *
+ * Exported rather than folded into the hook below because `celebrate` is the
+ * OR of two windows of the same length, opened by two different signals (this
+ * module's own completion marker and `useCelebrateEmptyTransition`'s
+ * remote-emptied ref), and an end that only one of them observes is not an end.
+ *
+ * Arming nothing for a window that is already shut is deliberate: a `setTimeout`
+ * per render, for a deadline in the past, is how a hook like this becomes a
+ * timer leak.
+ */
+export function useCelebrationWindowExpiry(
+  openedAt: number,
+  windowMs = CELEBRATION_WINDOW_MS,
+): void {
+  // The dispatch, not its count: nothing reads the number. A re-render is the
+  // whole product, because every caller derives the window from `Date.now()`
+  // during its own render and needs only to be asked again.
+  const [, retest] = useReducer((count: number) => count + 1, 0);
+
+  useEffect(() => {
+    if (openedAt === 0) return;
+    const remaining = openedAt + windowMs - Date.now();
+    if (remaining <= 0) return;
+    const timer = setTimeout(retest, remaining);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [openedAt, windowMs]);
+}
+
+/**
+ * `taskJustCompleted`, plus the clock that closes it. For the callers whose
+ * screen is a different shape while the window is open — the scope and list
+ * screens, where a celebration keeps the empty scene on a slot that Earlier's
+ * own rows otherwise own.
+ */
+export function useTaskJustCompleted(windowMs = CELEBRATION_WINDOW_MS): boolean {
+  useCelebrationWindowExpiry(lastCompletionAt, windowMs);
+  return taskJustCompleted(windowMs);
 }
 
 let lastLocalDeleteAt = 0;

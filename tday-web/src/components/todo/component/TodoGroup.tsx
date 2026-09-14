@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { TodoItemContainer } from "./TodoItemContainer";
 import { useTodoMutation } from "@/providers/TodoMutationProvider";
 import { useUserPreferences } from "@/providers/UserPreferencesProvider";
+import { useRowPlacement } from "@/hooks/useRowPlacement";
 import { cn } from "@/lib/utils";
 
 // Task order is now FIXED by the shared sort engine (src/lib/taskSort.ts, applied
@@ -33,6 +34,11 @@ const TodoGroup = ({
   const { useReorderTodo } = useTodoMutation();
   const { reorderMutateFn } = useReorderTodo();
   const [items, setItems] = useState(todos);
+  // A row can leave this list for reasons that have no departure animation of their
+  // own — a delete, a due date edited out from under the section, a remote change —
+  // and the fixed sort can move one without anything leaving at all. Either way the
+  // rows below used to be put in their new slots in a single frame.
+  const placementRef = useRowPlacement<HTMLDivElement>();
 
   // Display always mirrors the incoming (already fixed-sorted) todos.
   useEffect(() => {
@@ -66,7 +72,7 @@ const TodoGroup = ({
   }, [items, todos, preferences?.sortBy, reorderable, reorderDiff, reorderMutateFn]);
 
   return (
-    <div className={cn("space-y-0", className)}>
+    <div ref={placementRef} className={cn("space-y-0", className)}>
       {items.map((item) => (
         <div key={item.id} draggable={false}>
           <TodoItemContainer

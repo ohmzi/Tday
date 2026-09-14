@@ -1,8 +1,13 @@
 import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
-import { taskJustCompleted } from "@/lib/task-completion-signal";
-import { useEarlierExpandHandoff } from "@/features/todayTodos/lib/useEarlierExpandHandoff";
+import { useTaskJustCompleted } from "@/lib/task-completion-signal";
 import {
+  useCelebrationSceneExit,
+  useEarlierExpandHandoff,
+} from "@/features/todayTodos/lib/useEarlierExpandHandoff";
+import {
+  OVERDUE_ROWS_FADE_MS,
   TODAY_EARLIER_EXIT_MS,
+  earlierSlotChangesHands,
   shouldShowTodayEmptyIllustration,
 } from "@/features/todayTodos/lib/todayEarlierIllustration";
 
@@ -39,9 +44,10 @@ export function useListEmptyState({
 }) {
   const {
     expanded: earlierExpanded,
-    handoffPending: earlierHandoffPending,
+    handoff: earlierHandoff,
     toggle: toggleEarlierExpanded,
-  } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS);
+    beginSceneExit,
+  } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS, OVERDUE_ROWS_FADE_MS);
 
   // Remote sibling of `taskJustCompleted()` below — fires for a completion on
   // another device or by a collaborator, not just this tab's own tap.
@@ -59,7 +65,14 @@ export function useListEmptyState({
   // tick that emptied it, not for a list that was already empty. Hoisted so
   // the illustration/Earlier hand-off below reads the exact same signal — see
   // `shouldShowTodayEmptyIllustration`.
-  const celebrate = taskJustCompleted() || remoteEmptied;
+  const celebrate = useTaskJustCompleted() || remoteEmptied;
+  // The window has an end now, so the scene it holds gets to leave over one —
+  // the same derivation the scoped screens make; see `useCelebrationSceneExit`.
+  const sceneHeldForExit = useCelebrationSceneExit({
+    celebrate,
+    sceneLeavesWithTheWindow: showEmpty && hasEarlierItems && earlierExpanded,
+    beginSceneExit,
+  });
   // Requirements 1-3: who owns the empty-state slot once `showEmpty` is
   // true — the exact function Today/All/Priority/Scheduled call, reused
   // rather than a parallel List-only decision.
@@ -67,13 +80,25 @@ export function useListEmptyState({
     showEmpty,
     hasEarlierItems,
     earlierExpanded,
-    earlierHandoffPending,
+    earlierHandoff,
+    celebrate,
+    sceneHeldForExit,
+  });
+
+  // What a tap on Earlier's header does to the SLOT — the same derivation
+  // `useTimelineEmptyState` makes for the scoped screens, reused rather than
+  // restated; see its own doc comment for why one boolean covers both
+  // directions of the swap.
+  const slotChangesHands = earlierSlotChangesHands({
+    showEmpty,
+    hasEarlierItems,
     celebrate,
   });
 
   return {
     earlierExpanded,
-    earlierHandoffPending,
+    earlierHandoff,
+    earlierSlotChangesHands: slotChangesHands,
     toggleEarlierExpanded,
     celebrate,
     showEmptyIllustration,

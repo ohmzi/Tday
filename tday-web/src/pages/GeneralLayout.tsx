@@ -5,6 +5,7 @@ import {
   nativeAppScrollAttribute,
 } from "@/components/app/nativeAppLayout";
 import { usePathname } from "@/lib/navigation";
+import { scrollTo } from "@/lib/scroll";
 
 export default function GeneralLayout() {
   const pathname = usePathname();
@@ -15,9 +16,10 @@ export default function GeneralLayout() {
   // "auto", not "smooth": this is a screen change, not a gesture, and a smooth
   // scroll would visibly slide the screen you just opened.
   useLayoutEffect(() => {
-    document
-      .querySelector<HTMLElement>(`[${nativeAppScrollAttribute}]`)
-      ?.scrollTo({ top: 0, behavior: "auto" });
+    scrollTo(document.querySelector<HTMLElement>(`[${nativeAppScrollAttribute}]`), {
+      top: 0,
+      behavior: "auto",
+    });
   }, [pathname]);
 
   return (

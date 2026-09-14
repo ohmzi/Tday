@@ -1,40 +1,71 @@
 import { useEffect, useRef } from "react";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
+import {
+  fan,
+  frame,
+  FLIGHT_MS,
+  ORIGIN_X,
+  ORIGIN_Y,
+} from "@/components/app/confetti-kinematics";
 
 /**
  * The burst that plays when the user ticks off the last thing they had left.
  *
- * Deliberately not a package and not a sprite: a few dozen rounded rectangles on
- * one canvas, thrown from a single point and pulled back down, is the whole
- * effect. Pieces flip as they fly — the width is scaled by the cosine of their
- * own spin — which is what reads as paper rather than as coloured dots.
+ * Deliberately not a package and not a sprite: a few dozen rounded rectangles on one
+ * canvas is the whole effect. This file draws them and owns nothing else — where a
+ * piece is, how far round it has turned and how solid it still is all come from
+ * `confetti-kinematics.ts`, which is the half that can be tested.
  *
- * The twin of the Compose `TdayConfetti` and the iOS `TdayConfetti` view; the
- * three share piece count, fan, timing and palette so finishing a list feels the
- * same wherever the user does it.
+ * What the throw actually does, because the shape of it is what reads as paper: the
+ * outward travel is limited by drag, so each piece has a finite reach rather than
+ * sliding off the sides; the fall settles to that piece's own terminal speed instead
+ * of accelerating forever, which is why the cloud spreads out as it comes down; and
+ * the edge-on flip runs on its own axis at its own rate, unrelated to the in-plane
+ * spin, so nothing is a propeller and a coin at the same time.
  *
- * Sits in an absolutely positioned, non-clipping layer over its parent so the
- * pieces can cross the copy under the illustration.
+ * The twin of the Compose `TdayConfetti` and the iOS `TdayConfetti` view; the three
+ * share piece count, fan, timing and palette so finishing a list feels the same
+ * wherever the user does it. `docs/confetti-spec.md` is what holds them together.
+ *
+ * Sits in an absolutely positioned layer over its parent, bled above it so the apex
+ * is not cut: a canvas clips to its own bitmap, which the Compose `Box` and the iOS
+ * overlay do not.
  *
  * @param accentColor the screen's own accent, mixed into the palette so the
  *   celebration still belongs to the list it happened on. Arrives as anything
  *   CSS accepts (a hex, or an `hsl(var(--x))`), so it is handed to the canvas as
  *   a fill string rather than parsed.
+ * @param startDelayMs how long the burst is held back after it is mounted. Zero
+ *   where this plays over a page that is standing still; a feed that draws the
+ *   empty state inline hands over the time its own rows take to reach their new
+ *   slots, so the paper is never thrown across a screen that is still sliding.
+ *   Held here rather than by mounting the canvas late: the pieces are rolled and
+ *   the canvas is sized while the feed travels, so the first frame of the burst
+ *   is a frame of confetti rather than a frame of layout.
  */
-export default function Confetti({ accentColor }: { accentColor: string }) {
+export default function Confetti({
+  accentColor,
+  startDelayMs = 0,
+}: {
+  accentColor: string;
+  startDelayMs?: number;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // The burst is the whole effect — there is no finished state to pin, so
+    // reduced motion means never starting rather than jumping to the end.
+    if (prefersReducedMotion()) return;
 
     const context = canvas.getContext("2d");
     if (!context) return;
 
     const palette = [...PALETTE, accentColor];
     const pieces = fan();
-    const start = performance.now();
-    let frame = 0;
+    const start = performance.now() + startDelayMs;
+    let rafHandle = 0;
 
     const resize = () => {
       const ratio = window.devicePixelRatio || 1;
@@ -53,6 +84,12 @@ export default function Confetti({ accentColor }: { accentColor: string }) {
 
     const draw = (now: number) => {
       const t = (now - start) / FLIGHT_MS;
+      // Still waiting for the feed to settle. Nothing is cleared because nothing
+      // has been drawn yet, and the canvas is transparent until it has.
+      if (t < 0) {
+        rafHandle = requestAnimationFrame(draw);
+        return;
+      }
       context.clearRect(0, 0, box.width, box.height);
       if (t >= 1) return;
 
@@ -61,124 +98,65 @@ export default function Confetti({ accentColor }: { accentColor: string }) {
       // piece clean off the sides before it can be seen.
       const span = box.width;
       const originX = box.width * ORIGIN_X;
-      const originY = box.height * ORIGIN_Y;
+      // The bleed is added back in so the origin lands on the same pixel of the
+      // *container* it did before the canvas grew upwards. Without this term the
+      // whole burst would be thrown forty pixels high, which on the shortest
+      // viewport is a fifth of the illustration.
+      const originY =
+        (box.height - WEB_CANVAS_TOP_BLEED) * ORIGIN_Y + WEB_CANVAS_TOP_BLEED;
 
       for (const piece of pieces) {
-        // Staggered launches: one salvo of forty pieces reads as a single
-        // expanding ring rather than as confetti.
-        const local = (t - piece.delay) / (1 - piece.delay);
-        if (local <= 0) continue;
+        const state = frame(piece, t);
+        // Not launched yet, or already landed: one salvo of forty-six pieces
+        // leaving together reads as an expanding ring rather than as confetti.
+        if (!state) continue;
 
-        const travelled = piece.speed * local;
-        const x = originX + Math.cos(piece.angle) * travelled * span;
-        const y =
-          originY +
-          Math.sin(piece.angle) * travelled * span +
-          GRAVITY * local * local * span;
-
-        // Full opacity for the first half of the flight, then out — pieces that
-        // vanish at the apex look like a dropped frame.
-        const alpha =
-          local < FADE_START ? 1 : 1 - (local - FADE_START) / (1 - FADE_START);
-
-        const spin = piece.spinPhase + piece.spin * local;
-        // |cos| of the spin is the piece turning edge-on to the viewer; the
-        // floor keeps it from disappearing completely on the way round.
-        const flip = MIN_FLIP + (1 - MIN_FLIP) * Math.abs(Math.cos(spin));
-        const width = piece.width * flip;
-        const height = piece.height;
+        const width = state.widthScale * piece.width;
 
         context.save();
-        context.globalAlpha = alpha;
-        context.translate(x, y);
-        context.rotate(spin);
+        context.globalAlpha = state.alpha;
+        context.translate(originX + state.dx * span, originY + state.dy * span);
+        context.rotate(state.rot);
         context.fillStyle = palette[piece.colorIndex % palette.length];
         context.beginPath();
-        context.roundRect(-width / 2, -height / 2, width, height, width * 0.4);
+        // Radius off the DRAWN width, so a piece turning edge-on stays a sliver
+        // with rounded ends rather than becoming a capsule.
+        context.roundRect(-width / 2, -piece.height / 2, width, piece.height, width * 0.4);
         context.fill();
         context.restore();
       }
 
-      frame = requestAnimationFrame(draw);
+      rafHandle = requestAnimationFrame(draw);
     };
 
-    frame = requestAnimationFrame(draw);
+    rafHandle = requestAnimationFrame(draw);
 
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(rafHandle);
       observer.disconnect();
     };
-  }, [accentColor]);
+  }, [accentColor, startDelayMs]);
 
   return (
     <canvas
       ref={canvasRef}
       aria-hidden
-      className="pointer-events-none absolute inset-0 h-full w-full"
+      className="pointer-events-none absolute -top-10 bottom-0 left-0 right-0 w-full"
     />
   );
 }
 
-type Piece = {
-  angle: number;
-  speed: number;
-  spin: number;
-  spinPhase: number;
-  width: number;
-  height: number;
-  colorIndex: number;
-  delay: number;
-};
-
 /**
- * The fan, rolled from a fixed seed: the burst is the same every time, which is
- * what makes it read as a designed celebration rather than a random one.
+ * How far the canvas reaches above its container, in CSS pixels — the `-top-10` on
+ * the element below, in a number the origin can be computed against.
+ *
+ * A `<canvas>` clips to its own bitmap, which is the one way this client differs from
+ * the other two: Compose draws into a `Box` and iOS into an overlay, neither of which
+ * cuts anything. The container is `min-h-[42vh]`, so on a short viewport the apex —
+ * 0.195 of the WIDTH above the origin — lands outside the element at full opacity and
+ * the topmost pieces are sliced off mid-flight rather than fading out.
  */
-function fan(): Piece[] {
-  const random = seeded(0x7da9102b);
-  return Array.from({ length: PIECE_COUNT }, (_, index) => {
-    // Fanned up and out rather than in a full circle. A ring throws half its
-    // pieces straight down through the copy, where they read as a glitch.
-    const step = (index + random()) / PIECE_COUNT;
-    return {
-      angle: FAN_START + FAN_SWEEP * step,
-      speed: 0.3 + random() * 0.48,
-      spin: (random() < 0.5 ? 1 : -1) * (3.5 + random() * 9),
-      spinPhase: random() * Math.PI * 2,
-      width: 5 + random() * 4,
-      height: 8 + random() * 5,
-      colorIndex: Math.floor(random() * (PALETTE.length + 1)),
-      delay: random() * 0.16,
-    };
-  });
-}
-
-/** Mulberry32: three lines, and the same fan on every machine. */
-function seeded(seed: number) {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-const PIECE_COUNT = 46;
-const FLIGHT_MS = 1800;
-
-/** Where the burst is thrown from, as a fraction of the box: the scene's heart. */
-const ORIGIN_X = 0.5;
-const ORIGIN_Y = 0.28;
-
-/** Up and out: 200°..340°, measured with y growing downward. */
-const FAN_START = (200 * Math.PI) / 180;
-const FAN_SWEEP = (140 * Math.PI) / 180;
-
-const GRAVITY = 0.95;
-const MIN_FLIP = 0.25;
-const FADE_START = 0.55;
+const WEB_CANVAS_TOP_BLEED = 40;
 
 /**
  * A festive subset of the list palette rather than a new set of colours, so the

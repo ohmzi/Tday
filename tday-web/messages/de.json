@@ -397,6 +397,8 @@
     "floaterListEmptyBody": "Füge einen Floater hinzu, er wartet genau hier.",
     "noMatchingTasks": "Keine passenden Aufgaben",
     "searchEmptyBody": "Probiere ein anderes Wort oder lösche die Suche.",
+    "scrollForMore": "Weiter scrollen für mehr",
+    "tasksShownOfTotal": "{{shown}} von {{total}} Aufgaben werden angezeigt",
     "todayEmpty": "Keine Aufgaben für heute",
     "todayEmptyBody": "Füge etwas für heute hinzu, dann erscheint es genau hier.",
     "overdueEmpty": "Keine überfälligen Aufgaben",
@@ -796,6 +798,14 @@
       "title": "Ruhende Floater",
       "toggle": "Unberührte Anytime-Aufgaben ausblenden"
     },
+    "sound": {
+      "title": "Ton",
+      "toggle": "Beim Abschließen einer Aufgabe einen Ton abspielen"
+    },
+    "haptics": {
+      "title": "Vibration",
+      "toggle": "Bei Tippen und Ziehen vibrieren"
+    },
     "workspace": {
       "title": "Arbeitsbereich",
       "localTitle": "Lokaler Arbeitsbereich",
@@ -999,6 +1009,27 @@
         "summary": "Zieh Aufgaben in die Reihenfolge, die du willst.",
         "keywords": "ziehen, umsortieren, verschieben, sortieren, reihenfolge, anordnen",
         "body": "Deine Listen behalten die Reihenfolge, die du ihnen gibst. Zieh eine Aufgabe nach oben oder unten, um deinen Tag so anzuordnen, wie du ihn dir vorstellst."
+      },
+      "swipe-sheet-away": {
+        "title": "Karte nach unten wegziehen",
+        "summary": "Zieh die Karte für neue Aufgaben nach unten, um sie zu schließen.",
+        "keywords": "wischen, ziehen, schließen, verwerfen, karte, blatt, griff, geste, nach unten",
+        "body": "Der kleine Balken oben auf der Karte für neue Aufgaben heißt: Du kannst sie nach unten ziehen. Zieh sie, und sie folgt deinem Finger; lass etwa ab einem Viertel des Weges los, und sie schließt sich — genau so, als hättest du auf den abgedunkelten Bereich dahinter getippt. Ein kurzer Schwung zählt ebenfalls: Entscheidend ist, wohin du unterwegs warst, nicht wo du losgelassen hast. Und ein Zug, den du dir anders überlegst, federt an seinen Platz zurück.",
+        "tip": "Wenn sich der Inhalt einer Karte scrollen lässt, zieh sie oben an: Die Mitte gehört der Liste."
+      },
+      "sound-and-vibration": {
+        "title": "Ton und Vibration",
+        "summary": "Schalte den Abschlusston, die Vibration oder beides aus.",
+        "keywords": "ton, sound, stumm, lautlos, audio, lautstärke, vibration, vibrieren, haptik, rückmeldung, barrierefreiheit",
+        "body": "Beim Abhaken einer Aufgabe erklingt ein kurzer Ton, und auf dem Handy antwortet die App auf dein Tippen und Ziehen mit einer kleinen Vibration. In den Einstellungen gibt es für beides einen Schalter — schalte einen aus, alles andere bleibt, wie es war.",
+        "tip": "Die Schalter gehören zu diesem Browser und nicht zu deinem Konto: Ein stiller Laptop und ein vibrierendes Handy können jeweils ihre eigene Antwort haben."
+      },
+      "reduce-motion": {
+        "title": "Bewegung reduzieren",
+        "summary": "Schalte die Animationen von T'Day aus, ohne den Rest des Telefons zu ändern.",
+        "keywords": "bewegung, animation, animationen, reduzieren, barrierefreiheit, still, übergänge, schwindel",
+        "body": "In den Einstellungen gibt es einen Schalter „Bewegung reduzieren“. Ist er an, spielt T'Day die Animationen, die es selbst schreibt, nicht mehr ab: Eine Aufgabe wird abgehakt, durchgestrichen und verschwindet auf einmal statt in drei Schritten, der Wischhinweis und das Konfetti bleiben aus, und die Illustration für den leeren Tag ist einfach da, statt hereinzufahren. Jede Wartezeit, die nur eine davon überbrückt hat, entfällt mit ihr – die App wird dadurch schneller, nicht langsamer. Das Gleiten zwischen Bildschirmen und die aufsteigenden Blätter sind Animationen von Android und nicht von T'Day; die richten sich weiterhin nach der Animationseinstellung deines Telefons.",
+        "tip": "Er nimmt Bewegung nur weg. Sind Animationen in den Android-Einstellungen bereits aus, ist T'Day schon still – und der Schalter sagt das, statt anzubieten, es rückgängig zu machen."
       },
       "floaters-vs-todos": {
         "title": "Floater vs. geplante Aufgaben",

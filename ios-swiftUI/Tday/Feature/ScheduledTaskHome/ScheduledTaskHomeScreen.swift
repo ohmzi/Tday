@@ -9,7 +9,6 @@ private enum ScheduledTaskHomeMetrics {
     static let tileInnerPadding: CGFloat = 12
     static let todayCardHeight: CGFloat = 70
     static let listRowHeight: CGFloat = 70
-    static let rootDockCollapseThreshold: CGFloat = 44
     static let listContainerColorWeight: CGFloat = 0.66
     static let tileWatermarkSize: CGFloat = 116
     static let tileWatermarkTrailingInset: CGFloat = 22
@@ -71,6 +70,12 @@ struct ScheduledTaskHomeScreen: View {
 
     @State private var viewModel: ScheduledTaskHomeViewModel
     @Environment(\.tdayColors) private var colors
+    /// Gates the today block's own motion — see the `.animation(_:value:)` that
+    /// carries it and `TdayFeedItemMotion.row(reduceMotion:)`. The travel and the
+    /// row legs are refused separately because they come from two different
+    /// mechanisms; that method says why. The transition takes the boolean because
+    /// it cannot take a nil animation — `TdayMotionResolution.isEnabled` says why.
+    @Environment(\.tdayAnimation) private var tdayAnimation
     @FocusState private var searchFieldFocused: Bool
 
     @State private var searchExpanded = false
@@ -148,6 +153,14 @@ struct ScheduledTaskHomeScreen: View {
         searchExpanded && !normalizedSearchQuery.isEmpty
     }
 
+    /// The first load, and only the first. A pull-to-refresh with rows already on
+    /// screen has something to show, and swapping those for grey bars would be the
+    /// app forgetting what it already knows — which is why this asks the item list
+    /// as well as the flag, the same pair Android's feed asks.
+    private var showsTodayFeedSkeleton: Bool {
+        viewModel.isLoading && viewModel.todayTodos.isEmpty
+    }
+
     private var shouldCollapseRootDock: Bool {
         rootDockCollapsed
     }
@@ -198,10 +211,7 @@ struct ScheduledTaskHomeScreen: View {
                                     .frame(height: RootFeedHeroHeaderMetrics.expandedHeight)
                                     .id(scheduledTaskHomeScrollTopID)
                                     .background {
-                                        RootFeedHeaderScrollObserver(
-                                            state: headerScroll,
-                                            collapseThreshold: ScheduledTaskHomeMetrics.rootDockCollapseThreshold
-                                        ) { collapsed in
+                                        RootFeedHeaderScrollObserver(state: headerScroll) { collapsed in
                                             guard rootDockCollapsed != collapsed else { return }
                                             rootDockCollapsed = collapsed
                                             onRootDockCollapsedChange(collapsed)
@@ -228,15 +238,73 @@ struct ScheduledTaskHomeScreen: View {
                                     }
                                 )
 
-                                if !viewModel.todayTodos.isEmpty {
-                                    VStack(spacing: 0) {
-                                        ForEach(viewModel.todayTodos) { todo in
-                                            scheduledTaskHomeTodayTaskRow(todo)
-                                                .transition(.opacity.combined(with: .move(edge: .top)))
+                                // One slot, not two rows of the stack.
+                                //
+                                // Before this a cold open drew the header, the Today
+                                // card and then nothing at all until the first response
+                                // landed — a frame that reads as a screen that failed
+                                // rather than one that is working.
+                                //
+                                // The `ZStack` is what makes the hand-over a crossfade
+                                // instead of a shuffle. Written as two siblings of the
+                                // `LazyVStack` the bars and the rows are in sequence, and
+                                // SwiftUI holds a view being removed in the layout for
+                                // the whole of its removal — so for the length of the
+                                // dissolve the stack would carry three placeholder rows
+                                // AND the rows that replace them, shoving the category
+                                // board below down by the better part of a screen and
+                                // snapping it back. Stacked, the two halves occupy the
+                                // same space and the block is only ever as tall as the
+                                // taller of them.
+                                //
+                                // `.topLeading` so the bars sit where the first row will,
+                                // and so a short list settles from the top rather than
+                                // from the middle of where the placeholder was. Each half
+                                // keeps its own `.animation` — they are siblings here, so
+                                // neither is inside the other and neither can override it.
+                                ZStack(alignment: .topLeading) {
+                                    Group {
+                                        if showsTodayFeedSkeleton {
+                                            TdayTaskRowSkeletonGroup()
+                                                .transition(.opacity)
                                         }
                                     }
                                     .animation(
-                                        .spring(response: 0.34, dampingFraction: 0.9),
+                                        tdayAnimation(TdayTaskRowSkeleton.crossfade),
+                                        value: showsTodayFeedSkeleton
+                                    )
+
+                                    // The block's travel, hung on the `Group` and
+                                    // NOT inside the `if`. A modifier written inside
+                                    // the branch is part of that branch: the update
+                                    // that empties `todayTodos` takes the modifier out
+                                    // of the tree in the same pass it takes the rows
+                                    // out, so there is no open transaction at the
+                                    // moment the removal is decided and roughly 72pt
+                                    // of layout closes up in one frame — including the
+                                    // rows' own `.transition` legs, which are inert
+                                    // outside one. Out here the modifier outlives both
+                                    // states of the branch, which is the only position
+                                    // from which it can animate either.
+                                    Group {
+                                        if !viewModel.todayTodos.isEmpty {
+                                            VStack(spacing: 0) {
+                                                ForEach(viewModel.todayTodos) { todo in
+                                                    scheduledTaskHomeTodayTaskRow(todo)
+                                                        .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
+                                                }
+                                            }
+                                            // The block is what a feed adds and removes
+                                            // alongside its rows, so it leaves on the
+                                            // departure rung rather than inheriting the
+                                            // travel below — an exit that outlasts the
+                                            // arrival it undoes is the thing the rung
+                                            // split exists to prevent.
+                                            .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
+                                        }
+                                    }
+                                    .animation(
+                                        tdayAnimation(TdayFeedItemMotion.placement),
                                         value: viewModel.todayTodos.map(\.id)
                                     )
                                 }
@@ -490,7 +558,7 @@ struct ScheduledTaskHomeScreen: View {
 
     private func closeSearch() {
         searchFieldFocused = false
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             searchExpanded = false
         }
         searchQuery = ""
@@ -660,22 +728,22 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
-        .animation(.easeInOut(duration: 0.26), value: isFading)
+        .animation(TdayMotion.standard(duration: TdayMotion.Durations.change), value: isFading)
         .allowsHitTesting(!isCompleting)
     }
 
     private var rowContent: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: TdayTaskRowMetrics.contentSpacing) {
             Button(action: startCompletion) {
                 Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 24, weight: .regular))
+                    .font(.system(size: TdayTaskRowMetrics.checkGlyph, weight: .regular))
                     .foregroundStyle(showCheckmark ? Color.green : colors.onSurfaceVariant.opacity(0.78))
-                    .frame(width: 38, height: 38)
+                    .frame(width: TdayTaskRowMetrics.checkSlot, height: TdayTaskRowMetrics.checkSlot)
             }
             .buttonStyle(TdayPressButtonStyle(shadowColor: .black, pressedShadowOpacity: 0, normalShadowOpacity: 0))
             .disabled(isCompleting)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: TdayTaskRowMetrics.textSpacing) {
                 ScheduledTaskHomeTodayTaskTitle(
                     text: todo.title,
                     isCompleted: showStrikethrough,
@@ -685,7 +753,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
 
                 if let subtitleText {
                     Text(subtitleText)
-                        .font(.tdayRounded(size: 13, weight: .semibold))
+                        .font(.tdayRounded(size: TdayTaskRowMetrics.subtitleFontSize, weight: .semibold))
                         .foregroundStyle(subtitleColor)
                 }
 
@@ -693,36 +761,36 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 if !flattenedDescription.isEmpty {
                     Text(flattenedDescription)
-                        .font(.tdayRounded(size: 12, weight: .semibold))
+                        .font(.tdayRounded(size: TdayTaskRowMetrics.notesFontSize, weight: .semibold))
                         .foregroundStyle(colors.onSurfaceVariant)
                         // Struck alongside the title so the whole task reads as
                         // done during the completion animation. Uses the real
                         // per-line strikethrough (not the title's animated
                         // sweep) because notes wrap to several lines.
                         .strikethrough(showStrikethrough, color: colors.onSurfaceVariant)
-                        .animation(.easeInOut(duration: 0.32), value: showStrikethrough)
+                        .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: showStrikethrough)
                 }
             }
 
             Spacer(minLength: 0)
 
             if listMeta != nil || priorityIcon != nil {
-                HStack(spacing: 8) {
+                HStack(spacing: TdayTaskRowMetrics.metaSpacing) {
                     if let listMeta {
-                        TdayListIcon(iconKey: listMeta.iconKey, size: 14)
+                        TdayListIcon(iconKey: listMeta.iconKey, size: TdayTaskRowMetrics.metaIcon)
                             .foregroundStyle(scheduledTaskHomeListAccentColor(for: listMeta.color))
                     }
                     if let priorityIcon {
                         Image(systemName: priorityIcon)
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: TdayTaskRowMetrics.metaIcon, weight: .semibold))
                             .foregroundStyle(priorityColor(todo.priority))
                     }
                 }
-                .padding(.trailing, 8)
+                .padding(.trailing, TdayTaskRowMetrics.metaTrailingPadding)
             }
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 4)
+        .padding(.vertical, TdayTaskRowMetrics.verticalPadding)
+        .padding(.horizontal, TdayTaskRowMetrics.horizontalPadding)
         .contentShape(Rectangle())
     }
 
@@ -734,23 +802,25 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
 
         HapticManager.completion()
         SoundManager.taskCompleted()
-        withAnimation(.easeInOut(duration: 0.18)) {
+        withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
             completionPhase = .checked
         }
 
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 160_000_000)
-            withAnimation(.easeInOut(duration: 0.22)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)) {
                 completionPhase = .struck
             }
             try? await Task.sleep(nanoseconds: 360_000_000)
-            withAnimation(.easeInOut(duration: 0.26)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)) {
                 completionPhase = .fading
             }
             try? await Task.sleep(nanoseconds: 260_000_000)
             await onComplete()
             if completionPhase == .fading {
-                withAnimation(.easeInOut(duration: 0.16)) {
+                // Putting the row back is an exit undoing nothing anybody watched:
+                // Quick, which is also where the tick that started this came in.
+                withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
                     completionPhase = .active
                 }
             }
@@ -770,7 +840,7 @@ private struct ScheduledTaskHomeTodayTaskTitle: View {
 
     var body: some View {
         Text(text)
-            .font(.tdayRounded(size: 18, weight: .bold))
+            .font(.tdayRounded(size: TdayTaskRowMetrics.titleFontSize, weight: .bold))
             .foregroundStyle(titleColor)
             .lineLimit(1)
             .overlay {
@@ -785,13 +855,15 @@ private struct ScheduledTaskHomeTodayTaskTitle: View {
                 }
                 .allowsHitTesting(false)
             }
-            .animation(.easeInOut(duration: 0.32), value: isCompleted)
+            .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: isCompleted)
     }
 }
 
 private struct ScheduledTaskHomeTodayCard: View {
     let count: Int
     let action: () -> Void
+
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     private var dateLabel: String {
         Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().locale(AppLocale.current))
@@ -822,9 +894,24 @@ private struct ScheduledTaskHomeTodayCard: View {
 
                     Spacer()
 
+                    // The count rolls its digits instead of hard-swapping them, and it
+                    // rolls on `Change` rather than `Enter` or `Emphasis`. Rule 2 of
+                    // `docs/motion.md` decides that boundary by geometry: 7 → 6 after
+                    // the user ticks a task is their own edit replayed back to them in
+                    // place, with the label not moving and not changing size, which is
+                    // exactly what `Change` is for. The roll is also what earns 260 —
+                    // cross-dissolving a whole string for that long reads as a smear,
+                    // while digits travelling read as a number counting down.
+                    // No `#available` guard: `.numericText(value:)` is iOS 17 and the
+                    // deployment target is 17.0, so a guard here would be dead code.
                     Text("\(count)")
                         .font(.tdayRounded(size: 34, weight: .black))
                         .foregroundStyle(.white)
+                        .contentTransition(.numericText(value: Double(count)))
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                            value: count
+                        )
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
@@ -861,6 +948,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileScheduled",
                     title: L("Scheduled"),
                     count: scheduledCount,
+                    zoomRoute: .scheduledTodos,
                     action: onOpenScheduled
                 )
 
@@ -870,6 +958,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TilePriority",
                     title: L("Priority"),
                     count: priorityCount,
+                    zoomRoute: .priorityTodos,
                     action: onOpenPriority
                 )
             }
@@ -881,6 +970,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileOverdue",
                     title: L("Overdue"),
                     count: overdueCount,
+                    zoomRoute: .overdueTodos,
                     action: onOpenOverdue
                 )
 
@@ -890,6 +980,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileAll",
                     title: L("All"),
                     count: allCount,
+                    zoomRoute: .allTodos(highlightTodoId: nil),
                     action: onOpenAll
                 )
             }
@@ -901,6 +992,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileComplete",
                     title: L("Completed"),
                     count: completedCount,
+                    zoomRoute: .completed,
                     action: onOpenCompleted
                 )
 
@@ -910,6 +1002,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileCalendar",
                     title: L("Calendar"),
                     count: calendarCount,
+                    zoomRoute: .calendar,
                     action: onOpenCalendar
                 )
             }
@@ -924,7 +1017,16 @@ private struct ScheduledTaskHomeCategoryTile: View {
     let watermark: String?
     let title: String
     let count: Int
+    /// The route this tile pushes, carried alongside the closure that pushes it.
+    ///
+    /// The closure is opaque — a `() -> Void` the board was handed — so it cannot be
+    /// asked where it goes, and the zoom needs an id both ends agree on. Stored rather
+    /// than derived from `icon` or `title`: the title is localised and the icon is an
+    /// asset name, and neither is the thing `AppRootView` keys its destination on.
+    let zoomRoute: AppRoute
     let action: () -> Void
+
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: ScheduledTaskHomeMetrics.tileCornerRadius, style: .continuous)
@@ -983,9 +1085,15 @@ private struct ScheduledTaskHomeCategoryTile: View {
                             .frame(width: 24, height: 24)
                             .foregroundStyle(.white)
                         Spacer()
+                        // Same roll, same rung — see `ScheduledTaskHomeTodayCard`.
                         Text("\(count)")
                             .font(.tdayRounded(size: 26, weight: .black))
                             .foregroundStyle(.white)
+                            .contentTransition(.numericText(value: Double(count)))
+                            .animation(
+                                tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                                value: count
+                            )
                     }
 
                     Text(title)
@@ -1000,6 +1108,10 @@ private struct ScheduledTaskHomeCategoryTile: View {
             .contentShape(shape)
         }
         .buttonStyle(ScheduledTaskHomeTileButtonStyle())
+        // The rectangle the pushed screen grows out of. On iOS 17, under Reduce Motion,
+        // or for any route with no source id this resolves to nothing at all and the push
+        // is the stock slide — see `ZoomNavigation.swift`.
+        .tdayZoomSource(zoomRoute)
     }
 }
 
@@ -1046,6 +1158,7 @@ private struct ScheduledTaskHomeListRow: View {
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     private var accent: Color {
         scheduledTaskHomeListAccentColor(for: colorKey)
@@ -1115,9 +1228,15 @@ private struct ScheduledTaskHomeListRow: View {
 
                     Spacer()
 
+                    // Same roll, same rung — see `ScheduledTaskHomeTodayCard`.
                     Text("\(count)")
                         .font(.tdayRounded(size: 22, weight: .bold))
                         .foregroundStyle(.white)
+                        .contentTransition(.numericText(value: Double(count)))
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                            value: count
+                        )
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)

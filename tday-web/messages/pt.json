@@ -397,6 +397,8 @@
     "floaterListEmptyBody": "Adicione um flutuante e ele esperará aqui.",
     "noMatchingTasks": "Nenhuma tarefa correspondente",
     "searchEmptyBody": "Tente outra palavra ou limpe a busca.",
+    "scrollForMore": "Role para ver mais",
+    "tasksShownOfTotal": "Mostrando {{shown}} de {{total}} tarefas",
     "todayEmpty": "Nenhuma tarefa para hoje",
     "todayEmptyBody": "Adicione algo para hoje e aparecerá aqui.",
     "overdueEmpty": "Nenhuma tarefa atrasada",
@@ -796,6 +798,14 @@
       "title": "Flutuantes em repouso",
       "toggle": "Desbotar tarefas Anytime intocadas"
     },
+    "sound": {
+      "title": "Som",
+      "toggle": "Reproduzir um som ao concluir uma tarefa"
+    },
+    "haptics": {
+      "title": "Vibração",
+      "toggle": "Vibrar ao tocar e arrastar"
+    },
     "workspace": {
       "title": "Espaço de trabalho",
       "localTitle": "Espaço local",
@@ -999,6 +1009,27 @@
         "summary": "Arraste as tarefas para a ordem que quiser.",
         "keywords": "arrastar, reordenar, mover, ordenar, ordem, organizar",
         "body": "As suas listas mantêm a ordem que lhes dá. Arraste uma tarefa para cima ou para baixo para organizar o seu dia tal como pensa nele."
+      },
+      "swipe-sheet-away": {
+        "title": "Arraste a folha para baixo para fechar",
+        "summary": "Puxe a folha de nova tarefa para baixo para fechá-la.",
+        "keywords": "deslizar, arrastar, puxar, fechar, descartar, folha, cartão, alça, gesto, para baixo",
+        "body": "A pequena barra no topo da folha de nova tarefa indica que o cartão pode ser puxado para baixo. Arraste e ele acompanha o seu dedo; solte depois de cerca de um quarto do caminho e ele fecha, exatamente como se você tocasse na área escurecida atrás dele. Um impulso rápido também conta — o que vale é para onde você estava indo, não onde soltou — e um puxo do qual você desiste volta ao lugar.",
+        "tip": "Se o conteúdo de uma folha rola, arraste-a pelo topo: o meio do cartão pertence à lista."
+      },
+      "sound-and-vibration": {
+        "title": "Som e vibração",
+        "summary": "Desligue o som de conclusão, a vibração ou ambos.",
+        "keywords": "som, silêncio, silenciar, áudio, volume, vibração, vibrar, háptica, zumbido, acessibilidade",
+        "body": "Concluir uma tarefa toca um som curto e, no telemóvel, a app responde aos seus toques e arrastos com uma pequena vibração. As Definições têm um interruptor para cada um — desligue um e tudo o resto fica igual.",
+        "tip": "Os interruptores pertencem a este navegador e não à sua conta, por isso um portátil silencioso e um telemóvel que vibra podem ter cada um a sua própria resposta."
+      },
+      "reduce-motion": {
+        "title": "Reduzir o movimento",
+        "summary": "Desative as animações do T'Day sem mudar o resto do telefone.",
+        "keywords": "movimento, animação, animações, reduzir, acessibilidade, parado, transições, tontura",
+        "body": "As configurações têm um botão Reduzir o movimento. Com ele ligado, o T'Day para de tocar as animações que ele mesmo escreve: uma tarefa é marcada, riscada e sai de uma vez só em vez de em três tempos, a dica de deslizar e o confete não aparecem, e a ilustração do dia vazio simplesmente está lá em vez de subir até o lugar. Cada espera que existia só para cobrir uma delas vai junto — então o app fica mais rápido, não mais lento. Deslizar entre telas e as folhas que sobem são animações do Android e não do T'Day: essas continuam seguindo a configuração de animações do seu telefone.",
+        "tip": "Ele só tira movimento. Se a própria opção de animações do Android já estiver desligada, o T'Day já está parado e o botão diz isso em vez de oferecer desfazer."
       },
       "floaters-vs-todos": {
         "title": "Flutuantes vs tarefas agendadas",

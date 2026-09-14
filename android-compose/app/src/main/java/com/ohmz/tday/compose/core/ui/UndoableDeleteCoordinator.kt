@@ -18,7 +18,10 @@ import kotlinx.coroutines.withContext
  * deletes: the caller first *stages* the delete (local/optimistic cache removal
  * only — nothing is sent to the server), then hands this coordinator a commit
  * and an undo lambda. The coordinator shows a success toast with an Undo action
- * and starts a commit timer slightly longer than the toast's lifetime:
+ * and starts a commit timer slightly longer than that toast's lifetime — which is
+ * not a fixed number: it follows the user's accessibility timeout, so someone who
+ * has asked Android for longer to act gets a longer window here and an Undo button
+ * that still works for all of it (see [undoCommitDelayMillis]):
  * - if the window elapses, [onCommit] runs (the real delete — the existing
  *   repository delete whose local prune re-runs as a no-op on staged state);
  * - if the user taps Undo, the timer is cancelled and [onUndo] restores the
@@ -33,6 +36,17 @@ import kotlinx.coroutines.withContext
  * Accepted edge cases of the delayed-commit strategy: killing the app inside
  * the window means the commit never runs and the item survives (self-healing);
  * a sync pull during the window may briefly flash the staged-away row.
+ *
+ * Both of those are wider than they were, and by how much is worth knowing before
+ * weighing them. The window is no longer 8.5s but whatever the user's "Time to take
+ * action" stretches it to, up to [INTERACTIVE_TIMEOUT_CEILING_MS] + [UNDO_COMMIT_GRACE_MS]
+ * — two minutes of staged state rather than eight seconds, and it is the accessibility
+ * user who gets the long one. That is still the right trade: an Undo offered for longer
+ * than the thing it would restore exists is a button that lies, and the two exposures
+ * here are both recoverable. But two minutes is a real fraction of
+ * `SyncManager.OFFLINE_RESYNC_INTERVAL_MS`, so the resurrection guard stops being a
+ * formality at the long end — a reader touching either path should assume a pull lands
+ * inside the window rather than assume it does not.
  */
 @Singleton
 class UndoableDeleteCoordinator @Inject constructor(
@@ -70,8 +84,12 @@ class UndoableDeleteCoordinator @Inject constructor(
         // auto-dismisses before the commit delay elapses, so in practice a tap
         // on Undo always wins; the flag guards the races regardless.
         val resolved = AtomicBoolean(false)
+        // Read now, in the same breath as the toast this window belongs to, so the two
+        // are answering the same setting: the button is offered for exactly as long as
+        // the thing it would put back is still there. See [undoCommitDelayMillis].
+        val commitDelayMillis = undoCommitDelayMillis(context)
         val commitJob = scope.launch {
-            delay(COMMIT_DELAY_MS)
+            delay(commitDelayMillis)
             if (!resolved.compareAndSet(false, true)) return@launch
             // Once the commit starts it must not be torn mid-flight.
             withContext(NonCancellable) {
@@ -105,9 +123,5 @@ class UndoableDeleteCoordinator @Inject constructor(
 
     private companion object {
         const val LOG_TAG = "UndoableDeleteCoordinator"
-
-        // Slightly longer than the action-toast auto-dismiss (8s in TdayApp) so
-        // the Undo button can never outlive the staged state it would restore.
-        const val COMMIT_DELAY_MS = 8_500L
     }
 }

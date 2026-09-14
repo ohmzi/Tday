@@ -21,7 +21,7 @@ import {
 import { TodoItemType } from "@/types";
 import { useDateRange } from "../hooks/useDateRange";
 import { useCalendarPagerSwipe } from "../lib/useCalendarPagerSwipe";
-import { useCalendarRowSwipe } from "../lib/useCalendarRowSwipe";
+import { useSwipeRow } from "@/hooks/useSwipeRow";
 import { useCalendarTodo } from "../query/get-calendar-todo";
 import {
   lazy,
@@ -48,8 +48,18 @@ import {
 import { useEditCalendarTodo } from "../query/update-calendar-todo";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { moveTodoToDay } from "@/lib/moveTodoToDay";
+import { scrollIntoView } from "@/lib/scroll";
 import type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
+import AnimatedHeight from "@/components/ui/AnimatedHeight";
+import {
+  DRAG_LIFT_CLASS,
+  DRAG_VACATED_TRANSITION,
+  dragOverlayDropAnimation,
+} from "@/lib/dragLiftMotion";
+import { useNavigationRefusal } from "../lib/useNavigationRefusal";
+import ConfirmPlaceholder from "./LoadingPlaceholders/ConfirmPlaceholder";
 import { useModalPresence } from "@/components/ui/Modal";
+import { useDrawerPresence } from "@/components/ui/drawer";
 import ConfirmRescheduleRecurring, {
   type PendingReschedule,
 } from "./ConfirmationModals/ConfirmRescheduleRecurring";
@@ -77,6 +87,13 @@ import { getPriorityFlag } from "@/lib/priority";
 import i18n from "@/i18n";
 import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
+import {
+  TASK_COMPLETION_CHECK_TO_STRIKE_MS,
+  TASK_COMPLETION_REMOVING_TRANSITION,
+  TASK_COMPLETION_STRIKE_TO_FADE_MS,
+  TASK_COMPLETION_TOTAL_MS,
+} from "@/lib/taskCompletionTiming";
+import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
 import { buildTaskShareText } from "@/lib/listShareText";
 import { useToast } from "@/hooks/use-toast";
 import { SWIPE_COPY_COLOR, SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
@@ -143,7 +160,14 @@ function makeMonthDays(date: Date) {
   });
 }
 
-function CalendarViewSlider({
+/**
+ * Exported for `calendar-pager-height.test.tsx`, which asserts the thumb's rung beside the
+ * slide's and the box's. The rung is the whole point of the control and nothing else can hold
+ * it: the budget counter only forbids a NUMBER here, so an edit back to `duration-enter` would
+ * re-open the 20ms gap below and leave every guardrail green. The argument in the comment
+ * inside is exactly what a later rename would erase without noticing.
+ */
+export function CalendarViewSlider({
   view,
   onViewChange,
 }: {
@@ -155,8 +179,17 @@ function CalendarViewSlider({
 
   return (
     <div className="relative flex w-full rounded-[25px] border border-white/70 bg-muted/80 p-1.5 shadow-[0_18px_42px_-30px_hsl(var(--shadow)/0.62)] backdrop-blur-xl dark:border-white/10">
+      {/* Emphasis, and the thumb is the one site in this file where the rung
+          changes something. It travels a full segment on every view change,
+          which is rule 2's own case — but the reason it matters is that the
+          journey is not the only thing the tap starts: `changeView` also bumps
+          `animKey` and sets `slideDirection`, so the grid below plays
+          `cal-native-slide-from-*`, and `calendar-styles.css` runs both of
+          those on `--tday-duration-emphasis`. The 300 meant the control that
+          picks a view and the view it picked stopped 20ms apart, in the same
+          gesture, every time. One page turn, one clock — the thumb included. */}
       <div
-        className="absolute bottom-1.5 left-1.5 top-1.5 rounded-[20px] bg-card shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)] transition-transform duration-300 ease-out"
+        className="absolute bottom-1.5 left-1.5 top-1.5 rounded-[20px] bg-card shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)] transition-transform duration-emphasis ease-out"
         style={{
           width: "calc((100% - 0.75rem) / 3)",
           transform: `translateX(${selectedIndex * 100}%)`,
@@ -168,7 +201,7 @@ function CalendarViewSlider({
           type="button"
           onClick={() => onViewChange(option)}
           className={cn(
-            "relative z-10 flex h-12 flex-1 items-center justify-center rounded-[20px] px-3 text-sm font-black capitalize transition-colors duration-200",
+            "relative z-10 flex h-12 flex-1 items-center justify-center rounded-[20px] px-3 text-sm font-black capitalize transition-colors duration-enter",
             option === view ? "text-foreground" : "text-muted-foreground hover:text-foreground",
           )}
           aria-pressed={option === view}
@@ -199,20 +232,21 @@ function CalendarNavButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-card/90 text-muted-foreground shadow-sm transition-all duration-200 hover:bg-card hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35 dark:border-white/10 sm:h-11 sm:w-11"
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-card/90 text-muted-foreground shadow-sm transition-all duration-enter hover:bg-card hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35 dark:border-white/10 sm:h-11 sm:w-11"
     >
       <Icon className="h-5 w-5 stroke-[2.5]" />
     </button>
   );
 }
 
-function CalendarModeCard({
+export function CalendarModeCard({
   view,
   selectedDate,
   tasksByDay,
   slideDirection,
   animationKey,
   canGoPrevious,
+  refusedBack,
   onNavigate,
   onSelectDate,
 }: {
@@ -222,10 +256,20 @@ function CalendarModeCard({
   slideDirection: SlideDirection | null;
   animationKey: number;
   canGoPrevious: boolean;
+  /** A back navigation the floor turned down, being answered right now. */
+  refusedBack: boolean;
   onNavigate: (offset: -1 | 1) => void;
   onSelectDate: (date: Date) => void;
 }) {
-  const swipeHandlers = useCalendarPagerSwipe(swipeThreshold, onNavigate);
+  // `canGoPrevious` reaches the gesture as well as the chevron, and for the same
+  // rule: the page behind the current month does not exist. The chevron says so
+  // by being `disabled`; the gesture says so by giving under the finger and not
+  // travelling far enough to look like a page about to turn.
+  const { trackRef, swipeHandlers } = useCalendarPagerSwipe(
+    swipeThreshold,
+    onNavigate,
+    canGoPrevious,
+  );
 
   const { t: appDict } = useTranslation("app");
   const dfLocale = activeDfLocale();
@@ -238,7 +282,7 @@ function CalendarModeCard({
 
   return (
     <section className="rounded-[24px] border border-white/70 bg-card/94 p-4 shadow-[0_18px_42px_-34px_hsl(var(--shadow)/0.62)] dark:border-white/10 sm:p-5">
-      <div className="mb-4 flex items-center gap-2 sm:gap-3">
+      <div className="mb-3 flex items-center gap-2 sm:gap-3">
         <CalendarNavButton
           label={appDict("previous")}
           direction="previous"
@@ -257,35 +301,104 @@ function CalendarModeCard({
         />
       </div>
 
-      <div
-        key={animationKey}
-        className={cn(
-          "touch-pan-y",
-          slideDirection === "left" && "cal-native-slide-from-left",
-          slideDirection === "right" && "cal-native-slide-from-right",
-        )}
-        {...swipeHandlers}
-      >
-        {view === "month" && (
-          <MonthCalendarGrid
-            selectedDate={selectedDate}
-            tasksByDay={tasksByDay}
-            onSelectDate={onSelectDate}
-          />
-        )}
-        {view === "week" && (
-          <WeekCalendarStrip
-            selectedDate={selectedDate}
-            tasksByDay={tasksByDay}
-            onSelectDate={onSelectDate}
-          />
-        )}
-        {view === "day" && (
-          <DayCalendarSummary
-            selectedDate={selectedDate}
-            taskCount={tasksByDay.get(dayKey(selectedDate))?.length ?? 0}
-          />
-        )}
+      {/* Only the pager is inside the box, which is what keeps the header
+          anchored while the card resizes: the month title and the chevrons sit
+          above it and never move. The card's height is whatever this pager
+          currently needs, and the four things it can hold are four different
+          heights — a 35-day month, a 42-day month, a week strip, a day
+          summary — so every page change and every view change used to resize
+          the card in the frame the slide began, under content that was still
+          travelling. `AnimatedHeight` rather than a height animator of this
+          screen's own: it already measures with a `ResizeObserver`, which is
+          the only thing that sees all three ways this content changes size
+          (the swapped page, a locale whose weekday labels wrap, a font that
+          finally loads), and it is already on the rung a change of size takes,
+          which is the rung the slide beside it now runs on too.
+
+          That box clips, and nothing on this path clipped before it, so the
+          bleed: `-mx-4 px-4` walks the clip edges out to the card's padding
+          edge and puts the content back exactly where it was, which leaves the
+          sides 16px of room for what day cells paint outside themselves
+          without taking a pixel off the grid. Taking it off the grid would be
+          the wrong trade twice over — a month cell is a fixed `w-[2.9rem]` in
+          a seventh of the card, so a narrower card is one that hangs FURTHER
+          past its last column, not less. */}
+      {/* A wrapper that exists to hold one animation. The refusal cannot live
+          on the pager below, which already owns an `animation` for the slide
+          and would replay it on the way back out (`calendar-styles.css` argues
+          that where the rule is), and it cannot live on the card above, which
+          would tug the month title and the chevrons along with it and read as
+          the card coming loose rather than as the page declining to turn. */}
+      <div className={cn(refusedBack && "cal-native-page-refused")}>
+        <AnimatedHeight className="-mx-4 px-4 sm:-mx-5 sm:px-5">
+          {/* A header, sitting where the headers sit: outside the pager that
+              slides and outside the track the finger moves. AGENTS.md's
+              Calendar UX Contract asks for exactly this — "in month view, the
+              month title and weekday row should not slide with the date grid" —
+              and the labels are the reason it is right rather than merely
+              asked for: they come from today and the locale, never from the
+              selected date, so they are the same seven letters on every page
+              this card can draw. Inside the height box all the same, because
+              the row comes and goes with the view and a row that left the
+              measured content would take its height out of the card in one
+              frame while the rest of the change eased. Which leaves it inside
+              the refusal wrapper too, so a declined back swipe nudges it along
+              with everything else by 8px: kept deliberately, because that
+              answer is the calendar body saying no as one thing, and a header
+              held still inside a body that moved would read as the body coming
+              loose rather than as the page declining. */}
+          {view === "month" && <MonthWeekdayRow />}
+          <div
+            key={animationKey}
+            className={cn(
+              // Top and bottom cannot be bought by bleeding the way the sides
+              // are: the box is sized to this content, so vertical padding on the
+              // box would come straight out of the height the observer measured.
+              // 4px above for the drag-over ring, which reaches that far out on
+              // every side (`ring-2` plus `ring-offset-2`) and in week view sits
+              // flush against the top of the box; 6px below for the selected
+              // day's glow, the deeper of the two down there (12px down, 24px of
+              // blur, 18px pulled back in). The 4px comes off the header's margin
+              // above rather than being added, so the gap the eye sees is the one
+              // that was always there.
+              "touch-pan-y pt-1 pb-1.5",
+              slideDirection === "left" && "cal-native-slide-from-left",
+              slideDirection === "right" && "cal-native-slide-from-right",
+            )}
+            {...swipeHandlers}
+          >
+            {/* The element the finger actually moves, and a child of the one
+                that slides for a reason that is structural rather than tidy —
+                the same rule the refusal wrapper above is built on. A filling
+                CSS animation outranks an inline style, so a page that arrived
+                on `cal-native-slide-from-*` holds its own `transform` at
+                `translateX(0)` for as long as it lives, and a drag written
+                there would be ignored on every page but the very first one the
+                card ever drew. One element, one owner of `transform`. */}
+            <div ref={trackRef}>
+              {view === "month" && (
+                <MonthCalendarGrid
+                  selectedDate={selectedDate}
+                  tasksByDay={tasksByDay}
+                  onSelectDate={onSelectDate}
+                />
+              )}
+              {view === "week" && (
+                <WeekCalendarStrip
+                  selectedDate={selectedDate}
+                  tasksByDay={tasksByDay}
+                  onSelectDate={onSelectDate}
+                />
+              )}
+              {view === "day" && (
+                <DayCalendarSummary
+                  selectedDate={selectedDate}
+                  taskCount={tasksByDay.get(dayKey(selectedDate))?.length ?? 0}
+                />
+              )}
+            </div>
+          </div>
+        </AnimatedHeight>
       </div>
     </section>
   );
@@ -329,6 +442,41 @@ function DroppableDayCell({
   );
 }
 
+/**
+ * S M T W T F S, and nothing that belongs to a page.
+ *
+ * Rendered by the card rather than by the grid because it is not part of one:
+ * the labels are derived from today and the active locale, so every page the
+ * card can turn to draws the same seven letters. Sliding them said nothing and
+ * then said it again on the way back — 17px of it on a page turn, and up to
+ * 96px of it under a thumb once the grid started tracking the finger, which is
+ * where a pointless header became a contract breach.
+ *
+ * The spacing is the grid's old `space-y-3` rebuilt from the two sides that now
+ * own it: 4px of the 16px above comes from this row because the pager used to
+ * contribute it, and 4px of the 12px below still comes from the pager's own
+ * `pt-1`, so the card draws to the same pixels it did before the row moved.
+ */
+function MonthWeekdayRow() {
+  const weekdayLabels = eachDayOfInterval({
+    start: startOfWeek(new Date()),
+    end: endOfWeek(new Date()),
+  }).map((date) => format(date, "EEEEE", { locale: activeDfLocale() }));
+
+  return (
+    <div className="mb-2 grid grid-cols-7 pt-1">
+      {weekdayLabels.map((label, index) => (
+        <div
+          key={`${label}-${index}`}
+          className="text-center text-xs font-black uppercase text-muted-foreground/55"
+        >
+          {label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MonthCalendarGrid({
   selectedDate,
   tasksByDay,
@@ -341,60 +489,44 @@ function MonthCalendarGrid({
   const today = new Date();
   const minimumMonth = startOfMonth(today);
   const days = makeMonthDays(selectedDate);
-  const weekdayLabels = eachDayOfInterval({
-    start: startOfWeek(today),
-    end: endOfWeek(today),
-  }).map((date) => format(date, "EEEEE", { locale: activeDfLocale() }));
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-7">
-        {weekdayLabels.map((label, index) => (
-          <div
-            key={`${label}-${index}`}
-            className="text-center text-xs font-black uppercase text-muted-foreground/55"
-          >
-            {label}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-y-2">
-        {days.map((date) => {
-          const selected = isSameDay(date, selectedDate);
-          const todayDate = isSameDay(date, today);
-          const currentMonth = isSameMonth(date, selectedDate);
-          const disabled = isBefore(startOfMonth(date), minimumMonth);
-          const count = tasksByDay.get(dayKey(date))?.length ?? 0;
+    <div className="grid grid-cols-7 gap-y-2">
+      {days.map((date) => {
+        const selected = isSameDay(date, selectedDate);
+        const todayDate = isSameDay(date, today);
+        const currentMonth = isSameMonth(date, selectedDate);
+        const disabled = isBefore(startOfMonth(date), minimumMonth);
+        const count = tasksByDay.get(dayKey(date))?.length ?? 0;
 
-          return (
-            <DroppableDayCell
-              key={date.toISOString()}
-              date={date}
-              disabled={disabled}
-              onSelectDate={onSelectDate}
+        return (
+          <DroppableDayCell
+            key={date.toISOString()}
+            date={date}
+            disabled={disabled}
+            onSelectDate={onSelectDate}
+            className={cn(
+              "mx-auto flex h-[3.1rem] w-[2.9rem] flex-col items-center justify-center rounded-lg text-center transition-colors duration-enter",
+              "hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-30",
+              selected && "bg-accent text-accent-foreground shadow-[0_12px_24px_-18px_hsl(var(--accent)/0.8)] hover:bg-accent",
+              !selected && todayDate && "border border-accent/45 text-accent",
+              !selected && !todayDate && currentMonth && "text-foreground",
+              !selected && !todayDate && !currentMonth && "text-muted-foreground/45",
+            )}
+          >
+            <span className="text-lg font-black leading-none">{format(date, "d", { locale: activeDfLocale() })}</span>
+            <span
               className={cn(
-                "mx-auto flex h-[3.1rem] w-[2.9rem] flex-col items-center justify-center rounded-2xl text-center transition-colors duration-200",
-                "hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-30",
-                selected && "bg-accent text-accent-foreground shadow-[0_12px_24px_-18px_hsl(var(--accent)/0.8)] hover:bg-accent",
-                !selected && todayDate && "border border-accent/45 text-accent",
-                !selected && !todayDate && currentMonth && "text-foreground",
-                !selected && !todayDate && !currentMonth && "text-muted-foreground/45",
+                "mt-1 flex h-3 items-center gap-1 text-[0.62rem] font-black leading-none",
+                selected ? "text-accent-foreground/90" : count > 0 ? "text-accent" : "text-transparent",
               )}
             >
-              <span className="text-lg font-black leading-none">{format(date, "d", { locale: activeDfLocale() })}</span>
-              <span
-                className={cn(
-                  "mt-1 flex h-3 items-center gap-1 text-[0.62rem] font-black leading-none",
-                  selected ? "text-accent-foreground/90" : count > 0 ? "text-accent" : "text-transparent",
-                )}
-              >
-                {count > 0 && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
-                {taskCountText(count)}
-              </span>
-            </DroppableDayCell>
-          );
-        })}
-      </div>
+              {count > 0 && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
+              {taskCountText(count)}
+            </span>
+          </DroppableDayCell>
+        );
+      })}
     </div>
   );
 }
@@ -427,7 +559,7 @@ function WeekCalendarStrip({
             date={date}
             onSelectDate={onSelectDate}
             className={cn(
-              "flex min-h-[4.8rem] flex-col items-center justify-center rounded-[20px] border text-center transition-colors duration-200",
+              "flex min-h-[4.8rem] flex-col items-center justify-center rounded-[20px] border text-center transition-colors duration-enter",
               selected
                 ? "border-accent bg-accent text-accent-foreground shadow-[0_12px_24px_-18px_hsl(var(--accent)/0.8)]"
                 : "border-white/60 bg-muted/45 text-foreground hover:bg-muted/70 dark:border-white/10",
@@ -472,7 +604,18 @@ function DayCalendarSummary({
   );
 }
 
-function CalendarTaskRow({
+/**
+ * Exported for `calendar-row-complete-interaction.test.tsx` and for nothing else — this screen
+ * renders it itself, a few hundred lines down.
+ *
+ * Worth the export because of what it covers. This row plays the app's staged check-off and was
+ * the last one running it on a clock of its own, at 280 / 620 / 960 against everybody else's
+ * 160 / 360 / 260, and nothing in the repository noticed for as long as that was true: the
+ * literal counter cannot see a row retimed through named constants, and reaching the row through
+ * `CalendarClient` means standing up a month grid, a drag context and four queries to press one
+ * checkbox.
+ */
+export function CalendarTaskRow({
   todo,
   listName,
   highlighted = false,
@@ -485,9 +628,21 @@ function CalendarTaskRow({
   // Mounted while the form is open AND for its exit. `{displayForm && …}` handed the form the
   // very flag it was gated on, so it was unmounted on the frame that flag went false and its
   // close animation had nowhere to play. Still lazy: the row mounts nothing until first open.
-  const editFormPresent = useModalPresence(displayForm);
+  //
+  // The drawer's clock, not the modal's, even though this one flag gates both shells: the
+  // modal's exit is the shorter of the two, so it finishes inside this window and then waits
+  // out the rest rendering nothing, while the reverse — a drawer held for the modal's 200 ms —
+  // took a sheet away mid-slide, and the confirm sheet stacked on it with it.
+  const editFormPresent = useDrawerPresence(displayForm);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  // The Suspense fallbacks below are gated on these, not on the flags themselves, for the
+  // reason `useModalPresence` is exported at all: a gate on the raw flag takes the placeholder
+  // away one level above the modal, and the exit the primitives declare never gets a frame.
+  // The real dialogs make the same call inside themselves; the fallbacks that stand in for
+  // them have to make it here, because a Suspense fallback has no inside to make it in.
+  const deleteFallbackPresent = useModalPresence(deleteDialogOpen);
+  const deleteAllFallbackPresent = useModalPresence(deleteAllDialogOpen);
   const [itemElement, setItemElement] = useState<HTMLElement | null>(null);
   const [showHandle, setShowHandle] = useState(false);
   const { t: todayDict } = useTranslation("today");
@@ -501,12 +656,19 @@ function CalendarTaskRow({
   });
   const priorityFlag = getPriorityFlag(todo.priority);
 
-  // Staged "checking off" sequence — identical to the scheduled task home row.
+  // Staged "checking off" sequence — identical to the scheduled task home row, and now on the
+  // same clock as well. It used to run 280 / 620 / 960 against that row's 160 / 360 / 260,
+  // which is the same four beats a third slower: the same task, ticked off on two screens,
+  // finishing at two different speeds.
   const [completePhase, setCompletePhase] = useState<
     "checked" | "struck" | "removing" | null
   >(null);
   const completeTimers = useRef<number[]>([]);
   const completing = completePhase !== null;
+  const removing = completePhase === "removing";
+  // Subscribed rather than read once: this decides what the row renders, so it has to follow a
+  // preference that flips mid-session.
+  const reduceMotion = usePrefersReducedMotion();
 
   // Mobile swipe-to-reveal Edit + Copy + Delete — mirrors the scheduled task
   // home row exactly (same slide distance, same pills) so the calendar
@@ -515,10 +677,10 @@ function CalendarTaskRow({
   const announceSwipeOpen = useCallback(() => {
     window.dispatchEvent(new CustomEvent("tday-calendar-swipe-open", { detail: todo.id }));
   }, [todo.id]);
-  const { swipeX, swiping, closeSwipe, swipeHandlers } = useCalendarRowSwipe(
-    ACTIONS_WIDTH,
-    announceSwipeOpen,
-  );
+  const { swipeX, transition: swipeTransition, closeSwipe, swipeHandlers } = useSwipeRow({
+    actionsWidth: ACTIONS_WIDTH,
+    onOpen: announceSwipeOpen,
+  });
 
   /** Copies the task's title/notes/due/priority to the clipboard as plain text. */
   const handleCopy = async () => {
@@ -561,7 +723,7 @@ function CalendarTaskRow({
 
   useEffect(() => {
     if (!highlighted || !itemElement) return;
-    itemElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollIntoView(itemElement, { block: "center" });
   }, [highlighted, itemElement]);
 
   const completeTask = () => {
@@ -578,11 +740,14 @@ function CalendarTaskRow({
       return;
     }
     if (completing) return;
+    const removeAt = TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS;
     setCompletePhase("checked"); // 1. green tick + pop
     completeTimers.current.push(
-      window.setTimeout(() => setCompletePhase("struck"), 280), // 2. strike the title
-      window.setTimeout(() => setCompletePhase("removing"), 620), // 3. start fading
-      window.setTimeout(() => completeTask(), 960), // 4. remove from cache
+      window.setTimeout(() => setCompletePhase("struck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS), // 2. strike
+      window.setTimeout(() => setCompletePhase("removing"), removeAt), // 3. the ink leaves
+      // 4. gone. The last leg waits for the box to shut, and with reduce-motion on there is no
+      // box shutting — the same cut the other two task rows make, argued in `taskCompletionTiming`.
+      window.setTimeout(() => completeTask(), reduceMotion ? removeAt : TASK_COMPLETION_TOTAL_MS),
     );
   };
 
@@ -612,12 +777,24 @@ function CalendarTaskRow({
         {...attributes}
         {...listeners}
         style={
-          completePhase === "removing"
-            ? { opacity: 0, transition: "opacity 300ms ease" }
-            : undefined
+          removing
+            ? {
+                opacity: 0,
+                gridTemplateRows: "0fr",
+                transition: reduceMotion ? undefined : TASK_COMPLETION_REMOVING_TRANSITION,
+              }
+            : { transition: reduceMotion ? undefined : DRAG_VACATED_TRANSITION }
         }
         className={cn(
-          "group relative max-w-full overflow-hidden sm:overflow-visible",
+          // The 1fr track is the scheduled row's collapse (TodoItemCard), which argues the
+          // trick where it lives: a height cannot be animated away from `auto`, so the box
+          // shuts by closing a grid row instead. The swipe actions sit out of flow and never
+          // size it. Without this the calendar row faded out and left a full-height gap for
+          // the rows below to jump through.
+          "group relative grid max-w-full grid-rows-[1fr] overflow-hidden sm:overflow-visible",
+          // The hole the card came out of, on the lift's own rung via the style
+          // above rather than cutting on the frame the press fires; both halves of
+          // the pick-up are argued in `dragLiftMotion.ts`.
           isDragging && "opacity-70",
         )}
       >
@@ -699,15 +876,25 @@ function CalendarTaskRow({
           {...swipeHandlers}
           style={{
             transform: `translateX(${swipeX}px)`,
-            transition: swiping
-              ? "none"
-              : "transform 220ms ease, background-color 150ms ease",
+            // The whole whitelist — the swipe's settle and the two spellings of the highlight
+            // beside it — comes from `useSwipeRow`, because all three task rows draw the same
+            // three properties and used to write out three slightly different lists saying so.
+            transition: swipeTransition,
             touchAction: "pan-y",
+            // Lets the grid item shrink past its own content while the track closes.
+            ...(removing ? { overflow: "hidden", minHeight: 0 } : null),
           }}
           className={cn(
             "relative z-10 flex items-center justify-between gap-3 px-1 py-2.5",
             "sm:cursor-grab sm:rounded-lg sm:active:cursor-grabbing sm:hover:bg-muted/40",
-            highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
+            // The deep-link mark, inset so the wrapper's clip cannot eat it, and declared on both
+            // sides so only its colour travels. Both halves are argued in full on the identical
+            // pair in `TodoItemContainer` — this row is the same defect in a third file, not a
+            // variation on it.
+            "inset-ring-2",
+            highlighted
+              ? "rounded-lg inset-ring-accent/25 sm:bg-accent/5 sm:inset-ring-transparent"
+              : "inset-ring-transparent",
           )}
         >
           <div
@@ -734,9 +921,9 @@ function CalendarTaskRow({
               <div className="mb-1.5 flex items-center gap-1.5">
                 <p
                   className={cn(
-                    "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
-                    (completePhase === "struck" || completePhase === "removing") &&
-                      "text-muted-foreground line-through",
+                    "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-emphasis",
+                    (completePhase === "struck" || removing) &&
+                      "task-strike text-muted-foreground",
                   )}
                 >
                   {todo.title}
@@ -745,9 +932,9 @@ function CalendarTaskRow({
               {todo.description && (
                 <pre
                   className={cn(
-                    "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
-                    (completePhase === "struck" || completePhase === "removing") &&
-                      "line-through",
+                    "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
+                    // Same switch as the title above — see TodoItemContainer.
+                    (completePhase === "struck" || removing) && "task-strike",
                   )}
                 >
                   {flattenNotesToPlainText(todo.description)}
@@ -809,14 +996,42 @@ function CalendarTaskRow({
         </div>
       </div>
 
-      <Suspense fallback={null}>
+      {/* The fallback is gated, and that is the whole trick. Both boundaries
+          render unconditionally — that is what starts the import when the row
+          mounts instead of when the button is pressed — so a fallback that drew
+          itself whenever the boundary was suspended would flash a modal over the
+          calendar on first paint, once per row. Gated, it draws only for the tap
+          it is answering. */}
+      <Suspense
+        fallback={
+          deleteFallbackPresent
+            ? (
+              <ConfirmPlaceholder
+                open={deleteDialogOpen}
+                onCancel={() => setDeleteDialogOpen(false)}
+              />
+            )
+            : null
+        }
+      >
         <ConfirmDelete
           todo={todo}
           deleteDialogOpen={deleteDialogOpen}
           setDeleteDialogOpen={setDeleteDialogOpen}
         />
       </Suspense>
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={
+          deleteAllFallbackPresent
+            ? (
+              <ConfirmPlaceholder
+                open={deleteAllDialogOpen}
+                onCancel={() => setDeleteAllDialogOpen(false)}
+              />
+            )
+            : null
+        }
+      >
         <ConfirmDeleteAll
           todo={todo}
           deleteAllDialogOpen={deleteAllDialogOpen}
@@ -843,7 +1058,7 @@ function CalendarTodayButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex h-14 shrink-0 items-center justify-center rounded-full border border-white/70 bg-card/90 px-5 text-sm font-black text-accent shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-200 dark:border-white/10 sm:px-6",
+        "flex h-14 shrink-0 items-center justify-center rounded-full border border-white/70 bg-card/90 px-5 text-sm font-black text-accent shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-enter dark:border-white/10 sm:px-6",
         "hover:-translate-y-0.5 hover:bg-card hover:shadow-[0_12px_32px_-22px_hsl(var(--shadow)/0.5)]",
         "disabled:cursor-default disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:bg-card/90 disabled:hover:shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)]",
       )}
@@ -859,8 +1074,8 @@ export default function CalendarClient() {
   const [mounted, setMounted] = useState(false);
   const [calendarRange, setCalendarRange] = useDateRange();
   const [showCreateForm, setShowCreateForm] = useState(false);
-  // Same shape as the edit form above: gated on presence, not on the raw flag it passes down.
-  const createFormPresent = useModalPresence(showCreateForm);
+  // Same shape as the edit form above, down to which surface's exit the window is cut to.
+  const createFormPresent = useDrawerPresence(showCreateForm);
   const [selectDateRange, setSelectDateRange] = useState<{
     start: Date;
     end: Date;
@@ -874,6 +1089,14 @@ export default function CalendarClient() {
   const [view, setView] = useState<CalendarViewMode>("month");
   const [slideDirection, setSlideDirection] = useState<SlideDirection | null>(null);
   const [animKey, setAnimKey] = useState(0);
+  // The floor's answer to a back navigation it turned down: the hook holds both
+  // the flag the card draws from and the clock it comes down on.
+  const { refusing: refusedBack, refuse: refuseNavigation } = useNavigationRefusal();
+  // The subscribed shape of the preference, where the refusal above takes the
+  // imperative one. The drop animation is chosen during render and has to be
+  // re-chosen when the preference flips; a refusal only ever asks at the instant
+  // its timer arms.
+  const reduceMotion = usePrefersReducedMotion();
   const selectedDateRef = useRef<Date>(selectedDate);
   const viewRef = useRef<CalendarViewMode>(view);
   selectedDateRef.current = selectedDate;
@@ -1022,12 +1245,20 @@ export default function CalendarClient() {
     setSelectedDate(date);
   }, [minimumMonth]);
 
+  /**
+   * Turns the card to `date`, if it is allowed to go there.
+   *
+   * @returns Whether the page actually turned. Callers that offer the user a
+   *   gesture read it: the floor rule lives here, and a second copy of it at
+   *   the call site is a second copy that can drift out of step with this one.
+   */
   const animateToDate = useCallback((date: Date, direction: SlideDirection) => {
-    if (!canNavigateTo(date, minimumMonth)) return;
-    if (isSameDay(date, selectedDateRef.current)) return;
+    if (!canNavigateTo(date, minimumMonth)) return false;
+    if (isSameDay(date, selectedDateRef.current)) return false;
     setSlideDirection(direction);
     setAnimKey((key) => key + 1);
     setSelectedDate(date);
+    return true;
   }, [minimumMonth]);
 
   const handleSelectSearchResult = useCallback(
@@ -1047,8 +1278,16 @@ export default function CalendarClient() {
     const currentDate = selectedDateRef.current;
     const currentView = viewRef.current;
     const nextDate = periodDate(currentDate, currentView, offset);
-    animateToDate(nextDate, offset > 0 ? "right" : "left");
-  }, [animateToDate]);
+    if (animateToDate(nextDate, offset > 0 ? "right" : "left")) return;
+
+    // Nothing moved, and the user asked for something. Every way of asking
+    // arrives here — the swipe, the arrow keys, and the chevron that is
+    // `disabled` at the floor precisely because this is where the rule is
+    // enforced — so the answer is given once, at the refusal, rather than at
+    // each gesture that can run into it. It travels the one way because only
+    // the floor ever refuses: the calendar has no ceiling.
+    refuseNavigation();
+  }, [animateToDate, refuseNavigation]);
 
   const jumpToToday = useCallback(() => {
     const today = new Date();
@@ -1176,6 +1415,7 @@ export default function CalendarClient() {
           slideDirection={slideDirection}
           animationKey={animKey}
           canGoPrevious={canGoPrevious}
+          refusedBack={refusedBack}
           onNavigate={navigatePeriod}
           onSelectDate={selectDate}
         />
@@ -1218,9 +1458,17 @@ export default function CalendarClient() {
           )}
         </section>
       </div>
-        <DragOverlay dropAnimation={null}>
+        <DragOverlay dropAnimation={dragOverlayDropAnimation(reduceMotion)}>
+          {/* Opaque and lifted, not faded: the 70% this card used to carry is the
+              word the vacated row keeps, and a thing the finger is holding reads
+              as disabled at that opacity. `DRAG_LIFT_CLASS` argues it. */}
           {activeTodo ? (
-            <div className="pointer-events-none w-[min(20rem,80vw)] rounded-[20px] border border-white/70 bg-card px-4 py-3 opacity-70 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.6)] dark:border-white/10">
+            <div
+              className={cn(
+                "pointer-events-none w-[min(20rem,80vw)] rounded-[20px] border border-white/70 bg-card px-4 py-3 shadow-[0_24px_48px_-20px_hsl(var(--shadow)/0.6)] dark:border-white/10",
+                DRAG_LIFT_CLASS,
+              )}
+            >
               <p className="line-clamp-1 text-[0.98rem] font-black leading-5 text-foreground">
                 {activeTodo.title}
               </p>

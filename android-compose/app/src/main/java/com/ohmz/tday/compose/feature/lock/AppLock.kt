@@ -28,6 +28,7 @@ import androidx.compose.ui.zIndex
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 
 /**
  * Which authenticators the app lock accepts.
@@ -76,6 +77,13 @@ internal const val APP_LOCK_GRACE_MS = 2_000L
 internal fun canSatisfyAppLock(biometricManager: BiometricManager, sdkInt: Int = Build.VERSION.SDK_INT): Boolean =
     biometricManager.canAuthenticate(appLockAuthenticators(sdkInt)) == BiometricManager.BIOMETRIC_SUCCESS
 
+/** The gap between the lock glyph, the title and the unlock button. 16 sits between `SpacingXl`
+ *  and `SpacingXxl`. */
+private val LockContentSpacing = 16.dp
+
+/** The padlock. Drawn as an illustration rather than an icon, which is why it is past `IconXl`. */
+private val LockGlyphSize = 48.dp
+
 /**
  * Opaque cover shown over the app while it is locked.
  *
@@ -94,15 +102,15 @@ fun AppLockOverlay(onRequestUnlock: () -> Unit) {
             .zIndex(Float.MAX_VALUE)
             .background(colorScheme.background)
             .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
-            .padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            .padding(TdayDimens.Spacing4xl),
+        verticalArrangement = Arrangement.spacedBy(LockContentSpacing, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             imageVector = Icons.Filled.Lock,
             contentDescription = null,
             tint = colorScheme.onSurface.copy(alpha = 0.72f),
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(LockGlyphSize),
         )
         Text(
             text = stringResource(R.string.app_lock_title),

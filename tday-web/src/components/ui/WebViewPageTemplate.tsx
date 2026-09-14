@@ -31,7 +31,7 @@ type WebViewSectionCardProps = {
 
 export const WEB_VIEW_PAGE_CLASS = "w-full min-w-0 overflow-x-hidden space-y-5 pb-10";
 export const WEB_VIEW_CARD_CLASS =
-  "w-full min-w-0 overflow-hidden rounded-2xl border-border/70 bg-card/95";
+  "w-full min-w-0 overflow-hidden rounded-lg border-border/70 bg-card/95";
 
 /** Renders a shared desktop/mobile page shell that matches the web app utility pages. */
 export function WebViewPageTemplate({

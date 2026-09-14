@@ -4,6 +4,7 @@ import {
   findSectionKeyForDayKey,
 } from "@/lib/timeline/buildTimelineSections";
 import { getTodoDateSectionId } from "@/lib/todoToastNavigation";
+import { scrollIntoView } from "@/lib/scroll";
 import type { TimelineItem, TimelineScope } from "../component/AllTasksTimelineContainer";
 
 /**
@@ -81,9 +82,9 @@ export function useTimelineSections({
     if (!sectionKey) return undefined;
 
     const frame = window.requestAnimationFrame(() => {
-      document
-        .getElementById(getTodoDateSectionId(sectionKey))
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollIntoView(document.getElementById(getTodoDateSectionId(sectionKey)), {
+        block: "start",
+      });
     });
 
     return () => window.cancelAnimationFrame(frame);

@@ -424,6 +424,39 @@
       "searchBody": "faites glisser les taches dans l'ordre que vous voulez. vos listes conservent l'ordre que vous leur donnez. faites glisser une tache vers le haut ou le bas pour organiser votre journee comme vous la concevez."
     },
     {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Faire glisser une carte pour la fermer",
+      "summary": "Tire la carte de nouvelle tâche vers le bas pour la fermer.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "La petite barre en haut de la carte de nouvelle tâche signifie que tu peux la tirer vers le bas. Elle suit ton doigt ; lâche-la après environ un quart du trajet et elle se ferme, exactement comme si tu avais touché la zone assombrie derrière elle. Un geste bref compte aussi : ce qui compte, c'est la direction que tu prenais, pas l'endroit où tu as lâché. Et si tu changes d'avis en route, elle revient à sa place."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Si le contenu d'une carte défile, tire-la par le haut : le milieu appartient à la liste."
+          ]
+        }
+      ],
+      "searchTitle": "faire glisser une carte pour la fermer",
+      "searchKeywords": "glisser, faire glisser, tirer, fermer, abandonner, carte, poignee, geste, vers le bas",
+      "searchBody": "tire la carte de nouvelle tache vers le bas pour la fermer. la petite barre en haut de la carte de nouvelle tache signifie que tu peux la tirer vers le bas. elle suit ton doigt ; lache-la apres environ un quart du trajet et elle se ferme, exactement comme si tu avais touche la zone assombrie derriere elle. un geste bref compte aussi : ce qui compte, c'est la direction que tu prenais, pas l'endroit ou tu as lache. et si tu changes d'avis en route, elle revient a sa place. si le contenu d'une carte defile, tire-la par le haut : le milieu appartient a la liste."
+    },
+    {
       "id": "floaters-vs-todos",
       "section": "ORGANIZING",
       "sectionOrder": 3,

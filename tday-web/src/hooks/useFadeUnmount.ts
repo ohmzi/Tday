@@ -1,14 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-/**
- * Reads the OS/browser "reduce motion" preference directly (rather than
- * subscribing to it) because this hook only ever consults it once, at the
- * moment a collapse starts — see the call site below.
- */
-const prefersReducedMotion = () =>
-  typeof window !== "undefined" &&
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 
 /**
  * Keeps a collapsible body mounted for `durationMs` past the moment
@@ -59,6 +50,10 @@ export function useFadeUnmount(expanded: boolean, durationMs: number): boolean {
     // nothing to fade out.
     if (!wasExpanded) return;
 
+    // The imperative read rather than `usePrefersReducedMotion`: the answer is
+    // only ever wanted at the instant a collapse arms its timer, and subscribing
+    // would re-render every consumer of every collapsible body on a preference
+    // flip to change a decision none of them are waiting on.
     if (durationMs <= 0 || prefersReducedMotion()) {
       setMounted(false);
       return;

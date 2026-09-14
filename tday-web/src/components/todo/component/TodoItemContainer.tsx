@@ -1,8 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { Checkbox } from "@/components/ui/checkbox";
 import clsx from "clsx";
-import { TASK_COMPLETION_FADE_MS } from "@/lib/taskCompletionTiming";
+import { DRAG_VACATED_TRANSITION } from "@/lib/dragLiftMotion";
+import { TASK_COMPLETION_REMOVING_TRANSITION } from "@/lib/taskCompletionTiming";
+import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
+import { scrollIntoView } from "@/lib/scroll";
 import {
   stageTaskCompletion,
   useTaskCompletionPhase,
@@ -28,6 +31,7 @@ import { useTaskSelection } from "@/providers/TaskSelectionProvider";
 import { hapticTick } from "@/lib/haptics";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { useSwipeRow } from "@/hooks/useSwipeRow";
 import { buildTaskShareText } from "@/lib/listShareText";
 
 
@@ -80,17 +84,26 @@ export const TodoItemCard = ({
   const [displayForm, setDisplayForm] = useState(false);
   const [editInstanceOnly, setEditInstanceOnly] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
-  // Staged completion, matching the native rows exactly (Android/iOS use 160/360/260ms):
-  //   checked (green tick) → struck (title sweep + notes line-through) → fading → removed.
-  // The whole sequence is ~780ms and runs on its own timers — it is not gated on the undo
-  // toast, which lives for 5s independently.
+  // Staged completion, on the native rows' beats (Android/iOS use 160/360):
+  //   checked (green tick) → struck (title and notes, one rule fading in) → removing (ink out,
+  //   box shut) → gone.
+  // Title and notes are named together because they are one beat and one class: `.task-strike`
+  // fades `text-decoration-color` up on both. Android and iOS sweep the rule across the text
+  // instead — a mechanism difference between a `text-decoration` and a drawn line, on the same
+  // rung either way.
+  // The whole sequence runs on its own timers — it is not gated on the undo toast, which lives
+  // for 5s independently.
   //
   // The phase is read from `taskCompletionStaging`, not held here, because the row has no right
-  // to those 780ms: a filter change or a re-keyed list unmounts it mid-sequence, and when the
+  // to that window: a filter change or a re-keyed list unmounts it mid-sequence, and when the
   // timers were component state the unmount cleanup threw the user's completion away with them.
   // Keyed by task id, so a row that leaves and comes back rejoins its own sequence.
   const completePhase = useTaskCompletionPhase(todoItem.id);
   const completing = completePhase !== null;
+  const removing = completePhase === "removing";
+  // Subscribed rather than read once: this decides what the row renders, so a reader who turns
+  // reduce-motion on mid-session must not be stuck with the answer given at mount.
+  const reduceMotion = usePrefersReducedMotion();
 
   // Mobile swipe-to-reveal (mirrors the native slide-to-edit/copy/delete). The
   // row foreground translates left to expose Edit + Copy + Delete. A quick
@@ -98,50 +111,18 @@ export const TodoItemCard = ({
   // ~250ms press with <5px movement, which a swipe exceeds; vertical
   // scroll/drag is preserved via axis-locking and touch-action: pan-y.
   const ACTIONS_WIDTH = 210;
-  const [swipeX, setSwipeX] = useState(0);
-  const [swiping, setSwiping] = useState(false);
-  const swipeTouch = useRef<
-    { x: number; y: number; startX: number; axis: "x" | "y" | null } | null
-  >(null);
-
-  const closeSwipe = () => setSwipeX(0);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const announceSwipeOpen = useCallback(() => {
+    // Claim the row: tell any other open row to close so only one is open.
+    window.dispatchEvent(new CustomEvent("tday-swipe-open", { detail: todoItem.id }));
+  }, [todoItem.id]);
+  const { swipeX, transition: swipeTransition, closeSwipe, swipeHandlers } = useSwipeRow({
+    actionsWidth: ACTIONS_WIDTH,
+    onOpen: announceSwipeOpen,
     // While selecting, the row's only gesture is the tap that picks it — the
     // swipe would otherwise reveal Edit/Delete for a single task in the middle
     // of choosing several.
-    if (readOnly || selecting) return;
-    const t = e.touches[0];
-    swipeTouch.current = { x: t.clientX, y: t.clientY, startX: swipeX, axis: null };
-    setSwiping(true);
-  };
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const data = swipeTouch.current;
-    if (!data) return;
-    const t = e.touches[0];
-    const dx = t.clientX - data.x;
-    const dy = t.clientY - data.y;
-    if (data.axis === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-      data.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-      // Claim the row: tell any other open row to close so only one is open.
-      if (data.axis === "x") {
-        window.dispatchEvent(
-          new CustomEvent("tday-swipe-open", { detail: todoItem.id }),
-        );
-      }
-    }
-    if (data.axis === "x") {
-      setSwipeX(Math.min(0, Math.max(-ACTIONS_WIDTH, data.startX + dx)));
-    }
-  };
-  const handleTouchEnd = () => {
-    const data = swipeTouch.current;
-    setSwiping(false);
-    swipeTouch.current = null;
-    if (data?.axis === "x") {
-      setSwipeX((prev) => (prev < -ACTIONS_WIDTH / 2 ? -ACTIONS_WIDTH : 0));
-    }
-  };
+    disabled: readOnly || selecting,
+  });
 
   const setCombinedRef = (node: HTMLDivElement | null) => {
     setItemElement(node);
@@ -180,20 +161,20 @@ export const TodoItemCard = ({
   // never starts with a stray Edit/Delete pair showing.
   useEffect(() => {
     if (selecting) {
-      setSwipeX(0);
+      closeSwipe();
       setShowHandle(false);
     }
-  }, [selecting]);
+  }, [closeSwipe, selecting]);
 
   // Close this row's swipe actions when another row is swiped open.
   useEffect(() => {
     const onOpen = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;
-      if (id !== todoItem.id) setSwipeX(0);
+      if (id !== todoItem.id) closeSwipe();
     };
     window.addEventListener("tday-swipe-open", onOpen as EventListener);
     return () => window.removeEventListener("tday-swipe-open", onOpen as EventListener);
-  }, [todoItem.id]);
+  }, [closeSwipe, todoItem.id]);
 
   useEffect(() => {
     if (!displayForm) {
@@ -206,7 +187,7 @@ export const TodoItemCard = ({
       return;
     }
 
-    itemElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollIntoView(itemElement, { block: "center" });
   }, [highlighted, itemElement]);
 
   return (
@@ -215,15 +196,43 @@ export const TodoItemCard = ({
         id={getTodoFocusElementId(todoItem.id)}
         ref={setCombinedRef}
         style={
-          completePhase === "removing"
-            ? { ...style, opacity: 0, transition: `opacity ${TASK_COMPLETION_FADE_MS}ms ease` }
-            : style
+          removing
+            ? {
+                ...style,
+                opacity: 0,
+                // Closing the track is the whole height animation. Under reduced motion the row
+                // is handed the same finished frame with nothing to carry it there: an empty box
+                // and no ink, which is the destination without the trip.
+                gridTemplateRows: "0fr",
+                transition: reduceMotion ? undefined : TASK_COMPLETION_REMOVING_TRANSITION,
+              }
+            : {
+                ...style,
+                // The vacated dim below travels rather than cuts, and it has to be
+                // composed onto dnd-kit's own transition instead of added as a
+                // `transition-opacity` utility: dnd-kit puts a `transform` shorthand
+                // in this same inline style for the whole drag, and an inline
+                // shorthand outranks any class the row could carry, so the utility
+                // would silently never run. Reduced motion drops the trip and keeps
+                // the 70 %, which is the hole itself.
+                transition: reduceMotion
+                  ? style?.transition
+                  : [style?.transition, DRAG_VACATED_TRANSITION].filter(Boolean).join(", "),
+              }
         }
         {...containerProps}
         className={clsx(
           // No per-row divider — the date group owns a single divider after its
           // last task (see TodoGroup / TimelineSectionDroppable).
-          "group relative max-w-full overflow-hidden sm:overflow-visible",
+          //
+          // A grid with one 1fr row so the box has something interpolable to collapse: `height`
+          // cannot be animated away from `auto`, and a measured pixel height would have to be
+          // re-measured every time the title rewraps. Same trick the settings editors' `Collapse`
+          // uses. The swipe actions sit out of flow and so never size the track.
+          "group relative grid max-w-full grid-rows-[1fr] overflow-hidden sm:overflow-visible",
+          // The hole the card came out of. Value and reasoning in
+          // `dragLiftMotion.ts`, which owns both halves of the pick-up; the clock
+          // that carries it there is on the style above.
           dragging && "opacity-70",
         )}
       >
@@ -339,15 +348,19 @@ export const TodoItemCard = ({
             }
             if (swipeX !== 0) closeSwipe();
           }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+          {...swipeHandlers}
           style={{
             transform: `translateX(${swipeX}px)`,
-            transition: swiping
-              ? "none"
-              : "transform 220ms ease, background-color 150ms ease",
+            // Settle, tint and ring all come from `useSwipeRow`: three rows drawing the same
+            // three properties wrote out three lists that had drifted apart, and only one of
+            // them named the ring at all.
+            transition: swipeTransition,
             touchAction: "pan-y",
+            // A grid item's automatic minimum size is its own content, so the track above can
+            // only close once this one is allowed to be smaller than the row it holds. Applied
+            // while removing rather than always: clipping a row that is staying would cost it
+            // the focus ring and the hover actions that sit proud of its box.
+            ...(removing ? { overflow: "hidden", minHeight: 0 } : null),
           }}
           className={clsx(
             // Flat native-style row; transparent so the screen watermark shows
@@ -359,7 +372,39 @@ export const TodoItemCard = ({
             selecting &&
               "cursor-pointer rounded-lg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/70",
             selected && "bg-accent/10",
-            highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
+            // The mark a deep link or a search result leaves on the row it lands on, drawn INSIDE
+            // the box. Below `sm` this element's border box IS the clip box of the
+            // `overflow-hidden` wrapper it is the sole grid item of, so an outset `ring-2` was
+            // erased everywhere except the four rounded corners — the mark PR 25b taught to fade
+            // was almost entirely invisible on a phone. Moving the ring up onto the wrapper would
+            // have escaped the clip and lost the clock: the whitelist that fades it is written
+            // into this element's inline `transition`, and the wrapper declares none.
+            //
+            // Always declared, switched by colour, and load-bearing rather than tidy — though not
+            // because the conditional shape would cut. It would not: an unmarked row declares no
+            // `box-shadow` at all, and CSS pads a `none` against the other list adopting its
+            // `inset` flags, so `inset-ring-2` hung off `highlighted` still transitions — measured
+            // against the installed 4.2.2, by growing the ring from 0px to 2px. That growth is the
+            // objection. Size changing is `Emphasis` by the rung rule, and this mark shares the
+            // `Quick` leg of `swipeTransition` with the desktop tint, which is paint. A ring that
+            // is lighting up rather than arriving holds its geometry and moves alpha.
+            //
+            // It is also the only shape that stays safe. `--tw-inset-ring-shadow` sits at a
+            // NON-inset `0 0 #0000` initial, so the first `shadow-*`, ring or press rule to leave
+            // a composite `box-shadow` on this element at rest makes the flags disagree and stops
+            // the property transitioning altogether — `web-calendar-highlight-ring-cuts` back with
+            // every gate green, one utility away. Declaring the inset ring on both sides spends
+            // nothing and closes that off.
+            //
+            // Never both colours at once, hence a ternary and not two `&&`s: Tailwind emits
+            // `inset-ring-transparent` after `inset-ring-accent/25`, so the two in one string
+            // would resolve to the invisible one. The `sm:` reset is safe for the mirror reason —
+            // a variant always sorts after the utility it varies, which is what keeps the desktop
+            // mark the flat tint it has always been.
+            "inset-ring-2",
+            highlighted
+              ? "rounded-lg inset-ring-accent/25 sm:bg-accent/5 sm:inset-ring-transparent"
+              : "inset-ring-transparent",
           )}
         >
       <div className="flex min-w-0 items-start gap-3">
@@ -390,8 +435,8 @@ export const TodoItemCard = ({
           <div className="mb-1.5 flex items-center gap-1.5">
             <p
               className={clsx(
-                "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-300",
-                (completePhase === "struck" || completePhase === "removing") &&
+                "select-none text-[0.98rem] font-black leading-5 text-foreground transition-colors duration-emphasis",
+                (completePhase === "struck" || removing) &&
                   "task-strike text-muted-foreground",
               )}
             >
@@ -401,9 +446,11 @@ export const TodoItemCard = ({
           {description && (
             <pre
               className={clsx(
-                "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-300 sm:w-full",
-                (completePhase === "struck" || completePhase === "removing") &&
-                  "line-through",
+                "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
+                // `task-strike`, not Tailwind's `line-through`: the notes are struck on the
+                // same beat as the title an inch above them, and a rule that snaps on under
+                // one that fades in reads as two edits to one task.
+                (completePhase === "struck" || removing) && "task-strike",
               )}
             >
               {description}

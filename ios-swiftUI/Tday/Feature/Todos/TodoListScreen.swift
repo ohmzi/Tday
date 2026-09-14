@@ -83,6 +83,16 @@ enum TodoTimelineMetrics {
     static let minimalRowIndicatorSize: CGFloat = 14
     static let minimalRowTrailingIndicatorPadding: CGFloat = 24
     static let minimalRowVerticalPadding: CGFloat = 8
+    /// Between the toggle and the text column, and between the lines inside it.
+    /// Named here rather than left at the call sites because the loading
+    /// placeholder has to be built at them too, and a number a placeholder copies
+    /// is a number that stays right until somebody adjusts the row.
+    static let minimalRowContentSpacing: CGFloat = 12
+    static let minimalRowTextSpacing: CGFloat = 4
+    /// How far the toggle's reported first-text-baseline sits below its centre, so
+    /// it stays on line one of a title that wraps. Part of the row's height, not a
+    /// decoration: the guide is what stands the button proud of the text column.
+    static let minimalRowBaselineNudge: CGFloat = 5
     static let sameDateTaskSpacing: CGFloat = 2
     static let sectionTopSpacing: CGFloat = 6
     static let sectionHeaderBottomPadding: CGFloat = 2
@@ -113,7 +123,6 @@ enum TodoTimelineMetrics {
         heroMarkTopGap + heroMarkBox + heroMarkBottomGap + expandedTitleHeight
     static let timelineBottomSpacerHeight: CGFloat = 120
     static let floaterTaskHomeBottomSpacerHeight: CGFloat = 12
-    static let rootDockCollapseThreshold: CGFloat = 44
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
     static let topBarButtonSpacing: CGFloat = 8
@@ -146,6 +155,57 @@ enum TodoTimelineMetrics {
         guard end > start else { return value >= end ? 1 : 0 }
         return RootFeedHeroHeaderMetrics.stagger(value - start, to: end - start)
     }
+}
+
+/// What the loading placeholder has to be, to be these two rows.
+///
+/// Kept beside `TodoTimelineMetrics` rather than in `TdayTaskRowSkeleton.swift`
+/// for the reason the file itself gives: a set built from anything other than the
+/// constants its row is drawn with is a copy, and a copy is right until the day
+/// somebody edits the row. `TdayTaskRowSkeletonMetrics.today` is built the same
+/// way, next to Today's own numbers.
+///
+/// Two sets and not one because these are two rows. They agree on nearly
+/// everything and disagree on the thing that decides their height: a task list
+/// hangs its toggle off the title's first baseline so it stays on line one of a
+/// title that wraps, and Completed simply centres its own.
+extension TdayTaskRowSkeletonMetrics {
+
+    /// `TodoListScreen.minimalTimelineRow`.
+    static let minimalTimeline = TdayTaskRowSkeletonMetrics(
+        contentSpacing: TodoTimelineMetrics.minimalRowContentSpacing,
+        checkSlot: TodoTimelineMetrics.minimalRowToggleFrame,
+        checkGlyph: TodoTimelineMetrics.minimalRowToggleSize,
+        textSpacing: TodoTimelineMetrics.minimalRowTextSpacing,
+        titleFontSize: TodoTimelineMetrics.minimalRowTitleSize,
+        subtitleFontSize: TodoTimelineMetrics.minimalRowSubtitleSize,
+        metaIcon: TodoTimelineMetrics.minimalRowIndicatorSize,
+        metaTrailingPadding: TodoTimelineMetrics.minimalRowTrailingIndicatorPadding,
+        verticalPadding: TodoTimelineMetrics.minimalRowVerticalPadding,
+        // The timeline rows carry no horizontal padding of their own: the List's
+        // `listRowInsets` already hold them off both edges, and the placeholder is
+        // given the same insets at its call site. Today's 4 pt here would put the
+        // bars 4 pt to the right of the rows that replace them.
+        horizontalPadding: 0,
+        rowAlignment: .firstTextBaseline,
+        checkBaselineNudge: TodoTimelineMetrics.minimalRowBaselineNudge
+    )
+
+    /// `CompletedScreen`'s history row, which is the same row centred.
+    static let completedTimeline = TdayTaskRowSkeletonMetrics(
+        contentSpacing: TodoTimelineMetrics.minimalRowContentSpacing,
+        checkSlot: TodoTimelineMetrics.minimalRowToggleFrame,
+        checkGlyph: TodoTimelineMetrics.minimalRowToggleSize,
+        textSpacing: TodoTimelineMetrics.minimalRowTextSpacing,
+        titleFontSize: TodoTimelineMetrics.minimalRowTitleSize,
+        subtitleFontSize: TodoTimelineMetrics.minimalRowSubtitleSize,
+        metaIcon: TodoTimelineMetrics.minimalRowIndicatorSize,
+        metaTrailingPadding: TodoTimelineMetrics.minimalRowTrailingIndicatorPadding,
+        verticalPadding: TodoTimelineMetrics.minimalRowVerticalPadding,
+        horizontalPadding: 0,
+        rowAlignment: .center,
+        checkBaselineNudge: nil
+    )
 }
 
 /// Layout guards for the "all done" illustration in `watermarkedModeContent` —
@@ -252,6 +312,11 @@ private struct TimelineTaskFlashHighlight: ViewModifier {
         Task { @MainActor in
             strength = 0
             for pulseIndex in 0..<2 {
+                // not a token — see docs/motion.md's 340–420 and 600–620 bands.
+                // Each leg is timed against the sleep directly under it rather
+                // than against the ladder: the flash has to have landed before
+                // the next one is armed, so the duration and the wait are one
+                // number written twice, and a rung would desynchronise them.
                 withAnimation(.easeInOut(duration: 0.42)) {
                     strength = 0.46
                 }
@@ -283,7 +348,7 @@ struct TodoTimelineTaskTitle: View {
             // out, instead of a single rule drawn across the middle of the block.
             .strikethrough(isCompleted, color: strikeColor)
             .lineLimit(lineLimit)
-            .animation(.easeInOut(duration: 0.32), value: isCompleted)
+            .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: isCompleted)
     }
 }
 
@@ -391,6 +456,7 @@ private struct FloaterTaskHomeListCard: View {
     let onTap: () -> Void
 
     @Environment(\.tdayColors) private var colors
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     private var symbolName: String {
         todoListSymbolName(for: list.iconKey)
@@ -447,9 +513,16 @@ private struct FloaterTaskHomeListCard: View {
 
                     Spacer()
 
+                    // Same roll, same rung as the scheduled feed's counts — the
+                    // argument is at `ScheduledTaskHomeTodayCard`.
                     Text("\(count)")
                         .font(.tdayRounded(size: 22, weight: .bold))
                         .foregroundStyle(.white)
+                        .contentTransition(.numericText(value: Double(count)))
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                            value: count
+                        )
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -491,6 +564,11 @@ struct TodoListScreen: View {
     /// while this screen is still the one on top. See `isScreenVisible` for
     /// the on-screen half.
     @Environment(\.scenePhase) private var scenePhase
+    /// Gates the feed's own motion — see `timelineItemAnimationKey`'s
+    /// `.animation(_:value:)` and `timelineRowTransition`. The travel and the
+    /// row legs are refused separately because they come from two different
+    /// mechanisms; `TdayFeedItemMotion.row(reduceMotion:)` says why.
+    @Environment(\.tdayAnimation) private var tdayAnimation
     @FocusState private var floaterTaskHomeSearchFieldFocused: Bool
     @FocusState private var listSearchFieldFocused: Bool
     @State private var showingCreateTask = false
@@ -547,6 +625,12 @@ struct TodoListScreen: View {
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var headerScroll = RootFeedHeaderScrollState()
     @State private var rootDockCollapsed = false
+    /// The same answer as `rootDockCollapsed`, for the modes that have no root
+    /// feed header to observe the scroll for them. It exists because the fold
+    /// point has a dead band and a dead band needs the previous answer: this
+    /// screen's own scroll offset arrives as a number, and the side of the fold
+    /// it puts the dock on cannot be recovered from that number alone.
+    @State private var legacyRootDockCollapsed = false
     @State private var titleScrollToTopRequestID = 0
     @State private var completionPhases: [String: TodoCompletionPhase] = [:]
     @State private var flashTodoId: String?
@@ -838,6 +922,19 @@ struct TodoListScreen: View {
         isSearchingList && timelineItems.isEmpty && !viewModel.isLoading
     }
 
+    /// The first load of this screen's own scope, and only that.
+    ///
+    /// `isLoading` had two consumers here and neither of them drew anything: the
+    /// pull-to-refresh pill, which is about a refresh the user asked for, and the
+    /// two empty-state gates, which use it to keep "nothing here" from being said
+    /// about a scope nobody has finished counting yet. So the answer to "still
+    /// loading" was a blank feed. The search cases stay out of it — a live query
+    /// answers for itself, and a placeholder under a query the user is typing
+    /// would flash three grey rows per keystroke.
+    private var showsTimelineSkeleton: Bool {
+        viewModel.isLoading && timelineItems.isEmpty && !isSearchingList && !showFloaterTaskHomeSearchResults
+    }
+
     private var isTodayMode: Bool {
         viewModel.mode == .today
     }
@@ -1051,7 +1148,7 @@ struct TodoListScreen: View {
         // invalidate this screen's body; other modes still use @State.
         usesRootFeedHeader
             ? rootDockCollapsed
-            : max(timelineScrollOffset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold
+            : legacyRootDockCollapsed
     }
 
     private var minimalTimelineBottomSpacerHeight: CGFloat {
@@ -1544,7 +1641,10 @@ struct TodoListScreen: View {
         }
         .onChange(of: timelineScrollOffset, initial: true) { _, offset in
             guard !usesRootFeedHeader else { return }
-            onRootDockCollapsedChange(max(offset, 0) > TodoTimelineMetrics.rootDockCollapseThreshold)
+            let collapsed = RootFeedDockCollapse.next(previous: legacyRootDockCollapsed, offset: offset)
+            guard legacyRootDockCollapsed != collapsed else { return }
+            legacyRootDockCollapsed = collapsed
+            onRootDockCollapsedChange(collapsed)
         }
         .onChange(of: floaterTaskHomeSearchExpanded, initial: true) { _, expanded in
             guard isFloaterTaskHomeScreen else {
@@ -1904,10 +2004,7 @@ struct TodoListScreen: View {
         Color.clear
             .frame(height: RootFeedHeroHeaderMetrics.expandedHeight)
             .background {
-                RootFeedHeaderScrollObserver(
-                    state: headerScroll,
-                    collapseThreshold: TodoTimelineMetrics.rootDockCollapseThreshold
-                ) { collapsed in
+                RootFeedHeaderScrollObserver(state: headerScroll) { collapsed in
                     guard rootDockCollapsed != collapsed else { return }
                     rootDockCollapsed = collapsed
                     onRootDockCollapsedChange(collapsed)
@@ -2552,7 +2649,7 @@ struct TodoListScreen: View {
 
     private func closeFloaterTaskHomeSearch() {
         floaterTaskHomeSearchFieldFocused = false
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             floaterTaskHomeSearchExpanded = false
         }
         floaterTaskHomeSearchQuery = ""
@@ -2560,7 +2657,7 @@ struct TodoListScreen: View {
 
     private func openListSearch() {
         HapticManager.buttonPress()
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             listSearchExpanded = true
         }
     }
@@ -2570,7 +2667,7 @@ struct TodoListScreen: View {
     private func closeListSearch() {
         HapticManager.buttonPress()
         listSearchFieldFocused = false
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             listSearchExpanded = false
         }
         listSearchQuery = ""
@@ -2793,6 +2890,30 @@ struct TodoListScreen: View {
                         }
                     }
 
+                    if showsTimelineSkeleton {
+                        // Today stacks its placeholder over its rows so the two share one
+                        // slot; a `List` has no such move — its sections are siblings by
+                        // construction, and a `Section` cannot be overlaid on the ones after
+                        // it. So this one is above the rows it hands over to, and whether the
+                        // feed reflows as they swap depends on something source cannot settle:
+                        // SwiftUI holds a removing view in the layout, while a `List` on iOS
+                        // resolves the same change as a UIKit batch update that animates the
+                        // delete and the inserts into their final places together. The two
+                        // look different, and only a device can say which one this is — so it
+                        // is a line in docs/verification/phase-9-device-pass.md rather than a
+                        // claim here.
+                        Section {
+                            // `.minimalTimeline`, not the default: this feed's row
+                            // is not Today's, and a placeholder built at the other
+                            // one runs a line taller and sits 4 pt to its right.
+                            TdayTaskRowSkeletonGroup(metrics: .minimalTimeline)
+                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                                .listRowBackground(colors.background)
+                                .listRowSeparator(.hidden)
+                                .transition(.opacity)
+                        }
+                    }
+
                     // A query that matches nothing keeps its own counsel: the
                     // section headers would otherwise stay behind with nothing
                     // under them, a floater list's empty header included.
@@ -2873,7 +2994,37 @@ struct TodoListScreen: View {
                 .environment(\.defaultMinListRowHeight, 1)
                 .disableVerticalScrollBounce(!pullRefreshEnabled)
                 .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)
-                .animation(.easeInOut(duration: 0.22), value: timelineItemAnimationKey)
+                // The placeholder's hand-over, on the List rather than on the
+                // branch that holds it: inside a `List` the modifiers written
+                // around an `if` are handed down to the rows themselves and leave
+                // with them, so the removal would have no transaction to run in.
+                //
+                // BELOW the travel, and that order is the whole of it. Both values
+                // change in the same update — the first page landing is what
+                // empties `showsTimelineSkeleton` and what fills
+                // `timelineItemAnimationKey` — and where two `.animation(_:value:)`
+                // both fire at once the one nearest the content wins. Written
+                // above, this modifier was the outer of the two and the travel
+                // overrode it, so the one frame it exists for ran at Emphasis: the
+                // dissolve took the long way round, which is exactly what the rung
+                // split is meant to stop. A modifier whose value did not change
+                // leaves the transaction alone, so the travel still carries every
+                // other update to this list.
+                .animation(
+                    tdayAnimation(TdayTaskRowSkeleton.crossfade),
+                    value: showsTimelineSkeleton
+                )
+                // The feed's travel, and only the travel: every row the key
+                // change merely moves rides this transaction, while the rows it
+                // adds and removes override it from their own transition legs
+                // (`timelineRowTransition`). This line carried the travel before
+                // the split too — but at a length of its own, against legs pinned
+                // to the drag placeholder's spring, so the three events were timed
+                // against two clocks that never agreed.
+                .animation(
+                    tdayAnimation(TdayFeedItemMotion.placement),
+                    value: timelineItemAnimationKey
+                )
 
             }
             .onAppear {
@@ -2943,7 +3094,7 @@ struct TodoListScreen: View {
         let isSelected = selectedTodoIDs.contains(todo.id)
 
         return VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: TodoTimelineMetrics.minimalRowContentSpacing) {
                 Button {
                     if isSelecting {
                         toggleSelection(of: todo)
@@ -2963,10 +3114,10 @@ struct TodoListScreen: View {
                 )
                 // Keep the toggle on the first line of a multi-line title.
                 .alignmentGuide(.firstTextBaseline) { dimension in
-                    dimension[VerticalAlignment.center] + 5
+                    dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: TodoTimelineMetrics.minimalRowTextSpacing) {
                     TodoTimelineTaskTitle(
                         text: todo.title,
                         isCompleted: showStrikethrough,
@@ -2989,7 +3140,7 @@ struct TodoListScreen: View {
                             // Struck alongside the title so the whole task reads
                             // as done during the completion animation.
                             .strikethrough(showStrikethrough, color: colors.onSurfaceVariant)
-                            .animation(.easeInOut(duration: 0.32), value: showStrikethrough)
+                            .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: showStrikethrough)
                     }
                 }
 
@@ -3010,7 +3161,7 @@ struct TodoListScreen: View {
                     .padding(.trailing, TodoTimelineMetrics.minimalRowTrailingIndicatorPadding)
                     // Keep the trailing indicators on the first line too.
                     .alignmentGuide(.firstTextBaseline) { dimension in
-                        dimension[VerticalAlignment.center] + 5
+                        dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
                     }
                 }
             }
@@ -3026,7 +3177,7 @@ struct TodoListScreen: View {
         .opacity((isFading ? 0 : (draggedTodo?.id == todo.id ? 0.7 : 1)) * restingRowOpacity(for: todo))
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
-        .animation(.easeInOut(duration: 0.26), value: isFading)
+        .animation(TdayMotion.standard(duration: TdayMotion.Durations.change), value: isFading)
         .allowsHitTesting(!isCompleting)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .modifier(TimelineTaskFlashHighlight(active: flashHighlight))
@@ -3101,16 +3252,16 @@ struct TodoListScreen: View {
         }
         HapticManager.completion()
         SoundManager.taskCompleted()
-        withAnimation(.easeInOut(duration: 0.16)) {
+        withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
             completionPhases[todo.id] = .checked
         }
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 160_000_000)
-            withAnimation(.easeInOut(duration: 0.22)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)) {
                 completionPhases[todo.id] = .struck
             }
             try? await Task.sleep(nanoseconds: 360_000_000)
-            withAnimation(.easeInOut(duration: 0.26)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)) {
                 completionPhases[todo.id] = .fading
             }
             try? await Task.sleep(nanoseconds: 260_000_000)
@@ -3144,7 +3295,7 @@ struct TodoListScreen: View {
                     .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 8, trailing: TodoTimelineMetrics.horizontalPadding))
                     .listRowBackground(colors.background)
                     .listRowSeparator(.hidden)
-                    .transition(timelineRowTransition())
+                    .transition(todoDropPlaceholderTransition())
                     .scheduledTodoDropTarget(
                         section: section,
                         draggedTodo: draggedTodo,
@@ -3400,13 +3551,24 @@ struct TodoListScreen: View {
     }
 
     private func timelineRowTransition() -> AnyTransition {
-        let insertion = AnyTransition.opacity
+        TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled)
+    }
+
+    /// The drop placeholder's own transition, split out from
+    /// [timelineRowTransition] rather than sharing it.
+    ///
+    /// The gap that opens under a dragged task is not a feed item: nothing was
+    /// added to the list and nothing left it, and the thing it has to stay in step
+    /// with is the finger — which is why both its legs are pinned to
+    /// `todoDropPlaceholderAnimation`, the same spring the
+    /// `activeDropSectionId` transaction above runs on. Putting it on the feed's
+    /// arrival and departure rungs would time the affordance against a list
+    /// diffing event that is not happening.
+    private func todoDropPlaceholderTransition() -> AnyTransition {
+        let leg = AnyTransition.opacity
             .combined(with: .move(edge: .top))
             .animation(todoDropPlaceholderAnimation)
-        let removal = AnyTransition.opacity
-            .combined(with: .move(edge: .top))
-            .animation(todoDropPlaceholderAnimation)
-        return .asymmetric(insertion: insertion, removal: removal)
+        return .asymmetric(insertion: leg, removal: leg)
     }
 
     /// The "all done" illustration's own insertion/removal transition — see

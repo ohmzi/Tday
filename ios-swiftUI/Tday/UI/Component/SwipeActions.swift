@@ -18,31 +18,17 @@ struct TodoSwipeExtraAction {
     let action: () -> Void
 }
 
-struct TodoRowAction {
-    let title: String
-    let systemImage: String
-    let tint: Color
-    let role: ButtonRole?
-    let action: () -> Void
-}
-
 extension View {
-    func todoSwipeActions(_ actions: [TodoRowAction]) -> some View {
-        swipeActions {
-            ForEach(Array(actions.enumerated()), id: \.offset) { entry in
-                let item = entry.element
-                Button(role: item.role, action: item.action) {
-                    Label(item.title, systemImage: item.systemImage)
-                }
-                .tint(item.tint)
-            }
-        }
-    }
-
-    func swipeRevealHintOnTap(enabled: Bool = true) -> some View {
-        modifier(SwipeRevealHintModifier(enabled: enabled))
-    }
-
+    /// The app's only row-action gesture, on every task row on every screen.
+    ///
+    /// Hand-rolled rather than SwiftUI's `.swipeActions` for two reasons that
+    /// both survive review: the reveal is a row of pills that fade and scale in
+    /// on a per-pill stagger, which `.swipeActions` has no way to express, and a
+    /// `List` row carrying both would hand the same horizontal drag to two
+    /// recognizers at once. A `UIPanGestureRecognizer` is invisible to the
+    /// accessibility API, so the row also carries the same actions as
+    /// `.accessibilityActions` — see `body(content:)`. Anything added to the
+    /// pills belongs in both, and the guardrail suite says so out loud.
     func todoTrailingSwipeActions(
         rowID: String,
         openRowID: Binding<String?>,
@@ -125,6 +111,52 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                         closeActions()
                     }
                 }
+                // The pan recognizer this row installs is invisible to the
+                // accessibility API, and there is no context menu on a task row
+                // anywhere in the app — so without this block Edit, Copy, Delete
+                // and the mode's own third action have no way in at all, and the
+                // row is read-only to VoiceOver, Switch Control and Full Keyboard
+                // Access alike. They are the same four closures the pills call,
+                // haptic included: a second path to an action must not be a
+                // quieter one.
+                //
+                // `enabled` gates them because it is already the row's answer to
+                // "can this be acted on" — a viewer's list, a row mid-completion,
+                // a selection sweep. An action offered where the pills are not is
+                // one the app would refuse to perform.
+                .accessibilityActions {
+                    if enabled {
+                        // The extra action keeps the pill's own word rather than
+                        // a fuller phrase invented here. Schedule, Float and Defer
+                        // are what the app teaches this button is called; a second
+                        // name for it would only be a second name.
+                        if let extraAction {
+                            Button(extraAction.title) {
+                                HapticManager.buttonPress()
+                                closeActions()
+                                extraAction.action()
+                            }
+                        }
+
+                        Button(L("Edit task")) {
+                            HapticManager.buttonPress()
+                            closeActions()
+                            onEdit()
+                        }
+
+                        Button(L("Copy task")) {
+                            HapticManager.buttonPress()
+                            closeActions()
+                            onCopy()
+                        }
+
+                        Button(L("Delete task"), role: .destructive) {
+                            HapticManager.destructive()
+                            closeActions()
+                            onDelete()
+                        }
+                    }
+                }
 
             HStack(spacing: 16) {
                 Spacer()
@@ -180,6 +212,11 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
             }
             .padding(.trailing, 2)
             .frame(maxWidth: .infinity)
+            // Not decorative — the same four actions, behind a reveal only a pan
+            // can perform. Left exposed they are four transparent, un-hittable
+            // buttons sitting in the tree beside the real ones, so VoiceOver
+            // would read Edit twice and only one of them would do anything.
+            .accessibilityHidden(true)
         }
     }
 
@@ -365,6 +402,13 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
                 } else if openRowID.wrappedValue == rowID {
                     openRowID.wrappedValue = nil
                 }
+                // not a token — see docs/motion.md. The pair IS `Gesture`, and
+                // this is the site `TaskSwipeRevealState.kt` converts to Compose
+                // by hand. What keeps it written out is the constructor, not the
+                // numbers: `TdayMotion.gesture` is a plain `.spring`, and this
+                // settle has to survive a second pan landing on the row before it
+                // finishes — `.interactiveSpring` re-aims at the new target
+                // instead of fighting the one in flight.
                 withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
                     offsetX.wrappedValue = shouldOpen ? -revealWidth : 0
                 }
@@ -422,37 +466,6 @@ private struct TodoSwipePillActionButton: View {
         .opacity(Double(easedReveal))
         .scaleEffect(0.38 + (0.62 * easedReveal))
         .allowsHitTesting(easedReveal > 0.8)
-    }
-}
-
-private struct SwipeRevealHintModifier: ViewModifier {
-    let enabled: Bool
-
-    @State private var offsetX: CGFloat = 0
-    @State private var isHinting = false
-
-    func body(content: Content) -> some View {
-        content
-            .offset(x: offsetX)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                guard enabled, !isHinting else {
-                    return
-                }
-
-                isHinting = true
-                Task { @MainActor in
-                    withAnimation(.spring(response: 0.26, dampingFraction: 0.78)) {
-                        offsetX = -28
-                    }
-                    try? await Task.sleep(nanoseconds: 150_000_000)
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.68)) {
-                        offsetX = 0
-                    }
-                    try? await Task.sleep(nanoseconds: 340_000_000)
-                    isHinting = false
-                }
-            }
     }
 }
 

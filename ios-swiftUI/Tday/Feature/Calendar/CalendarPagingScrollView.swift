@@ -27,6 +27,12 @@ struct CalendarPagingScrollView: UIViewRepresentable {
     @Binding var selection: Int
     let onSettledSelection: (Int) -> Void
 
+    /// This representable sits in the app's own hierarchy, so it reads the provider's
+    /// live answer. The pages it hosts do not — a hand-made `UIHostingController`
+    /// starts a fresh environment — and they do not need to: the travel being decided
+    /// here is the scroll view's, not anything a page draws.
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
@@ -67,10 +73,19 @@ struct CalendarPagingScrollView: UIViewRepresentable {
     func updateUIView(_ scrollView: UIScrollView, context: Context) {
         context.coordinator.parent = self
         context.coordinator.rebuildPagesIfNeeded(pages, in: scrollView)
+        // A chevron tap slides a whole month grid the full width of the screen, which
+        // is the one motion in this app with no crossfade available to stand in for
+        // it: the grid is the page, so fading it would be fading the thing the user
+        // just asked to see. This is therefore the amplitude decision that comes out
+        // the other way — the travel is refused outright and the new month is simply
+        // drawn, which is the finished state the fifth idiom rule asks for and, at a
+        // full screen width, is also the movement Apple's guidance is most directly
+        // about. A swipe is untouched: the user's own finger is carrying that one, and
+        // a surface that stops following the finger holding it is a different bug.
         context.coordinator.scrollToSelection(
             selection,
             in: scrollView,
-            animated: selection != calendarNativePagerCenterIndex
+            animated: tdayAnimation.isEnabled && selection != calendarNativePagerCenterIndex
         )
     }
 
@@ -162,6 +177,17 @@ struct CalendarPagingScrollView: UIViewRepresentable {
                 // `scrollViewDidEndScrollingAnimation`, so this jump has to retract its own flag
                 // rather than wait for a callback that is never sent.
                 endProgrammaticScroll()
+                // And it has to report the arrival for the same reason. That callback was
+                // carrying two things, not one: the flag AND the only notification the parent
+                // ever gets that a chevron's page turn finished. Before Reduce Motion reached
+                // this call the un-animated path was always a re-centring, which
+                // `notifyParentIfNeeded` drops anyway — so the omission cost nothing and was
+                // invisible. Refusing the animation makes the same path carry a real page turn,
+                // and without this line the grid would jump one month and then freeze: the
+                // parent never advances, `selection` never returns to centre, and both chevrons
+                // stay dead. Removing the motion must not remove what the motion's completion
+                // was delivering.
+                notifySettledSelection(from: scrollView)
             }
         }
 

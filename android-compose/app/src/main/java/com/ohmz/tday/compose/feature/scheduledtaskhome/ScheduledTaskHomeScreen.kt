@@ -1,13 +1,15 @@
 package com.ohmz.tday.compose.feature.scheduledtaskhome
 
 import androidx.activity.compose.BackHandler
-import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -28,7 +30,6 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -86,11 +87,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -122,7 +123,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -141,16 +141,27 @@ import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.TdaySheetMotion
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
+import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.taskCopyText
+import com.ohmz.tday.compose.core.ui.taskStrikethrough
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.rememberSheetDismissState
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.ui.component.RootFeedDock
+import com.ohmz.tday.compose.ui.component.RootFeedDockCollapse
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSheetContent
 import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
@@ -188,6 +199,72 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 
+// What this screen draws that the scale has no rung for. Named here rather than snapped
+// onto a neighbouring step, because the differences are the point: 3 dp against 2 dp is
+// the whole distinction between a selected colour swatch and a selected icon one, and a
+// rung minted for one call site is a rung nobody can reason about.
+
+/** How flat a pressed card presses, against each surface's own resting elevation below.
+ *  The sink that used to stand beside it went with the hand-rolled press animations:
+ *  `tdayPressable` owns the offset now. */
+private val PressedCardElevation = 2.dp
+
+/** The target a finger gets where the control drawn inside it is smaller than a finger. */
+private val MinTouchTargetSize = 48.dp
+
+// The search overlay: a card hung under the field, and the result rows inside it.
+private val SearchResultsOverlayElevation = 8.dp
+private val SearchResultsMaxHeight = 320.dp
+private val SearchResultRowVerticalPadding = 9.dp
+private val SearchResultRowSpacing = 10.dp
+private val SearchResultIconSize = 17.dp
+
+// The summary sheet's spinner. This app's progress indicators run 18 to 32 dp with no
+// agreement between them, so this one says what it is instead of claiming an icon size.
+private val SummarySpinnerSize = 20.dp
+private val SummarySpinnerStroke = 2.dp
+
+// The create-list sheet: the icon preview, then the colour and icon pickers under it.
+private val CreateListCardSpacing = 16.dp
+private val ListIconPreviewSize = 86.dp
+private val ListIconPreviewGlyphSize = 42.dp
+private val ListOptionSwatchSize = 48.dp
+private val ListOptionRippleRadius = 24.dp
+private val ListIconOptionSpacing = 10.dp
+
+/** The colour swatch rings heavier because the ring is all it has: a selected icon option
+ *  also tints its fill and its glyph. */
+private val ListColorSwatchSelectedOutline = 3.dp
+private val ListIconSwatchSelectedOutline = 2.dp
+
+// A today task row: the swipe pills behind it, its completion toggle, its trailing badges.
+private val SwipeRevealWidth = 256.dp
+private val SwipeActionSpacing = 16.dp
+private val TaskRowMinHeight = 58.dp
+private val CompletionToggleRippleRadius = 24.dp
+private val CompletionToggleIconSize = 24.dp
+private val RowTrailingIconSize = 18.dp
+private val TaskCompletionRiseOffsetY = (-10).dp
+
+// The category tiles and the list rows below them.
+private val CategoryGridSpacing = 10.dp
+private val FeedCardHorizontalPadding = 16.dp
+private val TodayCardElevation = 9.dp
+private val ListRowElevation = 8.dp
+private val ListRowHeight = 70.dp
+private val ListRowIconSlotSize = 32.dp
+private val ListRowIconSize = 24.dp
+private val ListRowSharedBadgeSize = 16.dp
+
+/** The oversized list glyph behind the row, hung off the right edge and half out of frame. */
+private val ListRowWatermarkOffsetX = 14.dp
+private val ListRowWatermarkOffsetY = 8.dp
+private val ListRowWatermarkSize = 82.dp
+
+/** The feed's tail. Not BottomScrollSpacer: that rung is 96 dp, and lifting this screen's
+ *  scroll limit by 16 dp would be a visual change rather than a migration. */
+private val FeedBottomSpacer = 80.dp
+
 // Maps a domain TodoItem onto the shared sort key so this feed orders tasks
 // through the one TaskSortEngine (identical order to every other T'Day surface).
 private fun TodoItem.toTaskSortKey(): TaskSortKey = TaskSortKey(
@@ -224,7 +301,6 @@ fun ScheduledTaskHomeScreen(
     onSummarize: () -> Unit = {},
     summaryAvailable: Boolean = true,
     showRootFeedDock: Boolean = true,
-    showCreateTaskButton: Boolean = true,
     pullRefreshEnabled: Boolean = true,
     createTaskRequestKey: Int = 0,
     onCreateTaskRequestHandled: (Int) -> Unit = {},
@@ -236,16 +312,6 @@ fun ScheduledTaskHomeScreen(
     val colorScheme = MaterialTheme.colorScheme
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val fabInteractionSource = remember { MutableInteractionSource() }
-    val fabPressed by fabInteractionSource.collectIsPressedAsState()
-    val fabScale by animateFloatAsState(
-        targetValue = if (fabPressed) 0.93f else 1f,
-        label = "fabScale",
-    )
-    val fabOffsetY by animateDpAsState(
-        targetValue = if (fabPressed) 2.dp else 0.dp,
-        label = "fabOffsetY",
-    )
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val imeVisible = WindowInsets.isImeVisible
@@ -258,13 +324,17 @@ fun ScheduledTaskHomeScreen(
     var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
     var lastHandledCreateTaskRequestKey by rememberSaveable { mutableIntStateOf(0) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
-    val editTargetTodo = remember(editTargetTodoId, uiState.todayTodos) {
-        editTargetTodoId?.let { id -> uiState.todayTodos.firstOrNull { it.id == id } }
-    }
+    val editTargetTodo = rememberEditSheetTarget(
+        id = editTargetTodoId,
+        current = remember(editTargetTodoId, uiState.todayTodos) {
+            editTargetTodoId?.let { id -> uiState.todayTodos.firstOrNull { it.id == id } }
+        },
+    )
     var listName by rememberSaveable { mutableStateOf("") }
     var listColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var listIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
+    var listCreated by rememberSaveable { mutableStateOf(false) }
     var searchResultOpening by rememberSaveable { mutableStateOf(false) }
     val searchResultScope = rememberCoroutineScope()
     val closeSearch = {
@@ -278,6 +348,14 @@ fun ScheduledTaskHomeScreen(
         searchImeWasVisible = false
         searchResultOpening = false
     }
+    // The app's scale, because what this is timed against is the route handover in
+    // `TdayApp` and that handover now answers the in-app switch as well as the
+    // animator scale. This val used to read the device's for exactly the opposite
+    // reason, and leaving it there would have broken the same rule from the other
+    // side: the transition cut to nothing while the search surface stayed up for its
+    // full length, swallowing taps, over a task screen already drawn whole. A wait
+    // runs on the clock of the motion it covers — see [effectiveMotionScale].
+    val searchCloseMotionScale = rememberTdayMotionScale()
     val openTaskFromSearch: (String) -> Unit = openTask@{ todoId ->
         if (searchResultOpening) return@openTask
         searchResultOpening = true
@@ -285,7 +363,11 @@ fun ScheduledTaskHomeScreen(
         focusManager.clearFocus(force = true)
         onOpenTaskFromSearch(todoId)
         searchResultScope.launch {
-            delay(SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS)
+            // Scaled, because what it is waiting out is the push onto the task:
+            // tearing the search surface down underneath a transition that is
+            // still running is the jump this wait exists to hide, and with that
+            // push refused there is no transition left to hide behind.
+            scaledDelay(SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS, searchCloseMotionScale)
             closeSearch()
         }
     }
@@ -355,7 +437,8 @@ fun ScheduledTaskHomeScreen(
     val listState = rememberLazyListState()
     val hasScrollableContent =
         listState.canScrollForward || listState.canScrollBackward
-    val dockCollapseThresholdPx = with(density) { RootFeedDockCollapseThreshold.roundToPx() }
+    val dockCollapsePx = with(density) { RootFeedDockCollapse.CollapseThreshold.roundToPx() }
+    val dockExpandPx = with(density) { RootFeedDockCollapse.ExpandThreshold.roundToPx() }
     val headerCollapsePx = with(density) { RootFeedHeroHeaderMetrics.CollapseDistance.toPx() }
     // The header draws the refresh pill itself, so it can fly in from the top
     // and hover in front of the title instead of being painted underneath the
@@ -373,11 +456,26 @@ fun ScheduledTaskHomeScreen(
             (listState.firstVisibleItemScrollOffset / headerCollapsePx).coerceIn(0f, 1f)
         }
     }
-    val hasScrolledPastDockCollapseThreshold =
-        listState.firstVisibleItemIndex > 0 ||
-                listState.firstVisibleItemScrollOffset > dockCollapseThresholdPx
-    val dockCollapsed =
-        hasScrollableContent && hasScrolledPastDockCollapseThreshold
+    // Held rather than derived: which edge applies depends on the answer before it. The
+    // position is sampled in a snapshotFlow instead of in composition because the offset
+    // moves every frame of a fling, and this screen has no business recomposing at that
+    // rate to settle one boolean.
+    var scrolledPastDockFold by remember { mutableStateOf(false) }
+    LaunchedEffect(listState, dockCollapsePx, dockExpandPx) {
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { (index, offsetPx) ->
+            scrolledPastDockFold = RootFeedDockCollapse.next(
+                previous = scrolledPastDockFold,
+                firstVisibleItemIndex = index,
+                scrollOffsetPx = offsetPx,
+                collapsePx = dockCollapsePx,
+                expandPx = dockExpandPx,
+            )
+        }
+    }
+    // A feed too short to scroll never folds the dock, whatever the fold point says.
+    val dockCollapsed = hasScrollableContent && scrolledPastDockFold
     LaunchedEffect(dockCollapsed) {
         onRootDockCollapsedChange(dockCollapsed)
     }
@@ -408,25 +506,7 @@ fun ScheduledTaskHomeScreen(
         }
     }
 
-    Scaffold(
-        containerColor = colorScheme.background,
-        floatingActionButton = {
-            if (showCreateTaskButton) {
-                CreateTaskButton(
-                    modifier = Modifier
-                        .offset(y = fabOffsetY)
-                        .graphicsLayer {
-                            scaleX = fabScale
-                            scaleY = fabScale
-                        },
-                    interactionSource = fabInteractionSource,
-                    onClick = {
-                        showCreateTask = true
-                    },
-                )
-            }
-        },
-    ) { padding ->
+    Scaffold(containerColor = colorScheme.background) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
             val isDaytime = rememberIsDaytime()
             EmptyTaskWatermark(
@@ -499,11 +579,11 @@ fun ScheduledTaskHomeScreen(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = 18.dp,
-                            end = 18.dp,
-                            bottom = 18.dp,
+                            start = TdayDimens.ContentPaddingHorizontal,
+                            end = TdayDimens.ContentPaddingHorizontal,
+                            bottom = TdayDimens.SpacingXxl,
                         ),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
                     ) {
                     item(key = "root-feed-header-spacer") {
                         // Reserves the pinned header's space. The feed scrolls
@@ -534,9 +614,9 @@ fun ScheduledTaskHomeScreen(
                         ) { _, todo ->
                             ScheduledTaskHomeTodayTaskRow(
                                 modifier = Modifier.animateItem(
-                                    fadeInSpec = ScheduledTaskHomeItemFadeIn,
+                                    fadeInSpec = TdayFeedItemMotion.FadeIn,
                                     placementSpec = ScheduledTaskHomeItemPlacement,
-                                    fadeOutSpec = ScheduledTaskHomeItemFadeOut,
+                                    fadeOutSpec = TdayFeedItemMotion.FadeOut,
                                 ),
                                 todo = todo,
                                 lists = uiState.summary.lists,
@@ -555,7 +635,7 @@ fun ScheduledTaskHomeScreen(
                     item(key = "scheduled-task-home-category-grid") {
                         Column(
                             modifier = scheduledTaskHomeDisplacedItemMotion(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(CategoryGridSpacing),
                         ) {
                             CategoryGrid(
                                 overdueCount = overdueCount,
@@ -621,23 +701,50 @@ fun ScheduledTaskHomeScreen(
                         }
                     }
 
+                    // Keyed, because a load failure genuinely adds and removes a
+                    // row here and `animateItem` cannot animate either on an item
+                    // whose identity is its index. The one item on this feed that
+                    // is NOT a case for [scheduledTaskHomeDisplacedItemMotion]:
+                    // the grid and the list rows are only ever moved by a
+                    // completion, this card is added and removed by a load, so it
+                    // wants the fades that block argues itself out of, and it
+                    // takes its placement from the same spring, so it lands with
+                    // its neighbours rather than against them.
+                    //
+                    // That block's other half does reach here, though: this item
+                    // is inside the `!showSearchResultsOverlay` branch, so typing
+                    // takes the Today card, the grid and the rows in one frame and
+                    // leaves this card fading out alone over the blank. Accepted,
+                    // not gated — an error banner and a live query rarely coexist,
+                    // and a gate read inside this lambda could never fire, because
+                    // the item is only ever composed while the flag is false.
                     uiState.errorMessage?.let { message ->
-                        item {
+                        item(key = "error-retry", contentType = "error_retry") {
+                            val errorCardMotionEnabled = rememberTdayMotionEnabled()
                             com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                                 message = message,
                                 onRetry = onRefresh,
+                                modifier = if (errorCardMotionEnabled) {
+                                    Modifier.animateItem(
+                                        fadeInSpec = TdayFeedItemMotion.FadeIn,
+                                        placementSpec = ScheduledTaskHomeItemPlacement,
+                                        fadeOutSpec = TdayFeedItemMotion.FadeOut,
+                                    )
+                                } else {
+                                    Modifier
+                                },
                             )
                         }
                     }
 
-                    item { Spacer(Modifier.height(80.dp)) }
+                    item { Spacer(Modifier.height(FeedBottomSpacer)) }
                         }
                     }
 
                     val searchBarRect = searchBarBounds
                     if (showSearchResultsOverlay && searchBarRect != null) {
                         val overlayLeft = with(density) { (searchBarRect.left - rootInRoot.x).toDp() }
-                        val overlayTop = with(density) { (searchBarRect.bottom - rootInRoot.y).toDp() } + 8.dp
+                        val overlayTop = with(density) { (searchBarRect.bottom - rootInRoot.y).toDp() } + TdayDimens.SpacingMd
                         val overlayWidth = with(density) { searchBarRect.width.toDp() }
                         Card(
                             modifier = Modifier
@@ -647,15 +754,18 @@ fun ScheduledTaskHomeScreen(
                                 .onGloballyPositioned { coordinates ->
                                     searchResultsBounds = coordinates.boundsInRoot()
                                 },
-                            shape = RoundedCornerShape(22.dp),
-                            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.2f)),
+                            shape = RoundedCornerShape(TdayDimens.RadiusField),
+                            border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.2f)),
                             colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = SearchResultsOverlayElevation),
                         ) {
                             if (searchResults.isEmpty()) {
                                 Text(
                                     text = stringResource(R.string.scheduled_task_home_search_no_results),
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                    modifier = Modifier.padding(
+                                        horizontal = TdayDimens.SpacingXl,
+                                        vertical = TdayDimens.SpacingLg,
+                                    ),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = colorScheme.onSurfaceVariant,
                                 )
@@ -663,8 +773,8 @@ fun ScheduledTaskHomeScreen(
                                 LazyColumn(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .heightIn(max = 320.dp),
-                                    contentPadding = PaddingValues(vertical = 4.dp),
+                                        .heightIn(max = SearchResultsMaxHeight),
+                                    contentPadding = PaddingValues(vertical = TdayDimens.SpacingXs),
                                 ) {
                                     itemsIndexed(
                                         items = searchResults,
@@ -677,20 +787,23 @@ fun ScheduledTaskHomeScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .semantics(mergeDescendants = true) {}
-                                                .heightIn(min = 48.dp)
+                                                .heightIn(min = MinTouchTargetSize)
                                                 .clickable {
                                                     TdayHaptics.buttonPress(view)
                                                     openTaskFromSearch(todo.id)
                                                 }
-                                                .padding(horizontal = 12.dp, vertical = 9.dp),
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                .padding(
+                                                    horizontal = TdayDimens.SpacingLg,
+                                                    vertical = SearchResultRowVerticalPadding,
+                                                ),
+                                            horizontalArrangement = Arrangement.spacedBy(SearchResultRowSpacing),
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Icon(
                                                 imageVector = listIcon,
                                                 contentDescription = null,
                                                 tint = listTint.copy(alpha = 0.92f),
-                                                modifier = Modifier.size(17.dp),
+                                                modifier = Modifier.size(SearchResultIconSize),
                                             )
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
@@ -718,8 +831,8 @@ fun ScheduledTaskHomeScreen(
                                             Spacer(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .height(1.dp)
-                                                    .padding(horizontal = 12.dp)
+                                                    .height(TdayDimens.BorderWidth)
+                                                    .padding(horizontal = TdayDimens.SpacingLg)
                                                     .background(
                                                         colorScheme.outlineVariant.copy(
                                                             alpha = 0.45f
@@ -809,10 +922,7 @@ fun ScheduledTaskHomeScreen(
             onParseTaskTitleNlp = onParseTaskTitleNlp,
             onSuggestRepeat = onSuggestRepeat,
             onDismiss = { showCreateTask = false },
-            onCreateTask = { payload ->
-                onCreateTask(payload)
-                showCreateTask = false
-            },
+            onCreateTask = onCreateTask,
         )
     }
 
@@ -838,10 +948,7 @@ fun ScheduledTaskHomeScreen(
             onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = { editTargetTodoId = null },
             onCreateTask = { _ -> },
-            onUpdateTask = { target, payload ->
-                onUpdateTask(target, payload)
-                editTargetTodoId = null
-            },
+            onUpdateTask = onUpdateTask,
         )
     }
 
@@ -853,15 +960,26 @@ fun ScheduledTaskHomeScreen(
             onListColorChange = { listColor = it },
             listIconKey = listIconKey,
             onListIconChange = { listIconKey = it },
-            onDismiss = { showCreateList = false },
+            // The draft is cleared here and not in `onCreate`, and only when a list was
+            // actually made. The sheet is still on screen for the length of its exit now,
+            // so blanking the name at the moment of the tap would be watched: the field
+            // empties and the Create control greys out under the user's finger while the
+            // card is still sliding. Dismissing without creating keeps the draft, as it
+            // always has.
+            onDismiss = {
+                showCreateList = false
+                if (listCreated) {
+                    listName = ""
+                    listColor = TDAY_DEFAULT_LIST_COLOR_KEY
+                    listIconKey = TDAY_DEFAULT_LIST_ICON_KEY
+                    listCreated = false
+                }
+            },
             onCreate = {
                 val normalizedName = capitalizeFirstListLetter(listName).trim()
                 if (normalizedName.isNotBlank()) {
                     onCreateList(normalizedName, listColor, listIconKey)
-                    listName = ""
-                    listColor = TDAY_DEFAULT_LIST_COLOR_KEY
-                    listIconKey = TDAY_DEFAULT_LIST_ICON_KEY
-                    showCreateList = false
+                    listCreated = true
                 }
             },
         )
@@ -889,8 +1007,11 @@ private fun ScheduledTaskHomeSummaryBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(
+                    horizontal = TdayDimens.ContentPaddingHorizontal,
+                    vertical = TdayDimens.ContentPaddingVertical,
+                ),
+            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
         ) {
             TdaySheetHeader(
                 title = stringResource(R.string.todos_summary_title),
@@ -903,12 +1024,12 @@ private fun ScheduledTaskHomeSummaryBottomSheet(
             if (isLoading) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(SummarySpinnerSize),
+                        strokeWidth = SummarySpinnerStroke,
                     )
                     Text(
                         text = stringResource(R.string.todos_summary_loading),
@@ -921,8 +1042,8 @@ private fun ScheduledTaskHomeSummaryBottomSheet(
             if (!summaryText.isNullOrBlank()) {
                 TdaySheetCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                     ) {
                         Text(
                             text = summaryText,
@@ -987,8 +1108,8 @@ private fun CreateListBottomSheet(
     }
     var nameFieldFocused by remember { mutableStateOf(false) }
     // The same two-step dismissal the create-task sheet uses: start the exit, and tell the
-    // caller only once it has finished, so the 320 ms slide out is not cut off by the host
-    // Dialog leaving the composition on the frame of the tap.
+    // caller only once it has finished, so TdaySheetMotion's slide out is not cut off by
+    // the host Dialog leaving the composition on the frame of the tap.
     //
     // The keyboard goes at the end of that, with the caller's onDismiss, for the same
     // reason it does over there: clearing focus first drops `useTypingHeight` below, which
@@ -1001,7 +1122,9 @@ private fun CreateListBottomSheet(
             onDismiss()
         },
     )
-    val startDismiss = { sheetDismiss.start() }
+    // Typed `() -> Unit` so the dismiss affordances can discard the answer; only the
+    // confirm below has anything to do with it.
+    val startDismiss: () -> Unit = { sheetDismiss.start() }
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = tdayListAccentColor(listColor)
     val canCreate = listName.isNotBlank()
@@ -1017,8 +1140,12 @@ private fun CreateListBottomSheet(
         } else {
             CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION
         }).coerceAtMost(maxSheetHeight),
+        // Emphasis rather than TdaySheetMotion.cardIn(): this is the card changing height
+        // under a keyboard, not the card arriving. Same rung today — a size change is
+        // geometry either way — but keeping it off the card's spec means a retime of the
+        // arrival cannot silently retime the keyboard climb as well.
         animationSpec = tween(
-            durationMillis = CREATE_LIST_SHEET_MOTION_MS,
+            durationMillis = TdayMotionTokens.Durations.Emphasis,
             easing = FastOutSlowInEasing,
         ),
         label = "createListSheetHeight",
@@ -1040,19 +1167,28 @@ private fun CreateListBottomSheet(
             modifier = Modifier
                 .fillMaxSize(),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(sheetScrimColor)
-                    // No indication: a dismiss tap on the scrim is a gesture at the sheet,
-                    // not a press of a full-screen button, and the default ripple draws
-                    // itself across the entire window on the way out.
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = startDismiss,
-                    ),
-            )
+            // Same chrome as the create-task sheet, and now the same four specs: the scrim
+            // fades with the card instead of being drawn and undrawn with the Dialog
+            // window. `visible` and not `visibleState` — see SheetDismissState.visible.
+            AnimatedVisibility(
+                visible = sheetDismiss.visible,
+                enter = fadeIn(animationSpec = TdaySheetMotion.scrimIn()),
+                exit = fadeOut(animationSpec = TdaySheetMotion.scrimOut()),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(sheetScrimColor)
+                        // No indication: a dismiss tap on the scrim is a gesture at the
+                        // sheet, not a press of a full-screen button, and the default
+                        // ripple draws itself across the entire window on the way out.
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = startDismiss,
+                        ),
+                )
+            }
 
             AnimatedVisibility(
                 visibleState = sheetDismiss.transition,
@@ -1060,19 +1196,13 @@ private fun CreateListBottomSheet(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth(),
                 enter = slideInVertically(
-                    animationSpec = tween(
-                        durationMillis = CREATE_LIST_SHEET_MOTION_MS,
-                        easing = FastOutSlowInEasing,
-                    ),
+                    animationSpec = TdaySheetMotion.cardIn(),
                     initialOffsetY = { fullHeight -> fullHeight },
-                ) + fadeIn(animationSpec = tween(durationMillis = CREATE_LIST_SHEET_MOTION_MS)),
+                ) + fadeIn(animationSpec = TdaySheetMotion.cardIn()),
                 exit = slideOutVertically(
-                    animationSpec = tween(
-                        durationMillis = CREATE_LIST_SHEET_MOTION_MS,
-                        easing = FastOutSlowInEasing,
-                    ),
+                    animationSpec = TdaySheetMotion.cardOut(),
                     targetOffsetY = { fullHeight -> fullHeight },
-                ) + fadeOut(animationSpec = tween(durationMillis = CREATE_LIST_SHEET_MOTION_MS)),
+                ) + fadeOut(animationSpec = TdaySheetMotion.cardOut()),
             ) {
                 Surface(
                     modifier = Modifier
@@ -1091,8 +1221,11 @@ private fun CreateListBottomSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .navigationBarsPadding()
-                                .padding(horizontal = 18.dp, vertical = 14.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                                .padding(
+                                    horizontal = TdayDimens.ContentPaddingHorizontal,
+                                    vertical = TdayDimens.ContentPaddingVertical,
+                                ),
+                            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
                         ) {
                             TdaySheetHeader(
                                 title = stringResource(R.string.scheduled_task_home_new_list),
@@ -1100,9 +1233,19 @@ private fun CreateListBottomSheet(
                                 leftContentDescription = stringResource(R.string.action_close),
                                 onLeftClick = startDismiss,
                                 confirmContentDescription = stringResource(R.string.action_create_list),
+                            // Confirm leaves the same way the X does, and the keyboard
+                            // goes with the caller's onDismiss at the end of that — see
+                            // where `sheetDismiss` is built for why it cannot go first.
+                            //
+                            // The exit is claimed BEFORE `onCreate`, and the list is made
+                            // only if this tap is the one that claimed it. The card is
+                            // still on screen and still hit-testable for the whole slide,
+                            // so a second tap on a Create that is deliberately left lit
+                            // would make a second list of the same name.
                             onConfirm = {
-                                dismissKeyboard()
-                                if (canCreate) onCreate()
+                                if (canCreate && sheetDismiss.start()) {
+                                    onCreate()
+                                }
                             },
                             confirmEnabled = canCreate,
                         )
@@ -1111,14 +1254,14 @@ private fun CreateListBottomSheet(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 18.dp, vertical = 18.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    .padding(horizontal = TdayDimens.SpacingXxl, vertical = TdayDimens.SpacingXxl),
+                                verticalArrangement = Arrangement.spacedBy(CreateListCardSpacing),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(86.dp)
-                                        .clip(RoundedCornerShape(999.dp))
+                                        .size(ListIconPreviewSize)
+                                        .clip(RoundedCornerShape(TdayDimens.RadiusFull))
                                         .background(selectedAccent),
                                     contentAlignment = Alignment.Center,
                                 ) {
@@ -1126,7 +1269,7 @@ private fun CreateListBottomSheet(
                                         imageVector = selectedIcon,
                                         contentDescription = null,
                                         tint = Color.White,
-                                        modifier = Modifier.size(42.dp),
+                                        modifier = Modifier.size(ListIconPreviewGlyphSize),
                                     )
                                 }
 
@@ -1144,11 +1287,15 @@ private fun CreateListBottomSheet(
                                         .onFocusChanged { nameFieldFocused = it.isFocused },
                                     decorationBox = { innerTextField ->
                                         Box(
+                                            // RadiusRow and not RadiusField, which is the rung
+                                            // a text field would otherwise take: this one has
+                                            // always been drawn at 16 dp, and rounding it up to
+                                            // 22 would be a visual change rather than a name.
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .clip(RoundedCornerShape(16.dp))
+                                                .clip(RoundedCornerShape(TdayDimens.RadiusRow))
                                                 .background(TdaySheetDefaults.controlSurfaceColor())
-                                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                                .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingLg),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             if (listName.isBlank()) {
@@ -1172,19 +1319,19 @@ private fun CreateListBottomSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .horizontalScroll(rememberScrollState())
-                                    .padding(horizontal = 14.dp, vertical = 14.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                                horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
                             ) {
                                 TdayListColorOptions.forEach { option ->
                                     val selected = listColor == option.key
                                     val interactionSource = remember { MutableInteractionSource() }
                                     Box(
                                         modifier = Modifier
-                                            .size(48.dp)
+                                            .size(ListOptionSwatchSize)
                                             .clip(CircleShape)
                                             .background(option.color)
                                             .border(
-                                                width = if (selected) 3.dp else 0.dp,
+                                                width = if (selected) ListColorSwatchSelectedOutline else TdayDimens.SpacingNone,
                                                 color = if (selected) colorScheme.onBackground.copy(
                                                     alpha = 0.32f
                                                 ) else Color.Transparent,
@@ -1194,7 +1341,7 @@ private fun CreateListBottomSheet(
                                                 interactionSource = interactionSource,
                                                 indication = ripple(
                                                     bounded = true,
-                                                    radius = 24.dp,
+                                                    radius = ListOptionRippleRadius,
                                                 ),
                                             ) {
                                                 TdayHaptics.selection(view)
@@ -1211,8 +1358,8 @@ private fun CreateListBottomSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .horizontalScroll(rememberScrollState())
-                                    .padding(horizontal = 14.dp, vertical = 14.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                                horizontalArrangement = Arrangement.spacedBy(ListIconOptionSpacing),
                             ) {
                                 TdayListIconOptions.forEach { option ->
                                     val selected = listIconKey == option.key
@@ -1221,7 +1368,7 @@ private fun CreateListBottomSheet(
                                         stringResource(R.string.scheduled_task_home_list_icon_option, option.key)
                                     Box(
                                         modifier = Modifier
-                                            .size(48.dp)
+                                            .size(ListOptionSwatchSize)
                                             .clip(CircleShape)
                                             .background(
                                                 if (selected) {
@@ -1231,7 +1378,7 @@ private fun CreateListBottomSheet(
                                                 },
                                             )
                                             .border(
-                                                width = if (selected) 2.dp else 0.dp,
+                                                width = if (selected) ListIconSwatchSelectedOutline else TdayDimens.SpacingNone,
                                                 color = if (selected) selectedAccent.copy(alpha = 0.55f) else Color.Transparent,
                                                 shape = CircleShape,
                                             )
@@ -1239,7 +1386,7 @@ private fun CreateListBottomSheet(
                                                 interactionSource = interactionSource,
                                                 indication = ripple(
                                                     bounded = true,
-                                                    radius = 24.dp,
+                                                    radius = ListOptionRippleRadius,
                                                 ),
                                             ) {
                                                 TdayHaptics.selection(view)
@@ -1257,50 +1404,11 @@ private fun CreateListBottomSheet(
                             }
                         }
 
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(TdayDimens.SpacingXs))
                         }
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun CreateTaskButton(
-    modifier: Modifier,
-    interactionSource: MutableInteractionSource,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    val fabBlue = Color(0xFF6EA8E1)
-    val fabBlueBorder = Color(0xFF3D7FEA).copy(alpha = 0.58f)
-
-    Card(
-        modifier = modifier,
-        onClick = {
-            TdayHaptics.buttonPress(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        border = BorderStroke(1.dp, fabBlueBorder),
-        colors = CardDefaults.cardColors(containerColor = fabBlue),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = TdayDimens.FabElevation,
-            pressedElevation = TdayDimens.FabPressedElevation,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.size(TdayDimens.FabSize),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
-                contentDescription = stringResource(R.string.action_create_task),
-                tint = Color.White,
-                modifier = Modifier.size(40.dp),
-            )
         }
     }
 }
@@ -1327,7 +1435,7 @@ private fun MyListsHeader(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
     ) {
          Text(
             text = stringResource(R.string.scheduled_task_home_my_lists),
@@ -1338,64 +1446,21 @@ private fun MyListsHeader(modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-private fun PressableIconButton(
-    @DrawableRes icon: Int,
-    contentDescription: String,
-    tint: Color,
-    compact: Boolean = false,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    val colorScheme = MaterialTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "scheduledTaskHomeIconButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "scheduledTaskHomeIconButtonOffsetY",
-    )
-    val buttonSize = if (compact) 30.dp else TdayDimens.FabSize
-    val defaultElevation = if (compact) 0.dp else TdayDimens.FabElevation
-    val pressedElevation = if (compact) 0.dp else TdayDimens.FabPressedElevation
-
-    Card(
-        modifier = Modifier
-            .size(buttonSize)
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
-        onClick = {
-            TdayHaptics.buttonPress(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = if (compact) RoundedCornerShape(999.dp) else CircleShape,
-        border = if (compact) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f)),
-        colors = CardDefaults.cardColors(containerColor = if (compact) Color.Transparent else colorScheme.background),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = defaultElevation,
-            pressedElevation = pressedElevation,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(if (compact) 24.dp else 22.dp),
-            )
-        }
-    }
-}
+/**
+ * The check-off's beats, the same four every task row in every client plays:
+ * the tick lands, the rule crosses the task, the ink leaves, the row is handed
+ * to the list. Named here rather than left as three `delay` literals so that
+ * this row can be read against `TASK_COMPLETION_*_MS` in `TodoListScreen.kt`,
+ * `CALENDAR_TASK_COMPLETION_*_MS` in `CalendarScreen.kt` and
+ * `taskCompletionTiming.ts` on web without anybody counting milliseconds.
+ *
+ * The first two are gaps and not motions — nobody watches the wait between the
+ * tick and the strike — which is why they are plain numbers while the third,
+ * which is the length of a fade somebody does watch, reads its rung instead.
+ */
+private const val SCHEDULED_TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160L
+private const val SCHEDULED_TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
+private val SCHEDULED_TASK_COMPLETION_FADE_MS = TdayMotionTokens.Durations.Change.toLong()
 
 private val SCHEDULED_TASK_HOME_TODAY_DUE_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).withZone(ZoneId.systemDefault())
@@ -1409,19 +1474,6 @@ private fun ScheduledTaskHomeTodayCard(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        label = "todayCardScale"
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "todayCardOffsetY"
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 9.dp,
-        label = "todayCardElevation"
-    )
     val dateLabel = remember { SCHEDULED_TASK_HOME_TODAY_DATE_FORMATTER.format(Instant.now()) }
     val color = Color(0xFF6EA8E1)
 
@@ -1429,19 +1481,23 @@ private fun ScheduledTaskHomeTodayCard(
         modifier = Modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {}
-            .offset(y = animatedOffsetY)
-            .graphicsLayer { scaleX = animatedScale; scaleY = animatedScale },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
         colors = CardDefaults.cardColors(containerColor = color),
+        // The elevation is Material's to animate now. It was a third
+        // `animateDpAsState` fed into BOTH slots, which is a way of telling
+        // `CardDefaults` that this card has one elevation and then animating it
+        // behind its back; handing it the two ends instead says the same thing
+        // in the API's own terms.
         elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation
+            defaultElevation = TodayCardElevation,
+            pressedElevation = PressedCardElevation
         ),
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusCard),
     ) {
         Box(
             modifier = Modifier
@@ -1467,7 +1523,7 @@ private fun ScheduledTaskHomeTodayCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = FeedCardHorizontalPadding, vertical = TdayDimens.SpacingXl),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1515,7 +1571,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
     val coroutineScope = rememberCoroutineScope()
     // Edit + Copy + Delete: matches the 3-pill width used elsewhere (see
     // SwipeTaskRow.revealWidth).
-    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = 256.dp)
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = SwipeRevealWidth)
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
     val copyContext = LocalContext.current
@@ -1543,24 +1599,81 @@ private fun ScheduledTaskHomeTodayTaskRow(
         state = swipeRevealState,
         label = "scheduledTaskHomeTodaySwipeOffset",
     )
+    // The beats this row cut straight to. The tint answers the finger, so it is
+    // Quick; the title colour travels with the rule crossing it, so it is Emphasis
+    // and not a rung of its own; the fade below carries the row off.
+    val motionEnabled = rememberTdayMotionEnabled()
+    // Gated like the beats in front of it. The last leg of the check-off is timed
+    // against this fade, so a fade still running while its own wait had been zeroed
+    // would pull the row out of the list at full opacity — exactly the pop that leg
+    // exists to prevent.
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
-        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = SCHEDULED_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "scheduledTaskHomeTodayCompletionAlpha",
     )
     val completionOffsetY by animateDpAsState(
-        targetValue = if (completionFading) (-10).dp else 0.dp,
-        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        targetValue = if (completionFading) TaskCompletionRiseOffsetY else TdayDimens.SpacingNone,
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = SCHEDULED_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "scheduledTaskHomeTodayCompletionOffsetY",
     )
-    val titleStrikeProgress by animateFloatAsState(
-        targetValue = if (localStruck) 1f else 0f,
-        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
-        label = "scheduledTaskHomeTodayTitleStrikeProgress",
+    val titleStrikeProgress =
+        rememberTaskStrikeProgress(localStruck, "scheduledTaskHomeTodayTitleStrike")
+    // The number behind that switch, for this row's waits rather than its specs:
+    // the hint's two holds and the three legs of the check-off are gaps between
+    // beats this row gates on [motionEnabled], which is what makes the app's own
+    // scale the right clock for them. See [scaledDelay].
+    val rowMotionScale = rememberTdayMotionScale()
+    val toggleTint by animateColorAsState(
+        targetValue = if (localChecked) {
+            TdayTaskCompleteAccent
+        } else {
+            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "scheduledTaskHomeTodayToggleTint",
     )
+    val titleColor by animateColorAsState(
+        targetValue = if (localStruck) {
+            colorScheme.onSurface.copy(alpha = 0.78f)
+        } else {
+            colorScheme.onSurface
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Emphasis,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "scheduledTaskHomeTodayTitleColor",
+    )
+    var noteLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     val dueText = todo.due?.let(SCHEDULED_TASK_HOME_TODAY_DUE_FORMATTER::format)
-    val rowShape = RoundedCornerShape(16.dp)
+    val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
     val priorityIcon = priorityIconFor(todo.priority)
@@ -1593,14 +1706,14 @@ private fun ScheduledTaskHomeTodayTaskRow(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 58.dp)
+                .heightIn(min = TaskRowMinHeight)
                 .height(IntrinsicSize.Min),
         ) {
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(end = TdayDimens.SpacingXxs),
+                horizontalArrangement = Arrangement.spacedBy(SwipeActionSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TaskSwipeActionButton(
@@ -1686,7 +1799,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                         } else if (!swipeRevealState.isHinting && !pendingCompletion) {
                             claimSwipeSlot()
                             coroutineScope.launch {
-                                swipeRevealState.playHint()
+                                swipeRevealState.playHint(rowMotionScale)
                                 if (latestOpenSwipeTaskId.value == todo.id && !swipeRevealState.isOpenOrDragging) {
                                     onOpenSwipeTaskIdChange(null)
                                 }
@@ -1695,23 +1808,23 @@ private fun ScheduledTaskHomeTodayTaskRow(
                     },
                 shape = rowShape,
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs)
                         .semantics(mergeDescendants = true) {},
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
                         modifier = Modifier
-                            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                            .sizeIn(minWidth = MinTouchTargetSize, minHeight = MinTouchTargetSize)
                             .wrapContentSize(Alignment.Center)
                             .clip(CircleShape)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
-                                indication = ripple(bounded = true, radius = 24.dp),
+                                indication = ripple(bounded = true, radius = CompletionToggleRippleRadius),
                                 enabled = !pendingCompletion,
                             ) {
                                 if (!pendingCompletion) {
@@ -1721,68 +1834,87 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                     TdayHaptics.completion(view)
                                     pendingCompletion = true
                                     coroutineScope.launch {
-                                        delay(160)
+                                        scaledDelay(
+                                            SCHEDULED_TASK_COMPLETION_CHECK_TO_STRIKE_MS,
+                                            rowMotionScale,
+                                        )
                                         localStruck = true
-                                        delay(360)
+                                        scaledDelay(
+                                            SCHEDULED_TASK_COMPLETION_STRIKE_TO_FADE_MS,
+                                            rowMotionScale,
+                                        )
                                         completionFading = true
-                                        delay(260)
+                                        scaledDelay(
+                                            SCHEDULED_TASK_COMPLETION_FADE_MS,
+                                            rowMotionScale,
+                                        )
                                         onComplete()
                                     }
                                 }
                             },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = if (localChecked) ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big) else ImageVector.vectorResource(
-                                R.drawable.ic_lucide_circle
-                            ),
-                            contentDescription = if (localChecked) {
-                                stringResource(R.string.label_completed)
+                        val toggleGlyph = if (localChecked) {
+                            ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
+                        } else {
+                            ImageVector.vectorResource(R.drawable.ic_lucide_circle)
+                        }
+                        val toggleLabel = if (localChecked) {
+                            stringResource(R.string.label_completed)
+                        } else {
+                            stringResource(R.string.label_mark_complete)
+                        }
+                        // Crossed over rather than swapped, the same as the task list's
+                        // and the calendar's toggles: the tint above is only half of the
+                        // t=0 beat, and a glyph that hard-cuts underneath a tint that
+                        // travels is the control answering the finger twice.
+                        Crossfade(
+                            targetState = toggleGlyph,
+                            animationSpec = if (motionEnabled) {
+                                tween(
+                                    durationMillis = TdayMotionTokens.Durations.Quick,
+                                    easing = TdayMotionTokens.Easings.Standard,
+                                )
                             } else {
-                                stringResource(R.string.label_mark_complete)
+                                snap()
                             },
-                            tint = if (localChecked) TdayTaskCompleteAccent else colorScheme.onSurfaceVariant.copy(
-                                alpha = 0.78f
-                            ),
-                            modifier = Modifier.size(24.dp),
-                        )
+                            label = "scheduledTaskHomeTodayToggleGlyph",
+                        ) { glyph ->
+                            Icon(
+                                imageVector = glyph,
+                                // Only the glyph being crossed TO carries the description:
+                                // for the frames both exist, two labels in the tree would
+                                // have TalkBack announce the control twice.
+                                contentDescription = toggleLabel.takeIf { glyph == toggleGlyph },
+                                tint = toggleTint,
+                                modifier = Modifier.size(CompletionToggleIconSize),
+                            )
+                        }
                     }
 
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                            .padding(start = TdayDimens.SpacingXs),
+                        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
                     ) {
                         Text(
                             text = todo.title,
-                            modifier = Modifier.drawWithContent {
-                                drawContent()
-                                if (titleStrikeProgress > 0f) {
-                                    val lineEnd = (
-                                            titleLayoutResult
-                                                ?.takeIf { it.lineCount > 0 }
-                                                ?.getLineRight(0) ?: size.width
-                                            ).coerceIn(0f, size.width)
-                                    val lineY = size.height * 0.56f
-                                    drawLine(
-                                        color = colorScheme.onSurface.copy(alpha = 0.65f),
-                                        start = Offset(0f, lineY),
-                                        end = Offset(lineEnd * titleStrikeProgress, lineY),
-                                        strokeWidth = TdayDimens.BorderWidthThick.toPx(),
-                                    )
-                                }
-                            },
+                            // The rule this row already swept, moved into the modifier
+                            // every task row now shares: the sweep was right and the
+                            // copy of it in each screen was the problem.
+                            modifier = Modifier.taskStrikethrough(
+                                progress = titleStrikeProgress,
+                                layout = titleLayoutResult,
+                                color = colorScheme.onSurface.copy(alpha = 0.65f),
+                                thickness = TdayDimens.BorderWidthThick,
+                            ),
                             style = MaterialTheme.typography.titleMedium,
                             fontFamily = TdayFontFamily,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
                             lineHeight = 22.sp,
-                            color = if (localStruck) {
-                                colorScheme.onSurface.copy(alpha = 0.78f)
-                            } else {
-                                colorScheme.onSurface
-                            },
+                            color = titleColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             onTextLayout = { titleLayoutResult = it },
@@ -1807,17 +1939,24 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = 18.sp,
                                 color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                // Struck alongside the title so the whole task
-                                // reads as done during the completion animation.
-                                textDecoration = if (localStruck) TextDecoration.LineThrough else null,
+                                // Struck alongside the title, on the title's own sweep, so
+                                // the whole task reads as one edit rather than as a rule
+                                // that grows and a rule that appears.
+                                modifier = Modifier.taskStrikethrough(
+                                    progress = titleStrikeProgress,
+                                    layout = noteLayoutResult,
+                                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                    thickness = TdayDimens.BorderWidthThick,
+                                ),
+                                onTextLayout = { noteLayoutResult = it },
                             )
                         }
                     }
 
                     if (listMeta != null || priorityIcon != null) {
                         Row(
-                            modifier = Modifier.padding(end = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(end = TdayDimens.SpacingLg),
+                            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             if (listMeta != null) {
@@ -1825,7 +1964,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                     imageVector = tdayListIconForKey(listMeta.iconKey),
                                     contentDescription = null,
                                     tint = listIndicatorColor,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(RowTrailingIconSize),
                                 )
                             }
                             if (priorityIcon != null) {
@@ -1833,7 +1972,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                                     imageVector = priorityIcon,
                                     contentDescription = stringResource(R.string.label_priority_task),
                                     tint = tdayPriorityColor(todo.priority),
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(RowTrailingIconSize),
                                 )
                             }
                         }
@@ -1862,8 +2001,8 @@ private fun CategoryGrid(
     val colorScheme = MaterialTheme.colorScheme
     val completedColor = completedTileColor(colorScheme)
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFD98F4B),
@@ -1883,7 +2022,7 @@ private fun CategoryGrid(
                 onClick = onOpenPriority,
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = Color(0xFFE06F66),
@@ -1903,7 +2042,7 @@ private fun CategoryGrid(
                 onClick = onOpenAll,
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 color = completedColor,
@@ -1946,19 +2085,6 @@ private fun ListRow(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        label = "listRowScale",
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "listRowOffsetY",
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 8.dp,
-        label = "listRowElevation",
-    )
     val animatedCount by animateIntAsState(
         targetValue = count,
         animationSpec = tween(durationMillis = 220),
@@ -1972,23 +2098,19 @@ private fun ListRow(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(70.dp)
+            .height(ListRowHeight)
             .semantics(mergeDescendants = true) {}
-            .offset(y = animatedOffsetY)
-            .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusCard),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation,
+            defaultElevation = ListRowElevation,
+            pressedElevation = PressedCardElevation,
         ),
     ) {
         Box(
@@ -2036,27 +2158,27 @@ private fun ListRow(
                 tint = lerp(containerColor, Color.White, 0.34f).copy(alpha = 0.42f),
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .offset(x = 14.dp, y = 8.dp)
-                    .size(82.dp),
+                    .offset(x = ListRowWatermarkOffsetX, y = ListRowWatermarkOffsetY)
+                    .size(ListRowWatermarkSize),
             )
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = FeedCardHorizontalPadding, vertical = TdayDimens.SpacingLg),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        modifier = Modifier.size(32.dp),
+                        modifier = Modifier.size(ListRowIconSlotSize),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(ListRowIconSize),
                         )
                     }
                     Column {
@@ -2075,8 +2197,8 @@ private fun ListRow(
                                     contentDescription = stringResource(R.string.members_title),
                                     tint = Color.White.copy(alpha = 0.85f),
                                     modifier = Modifier
-                                        .padding(start = 8.dp)
-                                        .size(16.dp),
+                                        .padding(start = TdayDimens.SpacingMd)
+                                        .size(ListRowSharedBadgeSize),
                                 )
                             }
                         }
@@ -2105,23 +2227,26 @@ private fun ListRow(
 }
 
 /**
- * This feed's item motion, in one place so a row and everything its departure
- * moves travel together.
+ * The one thing about this feed's item motion that is this feed's own: how a
+ * displaced block travels.
  *
  * The Today rows already left on this spring; the tiles and list rows under them
  * had no keys, so every completion re-keyed them by index and they jumped a row
  * height in a single frame while the row above was still gliding away. Same
  * defect as the floater home's empty-state snap, an order of magnitude smaller —
  * this screen never draws an empty scene, so there is no gap to open.
+ *
+ * It stays a spring rather than joining [TdayFeedItemMotion.Placement] because a
+ * spring on Compose's own `StiffnessMediumLow` is a library default rather than
+ * a number anybody here chose, and retiming it is a decision about how this feed
+ * settles, not the drift this file's fades were fixed for. The fades ARE that
+ * drift: they were 180 in and 140 out, ten milliseconds under every other task
+ * feed and named by nothing, and they are [TdayFeedItemMotion]'s now.
  */
-private val ScheduledTaskHomeItemFadeIn =
-    tween<Float>(durationMillis = 180, easing = FastOutSlowInEasing)
 private val ScheduledTaskHomeItemPlacement = spring<IntOffset>(
     dampingRatio = Spring.DampingRatioNoBouncy,
     stiffness = Spring.StiffnessMediumLow,
 )
-private val ScheduledTaskHomeItemFadeOut =
-    tween<Float>(durationMillis = 140, easing = FastOutSlowInEasing)
 
 /**
  * The same spring, for a block a completion *moves* but never adds or removes.
@@ -2143,9 +2268,13 @@ private const val SCHEDULED_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT = 0.66f
 private const val CREATE_LIST_SHEET_MAX_HEIGHT_FRACTION = 0.80f
 private const val CREATE_LIST_SHEET_NORMAL_HEIGHT_FRACTION = 0.70f
 private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
-private const val CREATE_LIST_SHEET_MOTION_MS = 320
+
+/**
+ * How long the search surface is left standing after a result is tapped — not a
+ * token — see docs/motion.md. It equals Change by arithmetic and not by argument:
+ * what it is timed against is the navigation leaving this screen, not a rung.
+ */
 private const val SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS = 260L
-private val RootFeedDockCollapseThreshold = 44.dp
 
 @Composable
 private fun priorityIconFor(priority: String): ImageVector? {

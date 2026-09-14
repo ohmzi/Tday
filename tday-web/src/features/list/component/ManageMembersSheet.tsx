@@ -4,6 +4,8 @@ import { Crown, Share2, X } from "lucide-react";
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import { Input } from "@/components/ui/input";
 import { SheetCard, SheetSectionTitle } from "@/components/ui/sheet-chrome";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
 import { cn } from "@/lib/utils";
 import { hapticTick } from "@/lib/haptics";
 import {
@@ -55,6 +57,7 @@ export default function ManageMembersSheet({
   const isOwner = myRole === "OWNER";
 
   const { members, membersLoading } = useListMembers(listType, listId, open);
+  const { showSkeleton, skeletonClassName } = useSkeletonCrossfade(membersLoading);
   const { addMemberMutateFn, addMemberPending } = useAddListMember(listType, listId);
   const { updateRoleMutateFn } = useUpdateListMemberRole(listType, listId);
   const { removeMemberMutateFn } = useRemoveListMember(listType, listId);
@@ -183,13 +186,26 @@ export default function ManageMembersSheet({
       <div className="flex flex-col gap-3 pb-2">
         <SheetSectionTitle>{listName}</SheetSectionTitle>
         <SheetCard className="px-3 py-1.5">
-          {membersLoading ? (
-            <div className="space-y-2 p-2">
-              <div className="h-10 animate-pulse rounded-2xl bg-muted/70" />
-              <div className="h-10 animate-pulse rounded-2xl bg-muted/70" />
+          {showSkeleton ? (
+            // A member row, not a task row: the same primitive as the feed's skeleton but
+            // at this row's own geometry — the 40 px avatar circle, the `text-sm` name and
+            // the `text-xs` handle under it, inside the row's own `px-1 py-2`. What it
+            // replaced was two 40 px slabs at `rounded-2xl`, which is neither the circle
+            // nor the two lines and stood 32 px short of the two rows it stood in for.
+            <div className={skeletonClassName} aria-busy="true">
+              {[0, 1].map((index) => (
+                <div key={`member-skeleton-${index}`} className="flex items-center gap-3 px-1 py-2">
+                  <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                  <div className="min-w-0 flex-1">
+                    <Skeleton className="mb-1 h-5 w-1/2" />
+                    <Skeleton className="h-4 w-1/3" />
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : members ? (
-            <div className="divide-y divide-border/50">
+          ) : null}
+          {!membersLoading && members ? (
+            <div className="tday-content-enter divide-y divide-border/50">
               {renderMemberRow(members.owner, true)}
               {members.members.map((member) => renderMemberRow(member, false))}
             </div>
@@ -206,7 +222,7 @@ export default function ManageMembersSheet({
                 placeholder={appDict("searchUsersPlaceholder")}
                 autoCapitalize="none"
                 autoCorrect="off"
-                className="h-12 rounded-2xl border-transparent bg-muted/60 font-bold focus-visible:ring-0"
+                className="h-12 rounded-lg border-transparent bg-muted/60 font-bold focus-visible:ring-0"
               />
               {debouncedSearch.trim().length >= 2 ? (
                 <MemberSearchResults
@@ -220,7 +236,7 @@ export default function ManageMembersSheet({
             </SheetCard>
           </>
         ) : confirmingLeave ? (
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
             <p className="text-sm font-extrabold text-destructive">
               {appDict("leaveListConfirm", { name: listName })}
             </p>
@@ -228,7 +244,7 @@ export default function ManageMembersSheet({
               <button
                 type="button"
                 onClick={() => setConfirmingLeave(false)}
-                className="rounded-2xl border border-border/70 bg-card px-5 py-2.5 text-sm font-black"
+                className="rounded-lg border border-border/70 bg-card px-5 py-2.5 text-sm font-black"
               >
                 {appDict("cancel")}
               </button>
@@ -236,7 +252,7 @@ export default function ManageMembersSheet({
                 type="button"
                 disabled={leaveListPending}
                 onClick={() => void handleLeave()}
-                className="rounded-2xl bg-destructive px-5 py-2.5 text-sm font-black text-destructive-foreground disabled:opacity-50"
+                className="rounded-lg bg-destructive px-5 py-2.5 text-sm font-black text-destructive-foreground disabled:opacity-50"
               >
                 {appDict("leaveList")}
               </button>
@@ -251,7 +267,7 @@ export default function ManageMembersSheet({
                   onOpenChange(false);
                   onShareExternal();
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border/70 bg-muted/60 px-5 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/60 px-5 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
               >
                 <Share2 className="h-4 w-4 stroke-[2.4]" />
                 {appDict("share")}
@@ -260,7 +276,7 @@ export default function ManageMembersSheet({
             <button
               type="button"
               onClick={() => setConfirmingLeave(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
             >
               {appDict("leaveList")}
             </button>

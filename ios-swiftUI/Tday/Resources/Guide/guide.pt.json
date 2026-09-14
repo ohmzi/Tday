@@ -424,6 +424,39 @@
       "searchBody": "arraste as tarefas para a ordem que quiser. as suas listas mantem a ordem que lhes da. arraste uma tarefa para cima ou para baixo para organizar o seu dia tal como pensa nele."
     },
     {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Arraste a folha para baixo para fechar",
+      "summary": "Puxe a folha de nova tarefa para baixo para fechá-la.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "A pequena barra no topo da folha de nova tarefa indica que o cartão pode ser puxado para baixo. Arraste e ele acompanha o seu dedo; solte depois de cerca de um quarto do caminho e ele fecha, exatamente como se você tocasse na área escurecida atrás dele. Um impulso rápido também conta — o que vale é para onde você estava indo, não onde soltou — e um puxo do qual você desiste volta ao lugar."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Se o conteúdo de uma folha rola, arraste-a pelo topo: o meio do cartão pertence à lista."
+          ]
+        }
+      ],
+      "searchTitle": "arraste a folha para baixo para fechar",
+      "searchKeywords": "deslizar, arrastar, puxar, fechar, descartar, folha, cartao, alca, gesto, para baixo",
+      "searchBody": "puxe a folha de nova tarefa para baixo para fecha-la. a pequena barra no topo da folha de nova tarefa indica que o cartao pode ser puxado para baixo. arraste e ele acompanha o seu dedo; solte depois de cerca de um quarto do caminho e ele fecha, exatamente como se voce tocasse na area escurecida atras dele. um impulso rapido tambem conta — o que vale e para onde voce estava indo, nao onde soltou — e um puxo do qual voce desiste volta ao lugar. se o conteudo de uma folha rola, arraste-a pelo topo: o meio do cartao pertence a lista."
+    },
+    {
       "id": "floaters-vs-todos",
       "section": "ORGANIZING",
       "sectionOrder": 3,

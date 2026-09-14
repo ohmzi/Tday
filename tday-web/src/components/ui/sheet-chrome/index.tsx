@@ -188,7 +188,7 @@ export function DueDateTimeControl({
   onTimeClick: () => void;
 }) {
   return (
-    <div className="flex items-stretch overflow-hidden rounded-2xl border border-muted-foreground/25 bg-card/40">
+    <div className="flex items-stretch overflow-hidden rounded-lg border border-muted-foreground/25 bg-card/40">
       <button
         type="button"
         aria-label="Due date"

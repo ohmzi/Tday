@@ -697,15 +697,19 @@ private struct RootFeedHeaderCircleMenu<MenuItems: View>: View {
 }
 
 /// Publishes the feed's scroll offset into `RootFeedHeaderScrollState`, and
-/// calls back only when the root dock's collapse threshold is crossed — the
-/// per-frame offset must not touch the owning screen's `@State`.
+/// calls back only when the root dock's fold point is crossed — the per-frame
+/// offset must not touch the owning screen's `@State`.
+///
+/// Where that fold point is belongs to `RootFeedDockCollapse` and not to the
+/// feed that owns this observer: it was a parameter here for as long as each
+/// feed declared its own copy of the distance, and a threshold both callers
+/// pass the same value to is a shared number pretending to be a choice.
 struct RootFeedHeaderScrollObserver: UIViewRepresentable {
     let state: RootFeedHeaderScrollState
-    let collapseThreshold: CGFloat
     let onCollapsedChange: (Bool) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(state: state, collapseThreshold: collapseThreshold, onCollapsedChange: onCollapsedChange)
+        Coordinator(state: state, onCollapsedChange: onCollapsedChange)
     }
 
     func makeUIView(context: Context) -> UIView {
@@ -715,7 +719,6 @@ struct RootFeedHeaderScrollObserver: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
-        context.coordinator.collapseThreshold = collapseThreshold
         context.coordinator.onCollapsedChange = onCollapsedChange
         DispatchQueue.main.async {
             context.coordinator.attach(to: uiView)
@@ -724,7 +727,6 @@ struct RootFeedHeaderScrollObserver: UIViewRepresentable {
 
     final class Coordinator {
         let state: RootFeedHeaderScrollState
-        var collapseThreshold: CGFloat
         var onCollapsedChange: (Bool) -> Void
 
         private weak var observedScrollView: UIScrollView?
@@ -733,11 +735,9 @@ struct RootFeedHeaderScrollObserver: UIViewRepresentable {
 
         init(
             state: RootFeedHeaderScrollState,
-            collapseThreshold: CGFloat,
             onCollapsedChange: @escaping (Bool) -> Void
         ) {
             self.state = state
-            self.collapseThreshold = collapseThreshold
             self.onCollapsedChange = onCollapsedChange
         }
 
@@ -767,7 +767,10 @@ struct RootFeedHeaderScrollObserver: UIViewRepresentable {
                 state.offset = offset
             }
 
-            let collapsed = offset > collapseThreshold
+            // `lastCollapsed` is the dead band's memory as well as the callback's
+            // gate now: the edge being tested depends on the side the dock is
+            // already on, and nothing else on this path remembers.
+            let collapsed = RootFeedDockCollapse.next(previous: lastCollapsed ?? false, offset: offset)
             guard lastCollapsed != collapsed else { return }
             lastCollapsed = collapsed
             onCollapsedChange(collapsed)

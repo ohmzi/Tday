@@ -209,6 +209,9 @@
     <string name="error_update_name_failed">Не удалось обновить имя. Повторите попытку.</string>
     <string name="error_change_password_failed">Не удалось изменить пароль. Повторите попытку.</string>
     <string name="settings_appearance">Оформление</string>
+    <string name="settings_motion">Движение</string>
+    <string name="settings_reduce_motion">Уменьшить анимацию</string>
+    <string name="settings_reduce_motion_system">Анимации уже отключены в настройках Android.</string>
     <string name="settings_behavior">Поведение</string>
     <string name="settings_default_home_screen">Домашний экран по умолчанию</string>
     <string name="settings_reminders">Напоминания</string>

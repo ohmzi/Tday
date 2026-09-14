@@ -424,6 +424,39 @@
       "searchBody": "zieh aufgaben in die reihenfolge, die du willst. deine listen behalten die reihenfolge, die du ihnen gibst. zieh eine aufgabe nach oben oder unten, um deinen tag so anzuordnen, wie du ihn dir vorstellst."
     },
     {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Karte nach unten wegziehen",
+      "summary": "Zieh die Karte für neue Aufgaben nach unten, um sie zu schließen.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Der kleine Balken oben auf der Karte für neue Aufgaben heißt: Du kannst sie nach unten ziehen. Zieh sie, und sie folgt deinem Finger; lass etwa ab einem Viertel des Weges los, und sie schließt sich — genau so, als hättest du auf den abgedunkelten Bereich dahinter getippt. Ein kurzer Schwung zählt ebenfalls: Entscheidend ist, wohin du unterwegs warst, nicht wo du losgelassen hast. Und ein Zug, den du dir anders überlegst, federt an seinen Platz zurück."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Wenn sich der Inhalt einer Karte scrollen lässt, zieh sie oben an: Die Mitte gehört der Liste."
+          ]
+        }
+      ],
+      "searchTitle": "karte nach unten wegziehen",
+      "searchKeywords": "wischen, ziehen, schliesen, verwerfen, karte, blatt, griff, geste, nach unten",
+      "searchBody": "zieh die karte fur neue aufgaben nach unten, um sie zu schliesen. der kleine balken oben auf der karte fur neue aufgaben heist: du kannst sie nach unten ziehen. zieh sie, und sie folgt deinem finger; lass etwa ab einem viertel des weges los, und sie schliest sich — genau so, als hattest du auf den abgedunkelten bereich dahinter getippt. ein kurzer schwung zahlt ebenfalls: entscheidend ist, wohin du unterwegs warst, nicht wo du losgelassen hast. und ein zug, den du dir anders uberlegst, federt an seinen platz zuruck. wenn sich der inhalt einer karte scrollen lasst, zieh sie oben an: die mitte gehort der liste."
+    },
+    {
       "id": "floaters-vs-todos",
       "section": "ORGANIZING",
       "sectionOrder": 3,

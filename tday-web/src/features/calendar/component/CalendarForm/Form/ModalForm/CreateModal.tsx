@@ -6,7 +6,9 @@ import ConfirmCancelEditDialog from "@/features/calendar/component/ConfirmationM
 import { Modal, ModalOverlay, ModalContent } from "@/components/ui/Modal";
 import { SheetHeader } from "@/components/ui/sheet-chrome";
 import type { CalendarTaskFormState } from "@/features/calendar/hooks/useCalendarTaskFormState";
-import CalendarTaskFormBody from "../CalendarTaskFormBody";
+// The body is the lazy half of this screen; the sheet around it is not. See
+// LazyCalendarTaskFormBody for why the split moved in here.
+import CalendarTaskFormBody from "../LazyCalendarTaskFormBody";
 
 type CreateCalendarFormProps = {
   start: Date;

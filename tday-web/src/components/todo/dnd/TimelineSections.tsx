@@ -70,6 +70,7 @@ export default function TimelineSections({
   focusedTaskId,
   focusedDateKey,
   earlierExpanded,
+  earlierExpanding,
   onToggleEarlier,
   onDragActiveChange,
 }: {
@@ -78,6 +79,13 @@ export default function TimelineSections({
   focusedTaskId?: string | null;
   focusedDateKey?: string | null;
   earlierExpanded: boolean;
+  /**
+   * A tap to open Earlier is still being handed the slot, so `earlierExpanded`
+   * has not gone true yet — `earlierIsExpanding`. Required rather than
+   * optional: a caller that sequences the bucket at all has an answer, and one
+   * that does not passes `false` and says so.
+   */
+  earlierExpanding: boolean;
   onToggleEarlier: () => void;
   /** Drives `includeEmptyDropTargets` on the caller's `buildTimelineSections`. */
   onDragActiveChange: (active: boolean) => void;
@@ -91,6 +99,7 @@ export default function TimelineSections({
           section={section}
           focusedDateKey={focusedDateKey}
           collapsed={section.collapsible ? !earlierExpanded : false}
+          expanding={section.collapsible ? earlierExpanding : false}
           onToggleCollapse={section.collapsible ? onToggleEarlier : undefined}
         >
           {section.todos.map((todo) => (

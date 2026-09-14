@@ -51,7 +51,7 @@ interface MobileSearchHeaderProps {
 const collapsedButtonClassName = cn(
   "flex h-14 w-14 shrink-0 items-center justify-center rounded-full",
   "border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)]",
-  "transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10",
+  "transition-all duration-enter hover:-translate-y-0.5 hover:bg-card dark:border-white/10",
 );
 
 export default function MobileSearchHeader({
@@ -222,7 +222,22 @@ export default function MobileSearchHeader({
         // collapsing page header measures its handoff against this bar's bottom
         // edge, so the two must not drift.
         nativePageBarClassName,
-        "transition-all duration-300",
+        // A rung rather than a number, and that is the whole of the claim — this
+        // is NOT the expand being timed. Swapping `justify-between` for
+        // `justify-stretch` redistributes every child in the bar, and measured in
+        // Chromium against this stylesheet the second one moves 778px on the
+        // first frame and sits there: `justify-content` is a discrete property
+        // that does not interpolate, and a parent cannot animate where its
+        // children land however long it asks for. The 300 this replaces timed
+        // exactly as much. Animating the redistribution would mean each child
+        // carrying its own transition, which is a bigger change than a bar that
+        // reflows in one frame is asking for.
+        //
+        // The declaration stays because it still covers the bar's own animatable
+        // surface — its background — and `Enter` is the rung for that by the
+        // ladder's own default clause: a motion with no reason to be another
+        // length.
+        "transition-all duration-enter",
         isExpanded ? "justify-stretch" : "justify-between",
       )}
     >
@@ -276,7 +291,7 @@ export default function MobileSearchHeader({
               "rounded-full",
               "bg-card/90",
               "border border-white/70 shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)]",
-              "transition-colors duration-200",
+              "transition-colors duration-enter",
               "dark:border-white/10",
               isSearchFocused && ["bg-card", "border-accent/45"],
             )}
@@ -284,7 +299,7 @@ export default function MobileSearchHeader({
             <Search
               className={cn(
                 "pointer-events-none absolute left-4 h-4 w-4",
-                "transition-colors duration-200",
+                "transition-colors duration-enter",
                 isSearchFocused ? "text-accent" : "text-muted-foreground",
               )}
             />
@@ -319,7 +334,7 @@ export default function MobileSearchHeader({
                     "rounded-full bg-muted/60 px-2 py-1",
                     "text-xs font-black text-muted-foreground/60",
                     "hover:bg-muted hover:text-muted-foreground",
-                    "transition-all duration-200",
+                    "transition-all duration-enter",
                   )}
                 >
                   {isMac ? (

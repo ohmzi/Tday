@@ -1,6 +1,9 @@
 import { Ellipsis, Leaf, ListPlus, Moon, Search, Sun, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { DURATION_MS, EASE } from "@/lib/motion";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
+import { scrollTo } from "@/lib/scroll";
 import { cn } from "@/lib/utils";
 import { nativeAppScrollAttribute } from "./nativeAppLayout";
 import { clamp01, stagger } from "./nativeHeaderEasing";
@@ -150,9 +153,41 @@ export const tdaySearchCapsuleClearClass =
  * across whatever passes underneath.
  */
 export const rootFeedHeaderButtonClass =
-  "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
+  "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-enter hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
 
 const floaterAccent = "#4D8F83";
+
+/**
+ * How long the time-of-day mark may be stale for. Not a motion value and not on
+ * the ladder — nothing moves when it fires. It is a plain minute because that is
+ * the period iOS gives the `TimelineView` it reads the same glyph off, and the
+ * one Android's `MARK_CLOCK_TICK_MS` polls on.
+ */
+const MARK_CLOCK_TICK_MS = 60_000;
+
+/**
+ * How long after the last scroll frame the header drops its compositor hints.
+ * not a token — see docs/motion.md. It is a debounce on a hint, not a motion
+ * anybody watches: nothing on the screen is this long, and the only way to see
+ * the number at all is to go looking for a layer. Long enough that a finger
+ * pausing mid-flick does not throw away the layers the next flick needs; short
+ * enough that a header parked at the top of a feed is not holding three of them
+ * for the rest of the session.
+ *
+ * A clock is what bounds a hint here because there is nothing else to bound it
+ * with: a scroll pass has no end event, only a last frame that turns out later
+ * to have been the last. The compositor-hints block in `globals.css` argues why
+ * the app's only hint is this one and not a class — briefly, that a class hands
+ * the engine the hint and the `animation-name` in the same style recalculation,
+ * which is too late to have bought a frame.
+ */
+const HINT_IDLE_MS = 200;
+
+/** Whether the wall clock says it is daytime right now. */
+function isDaytimeNow(): boolean {
+  const hour = new Date().getHours();
+  return hour >= 6 && hour < 18;
+}
 
 type Props = {
   title: string;
@@ -201,22 +236,39 @@ export default function RootFeedHeroHeader({
   const shortLabelRef = useRef<HTMLSpanElement | null>(null);
   const measureRef = useRef<HTMLSpanElement | null>(null);
   const resultsRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const longVisibleRef = useRef(true);
   const scrollerRef = useRef<HTMLElement | null>(null);
   const searchOpenRef = useRef(searchOpen);
   const hasQueryRef = useRef(false);
+  /** The rAF's `apply`, so a commit can run the same layout without waiting a frame. */
+  const applyRef = useRef<(() => void) | null>(null);
+  /** The morph currently in flight, so a reversal can be measured before it is cut. */
+  const morphRef = useRef<Animation[]>([]);
+  const wasSearchOpenRef = useRef(searchOpen);
 
   const hasQuery = searchQuery.trim().length > 0;
   searchOpenRef.current = searchOpen;
   hasQueryRef.current = hasQuery;
 
-  const isDaytime = (() => {
-    const hour = new Date().getHours();
-    return hour >= 6 && hour < 18;
-  })();
+  // Sampled on a timer, not during render. A render-time read is only ever as
+  // fresh as the last render, and nothing on this header guarantees one — a
+  // session left open across 18:00 keeps the sun up until something unrelated
+  // re-renders. iOS reads the glyph off `TimelineView(.periodic(from: .now, by:
+  // 60))` and Android polls the same minute from the same unaligned start, so all
+  // three turn the glyph over on the same boundary. Nothing animates when it
+  // fires and nothing should: the change happens once a day while nobody is
+  // looking at the header.
+  const [isDaytime, setIsDaytime] = useState(isDaytimeNow);
+  useEffect(() => {
+    // The Floater's leaf never changes, so it does not get a clock.
+    if (mark === "floaterLeaf") return;
+    const timer = window.setInterval(() => setIsDaytime(isDaytimeNow()), MARK_CLOCK_TICK_MS);
+    return () => window.clearInterval(timer);
+  }, [mark]);
 
   const scrollToTop = useCallback(() => {
-    scrollerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    scrollTo(scrollerRef.current, { top: 0 });
   }, []);
 
   // The morph is applied by writing styles straight onto the nodes inside a
@@ -233,6 +285,34 @@ export default function RootFeedHeroHeader({
     if (!scroller) return;
 
     let frame = 0;
+    let hintTimer = 0;
+    let hinting = false;
+
+    // `apply` rewrites width, height and transform on these three every scroll
+    // frame, under a strip that is pinned over a feed still scrolling behind it
+    // — the one place in the app where a layer promotion lands mid-gesture, and
+    // the reason this is the app's only `will-change`. The hint is taken when a
+    // pass STARTS, a frame before `apply` first runs, which is the whole of what
+    // makes it worth anything; left on for the life of the header it would be
+    // three permanent textures, which is what the compositor-hints block in
+    // `globals.css` refuses and what `clearHints` exists to prevent.
+    //
+    // Each node promises only what this effect actually writes to it. A hint
+    // wider than the change is a promise the element never keeps, and an engine
+    // is entitled to reserve for all of it.
+    const hintTargets = (): [HTMLElement | null, string][] => [
+      [markRef.current, "width, height, transform"],
+      [titleRef.current, "transform, opacity"],
+      [capsuleRef.current, "width, transform"],
+    ];
+
+    const clearHints = () => {
+      hintTimer = 0;
+      hinting = false;
+      for (const [node] of hintTargets()) {
+        if (node) node.style.willChange = "";
+      }
+    };
 
     const apply = () => {
       frame = 0;
@@ -343,10 +423,28 @@ export default function RootFeedHeroHeader({
     };
 
     const schedule = () => {
+      // Written once when a pass starts, not once a frame: assigning the same
+      // string back every frame is a style mutation the engine still has to
+      // process, on the frames this exists to keep cheap.
+      if (!hinting) {
+        hinting = true;
+        for (const [node, properties] of hintTargets()) {
+          if (node) node.style.willChange = properties;
+        }
+      }
+      // Re-armed on every call, so a pass ends when the scrolling does rather
+      // than a fixed time after it began — a slow drag down the feed keeps its
+      // layers for as long as it lasts.
+      if (hintTimer) window.clearTimeout(hintTimer);
+      hintTimer = window.setTimeout(clearHints, HINT_IDLE_MS);
       if (frame) return;
       frame = requestAnimationFrame(apply);
     };
 
+    // Handed out so a commit can run this same pass synchronously. A scroll frame
+    // still goes through `schedule`; only the state changes below, which arrive as
+    // renders and not as scroll events, call it directly.
+    applyRef.current = apply;
     apply();
     // A webfont swapping in changes the title's natural width, and nothing else
     // here would hear about it — a font swap fires neither scroll nor resize.
@@ -356,7 +454,13 @@ export default function RootFeedHeroHeader({
     scroller.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
     return () => {
+      applyRef.current = null;
       if (frame) cancelAnimationFrame(frame);
+      // The nodes outlive this effect on a re-run (`m` is a module constant, so
+      // in practice only StrictMode's double-invoke), and a hint left behind by
+      // a torn-down pass is an always-on hint by another route.
+      if (hintTimer) window.clearTimeout(hintTimer);
+      clearHints();
       scroller.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
@@ -380,11 +484,85 @@ export default function RootFeedHeroHeader({
   }, [searchOpen, onSearchOpenChange]);
 
   // Re-run the layout when the field opens or closes, and when the title text
-  // changes width (locale switch).
-  useEffect(() => {
-    const event = new Event("scroll");
-    scrollerRef.current?.dispatchEvent(event);
+  // changes width (locale switch) — synchronously, in a layout effect, rather than
+  // by poking the scroller and waiting for the animation frame that poke schedules.
+  // Everything the rAF writes is scroll-derived except the open state, and that one
+  // arrives as a commit: routing it through a synthetic scroll event left the
+  // capsule's width unordered against the paint of the commit that changed its
+  // contents, so whether the expanded field ever showed up clipped inside the folded
+  // 56px pill came down to where the browser chose to put a frame.
+  //
+  // Then play the difference back. The rAF stays the ONLY writer of the settled
+  // geometry: a CSS transition on `width`/`transform` here would also catch every
+  // scroll frame of the fold, where these two values are recomputed continuously,
+  // and lag the finger by the length of the transition. So the morph is armed the
+  // way `useRowPlacement` arms a placement — measure where it was, write where it
+  // goes, animate the gap — which leaves the scroll path untouched. `Emphasis`,
+  // because width and position are geometry (`docs/motion.md`, second idiom rule);
+  // the title only fades, so it clears out on `Quick` with the other two controls.
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    const capsule = capsuleRef.current;
+    const titleEl = titleRef.current;
+    const opened = wasSearchOpenRef.current !== searchOpen;
+    wasSearchOpenRef.current = searchOpen;
+
+    // Measured off the boxes rather than off the last values written, and before the
+    // running morph is cut, so a field closed again mid-open starts back from where
+    // the eye actually has it instead of from a width it never reached.
+    const capsuleRect = opened && capsule ? capsule.getBoundingClientRect() : null;
+    const first =
+      capsuleRect && header
+        ? {
+            width: capsuleRect.width,
+            // The capsule is `left-0` inside the header, so this IS its translateX,
+            // read back off the box and therefore true mid-animation.
+            x: capsuleRect.left - header.getBoundingClientRect().left,
+            titleOpacity: titleEl ? getComputedStyle(titleEl).opacity : "1",
+          }
+        : null;
+    for (const animation of morphRef.current) animation.cancel();
+    morphRef.current = [];
+
+    const apply = applyRef.current;
+    apply?.();
+
+    // The finished state is already drawn by the line above, so everything from here
+    // is the trip and nothing else — which is what lets these guards simply return
+    // (`docs/motion.md`'s fifth idiom rule). No `apply` means no scroller was found
+    // and nothing has been written to animate towards; jsdom has no `animate` at all.
+    if (!first || !capsule || !apply || prefersReducedMotion()) return;
+    if (typeof capsule.animate === "function") {
+      // Both endpoints written out rather than leaning on an implicit keyframe. The
+      // cost is that the destination is the one captured here, so a scroll during a
+      // CLOSE — the only direction whose target is still scroll-derived — lands on
+      // the width this frame asked for and takes the remainder in one step.
+      morphRef.current.push(
+        capsule.animate(
+          [
+            { width: `${first.width}px`, transform: `translateX(${first.x}px)` },
+            { width: capsule.style.width, transform: capsule.style.transform },
+          ],
+          { duration: DURATION_MS.emphasis, easing: EASE.standard },
+        ),
+      );
+    }
+    if (titleEl && typeof titleEl.animate === "function") {
+      morphRef.current.push(
+        titleEl.animate(
+          [{ opacity: first.titleOpacity }, { opacity: titleEl.style.opacity }],
+          { duration: DURATION_MS.quick, easing: EASE.standard },
+        ),
+      );
+    }
   }, [searchOpen, title]);
+
+  // `autoFocus` fired on mount, and the field is no longer mounted on demand — both
+  // halves of the capsule stay in the tree so they can cross-fade. Focus follows the
+  // state instead; closing needs no counterpart, since disabling the input blurs it.
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
 
   const MarkIcon = mark === "floaterLeaf" ? Leaf : isDaytime ? Sun : Moon;
   const markColor =
@@ -438,7 +616,7 @@ export default function RootFeedHeroHeader({
           ref={markRef}
           aria-hidden
           className={cn(
-            "pointer-events-none absolute left-0 top-0 origin-top-left transition-opacity duration-200",
+            "pointer-events-none absolute left-0 top-0 origin-top-left transition-opacity duration-quick motion-reduce:transition-none",
             searchOpen ? "opacity-0" : "opacity-100",
           )}
         >
@@ -449,8 +627,14 @@ export default function RootFeedHeroHeader({
           ref={titleRef}
           type="button"
           onClick={scrollToTop}
+          // No transition on `opacity`: the rAF above rewrites it every scroll
+          // frame from `1 - drop`, and a transition on a value that is replaced
+          // each frame never reaches the value it was given — it only follows the
+          // finger a fixed distance behind. The open/close step is the one change
+          // here that is NOT scroll-derived, and the layout effect plays that one
+          // back explicitly.
           className={cn(
-            "absolute left-0 top-0 origin-top-left whitespace-nowrap transition-opacity duration-200",
+            "absolute left-0 top-0 origin-top-left whitespace-nowrap",
             searchOpen ? "pointer-events-none" : "",
           )}
           // Hidden until the first frame positions it: with no transform yet it
@@ -471,7 +655,7 @@ export default function RootFeedHeroHeader({
 
         <div
           className={cn(
-            "absolute right-0 flex items-center gap-2 transition-opacity duration-200",
+            "absolute right-0 flex items-center gap-2 transition-opacity duration-quick motion-reduce:transition-none",
             searchOpen ? "pointer-events-none opacity-0" : "opacity-100",
           )}
           style={{ top: m.topInset }}
@@ -499,58 +683,82 @@ export default function RootFeedHeroHeader({
           className="absolute left-0 z-[2] overflow-hidden rounded-full border border-white/70 bg-card/90 shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] dark:border-white/10"
           style={{ top: m.topInset, height: m.barButtonSize }}
         >
-          {searchOpen ? (
-            <div className="flex h-full w-full items-center gap-2 px-3">
-              <Search className={tdaySearchCapsuleIconClass} />
-              <input
-                autoFocus
-                type="search"
-                value={searchQuery}
-                onChange={(event) => onSearchQueryChange(event.target.value)}
-                placeholder={searchPlaceholder}
-                aria-label={searchAriaLabel}
-                className={tdaySearchCapsuleInputClass}
-              />
-              <button
-                type="button"
-                onClick={() => onSearchOpenChange(false)}
-                aria-label={searchAriaLabel}
-                className={tdaySearchCapsuleClearClass}
-              >
-                <X className="h-5 w-5 stroke-[2.6]" />
-              </button>
-            </div>
-          ) : (
-            // The glyph stays pinned at searchLeadingPadding, which centres it
-            // once the capsule is a round button, while the placeholder simply
-            // runs off the end and is clipped.
+          {/* Both states stay in the tree and cross-fade, which is how iOS and
+              Android draw this capsule too: two overlays on one clipped shape,
+              sized by it and never the reverse. Swapping them on the commit is
+              what made the open a cut — the outgoing half had no frame to leave
+              in, and the incoming one was laid out against whichever width the
+              capsule happened to be carrying. `Quick`, because a control getting
+              out of the way is not something anybody is meant to watch go.
+
+              `disabled` rather than an unmount does the rest: it takes the hidden
+              half out of the tab order and off the accessibility tree the same
+              way `.disabled(!searchExpanded)` and `enabled = searchExpanded` do
+              on the other two clients.
+
+              The glyph below stays pinned at searchLeadingPadding, which centres
+              it once the capsule is a round button, while the placeholder simply
+              runs off the end and is clipped. */}
+          <button
+            type="button"
+            disabled={searchOpen}
+            aria-hidden={searchOpen}
+            onClick={() => onSearchOpenChange(true)}
+            aria-label={searchAriaLabel}
+            className={cn(
+              "absolute inset-0 flex items-center text-left transition-opacity duration-quick motion-reduce:transition-none",
+              searchOpen ? "pointer-events-none opacity-0" : "opacity-100",
+            )}
+            style={{ paddingLeft: m.searchLeadingPadding }}
+          >
+            <span
+              className="flex shrink-0 items-center justify-center"
+              style={{ width: m.searchIconSlot }}
+            >
+              <Search className="h-[22px] w-[22px] stroke-[2.6] text-foreground" />
+            </span>
+            <span
+              ref={labelRef}
+              className="ml-0.5 min-w-0 flex-1 text-base font-bold text-muted-foreground"
+              style={{ opacity: 0, paddingRight: m.searchLabelTrailingPadding }}
+            >
+              <span ref={longLabelRef} className="block truncate">
+                {searchPlaceholder}
+              </span>
+              <span ref={shortLabelRef} className="block truncate" style={{ display: "none" }}>
+                {searchPlaceholderShort}
+              </span>
+            </span>
+          </button>
+
+          <div
+            aria-hidden={!searchOpen}
+            className={cn(
+              "absolute inset-0 flex items-center gap-2 px-3 transition-opacity duration-quick motion-reduce:transition-none",
+              searchOpen ? "opacity-100" : "pointer-events-none opacity-0",
+            )}
+          >
+            <Search className={tdaySearchCapsuleIconClass} />
+            <input
+              ref={searchInputRef}
+              type="search"
+              disabled={!searchOpen}
+              value={searchQuery}
+              onChange={(event) => onSearchQueryChange(event.target.value)}
+              placeholder={searchPlaceholder}
+              aria-label={searchAriaLabel}
+              className={tdaySearchCapsuleInputClass}
+            />
             <button
               type="button"
-              onClick={() => onSearchOpenChange(true)}
+              disabled={!searchOpen}
+              onClick={() => onSearchOpenChange(false)}
               aria-label={searchAriaLabel}
-              className="flex h-full w-full items-center text-left"
-              style={{ paddingLeft: m.searchLeadingPadding }}
+              className={tdaySearchCapsuleClearClass}
             >
-              <span
-                className="flex shrink-0 items-center justify-center"
-                style={{ width: m.searchIconSlot }}
-              >
-                <Search className="h-[22px] w-[22px] stroke-[2.6] text-foreground" />
-              </span>
-              <span
-                ref={labelRef}
-                className="ml-0.5 min-w-0 flex-1 text-base font-bold text-muted-foreground"
-                style={{ opacity: 0, paddingRight: m.searchLabelTrailingPadding }}
-              >
-                <span ref={longLabelRef} className="block truncate">
-                  {searchPlaceholder}
-                </span>
-                <span ref={shortLabelRef} className="block truncate" style={{ display: "none" }}>
-                  {searchPlaceholderShort}
-                </span>
-              </span>
+              <X className="h-5 w-5 stroke-[2.6]" />
             </button>
-          )}
+          </div>
         </div>
 
         {searchOpen && results ? (

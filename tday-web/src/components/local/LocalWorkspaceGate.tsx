@@ -148,7 +148,7 @@ function GateHeader({
           Change setup
         </button>
       )}
-      <div className="flex h-[42px] w-[42px] items-center justify-center rounded-2xl bg-primary/12">
+      <div className="flex h-[42px] w-[42px] items-center justify-center rounded-lg bg-primary/12">
         <Icon className="h-[22px] w-[22px] text-primary" strokeWidth={2.25} />
       </div>
       <p className="text-[21px] font-bold leading-tight text-foreground">{title}</p>

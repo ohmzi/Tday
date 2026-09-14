@@ -182,6 +182,12 @@ struct CreateTaskSheet: View {
                     .transition(TdayCenteredSelectorMotion.transition)
             }
         }
+        // This card is presented by `tdayBottomSheetPresentation`, whose chrome —
+        // a grabber and a drag-to-dismiss — is applied to the view it is handed and
+        // therefore sits above the scrim declared just above here. Saying so is what
+        // keeps the bar from floating lit on the dim and keeps a pull downward on
+        // the dim from discarding a half-written task.
+        .tdaySheetContentIsCovered(activeSelector != nil)
         .task {
             hydrateFromInitialPayload()
         }

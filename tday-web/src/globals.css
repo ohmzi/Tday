@@ -13,6 +13,65 @@
    verbatim and never resolves it, so ordering for its sake would not matter. */
 @import "./generated/motion-tokens.css";
 
+/* ── The reduced-motion floor ──
+   The safety net under every animation in the app, and specifically under the
+   ones nobody remembered to guard. The blocks further down this file each
+   answer for one motion they own; this one answers for the motion no block
+   claims — a Tailwind `animate-*` utility, a library's inline transition, the
+   next keyframe somebody writes without reading this paragraph.
+
+   It sits directly under the imports because everything it floors has to be in
+   the cascade before it, and because an `@import` that follows any other rule
+   is discarded — the note above the motion-tokens import spells that out.
+
+   `!important`, in a file that spends a paragraph below arguing its way OUT of
+   one. A cascade layer cannot do this job: the `tday-press` layer wins against
+   utilities, and most of what this rule exists for is not a utility. It is
+   dnd-kit's `transition` string on a dragging row and vaul's on a drawer —
+   inline styles, which no layer outranks and only `!important` does.
+   Specificity stays at zero all the same (`:where()` inside the `:not()`), so
+   a rule that deliberately means to out-rank the floor still can.
+
+   A floor and not an off switch. `animation: none` would take the fill mode
+   with it, and an element whose resting CSS *is* its own start frame —
+   `opacity: 0`, waiting for a keyframe to raise it — would then be invisible
+   for good. That is the fifth idiom rule in `docs/motion.md` exactly inverted:
+   the trip removed and the destination with it. A floored animation still
+   runs, still fills `forwards`/`both` onto its last frame, and still fires
+   `animationend`, so the JS that waits for one advances instead of stalling.
+   The delays go to zero for the other half of the same rule: a delay is the
+   wait with the motion already gone, and removing the motion must never mean
+   keeping the wait.
+
+   The two exemptions are busy indicators, which are status rather than
+   transition. They have no finished state for this rule to draw, and one that
+   has stopped reads as work that has finished when it has not — the single
+   thing worse than a spinner that spins. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    /* not a token — see docs/motion.md. Not a rung and not a length anybody
+       watches: it is the shortest animation that still reports having
+       happened. Zero is what the eye wants, but a zero-length animation's
+       `animationend` is not something every engine agrees to fire, and this
+       rule's whole argument is that the event still arrives. */
+    --tday-motion-floor: 1ms;
+  }
+
+  *:not(:where(.animate-spin, .animate-pulse)),
+  *:not(:where(.animate-spin, .animate-pulse))::before,
+  *:not(:where(.animate-spin, .animate-pulse))::after {
+    animation-duration: var(--tday-motion-floor) !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: var(--tday-motion-floor) !important;
+    transition-delay: 0s !important;
+    /* The CSS half of `src/lib/scroll.ts`. That module downgrades the smooth
+       scroll a script asks for; this catches the scroller that asks for one in
+       a stylesheet, where no script is passing through to be asked. */
+    scroll-behavior: auto !important;
+  }
+}
+
 @font-face {
   font-family: "Nunito";
   src: url("./assets/fonts/Nunito.ttf") format("truetype");
@@ -60,6 +119,11 @@
   --color-red: hsl(var(--red));
   --color-nlp: hsl(var(--nlp));
   --color-shadow: hsl(var(--shadow));
+
+  /* The one dim every overlay draws. `hsl()` rather than `hsla()` because
+     `--sheet-scrim` carries its own alpha after a slash; the two-token spelling
+     used by `--color-popover` is for values that do not. */
+  --color-sheet-scrim: hsl(var(--sheet-scrim));
 
   --color-sidebar: hsla(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
@@ -133,9 +197,38 @@
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  /* The radius ladder, whole. It used to be three lines — `lg`, `md`, `sm` —
+     and Tailwind supplied the other five from `theme.css:397-404`, which is how
+     `rounded-xl` came to render 12px while `rounded-md` rendered 14px: a rung
+     that is not declared is a rung the framework picks, and it picked one that
+     sorts below the rung under it. So the whole namespace is declared here, the
+     unused keys included, rather than half of it.
+
+     Five rungs, because five distinct corners are what the app actually draws —
+     2, 12, 14, 16, 24. `2xl` and `3xl` are gone as names and not as pixels: the
+     fix was a rename at the call sites, not a revalue here. Lifting `--radius-xl`
+     above `md` would have moved the rendered corner at 35 sites and, with `2xl`
+     folded onto `lg`, at 84 more — most of the app, and a device pass this row
+     does not have. Renaming leaves every corner byte-identical and costs a diff,
+     the two `<pre>` blocks in `public/content/blog` included: they ride the same
+     stylesheet and rule C walks them for exactly that reason.
+
+     It is also the same argument the easings below make: a value that already
+     has a name does not get a second one. `lg` and `2xl` both meaning 16px was
+     exactly that, and one of them had to go.
+
+     `xs` keeps Tailwind's own `0.125rem` rather than the `2px` the two
+     `rounded-[2px]` sites spell, so that declaring the rung stays a pure
+     declaration — the app pins no root font size, and `2px` would diverge from
+     what renders today for anyone who has changed theirs. */
+  --radius-xs: 0.125rem;
+  --radius-sm: calc(var(--radius) - 4px); /* 12px */
+  --radius-md: calc(var(--radius) - 2px); /* 14px */
+  --radius-lg: var(--radius); /* 16px */
+  --radius-xl: calc(var(--radius) + 8px); /* 24px */
+  --radius-2xl: initial;
+  --radius-3xl: initial;
+  --radius-4xl: initial;
 
   /* The two easings Tailwind does not already ship, and only those two. Its own
      `--ease-in-out`, `--ease-out` and `--ease-in` (theme.css:434-436) are
@@ -229,6 +322,23 @@
     color: hsl(var(--accent-foreground));
   }
 
+  /* The blanket press affordance: anything that takes a finger squashes, dips a
+     pixel and a half, and pushes a ripple out from under the touch.
+
+     `:where()` holds the whole selector at 0,0,0 so a call site can say
+     `active:scale-[0.97]` and be obeyed — 17 do, at three depths — and the
+     pressed geometry stays down here in `base` so that they still can.
+
+     The rest of the affordance does not stay here, because specificity was
+     never the lever. `@layer base` loses to `@layer utilities` at every
+     specificity there is: `transition-colors`, which every shadcn Button
+     carries, replaced this rule's transition wholesale, and the most common
+     button in the app squashed in one frame instead of easing in — under a
+     ripple that still took its time, because no class can reach a pseudo. An
+     0,3,4 selector written in this layer loses to that 0,1,0 utility just the
+     same. What a class must not be able to delete lives in `@layer tday-press`
+     immediately below this block, which is opened after the Tailwind import and
+     therefore sorts after `utilities`. */
   :where(
       button,
       [role="button"],
@@ -244,9 +354,17 @@
     isolation: isolate;
     overflow: hidden;
     position: relative;
-    transition-duration: 180ms;
-    transition-property: background-color, border-color, box-shadow, color, filter, opacity, scale, translate;
-    transition-timing-function: var(--tday-ease-gesture);
+    /* Quick — the app answering a finger that is on it — and left down here on
+       purpose, where a `duration-200` on the element still beats it. A rule that
+       cannot see how big its surface is can pick the press LENGTH for a site
+       that says nothing, but it should not overrule a site that said something;
+       the dozen pressables carrying a duration of their own are a call-site
+       migration with its own row, not a silent retiming to be had for free
+       here. It ran on a hand-written 180ms, which named no rung and differed
+       from Tailwind's un-overridden `--default-transition-duration` — the 150
+       every bare `transition-*` in the app already rides — by exactly enough to
+       make two buttons beside each other disagree. */
+    transition-duration: var(--tday-duration-quick);
   }
 
   :where(
@@ -266,12 +384,26 @@
     pointer-events: none;
     position: absolute;
     scale: 0.34;
-    transition-duration: 340ms;
+    /* The ripple goes from a third of the surface to nearly twice it. That is a
+       change of size, which rule 2 puts on Emphasis; it ran on a hand-written
+       340ms, which is that rung to within a frame and named nothing. */
+    transition-duration: var(--tday-duration-emphasis);
     transition-property: opacity, scale;
     transition-timing-function: var(--tday-ease-gesture);
     z-index: 0;
   }
 
+  /* The one half of the affordance a call site is meant to be able to beat, and
+     the reason the selector is a `:where()` at all. `--tday-press-row` is the
+     full-width-row depth, which is the right default for a rule that cannot see
+     how big its element is; 17 elements that DO know how big they are say
+     otherwise and are obeyed, because a utility beats `base`: the onboarding
+     wizard's step chip at `active:scale-[0.97]` (which is `--tday-press-card`),
+     eight sheet buttons at `[0.99]`, and eight small round icon buttons — the
+     task FAB among them — at `active:scale-95`. Six more say `[0.985]`, which is
+     this token written out, so they are not counted here; they are a separate
+     tidy-up. Move this declaration up a layer and all 17 go quiet at once, which
+     would look like a tidy-up while it happened. */
   :where(
       button,
       [role="button"],
@@ -281,9 +413,7 @@
       a[href][class*="bg-"],
       [data-pressable="true"]
     ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]):active {
-    box-shadow: var(--press-shadow) !important;
-    filter: saturate(0.98);
-    scale: 0.985;
+    scale: var(--tday-press-row);
     translate: 0 1.5px;
   }
 
@@ -299,7 +429,88 @@
     opacity: 1;
     scale: 1.9;
   }
+}
 
+/* The half of the press affordance no component class may delete.
+
+   Where this layer is opened is the whole mechanism: layer order follows first
+   appearance, so a layer opened here — after `@import "tailwindcss"` — sorts
+   after `utilities` and outranks `transition-colors`, `duration-300` and
+   `shadow-lg` alike, whatever specificity either side happens to have. Opened
+   above the import it would sort first instead, and every defect below would
+   come back with the stylesheet still reading exactly as it does now.
+
+   What is up here is the smallest set of declarations that has to win, and no
+   more. WHICH properties animate, because `transition-colors` on a shadcn
+   Button — the most common button in the app — deleted scale and translate out
+   of the list and the squash arrived in one frame under a ripple that still
+   took its time. WHAT CURVE they animate on, for the same reason. The
+   reduced-motion floor, which the same utility was overriding on every element
+   that carried one. And the pressed shadow, which used to hold its ground with
+   an `!important`; the layer does that work now, so the escalation comes out
+   rather than being met with a bigger one. HOW LONG the press takes is not up
+   here — that one stays in `base` with the pressed scale, where a call site can
+   still beat it. */
+@layer tday-press {
+  :where(
+      button,
+      [role="button"],
+      [class*="cursor-pointer"],
+      a[href][class*="rounded"],
+      a[href][class*="shadow"],
+      a[href][class*="bg-"],
+      [data-pressable="true"]
+    ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]) {
+    /* This list REPLACES whatever the call site asked for — that is what being
+       up here means — so it has to carry the properties those call sites were
+       animating and not just the ones the press needs. `transition-colors`
+       contributes outline-color, text-decoration-color, fill and stroke;
+       `transition-transform` contributes transform and rotate. Neither the squash
+       nor the ripple touches any of those six: they are here so a button that
+       tints its own focus ring, or turns its own chevron, keeps doing it while
+       the press rides along beside it.
+
+       It is NOT a superset of `transition-all`, and no closed list can be. So it
+       is the closed list plus whatever `all` is actually animating on a pressable
+       in this app, which is one property: `min-width`, for the dock tab, which
+       grows to hold its label on becoming the selected tab and collapses again on
+       losing it. Drop it and that tab snaps 104px → 48px in a single frame beside
+       an indicator pill that still glides for 300ms — the same jolt-under-a-slow-
+       companion this rule exists to remove, relocated rather than removed. It has
+       to be enumerated HERE because a call site cannot add to this list from
+       below: a `transition-[min-width]` of its own is displaced by this very
+       declaration, and the `!important` that would beat it is the escalation the
+       layer exists to make unnecessary. `width` and `height` stay out: nothing
+       pressable animates them today, and a blanket size transition on every
+       button in the app is a larger promise than a rule that cannot see its own
+       element is in a position to make. */
+    transition-property: background-color, border-color, box-shadow, color, fill, filter,
+      min-width, opacity, outline-color, rotate, scale, stroke, text-decoration-color, transform,
+      translate;
+    /* Gesture is the press curve in the normative table, and this is the half
+       of the timing the rule does own: `transition-colors` on a shadcn Button
+       was pressing on Tailwind's default ease, so the most common button in the
+       app answered a finger on a curve the vocabulary does not have. */
+    transition-timing-function: var(--tday-ease-gesture);
+  }
+
+  :where(
+      button,
+      [role="button"],
+      [class*="cursor-pointer"],
+      a[href][class*="rounded"],
+      a[href][class*="shadow"],
+      a[href][class*="bg-"],
+      [data-pressable="true"]
+    ):not(:disabled):not([aria-disabled="true"]):not(input):not(textarea):not(select):not([data-no-press]):active {
+    box-shadow: var(--press-shadow);
+    filter: saturate(0.98);
+  }
+
+  /* The floor belongs up here with the transition it floors. A layer down it
+     was overridden by the same `transition-*` utilities, so a button carrying
+     one went on animating under `prefers-reduced-motion: reduce`. The squash it
+     draws instead is instant, which is the finished state. */
   @media (prefers-reduced-motion: reduce) {
     :where(
         button,
@@ -325,7 +536,12 @@
       display: none;
     }
   }
+}
 
+/* `base` reopened. The colour and radius variables below were always in this
+   layer; the press layer is spliced in above them rather than appended to the
+   file so that both halves of the affordance stay in one place to read. */
+@layer base {
   :root {
     /*
      * Toast action ("Undo") colour. Mirrors the iOS snackbar accent exactly —
@@ -353,6 +569,18 @@
     --calendar-lime: 169.09 30% 43.14%;
     --calendar-orange: 33 100% 48%;
     --calendar-red: 4 90% 58%;
+
+    /*
+     * The dim behind every sheet, dialog, drawer and centred selector. Not a new
+     * opinion: 0.40 light / 0.68 dark is byte-for-byte what both native clients
+     * already draw — TdayTheme.swift:76 `Color.black.opacity(isDark ? 0.68 : 0.40)`
+     * and TdaySheetChrome.kt:111 `Color.Black.copy(alpha = if (isDarkTheme()) 0.68f
+     * else 0.40f)`. Web was the only client with an opinion of its own, and it had
+     * four of them — 0.80, 0.65, 0.50 and 0.45 across five scrims — so which shade
+     * the page went depended on which overlay system happened to own the surface.
+     */
+    --sheet-scrim: 0 0% 0% / 0.40;
+
     --radius: 1rem;
 
     --background: 222.86 46.67% 97.06%;
@@ -422,6 +650,8 @@
 
   .dark {
     --toast-action: 4 66% 64%;
+    /* Dark leans harder on the scrim than light does, on all three clients. */
+    --sheet-scrim: 0 0% 0% / 0.68;
     --lime: 169.09 30% 50%;
     --calendar-lime: 169.09 30% 43.14%;
     --calendar-red: 4 70% 56%;
@@ -545,12 +775,25 @@
  * positioned bar at 55% of the block, which on a two-line title landed in the
  * gap between the lines and on a three-line title crossed only the middle one.
  *
- * The sweep is gone rather than rebuilt, because both native apps dropped
- * theirs for the same reason in `f07187b2`: Android's row is a plain
- * `TextDecoration.LineThrough` and iOS's a plain `.strikethrough()`, each
- * fading in over the same 320ms. What is left here is that fade. It also means
- * the title and the notes directly below it are now struck by the same
- * mechanism instead of two that never quite matched.
+ * The sweep stayed gone here rather than being rebuilt, because a decoration
+ * the browser draws already crosses every line and a bar we position does not —
+ * that is the lesson of `f07187b2`, not a rule against sweeps. Android draws one
+ * rule per line and sweeps them (`TaskStrikethrough.kt`) because Compose's
+ * `TextDecoration.LineThrough` is a boolean with nothing to animate; iOS keeps
+ * `.strikethrough()` and animates it. Three mechanisms, one beat, one rung.
+ *
+ * What is left on this client is the fade, and it also means the title and the
+ * notes directly below it are struck by the same mechanism instead of two that
+ * never quite matched — a claim this comment made for a while before it was
+ * true: the notes carried Tailwind's bare `line-through`, so the rule above them
+ * faded in and the rule under them snapped on, half a beat of the check-off
+ * telling the reader two different things.
+ *
+ * Emphasis and not Change, by `docs/motion.md`'s second idiom rule: the
+ * decoration grows across the text, and a thing that changes how big it is
+ * takes the longer rung. The rows' own colour transition is pinned to the same
+ * rung for the same reason — `text-decoration-color` is `currentColor`, so ink
+ * and rule have to arrive together or the strike reads as a second event.
  *
  * Declared here rather than with Tailwind's `line-through` utility so the class
  * stays the single switch the rows toggle, and so the decoration's reveal has
@@ -564,16 +807,53 @@
 
 .task-strike {
   text-decoration: line-through;
-  /* Follows the title into `text-muted-foreground`, so the rule dims with the
-     text over the row's own 300ms colour transition. */
+  /* Follows the text into `text-muted-foreground`, so the rule dims with it
+     over the row's own colour transition. */
   text-decoration-color: currentColor;
-  animation: task-strike-fade 320ms var(--tday-ease-standard) forwards;
+  animation: task-strike-fade var(--tday-duration-emphasis) var(--tday-ease-standard) forwards;
 }
 
-/* A reduced-motion reader still needs to see the task is struck — just not the fade. */
+/*
+ * The same rule lifting again, on the Completed screens, where un-ticking a task
+ * replays the check-off backwards.
+ *
+ * It is a separate class and not `.task-strike` played in reverse because the two
+ * states are not symmetrical in the DOM: a completed row is BORN struck, so a class
+ * whose whole job is to reveal a decoration would fade a rule in on every row in
+ * the list the moment the list mounted. This one only ever appears on the beat the
+ * user asked for, and the decoration stays declared underneath the transparent
+ * colour so the text does not reflow as the rule goes.
+ *
+ * Emphasis in both directions, like the strike it undoes. The rule is one motion
+ * and it does not get shorter for being played backwards — the first idiom rule
+ * caps an exit at the length of the enter it undoes, and this sits exactly at that
+ * cap rather than under it, because the native rows retract the same rule they
+ * swept and a retraction IS the geometry the second rule points at. Web fades where
+ * they retract; that is a mechanism difference between a `text-decoration` and a
+ * drawn line, and not a reason for the beat to take a different length of time.
+ */
+@keyframes task-strike-lift {
+  to {
+    text-decoration-color: transparent;
+  }
+}
+
+.task-unstrike {
+  text-decoration: line-through;
+  animation: task-strike-lift var(--tday-duration-emphasis) var(--tday-ease-standard) forwards;
+}
+
+/* A reduced-motion reader still needs to see the task is struck — just not the fade.
+   `.task-unstrike` is handed its finished frame the other way: no animation, and the
+   transparent colour taken straight, so the rule is simply gone. */
 @media (prefers-reduced-motion: reduce) {
   .task-strike {
     animation: none;
+  }
+
+  .task-unstrike {
+    animation: none;
+    text-decoration-color: transparent;
   }
 }
 
@@ -601,18 +881,102 @@
   50% { opacity: 1; transform: scale(1); }
 }
 
+/* ── Compositor hints, and why this stylesheet has none ──
+   `will-change` is a promise, not a decoration: a standing instruction to keep
+   an element on its own compositor layer, which on a phone is a texture the size
+   of the element held for as long as the declaration applies — about ten
+   megabytes for a full-screen one. This block was written to spend some of that
+   on the surfaces that move while a feed scrolls under them: the dock and the
+   create button ducking, the bulk bar and the mobile search panel arriving, the
+   empty scene, Earlier's rows, the card a finger is carrying. Nine rules took a
+   hint and gave it back, and this is the argument for why, because the next
+   person to reach for one will reach for exactly those nine.
+
+   A hint buys the FIRST frame of a motion and nothing after it, and only when it
+   reaches the element BEFORE that motion starts. An engine composites a
+   keyframed `opacity` or `transform` on its own; what it will not do is build the
+   layer until the animation begins, and that build is paid for in the frame the
+   user is watching it begin. Set the hint in the same style recalculation as the
+   `animation-name` and there is no earlier frame for it to have built in — the
+   engine promotes at the one compositing update it was going to promote at
+   anyway, and all that is left of the hint is the texture.
+
+   That is every rule below, without exception. `.tday-surface-*` lands on a bar
+   and a panel that are `{flag && …}`, so they mount already carrying it;
+   `.tday-rows-*`, `.tday-empty-*` and the drag lift mount the same way. And
+   `useDuckPresence` hands out `""` until the dock has been absent once, so the
+   very first duck-out — the one beat this was scoped for, the dock leaving
+   through the bottom edge while the bulk bar rises into its slot over a feed
+   that has not stopped — applies `.tday-duck-exit` with hint and keyframe
+   together. There is no frame between them to promote in.
+
+   The lifetime half is worse than the timing half. A hint's life is its CLASS's
+   life, and nothing here takes a class off when a keyframe finishes: the `-exit`
+   halves go with their node a rung later (`useFadeUnmount`, `useDuckPresence`)
+   and the `-enter` halves are applied at mount and stay until the surface does.
+   `wasEverAbsent` never flips back, so once a user has entered selection mode
+   once the dock and the create button carry `.tday-duck-enter` for the life of
+   the shell — and those classes sit on the full-width fixed positioning strip,
+   not on the `backdrop-blur-xl` box two levels inside it, so the layer would be
+   a new one rather than one the blur had already paid for. A permanent always-on
+   layer, bought with a frame that was never for sale.
+
+   `prefers-reduced-motion` turns what is left into pure cost. The floor at the
+   top of this file reaches `animation-duration`, `-iteration-count` and
+   `-delay`; it deliberately does not reach `animation-name`, and every block
+   below cancels its own motion with `animation: none`, which does. So a hinted
+   class under that preference is a layer reserved for a keyframe that never
+   runs, held for as long as the surface is drawn.
+
+   Two of the nine would have been wrong even with the timing right, and they are
+   the ones worth naming because they look like candidates. `.task-strike` and
+   `.task-unstrike` animate `text-decoration-color`, which is paint: there is no
+   layer to run it on, so the promotion would still repaint every frame of the
+   strike. `.tday-empty-scene` and `.tday-empty-sparkle` run `infinite`, which is
+   an always-on hint wearing an animation's clothes. `.tday-route-fade` is the
+   largest version of the same mistake — `RouteFade` puts that class on the
+   container every screen is drawn inside and keys it on `pathname`, so it is
+   never absent and never small — and `::view-transition-old(root)` beside it
+   needs nothing either, being a flat image the compositor already owns, which
+   the route-change block below says in as many words.
+
+   The app's one hint is in JavaScript instead, in `RootFeedHeroHeader`: three
+   nodes whose width, height and transform are rewritten every frame of a scroll
+   pass, hinted when the pass starts — a frame before the first write it prepares
+   — and dropped `HINT_IDLE_MS` after its last frame. Set ahead, and with a clock
+   to end it: the two things a class on a mounting node cannot offer.
+
+   Rule F of `tests/guardrails/motion-reachability-web.test.ts` is the ratchet
+   for the next attempt rather than a guard over this one. A `will-change` here
+   may only sit in a rule that also declares an `animation`, never in one that
+   runs `infinite`, and never in one whose animation is cancelled under
+   `prefers-reduced-motion` without the hint being cancelled in the same block —
+   that last shape is the one that got past review here. All three read on an
+   empty list today and say so. What no test can see is how long a class stays on
+   an element, which is the paragraph above and is the reviewer's job. */
+
 /* The scene's own arrival. The frame before it is the row the user just ticked
    off leaving the screen, and a state that simply appears in that gap reads as
    the list breaking rather than as the list being finished. */
 .tday-empty-enter {
-  animation: 520ms var(--tday-ease-scene) both tday-empty-rise;
+  animation: var(--tday-duration-scene) var(--tday-ease-scene) both tday-empty-rise;
 }
 
 /* The burst leads; the scene follows through it. Without the wait the
    illustration is already sitting there when the first piece of paper clears
-   it, and the confetti reads as decoration on a static page. */
+   it, and the confetti reads as decoration on a static page.
+
+   `--tday-celebration-start` is how long the WHOLE celebration waited before
+   any of it played, set by a feed that draws this scene inline and has to move
+   its own rows out of the way first (`EmptyState`'s `celebrationStartDelayMs`).
+   It is added to the lead rather than spent out of it — `MotionTokens.kt` calls
+   the two "added, never traded" — because a lead the travel eats into is not a
+   lead: the paper would be crossing a screen that is still sliding. Unset, and
+   therefore zero, for the overlay callers, where nothing but the paper moves. */
 .tday-empty-enter-celebrating {
-  animation-delay: 320ms;
+  animation-delay: calc(
+    var(--tday-celebration-start, 0s) + var(--tday-delay-celebration-lead)
+  );
 }
 
 @keyframes tday-empty-rise {
@@ -620,17 +984,83 @@
   to { opacity: 1; transform: none; }
 }
 
-/* The exit mirror of `.tday-empty-enter`, played only during an "Earlier"
-   hand-off (requirement 3 of the Earlier section — Today originally, since
-   generalized to every other scope with its own Earlier bucket): the caller
-   sets `animation-duration` inline from `TODAY_EARLIER_EXIT_MS`
-   (`todayEarlierIllustration.ts`) — the SAME constant that gates the delay
-   before Earlier's rows are told to appear — so the visual exit and that
-   hand-off are one number, read twice, not two independently tuned to look
-   close together. */
+/* The slot the scene sits in, as opposed to the ink on it.
+
+   `.tday-empty-exit` below animates paint. Its box used to hold all 42vh of the
+   slot for the whole beat and then be released in the single frame the hand-off
+   swapped Earlier's rows in — a motion, then a jump, and the jump the larger of
+   the two. The track closes under the fade instead, so the page has taken the
+   space back by the time the rows arrive and the swap frame has nothing left to
+   move.
+
+   A grid with one 1fr row is the only interpolable spelling of "as tall as
+   whatever is inside it": `height` cannot be animated away from `auto`, and a
+   measured pixel height would want re-measuring every time the copy inside
+   rewraps. Same track the completed row closes on its way out
+   (`TodoItemContainer`). */
+.tday-empty-slot {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--tday-duration-enter) var(--tday-empty-sink-ease);
+}
+
+/* The track closing, a separate class from the ink sinking below because the
+   stylesheet needs it to be — the ink is an animation and this is a transition
+   on a grid — and not because the two can disagree. They cannot: one departure,
+   one question, asked in `emptySceneIsLeaving` (`todayEarlierIllustration.ts`)
+   and spent on both names. A scene whose ink leaves without its box, or the
+   other way round, reads as two things happening to it rather than as it
+   leaving.
+
+   Nothing here runs inside the celebration window, and nothing needs to: the
+   scene is still on screen when that window ends
+   (`shouldShowTodayEmptyIllustration`'s last line), so a tap landing in it
+   swaps nothing and is never sequenced at all (`earlierSlotChangesHands`). A
+   track closed on that path would have had to open again the frame the class
+   came off — 42vh taken out from under Earlier's rows and put straight back —
+   and the ink that did fade there snapped back to full opacity with it.
+
+   The child's two declarations are scoped to the closing rather than left on: a
+   grid item that is not a scroll container keeps its own content height as the
+   track's floor, so without them the track would have nothing to shrink to —
+   and left on, they would clip the resting scene. */
+.tday-empty-slot-closing {
+  grid-template-rows: 0fr;
+}
+
+.tday-empty-slot-closing > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+:root {
+  /* Named once because the sink and the track closing under it have to ride the
+     same curve: two curves on one departure read as two things happening to the
+     scene rather than as the scene leaving. Deliberately not `Scene`'s curve
+     read backwards — see the non-token table in docs/motion.md. */
+  --tday-empty-sink-ease: cubic-bezier(0.3, 0, 0.4, 1);
+}
+
+/* The exit mirror of `.tday-empty-enter`, played whenever the empty scene gives
+   its slot up to Earlier's own rows (requirement 3 of the Earlier section —
+   Today originally, since generalized to every other scope with its own Earlier
+   bucket). Two things ask for it and they ask for the same beat: a tap that
+   swaps the slot, and the celebration window that was holding the scene above
+   those rows running out (`useCelebrationSceneExit`). Only ever applied to a
+   `.tday-empty-slot`, which carries the track this rides over — closed by
+   `.tday-empty-slot-closing` above, always in the same breath as this.
+
+   `--tday-duration-enter` is the rung `TODAY_EARLIER_EXIT_MS`
+   (`todayEarlierIllustration.ts`) sits on, and that constant argues the choice:
+   it gates the delay before Earlier's rows are told to appear, these two draw
+   the exit that delay is waiting for, and all three read the one generated rung
+   — a duration bound for a stylesheet wants the token and only a `setTimeout`
+   wants the integer (`src/lib/motion.ts`). One number, read twice, not two
+   tuned to look close together. */
 .tday-empty-exit {
   animation-name: tday-empty-sink;
-  animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1);
+  animation-duration: var(--tday-duration-enter);
+  animation-timing-function: var(--tday-empty-sink-ease);
   animation-fill-mode: both;
 }
 
@@ -671,6 +1101,88 @@
   to { opacity: 0; }
 }
 
+/* ── A skeleton handing over to the content it stood in for ──
+   Every loading state on web ended in one frame: the placeholder was rendered
+   behind a `loading` flag, so the flag going false took the grey bars off the
+   screen and put the rows up in the same paint. `useSkeletonCrossfade`
+   (`src/hooks/useSkeletonCrossfade.ts`) keeps the placeholder mounted past that
+   flip and these two draw the hand-over it buys — the skeleton fading out over
+   the content fading in, both halves on one clock.
+
+   `Enter`, at 200: one element arriving, and nothing here argues for another
+   length. Not the 190 the ledger row asked for — `docs/motion.md` settled that
+   at this rung, 190 being two hand-written Android tweens against 200's
+   fifty-seven sites across two clients, and `src/lib/feedItemMotion.ts` restates
+   it; a 190 typed here would also be a raw literal in a file whose whole point
+   is that it names the token. `Standard` is the curve for the reason
+   `AppRootView.swift` already gives for the iOS handover it mirrors: a crossfade
+   runs both halves off one clock and neither `Enter` nor `Exit` describes that.
+   The duration is `var(--tday-duration-enter)` and not an integer, the same
+   reading `.tday-empty-exit` above argues — a duration bound for a stylesheet
+   wants the token and only a `setTimeout` wants the integer.
+
+   The exiting skeleton takes itself out of flow, which is the half that stops
+   this being a worse bug than the one it fixes. The content arrives in the same
+   frame the flag flips; a placeholder lingering 200 ms in flow above it would
+   hold three rows of height open and then drop them, which is exactly the jump
+   `TaskRowSkeleton` was built to remove. `height: 0` with the overflow left
+   visible releases the space immediately and keeps painting the bars, and
+   `display: flow-root` is what makes that true of a placeholder that carries a
+   margin: `TodoListLoading` holds its callers' `mt-5` / `mt-8` on the box inside
+   this one, and with no block formatting context here that margin collapses back
+   out through the zero-height wrapper and holds 20-32 px open until the node
+   finally goes — the space given back late, which is the same step in slower
+   clothes.
+
+   `z-index: 20` is what puts the bars over the arriving rows rather than under
+   them, and the number is the rows' own: the content of a task row sits on
+   `relative z-10` (`TodoItemContainer`, and `FloaterItemContainer` beside it)
+   over a wrapper that is `relative` with no z-index of its own, so the row's 10
+   competes in the same stacking context this rule does and a 1 here loses to it.
+   It loses invisibly on the surfaces that wrap their content in
+   `.tday-content-enter` — an opacity animation makes that wrapper a stacking
+   context and shuts the 10 inside it — and visibly on the four `TodoListLoading`
+   screens, which have no single content block to carry the enter half. A ghost
+   behind its own replacement reads as text printed on top of grey. 20 clears the
+   rows and still passes under the sheets and bars, which start at `z-40`.
+
+   The crossfade class goes on a WRAPPER, never on an element that also carries
+   `animate-pulse`. The blanket reduced-motion floor at the top of this file
+   exempts `.animate-pulse` and `.animate-spin` per element — a busy indicator
+   that freezes is one that lies — so a wrapper carrying both would take the
+   pulse's exemption with it and keep a 200 ms fade a reduced-motion user asked
+   not to have. The pulse belongs on the `Skeleton` bars inside; this belongs
+   above them. (In practice the hook does not linger at all under the
+   preference — `useFadeUnmount` reads it and drops the delay — so this is the
+   belt to that braces.) */
+.tday-skeleton-exit {
+  position: relative;
+  z-index: 20;
+  display: flow-root;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  animation-name: tday-skeleton-fade-out;
+  animation-duration: var(--tday-duration-enter);
+  animation-timing-function: var(--tday-ease-standard);
+  animation-fill-mode: both;
+}
+
+.tday-content-enter {
+  animation-name: tday-content-fade-in;
+  animation-duration: var(--tday-duration-enter);
+  animation-timing-function: var(--tday-ease-standard);
+  animation-fill-mode: both;
+}
+
+@keyframes tday-skeleton-fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes tday-content-fade-in {
+  from { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Held at the top of the twinkle rather than switched off, so the scene still
      looks deliberate rather than half-drawn. */
@@ -678,10 +1190,18 @@
   .tday-empty-sparkle { animation: none; opacity: 1; }
   /* Drawn where it lands, with no trip to get there. */
   .tday-empty-enter { animation: none; }
-  /* Held fully visible rather than switched off mid-air — the hand-off's own
-     timer (not this animation) is what actually gates Earlier's rows, so
-     disabling the animation changes nothing about when they appear. */
+  /* Held fully visible rather than switched off mid-air, and its slot held open
+     underneath it. Mostly unreachable now: `useEarlierExpandHandoff` reads the
+     same preference and takes its immediate branch, so `earlierHandoffPending`
+     — the only thing that ever applies this class — never goes true in the
+     first place. What is left is the hand-off already in flight when the
+     preference flips mid-beat, whose timer is not cancelled; this is what stops
+     that one sinking through. The track stays open for the same reason: shutting
+     it with no trip to carry it would take the scene off the screen and leave
+     the rest of that beat holding nothing, which is the destination of the
+     hand-off and not the destination of this scene. */
   .tday-empty-exit { animation: none; }
+  .tday-empty-slot-closing { grid-template-rows: 1fr; }
   /* `useFadeUnmount` itself skips its own delay under reduced motion (see its
      own doc comment), so these never actually get applied for long — this is
      just the same belt-and-braces as the pair above. */
@@ -747,18 +1267,220 @@
   .tday-surface-exit { animation: none; }
 }
 
+/* ── A task being carried ──
+   The card inside a dnd-kit `DragOverlay`, on the three screens that let a task
+   be dragged somewhere (`src/lib/dragLiftMotion.ts` holds the other end of this
+   — the landing — and argues both).
+
+   The overlay used to appear at full size with its shadow already cast, which
+   gives a pick-up no moment of picking up: the card is in the list, then it is
+   in the air, in the same paint. This is that moment. The card rises out of the
+   row — it gets bigger and it starts casting — so `from` is the resting state
+   and the class itself declares the lifted one, which is what leaves a reduced-
+   motion reader with a card that is already up rather than one held halfway.
+
+   `box-shadow: none` interpolates against whatever shadow the card's own class
+   carries (CSS matches a `none` against the other list as zero-size and
+   transparent), so the three overlays keep their own elevation and this only
+   decides that it arrives rather than being there.
+
+   The scale is `--tday-press-card` read backwards. That token is how far a card
+   sinks under a finger; this is the same card going the other way under the same
+   finger, and it costs the tree no tenth press literal on top of the nine
+   `docs/motion.md` already counts. Emphasis by the geometry rule, on the Enter
+   curve — a thing arriving, which should settle rather than stop. */
+.tday-drag-lift {
+  animation: tday-drag-lift var(--tday-duration-emphasis) var(--tday-ease-enter) both;
+  scale: calc(2 - var(--tday-press-card));
+}
+
+@keyframes tday-drag-lift {
+  from {
+    box-shadow: none;
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The trip goes; the destination — a card that is up, bigger and casting —
+     stays, because it is declared on the class and not in the keyframe. The
+     landing asks the same question in JavaScript and answers it the other way
+     round, which its own doc comment argues: there, a drop's finished state is
+     the overlay gone. */
+  .tday-drag-lift { animation: none; }
+}
+
+/* ── The bottom chrome ducking ──
+   The dock and the create button leave by travelling straight down and out
+   through the bottom edge, and come back the same way. They used to be
+   `{flag && <Control />}` and nothing else, so a screen that took the slot —
+   selection mode, the More sheet — arrived over a hole that appeared on the
+   frame before it.
+
+   Not the `.tday-surface-*` pair above, though the shape of the problem is the
+   same, and the difference is the vocabulary working rather than a second
+   opinion about the same motion. A surface arrives OVER content that stays put
+   and nudges 8px to say which way it came from: nothing about it changes where
+   it lives, which is the Change rung. These two leave the layout entirely, and
+   position changing is Emphasis by the geometry rule. Android and iOS spend the
+   Settle spring here — the token whose own doc string says "a dock, a bar" —
+   and web has no spring runtime, so the weight is spelled as the Gesture
+   easing, which is the stand-in `docs/motion.md` names for those springs.
+
+   The travel is a percentage of the control's own box so the dock (64px tall)
+   and the button (56px) each clear their own height plus the 18px + safe-area
+   they sit above, with no second number to keep in step with the layout. The
+   fade is not decoration: the strip below the safe-area inset is still screen
+   on a device with a home indicator, so opacity is what guarantees the control
+   is gone rather than parked in it — and iOS needs exactly the same guarantee
+   from the same `.combined(with: .opacity)`.
+
+   The duration is read from the same token the `useDuckPresence` timer reads,
+   which is what keeps the node in the DOM long enough for the exit to play. Not
+   the `SURFACE_TRANSITION_MS` trick of handing the number in through an inline
+   style: there is only one rung involved and both halves can name it, so there
+   is nothing for a fixture to carry. */
+.tday-duck-enter {
+  animation-name: tday-duck-in;
+  animation-duration: var(--tday-duration-emphasis);
+  animation-timing-function: var(--tday-ease-gesture);
+  animation-fill-mode: both;
+}
+
+.tday-duck-exit {
+  animation-name: tday-duck-out;
+  animation-duration: var(--tday-duration-emphasis);
+  animation-timing-function: var(--tday-ease-gesture);
+  animation-fill-mode: both;
+}
+
+@keyframes tday-duck-in {
+  from { opacity: 0; transform: translateY(150%); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes tday-duck-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(150%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The trip goes, the destination stays: a control that cannot duck is drawn
+     in its slot, and one that cannot duck out is taken away at once —
+     `useDuckPresence` drops its linger here for that reason, so the exit class
+     is barely applied at all. */
+  .tday-duck-enter { animation: none; }
+  .tday-duck-exit { animation: none; }
+}
+
 /* ── Route change ──
    Screens share a toolbar row, so nothing in the bar moves between routes; the
-   fade is what turns a one-frame swap into a handover. Short: this sits between
-   a tap and the screen the user asked for, and anything longer reads as lag. */
-@keyframes fade-in {
+   fade is what turns a one-frame swap into a handover.
+
+   `Enter`, and it was a hand-written 140 until PR 55. Half of that number's
+   argument survives the move and is restated here: this is not `Scene`, and it is
+   not Android's 360 either — a route change that can be watched is a route change
+   that reads as a stall. What the 140 could not defend was 140 in particular. It
+   named no rung, and the lag it was written against is the wait in front of the
+   destination rather than the length of the fade: the arriving screen is laid out
+   and hit-testable from the first frame, so this animation never sits between a
+   tap and its answer. A thing arriving with no reason to be another length is
+   `Enter`, which is what the normative table says and what the other client in
+   this row is being brought to.
+
+   Two paths, because only one of them exists everywhere:
+
+     Everywhere — the arriving screen fades up out of the background and the
+     leaving one is simply gone. `RouteFade` argues why its tree is not held
+     mounted for an exit, and that argument still stands.
+
+     Where `document.startViewTransition` exists — `lib/navigation.tsx` asks for
+     one, and the leaving screen comes back as a SNAPSHOT laid over the top. That
+     is the outgoing half of the handover at none of the cost of the live tree
+     `RouteFade` refused to pay for it: no duplicate queries, no second set of
+     subscriptions, a flat image the compositor owns.
+
+   The two COMPOSE rather than switch, which is the whole reason the overrides
+   below are shaped the way they are. Nothing has to detect which path it is on,
+   and nothing has to be turned off halfway — a browser without view transitions
+   runs exactly the first path and sees no difference. */
+@keyframes tday-route-fade-in {
   from { opacity: 0; }
 }
 
+@keyframes tday-route-fade-out {
+  to { opacity: 0; }
+}
+
 .tday-route-fade {
-  animation: 140ms ease-out both fade-in;
+  animation: var(--tday-duration-enter) var(--tday-ease-enter) both tday-route-fade-in;
+}
+
+/* Three things the UA default has to be talked out of, none of which has a local
+   symptom if it is deleted — the transition keeps running and keeps looking like
+   a route change, just a wrong one.
+
+   `new` must not animate. It renders the arriving screen LIVE, `.tday-route-fade`
+   is already fading up inside it, and a second opacity curve over that one is a
+   fade of a fade — the double-dip this pairing exists to avoid.
+
+   `old` is therefore the half that moves, so it has to be on top: the UA paints
+   `new` last, and an opaque `new` over a fading `old` hides the outgoing half
+   completely.
+
+   And the blend has to be `normal`. `plus-lighter` is what keeps the UA's own
+   symmetric crossfade from dipping through the background in the middle; over two
+   layers that are each opaque at the ends it blows the whole screen out to white.
+
+   What is left is a fade THROUGH the background rather than a straight crossfade —
+   the new content reaches half opacity a beat after the old has left half of its
+   own — which is the same fade `RouteFade` already describes on the path without
+   snapshots, now with the outgoing screen in it. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+  animation: var(--tday-duration-enter) var(--tday-ease-exit) both tday-route-fade-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tday-route-fade { animation: none; }
+  /* The destination is the whole of the finished state at a route change, so the
+     outgoing snapshot is not merely un-animated — an un-animated `old` is opaque
+     and on top, and would hold the screen the user just left for the frame it
+     takes the transition to end. Taken off outright instead. */
+  ::view-transition-old(root) { animation: none; opacity: 0; }
+}
+
+/* ── A sheet leaving ──
+   vaul animates its own sheet and scrim from a stylesheet it injects at import:
+   half a second in, half a second out. The way in keeps that. It is a library
+   default rather than a decision made here — the standing `docs/motion.md`
+   gives Compose's `StiffnessMediumLow` — and the same 0.5s is written inline
+   onto the sheet as the transition a released drag settles on, so retiming the
+   arrival without the drag would split a dragged close from a tapped one.
+
+   The way out is a decision. A sheet leaves by travelling out through the bottom
+   edge, which is position changing, which is Emphasis by the geometry rule; that
+   it is shorter than the enter it undoes is rule 1 rather than a coincidence.
+   `DRAWER_EXIT_MS` in `components/ui/drawer.tsx` names the same rung, because a
+   caller has to hold the subtree in the DOM for exactly as long as this plays,
+   and the calendar's form sheet spent a release waiting out the modal's number
+   instead — taken away halfway down, with the confirm sheet stacked on it going
+   in the same frame.
+
+   Specific enough to outrank the injected rules without `!important`: vaul sets
+   the duration on `[data-vaul-drawer]` and on
+   `[data-vaul-overlay][data-vaul-snap-points]`, and each selector below carries
+   one attribute more than the rule it is overriding. */
+[data-vaul-drawer][data-vaul-drawer-direction][data-state="closed"],
+[data-vaul-overlay][data-vaul-snap-points][data-state="closed"] {
+  animation-duration: var(--tday-duration-emphasis);
 }

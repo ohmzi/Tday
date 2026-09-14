@@ -209,6 +209,9 @@
     <string name="error_update_name_failed">无法更新您的姓名，请重试。</string>
     <string name="error_change_password_failed">无法更改您的密码，请重试。</string>
     <string name="settings_appearance">外观</string>
+    <string name="settings_motion">动效</string>
+    <string name="settings_reduce_motion">减弱动效</string>
+    <string name="settings_reduce_motion_system">动画已在 Android 设置中关闭。</string>
     <string name="settings_behavior">行为</string>
     <string name="settings_default_home_screen">默认主屏幕</string>
     <string name="settings_reminders">提醒</string>

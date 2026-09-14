@@ -19,6 +19,7 @@
 		02DCC3220DC138F342784CA4 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6D61A167DBA9FD21F8CC00A /* SyncManager.swift */; };
 		03A0CCC6A8AAE2DB065E6DE6 /* ServerURLPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */; };
 		7D4A9E1200000000000000A2 /* TdaySheetChromeMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4A9E1200000000000000A1 /* TdaySheetChromeMotionTests.swift */; };
+		7D4A9E1300000000000000B2 /* RootFeedDockCollapseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4A9E1300000000000000B1 /* RootFeedDockCollapseTests.swift */; };
 		E0D3B11DFB20419468405B6E /* DefaultHomeScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BF881C9B39C6DF685E58AA6 /* DefaultHomeScreenTests.swift */; };
 		041712E33446975E528F050E /* RealtimeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */; };
 		04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */; };
@@ -160,9 +161,18 @@
 		EF64B4D7E0FB06A86DA86E0C /* TaskFloatingActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */; };
 		7E1A4C90B3D2F5680A1C9E33 /* TdayEmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */; };
 		C0FE7712A4B6D8E90F1A2B3C /* TdayConfetti.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7714E5F60718293A4B5C /* TdayConfetti.swift */; };
+		F0A57E0100000000000000A2 /* TdayFeedItemMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */; };
+		F0A57E0200000000000000A2 /* TdayTaskRowSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0200000000000000A1 /* TdayTaskRowSkeleton.swift */; };
+		C0FE7715B8C9D0E1F2A30002 /* TdayConfettiKinematicsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7715B8C9D0E1F2A30001 /* TdayConfettiKinematicsTests.swift */; };
+		F0A57E0100000000000000C2 /* TdayFeedItemMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */; };
+		F0A57E0200000000000000C2 /* TdayTaskRowSkeletonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */; };
 		F0A57E0000000000000000A2 /* TdayMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000A1 /* TdayMotion.swift */; };
 		F0A57E0000000000000000B2 /* TdayMotionGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */; };
 		F0A57E0000000000000000C2 /* TdayMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000C1 /* TdayMotionTests.swift */; };
+		F0A57E0000000000000000D2 /* TdayMotionEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000D1 /* TdayMotionEnvironment.swift */; };
+		F0A57E0000000000000000E2 /* TdayMotionEnvironmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000E1 /* TdayMotionEnvironmentTests.swift */; };
+		F0A57E0000000000000000F2 /* ZoomNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000F1 /* ZoomNavigation.swift */; };
+		F0A57E0000000000000000F4 /* ZoomNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000F3 /* ZoomNavigationTests.swift */; };
 		F1A2B3C4D5E6F708192A3B4D /* FloaterListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */; };
 		F2C4D6E8A1B3456790ABCDE0 /* TdaySheetChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */; };
 		F2E1D0C9B8A7F6E5D4C3B2A1 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */; };
@@ -382,6 +392,7 @@
 		D19AB4B0B909242B323D5ABF /* ListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListRepository.swift; sourceTree = "<group>"; };
 		D206496BC88FF6272CFC286C /* ServerURLPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLPersistenceTests.swift; sourceTree = "<group>"; };
 		7D4A9E1200000000000000A1 /* TdaySheetChromeMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdaySheetChromeMotionTests.swift; sourceTree = "<group>"; };
+		7D4A9E1300000000000000B1 /* RootFeedDockCollapseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFeedDockCollapseTests.swift; sourceTree = "<group>"; };
 		7BF881C9B39C6DF685E58AA6 /* DefaultHomeScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultHomeScreenTests.swift; sourceTree = "<group>"; };
 		D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLState.swift; sourceTree = "<group>"; };
 		D26B48A87B57A0417CC3F578 /* TdayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TdayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -410,9 +421,18 @@
 		E30D3242D00BC6C1C4BA862D /* CredentialEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialEnvelope.swift; sourceTree = "<group>"; };
 		E6E5E1DBE3F7999D219BE2EE /* AuthRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRepository.swift; sourceTree = "<group>"; };
 		E867FA22FEB66EDCE837CF6D /* SecureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStore.swift; sourceTree = "<group>"; };
+		F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayFeedItemMotion.swift; sourceTree = "<group>"; };
+		F0A57E0200000000000000A1 /* TdayTaskRowSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayTaskRowSkeleton.swift; sourceTree = "<group>"; };
+		C0FE7715B8C9D0E1F2A30001 /* TdayConfettiKinematicsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayConfettiKinematicsTests.swift; sourceTree = "<group>"; };
+		F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayFeedItemMotionTests.swift; sourceTree = "<group>"; };
+		F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayTaskRowSkeletonTests.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000A1 /* TdayMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotion.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionGenerated.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000C1 /* TdayMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionTests.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000D1 /* TdayMotionEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionEnvironment.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000E1 /* TdayMotionEnvironmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionEnvironmentTests.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000F1 /* ZoomNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomNavigation.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000F3 /* ZoomNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomNavigationTests.swift; sourceTree = "<group>"; };
 		F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterListRepository.swift; sourceTree = "<group>"; };
 		F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdaySheetChrome.swift; sourceTree = "<group>"; };
 		FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
@@ -531,8 +551,14 @@
 				7BF881C9B39C6DF685E58AA6 /* DefaultHomeScreenTests.swift */,
 				19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */,
 				5E7E7A8C0B534B26A6E2F911 /* TelemetrySanitizerTests.swift */,
+				C0FE7715B8C9D0E1F2A30001 /* TdayConfettiKinematicsTests.swift */,
+				F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */,
+				F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */,
 				F0A57E0000000000000000C1 /* TdayMotionTests.swift */,
+				F0A57E0000000000000000E1 /* TdayMotionEnvironmentTests.swift */,
+				F0A57E0000000000000000F3 /* ZoomNavigationTests.swift */,
 				7D4A9E1200000000000000A1 /* TdaySheetChromeMotionTests.swift */,
+				7D4A9E1300000000000000B1 /* RootFeedDockCollapseTests.swift */,
 				FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */,
 			);
 			path = TdayCoreTests;
@@ -662,6 +688,7 @@
 			isa = PBXGroup;
 			children = (
 				CEFF55971ADA0C60CD0F3074 /* AppRoute.swift */,
+				F0A57E0000000000000000F1 /* ZoomNavigation.swift */,
 			);
 			path = Navigation;
 			sourceTree = "<group>";
@@ -831,6 +858,7 @@
 			children = (
 				AC2B21F3E1A43EAEECA86EE8 /* Colors.swift */,
 				F0A57E0000000000000000A1 /* TdayMotion.swift */,
+				F0A57E0000000000000000D1 /* TdayMotionEnvironment.swift */,
 				F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */,
 				39ADD9E07BF8B32C3FC7B170 /* TdayTheme.swift */,
 			);
@@ -1030,6 +1058,8 @@
 				0DE4A047CF237AD9F605D02E /* TaskFloatingActionButton.swift */,
 				2F84D07BC61E9A35D8B47021 /* TdayEmptyState.swift */,
 				C0FE7714E5F60718293A4B5C /* TdayConfetti.swift */,
+				F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */,
+				F0A57E0200000000000000A1 /* TdayTaskRowSkeleton.swift */,
 				8A7EC85EB5D9686D401249C6 /* UserFacingError.swift */,
 			);
 			path = UI;
@@ -1276,8 +1306,14 @@
 				E0D3B11DFB20419468405B6E /* DefaultHomeScreenTests.swift in Sources */,
 				C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */,
 				5E7E7A8C0B534B26A6E2F910 /* TelemetrySanitizerTests.swift in Sources */,
+				C0FE7715B8C9D0E1F2A30002 /* TdayConfettiKinematicsTests.swift in Sources */,
+				F0A57E0100000000000000C2 /* TdayFeedItemMotionTests.swift in Sources */,
+				F0A57E0200000000000000C2 /* TdayTaskRowSkeletonTests.swift in Sources */,
 				F0A57E0000000000000000C2 /* TdayMotionTests.swift in Sources */,
+				F0A57E0000000000000000E2 /* TdayMotionEnvironmentTests.swift in Sources */,
+				F0A57E0000000000000000F4 /* ZoomNavigationTests.swift in Sources */,
 				7D4A9E1200000000000000A2 /* TdaySheetChromeMotionTests.swift in Sources */,
+				7D4A9E1300000000000000B2 /* RootFeedDockCollapseTests.swift in Sources */,
 				494E748270A233BECED5A359 /* TodayTasksWidgetSnapshotStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1403,7 +1439,11 @@
 				CAFE0D1E000000000000005C /* DayAhead.swift in Sources */,
 				2D4CE01CFE08086ACC160F8B /* TdayAPIService.swift in Sources */,
 				861A548A6A3DDE0A78D35D83 /* TdayApp.swift in Sources */,
+				F0A57E0100000000000000A2 /* TdayFeedItemMotion.swift in Sources */,
+				F0A57E0200000000000000A2 /* TdayTaskRowSkeleton.swift in Sources */,
 				F0A57E0000000000000000A2 /* TdayMotion.swift in Sources */,
+				F0A57E0000000000000000D2 /* TdayMotionEnvironment.swift in Sources */,
+				F0A57E0000000000000000F2 /* ZoomNavigation.swift in Sources */,
 				F0A57E0000000000000000B2 /* TdayMotionGenerated.swift in Sources */,
 				BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */,
 				0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */,

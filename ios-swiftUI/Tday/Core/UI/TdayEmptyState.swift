@@ -34,26 +34,30 @@ struct TdayEmptyState: View {
     var celebrate: Bool = false
 
     @Environment(\.tdayColors) private var colors
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.tdayAnimation) private var tdayAnimation
     @State private var animating = false
     /// The arrival, once: 0 is low and invisible, 1 is the finished state.
     @State private var entered = false
 
     /// Reduced motion holds the scene at the top of the twinkle instead of
     /// switching it off — a half-drawn scene looks broken, not calm.
-    private var floating: Bool { reduceMotion ? false : animating }
-    private var twinkling: Bool { reduceMotion ? true : animating }
+    private var floating: Bool { tdayAnimation.isEnabled ? animating : false }
+    private var twinkling: Bool { tdayAnimation.isEnabled ? animating : true }
 
     /// Half of the web keyframe's duration in each direction: `autoreverses` makes
     /// the round trip, so 3s here is the 6s float there.
     private var floatAnimation: Animation? {
-        guard !reduceMotion else { return nil }
-        return .easeInOut(duration: 3).repeatForever(autoreverses: true)
+        // not a token — see docs/motion.md. Ambience, not a transition: these
+        // repeat forever, so 3 and 1.4 are half-periods rather than lengths, and
+        // every rung on the ladder measures a motion that ends. The longest of
+        // them is 0.52 s, which would make this a flicker.
+        tdayAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true))
     }
 
     private func twinkleAnimation(delay: Double) -> Animation? {
-        guard !reduceMotion else { return nil }
-        return .easeInOut(duration: 1.4).repeatForever(autoreverses: true).delay(delay)
+        // not a token — see docs/motion.md. The half-period of the twinkle, for
+        // the reason `floatAnimation` above gives.
+        tdayAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true).delay(delay))
     }
 
     var body: some View {
@@ -109,7 +113,7 @@ struct TdayEmptyState: View {
             animating = true
             // Reduced motion still gets the finished state, just not the trip:
             // a scene held at the start of its fade looks half-drawn.
-            guard !reduceMotion else {
+            guard tdayAnimation.isEnabled else {
                 entered = true
                 return
             }

@@ -2,6 +2,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useFadeUnmount } from "@/hooks/useFadeUnmount";
+import { installReducedMotion } from "../setup/reduced-motion";
 
 const FADE_MS = 260;
 
@@ -88,19 +89,7 @@ describe("useFadeUnmount", () => {
 
   it("skips the delay under prefers-reduced-motion — unmounts on the same flip", () => {
     const originalMatchMedia = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
-      matches: query.includes("prefers-reduced-motion"),
-      media: query,
-      // No-op: this mock's `matches` is fixed for its lifetime, so the hook
-      // (which never actually subscribes) has nothing to be notified of.
-      // Present only to satisfy `MediaQueryList`'s shape.
-      addEventListener: () => {
-        /* intentionally empty — see comment above */
-      },
-      removeEventListener: () => {
-        /* intentionally empty — see comment above */
-      },
-    })) as unknown as typeof window.matchMedia;
+    installReducedMotion(true);
 
     try {
       const { result, rerender } = renderHook(({ expanded }) => useFadeUnmount(expanded, FADE_MS), {
