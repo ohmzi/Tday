@@ -27,3 +27,42 @@ The rows below are the half that has to be looked at.
               block and the sections' own. Expected here, and not what this row is asking
               about: the check is the ROWS holding still, so read the step above them as
               out of scope rather than as a failure.
+
+- [ ] **PR 40a · web · The handover is a crossfade, not a swap** — a phone, the Anytime feed and a
+      shared list, on a cold load with the network throttled to Slow 3G.
+      Do:     watch the moment the grey bars become rows, on all eight surfaces the crossfade
+              reaches: the Anytime root feed (`NativeFloaterTaskHomeDashboard`), an Anytime list
+              (`FloaterListContainer`), the scheduled root feed, the Members sheet of a shared
+              list, and then the four `TodoListLoading` screens — Today, All tasks, a scheduled
+              list, and both Completed tabs.
+      Watch:  the bars fade out over the rows fading in — both halves on one 200 ms clock — and
+              the rows are in their final position from the first frame of it. The bars sit ON
+              TOP of the arriving rows while they fade, never behind them.
+      Fails:  the bars disappear in one frame; the page holds a block of empty space open for the
+              length of the fade and then snaps shut; the rows are printed over the top of the
+              grey bars instead of under them; anything below the feed steps when the last of the
+              placeholder goes.
+      Known:  the scheduled root feed had no loading state at all before this row — a placeholder
+              appearing there where nothing used to be drawn is the fix, not a regression.
+      Known:  the four `TodoListLoading` screens get the fade-OUT half only. What arrives on them
+              is not one block — a timeline, three drop targets, an empty state and a pager are
+              siblings there, and there is nothing to hang `.tday-content-enter` on that is not a
+              wrapper invented for it. The rows appear at full opacity, in their final position,
+              under bars that fade off them. A step under the rows as the last of the grey goes
+              is still a failure; the rows not fading in is not.
+
+- [ ] **PR 40a · web · Reduce Motion gets the content, not the wait** — the same eight surfaces
+      with the OS "Reduce Motion" setting ON.
+      Do:     cold-load each one and watch the same moment.
+      Watch:  the rows replace the bars immediately, with no fade and no pause in front of them.
+              The bars themselves still pulse while they are on screen — a busy indicator that
+              has stopped reads as work that has finished.
+      Fails:  a beat of nothing between the bars going and the rows arriving (the wait kept after
+              the motion was removed); or the placeholder frozen mid-pulse while it waits.
+
+- [ ] **PR 40a · web · The sidebar's account placeholder moves** — desktop, sidebar expanded and
+      again collapsed to the rail, on a cold load.
+      Do:     watch the two account blocks at the bottom of the sidebar before the user resolves.
+      Watch:  both blocks pulse, at the same rhythm as every other skeleton in the app.
+      Fails:  they sit perfectly still — which is how a control that has rendered empty looks, not
+              how one still loading does.

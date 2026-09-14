@@ -71,7 +71,7 @@ const CompletedTodoContainer = ({
         beneathTitle={tabSwitcher}
       />
 
-      {todoLoading && <TodoListLoading className="mt-8" />}
+      <TodoListLoading className="mt-8" loading={todoLoading} />
 
       {/* Empty state — nothing has been ticked off yet */}
       {!todoLoading && !isSearching && completedTodos.length === 0 && (

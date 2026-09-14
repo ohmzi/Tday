@@ -979,6 +979,88 @@
   to { opacity: 0; }
 }
 
+/* ── A skeleton handing over to the content it stood in for ──
+   Every loading state on web ended in one frame: the placeholder was rendered
+   behind a `loading` flag, so the flag going false took the grey bars off the
+   screen and put the rows up in the same paint. `useSkeletonCrossfade`
+   (`src/hooks/useSkeletonCrossfade.ts`) keeps the placeholder mounted past that
+   flip and these two draw the hand-over it buys — the skeleton fading out over
+   the content fading in, both halves on one clock.
+
+   `Enter`, at 200: one element arriving, and nothing here argues for another
+   length. Not the 190 the ledger row asked for — `docs/motion.md` settled that
+   at this rung, 190 being two hand-written Android tweens against 200's
+   fifty-seven sites across two clients, and `src/lib/feedItemMotion.ts` restates
+   it; a 190 typed here would also be a raw literal in a file whose whole point
+   is that it names the token. `Standard` is the curve for the reason
+   `AppRootView.swift` already gives for the iOS handover it mirrors: a crossfade
+   runs both halves off one clock and neither `Enter` nor `Exit` describes that.
+   The duration is `var(--tday-duration-enter)` and not an integer, the same
+   reading `.tday-empty-exit` above argues — a duration bound for a stylesheet
+   wants the token and only a `setTimeout` wants the integer.
+
+   The exiting skeleton takes itself out of flow, which is the half that stops
+   this being a worse bug than the one it fixes. The content arrives in the same
+   frame the flag flips; a placeholder lingering 200 ms in flow above it would
+   hold three rows of height open and then drop them, which is exactly the jump
+   `TaskRowSkeleton` was built to remove. `height: 0` with the overflow left
+   visible releases the space immediately and keeps painting the bars, and
+   `display: flow-root` is what makes that true of a placeholder that carries a
+   margin: `TodoListLoading` holds its callers' `mt-5` / `mt-8` on the box inside
+   this one, and with no block formatting context here that margin collapses back
+   out through the zero-height wrapper and holds 20-32 px open until the node
+   finally goes — the space given back late, which is the same step in slower
+   clothes.
+
+   `z-index: 20` is what puts the bars over the arriving rows rather than under
+   them, and the number is the rows' own: the content of a task row sits on
+   `relative z-10` (`TodoItemContainer`, and `FloaterItemContainer` beside it)
+   over a wrapper that is `relative` with no z-index of its own, so the row's 10
+   competes in the same stacking context this rule does and a 1 here loses to it.
+   It loses invisibly on the surfaces that wrap their content in
+   `.tday-content-enter` — an opacity animation makes that wrapper a stacking
+   context and shuts the 10 inside it — and visibly on the four `TodoListLoading`
+   screens, which have no single content block to carry the enter half. A ghost
+   behind its own replacement reads as text printed on top of grey. 20 clears the
+   rows and still passes under the sheets and bars, which start at `z-40`.
+
+   The crossfade class goes on a WRAPPER, never on an element that also carries
+   `animate-pulse`. The blanket reduced-motion floor at the top of this file
+   exempts `.animate-pulse` and `.animate-spin` per element — a busy indicator
+   that freezes is one that lies — so a wrapper carrying both would take the
+   pulse's exemption with it and keep a 200 ms fade a reduced-motion user asked
+   not to have. The pulse belongs on the `Skeleton` bars inside; this belongs
+   above them. (In practice the hook does not linger at all under the
+   preference — `useFadeUnmount` reads it and drops the delay — so this is the
+   belt to that braces.) */
+.tday-skeleton-exit {
+  position: relative;
+  z-index: 20;
+  display: flow-root;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+  animation-name: tday-skeleton-fade-out;
+  animation-duration: var(--tday-duration-enter);
+  animation-timing-function: var(--tday-ease-standard);
+  animation-fill-mode: both;
+}
+
+.tday-content-enter {
+  animation-name: tday-content-fade-in;
+  animation-duration: var(--tday-duration-enter);
+  animation-timing-function: var(--tday-ease-standard);
+  animation-fill-mode: both;
+}
+
+@keyframes tday-skeleton-fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes tday-content-fade-in {
+  from { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Held at the top of the twinkle rather than switched off, so the scene still
      looks deliberate rather than half-drawn. */
