@@ -310,6 +310,35 @@ animates.
               the card has gone, which is the activity's own transparent window still standing there
               waiting for a sync.
 
+- [ ] **PR G2 · and · A toast leaves when it is asked to, and not before** — any screen that puts a
+      toast up with an Undo on it: delete a task from a list, which is the toast with the most to
+      lose. Five gestures, one toast each; work quickly, the auto-dismiss window is the clock.
+      Do:     (1) press the middle of the card and let go without meaning to move. (2) Take it down
+              about a centimetre — a third of the card's own height — and let go slowly. (3) From
+              rest, flick it down hard and let go at once, without taking it far. (4) Take it down
+              a centimetre and then flick it back UP before letting go. (5) Swipe straight across
+              the card, sideways.
+      Watch:  (1) and (4) leave the card on screen and spring it back to where it sat — the same
+              return a half-opened task row makes when you let go of it, on the same spring
+              (0.82 / 340), carrying whatever speed it had. (2) and (3) throw it off the bottom in
+              160 ms and the Undo goes with it. (5) does not move the card at all. Under the finger
+              the card still fades towards 45 % and shrinks 3 % over the first 96 dp, exactly as it
+              did before.
+      Fails:  the card leaving on (1) — that is the old "any downward pixel commits", which is the
+              whole point of this row. Also a fail: (4) dismissing, which means an upward flick is
+              being read as distance already given up. Also a fail: a refused card arriving back at
+              rest in one frame instead of springing, or snapping home and then springing from
+              there — that is the hand-off between the finger and the spring going through zero.
+              Also a fail: (5) dragging the card sideways-and-down, or eating a swipe meant for the
+              screen underneath.
+      Known:  (3)'s flick leaves on the same fixed 160 ms accelerating exit as (2)'s slow drag, so
+              a hard throw hangs for a frame or two at lift-off before the card goes. The speed is
+              carried into the refusal spring only; making the exit answer it is
+              `toast-drag-two-stage-exit`, and it is not a fail here. A toast that is already past
+              the threshold when something else claims the pointer still commits. A cancelled drag reaches the app as a release with no velocity, so it
+              is judged on distance like any other release; that is argued at `TdayToastDismissState`
+              and pinned by a test, and is not what this row is looking for.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on

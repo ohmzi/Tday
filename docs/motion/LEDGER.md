@@ -196,7 +196,7 @@ Restore it from git history rather than adjusting the number.
     that suite already statically reads Kotlin on Linux and runs on every PR, so these rows read `Gate G`
     rather than `Gate J`. The four rules and the canary are 9 tests, ~0.5 s.
 - [x] `and-toast-exit-never-plays` — toast content lambda returns null the frame `visible` flips · and · Sev 3 · XS · Gate G+D
-- [ ] `and-toast-drag-dismiss-has-no-threshold` — drag-dismiss commits on any downward movement (1 px twitch) · and · Sev 2 · S · Gate J+D
+- [x] `and-toast-drag-dismiss-has-no-threshold` — drag-dismiss commits on any downward movement (1 px twitch) · and · Sev 2 · S · Gate J+D
 
 ### PR G3 — Rule B, write-once visibility flag
 
