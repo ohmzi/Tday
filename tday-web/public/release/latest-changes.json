@@ -1,11 +1,11 @@
 {
-  "version": "0.7.23",
-  "publishedAt": "2026-09-13T09:04:32-04:00",
+  "version": "0.7.24",
+  "publishedAt": "2026-09-14T18:37:22-04:00",
   "notes": [
-    "Keep the calendar form's draft across the 640 px shell swap",
-    "Keep a staged completion when its row unmounts mid-window",
-    "Notify subscribers even when a staged commit throws"
+    "Stop rounded-xl drawing a smaller corner than rounded-md",
+    "Give Android its own Reduce motion switch, folded into the same scale",
+    "The create sheet can be pulled down, and shows that it can"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.23",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.22..v0.7.23"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.24",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.23..v0.7.24"
 }
