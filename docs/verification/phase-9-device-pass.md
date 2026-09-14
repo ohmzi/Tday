@@ -571,6 +571,45 @@ animates.
               travel is 2 dp and no duration is legible in it. Naming Emphasis there is for the
               next size that gets animated off that line, not for this one.
 
+- [ ] **PR 31 · android · Every screen hands over at the same length** — a device, anywhere
+      with depth: Today → a list → a task, Settings → Account, the Guide, the Latest release
+      screen. Include the cold launch, which is the splash handing over to the first real
+      screen, and include at least one Settings sub-screen, because those routes each used to
+      name a transition of their own and now inherit the graph's.
+      Do:     walk in three or four screens deep and back out again with the system back
+              gesture, watching the toolbar row rather than the body. Then kill the app and
+              cold-launch it, watching the splash give way. Then sign out and back in, which is
+              the auth routes. Do the whole walk once more at normal reading speed rather than
+              at test speed.
+      Watch:  every hand-over is the same length — 200 ms in and 200 ms out, one fade in place,
+              nothing sliding. Going in should feel like it decelerates into the new screen and
+              coming out like it leaves promptly; that is the only difference between the two
+              directions and it is a curve, not a length. The splash and the Settings
+              sub-screens are indistinguishable from an ordinary push.
+      Fails:  a route that is visibly longer or shorter than the ones either side of it — the
+              defect this row exists for, and the splash is where it was worst at 300 against
+              360. Also a fail: the back chevron or the action cluster appearing to travel
+              sideways, which would mean a slide has come back; the outgoing screen still
+              legible under the arriving one, which at 200 ms should not read as a crossfade
+              with two screens in it; or a hand-over that now feels rushed enough that the
+              screen appears before you have finished the gesture — that is the one judgement
+              call here, and the argument against it is at `navigationEnterTransition`.
+      Also:   with Settings → Motion → Reduce motion ON — the in-app switch, NOT the developer
+              options animator scale — every route change is a cut: the destination is fully
+              drawn on the first frame, on the way in and on the way out, including the cold
+              launch. This is the half that did not work before this unit, so it is the half
+              worth the most attention. A screen caught half-faded, or a fade that still plays
+              at any length, is a fail. Then check the animator scale at Off as well, which
+              worked before and must still.
+      Also:   still with the in-app switch ON, tap a search result from the scheduled home and
+              from a root feed search {D} two waits existed only to cover the fade this unit now
+              cuts, and they move with it. The search surface must come down at once rather
+              than sitting over the task for a quarter of a second swallowing taps, and the
+              highlighted row must be scrolled to and flashed immediately rather than after a
+              third of a second of a destination that is already fully drawn. Either pause
+              surviving is the wait kept with the motion removed, which is the failure the
+              gate was supposed to end.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on

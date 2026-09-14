@@ -53,7 +53,7 @@ object TdayMotionTokens {
         /**
          * The empty-state illustration rising or sinking. The longest motion the
          * app plays, and the only one at this length — NOT for route or tab
-         * handovers, which are [Quick].
+         * handovers, which are [Durations.Enter].
          */
         const val Scene: Int = TdayMotionTokensGenerated.Durations.Scene
     }

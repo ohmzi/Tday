@@ -945,15 +945,24 @@ fun TodoListScreen( // skipcq: KT-R1006
         onDispose { onRootControlsVisibleChange(true) }
     }
     val density = LocalDensity.current
-    // Read once for the whole screen, and read as the SYSTEM scale, because every
-    // wait it feeds below covers an animation the in-app switch does not reach: the
-    // two settles wait out the route handover in `TdayApp` and the `animateScrollTo`
-    // that follows it, the two holds wait out `SwipeTaskRow`'s highlight pulses, and
-    // the Earlier hand-off waits out `TdayFeedItemMotion.FadeOut` through
-    // `animateItem`. All four are plain Compose animations on the device's clock. A
-    // wait zeroed while the motion it covers plays on is the fifth idiom rule broken
-    // the other way about — see [effectiveMotionScale]. Each moves back to
-    // `rememberTdayMotionScale` as its animation is gated.
+    // The settle before a search result *navigated to* is scrolled to, on the app's
+    // scale: what it waits out is `navigationEnterTransition` in `TdayApp`, and that
+    // handover answers the in-app switch now as well as the animator scale. Left on
+    // the device's it would be the 380 ms of a tapped result doing nothing that
+    // [SEARCH_RESULT_NAV_SETTLE_DELAY_MS] already names — over a destination drawn
+    // whole on the first frame, for the users who asked for less motion.
+    val navSettleMotionScale = rememberTdayMotionScale()
+    // Every other wait on this screen reads the SYSTEM scale, because each covers an
+    // animation the in-app switch does not reach: the floater settle waits out the
+    // feed re-laying itself under `animateItem` once the results card is dropped from
+    // it (no route changes there — `closeFloaterTaskHomeSearch` is a state flip), the
+    // two holds wait out `SwipeTaskRow`'s ungated highlight pulses, and the Earlier
+    // hand-off waits out `TdayFeedItemMotion.FadeOut`, again through `animateItem`.
+    // The only gate on any of the three is `timelineAnimationsEnabled`, a first-frame
+    // guard rather than a preference. A wait zeroed while the motion it covers plays
+    // on is the fifth idiom rule broken the other way about — see
+    // [effectiveMotionScale]. Each moves to `rememberTdayMotionScale` as its
+    // animation is gated.
     val motionScale = rememberSystemMotionScale()
     val heroCollapse = rememberLazyListHeroTitleCollapse(
         listState = listState,
@@ -1498,7 +1507,9 @@ fun TodoListScreen( // skipcq: KT-R1006
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
         val target = highlightedTodoListTarget(highlightedTodoId)
         if (target != null) {
-            scaledDelay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS, motionScale)
+            // The one settle that is genuinely waiting on a route change: this effect
+            // runs because the screen was navigated to with a row to highlight.
+            scaledDelay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS, navSettleMotionScale)
             val viewportHeight =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
             val estimatedRowHeight =
@@ -1522,6 +1533,8 @@ fun TodoListScreen( // skipcq: KT-R1006
         closeFloaterTaskHomeSearch()
         val target = floaterTaskHomeTodoListTarget(todo.id) ?: return
         screenScope.launch {
+            // Same constant, the other scale: nothing navigates here. What settles is
+            // the feed closing over the results card, so the clock is the feed's.
             scaledDelay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS, motionScale)
             val viewportHeight =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
@@ -5527,13 +5540,15 @@ private fun searchResultScrollDurationMillis(distancePx: Float): Int =
 /**
  * The wait before a search result is scrolled to — not a token — see docs/motion.md.
  *
- * What it is waiting for is the navigation into this screen: scrolling a list that
- * is still fading in aims at rows whose final positions are not settled yet, and the
- * correction passes below spend themselves chasing the transition rather than the
- * target. [scaledDelay] and not `delay`, because that transition is a Compose
- * animation and therefore already on the animator's clock — at 0x the screen is
- * whole on the first frame and this would be 380 ms of a tapped result doing
- * nothing.
+ * What it is waiting for is the feed stopping: scrolling a list whose rows are still
+ * moving aims at final positions that are not final yet, and the correction passes
+ * below spend themselves chasing the movement rather than the target. Its two call
+ * sites are waiting on different movement — one on the route handover into this
+ * screen, one on the floater feed re-laying itself out once the search card leaves it
+ * — which is why they are handed different scales; [effectiveMotionScale] has the
+ * argument. [scaledDelay] and not `delay` at both, because both are covering Compose
+ * animations: with those refused the screen is whole on the first frame and this
+ * would be 380 ms of a tapped result doing nothing.
  */
 private const val SEARCH_RESULT_NAV_SETTLE_DELAY_MS = 380L
 private const val SEARCH_RESULT_SCROLL_CORRECTION_PASSES = 2
