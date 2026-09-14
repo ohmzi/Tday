@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -55,10 +54,38 @@ import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.feature.release.GitHubAsset
 import com.ohmz.tday.compose.feature.release.GitHubRelease
 import com.ohmz.tday.compose.feature.release.InAppApkUpdater
+import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.IOException
 import kotlin.math.roundToInt
+
+// What the overlay draws that the scale has no rung for. The card's corner is not among them: it
+// has always drawn the 28 that `TdaySheetDefaults.CardShape` names.
+
+/** How wide the card is allowed to grow. One column of centred text, so narrower than a sheet. */
+private val UpdateCardMaxWidth = 420.dp
+
+/** Lifts the card off the scrim behind it. Between `BottomSheetTonalElevationDark` and
+ *  `FabElevation`, where the scale has no step. */
+private val UpdateCardElevation = 12.dp
+
+/** The card's interior. Deliberately not the 28 of its corner above: nothing would resize both,
+ *  and naming them apart is what keeps one from following the other. */
+private val UpdateCardPadding = 28.dp
+
+/** The gap between the things stacked inside the card. 16 sits between `SpacingXl` and
+ *  `SpacingXxl`. */
+private val CardContentSpacing = 16.dp
+
+/** The download or warning glyph the card opens with. Far above `IconXl` because it is the card's
+ *  illustration, not an icon beside a label. */
+private val StatusIconSize = 48.dp
+
+// The spinner shown while the release is being looked up, drawn where the install button will land.
+private val ReleaseCheckSpinnerSize = 24.dp
+private val ReleaseCheckSpinnerStroke = 2.dp
 
 @Composable
 fun UpdateRequiredOverlay(
@@ -150,18 +177,18 @@ fun UpdateRequiredOverlay(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 420.dp)
-                .padding(horizontal = 24.dp),
-            shape = RoundedCornerShape(28.dp),
+                .widthIn(max = UpdateCardMaxWidth)
+                .padding(horizontal = TdayDimens.Spacing3xl),
+            shape = TdaySheetDefaults.CardShape,
             colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = UpdateCardElevation),
         ) {
             Column(
                 modifier = Modifier
-                    .padding(28.dp)
+                    .padding(UpdateCardPadding)
                     .animateContentSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(CardContentSpacing),
             ) {
                 when (versionCheckResult) {
                     is VersionCheckResult.AppUpdateRequired -> {
@@ -174,7 +201,7 @@ fun UpdateRequiredOverlay(
                             imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_download),
                             contentDescription = null,
                             tint = colorScheme.primary,
-                            modifier = Modifier.size(48.dp),
+                            modifier = Modifier.size(StatusIconSize),
                         )
                         Text(
                             text = stringResource(R.string.app_update_required_title),
@@ -195,8 +222,8 @@ fun UpdateRequiredOverlay(
                         when {
                             isCheckingRelease -> {
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(ReleaseCheckSpinnerSize),
+                                    strokeWidth = ReleaseCheckSpinnerStroke,
                                 )
                             }
 
@@ -258,7 +285,7 @@ fun UpdateRequiredOverlay(
                             imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_triangle_alert),
                             contentDescription = null,
                             tint = colorScheme.error,
-                            modifier = Modifier.size(48.dp),
+                            modifier = Modifier.size(StatusIconSize),
                         )
                         Text(
                             text = stringResource(R.string.server_update_required_title),
