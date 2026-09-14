@@ -95,6 +95,8 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.ui.TdayHaptics
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.TdaySheetMotion
 import com.ohmz.tday.compose.feature.guide.GuideHelpLink
 import com.ohmz.tday.compose.ui.priority.PRIORITY_OPTIONS_LOW_TO_HIGH
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
@@ -136,7 +138,6 @@ private const val CREATE_TASK_SHEET_EDIT_HEIGHT_FRACTION = 0.76f
 private const val CREATE_TASK_SHEET_FLOATER_EDIT_HEIGHT_FRACTION = 0.54f
 private const val CREATE_TASK_SHEET_MAX_HEIGHT_FRACTION = 0.86f
 private const val CREATE_TASK_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.85f
-private const val CREATE_TASK_SHEET_MOTION_MS = 320
 
 /**
  * The dismissal half of a sheet that is an `AnimatedVisibility` inside a [Dialog].
@@ -156,15 +157,31 @@ private const val CREATE_TASK_SHEET_MOTION_MS = 320
  * sheet's own state outlives the tap, its content is still composed — and still readable —
  * for the whole slide out.
  *
- * Waiting on the transition rather than on a `delay(320)` also keeps the handoff honest when
- * the system animation scale is 0: the transition settles on the next frame and the sheet
- * closes immediately, instead of stranding a sheet-less scrim on screen for 320 ms.
+ * Waiting on the transition rather than on a `delay(TdaySheetMotion.CardOutMillis)` also keeps
+ * the handoff honest when the system animation scale is 0: the transition settles on the next
+ * frame and the sheet closes immediately, instead of stranding a sheet-less scrim on screen
+ * for the length of an exit nobody is playing.
  */
 @Stable
 internal class SheetDismissState(internal val transition: MutableTransitionState<Boolean>) {
     /** True once a dismissal has been asked for. The exit may still be playing. */
     var dismissing: Boolean by mutableStateOf(false)
         private set
+
+    /**
+     * Whether the sheet is meant to be on screen — the target, not where the card has got
+     * to.
+     *
+     * This is what a *second* surface animating alongside the card reads, and it exists so
+     * that surface does not share [transition] instead. A `MutableTransitionState` handed
+     * to two `AnimatedVisibility` calls is driven by two `Transition`s, and each of them
+     * writes `currentState` and clears `isRunning` when *it* finishes — so the shorter of
+     * the two would report the whole dismissal settled while the longer was still playing,
+     * and [gone] would tear the composition down over a card that is still moving. That is
+     * the exact defect this class was written to remove, arriving through the back door.
+     */
+    val visible: Boolean
+        get() = transition.targetState
 
     /** The exit has finished and the sheet is off screen; the host can go away now. */
     val gone: Boolean
@@ -470,9 +487,13 @@ fun CreateTaskBottomSheet(
     val sheetContentSizeAnimation = if (keyboardVisible) {
         Modifier
     } else {
+        // Emphasis rather than TdaySheetMotion.cardIn(): what this resizes is the sheet's
+        // content, not the sheet arriving. It happens to be the same rung — a size change
+        // is geometry either way — but tying it to the card's spec would carry it along
+        // the next time the arrival is retimed, which is a different question.
         Modifier.animateContentSize(
             animationSpec = tween(
-                durationMillis = CREATE_TASK_SHEET_MOTION_MS,
+                durationMillis = TdayMotionTokens.Durations.Emphasis,
                 easing = FastOutSlowInEasing,
             ),
         )
@@ -542,19 +563,34 @@ fun CreateTaskBottomSheet(
             modifier = Modifier
                 .fillMaxSize(),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(sheetScrimColor)
-                    // No indication: a dismiss tap on the scrim is a gesture at the sheet,
-                    // not a press of a full-screen button, and the default ripple draws
-                    // itself across the entire window on the way out.
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = startDismiss,
-                    ),
-            )
+            // The scrim fades on the sheet's timing, not the Dialog window's. Left bare it
+            // had no timing of its own: it arrived with the window — roughly 150 ms — and
+            // was at full dim long before the card finished its Emphasis-long slide up, and
+            // it could not leave until the Dialog did, which is after `gone`, which is after
+            // the card has landed. The dim led the card in and outlasted it going out; one
+            // transition target answers both ends.
+            //
+            // `visible` and not `visibleState`: see SheetDismissState.visible for why the
+            // two surfaces must not share one transition.
+            AnimatedVisibility(
+                visible = sheetDismiss.visible,
+                enter = fadeIn(animationSpec = TdaySheetMotion.scrimIn()),
+                exit = fadeOut(animationSpec = TdaySheetMotion.scrimOut()),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(sheetScrimColor)
+                        // No indication: a dismiss tap on the scrim is a gesture at the
+                        // sheet, not a press of a full-screen button, and the default
+                        // ripple draws itself across the entire window on the way out.
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = startDismiss,
+                        ),
+                )
+            }
 
             AnimatedVisibility(
                 visibleState = sheetDismiss.transition,
@@ -562,19 +598,13 @@ fun CreateTaskBottomSheet(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth(),
                 enter = slideInVertically(
-                    animationSpec = tween(
-                        durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                        easing = FastOutSlowInEasing,
-                    ),
+                    animationSpec = TdaySheetMotion.cardIn(),
                     initialOffsetY = { fullHeight -> fullHeight },
-                ) + fadeIn(animationSpec = tween(durationMillis = CREATE_TASK_SHEET_MOTION_MS)),
+                ) + fadeIn(animationSpec = TdaySheetMotion.cardIn()),
                 exit = slideOutVertically(
-                    animationSpec = tween(
-                        durationMillis = CREATE_TASK_SHEET_MOTION_MS,
-                        easing = FastOutSlowInEasing,
-                    ),
+                    animationSpec = TdaySheetMotion.cardOut(),
                     targetOffsetY = { fullHeight -> fullHeight },
-                ) + fadeOut(animationSpec = tween(durationMillis = CREATE_TASK_SHEET_MOTION_MS)),
+                ) + fadeOut(animationSpec = TdaySheetMotion.cardOut()),
             ) {
                 Surface(
                     modifier = Modifier
