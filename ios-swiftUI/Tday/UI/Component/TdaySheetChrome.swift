@@ -219,6 +219,11 @@ private enum TdayBottomSheetMotion {
     /// `.easeIn`. Binding an exit to a token whose docstring reads "one element
     /// arriving" would name it wrong for no pixel gained, so it stays a literal.
     static let scrimOut = Animation.easeIn(duration: 0.2)
+    /// The card's two specs, and neither has a Reduce Motion twin here — which is the
+    /// decision rather than an omission. A card that has stopped travelling is doing
+    /// exactly what the scrim beside it is doing, so the substitute is `scrimIn` and
+    /// `scrimOut` above; a third pair of numbers minted for it would be the only thing
+    /// left making the two read as two surfaces instead of one arriving.
     static let cardIn = TdayMotion.settle
     static let cardOut = Animation.easeIn(duration: exitDuration)
 }
@@ -241,6 +246,19 @@ private enum TdayBottomSheetMotion {
 /// card slides back down by the keyboard's height at the same moment the picker
 /// arrives, so sharing that curve is what makes the two read as one move rather
 /// than a pop over a slide.
+/// **Reduce Motion leaves this one alone, and that is a decision.** Every other
+/// large surface on iOS gives its travel up under the setting — the sheet card
+/// above, the root dock, the snackbar, the calendar's page turn. This spec is the
+/// one that does not, because it has no travel to give up: the overlay arrives
+/// where it already is, and the 3 % is a crossfade's own shape rather than a
+/// movement across the screen. Dropping it would remove three hundredths of a
+/// scale and leave the fade exactly as it is — no amplitude gained, and a picker
+/// that reads as pasted on instead of resolved into place. The guidance this
+/// phase follows is about the size of what moves, not about whether anything at
+/// all is allowed to; gating a 0.97 would be obeying the letter of a rule that
+/// was written for a card crossing a screen. `CompletedScreen`'s restoring row
+/// (`.scale(scale: 0.985)`) and the three confirmation overlays' `0.96` are the
+/// same call and left alone for the same reason.
 enum TdayCenteredSelectorMotion {
     /// The same shape the three Settings selectors carry, so the two families
     /// of centred picker enter and leave identically.
@@ -418,12 +436,17 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
 
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
+    /// Read here and not only at the app root because a `fullScreenCover` is a
+    /// presentation of its own; it inherits the environment of the view that
+    /// presented it, which is how the root's answer reaches this, and the accessor's
+    /// fallback covers a sheet presented from anywhere that answer does not.
+    @Environment(\.tdayAnimation) private var tdayAnimation
     @State private var keyboardFrame: CGRect?
     @State private var contentHeight: CGFloat = 0
     // The cover is presented and torn down with animations suppressed (see
     // TdayBottomSheetPresentationModifier), so these two flags supply the
     // entire visible entrance and exit: the scrim fades where it already is,
-    // and only the card travels.
+    // and only the card travels — or, under Reduce Motion, fades beside it.
     @State private var isScrimVisible = false
     @State private var isCardRaised = false
 
@@ -464,7 +487,23 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
                     // Parked a full screen height down until raised, so the card
                     // starts (and ends) fully offscreen without needing a
                     // measured height on the very first render.
-                    .offset(y: (isCardRaised ? 0 : proxy.size.height) - keyboardBottomInset)
+                    //
+                    // Under Reduce Motion it is never parked. This is the longest
+                    // travel in the app — a whole screen — and the case Apple's
+                    // guidance describes most exactly, so the card is placed where
+                    // it will stay and crossfades in alongside the scrim instead.
+                    // Refusing the motion outright was the other candidate and is
+                    // worse here than anywhere else: a full-bleed modal that
+                    // replaces the screen between two frames gives the eye nothing
+                    // to follow to it, and the sheet is the one surface in this app
+                    // that arrives over content the user was reading. The finished
+                    // state is still what gets drawn — the fifth idiom rule asks
+                    // for the destination, not for the absence of a fade.
+                    .offset(y: (isCardRaised || !tdayAnimation.isEnabled ? 0 : proxy.size.height) - keyboardBottomInset)
+                    // The crossfade's own half, and inert while motion is full: the
+                    // card is opaque through every frame of its travel, so this is
+                    // 1 whenever the branch above is the one doing the work.
+                    .opacity(isCardRaised || tdayAnimation.isEnabled ? 1 : 0)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
@@ -476,7 +515,11 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
             withAnimation(TdayBottomSheetMotion.scrimIn) {
                 isScrimVisible = true
             }
-            withAnimation(TdayBottomSheetMotion.cardIn) {
+            // The scrim's own curve is what the card falls back to, not a third
+            // number: under Reduce Motion the two are the same gesture — one
+            // surface fading up over another — and giving them separate lengths
+            // would be the only thing making them read as two.
+            withAnimation(tdayAnimation(TdayBottomSheetMotion.cardIn, reduced: TdayBottomSheetMotion.scrimIn)) {
                 isCardRaised = true
             }
         }
@@ -522,9 +565,16 @@ private struct TdayBottomSheetPresentationHost<SheetContent: View>: View {
         withAnimation(TdayBottomSheetMotion.scrimOut) {
             isScrimVisible = false
         }
-        withAnimation(TdayBottomSheetMotion.cardOut) {
+        withAnimation(tdayAnimation(TdayBottomSheetMotion.cardOut, reduced: TdayBottomSheetMotion.scrimOut)) {
             isCardRaised = false
         }
+        // The wait below stays as it is, and it is worth saying why rather than
+        // leaving it to be rediscovered: under Reduce Motion the card is still
+        // animating, it is just fading instead of travelling, and `scrimOut`'s
+        // 0.20 finishes inside `exitDuration`'s 0.24. This is the deferred
+        // teardown covering a real animation, not the wait-without-a-trip the
+        // fifth idiom rule forbids — which is exactly what it WOULD have become
+        // had the card been handed `nil` above.
         DispatchQueue.main.asyncAfter(deadline: .now() + TdayBottomSheetMotion.exitDuration) {
             onDismissAnimationCompleted()
         }

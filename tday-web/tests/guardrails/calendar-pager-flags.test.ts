@@ -154,6 +154,35 @@ describe("the iOS pager can always let go of a programmatic scroll", () => {
     expect(rebuild).toContain("endProgrammaticScroll()");
   });
 
+  it("reports the arrival on the un-animated path that actually moves", () => {
+    // `setContentOffset(_:animated: false)` fires no delegate callback at all, and the callback it
+    // skips was carrying two things: the latch AND the only notification the parent ever gets that
+    // a chevron's page turn finished. While the un-animated path was only ever a re-centring, the
+    // second half cost nothing — `notifyParentIfNeeded` drops the centre index anyway. Reduce
+    // Motion routes a real page turn through it, and without the report the grid turns one page
+    // and freezes: the parent never advances, `selection` never returns to centre, and both
+    // chevrons stay dead for the rest of the session. Same shape as the three clears above, one
+    // question further on: what else was the animation's completion delivering.
+    const jumped = blockAfter(
+      code,
+      "scrollView.setContentOffset(CGPoint(x: targetX, y: 0), animated: animated)",
+    );
+    expect(jumped).not.toBe("");
+    expect(jumped).toContain("endProgrammaticScroll()");
+    expect(jumped).toContain("notifySettledSelection(from: scrollView)");
+  });
+
+  it("refuses the page turn's travel under Reduce Motion", () => {
+    // The amplitude decision this pager makes, and the reason the report above has to exist. A
+    // month grid crossing a full screen width is the movement the setting is most directly about,
+    // and the grid IS the page — so unlike the sheet card, the dock and the snackbar there is no
+    // crossfade to substitute, and this one is refused outright. A swipe is untouched: the user's
+    // own finger is carrying that.
+    expect(code).toContain(
+      "animated: tdayAnimation.isEnabled && selection != calendarNativePagerCenterIndex",
+    );
+  });
+
   it("routes every clear through one method", () => {
     // Keeping the exits in one place is what makes "how many ways can this latch open" a question
     // with a readable answer. Clearing inline is how that list got short enough to be wrong.

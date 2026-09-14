@@ -6,16 +6,23 @@ import SwiftUI
 /// is a per-user accessibility setting SwiftUI publishes into *every* environment, live,
 /// so unlike Android — which has only a device-wide animator scale and had to grow a
 /// switch of its own, see `TdayMotion.kt` — there is no answer to invent here and no
-/// second switch to offer. What had to be built is the single place that answer becomes
-/// an `Animation?`, because before this type there were seven: seven views each reading
-/// the setting and each spelling `reduceMotion ? nil : x` in their own hand, which is
-/// seven places to forget and no place to fix it once.
+/// second switch to offer. What had to be built is the single place that answer is
+/// applied, because before this type there were seven: seven views each reading the
+/// setting and each spelling `reduceMotion ? nil : x` in their own hand, which is seven
+/// places to forget and no place to fix it once.
 ///
-/// `nil` is the whole mechanism, and it is `docs/motion.md`'s fifth idiom rule in one
-/// line: `withAnimation(nil)` and `.animation(nil, value:)` still apply the state
-/// change, they just do not animate the trip. The surface is drawn finished, in the
-/// frame the state changed. Refusing the animation can never leave anything held at the
-/// start of a fade, and there is no wait left behind to sit through.
+/// There are two mechanisms below, and which one a surface gets is a judgement about
+/// amplitude rather than a default. Where the travel was already nothing — a tint, a
+/// crossfade, a tab hand-over drawn in the slot the last one had — the answer is `nil`,
+/// which is `docs/motion.md`'s fifth idiom rule in one line: `withAnimation(nil)` and
+/// `.animation(nil, value:)` still apply the state change, they just do not animate the
+/// trip, so the surface is drawn finished in the frame the state changed. Where the
+/// travel IS the animation — a card crossing the whole screen, a toast over a feed —
+/// `nil` gives the eye nothing to follow and leaves a surface that blinks rather than
+/// arrives, so the answer is a substitute the call site has to name: the `reduced:`
+/// overloads further down. Neither one can leave anything held at the start of a fade
+/// or any wait behind to sit through; what they differ on is whether there is anything
+/// left to follow to the finished state.
 ///
 /// `Equatable` over a single `Bool`, so a view reading it out of the environment is
 /// diffed on the answer rather than on the identity of whatever produced it — the reason
@@ -35,7 +42,9 @@ struct TdayMotionResolution: Equatable {
     /// has to collapse to `.identity` rather than be handed a nil animation, because a
     /// transition does not open the transaction it plays in and a nil cannot reach back
     /// out and close one. Anything that can take an `Animation?` should go through
-    /// `callAsFunction` instead and leave the branch here.
+    /// `callAsFunction` instead and leave the branch here; a `.transition` whose travel
+    /// is the thing being refused has `transition(_:reduced:)` below, which keeps the
+    /// crossfade rather than collapsing the whole leg.
     let isEnabled: Bool
 
     /// The animation, or `nil` where the user has asked for less motion.
@@ -51,6 +60,41 @@ struct TdayMotionResolution: Equatable {
     /// under reduced motion depend on where the parentheses went.
     func callAsFunction(_ animation: Animation) -> Animation? {
         isEnabled ? animation : nil
+    }
+
+    /// The animation for a motion whose **amplitude** is the thing being refused,
+    /// rather than the motion itself.
+    ///
+    /// Reduce Motion is not a request for a static app, and reading it as one is how
+    /// an accommodation turns into a worse experience than the thing it accommodates.
+    /// Apple's guidance names large-amplitude travel as what triggers a vestibular
+    /// response — a card crossing the whole screen, a grid paging sideways — and names
+    /// a crossfade as the substitute. `nil` above is the right answer wherever the
+    /// amplitude was already nothing: a tint, a fade, a tab hand-over drawn in the slot
+    /// the last one had. It is the wrong answer where the travel IS the animation,
+    /// because refusing it leaves a surface that appears and vanishes between two
+    /// frames, and a surface with no context around it to explain the jump reads as a
+    /// rendering fault rather than as the app doing what it was asked.
+    ///
+    /// So this overload makes the call site supply both halves — the motion as
+    /// designed, and what stands in for it — which is the only form in which the
+    /// judgement is reviewable. It returns a non-optional on purpose: a site that
+    /// reaches for this one has already decided that *something* plays, and letting a
+    /// `nil` back out here would be that decision silently reversed by whoever wrote
+    /// the substitute.
+    func callAsFunction(_ animation: Animation, reduced substitute: Animation) -> Animation {
+        isEnabled ? animation : substitute
+    }
+
+    /// The `.transition` half of the same judgement: drop the travel, keep the fade.
+    ///
+    /// Deliberately not the same answer `TdayFeedItemMotion.row` gives, which collapses
+    /// to `.identity`. A feed row has neighbours that close over the space it leaves,
+    /// so its arrival and departure are legible with no transition at all; a modal card,
+    /// a toast or a floating dock has nothing around it doing that work, and the fade is
+    /// the only thing left saying the surface arrived rather than blinked.
+    func transition(_ full: AnyTransition, reduced substitute: AnyTransition) -> AnyTransition {
+        isEnabled ? full : substitute
     }
 }
 

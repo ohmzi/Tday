@@ -251,11 +251,12 @@ unchanged.
   working two-platform conversion before it had a name —
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskSwipeRevealState.kt:49` converts
   `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:368` explicitly, and
-  `ios-swiftUI/Tday/Core/UI/RootFeedDock.swift:92` is the third site. **Do not
-  round 340 to the arithmetic 342**: it would break the Android site that
-  already matches.
+  `ios-swiftUI/Tday/Core/UI/RootFeedDock.swift:118` is the third site — it wrote
+  0.34 / 0.82 out until Reduce Motion needed a gate there, and naming the token
+  is what bought one. **Do not round 340 to the arithmetic 342**: it would break
+  the Android site that already matches.
 - **`Settle`.** One anchoring site today,
-  `ios-swiftUI/Tday/UI/Component/TdaySheetChrome.swift:222` (`cardIn`). Android
+  `ios-swiftUI/Tday/UI/Component/TdaySheetChrome.swift:227` (`cardIn`). Android
   has no exact match — `Spring.StiffnessLow` is 200 f and `StiffnessMediumLow`
   is 400 f, and this rung sits between them on purpose.
 
@@ -402,19 +403,48 @@ is still running. Where the choice is available, gating the covered animation is
 the better half of the fix — the run then has one clock instead of two.
 
 iOS has one clock and no switch of its own, so its file is about reach rather
-than arithmetic. `\.tdayAnimation` in the environment answers in both shapes a
-call site needs — `tdayAnimation(TdayMotion.settle)` for anything that takes an
-`Animation?`, and `tdayAnimation.isEnabled` for a `.transition`, which cannot be
-handed a nil because it does not open the transaction it plays in. The value is
-composed rather than stored: an override written by `tdayResolvedMotion()` at the
-app root, falling back to `accessibilityReduceMotion` from the same environment
-wherever nobody has written one. The fallback is what covers the surfaces the root
-cannot reach — a hand-built `UIHostingController`, of which the calendar's pager
-makes one per month page, inherits none of the app's own environment while still
-resolving the system keys from its traits. The override is what makes the answer
+than arithmetic. `\.tdayAnimation` in the environment answers in the two shapes
+an ordinary call site needs — `tdayAnimation(TdayMotion.settle)` for anything
+that takes an `Animation?`, and `tdayAnimation.isEnabled` for a `.transition`,
+which cannot be handed a nil because it does not open the transaction it plays
+in; a third shape, for the surfaces whose amplitude rather than whose existence
+is the thing being refused, is below. The value is composed rather than stored:
+an override written by `tdayResolvedMotion()` at the app root, falling back to
+`accessibilityReduceMotion` from the same environment wherever nobody has
+written one. The fallback is what covers the surfaces the root cannot reach — a
+hand-built `UIHostingController`, of which the calendar's pager makes one per
+month page, inherits none of the app's own environment while still resolving the
+system keys from its traits. The override is what makes the answer
 live: an accessor reading a key it never declared a dependency on is right at
 first draw and silent afterwards, which is the runtime half of what this row was
 filed for.
+
+**Refusing an animation is not always the accommodation.** The rule above says a
+surface must be drawn finished; it does not say the way to that surface must be a
+cut. What the accessibility setting is actually about is *amplitude* — a card
+crossing the screen, a grid paging sideways, a control jumping a fifth of its own
+size — and the standard substitute for a large travel is a crossfade, not nothing.
+Refusing everything fails the same user twice: a full-bleed modal that replaces
+the screen between two frames gives the eye nothing to follow to it, and a toast
+that blinks in and out over a feed reads as the app glitching rather than as the
+app doing what it was asked. So iOS's resolver answers in a third shape,
+`tdayAnimation(spec, reduced: substitute)` and its `.transition` twin, and the
+five surfaces that had to make that judgement each carry it at the call site:
+
+| Surface | Amplitude | Under Reduce Motion |
+|---|---|---|
+| `TdaySheetChrome`'s bottom-sheet card | a whole screen height | Crossfades in place, on the scrim's own curve — it is placed where it will stay |
+| `CalendarPagingScrollView`'s chevron page turn | a whole screen width | Refused. The grid *is* the page, so there is nothing to crossfade that is not the thing being asked for |
+| `RootFeedDock`'s collapse/expand swap | an 18 % anchored scale | Keeps the crossfade, drops the scale. The two arms are different controls at different widths |
+| `AppRootView`'s snackbar | a full toast height | Keeps the crossfade on `Enter`, drops the slide |
+| `TdayCenteredSelectorMotion` (and the 0.96 / 0.985 overlays that share its shape) | 3 % and travels nowhere | Kept as it is. This is already a crossfade; gating it removes no amplitude and leaves the picker pasted on |
+
+The calendar row is the one worth reading before writing another of these. The
+travel it refuses was carrying `scrollViewDidEndScrollingAnimation`, which is the
+only notification the parent ever gets that a page turn finished — so removing the
+motion removed the completion, and the fix is the un-animated path reporting its
+own arrival. Removing the trip must not remove what arriving at the destination
+told somebody.
 
 - Android: `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:126` seeds the
   appearance `Animatable` at `1f` — fully arrived — when motion is off, rather
