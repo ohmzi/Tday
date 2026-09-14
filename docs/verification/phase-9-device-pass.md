@@ -396,6 +396,47 @@ animates.
               2/8/5 dp across pressed, enabled and disabled, which is its own animation and not
               this one.
 
+- [ ] **PR 9b · and · Four classes of surface press to four different depths** — this is the row
+      that says whether the press vocabulary was worth having. One device, one sitting, all five
+      surfaces in a row so the depths are compared against each other rather than each against a
+      memory.
+      Do:     press and HOLD, in this order, letting go between each: a category card on the root
+              feed; a list row under it on the Floater home; the round create button at the bottom
+              of a task list; a "Members" or "Share" tile in a list's settings sheet, and the
+              "Delete list" bar under them; then each end of a segmented slider — first the segment
+              already selected, then the one that is not. Repeat the lot with Settings →
+              "Reduce motion" on.
+      Watch:  four depths, and they must be TELLABLE APART held side by side. The create button
+              travels furthest and is the only thing on screen with nothing beside it to be
+              measured against. The category card and the settings tiles sink less. The list row
+              and the slider barely move at all — a full-width row that travels reads as the list
+              shifting. The card and the row both drop about 2 dp as they shrink; the two settings
+              tiles and the delete bar squash WITHOUT sinking.
+      Fails:  four surfaces that all look like one number, which is the defect this closes coming
+              back. A settings tile dropping while the tile beside it holds still — the pair must
+              stay aligned, so neither sinks. A card or a row whose shadow no longer softens as it
+              goes down: the lift is `cardElevation`'s two ends now rather than a hand-animated
+              third leg, and if it has stopped moving, that hand-off is what to look at. On the
+              slider, the selected segment's label sliding against the pill under it as the finger
+              lands — label and pill are on one depth now and must travel as one object — and the
+              UNSELECTED segment's halo, which grows INTO view and is deliberately not a press;
+              it should still bloom outwards, not sink.
+      Known:  the slider's segment label presses a half-hundredth shallower than it did, onto the
+              selector's own depth. Not something to look for on its own; the label-against-pill
+              question above is. The slider is also the one surface here that reads no motion
+              preference at all: both its press scales keep an explicit spring because each is
+              coupled to the offset that slides the selector, so with "Reduce motion" on the label
+              and the pill still take that spring's time to get down. Expected, not a fail. The
+              card's and the row's shadow is `cardElevation`'s now, which Material animates on a
+              spec of its own that the preference does not reach, so the lift keeps travelling
+              while the scale and the sink snap.
+      Also:   with **Reduce motion** on, the four surfaces on the shared press modifier — the card,
+              the row, the create button, and the settings tiles with the delete bar — arrive
+              pressed on the next frame and leave on the next frame: no travel, and exactly as far
+              down as before. One that shows no press at all is a fail; so is one that still takes
+              time to get there. The slider is not one of the four — see Known, and do not log it
+              against this line.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on

@@ -175,6 +175,7 @@ import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.TdayPress
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.TdayTaskRowMetrics
 import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeleton
@@ -195,6 +196,7 @@ import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.RootFeedDock
@@ -1455,15 +1457,6 @@ fun TodoListScreen( // skipcq: KT-R1006
             null
         },
     )
-    val fabPressed by fabInteractionSource.collectIsPressedAsState()
-    val fabScale by animateFloatAsState(
-        targetValue = if (fabPressed) 0.93f else 1f,
-        label = "todoFabScale",
-    )
-    val fabOffsetY by animateDpAsState(
-        targetValue = if (fabPressed) 2.dp else 0.dp,
-        label = "todoFabOffsetY",
-    )
     val timelineItemSpacing = TimelineDateGroupSpacing
     fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
         // Starts at 1: the hero block holds index 0 on this path, so every row
@@ -1741,12 +1734,6 @@ fun TodoListScreen( // skipcq: KT-R1006
             // selecting; the two must never share it.
             if (showCreateTaskButton && !isViewerList && !selectionActive) {
                 CreateTaskButton(
-                    modifier = Modifier
-                        .offset(y = fabOffsetY)
-                        .graphicsLayer {
-                            scaleX = fabScale
-                            scaleY = fabScale
-                        },
                     interactionSource = fabInteractionSource,
                     backgroundColor = fabColor,
                     onClick = {
@@ -3701,19 +3688,6 @@ private fun FloaterTaskHomeListRow(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        label = "floaterTaskHomeListRowScale",
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "floaterTaskHomeListRowOffsetY",
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 8.dp,
-        label = "floaterTaskHomeListRowElevation",
-    )
     val accent = tdayListAccentColor(colorKey)
     val icon = tdayListIconForKey(iconKey)
     val containerColor =
@@ -3725,11 +3699,7 @@ private fun FloaterTaskHomeListRow(
             .fillMaxWidth()
             .height(70.dp)
             .semantics(mergeDescendants = true) {}
-            .offset(y = animatedOffsetY)
-            .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -3737,9 +3707,11 @@ private fun FloaterTaskHomeListRow(
         interactionSource = interactionSource,
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
+        // Was a third `animateDpAsState` off the same press fed into both slots.
+        // `cardElevation` holds exactly this pair and animates between them.
         elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation,
+            defaultElevation = 8.dp,
+            pressedElevation = 2.dp,
         ),
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -3854,29 +3826,16 @@ private fun TodayHeaderButton(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
     // The same fill the back button beside it carries. These were painted with
     // `background` and a hairline instead, which on a bar whose own strip is
     // that colour left them as outlines next to a solid white circle.
     val containerColor = tdayBarButtonContainerColor()
     val iconTint = MaterialTheme.colorScheme.onSurface
     val buttonSize = TdayDimens.FabSize
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "todayHeaderButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "todayHeaderButtonOffsetY",
-    )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -3997,7 +3956,6 @@ private fun SummaryBottomSheet(
 
 @Composable
 private fun CreateTaskButton(
-    modifier: Modifier,
     interactionSource: MutableInteractionSource,
     backgroundColor: Color,
     onClick: () -> Unit,
@@ -4005,7 +3963,11 @@ private fun CreateTaskButton(
     val view = LocalView.current
 
     Card(
-        modifier = modifier,
+        // The press sits with the Card that owns the source rather than being
+        // handed in from the Scaffold slot, which is where `RootCreateTaskButton`
+        // keeps its own. `FabScale`, not `PressScales.Bar`: this is the other of
+        // the two Android FABs that were each spelling 0.93 out.
+        modifier = Modifier.tdayPressable(interactionSource, scale = TdayPress.FabScale),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -4337,18 +4299,17 @@ private fun ListSettingsActionTile(
     val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
-        label = "listSettingsActionTileScale",
-    )
 
     Card(
+        // `offsetY = 0.dp`: these two tiles sit side by side inside the sheet and
+        // never had a sink. A tile dropping while the one beside it holds still
+        // reads as the pair misaligning, not as a tile going down.
         modifier = modifier
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(
+                interactionSource,
+                scale = TdayMotionTokens.PressScales.Card,
+                offsetY = 0.dp,
+            ),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -4391,19 +4352,17 @@ private fun ListSettingsDeleteButton(
     val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
-        label = "listSettingsDeleteButtonScale",
-    )
 
     Card(
+        // Flat, full width, and the last thing in the sheet: `offsetY = 0.dp` for
+        // the same reason the tiles above it take it.
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(
+                interactionSource,
+                scale = TdayMotionTokens.PressScales.Card,
+                offsetY = 0.dp,
+            ),
         onClick = {
             // Opens the confirmation, destroys nothing — Cancel is still there.
             // The thud is fired by the dialog's confirm button instead.
