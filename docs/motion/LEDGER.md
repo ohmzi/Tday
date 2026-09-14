@@ -674,20 +674,65 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 25d — the highlight ring is clipped away by the row's own collapse wrapper
 
-- [ ] *new, not one of the 109* — below `sm` the ring is drawn outset on a child whose border box **is** the wrapper's clip box, so the mark a deep link leaves on a row is ~95 % invisible on a phone · web · Sev 2 · S · Gate V+D
+- [x] *new, not one of the 109* — below `sm` the ring is drawn outset on a child whose border box **is** the wrapper's clip box, so the mark a deep link leaves on a row is ~95 % invisible on a phone · web · Sev 2 · S · Gate V+D
   - Found while fixing `web-calendar-highlight-ring-cuts`, which now fades a ring almost nobody can
     see. Identical in all three row types carrying
     `highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0"` —
-    `CalendarClient.tsx:799`, `TodoItemContainer.tsx:390`, `FloaterItemContainer.tsx:298` — because
+    `CalendarClient.tsx:880`, `TodoItemContainer.tsx:406`, `FloaterItemContainer.tsx:267` — because
     all three sit in the same `grid-rows-[1fr] overflow-hidden sm:overflow-visible` wrapper, which
     predates the programme (09225a04).
   - Not the one-line `inset-ring` swap it looks like, which is why it is `S`. The wrapper's clip is
     load-bearing — it is what lets the 1fr track actually close below `sm` — and `sm:ring-0` means
-    whatever lands has to leave the desktop tint byte-identical. Three shapes are open: an inset
+    whatever lands has to leave the desktop tint byte-identical. Three shapes were open: an inset
     ring, the ring moved onto the wrapper, or the clip applied only while `removing`, which is the
-    trade `TodoItemContainer.tsx:374` already argues for the foreground child's own `overflow` and
+    trade `TodoItemContainer.tsx:359` already argues for the foreground child's own `overflow` and
     for exactly this reason. Whichever wins, it is one change in three files or it is a fourth way
     these rows differ from each other.
+  - **The inset ring won**, spelled `inset-ring-2` / `inset-ring-accent/25` — its own utility in
+    Tailwind 4, not v3's `ring-inset` modifier, and compiled against the installed 4.2.2 rather
+    than read off a changelog. It stays a `box-shadow`, so it rides the whitelist leg PR 25b added
+    and the clip keeps doing the two jobs that make it unmovable.
+  - **The ring on the wrapper was rejected** because it escapes the clip by leaving the clock
+    behind. `HIGHLIGHT_SETTLE` is written into the foreground child's inline `style` as part of
+    `swipeTransition` (`useSwipeRow.ts:51`); the wrapper declares no transition at all, so the ring
+    would arrive there as a cut — `web-calendar-highlight-ring-cuts` reopened by its own follow-up —
+    unless the clock were duplicated onto a second node, which is a second place for it to drift.
+  - **Clipping only while `removing` was rejected** for more than the row above credits. The clip
+    is not only what lets the 1fr track close: it is also what contains the swipe. The foreground
+    child is translated up to -210px under a finger, and `FloaterItemContainer.tsx:255` already
+    records that this same clip is what the mobile `min-h-[54px]` exists to keep the swipe pills
+    out of. Removing it outside `removing` would trade a clipped ring for a row painting over its
+    neighbours.
+  - The shape is a ternary, not a second `&&`, and that is the one piece of this that a diff reads
+    as noise. Two things forced it. Tailwind emits `inset-ring-transparent` *after*
+    `inset-ring-accent/25` in the utilities layer, so a row carrying both resolves to the invisible
+    one; and the ring has to be declared on **both** sides of `highlighted`, for two reasons that
+    are *not* "it would cut". It would not. An unmarked row of any of the three declares no
+    `box-shadow` at all — nothing in its class string is a ring or shadow utility, and the only
+    `box-shadow` rule in `globals.css` outside the drag keyframe is the `:active` press — so it
+    computes to `none`, and CSS pads a `none` against the other list adopting its `inset` flags.
+    Measured in headless Chromium against the installed 4.2.2 with `transition: box-shadow 1000ms
+    linear`, `inset-ring-2` hung off `highlighted` interpolates: spread 0.27px at t+150ms, 1.17px
+    at t+600ms, 2px at the end. The same comment already stands in this tree at `globals.css:1179`
+    for the drag overlay. What is wrong with it is that *growing a ring is geometry*, and geometry
+    is `Emphasis` by rule 2 while this mark rides the `Quick` leg of `swipeTransition` next to the
+    desktop tint; a mark lighting up should move paint, which is what a fixed 2px ring changing
+    only its alpha does. And declaring both sides is defensive against the real cut:
+    `--tw-inset-ring-shadow` initialises **non**-inset, so the first `shadow-*`, ring or press rule
+    to leave a composite `box-shadow` on the resting row makes the flags disagree and the property
+    stops transitioning at all — the same measurement, with `ring-0` added to the from-state, holds
+    2px flat from t+150ms. That is `web-calendar-highlight-ring-cuts` back with every gate green,
+    one utility away. Only the colour moves.
+  - Desktop is byte-identical by construction: `sm:inset-ring-transparent` replaces `sm:ring-0`,
+    and a variant always sorts after the utility it varies. No new duration, curve or ms literal,
+    so `motion-budget.json` is untouched.
+  - Restores an existing mark rather than introducing a behaviour, so no `GuideTopic`,
+    `sinceVersion`, locale strings or `:shared:exportGuideContent` re-run.
+  - `calendar-row-highlight-ring.test.tsx` is PR 25b's and asserted the ring by the literal
+    `ring-2`, which is a substring of `inset-ring-2` and so would have passed on the defect and on
+    the fix alike. It now names the inset spelling, and its "no ring when unmarked" assertion is
+    about the absent *colour*, the ring itself being unconditional. The new coverage is
+    `row-highlight-ring-clip.test.tsx`, which holds all three rows against one string.
 
 ### PR 49 — the drawer placeholder matches the surface it precedes
 
