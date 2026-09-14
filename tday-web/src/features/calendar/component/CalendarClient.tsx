@@ -871,7 +871,14 @@ export function CalendarTaskRow({
           className={cn(
             "relative z-10 flex items-center justify-between gap-3 px-1 py-2.5",
             "sm:cursor-grab sm:rounded-lg sm:active:cursor-grabbing sm:hover:bg-muted/40",
-            highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
+            // The deep-link mark, inset so the wrapper's clip cannot eat it, and declared on both
+            // sides so only its colour travels. Both halves are argued in full on the identical
+            // pair in `TodoItemContainer` — this row is the same defect in a third file, not a
+            // variation on it.
+            "inset-ring-2",
+            highlighted
+              ? "rounded-lg inset-ring-accent/25 sm:bg-accent/5 sm:inset-ring-transparent"
+              : "inset-ring-transparent",
           )}
         >
           <div
