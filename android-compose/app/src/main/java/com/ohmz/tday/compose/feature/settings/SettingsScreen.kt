@@ -16,15 +16,10 @@ import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +29,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -78,7 +72,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -104,6 +97,7 @@ import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.calendar.CalendarEntryPoint
 import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
+import com.ohmz.tday.compose.core.data.ReduceMotionPreferenceStore
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.db.hasUnmigratedPlaintextCache
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
@@ -122,15 +116,19 @@ import com.ohmz.tday.compose.core.notification.isNotificationOsAuthorized
 import com.ohmz.tday.compose.core.notification.notificationToggleAction
 import com.ohmz.tday.compose.core.notification.notificationToggleChecked
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
+import com.ohmz.tday.compose.core.ui.TdayDisclosureMotion
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.feature.app.MobileSyncStatus
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
 import com.ohmz.tday.compose.feature.auth.SecurityQuestionPicker
@@ -160,6 +158,46 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+// What this screen draws that the scale has no rung for. Named here rather than snapped onto a
+// neighbouring step, because the near misses are what the names are for: 48 is Android's minimum
+// touch target and not a spacing step that lands near it, and the pill is 34 tall because that is
+// the height iOS draws it at.
+
+// A `PressedSurfaceOffsetY` stood here, naming the 2 dp the bar button sank by. Its one call site
+// is gone: the button now presses through `Modifier.tdayPressable`, whose `offsetY` already
+// defaults to `TdayPress.SinkOffset` — the same 2 dp, named once for every surface instead of once
+// per screen.
+
+/** The glyph inside the toolbar's circular button, sized against that button rather than the icon scale. */
+private val BarButtonIconSize = 22.dp
+
+/**
+ * Android's minimum touch target. The pill claims it as a minimum height outside its painted shape
+ * so the shape still looks 34 tall; the save button claims it as a fixed one. Both are the target,
+ * not the drawing, which is why neither is a spacing rung.
+ */
+private val MinTouchTargetHeight = 48.dp
+
+// The pill that says a value changes here. Its geometry is quoted in SettingsPillButton's KDoc and
+// is one shape's proportions, so the three move together or not at all.
+private val PillHeight = 34.dp
+private val PillIconGap = 5.dp
+private val PillIconSize = 12.dp
+
+/** Cancel beside Save. Falls between SpacingMd and SpacingLg, where the scale has no step. */
+private val EditorActionSpacing = 10.dp
+
+// The spinner that stands in for the Save label while a profile edit is in flight. It is under
+// IconSm because it is drawn inside a button's text slot, not beside a label.
+private val ButtonSpinnerSize = 18.dp
+private val ButtonSpinnerStroke = 2.dp
+
+/** The gap between things stacked inside a settings card. 16 sits between SpacingXl and SpacingXxl. */
+private val CardContentSpacing = 16.dp
+
+/** A row's trailing chevron is drawn under the leading glyph's IconSm, so it reads as punctuation. */
+private val RowChevronSize = 18.dp
 
 @Composable
 fun SettingsScreen(
@@ -228,6 +266,7 @@ fun SettingsScreen(
     // sits under: searching "reminders" keeps the whole group rather than only
     // the one row that happens to draw the heading.
     val appearanceTitle = stringResource(R.string.settings_appearance)
+    val motionTitle = stringResource(R.string.settings_motion)
     val behaviorTitle = stringResource(R.string.settings_behavior)
     val remindersTitle = stringResource(R.string.settings_reminders)
     // Whether a notification would actually arrive — the OS permission AND the
@@ -300,6 +339,23 @@ fun SettingsScreen(
                 selectedThemeMode = selectedThemeMode,
                 onThemeModeSelected = onThemeModeSelected,
             )
+        },
+        SettingsEntry(
+            key = "reduce-motion",
+            visible = search.matches(
+                motionTitle,
+                stringResource(R.string.settings_reduce_motion),
+            ),
+            // Its own heading rather than a second row under "Appearance". Appearance is
+            // what the app looks like standing still; this is how long it takes to get
+            // there, and the two are answered by different people for different reasons.
+            // The heading is also the only place this card can hang a "?" — only the first
+            // row of a same-section run draws one — and the guide topic is where the
+            // system setting this composes with gets explained.
+            section = motionTitle,
+            sectionHelpTopicId = GuideTopicIds.REDUCE_MOTION,
+        ) {
+            ReduceMotionRow()
         },
         SettingsEntry(
             key = "default-home-screen",
@@ -406,7 +462,7 @@ fun SettingsScreen(
                 SettingsRowIcon(R.drawable.ic_lucide_sparkles)
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
                 ) {
                     Text(
                         text = stringResource(R.string.settings_ai_task_summary),
@@ -553,7 +609,7 @@ fun SettingsScreen(
                     color = colorScheme.onSurface,
                 )
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -682,9 +738,9 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .background(colorScheme.background)
                 .verticalScroll(scrollState)
-                .padding(horizontal = 18.dp)
-                .padding(bottom = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = TdayDimens.ContentPaddingHorizontal)
+                .padding(bottom = TdayDimens.SpacingXxs),
+            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
         ) {
             TdayHeroTitleBlock(
                 title = settingsTitle,
@@ -725,11 +781,11 @@ fun SettingsScreen(
                     accentColor = colorScheme.primary,
                     title = stringResource(R.string.search_no_results_settings),
                     description = stringResource(R.string.search_no_results_body),
-                    modifier = Modifier.padding(vertical = 24.dp),
+                    modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(TdayDimens.Spacing3xl))
         }
 
         // Last, so it draws over the content passing behind it.
@@ -887,23 +943,10 @@ private fun SettingsBarButton(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "settingsBarButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "settingsBarButtonOffsetY",
-    )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -913,7 +956,7 @@ private fun SettingsBarButton(
         colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.BarButtonElevation,
-            pressedElevation = 0.dp,
+            pressedElevation = TdayDimens.CardElevationDefault,
         ),
     ) {
         Box(
@@ -924,7 +967,7 @@ private fun SettingsBarButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(BarButtonIconSize),
             )
         }
     }
@@ -1010,7 +1053,7 @@ private fun AccountNameSection(
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -1018,7 +1061,7 @@ private fun AccountNameSection(
             SettingsRowIcon(R.drawable.ic_lucide_user)
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
             ) {
                 AccountFieldLabel(stringResource(R.string.settings_account_name_label))
                 Text(
@@ -1043,10 +1086,10 @@ private fun AccountNameSection(
 
         AnimatedVisibility(
             visible = isEditing,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
+            enter = TdayDisclosureMotion.Enter,
+            exit = TdayDisclosureMotion.Exit,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg)) {
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = draft,
@@ -1057,7 +1100,7 @@ private fun AccountNameSection(
                     label = { Text(stringResource(R.string.settings_account_name_label)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(TdayDimens.RadiusField),
                 )
                 error?.let { AccountErrorText(it) }
                 AccountEditorActions(
@@ -1091,7 +1134,7 @@ private fun AccountUsernameRow(username: String) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SettingsRowIcon(R.drawable.ic_lucide_at_sign)
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs)) {
             AccountFieldLabel(stringResource(R.string.settings_account_username_label))
             Text(
                 text = username,
@@ -1134,7 +1177,7 @@ private fun AccountPasswordSection(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -1142,7 +1185,7 @@ private fun AccountPasswordSection(
             SettingsRowIcon(R.drawable.ic_lucide_lock)
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
             ) {
                 AccountFieldLabel(stringResource(R.string.settings_account_password_label))
                 Text(
@@ -1163,10 +1206,10 @@ private fun AccountPasswordSection(
 
         AnimatedVisibility(
             visible = isEditing,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
+            enter = TdayDisclosureMotion.Enter,
+            exit = TdayDisclosureMotion.Exit,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg)) {
                 AccountPasswordField(
                     value = current,
                     onValueChange = {
@@ -1202,7 +1245,7 @@ private fun AccountPasswordSection(
                 error?.let { AccountErrorText(it) }
                 TextButton(
                     onClick = onForgotPassword,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(TdayDimens.SpacingNone),
                 ) {
                     Text(
                         text = stringResource(R.string.settings_account_forgot_password),
@@ -1307,7 +1350,7 @@ private fun AccountSecurityQuestionsSection(
             answer1.isNotBlank() && answer2.isNotBlank() && answer3.isNotBlank() &&
             (!configured || current.isNotBlank())
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -1315,7 +1358,7 @@ private fun AccountSecurityQuestionsSection(
             SettingsRowIcon(R.drawable.ic_lucide_shield_question)
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
             ) {
                 AccountFieldLabel(stringResource(R.string.settings_account_security_questions_label))
                 Text(
@@ -1340,10 +1383,10 @@ private fun AccountSecurityQuestionsSection(
 
         AnimatedVisibility(
             visible = isEditing,
-            enter = expandVertically(),
-            exit = shrinkVertically(),
+            enter = TdayDisclosureMotion.Enter,
+            exit = TdayDisclosureMotion.Exit,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg)) {
                 if (configured) {
                     AccountPasswordField(
                         value = current,
@@ -1446,7 +1489,7 @@ private fun AccountPasswordField(
         singleLine = true,
         visualTransformation = if (revealed) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(imeAction = imeAction),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusField),
         trailingIcon = {
             IconButton(onClick = { revealed = !revealed }) {
                 Icon(
@@ -1492,7 +1535,7 @@ private fun SettingsPillButton(
             // M3 Button would apply for it, so the tappable area was the 34dp box
             // — under Android's 48dp minimum. The extra height is claimed outside
             // the painted shape so the pill still looks 34 tall.
-            .sizeIn(minHeight = 48.dp)
+            .sizeIn(minHeight = MinTouchTargetHeight)
             .wrapContentHeight()
             .clip(CircleShape)
             .background(colorScheme.secondary.copy(alpha = 0.12f))
@@ -1500,16 +1543,16 @@ private fun SettingsPillButton(
                 TdayHaptics.buttonPress(view)
                 onClick()
             }
-            .height(34.dp)
-            .padding(horizontal = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
+            .height(PillHeight)
+            .padding(horizontal = TdayDimens.SpacingXl),
+        horizontalArrangement = Arrangement.spacedBy(PillIconGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = ImageVector.vectorResource(icon),
             contentDescription = null, // decorative: the pill's label carries the meaning
             tint = colorScheme.secondary,
-            modifier = Modifier.size(12.dp),
+            modifier = Modifier.size(PillIconSize),
         )
         Text(
             text = text,
@@ -1531,7 +1574,7 @@ private fun AccountEditorActions(
     val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(EditorActionSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TextButton(
@@ -1549,7 +1592,7 @@ private fun AccountEditorActions(
             enabled = canSave,
             modifier = Modifier
                 .weight(1f)
-                .height(48.dp),
+                .height(MinTouchTargetHeight),
             colors = ButtonDefaults.buttonColors(
                 containerColor = colorScheme.primary,
                 contentColor = colorScheme.onPrimary,
@@ -1557,8 +1600,8 @@ private fun AccountEditorActions(
         ) {
             if (busy) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(ButtonSpinnerSize),
+                    strokeWidth = ButtonSpinnerStroke,
                     color = colorScheme.onPrimary,
                 )
             } else {
@@ -1599,7 +1642,7 @@ private fun SettingsWorkspaceContent(
     val colorScheme = MaterialTheme.colorScheme
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(CardContentSpacing),
     ) {
         if (syncStatus.isLocalMode) {
             Text(
@@ -1722,16 +1765,21 @@ internal fun SettingsSectionCard(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, borderColor),
+        // RadiusXl, not RadiusCard: this is the card a section is drawn on, but it has always
+        // been drawn a step under that rung and moving it up would be a redraw, not a migration.
+        shape = RoundedCornerShape(TdayDimens.RadiusXl),
+        border = BorderStroke(TdayDimens.BorderWidth, borderColor),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.SettingsCardElevation,
         ),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(
+                horizontal = TdayDimens.SpacingXxl,
+                vertical = TdayDimens.SpacingXxl,
+            ),
+            verticalArrangement = Arrangement.spacedBy(CardContentSpacing),
             content = content,
         )
     }
@@ -1777,9 +1825,9 @@ internal fun SettingsListRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(TdayDimens.RadiusRow))
             .clickable(onClick = onClick)
-            .padding(vertical = 2.dp),
+            .padding(vertical = TdayDimens.SpacingXxs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SettingsRowIcon(icon, iconTint)
@@ -1791,7 +1839,7 @@ internal fun SettingsListRow(
             color = titleColor,
         )
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             value?.let {
@@ -1806,7 +1854,7 @@ internal fun SettingsListRow(
                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
                     contentDescription = null,
                     tint = trailingTint,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(RowChevronSize),
                 )
             }
         }
@@ -1820,7 +1868,7 @@ internal fun SettingsDivider(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(1.dp)
+            .height(TdayDimens.BorderWidth)
             .background(color),
     )
 }
@@ -1860,6 +1908,88 @@ private fun ThemeModeSelector(
         onOptionSelected = onThemeModeSelected,
         label = { mode -> context.getString(mode.labelRes) },
     )
+}
+
+/**
+ * The app's own "Reduce motion" switch — and the one state where it has nothing to say.
+ *
+ * It composes with Android's animator duration scale rather than competing with it (see
+ * `effectiveMotionScale`): either answer asking for less is enough, and this switch can
+ * only ever subtract. Which leaves exactly one case worth drawing differently — a device
+ * whose own setting has already removed animations, where this switch cannot change what
+ * the app does either way. Drawing it off there would claim the app is animating when it
+ * is not; drawing it on and live would be a control that springs back the moment it is
+ * touched, since turning it off would change nothing. So it shows the truth (reduced) and
+ * is silenced, the same treatment the reminder rows get while notifications are off, with
+ * a line naming who made the decision — this one is worth saying out loud because, unlike
+ * the notification switch, the setting responsible is in another app entirely.
+ */
+@Composable
+private fun ReduceMotionRow() {
+    val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val store = remember(context) { ReduceMotionPreferenceStore(context.applicationContext) }
+    var enabled by remember(store) { mutableStateOf(store.isEnabled()) }
+    val systemReduced = rememberSystemMotionScale() == 0f
+
+    SettingsSilencedWhen(systemReduced) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SettingsRowIcon(R.drawable.ic_lucide_activity)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_reduce_motion),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colorScheme.onSurface,
+                )
+                if (systemReduced) {
+                    Text(
+                        text = stringResource(R.string.settings_reduce_motion_system),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Switch(
+                checked = enabled || systemReduced,
+                // `enabled` as well as the wrapper, because the wrapper only stops
+                // fingers: it is a transparent `clickable` laid over the row, and
+                // TalkBack does not go through the overlay — it activates the
+                // toggle's own semantics node underneath. Without this, the one
+                // control on the screen that cannot change anything is the one a
+                // screen-reader user can still write to, and the row would go on
+                // drawing `on` while a preference they never chose waited to take
+                // effect the moment Android's animations came back. Passing it here
+                // removes the action from the node rather than hiding it, which is
+                // the same argument the doc above makes for not drawing this row
+                // live.
+                enabled = !systemReduced,
+                onCheckedChange = {
+                    enabled = it
+                    store.setEnabled(it)
+                },
+                // The disabled colours restate the checked ones so the dimming stays
+                // [SettingsSilencedWhen]'s single 0.45, and this row reads as the
+                // silenced neighbours do. Material's own disabled palette on top of
+                // that alpha would wash the track out until "on" stopped being
+                // legible — and "on" is the whole thing this row has to say.
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = colorScheme.secondary,
+                    checkedBorderColor = Color.Transparent,
+                    disabledCheckedThumbColor = Color.White,
+                    disabledCheckedTrackColor = colorScheme.secondary,
+                    disabledCheckedBorderColor = Color.Transparent,
+                ),
+            )
+        }
+    }
 }
 
 /** The "Behavior" card row: label plus [RootFeedTabSelector]. Its own composable, out of
@@ -1977,7 +2107,7 @@ private fun AppLockRow() {
     var enabled by remember { mutableStateOf(store.isAppLockEnabled()) }
     var showUnavailable by remember { mutableStateOf(false) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs)) {
         SettingsToggleRow(
             icon = R.drawable.ic_lucide_shield,
             title = stringResource(R.string.settings_app_lock),
@@ -2027,7 +2157,7 @@ private fun UnencryptedLegacyCacheWarning() {
 
     val colorScheme = MaterialTheme.colorScheme
     SettingsDivider()
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs)) {
         Text(
             text = stringResource(R.string.settings_legacy_cache_warning_title),
             style = MaterialTheme.typography.titleMedium,
@@ -2083,7 +2213,7 @@ private fun DeviceCalendarSyncRow() {
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs)) {
         SettingsToggleRow(
             icon = R.drawable.ic_lucide_calendar,
             title = stringResource(R.string.settings_calendar_sync),
@@ -2185,7 +2315,7 @@ private fun NotificationsRow(onDeliversChange: (Boolean) -> Unit = {}) {
         osState = readNotificationOsState(context, store)
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -2424,7 +2554,7 @@ private fun QuietHoursRow() {
         ).show()
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -2474,8 +2604,8 @@ private fun QuietHoursTimeRow(label: String, value: String, onClick: () -> Unit)
             // Sub-row of Quiet hours: no glyph of its own, indented under its label instead.
             .padding(
                 start = TdayDimens.IconSm + TdayDimens.SpacingXl,
-                top = 4.dp,
-                bottom = 4.dp,
+                top = TdayDimens.SpacingXs,
+                bottom = TdayDimens.SpacingXs,
             ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -2511,7 +2641,7 @@ private fun UnifiedPushRow() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(vertical = TdayDimens.SpacingXxs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SettingsRowIcon(R.drawable.ic_lucide_cloud)
@@ -2562,7 +2692,7 @@ private fun ReminderSelector(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 2.dp),
+                .padding(vertical = TdayDimens.SpacingXxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SettingsRowIcon(R.drawable.ic_lucide_bell)
@@ -2612,7 +2742,7 @@ private fun DayAheadSelector(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 2.dp),
+                .padding(vertical = TdayDimens.SpacingXxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SettingsRowIcon(R.drawable.ic_lucide_bell_ring)
@@ -2682,7 +2812,7 @@ private fun LanguageSelector() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 2.dp),
+                .padding(vertical = TdayDimens.SpacingXxs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SettingsRowIcon(R.drawable.ic_lucide_languages)

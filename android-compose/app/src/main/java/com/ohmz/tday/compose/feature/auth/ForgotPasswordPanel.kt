@@ -41,9 +41,30 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.feature.onboarding.WizardHeroTile
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import kotlinx.coroutines.delay
 
 private const val RESET_RETURN_DELAY_MS = 2000L
+
+// What the reset panel draws that the scale has no rung for. Named here rather than snapped onto a
+// neighbouring step: 48 is Android's minimum touch target and not a spacing step that lands near
+// it, and the two 18s below are two different things that happen to agree today.
+
+/** The full-width button every step ends on. The target, not the drawing, which is why it is not a
+ *  spacing rung. */
+private val PrimaryButtonHeight = 48.dp
+
+/** The tick beside "Password changed". Between `IconSm` and `IconMd`, and sized against the title
+ *  it sits next to rather than the icon scale. */
+private val SuccessIconSize = 24.dp
+
+/** The arrow in the "Back to sign in" link, drawn under `IconSm` so it reads as punctuation. */
+private val BackLinkIconSize = 18.dp
+
+// The spinner that stands in for a button's label while the step is in flight. Under `IconSm`
+// because it is drawn inside the button's text slot, not beside a label.
+private val ButtonSpinnerSize = 18.dp
+private val ButtonSpinnerStroke = 2.dp
 
 /**
  * Staged self-service reset flow, rendered bare so it lives inside the login dialog's
@@ -84,7 +105,7 @@ fun ForgotPasswordPanel(
         modifier = modifier
             .fillMaxWidth()
             .animateContentSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
     ) {
         // Same red hero tile the Sign in panel uses, so the reset flow reads as the same dialog.
         WizardHeroTile(
@@ -105,7 +126,7 @@ fun ForgotPasswordPanel(
                     label = { Text(stringResource(R.string.onboarding_username_label)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(TdayDimens.RadiusField),
                 )
                 ErrorText(uiState.errorMessage)
                 PrimaryButton(
@@ -128,7 +149,7 @@ fun ForgotPasswordPanel(
                         label = { Text(question.text) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                        shape = RoundedCornerShape(22.dp),
+                        shape = RoundedCornerShape(TdayDimens.RadiusField),
                     )
                 }
                 ErrorText(uiState.errorMessage)
@@ -161,7 +182,7 @@ fun ForgotPasswordPanel(
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(TdayDimens.RadiusField),
                 )
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
@@ -174,7 +195,7 @@ fun ForgotPasswordPanel(
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(TdayDimens.RadiusField),
                 )
                 ErrorText(localError ?: uiState.errorMessage)
                 PrimaryButton(
@@ -207,14 +228,14 @@ fun ForgotPasswordPanel(
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
                         imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
                         contentDescription = null,
                         tint = colorScheme.primary,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(SuccessIconSize),
                     )
                     Text(
                         text = stringResource(R.string.forgot_password_success_title),
@@ -241,7 +262,7 @@ fun ForgotPasswordPanel(
                 Button(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
+                        .height(PrimaryButtonHeight),
                     enabled = !uiState.isBusy,
                     onClick = { viewModel.requestAdminReset() },
                     colors = ButtonDefaults.buttonColors(
@@ -276,10 +297,10 @@ fun ForgotPasswordPanel(
                 Icon(
                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_arrow_left),
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(BackLinkIconSize),
                 )
                 Text(
-                    modifier = Modifier.padding(start = 6.dp),
+                    modifier = Modifier.padding(start = TdayDimens.SpacingSm),
                     text = stringResource(R.string.forgot_password_back_to_sign_in),
                 )
             }
@@ -298,7 +319,7 @@ private fun PrimaryButton(
     Button(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp),
+            .height(PrimaryButtonHeight),
         enabled = enabled,
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(
@@ -325,8 +346,8 @@ private fun ErrorText(message: String?) {
 private fun BusyContent(busy: Boolean, label: String) {
     if (busy) {
         CircularProgressIndicator(
-            modifier = Modifier.size(18.dp),
-            strokeWidth = 2.dp,
+            modifier = Modifier.size(ButtonSpinnerSize),
+            strokeWidth = ButtonSpinnerStroke,
             color = MaterialTheme.colorScheme.onPrimary,
         )
     } else {

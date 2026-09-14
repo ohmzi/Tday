@@ -13,6 +13,9 @@ struct CompletedScreen: View {
     @State private var viewModel: CompletedViewModel
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
+    /// Gates the history's own motion — see `completedTimelineAnimationKey`'s
+    /// `.animation(_:value:)` and `completedRowTransition`.
+    @Environment(\.tdayAnimation) private var tdayAnimation
     @State private var editingItem: CompletedItem?
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var collapsedSectionIDs: Set<String> = []
@@ -102,6 +105,15 @@ struct CompletedScreen: View {
         searchedItems.isEmpty && !viewModel.isLoading
     }
 
+    /// The opposite half of [showsCompletedEmptyState], and deliberately its
+    /// mirror: history that is still arriving is neither empty nor a list, and
+    /// before this the screen answered that third case with the empty frame it
+    /// also uses for "there is nothing". A refresh over rows that are already on
+    /// screen keeps the rows — the item list is asked as well as the flag.
+    private var showsCompletedFeedSkeleton: Bool {
+        searchedItems.isEmpty && viewModel.isLoading
+    }
+
     /// The empty scene's insertion and removal. The same shape, for the same
     /// reasons, as `TodoListScreen.emptyStateIllustrationTransition`:
     ///
@@ -125,10 +137,10 @@ struct CompletedScreen: View {
 
     /// The scene's exit. The same 0.22s ease-in as the timeline's illustration
     /// exit (`TodoListScreen.EarlierIllustrationHandoff.exitDuration`), so the
-    /// two screens' empty scenes leave the same way, and a touch inside the
-    /// 0.24s the history's own rows arrive on (`completedTimelineAnimationKey`)
-    /// so the scene is out of the way rather than dissolving over the rows it
-    /// was standing in for.
+    /// two screens' empty scenes leave the same way, and shorter than the travel
+    /// the rows taking its place ride (`TdayFeedItemMotion.placement`, on
+    /// `completedTimelineAnimationKey`) so the scene is out of the way rather than
+    /// dissolving over the rows it was standing in for.
     private enum CompletedEmptyStateExit {
         static let duration: Double = 0.22
     }
@@ -278,6 +290,35 @@ struct CompletedScreen: View {
                     }
                 }
 
+                // Until this branch a cold open drew the title and then a blank
+                // page: `isLoading` was consumed only to suppress the empty scene,
+                // so the screen's answer to "still loading" was to show nothing at
+                // all and let the rows appear out of it.
+                if showsCompletedFeedSkeleton {
+                    // Today stacks its placeholder over its rows so the two share one
+                    // slot; a `List` has no such move — its sections are siblings by
+                    // construction, and a `Section` cannot be overlaid on the ones after
+                    // it. So this one is above the rows it hands over to, and whether the
+                    // feed reflows as they swap depends on something source cannot settle:
+                    // SwiftUI holds a removing view in the layout, while a `List` on iOS
+                    // resolves the same change as a UIKit batch update that animates the
+                    // delete and the inserts into their final places together. The two
+                    // look different, and only a device can say which one this is — so it
+                    // is a line in docs/verification/phase-9-device-pass.md rather than a
+                    // claim here.
+                    Section {
+                        // History's row, not Today's: same toggle, but 8 pt of
+                        // vertical padding to Today's 10 and no horizontal padding
+                        // of its own, so the default set would stand a line taller
+                        // than the rows it is standing in for.
+                        TdayTaskRowSkeletonGroup(metrics: .completedTimeline)
+                            .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .transition(.opacity)
+                    }
+                }
+
                 ForEach(Array(groupedItems.enumerated()), id: \.element.id) { index, section in
                     completedTimelineSection(
                         section,
@@ -301,7 +342,29 @@ struct CompletedScreen: View {
             .listSectionSpacing(0)
             .environment(\.defaultMinListRowHeight, 1)
             .disableVerticalScrollBounce()
-            .animation(.easeInOut(duration: 0.24), value: completedTimelineAnimationKey)
+            // The placeholder's hand-over, on the List rather than beside the
+            // branch that holds it: inside a `List` the modifiers written around an
+            // `if` are handed down to the rows themselves and leave with them, so
+            // the removal would have no transaction left to run in.
+            //
+            // BELOW the travel, and the order is the point. `searchedItems` drives
+            // both values, so the first page landing changes both in one update,
+            // and between two `.animation(_:value:)` that fire together the one
+            // nearest the content wins. Above the travel this lost every time it
+            // mattered and the dissolve ran at Emphasis instead of Enter. Below it,
+            // the travel still carries every update this one is not about, because
+            // a modifier whose value held still leaves the transaction alone.
+            .animation(
+                tdayAnimation(TdayTaskRowSkeleton.crossfade),
+                value: showsCompletedFeedSkeleton
+            )
+            // The history's travel. Rows that arrive and leave override this from
+            // their own legs (`completedRowTransition`); this is what carries
+            // everything a search narrowing the list merely moves.
+            .animation(
+                tdayAnimation(TdayFeedItemMotion.placement),
+                value: completedTimelineAnimationKey
+            )
 
         }
     }
@@ -349,7 +412,7 @@ struct CompletedScreen: View {
 
     private func openSearch() {
         HapticManager.buttonPress()
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             searchExpanded = true
         }
     }
@@ -359,7 +422,7 @@ struct CompletedScreen: View {
     private func closeSearch() {
         HapticManager.buttonPress()
         searchFieldFocused = false
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             searchExpanded = false
         }
         searchQuery = ""
@@ -459,14 +522,15 @@ struct CompletedScreen: View {
         return !Calendar.current.isDate(currentDate, inSameDayAs: nextDate)
     }
 
+    /// The history's rows are the same three events as the timeline's, so they run
+    /// the same three specs. This screen already had the asymmetry — it just had it
+    /// in numbers of its own (0.16 in, 0.1 out) that no other feed shared, and that
+    /// sat under a 0.24s travel nothing else shared either. Both legs also leave
+    /// `.easeOut` for the feed's one curve, and the removal lengthens 0.1 -> Quick:
+    /// a visible change, made on purpose, and the reason `docs/motion.md` no longer
+    /// files that 0.1 under sequencing constants nobody watches.
     private func completedRowTransition() -> AnyTransition {
-        let insertion = AnyTransition.opacity
-            .combined(with: .move(edge: .top))
-            .animation(.easeOut(duration: 0.16))
-        let removal = AnyTransition.opacity
-            .combined(with: .move(edge: .top))
-            .animation(.easeOut(duration: 0.1))
-        return .asymmetric(insertion: insertion, removal: removal)
+        TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled)
     }
 
     private func completedTimelineRow(_ item: CompletedItem) -> some View {
@@ -533,7 +597,7 @@ private struct CompletedTimelineRow: View {
         let priorityIcon = priorityIndicatorSymbolName(item.priority)
 
         VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: TodoTimelineMetrics.minimalRowContentSpacing) {
                 Button {
                     startRestore()
                 } label: {
@@ -555,7 +619,7 @@ private struct CompletedTimelineRow: View {
                 .disabled(isRestoring)
                 .accessibilityLabel("Undo complete")
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: TodoTimelineMetrics.minimalRowTextSpacing) {
                     TodoTimelineTaskTitle(
                         text: item.title,
                         isCompleted: showStrikethrough,
@@ -596,7 +660,7 @@ private struct CompletedTimelineRow: View {
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
-        .animation(.easeInOut(duration: 0.26), value: isFading)
+        .animation(TdayMotion.standard(duration: TdayMotion.Durations.change), value: isFading)
         .transition(.opacity.combined(with: .scale(scale: 0.985)))
         .allowsHitTesting(!isRestoring)
         .todoTrailingSwipeActions(
@@ -620,16 +684,20 @@ private struct CompletedTimelineRow: View {
         }
 
         HapticManager.toggle(on: false)
+        // The check-off's own beats, run backwards. This row kept a third set —
+        // 180 / 180 — so undoing a completion took a different length of time from
+        // making one. The offsets and the rungs are now the ones every task row in
+        // every client plays; only the direction differs.
         Task { @MainActor in
-            withAnimation(.easeInOut(duration: 0.16)) {
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
                 restorePhase = .unchecked
             }
-            try? await Task.sleep(nanoseconds: 180_000_000)
-            withAnimation(.easeInOut(duration: 0.16)) {
+            try? await Task.sleep(nanoseconds: 160_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)) {
                 restorePhase = .unstruck
             }
-            try? await Task.sleep(nanoseconds: 180_000_000)
-            withAnimation(.easeInOut(duration: 0.26)) {
+            try? await Task.sleep(nanoseconds: 360_000_000)
+            withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)) {
                 restorePhase = .fading
             }
             try? await Task.sleep(nanoseconds: 260_000_000)

@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { forwardRef, type ComponentProps } from "react";
 import i18n, { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n";
+import { startsRouteHandover } from "@/lib/routeHandover";
 
 function resolveLocale(params: Record<string, string | undefined>): string {
   const fromParams = params.locale;
@@ -36,29 +37,49 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
 ) {
   void prefetch;
   const params = useParams();
+  const { pathname } = useLocation();
   const currentLocale = resolveLocale(params);
   const targetLocale = locale || currentLocale;
   const path = href ?? to ?? "";
   const localizedPath = localizePath(path, targetLocale);
 
-  return <RouterLink ref={ref} to={localizedPath} {...rest} />;
+  // Before the spread, so a call site that has a reason to decide for itself still
+  // wins — this is the app's default answer, not a policy.
+  return (
+    <RouterLink
+      ref={ref}
+      to={localizedPath}
+      viewTransition={startsRouteHandover(localizedPath, pathname)}
+      {...rest}
+    />
+  );
 });
 
 export function useRouter() {
   const navigate = useNavigate();
   const params = useParams();
+  const { pathname } = useLocation();
   const locale = resolveLocale(params);
 
   return {
     push(path: string) {
-      navigate(localizePath(path, locale));
+      const target = localizePath(path, locale);
+      navigate(target, { viewTransition: startsRouteHandover(target, pathname) });
     },
     replace(path: string) {
-      navigate(localizePath(path, locale), { replace: true });
+      const target = localizePath(path, locale);
+      navigate(target, {
+        replace: true,
+        viewTransition: startsRouteHandover(target, pathname),
+      });
     },
     refresh() {
       window.location.reload();
     },
+    // No opt-in here, and none is available: `navigate(-1)` takes a delta rather
+    // than a destination, and the browser's own back button does not come through
+    // this module at all. A POP therefore gets the path that exists everywhere —
+    // the arriving screen fades up, with no snapshot of the one being left.
     back() {
       navigate(-1);
     },

@@ -93,6 +93,87 @@ object GuideCatalog {
             setOf(WEB, ANDROID, IOS), badge = GuideBadge.PRO_TIP,
             body = listOf(para(GuideTopicIds.DRAG_REORDER)),
         ),
+        topic(
+            // After Drag to reorder because it is the same hand doing the same
+            // thing to a different surface, and a reader arrives here already
+            // holding something.
+            //
+            // IOS only, and that is the topic rather than an oversight. Android's
+            // create sheet is a Material `ModalBottomSheet`, which arrives with
+            // the platform's own drag-to-dismiss and its own grabber already
+            // drawn, and web has no bottom sheet to pull at all. iOS is the one
+            // client whose create sheet is hand-rolled — the host drives its own
+            // entrance so the dim does not arrive as a sliding band — and so the
+            // one client that had to be handed the gesture on purpose.
+            //
+            // "grip-vertical" again, one topic after it: a grabber is the handle
+            // that glyph draws, turned on its side. A glyph of its own would mean
+            // an Android vector drawable and an iOS imageset for a topic only one
+            // platform shows, which is the trade Reduce motion below refuses for
+            // the same reason.
+            GuideTopicIds.SWIPE_SHEET_AWAY, GuideSectionId.GESTURES, "grip-vertical",
+            setOf(IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.23",
+            body = listOf(
+                para(GuideTopicIds.SWIPE_SHEET_AWAY),
+                tip(GuideTopicIds.SWIPE_SHEET_AWAY),
+            ),
+        ),
+        topic(
+            // Last in Gestures because it is what the section's other topics feel
+            // like: the pop and the buzz are the app answering a finger, so a
+            // reader arrives here having just met the taps and drags being
+            // answered.
+            //
+            // WEB only, and that is the whole point of the topic. Android's
+            // TaskCompletionSound refuses to play unless the ringer is in
+            // RINGER_MODE_NORMAL, iOS's SoundManager runs on an .ambient session
+            // the silent switch silences, and native haptics go through
+            // performHapticFeedback / UIFeedbackGenerator, which the OS mutes with
+            // its own touch-feedback setting. The phone carries all three
+            // switches; a browser is handed none of them, so web is the only
+            // client with rows of its own to document.
+            //
+            // "waves" rather than a new glyph: a sound and a vibration are both a
+            // wave, it is already in the covered set, and a fresh glyph would mean
+            // an Android vector drawable plus an iOS imageset for a topic neither
+            // platform shows. The precedent is written up in Widgets & surfaces,
+            // where "layout-grid" covers three unrelated topics.
+            GuideTopicIds.SOUND_AND_VIBRATION, GuideSectionId.GESTURES, "waves",
+            setOf(WEB), sinceVersion = "0.7.23",
+            body = listOf(
+                para(GuideTopicIds.SOUND_AND_VIBRATION),
+                tip(GuideTopicIds.SOUND_AND_VIBRATION),
+            ),
+            deepLink = GuideDeepLink(web = "settings"),
+            helpAnchors = listOf("settings-feature-toggle"),
+        ),
+        topic(
+            // Beside Sound and vibration, and last for the same reason it is: these
+            // are the three ways the app answers a hand that is on it, and this is
+            // the one you turn down when the other two are not the problem.
+            //
+            // ANDROID only, and — like its neighbour — that is the topic. The other
+            // two clients already have a switch that reaches them: the browser hands
+            // web `prefers-reduced-motion`, and iOS hands SwiftUI
+            // `UIAccessibility.isReduceMotionEnabled`, both of them a system setting
+            // a user has already been taught to find. Android offers no such signal;
+            // what it has is the animator duration scale, which lives in the
+            // developer options on many builds and is device-wide when it is
+            // reachable at all. So Android is the one client whose users need to be
+            // told where the switch is, because it is the one client that had to
+            // grow its own.
+            //
+            // "activity": the glyph is a line that moves, which is the thing being
+            // turned down, and it already has a drawable and an imageset — a new
+            // glyph would mean drawing both for a topic only one platform shows.
+            GuideTopicIds.REDUCE_MOTION, GuideSectionId.GESTURES, "activity",
+            setOf(ANDROID), sinceVersion = "0.7.23",
+            body = listOf(
+                para(GuideTopicIds.REDUCE_MOTION),
+                tip(GuideTopicIds.REDUCE_MOTION),
+            ),
+            helpAnchors = listOf("settings-motion"),
+        ),
 
         // ── Organizing ───────────────────────────────────────────────────
         topic(

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight, CircleHelp, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "@/lib/navigation";
+import { scrollIntoView } from "@/lib/scroll";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
@@ -26,9 +28,9 @@ function isNew(topic: GuideTopicDef): boolean {
 
 export default function GuideScreen() {
   const { t } = useTranslation();
-  const { locale, topicId: topicIdParam } = useParams();
+  const { topicId: topicIdParam } = useParams();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const focusTopicId = topicIdParam ?? searchParams.get("topic");
   const [query, setQuery] = useState("");
@@ -65,8 +67,7 @@ export default function GuideScreen() {
   useEffect(() => {
     if (!focusTopicId) return;
     setExpandedId(focusTopicId);
-    const node = rowRefs.current[focusTopicId];
-    if (node) node.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollIntoView(rowRefs.current[focusTopicId], { block: "center" });
   }, [focusTopicId]);
 
   const whatsNew = useMemo(() => whatsNewTopics(), []);
@@ -84,7 +85,7 @@ export default function GuideScreen() {
         showNew={showNewBadges && isNew(topic)}
         expanded={expandedId === topic.id}
         onToggle={() => setExpandedId((cur) => (cur === topic.id ? null : topic.id))}
-        onTryIt={(seg) => navigate(`/${locale}/app/${seg}`)}
+        onTryIt={(seg) => router.push(`/app/${seg}`)}
         registerRef={(el) => (rowRefs.current[topic.id] = el)}
       />
     </div>
@@ -211,9 +212,9 @@ function TopicRow({
         onClick={onToggle}
         aria-expanded={expanded}
         data-no-press
-        className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3.5 rounded-2xl px-2 py-3 text-left transition-colors hover:bg-muted-foreground/5 active:bg-muted-foreground/10"
+        className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3.5 rounded-lg px-2 py-3 text-left transition-colors hover:bg-muted-foreground/5 active:bg-muted-foreground/10"
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted/70">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-muted/70">
           <GuideIcon name={topic.icon} className="size-5 stroke-[2.4] text-accent" />
         </span>
         <span className="min-w-0 flex-1">
@@ -313,7 +314,7 @@ function BodyBlock({ type, texts }: { type: string; texts: string[] }) {
       );
     case "TIP":
       return (
-        <p className="rounded-2xl border-l-2 border-accent bg-accent/[0.06] px-3.5 py-2.5 text-sm font-bold text-muted-foreground">
+        <p className="rounded-lg border-l-2 border-accent bg-accent/[0.06] px-3.5 py-2.5 text-sm font-bold text-muted-foreground">
           {text}
         </p>
       );
@@ -327,7 +328,7 @@ function BodyBlock({ type, texts }: { type: string; texts: string[] }) {
       );
     case "EXAMPLE":
       return (
-        <p className="rounded-2xl bg-muted/70 px-3.5 py-2.5 font-mono text-sm font-bold text-foreground">
+        <p className="rounded-lg bg-muted/70 px-3.5 py-2.5 font-mono text-sm font-bold text-foreground">
           {text}
         </p>
       );

@@ -397,6 +397,8 @@
     "floaterListEmptyBody": "Aggiungi un flottante e aspetterà proprio qui.",
     "noMatchingTasks": "Nessuna attività corrispondente",
     "searchEmptyBody": "Prova un'altra parola o cancella la ricerca.",
+    "scrollForMore": "Scorri per vedere altro",
+    "tasksShownOfTotal": "Visualizzate {{shown}} attività su {{total}}",
     "todayEmpty": "Nessuna attività per oggi",
     "todayEmptyBody": "Aggiungi qualcosa per oggi e comparirà proprio qui.",
     "overdueEmpty": "Nessuna attività in ritardo",
@@ -796,6 +798,14 @@
       "title": "Floater a riposo",
       "toggle": "Sbiadisci le attività Anytime intatte"
     },
+    "sound": {
+      "title": "Suono",
+      "toggle": "Riproduci un suono al completamento di un'attività"
+    },
+    "haptics": {
+      "title": "Vibrazione",
+      "toggle": "Vibra ai tocchi e ai trascinamenti"
+    },
     "workspace": {
       "title": "Spazio di lavoro",
       "localTitle": "Spazio locale",
@@ -999,6 +1009,27 @@
         "summary": "Trascina le attività nell'ordine che preferisci.",
         "keywords": "trascina, riordina, sposta, ordina, ordine, disponi",
         "body": "I tuoi elenchi mantengono l'ordine che imposti. Trascina un'attività in alto o in basso per organizzare la giornata nel modo in cui la pensi."
+      },
+      "swipe-sheet-away": {
+        "title": "Trascina giù una scheda per chiuderla",
+        "summary": "Tira verso il basso la scheda della nuova attività per chiuderla.",
+        "keywords": "scorrere, trascinare, tirare, chiudere, annullare, scheda, maniglia, gesto, verso il basso",
+        "body": "La piccola barra in cima alla scheda della nuova attività significa che puoi tirarla verso il basso. Trascinala e segue il tuo dito; lasciala dopo circa un quarto del percorso e si chiude, esattamente come se avessi toccato l'area scurita dietro di essa. Vale anche un colpetto rapido: conta dove stavi andando, non dove hai lasciato. E se ci ripensi a metà strada, torna al suo posto.",
+        "tip": "Se il contenuto di una scheda scorre, trascinala dall'alto: il centro appartiene all'elenco."
+      },
+      "sound-and-vibration": {
+        "title": "Suono e vibrazione",
+        "summary": "Disattiva il suono di completamento, la vibrazione o entrambi.",
+        "keywords": "suono, silenzio, muto, audio, volume, vibrazione, vibrare, aptica, ronzio, accessibilità",
+        "body": "Quando completi un'attività parte un breve suono e, sul telefono, l'app risponde ai tuoi tocchi e trascinamenti con una piccola vibrazione. Nelle Impostazioni c'è un interruttore per ciascuno: disattivane uno e tutto il resto resta com'era.",
+        "tip": "Gli interruttori appartengono a questo browser e non al tuo account, così un portatile silenzioso e un telefono che vibra possono avere ciascuno la propria risposta."
+      },
+      "reduce-motion": {
+        "title": "Riduci il movimento",
+        "summary": "Disattiva le animazioni di T'Day senza cambiare il resto del telefono.",
+        "keywords": "movimento, animazione, animazioni, ridurre, accessibilità, fermo, transizioni, vertigini",
+        "body": "Nelle impostazioni c'è un interruttore «Riduci il movimento». Attivo, T'Day smette di riprodurre le animazioni che scrive da sé: un'attività si spunta, si barra e se ne va in un colpo solo invece che in tre tempi, il suggerimento di scorrimento e i coriandoli non compaiono, e l'illustrazione del giorno vuoto è semplicemente lì invece di salire al suo posto. Ogni attesa che serviva solo a coprirne una se ne va con essa, quindi l'app diventa più veloce, non più lenta. Lo scorrimento tra schermate e i fogli che salgono sono animazioni di Android e non di T'Day: quelli continuano a seguire l'impostazione delle animazioni del tuo telefono.",
+        "tip": "Toglie movimento e basta. Se l'impostazione delle animazioni di Android è già disattivata, T'Day è già fermo e l'interruttore lo dice invece di proporre di annullarlo."
       },
       "floaters-vs-todos": {
         "title": "Floater e attività con data",

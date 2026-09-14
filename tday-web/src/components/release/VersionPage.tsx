@@ -15,7 +15,7 @@ import {
 } from "@/features/release/lib/release";
 import { useReleaseInfo } from "@/features/release/query/get-release-info";
 
-const SURFACE_CLASS = "rounded-xl border border-border/70 bg-background/50";
+const SURFACE_CLASS = "rounded-sm border border-border/70 bg-background/50";
 
 /** Wraps the version content in the same native screen chrome as every other app screen. */
 function VersionPageShell({ children }: { children: ReactNode }) {

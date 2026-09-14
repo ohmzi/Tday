@@ -6,12 +6,9 @@ import android.net.Uri
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +18,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -76,7 +72,9 @@ import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
 import kotlinx.coroutines.launch
@@ -85,6 +83,53 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.roundToInt
+
+// What this screen draws that the scale has no rung for. Named here rather than snapped onto a
+// neighbouring step, because the near misses are the point: 15 dp is not SpacingXl's 14, and the
+// browse card's 20 dp corner is not RadiusLg's 18. Rounding either would be a redraw, not a
+// migration.
+
+// The state the screen spends its first second in, and the card it falls back to when the
+// release feed cannot be reached at all.
+private val LoadingStateTopInset = 48.dp
+private val LoadingSpinnerSize = 32.dp
+private val LoadingSpinnerStroke = 3.dp
+private val LoadFailureCardVerticalPadding = 20.dp
+
+/**
+ * The content inset of every card here except `ReleaseSurfaceCard`, which sits at `SpacingXxl`
+ * because it is the surface a section is drawn on rather than something drawn inside one.
+ */
+private val CardContentPadding = 16.dp
+
+/**
+ * The gap inside a group — label to badge, bullet to its text, bullet to the next bullet. It falls
+ * between `SpacingMd` and `SpacingLg`, where the scale has no step, so it is named once instead of
+ * being rounded six times.
+ */
+private val TightGroupSpacing = 10.dp
+
+// The version pill. Its 10 dp is named apart from TightGroupSpacing because it is padding inside a
+// shape rather than a gap between two of them, and the two would not move together.
+private val VersionBadgeRadius = 12.dp
+private val VersionBadgeHorizontalPadding = 10.dp
+private val VersionBadgeVerticalPadding = 5.dp
+
+/** A changelog bullet is a dot, not a glyph, so it claims no icon rung. */
+private val ChangelogBulletSize = 5.dp
+
+// The "view on GitHub" row, the one card on this screen that is also a button.
+private val BrowserCardRadius = 20.dp
+private val BrowserRowVerticalPadding = 15.dp
+private val BrowserRowIconSize = 18.dp
+
+// A `PressedSurfaceOffsetY` stood here, naming the 2 dp this header's buttons sank by. Its one
+// call site is gone: the button now presses through `Modifier.tdayPressable`, whose `offsetY`
+// already defaults to `TdayPress.SinkOffset` — the same 2 dp, named once for every surface
+// instead of once per screen.
+
+/** The back chevron outgrows IconLg because it is the only glyph inside a FabSize target. */
+private val BackButtonIconSize = 36.dp
 
 @Composable
 fun LatestReleaseScreen(
@@ -174,9 +219,9 @@ fun LatestReleaseScreen(
                 .fillMaxSize()
                 .background(colorScheme.background)
                 .verticalScroll(scrollState)
-                .padding(horizontal = 18.dp)
-                .padding(bottom = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = TdayDimens.ContentPaddingHorizontal)
+                .padding(bottom = TdayDimens.SpacingXxs),
+            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
         ) {
             TdayHeroTitleBlock(
                 title = stringResource(R.string.release_title),
@@ -188,27 +233,30 @@ fun LatestReleaseScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 48.dp),
+                        .padding(top = LoadingStateTopInset),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(32.dp),
-                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(LoadingSpinnerSize),
+                        strokeWidth = LoadingSpinnerStroke,
                     )
                 }
             } else {
                 if (uiState.error != null && uiState.currentRelease == null && uiState.latestRelease == null) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(TdayDimens.RadiusXl),
                         colors = CardDefaults.cardColors(
                             containerColor = colorScheme.errorContainer.copy(alpha = 0.5f),
                         ),
                     ) {
                         Column(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
+                            modifier = Modifier.padding(
+                                horizontal = CardContentPadding,
+                                vertical = LoadFailureCardVerticalPadding,
+                            ),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
                         ) {
                             Text(
                                 text = stringResource(R.string.release_error),
@@ -271,18 +319,27 @@ private fun ReleaseTopBar(
     val progress = collapseProgress.coerceIn(0f, 1f)
     val titleHandoffPoint = 0.9f
     val density = LocalDensity.current
-    val expandedTitleHeight = lerp(56.dp, 0.dp, progress)
+    val expandedTitleHeight = lerp(TdayDimens.ExpandedTitleHeight, TdayDimens.SpacingNone, progress)
     val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
     val collapsedTitleAlpha =
         ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
-    val collapsedTitleShiftY = with(density) { (12.dp * (1f - collapsedTitleAlpha)).toPx() }
-    val expandedTitleShiftY = with(density) { (-10.dp * (1f - expandedTitleAlpha)).toPx() }
+    val collapsedTitleShiftY = with(density) {
+        (TdayDimens.CollapsedTitleShiftOffset * (1f - collapsedTitleAlpha)).toPx()
+    }
+    val expandedTitleShiftY = with(density) {
+        (-TdayDimens.ExpandedTitleShiftOffset * (1f - expandedTitleAlpha)).toPx()
+    }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 2.dp),
+            .padding(
+                start = TdayDimens.ContentPaddingHorizontal,
+                end = TdayDimens.ContentPaddingHorizontal,
+                top = TdayDimens.TitleBarTopPadding,
+                bottom = TdayDimens.TitleBarBottomPadding,
+            ),
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             ReleaseHeaderButton(
@@ -309,7 +366,7 @@ private fun ReleaseTopBar(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(lerp(14.dp, 0.dp, progress)))
+        Spacer(modifier = Modifier.height(lerp(TdayDimens.SpacingXl, TdayDimens.SpacingNone, progress)))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -345,32 +402,24 @@ private fun ReleaseHeaderButton(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
     val containerColor = if (isBackButton) {
         if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
     } else {
         colorScheme.background
     }
-    val buttonBorder = if (isBackButton) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.38f))
-    val buttonSize = if (isBackButton) TdayDimens.FabSize else 56.dp
-    val iconSize = if (isBackButton) 36.dp else 28.dp
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "releaseHeaderButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "releaseHeaderButtonOffsetY",
-    )
+    val buttonBorder = if (isBackButton) {
+        null
+    } else {
+        BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.38f))
+    }
+    // Naming both branches showed them to be the same number; the condition was never a fork.
+    val buttonSize = TdayDimens.FabSize
+    val iconSize = if (isBackButton) BackButtonIconSize else TdayDimens.IconLg
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -380,8 +429,8 @@ private fun ReleaseHeaderButton(
         border = buttonBorder,
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isBackButton) TdayDimens.FabElevation else 0.dp,
-            pressedElevation = if (isBackButton) TdayDimens.FabPressedElevation else 0.dp,
+            defaultElevation = if (isBackButton) TdayDimens.FabElevation else TdayDimens.CardElevationDefault,
+            pressedElevation = if (isBackButton) TdayDimens.FabPressedElevation else TdayDimens.CardElevationDefault,
         ),
     ) {
         Box(
@@ -447,7 +496,7 @@ private fun ReleaseContent(
         )
     }
 
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(modifier = Modifier.height(TdayDimens.Spacing3xl))
 }
 
 @Composable
@@ -563,14 +612,15 @@ private fun ReleaseSurfaceCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, borderColor),
+        // RadiusXl, not RadiusCard: this card has always drawn at 24 and 26 would be a redraw.
+        shape = RoundedCornerShape(TdayDimens.RadiusXl),
+        border = BorderStroke(TdayDimens.BorderWidth, borderColor),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = TdayDimens.SpacingXxl, vertical = TdayDimens.SpacingXxl),
+            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
             content = content,
         )
     }
@@ -660,7 +710,7 @@ private fun InstalledVersionRow(
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(TightGroupSpacing),
     ) {
         VersionBadge(
             text = stringResource(R.string.label_version_name, currentVersion),
@@ -707,26 +757,26 @@ private fun ReleaseNotesSection(
             color = colorScheme.onSurface,
         )
         Card(
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(TdayDimens.RadiusLg),
             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                verticalArrangement = Arrangement.spacedBy(TightGroupSpacing),
             ) {
                 ChangelogList(items = changelog)
             }
         }
     } else if (emptyMessage != null) {
         Card(
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(TdayDimens.RadiusLg),
             colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
         ) {
             Text(
                 text = emptyMessage,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+                modifier = Modifier.padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurface.copy(alpha = 0.6f),
             )
@@ -767,15 +817,15 @@ private fun ApkAssetCard(apk: GitHubAsset) {
     val colorScheme = MaterialTheme.colorScheme
 
     Card(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusLg),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant.copy(alpha = 0.7f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = CardContentPadding, vertical = TdayDimens.SpacingXl),
+            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -795,7 +845,7 @@ private fun ApkAssetCard(apk: GitHubAsset) {
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_cloud_download),
                 contentDescription = null,
                 tint = colorScheme.onSurface.copy(alpha = 0.5f),
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(TdayDimens.IconSm),
             )
         }
     }
@@ -814,15 +864,15 @@ private fun ApkInstallButton(
         onClick = { onDownloadApk(apk) },
         enabled = !isInstallerBusy,
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusLg),
         colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary),
     ) {
         Icon(
             imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_cloud_download),
             contentDescription = null,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(TdayDimens.IconSm),
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(TdayDimens.SpacingMd))
         Text(
             text = apkInstallButtonLabel(apkInstallUiState = apkInstallUiState),
             fontWeight = FontWeight.ExtraBold,
@@ -906,15 +956,15 @@ private fun SignatureConflictCard() {
     val colorScheme = MaterialTheme.colorScheme
 
     Card(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusLg),
         colors = CardDefaults.cardColors(
             containerColor = colorScheme.errorContainer.copy(alpha = 0.5f),
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(horizontal = CardContentPadding, vertical = CardContentPadding),
+            verticalArrangement = Arrangement.spacedBy(TightGroupSpacing),
         ) {
             Text(
                 text = stringResource(R.string.release_signature_conflict),
@@ -932,8 +982,8 @@ private fun SignatureConflictCard() {
                     context.startActivity(InAppApkUpdater.buildUninstallIntent(context))
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, colorScheme.error.copy(alpha = 0.5f)),
+                shape = RoundedCornerShape(TdayDimens.RadiusMd),
+                border = BorderStroke(TdayDimens.BorderWidth, colorScheme.error.copy(alpha = 0.5f)),
             ) {
                 Text(
                     text = stringResource(R.string.release_uninstall),
@@ -955,23 +1005,23 @@ private fun ReleaseBrowserButton(
     Card(
         modifier = Modifier.fillMaxWidth(),
         onClick = { onOpenInBrowser(browseUrl) },
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.06f)),
+        shape = RoundedCornerShape(BrowserCardRadius),
+        border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.06f)),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 15.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = TdayDimens.SpacingXxl, vertical = BrowserRowVerticalPadding),
+            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_square_arrow_out_up_right),
                 contentDescription = null,
                 tint = colorScheme.primary,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(BrowserRowIconSize),
             )
             Text(
                 text = stringResource(R.string.release_view_on_github),
@@ -984,7 +1034,7 @@ private fun ReleaseBrowserButton(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_square_arrow_out_up_right),
                 contentDescription = null,
                 tint = colorScheme.primary,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(BrowserRowIconSize),
             )
         }
     }
@@ -999,9 +1049,9 @@ private fun VersionBadge(
     Text(
         text = text,
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(VersionBadgeRadius))
             .background(backgroundColor)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .padding(horizontal = VersionBadgeHorizontalPadding, vertical = VersionBadgeVerticalPadding),
         style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.ExtraBold,
         color = textColor,
@@ -1018,7 +1068,7 @@ private fun ReleaseVersionLine(
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(TightGroupSpacing),
     ) {
         Text(
             text = label,
@@ -1036,17 +1086,17 @@ private fun ReleaseVersionLine(
 @Composable
 private fun ChangelogList(items: List<String>) {
     val colorScheme = MaterialTheme.colorScheme
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(TightGroupSpacing)) {
         items.forEach { item ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(TightGroupSpacing),
                 verticalAlignment = Alignment.Top,
             ) {
                 Box(
                     modifier = Modifier
-                        .padding(top = 8.dp)
-                        .size(5.dp)
+                        .padding(top = TdayDimens.SpacingMd)
+                        .size(ChangelogBulletSize)
                         .clip(CircleShape)
                         .background(colorScheme.onSurface.copy(alpha = 0.3f)),
                 )

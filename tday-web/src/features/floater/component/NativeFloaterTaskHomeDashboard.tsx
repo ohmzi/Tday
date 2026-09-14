@@ -5,6 +5,8 @@ import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { taskJustCompleted } from "@/lib/task-completion-signal";
 import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
+import { useRowPlacement } from "@/hooks/useRowPlacement";
+import { DELAY_MS } from "@/lib/motion";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { sortFloatersByPriority } from "@/lib/floater/buildFloaterSections";
@@ -17,6 +19,8 @@ import { useFloater } from "@/features/floater/query/get-floater";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 import { useCompletedFloater } from "@/features/completed/query/get-completedFloater";
 import FloaterGroup from "./FloaterGroup";
+import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
+import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
 import FloaterListFormSheet from "@/features/floaterList/component/FloaterListFormSheet";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 
@@ -34,11 +38,15 @@ export default function NativeFloaterTaskHomeDashboard() {
   const router = useRouter();
   const { t: appDict } = useTranslation("app");
   const { floaters, floaterLoading } = useFloater();
+  // The feed hands over to its rows instead of swapping to them in one frame;
+  // the exit class lives on the wrapper, never on the pulsing bars inside it.
+  const { showSkeleton, skeletonClassName } = useSkeletonCrossfade(floaterLoading);
   const { floaterListMetaData } = useFloaterListMetaData();
   const { completedFloaters } = useCompletedFloater();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [createListOpen, setCreateListOpen] = useState(false);
+  const placementRef = useRowPlacement<HTMLDivElement>();
   const floaterAccent = nativeScreenAccentColors.floater;
 
   const listCounts = useMemo(() => {
@@ -87,7 +95,14 @@ export default function NativeFloaterTaskHomeDashboard() {
   return (
     <>
       <ScreenWatermark icon={Leaf} color={floaterAccent} />
-      <div className="flex w-full flex-col gap-4 sm:gap-5">
+      {/* The same travel the scheduled task home's column got, for the worse version of
+          its problem. Ticking the last Anytime task swaps a one-row feed for the
+          `min-h-[42vh]` empty state, so the lists below drop by most of a screen — and
+          they did it in the frame the confetti fired, which put the biggest uncued jump
+          in the app underneath the one moment nobody is looking at the layout. Now the
+          tiles glide down first and the celebration waits for them; see the empty
+          state's own `celebrationStartDelayMs` below for the ordering. */}
+      <div ref={placementRef} className="flex w-full flex-col gap-4 sm:gap-5">
         <RootFeedHeroHeader
           title={appDict("floater")}
           mark="floaterLeaf"
@@ -117,7 +132,7 @@ export default function NativeFloaterTaskHomeDashboard() {
                     <button
                       type="button"
                       key={floater.id}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors hover:bg-muted/65"
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/65"
                       onClick={() => router.push(`/app/todo?todo=${encodeURIComponent(floater.id)}`)}
                     >
                       <span
@@ -163,7 +178,7 @@ export default function NativeFloaterTaskHomeDashboard() {
           href="/app/completed?scope=floater"
           className={cn(
             "relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white",
-            "shadow-[0_14px_30px_-20px_rgba(60,70,90,0.55)] transition-transform duration-200",
+            "shadow-[0_14px_30px_-20px_rgba(60,70,90,0.55)] transition-transform duration-enter",
             "hover:-translate-y-0.5 active:translate-y-0.5",
           )}
           style={{ backgroundColor: nativeScreenAccentColors.completed }}
@@ -178,14 +193,6 @@ export default function NativeFloaterTaskHomeDashboard() {
           </span>
         </Link>
 
-        {floaterLoading ? (
-          <div className="space-y-3 px-1 py-6">
-            <div className="h-6 w-36 animate-pulse rounded-full bg-muted" />
-            <div className="h-16 animate-pulse rounded-2xl bg-muted/70" />
-            <div className="h-16 animate-pulse rounded-2xl bg-muted/70" />
-          </div>
-        ) : null}
-
         {!floaterLoading && !hasFloaters && !isSearching ? (
           <EmptyState
             icon={Leaf}
@@ -197,6 +204,15 @@ export default function NativeFloaterTaskHomeDashboard() {
             // Whether that tick happened here, on another device, or from a
             // collaborator on a shared list.
             celebrate={taskJustCompleted() || remoteEmptied}
+            // This scene is drawn INLINE: mounting it is what pushes the tiles
+            // above down, so the travel and the burst would otherwise be the
+            // same beat. `PlacementLead` is the token for exactly that wait —
+            // it is `Emphasis` by construction, so it cannot drift away from
+            // the placement it is here to outlast — and holding the whole
+            // celebration back by it leaves the confetti's own lead intact:
+            // travel, then burst, then scene. The same order Android gets from
+            // `TdayFeedItemMotion.CelebrationStartDelayMillis`.
+            celebrationStartDelayMs={DELAY_MS.placementLead}
           />
         ) : null}
 
@@ -218,8 +234,32 @@ export default function NativeFloaterTaskHomeDashboard() {
           />
         ) : null}
 
-        {!floaterLoading && sortedFloaters.length > 0 ? (
-          <FloaterGroup floaters={sortedFloaters} reorderable={false} />
+        {/* Placeholder and rows in one column child, because the column is a flex box with a
+            gap: a second child holding the fading placeholder would keep 16 px of gap open
+            for the length of the fade and then drop it, which is a step this row exists to
+            remove. The exiting skeleton releases its own height immediately and paints over
+            the rows that have taken the slot.
+
+            What arrives here is a bare `FloaterGroup` — no section label above it — so the
+            pill this used to draw stood in for a heading that never comes, and its two
+            64 px cards stood in for a flat row of 62. `TaskRowSkeletonGroup` is the feed's
+            own row geometry, and it is the same primitive the sibling list screen loads
+            behind: two root feeds that load differently are two root feeds. */}
+        {showSkeleton || (!floaterLoading && sortedFloaters.length > 0) ? (
+          <div>
+            {showSkeleton ? (
+              <div className={skeletonClassName}>
+                <TaskRowSkeletonGroup />
+              </div>
+            ) : null}
+            {!floaterLoading && sortedFloaters.length > 0 ? (
+              <FloaterGroup
+                floaters={sortedFloaters}
+                reorderable={false}
+                className="tday-content-enter"
+              />
+            ) : null}
+          </div>
         ) : null}
 
         {lists.length > 0 ? (
@@ -239,7 +279,7 @@ export default function NativeFloaterTaskHomeDashboard() {
                     href={`/app/floater-list/${list.id}`}
                     className={cn(
                       "relative flex min-h-[66px] items-center gap-3 overflow-hidden rounded-[24px] px-4 text-white",
-                      "shadow-[0_14px_30px_-20px_rgba(60,70,90,0.55)] transition-transform duration-200",
+                      "shadow-[0_14px_30px_-20px_rgba(60,70,90,0.55)] transition-transform duration-enter",
                       "hover:-translate-y-0.5 active:translate-y-0.5",
                     )}
                     style={{ backgroundColor: color }}

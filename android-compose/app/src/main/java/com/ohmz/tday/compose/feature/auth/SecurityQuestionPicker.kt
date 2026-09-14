@@ -20,9 +20,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.SecurityQuestion
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 
 /**
  * Question dropdown + answer field used by both the first-time security-questions gate
@@ -44,7 +44,7 @@ fun SecurityQuestionPicker(
     val selectable = questions.filter { it.id == selectedId || it.id !in excludeIds }
     val selectedText = questions.firstOrNull { it.id == selectedId }?.text.orEmpty()
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd)) {
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = it },
@@ -59,7 +59,7 @@ fun SecurityQuestionPicker(
                 label = { Text(label) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 singleLine = true,
-                shape = RoundedCornerShape(22.dp),
+                shape = RoundedCornerShape(TdayDimens.RadiusField),
             )
             ExposedDropdownMenu(
                 expanded = expanded,
@@ -83,7 +83,7 @@ fun SecurityQuestionPicker(
             label = { Text(stringResource(R.string.security_questions_answer_label)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            shape = RoundedCornerShape(22.dp),
+            shape = RoundedCornerShape(TdayDimens.RadiusField),
         )
     }
 }

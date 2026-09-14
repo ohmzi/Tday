@@ -24,6 +24,24 @@ struct AppRootView: View {
     // Optional biometric gate, default OFF. When disabled every member below is inert.
     @State private var appLock = AppLockController()
     @Environment(\.scenePhase) private var scenePhase
+    /// The namespace the six home tiles and the screens they open are matched in.
+    ///
+    /// Owned here because this is the one view that contains both ends: the tiles are
+    /// built inside `ScheduledTaskHomeScreen`, the destinations by `destinationView(for:)`
+    /// below, and a `@Namespace` only matches views that share the one instance. It is
+    /// published into the environment rather than passed down — see `ZoomNavigation.swift`
+    /// for why a parameter chain through two private types was not the way to spend it.
+    @Namespace private var zoomNamespace
+    /// The app's one motion gate — see `TdayMotionEnvironment.swift`. Every
+    /// `.animation` in this view's body passes its spec through it, so Reduce Motion
+    /// refuses the trip in one place rather than at each of them. It resolves against
+    /// the provider `TdayApp` installs above this view, not the one `tdayAppTheme`
+    /// applies to this body: a property wrapper reads the environment the view was
+    /// placed in, so a gate this view installs would reach its children and miss it.
+    /// `AppSnackbar` below is a separate view with an environment of its own and is
+    /// not covered — its drag snap-back still animates, and is owed to the open
+    /// `reduced-motion-coverage` box.
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     init(container: AppContainer) {
         self.container = container
@@ -37,10 +55,30 @@ struct AppRootView: View {
         ))
     }
 
+    /// Whether the launch splash still owns the screen.
+    ///
+    /// Hoisted out of the `if` below so the hand-over has ONE `Equatable` value to key an
+    /// `.animation(_:value:)` on. Two `||`-ed properties are two things changing, and the
+    /// boundary the user sees is neither of them separately — a bootstrap that finishes
+    /// while a finger is still holding the splash down must be one arrival, not two.
+    private var showsLaunchSplash: Bool {
+        !appViewModel.hasCompletedInitialBootstrap || isLaunchSplashHeld
+    }
+
     var body: some View {
         Group {
-            if !appViewModel.hasCompletedInitialBootstrap || isLaunchSplashHeld {
+            if showsLaunchSplash {
                 AppLaunchSplashView(isHeld: $isLaunchSplashHeld)
+                    // The half that leaves, on `Exit` — something departing should commit
+                    // rather than drift off, and it is the curve web hands the outgoing
+                    // snapshot of a route change (`::view-transition-old(root)`). Its own
+                    // `.animation` because a `.transition` with none takes the enclosing
+                    // transaction's single curve, which is the one thing a two-curve
+                    // hand-over cannot be spelled as. Same rung as the arm below: one
+                    // length, two curves, which is exactly the web pairing.
+                    .transition(AnyTransition.opacity.animation(
+                        tdayAnimation(TdayMotion.exit(duration: TdayMotion.Durations.enter))
+                    ))
             } else {
                 let showOnboardingOverlay = !appViewModel.isWorkspaceAvailable && appViewModel.versionCheckResult == .compatible
 
@@ -66,6 +104,7 @@ struct AppRootView: View {
                                 ) { route in
                                     handleRoute(route)
                                 }
+                                .transition(.opacity)
                             case .floaterTaskHome:
                                 TodoListScreen(
                                     container: container,
@@ -93,20 +132,108 @@ struct AppRootView: View {
                                     },
                                     summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
                                 )
+                                .transition(.opacity)
                             }
 
                             if appViewModel.isWorkspaceAvailable, rootControlsVisible {
                                 rootFloatingControls
+                                    // Down and out through the bottom edge, and back up the
+                                    // same way. The opacity half is load-bearing rather than
+                                    // decorative: `.move(edge:)` offsets by the view's own
+                                    // height, which clears the dock's box but not the home
+                                    // indicator strip it sits above, so the fade is what
+                                    // guarantees the control is gone rather than parked in
+                                    // it. Android pairs `slideOutVertically { it }` with a
+                                    // fade for the same reason. The travel answers to
+                                    // `rootControlsVisible` and to nothing else — the unlock
+                                    // that also inserts these controls is handed no animation
+                                    // below, for the reason written there.
+                                    .transition(.move(edge: .bottom).combined(with: .opacity))
                             }
                         }
+                        // The dock's pill slides to the tab that was tapped and the feed under
+                        // it changed on the next frame: one gesture running at two speeds. The
+                        // two transitions above are inert without a transaction, and this is
+                        // it. Nothing in the body travels — the arriving feed is drawn in the
+                        // slot the leaving one had — so by the geometry rule this is not
+                        // Emphasis, and a tab handover is the Quick rung the vocabulary
+                        // already names for it. Quick also keeps the fade inside the 180 ms
+                        // `presentPendingRootCreateTaskIfReady` waits out, so a deep link that
+                        // switches tab and then asks for a create sheet still finds one feed
+                        // on screen. The floating controls are in the transaction too, which
+                        // crosses their accent over with the body instead of snapping it; the
+                        // pill is a `UISegmentedControl`, so its own indicator stays on
+                        // UIKit's timing rather than this one. Android crossfades the same
+                        // swap on the same rung and curve, and drives its own create button's
+                        // accent across on that rung too so the corner doesn't cut while the
+                        // body fades. Reduce Motion passes no animation at all: the swap
+                        // cuts to the arriving feed finished rather than holding it
+                        // half-faded (`docs/motion.md`'s fifth idiom rule).
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)),
+                            value: rootFeedTab
+                        )
+                        // The dock and the create button used to be nothing but the `if`
+                        // above: expanding the search field took them off the screen in the
+                        // frame the field grew into, leaving a hole where the chrome had
+                        // been and then putting the chrome back in it. The transition on the
+                        // controls is inert without a transaction, and this is that one.
+                        //
+                        // Travel, so Emphasis by the geometry rule — and Settle is the rung
+                        // spelled as a spring, the token whose own doc string names a dock
+                        // and a bar. One spec for both directions: the exit is the enter
+                        // played backwards, and a length of its own would read as two
+                        // gestures rather than one control getting out of the way. The first
+                        // idiom rule only forbids an exit that OUTLASTS its arrival, and
+                        // these cannot. Android drives the same two controls off the same
+                        // spring; web, having no spring runtime, spells it as the Gesture
+                        // easing on the Emphasis rung.
+                        //
+                        // Its own `.animation` rather than a second value on the one above,
+                        // because a tab swap and the chrome standing down are different
+                        // events that happen to share a container — folding them together
+                        // would put the dock's departure on the tab handover's clock.
+                        // Reduce Motion passes nil, so the controls are taken away and put
+                        // back finished (`docs/motion.md`'s fifth idiom rule).
+                        .animation(
+                            tdayAnimation(TdayMotion.settle),
+                            value: rootControlsVisible
+                        )
+                        // The other way these controls come and go: `isWorkspaceAvailable` in
+                        // the `if` above, which the unlock flips at the same moment as the
+                        // `showOnboardingOverlay` further down. That one opens a transaction
+                        // over this whole subtree, and a transaction is all a `.transition`
+                        // needs — so without this line the move above would ALSO play the
+                        // lock and unlock, travelling the dock and the button up from under
+                        // the bottom edge on the Quick rung, in the one handover where
+                        // nothing else on the screen moves at all.
+                        //
+                        // Handing that value no animation is how an insertion says it has no
+                        // before. Android says it in its own dialect: `RootFeedContent` is
+                        // composed fresh inside the arriving half of the lock Crossfade, and
+                        // `AnimatedVisibility` plays no enter for a `visible` that was
+                        // already true on its first composition, so the dock is simply drawn
+                        // in its slot while the wizard hands over above it. What fades on
+                        // either client is the wizard, not the chrome underneath it.
+                        //
+                        // It also settles a split this file already had: an unlock whose
+                        // version check is blocking leaves `showOnboardingOverlay` false on
+                        // both sides, so that unlock opened no transaction and the chrome
+                        // appeared finished, while an ordinary one animated it. The same
+                        // event cannot mean two things depending on a version number.
+                        .animation(nil, value: showOnboardingOverlay)
                     }
                     .blur(radius: showOnboardingOverlay ? 6 : 0)
                     .scaleEffect(showOnboardingOverlay ? 0.992 : 1)
-                    .animation(.easeInOut(duration: 0.22), value: showOnboardingOverlay)
                     .navigationBarBackButtonHidden(true)
                     .toolbar(.hidden, for: .navigationBar)
                     .navigationDestination(for: AppRoute.self) { route in
+                        // One site covers every push. `tdayZoomDestination` reads the route's
+                        // own source id, so the six home tiles grow into their screens and
+                        // everything else falls through to the stock push without a list here
+                        // to keep in step with the one in `ZoomNavigation.swift`.
                         destinationView(for: route)
+                            .tdayZoomDestination(route)
                     }
                     .onChange(of: appViewModel.navigationPath) { _, path in
                         normalizeRootNavigationPath(path)
@@ -196,6 +323,7 @@ struct AppRootView: View {
                                         appViewModel.clearPendingApprovalNotice()
                                     }
                                 )
+                                .transition(.opacity)
                             }
                         }
 
@@ -220,7 +348,47 @@ struct AppRootView: View {
                             )
                         }
                     }
+                    // Locking and unlocking the app is one event with several surfaces in
+                    // it: the app behind goes out of focus and shrinks a thousandth, the
+                    // wizard covers it, and the floating controls that only exist for a
+                    // real workspace come and go underneath. The blur and the scale were
+                    // already animated, on a 220 ms of their own; the wizard carried no
+                    // `.transition` at all, so it cut in over a backdrop that was still
+                    // resolving. They need one transaction between them, and a transaction
+                    // reaches a `.transition` only from a modifier applied OUTSIDE the
+                    // `.overlay` that inserts it — which is why this sits below the overlay
+                    // rather than beside the blur it also drives. Absorbing that 220 is the
+                    // point: three surfaces of one event cannot keep separate clocks, and
+                    // the odd duration was never in the vocabulary to be kept. The wizard
+                    // is drawn where it will stay and the controls are put back in their
+                    // slot finished, so nothing in the handover travels; the 0.992 is the
+                    // blur's other half and not a geometry change — eight thousandths is a
+                    // focus cue, too small to read as a move, and it answers to the rung
+                    // the blur it accompanies is on. Those controls carry a move of their
+                    // own for when the search field takes their row, and they are held out
+                    // of this transaction (`.animation(nil, value:)` above) so it cannot
+                    // drive that move through an event nothing else moves in. So by the
+                    // geometry rule this is not Emphasis, and a whole-screen handover is
+                    // the Quick rung the vocabulary names for it — the rung the tab swap
+                    // above already runs on. Standard is the curve because a crossfade runs
+                    // both halves off one clock and neither Enter nor Exit describes that,
+                    // and one animation covers both directions because the way in and the
+                    // way out are the same handover reversed. Android times the same moment
+                    // on this rung and curve; its third surface is a crossfade rather than
+                    // a fade-in, because it draws an inert placeholder feed under the
+                    // wizard where this one draws the real screens, and it has no scale
+                    // because its backdrop cue is a 14 dp blur that carries the focus
+                    // change on its own. Reduce Motion passes no animation: the app is
+                    // drawn unlocked and in focus, finished, rather than held mid-blur
+                    // (`docs/motion.md`'s fifth idiom rule).
+                    .animation(
+                        tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)),
+                        value: showOnboardingOverlay
+                    )
                 }
+                // Above the stack, so both ends read the same namespace: the root feed's
+                // tiles inside it, and the destinations `.navigationDestination` builds.
+                .environment(\.tdayZoomNamespace, zoomNamespace)
                 .navigationInteractivePopGesture()
                 // The snackbar overlays the NavigationStack itself, not the
                 // stack's root content: toasts scheduled while a destination
@@ -233,12 +401,74 @@ struct AppRootView: View {
                         AppSnackbar(content: content) {
                             container.snackbarManager.dismiss()
                         }
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .transition(
+                            tdayAnimation.transition(
+                                .move(edge: .bottom).combined(with: .opacity),
+                                reduced: .opacity
+                            )
+                        )
                     }
                 }
-                .animation(.snappy(duration: 0.3), value: container.snackbarManager.content?.id)
+                // `.snappy(duration: 0.3)` was SwiftUI's own preset — `spring(duration:
+                // 0.3, bounce: 0.15)` — and the Snappy token is `response: 0.28,
+                // dampingFraction: 0.86`, the same bounce and the same perceptual length
+                // to within a frame. The literal was approximating this token, so naming
+                // it is not a retiming. What the site gained in 35a was the gate.
+                //
+                // 35a refused the whole thing, slide and fade together, and that was the
+                // wrong half of the judgement to make here. A toast is the one surface
+                // in this app with nothing around it to explain its arrival: no row
+                // closes over it, no scrim dims for it, and it carries an Undo the user
+                // has a few seconds to reach. Cut in and cut out, it reads as the screen
+                // glitching, and a user who did not happen to be looking at the bottom
+                // edge never learns it was there. So the travel goes — that is the
+                // amplitude, a full toast height up from off the screen — and the
+                // crossfade stays, on Enter, the rung for one element arriving with
+                // nothing arguing for another length. The finished state is still drawn
+                // either way, which is what the fifth idiom rule asks; what the fade
+                // adds is that the user can tell it apart from a redraw.
+                .animation(
+                    tdayAnimation(
+                        TdayMotion.snappy,
+                        reduced: TdayMotion.standard(duration: TdayMotion.Durations.enter)
+                    ),
+                    value: container.snackbarManager.content?.id
+                )
+                // The half that arrives, on `Enter` — the first screen settles in rather
+                // than stopping. Paired with the splash's `Exit` above and played in the
+                // one transaction below them both.
+                .transition(AnyTransition.opacity.animation(
+                    tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter))
+                ))
             }
         }
+        // The splash handing over to the app was the one boundary in this file with
+        // nothing on it: a bare `if`, no transition and no transaction, so the first
+        // screen of every launch arrived by cutting the splash out between two frames.
+        // This line is that transaction — the two `.transition`s above are inert without
+        // one, and inert-because-nobody-opened-a-transaction is the failure
+        // `motion-reachability-ios` exists to catch.
+        //
+        // `Enter`, and not a length of its own. The first screen is a thing arriving with
+        // nothing arguing for another rung; the wait this fade could be accused of
+        // sitting in front of is the bootstrap, and the bootstrap is what flipped the
+        // value, so it has already finished by the time the fade starts. That is PR 55's
+        // argument for the web route fade, on the boundary one level further out. Web
+        // times this same hand-over the same way — `.tday-route-fade` and
+        // `::view-transition-old(root)` are both `var(--tday-duration-enter)`, on
+        // `--tday-ease-enter` and `--tday-ease-exit` — and the arms above are that pair.
+        // SwiftUI has no way to carry two curves through one `.animation(_:value:)`, so
+        // the curves live per-arm and the length is named here as well, where the
+        // transaction is opened.
+        //
+        // Reduce Motion needs no branch of its own: `tdayAnimation(…)` returns nil, the
+        // arms still swap, and the app is drawn finished in the frame the bootstrap
+        // completes. That is `docs/motion.md`'s fifth idiom rule, and an `if` here would
+        // be re-deriving an answer this view already reads out of the environment.
+        .animation(
+            tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter)),
+            value: showsLaunchSplash
+        )
         // FALLBACK layer only. Applied INSIDE the theme/locale modifiers below so it is themed
         // and localized like the rest of the app, and it covers every state above it — splash,
         // onboarding, all pushed destinations. What it CANNOT cover is a `.sheet` or
@@ -1140,7 +1370,15 @@ struct AppLaunchSplashView: View {
     @Environment(\.colorScheme) private var colorScheme
     /// The English line is the catalog key; `L` resolves it against the in-app
     /// language so the splash speaks the same language as the rest of the app.
-    @State private var taglineKey = splashTaglines.randomElement() ?? "Running on your server, running your life"
+    ///
+    /// Read out of `launchTagline` rather than seeded per view, and that is the whole
+    /// reason `launchTagline` exists: this view is built TWICE on every cold launch, once
+    /// by `TdayApp` while `AppContainer` is under construction and once by `AppRootView`
+    /// until the bootstrap finishes. Two structural positions is two identities, so a
+    /// `@State` seed here would draw twice and land a different line each time — a new
+    /// tagline blinking in at the one boundary in this app that is supposed to look like
+    /// nothing happened.
+    private let taglineKey = launchTagline
 
     var body: some View {
         ZStack {
@@ -1196,6 +1434,16 @@ struct AppLaunchSplashView: View {
         colorScheme == .dark ? .tdayDarkMuted : .tdayLightMuted
     }
 }
+
+/// The tagline for THIS launch, chosen once per process.
+///
+/// A Swift global initializes lazily and exactly once, which is precisely the lifetime
+/// the line needs: still a fresh tagline on every cold launch, but the same one for both
+/// of the `AppLaunchSplashView`s a launch draws (see `taglineKey`). Picking inside the
+/// view instead made `TdayApp`'s splash hand over to `AppRootView`'s with a new line
+/// under it — 89 times in 90 — which is a hard cut on the only screen where both sides
+/// of the boundary are meant to be the same pixels.
+private let launchTagline = splashTaglines.randomElement() ?? "Running on your server, running your life"
 
 private let splashTaglines = [
     "Your server remembers, so you don\u{2019}t have to",

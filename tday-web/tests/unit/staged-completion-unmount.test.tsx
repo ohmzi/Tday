@@ -3,9 +3,10 @@
 /**
  * Ticking a task is a promise the app makes before it keeps it: the row shows the green check
  * straight away and the real work — pruning the caches, raising the undoable toast, and eventually
- * PATCHing `/api/todo/complete` — happens 780ms later, at the end of the staged check-off sequence.
+ * PATCHing `/api/todo/complete` — happens at the end of the staged check-off sequence, just under
+ * a second later.
  *
- * The row is not entitled to survive those 780ms. A filter flips, a section collapses, the user
+ * The row is not entitled to survive that window. A filter flips, a section collapses, the user
  * navigates, a parent re-keys its children — any of those unmounts the row while the sequence is
  * still running. When the staging lived in the row's own `useState` + `useRef<number[]>` the
  * unmount cleanup cleared the timers, and the completion the user had already seen acknowledged
@@ -156,8 +157,8 @@ describe("a staged completion whose row unmounts mid-window", () => {
     });
     expect(idsIn(queryClient, "todoTimeline")).toEqual(["todo-1", "todo-2"]);
 
-    // The row goes away with ~600ms still to run — the filter changed, the list re-keyed, the
-    // user navigated. Whatever the reason, the tick already happened.
+    // The row goes away with most of the window still to run — the filter changed, the list
+    // re-keyed, the user navigated. Whatever the reason, the tick already happened.
     unmount();
 
     await act(async () => {
@@ -224,7 +225,7 @@ describe("a staged completion whose row unmounts mid-window", () => {
 
     // The guard against a second tap has to survive the unmount too. If it doesn't, the remounted
     // row is a fresh component with no memory of the completion already in flight, and this tap
-    // starts the 780ms over again — so the commit arrives late, and twice.
+    // starts the window over again — so the commit arrives late, and twice.
     await act(async () => {
       screen.getByRole("checkbox").click();
     });

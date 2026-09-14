@@ -172,6 +172,20 @@ function notesInput() {
 // the assertion weakened.
 const SHELL_MOUNT_TIMEOUT = { timeout: 5000 };
 
+/**
+ * Wait for the named shell AND for the fields inside it.
+ *
+ * The shells are eager now and only the form body is code-split, so a shell's
+ * marker is in the document a tick before the fields are: waiting on the marker
+ * alone and then reading `titleInput()` synchronously would find the body's
+ * placeholder instead. Both waits, in that order, so a failure still says which
+ * of the two never arrived.
+ */
+async function findShell(testId: "shell-drawer" | "shell-modal") {
+  await screen.findByTestId(testId, {}, SHELL_MOUNT_TIMEOUT);
+  await screen.findByTestId("title-input", {}, SHELL_MOUNT_TIMEOUT);
+}
+
 describe("calendar form shell swap at 640 px", () => {
   afterEach(() => {
     cleanup();
@@ -189,12 +203,12 @@ describe("calendar form shell swap at 640 px", () => {
       />,
     );
 
-    await screen.findByTestId("shell-drawer", {}, SHELL_MOUNT_TIMEOUT);
+    await findShell("shell-drawer");
     fireEvent.change(titleInput(), { target: { value: "Dentist, bring referral" } });
     fireEvent.change(notesInput(), { target: { value: "ask about the night guard" } });
 
     await resizeTo(900);
-    await screen.findByTestId("shell-modal", {}, SHELL_MOUNT_TIMEOUT);
+    await findShell("shell-modal");
 
     expect(screen.queryByTestId("shell-drawer")).toBeNull();
     expect(titleInput().value).toBe("Dentist, bring referral");
@@ -213,11 +227,11 @@ describe("calendar form shell swap at 640 px", () => {
       />,
     );
 
-    await screen.findByTestId("shell-modal", {}, SHELL_MOUNT_TIMEOUT);
+    await findShell("shell-modal");
     fireEvent.change(titleInput(), { target: { value: "Collect the parcel" } });
 
     await resizeTo(375);
-    await screen.findByTestId("shell-drawer", {}, SHELL_MOUNT_TIMEOUT);
+    await findShell("shell-drawer");
 
     expect(screen.queryByTestId("shell-modal")).toBeNull();
     expect(titleInput().value).toBe("Collect the parcel");
@@ -230,13 +244,13 @@ describe("calendar form shell swap at 640 px", () => {
       <EditCalendarFormContainer todo={todo} displayForm setDisplayForm={vi.fn()} />,
     );
 
-    await screen.findByTestId("shell-drawer", {}, SHELL_MOUNT_TIMEOUT);
+    await findShell("shell-drawer");
     // The edit form opens seeded from the todo; the user rewrites the title.
     expect(titleInput().value).toBe("Renew passport");
     fireEvent.change(titleInput(), { target: { value: "Renew passport — photos first" } });
 
     await resizeTo(900);
-    await screen.findByTestId("shell-modal", {}, SHELL_MOUNT_TIMEOUT);
+    await findShell("shell-modal");
 
     expect(titleInput().value).toBe("Renew passport — photos first");
   });

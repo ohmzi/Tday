@@ -33,6 +33,8 @@ import {
   Trash2,
   User,
   UsersRound,
+  Vibrate,
+  Volume2,
   Waves,
   Webhook,
   type LucideIcon,
@@ -65,7 +67,13 @@ import {
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { api } from "@/lib/api-client";
 import parseApiDateTime from "@/lib/date/parseApiDateTime";
-import { hapticTick } from "@/lib/haptics";
+import { hapticTick, hapticsSupported } from "@/lib/haptics";
+import {
+  isHapticsEnabled,
+  isSoundEnabled,
+  setHapticsEnabled,
+  setSoundEnabled,
+} from "@/lib/feedbackPreferences";
 import { getErrorMessage } from "@/lib/error-message";
 import { deleteLocalWorkspace } from "@/lib/local/localApi";
 import {
@@ -284,7 +292,7 @@ function ThemeSegmentedControl({
     <div className="relative flex h-14 rounded-[22px] bg-muted/60 p-1.5">
       <span
         aria-hidden
-        className="absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/3)] rounded-[16px] bg-card shadow-sm transition-transform duration-200 ease-out"
+        className="absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/3)] rounded-[16px] bg-card shadow-sm transition-transform duration-enter ease-out"
         style={{ transform: `translateX(${index * 100}%)` }}
       />
       {themeOptions.map((option) => {
@@ -333,7 +341,7 @@ function DefaultHomeScreenSegmentedControl({
     <div className="relative flex h-14 rounded-[22px] bg-muted/60 p-1.5">
       <span
         aria-hidden
-        className="absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/2)] rounded-[16px] bg-card shadow-sm transition-transform duration-200 ease-out"
+        className="absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/2)] rounded-[16px] bg-card shadow-sm transition-transform duration-enter ease-out"
         style={{ transform: `translateX(${index * 100}%)` }}
       />
       {defaultHomeScreenOptions.map((option) => {
@@ -391,7 +399,7 @@ function DefaultHomeScreenSection({
 }
 
 const fieldClass =
-  "h-12 rounded-2xl border-border/70 bg-background/50 font-bold focus-visible:ring-accent/30";
+  "h-12 rounded-lg border-border/70 bg-background/50 font-bold focus-visible:ring-accent/30";
 
 /** Editor action buttons, matching the native SettingsEditorActions capsules:
  * Cancel = subdued onSurface text on a faint onSurface capsule, Save = primary capsule. */
@@ -413,7 +421,7 @@ function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
   return (
     <div
       className={cn(
-        "grid transition-[grid-template-rows] duration-200 ease-out",
+        "grid transition-[grid-template-rows] duration-enter ease-out",
         open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
       )}
     >
@@ -468,6 +476,14 @@ export default function SettingsPage() {
     }
     void i18n.changeLanguage(target);
     // Swap the leading locale segment of the current URL so deep links stay valid.
+    //
+    // Deliberately `useNavigate` rather than `useRouter().push`, which would ask for
+    // the route hand-over: this is the one pathname change in the shell where the
+    // screen being left is not being left. `changeLanguage` above has already told
+    // every subscriber to re-render in the new language, so the outgoing snapshot a
+    // transition would take is of a tree mid-swap — the same settings page, some of
+    // it translated — and crossfading that over its finished self is a flicker
+    // rather than a hand-over.
     navigate(pathname.replace(/^\/[^/]+/, `/${target}`));
   };
 
@@ -515,6 +531,12 @@ export default function SettingsPage() {
   const [restingFloatersOn, setRestingFloatersOn] = useState(() =>
     isRestingFloatersEnabled(),
   );
+  const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
+  const [hapticsOn, setHapticsOn] = useState(() => isHapticsEnabled());
+  // Whether the browser has a vibrator to switch off at all. Read once, like the
+  // preferences beside it: `navigator.vibrate` does not appear or disappear
+  // mid-session, and a re-read per render would suggest it might.
+  const [canVibrate] = useState(() => hapticsSupported());
 
   const [apiKeys, setApiKeys] = useState<ApiKeyInfo[] | null>(null);
   const [generatedApiKey, setGeneratedApiKey] = useState<string | null>(null);
@@ -1144,6 +1166,11 @@ export default function SettingsPage() {
     // the words people type, so they stay in the term list.
     t("restingFloaters.title"),
     t("restingFloaters.toggle"),
+    t("sound.title"),
+    t("sound.toggle"),
+    // "vibrate" is only a word people type at this box on a device that can do it;
+    // on a desktop the row is not drawn and a hit would scroll to nothing.
+    ...(canVibrate ? [t("haptics.title"), t("haptics.toggle")] : []),
     ...(push.isSupported ? [t("notifications.title"), t("notifications.push")] : []),
   );
   // Server Mode only. Export and import are an account's data moving in and out
@@ -1613,7 +1640,7 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={() => setLanguageOpen(true)}
-          className="flex w-full items-center justify-between gap-3 rounded-2xl py-1.5 text-left"
+          className="flex w-full items-center justify-between gap-3 rounded-lg py-1.5 text-left"
           aria-haspopup="dialog"
           aria-label={`${t("language.appLanguage")}, ${currentLanguageLabel}`}
         >
@@ -1660,14 +1687,16 @@ export default function SettingsPage() {
       {showPreferencesCard && (
       <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
         {/* One card, one title, one "?" — Android and iOS both draw these
-            switches under a single `Feature toggle` heading, and three headings
-            with three help links each was more chrome than the three rows they
-            introduced. The link lands on `ai-summary` because the guide now
-            lists it first under Integrations and it is this card's own first
-            row, so the reader arrives at the top of a section rather than
-            mid-list. The other two switches are documented in their own
-            sections (resting-floaters under Organizing, push-notifications
-            under Reminders), which is where their topics belong. */}
+            switches under a single `Feature toggle` heading, and a heading plus
+            a help link per switch would be more chrome than the three to five
+            rows they introduce, the count depending on whether the device can
+            vibrate and the browser can be pushed to. The link lands on
+            `ai-summary` because the guide now lists it first under Integrations
+            and it is this card's own first row, so the reader arrives at the top
+            of a section rather than mid-list. The other switches are documented
+            in their own sections (resting-floaters under Organizing,
+            sound-and-vibration under Gestures, push-notifications under
+            Reminders), which is where their topics belong. */}
         <SectionHeading
           title={t("featureToggle.title")}
           titleAction={<GuideHelpLink topic="ai-summary" />}
@@ -1712,6 +1741,54 @@ export default function SettingsPage() {
             }}
           />
         </div>
+
+        {/* The two cues that are not on the screen. They sit in this card rather
+            than under Appearance because nothing about them is visual, and next
+            to each other because they answer one question — how loudly the app
+            is allowed to answer back. Android and iOS have no rows for these:
+            the ringer switch and the system touch-feedback setting already
+            decide it there, and a browser is handed neither. */}
+        <CardDivider />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <RowIcon icon={Volume2} />
+            <div className="min-w-0">
+              <p className="text-[1.05rem] font-black text-foreground">{t("sound.title")}</p>
+            </div>
+          </div>
+          <SettingsSwitch
+            checked={soundOn}
+            ariaLabel={t("sound.toggle")}
+            onClick={() => {
+              const next = !soundOn;
+              setSoundEnabled(next);
+              setSoundOn(next);
+            }}
+          />
+        </div>
+
+        {canVibrate && (
+          <>
+            <CardDivider />
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3.5">
+                <RowIcon icon={Vibrate} />
+                <div className="min-w-0">
+                  <p className="text-[1.05rem] font-black text-foreground">{t("haptics.title")}</p>
+                </div>
+              </div>
+              <SettingsSwitch
+                checked={hapticsOn}
+                ariaLabel={t("haptics.toggle")}
+                onClick={() => {
+                  const next = !hapticsOn;
+                  setHapticsEnabled(next);
+                  setHapticsOn(next);
+                }}
+              />
+            </div>
+          </>
+        )}
 
         {push.isSupported && (
           <>
@@ -1769,7 +1846,7 @@ export default function SettingsPage() {
             variant={calendarFeed?.enabled ? "destructive" : "default"}
             disabled={feedLoading || calendarFeed === null}
             onClick={calendarFeed?.enabled ? handleRevokeFeed : handleGenerateFeed}
-            className="h-11 shrink-0 rounded-2xl font-black"
+            className="h-11 shrink-0 rounded-lg font-black"
           >
             {feedLoading ? (
               <>
@@ -1793,7 +1870,7 @@ export default function SettingsPage() {
         </div>
 
         {generatedFeedUrl && (
-          <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/40 p-3">
+          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/40 p-3">
             <p className="text-xs font-extrabold text-muted-foreground">
               {t("calendarFeed.copyUrl")}
             </p>
@@ -1802,12 +1879,12 @@ export default function SettingsPage() {
                 type={showFeedUrl ? "text" : "password"}
                 value={generatedFeedUrl}
                 readOnly
-                className="h-10 flex-1 rounded-xl bg-background/50 font-mono text-xs"
+                className="h-10 flex-1 rounded-sm bg-background/50 font-mono text-xs"
               />
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={() => setShowFeedUrl(!showFeedUrl)}>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-sm" onClick={() => setShowFeedUrl(!showFeedUrl)}>
                 {showFeedUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={handleCopyFeedUrl}>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-sm" onClick={handleCopyFeedUrl}>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
@@ -1828,7 +1905,7 @@ export default function SettingsPage() {
             value={newWebhookUrl}
             onChange={(event) => setNewWebhookUrl(event.target.value)}
             placeholder={t("webhooks.urlPlaceholder")}
-            className="h-11 rounded-2xl font-mono text-xs"
+            className="h-11 rounded-lg font-mono text-xs"
           />
           <div className="space-y-1.5">
             <p className="text-xs font-extrabold text-muted-foreground">
@@ -1860,7 +1937,7 @@ export default function SettingsPage() {
             type="button"
             disabled={webhookLoading || newWebhookUrl.trim().length === 0}
             onClick={handleCreateWebhook}
-            className="h-11 w-full rounded-2xl font-black"
+            className="h-11 w-full rounded-lg font-black"
           >
             {webhookLoading ? (
               <>
@@ -1877,7 +1954,7 @@ export default function SettingsPage() {
         </div>
 
         {generatedWebhookSecret && (
-          <div className="space-y-2 rounded-2xl border border-border/60 bg-muted/40 p-3">
+          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/40 p-3">
             <p className="text-xs font-extrabold text-muted-foreground">
               {t("webhooks.secretCopyNow")}
             </p>
@@ -1886,12 +1963,12 @@ export default function SettingsPage() {
                 type={showWebhookSecret ? "text" : "password"}
                 value={generatedWebhookSecret}
                 readOnly
-                className="h-10 flex-1 rounded-xl bg-background/50 font-mono text-xs"
+                className="h-10 flex-1 rounded-sm bg-background/50 font-mono text-xs"
               />
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={() => setShowWebhookSecret(!showWebhookSecret)}>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-sm" onClick={() => setShowWebhookSecret(!showWebhookSecret)}>
                 {showWebhookSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={handleCopyWebhookSecret}>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-sm" onClick={handleCopyWebhookSecret}>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
@@ -1903,7 +1980,7 @@ export default function SettingsPage() {
             {webhooks.map((webhook) => (
               <div
                 key={webhook.id}
-                className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3"
+                className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 p-3"
               >
                 <div className="min-w-0 text-sm">
                   <p className="truncate font-mono text-xs font-black text-foreground">
@@ -1923,7 +2000,7 @@ export default function SettingsPage() {
                   disabled={revokingWebhookId === webhook.id}
                   onClick={() => handleDeleteWebhook(webhook.id)}
                   aria-label={t("webhooks.delete")}
-                  className="h-10 w-10 shrink-0 rounded-xl"
+                  className="h-10 w-10 shrink-0 rounded-sm"
                 >
                   {revokingWebhookId === webhook.id ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1959,7 +2036,7 @@ export default function SettingsPage() {
         <Button
           type="button"
           onClick={openGenerateKeyDialog}
-          className="h-11 w-full rounded-2xl font-black"
+          className="h-11 w-full rounded-lg font-black"
         >
           <Key className="mr-2 h-4 w-4" />
           {t("dashboard.generateKey")}
@@ -1974,7 +2051,7 @@ export default function SettingsPage() {
               return (
                 <div
                   key={key.id}
-                  className="rounded-2xl border border-border/60 bg-muted/30"
+                  className="rounded-lg border border-border/60 bg-muted/30"
                 >
                   <div className="flex items-center gap-2 p-3">
                     {/* data-no-press: the app-wide press ripple assumes a
@@ -1989,7 +2066,7 @@ export default function SettingsPage() {
                       }}
                       aria-expanded={expanded}
                       data-no-press
-                      className="-mx-1.5 flex min-w-0 flex-1 items-center gap-2 rounded-xl px-1.5 py-1 text-left transition-colors hover:bg-muted-foreground/5 active:bg-muted-foreground/10"
+                      className="-mx-1.5 flex min-w-0 flex-1 items-center gap-2 rounded-sm px-1.5 py-1 text-left transition-colors hover:bg-muted-foreground/5 active:bg-muted-foreground/10"
                     >
                       <div className="flex min-w-0 flex-1 items-center gap-3.5">
                         <RowIcon icon={KeyRound} />
@@ -2007,7 +2084,7 @@ export default function SettingsPage() {
                       </div>
                       <ChevronRight
                         className={cn(
-                          "h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform duration-200",
+                          "h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform duration-enter",
                           expanded && "rotate-90",
                         )}
                       />
@@ -2019,7 +2096,7 @@ export default function SettingsPage() {
                       disabled={revokingKeyId === key.id}
                       onClick={() => handleRevokeApiKey(key.id)}
                       aria-label={t("dashboard.revokeKey")}
-                      className="h-10 w-10 shrink-0 rounded-xl"
+                      className="h-10 w-10 shrink-0 rounded-sm"
                     >
                       {revokingKeyId === key.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -2237,7 +2314,7 @@ export default function SettingsPage() {
             type="button"
             disabled={resettingCache}
             onClick={() => void handleResetAppData()}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-muted/70 py-3 text-base font-black text-accent transition-colors hover:bg-muted disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-muted/70 py-3 text-base font-black text-accent transition-colors hover:bg-muted disabled:opacity-50"
           >
             {resettingCache ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {t("troubleshooting.confirmAction")}
@@ -2246,7 +2323,7 @@ export default function SettingsPage() {
             type="button"
             disabled={resettingCache}
             onClick={() => setResetCacheOpen(false)}
-            className="w-full rounded-2xl bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            className="w-full rounded-lg bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted disabled:opacity-50"
           >
             {t("troubleshooting.confirmCancel")}
           </button>
@@ -2313,14 +2390,14 @@ export default function SettingsPage() {
               encryptPassphrase.length < MIN_PASSPHRASE_LENGTH ||
               encryptConfirmation.length === 0
             }
-            className="w-full rounded-2xl bg-primary/10 py-3 text-base font-black text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+            className="w-full rounded-lg bg-primary/10 py-3 text-base font-black text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
           >
             {t("workspace.encryptAction")}
           </button>
           <button
             type="button"
             onClick={closeEncryptDialog}
-            className="w-full rounded-2xl bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted"
+            className="w-full rounded-lg bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted"
           >
             {t("workspace.encryptCancel")}
           </button>
@@ -2344,19 +2421,19 @@ export default function SettingsPage() {
                 type={showApiKey ? "text" : "password"}
                 value={generatedApiKey}
                 readOnly
-                className="h-10 flex-1 rounded-xl bg-background/50 font-mono text-xs"
+                className="h-10 flex-1 rounded-sm bg-background/50 font-mono text-xs"
               />
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={() => setShowApiKey(!showApiKey)}>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-sm" onClick={() => setShowApiKey(!showApiKey)}>
                 {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-xl" onClick={handleCopyApiKey}>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-sm" onClick={handleCopyApiKey}>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
             <button
               type="button"
               onClick={closeGenerateKeyDialog}
-              className="w-full rounded-2xl bg-muted/70 py-3 text-base font-black text-accent transition-colors hover:bg-muted"
+              className="w-full rounded-lg bg-muted/70 py-3 text-base font-black text-accent transition-colors hover:bg-muted"
             >
               {t("dashboard.done")}
             </button>
@@ -2369,10 +2446,10 @@ export default function SettingsPage() {
               onChange={(event) => setNewKeyLabel(event.target.value)}
               maxLength={60}
               placeholder={t("dashboard.labelPlaceholder")}
-              className="h-11 rounded-2xl font-extrabold"
+              className="h-11 rounded-lg font-extrabold"
               autoFocus
             />
-            <div className="flex rounded-2xl bg-muted/60 p-1.5">
+            <div className="flex rounded-lg bg-muted/60 p-1.5">
               {(["READ", "FULL"] as ApiKeyScope[]).map((scope) => (
                 <button
                   key={scope}
@@ -2399,7 +2476,7 @@ export default function SettingsPage() {
               type="button"
               disabled={apiKeyLoading}
               onClick={handleGenerateApiKey}
-              className="h-11 w-full rounded-2xl font-black"
+              className="h-11 w-full rounded-lg font-black"
             >
               {apiKeyLoading ? (
                 <>
@@ -2417,7 +2494,7 @@ export default function SettingsPage() {
               type="button"
               onClick={closeGenerateKeyDialog}
               disabled={apiKeyLoading}
-              className="w-full rounded-2xl bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+              className="w-full rounded-lg bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
               {t("dashboard.cancel")}
             </button>
@@ -2437,14 +2514,14 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => void handleDeleteLocalData()}
-            className="w-full rounded-2xl bg-destructive/10 py-3 text-base font-black text-destructive transition-colors hover:bg-destructive/20"
+            className="w-full rounded-lg bg-destructive/10 py-3 text-base font-black text-destructive transition-colors hover:bg-destructive/20"
           >
             {t("workspace.deleteConfirmAction")}
           </button>
           <button
             type="button"
             onClick={() => setDeleteLocalOpen(false)}
-            className="w-full rounded-2xl bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted"
+            className="w-full rounded-lg bg-muted/70 py-3 text-base font-black text-foreground transition-colors hover:bg-muted"
           >
             {t("workspace.deleteConfirmCancel")}
           </button>

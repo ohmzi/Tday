@@ -303,11 +303,22 @@ interface TypeScope {
   end: number;
   animated: Set<string>;
   ownState: Set<string>;
+  /** This type's computed `var`s, by name, as their body text. */
+  computed: Map<string, string>;
 }
 
-/** The `value:` expression of every `.animation(_:value:)` in a slice. */
-function animatedValueExpressions(text: string): string[] {
-  const exprs: string[] = [];
+/**
+ * Every `.animation(_:value:)` in a slice: its `value:` expression, and the
+ * 1-based line the `.animation(` itself sits on.
+ *
+ * The line is what rule D needs and rule A's scope building does not, which is why
+ * this returns pairs and [animatedValueExpressions] throws half of them away. The
+ * call is nearly always written across four lines with `value:` on the third, so
+ * the line that matters is the one the modifier OPENS on — that is the line whose
+ * enclosing branches say where in the tree the modifier lives.
+ */
+function animatedValueSites(text: string): { line: number; expr: string }[] {
+  const sites: { line: number; expr: string }[] = [];
   for (const match of text.matchAll(/\.animation\s*\(/g)) {
     const open = match.index + match[0].length - 1;
     let depth = 0;
@@ -325,9 +336,86 @@ function animatedValueExpressions(text: string): string[] {
     if (close < 0) continue;
     const args = text.slice(open + 1, close);
     const valueAt = args.indexOf("value:");
-    if (valueAt >= 0) exprs.push(args.slice(valueAt + "value:".length));
+    if (valueAt < 0) continue;
+    let line = 1;
+    for (let i = 0; i < match.index; i += 1) if (text[i] === "\n") line += 1;
+    sites.push({ line, expr: args.slice(valueAt + "value:".length) });
   }
-  return exprs;
+  return sites;
+}
+
+/** The `value:` expression of every `.animation(_:value:)` in a slice. */
+function animatedValueExpressions(text: string): string[] {
+  return animatedValueSites(text).map((site) => site.expr);
+}
+
+/**
+ * Maximal dotted chains, as segment arrays: `!viewModel.todayTodos.isEmpty` yields
+ * `[viewModel, todayTodos, isEmpty]`, and a leading-dot member like `.opacity`
+ * yields nothing.
+ */
+function dottedPaths(text: string): string[][] {
+  const out: string[][] = [];
+  for (const match of text.matchAll(/(^|[^.\w$])([A-Za-z_]\w*(?:\s*\.\s*[A-Za-z_]\w*)*)/g)) {
+    const segments = match[2].split(".").map((part) => part.trim());
+    if (SWIFT_KEYWORDS.has(segments[0])) continue;
+    out.push(segments);
+  }
+  return out;
+}
+
+/**
+ * Predicates a condition asks ABOUT a piece of state rather than state of their
+ * own. `if !todos.isEmpty` is gated on `todos`; `if viewModel.isLoading` is gated
+ * on `isLoading`, and reading it as "gated on viewModel" would make every
+ * condition in a screen look like every other one.
+ */
+const COLLECTION_PREDICATES = new Set(["isEmpty", "count", "first", "last"]);
+
+/** What a condition is actually gated on, as dotted paths. */
+function gateStatePaths(cond: string): string[][] {
+  return dottedPaths(cond).map((segments) =>
+    segments.length > 1 && COLLECTION_PREDICATES.has(segments[segments.length - 1])
+      ? segments.slice(0, -1)
+      : segments,
+  );
+}
+
+/** Does `expr` read `state`, or something under it? */
+function expressionReads(expr: string, state: string[]): boolean {
+  return dottedPaths(expr).some(
+    (segments) =>
+      segments.length >= state.length && state.every((name, i) => segments[i] === name),
+  );
+}
+
+/**
+ * The same question, asked one hop through the type's own computed properties.
+ *
+ * [expressionReads] is textual, and the expression that names the state is often not
+ * the expression that is written: a `value:` keyed on a composite like
+ * `pendingDayAnimationKey` reads the gate's collection in the property's body and
+ * nothing at all on the line itself. Rule D's whole subject is a modifier that LOOKS
+ * right, so a rule that only reads the line is exactly one rename away from being
+ * blind at the site it was written for.
+ *
+ * One hop, and no transitive closure. A key assembled out of the branch's own state is
+ * the shape that exists; chasing further would start pulling half a screen's
+ * properties into every expression and turn a precise rule into a noisy one. Returns
+ * the property it went through so the failure can name the indirection rather than
+ * point at a line the state does not appear on.
+ */
+function expressionReadsVia(
+  expr: string,
+  state: string[],
+  scope: TypeScope | null,
+): { reads: boolean; through?: string } {
+  if (expressionReads(expr, state)) return { reads: true };
+  for (const name of bareIdentifiers(expr)) {
+    const body = scope?.computed.get(name);
+    if (body && expressionReads(body, state)) return { reads: true, through: name };
+  }
+  return { reads: false };
 }
 
 /** Every identifier touched inside a `withAnimation { … }` body in a slice. */
@@ -349,6 +437,45 @@ function withAnimationIdentifiers(text: string): string[] {
     found.push(...rootIdentifiers(text.slice(i, end)));
   }
   return found;
+}
+
+/** `var x: T { … }` — computed, so no `=` between the name and the brace. */
+const COMPUTED_PROPERTY = /\bvar\s+(\w+)\s*:\s*[^={]*\{$/;
+
+/**
+ * The computed `var`s declared directly in a type's body, by name, as body text.
+ *
+ * Every brace-opening member is skipped whole rather than walked, which is what keeps
+ * a nested view struct's properties out of the outer type's table: two structs in one
+ * file routinely share a name like `items`, and resolving through the wrong one would
+ * make rule D fail on a line that reads nothing of the sort.
+ */
+function computedProperties(code: string[], start: number, end: number): Map<string, string> {
+  const map = new Map<string, string>();
+  let i = start + 1;
+  while (i <= end) {
+    if (!code[i].trim().endsWith("{")) {
+      i += 1;
+      continue;
+    }
+    const close = blockEnd(code, i);
+    const header = joinedHeader(code, i, DECLARATION_HEADER);
+    const match = header && COMPUTED_PROPERTY.exec(header.text);
+    if (match) {
+      map.set(
+        match[1],
+        code
+          .slice(i, close + 1)
+          .join(" ")
+          .replace(/^[^{]*\{/, "")
+          .replace(/\}\s*$/, "")
+          .replace(/\s+/g, " ")
+          .trim(),
+      );
+    }
+    i = close + 1;
+  }
+  return map;
 }
 
 function typeScopes(code: string[]): TypeScope[] {
@@ -376,6 +503,7 @@ function typeScopes(code: string[]): TypeScope[] {
       end: end + 1,
       animated,
       ownState,
+      computed: computedProperties(code, i, end),
     });
   }
   return scopes;
@@ -428,10 +556,10 @@ function gatesOf(cond: string, scope: TypeScope): string[] {
 
 /** Rule A — `.transition` sites whose transaction is supplied outside this type. */
 const TRANSITION_DRIVEN_ELSEWHERE: Record<string, string> = {
-  "ios-swiftUI/Tday/UI/Component/CreateTaskSheet.swift:242":
+  "ios-swiftUI/Tday/UI/Component/CreateTaskSheet.swift:248":
     "`scheduleEnabled` is written through the Binding handed to " +
     "CreateTaskSheetScheduleToggleRow, which applies `$isOn.animation(.spring(…))` " +
-    "on the Toggle (:787). The Binding carries the transaction, so the due row's " +
+    "on the Toggle (:797). The Binding carries the transaction, so the due row's " +
     "transition runs on every user-driven flip of this gate.",
 };
 
@@ -440,6 +568,17 @@ const PANEL_SWAP_CUTS_ON_PURPOSE: Record<string, string> = {};
 
 /** Rule C — private view declarations reached from somewhere this scan cannot see. */
 const VIEW_DECLARATIONS_REACHED_ELSEWHERE: Record<string, string> = {};
+
+/**
+ * Rule D — `.animation(_:value:)` inside its own gate's branch, on purpose.
+ *
+ * There is no honest entry for "the branch should cut": a branch that is meant to
+ * cut wants no animation at all, and one written inside the branch still animates
+ * everything that changes WITHIN it while animating nothing about the branch
+ * appearing or going away. An entry here would have to name a third thing the
+ * modifier is for.
+ */
+const ANIMATION_INSIDE_ITS_OWN_BRANCH: Record<string, string> = {};
 
 /** Protocol witnesses: SwiftUI calls these, never the file. */
 const PROTOCOL_WITNESSES = new Set(["body", "previews", "makeBody"]);
@@ -481,6 +620,10 @@ describeIOS("iOS motion reachability scan integrity", () => {
     const branches = PARSED.reduce((total, parsed) => total + parsed.structure.branches.length, 0);
     const scopes = PARSED.reduce((total, parsed) => total + parsed.scopes.length, 0);
     const decls = PARSED.reduce((total, parsed) => total + viewDeclarations(parsed).length, 0);
+    const computed = PARSED.reduce(
+      (total, parsed) => total + parsed.scopes.reduce((n, scope) => n + scope.computed.size, 0),
+      0,
+    );
 
     expect(IOS_FILES.length, "iOS .swift files").toBeGreaterThan(80);
     expect(transitions, "`.transition(` sites").toBeGreaterThan(15);
@@ -488,6 +631,9 @@ describeIOS("iOS motion reachability scan integrity", () => {
     expect(branches, "if/else branches").toBeGreaterThan(500);
     expect(scopes, "type scopes").toBeGreaterThan(100);
     expect(decls, "private view declarations").toBeGreaterThan(60);
+    // Rule D reads the gate's state through these. An empty table is not a rule that
+    // fails; it is a rule that stops seeing every indirect `value:` in the tree.
+    expect(computed, "computed `var` bodies").toBeGreaterThan(400);
   });
 });
 
@@ -608,6 +754,65 @@ describeIOS("iOS motion reachability", () => {
 
     expect(violations, violations.join("\n")).toEqual([]);
   });
+
+  // Rule D — where the modifier is written, not just whether it exists.
+  //
+  // Rule A asks whether a transaction exists somewhere in the type. It cannot ask
+  // the next question, which is the one that bit the today block and the calendar's
+  // day list: a `.animation(_:value:)` written INSIDE `if <that same state> { … }`
+  // is part of that branch. The update that flips the gate removes the branch and
+  // the modifier together, so at the moment the removal is decided there is no
+  // transaction open — the block cuts, and every `.transition` inside it cuts with
+  // it, while the same modifier goes on animating changes within the branch
+  // perfectly well. It reads correct, it IS correct for half its job, and rule A
+  // sees a gate that is named in an `.animation(value:)` and says nothing.
+  //
+  // The fix is never an allowlist entry; it is moving the modifier out, onto a
+  // `Group` or whatever else spans both states of the branch.
+  //
+  // "The state it animates" is resolved one hop through the type's computed
+  // properties, not read off the line. Both original sites happened to write the
+  // collection inline, but a `value:` keyed on something assembled out of it —
+  // `pendingDayAnimationKey`, which is what the calendar ships — names no state
+  // textually at all, and a rule that only read the line would have gone green on the
+  // very defect it was written for the moment the expression was given a name.
+  it("no `.animation(_:value:)` sits inside the branch it would animate", () => {
+    const violations: string[] = [];
+
+    for (const parsed of PARSED) {
+      const { code, raw, structure, file } = parsed;
+      for (const site of animatedValueSites(code.join("\n"))) {
+        const scope = scopeAt(parsed, site.line);
+        for (const index of structure.enclosing[site.line - 1] ?? []) {
+          const branch = structure.branches[index];
+          if (!branch.cond) continue;
+          const shared = gateStatePaths(branch.cond)
+            .map((state) => ({ state, hit: expressionReadsVia(site.expr, state, scope) }))
+            .filter(({ hit }) => hit.reads)
+            .map(({ state, hit }) =>
+              hit.through
+                ? `\`${state.join(".")}\` (through \`${hit.through}\`)`
+                : `\`${state.join(".")}\``,
+            );
+          if (shared.length === 0) continue;
+
+          const siteKey = `${relPath(file)}:${site.line}`;
+          if (siteKey in ANIMATION_INSIDE_ITS_OWN_BRANCH) break;
+          violations.push(
+            `${siteKey} → ${raw[site.line - 1].trim()} — animates ` +
+              `${[...new Set(shared)].join(", ")}, which gates the ` +
+              `branch at :${branch.startLine} that this modifier is written inside. It is ` +
+              "removed in the same update as the views it would animate out; hang it on a " +
+              "`Group` around the `if` instead",
+          );
+          break;
+        }
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+
 });
 
 // ─── Rule C — view code no path reaches ────────────────────────────
@@ -831,6 +1036,562 @@ describeIOS("iOS dead view branches", () => {
         const site = `${relPath(file)}:${decl.line}`;
         if (site in VIEW_DECLARATIONS_REACHED_ELSEWHERE) continue;
         violations.push(`${site} → \`${decl.name}\` is dead: ${why}`);
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+});
+
+// ─── Row actions ───────────────────────────────────────────────────
+//
+// `extension View` is where a modifier with no caller hides best. Rule C reads
+// `private` declarations only, and says why: `private` is file-scoped in Swift,
+// so a one-file reference search is a proof. An `internal` helper is visible to
+// the whole module — but the module is exactly this tree (`project.yml` gives
+// the app target the single source path `Tday`), so a search across the scan is
+// the same proof, one target wide instead of one file wide.
+//
+// That gap is how the app came to ship a swipe nobody could perform. The dead
+// `standardModeContent` branch went, and with it the `todoRow` that applied
+// `.swipeActions` — but `todoSwipeActions`, the helper holding the
+// `.swipeActions` call itself, stayed behind in `extension View` with every
+// caller gone, which reads in review as a feature the app has.
+//
+// A modifier is declared in two halves, and the `extension View` half is the
+// one review tends to read. `SwipeRevealHintModifier` stranded for longer than
+// `todoSwipeActions` did and was found by eye rather than by rule, because the
+// half it lived in was a `private struct … : ViewModifier` — the sort of
+// declaration no scan here collected. Both halves are searched now: the
+// reference proof is the same one, and a `.modifier(X())` call is as findable
+// as a `.x()` one.
+
+interface ViewHelper {
+  name: string;
+  /** 1-based line the declaration starts on, which a wrapped signature moves. */
+  line: number;
+  endLine: number;
+  body: string;
+  file: string;
+}
+
+/** `func …(…) -> some View {` declared directly in an `extension View`. */
+function extensionViewHelpers(parsed: ParsedFile): ViewHelper[] {
+  const { code } = parsed;
+  const helpers: ViewHelper[] = [];
+  for (const scope of parsed.scopes) {
+    // `typeScopes` rejoins wrapped headers, so a member whose own `{` sits
+    // within reach of the `extension View {` line above it is also recorded as
+    // a scope called `View`. Reading the opening line back settles which one is
+    // the extension and keeps every helper inside it from being found twice.
+    if (scope.name !== "View" || !/\bextension\s+View\b/.test(code[scope.start - 1])) continue;
+    let i = scope.start;
+    while (i <= scope.end - 2) {
+      if (!code[i].trim().endsWith("{")) {
+        i += 1;
+        continue;
+      }
+      const close = blockEnd(code, i);
+      const header = joinedHeader(code, i, DECLARATION_HEADER);
+      const match = header ? /\bfunc\s+(\w+)/.exec(header.text) : null;
+      if (header && match) {
+        helpers.push({
+          name: match[1],
+          line: header.start + 1,
+          endLine: close + 1,
+          body: code.slice(i, close + 1).join("\n"),
+          file: parsed.file,
+        });
+      }
+      i = close + 1;
+    }
+  }
+  return helpers;
+}
+
+/** `struct X: ViewModifier { … }` — the half a `.modifier(X())` call reaches. */
+function viewModifierTypes(parsed: ParsedFile): ViewHelper[] {
+  const { code } = parsed;
+  const types: ViewHelper[] = [];
+  for (const scope of parsed.scopes) {
+    const header = joinedHeader(code, scope.start - 1, TYPE_HEADER);
+    if (!header) continue;
+    // `typeScopes` rejoins wrapped headers, so a member declared inside a
+    // `struct X: ViewModifier {` is recorded a second time under that struct's
+    // name, opening at the member's own brace. A declaration header carries
+    // exactly one brace and it is the last thing on it; the rejoined member
+    // drags the struct's along, which is what tells the two apart — and unlike
+    // reading the brace line back, it still admits a header that wraps.
+    if (header.text.split("{").length !== 2 || !header.text.endsWith("{")) continue;
+    if (!/\bstruct\s+\w+/.test(header.text)) continue;
+    if (!/:\s*[^{]*\bViewModifier\b/.test(header.text)) continue;
+    types.push({
+      name: scope.name,
+      line: header.start + 1,
+      endLine: scope.end,
+      body: code.slice(scope.start - 1, scope.end).join("\n"),
+      file: parsed.file,
+    });
+  }
+  return types;
+}
+
+/** Every line in the scan naming `name`, outside the declaration itself. */
+function referenceSites(name: string, home: ViewHelper): string[] {
+  const pattern = new RegExp(`\\b${name}\\b`);
+  const sites: string[] = [];
+  for (const parsed of PARSED) {
+    for (let i = 0; i < parsed.code.length; i += 1) {
+      if (parsed.file === home.file && i + 1 >= home.line && i + 1 <= home.endLine) continue;
+      if (pattern.test(parsed.code[i])) sites.push(`${relPath(parsed.file)}:${i + 1}`);
+    }
+  }
+  return sites;
+}
+
+/**
+ * Which view `modeContent` hands back for one `TodoListMode` case.
+ *
+ * A guard it cannot read is reported rather than skipped. The whole subject here
+ * is a branch structure that looked exhaustive and was not, so a rule that goes
+ * quiet the moment the branching gets interesting would be the same failure in a
+ * new place.
+ */
+function modeContentFor(
+  parsed: ParsedFile,
+  mode: string,
+): { text: string; where: string } | { unevaluable: string } {
+  const decl = viewDeclarations(parsed).find((entry) => entry.name === "modeContent");
+  if (!decl) {
+    return { unevaluable: `${relPath(parsed.file)} declares no \`modeContent\`` };
+  }
+
+  const { code, structure } = parsed;
+  const predicates = boolPredicates(parsed);
+  const guards: Branch[] = [];
+  const loose: number[] = [];
+  for (let i = decl.braceLine; i < decl.endLine - 1; i += 1) {
+    if (structure.depthAt[i] !== decl.bodyDepth) continue;
+    const index = structure.branches.findIndex((entry) => entry.line === i + 1);
+    const branch = index >= 0 ? structure.branches[index] : null;
+    if (branch && branch.cond.length > 0 && branch.chainRoot === index) guards.push(branch);
+    else if (!branch && code[i].trim().length > 0) loose.push(i);
+  }
+
+  for (const guard of guards) {
+    const cover = coveredCases(guard.cond, predicates);
+    if (!cover) {
+      return {
+        unevaluable:
+          `${relPath(parsed.file)}:${guard.line} branches on \`${guard.cond}\`, which is not a ` +
+          "plain test of enum cases — nothing here can say which mode reaches which view. " +
+          "`modeContent` routes on the mode and on nothing else; a guard about any other state " +
+          "belongs inside the view it routes to, where it cannot cost a whole mode its rows.",
+      };
+    }
+    if (cover.cases.has(mode)) {
+      return {
+        text: code.slice(guard.line, guard.endLine - 1).join("\n"),
+        where: `${relPath(parsed.file)}:${guard.line}`,
+      };
+    }
+  }
+
+  if (loose.length === 0) {
+    return {
+      unevaluable:
+        `${relPath(parsed.file)}:${decl.line} sends \`.${mode}\` into no branch and has no ` +
+        "fallback — the case renders nothing at all",
+    };
+  }
+  return {
+    text: loose.map((line) => code[line]).join("\n"),
+    where: `${relPath(parsed.file)}:${decl.line}`,
+  };
+}
+
+/** Every private view declaration a view expression reaches, transitively. */
+function reachedDeclarations(parsed: ParsedFile, start: string): Declaration[] {
+  const byName = new Map(viewDeclarations(parsed).map((entry) => [entry.name, entry]));
+  const reached = new Map<string, Declaration>();
+  let frontier = [start];
+  for (let round = 0; round < 16 && frontier.length > 0; round += 1) {
+    const next: string[] = [];
+    for (const text of frontier) {
+      for (const name of bareIdentifiers(text)) {
+        const decl = byName.get(name);
+        if (!decl || reached.has(name)) continue;
+        reached.set(name, decl);
+        next.push(parsed.code.slice(decl.braceLine, decl.endLine - 1).join("\n"));
+      }
+    }
+    frontier = next;
+  }
+  return [...reached.values()];
+}
+
+const SWIPE = /swipe/i;
+const SWIPE_APPLICATION = /\.(?:todoTrailingSwipeActions|swipeActions)\s*\(?/;
+
+const SWIPE_HELPERS = PARSED.flatMap((parsed) => [
+  ...extensionViewHelpers(parsed),
+  ...viewModifierTypes(parsed),
+]).filter((helper) => SWIPE.test(helper.name) || SWIPE.test(helper.body));
+
+const TODO_LIST_SCREEN =
+  PARSED.find((parsed) => parsed.file.endsWith(`Todos${path.sep}TodoListScreen.swift`)) ?? null;
+
+const MODE_CASES = [...(collectEnumCases().get("TodoListMode") ?? [])].sort();
+
+describeIOS("iOS row actions", () => {
+  // The mode list is read from `TodoListMode` itself rather than written out
+  // here, so a new case arrives with its own reachability test instead of
+  // arriving with six of seven still asserted. The floor is what catches the
+  // parse going wrong: seven cases and one screen, or these rules are asserting
+  // nothing about an empty set.
+  it("still sees the modes and the affordances the rules are about", () => {
+    expect(TODO_LIST_SCREEN, "TodoListScreen.swift in the scan").not.toBeNull();
+    expect(MODE_CASES.length, "TodoListMode cases").toBeGreaterThanOrEqual(7);
+    // One name from each half. The `extension View` arm alone was green over a
+    // dead `SwipeRevealHintModifier` for as long as that struct existed, so an
+    // arm that silently collects nothing is the failure this floor is for.
+    const names = SWIPE_HELPERS.map((helper) => helper.name);
+    expect(names).toContain("todoTrailingSwipeActions");
+    expect(names).toContain("TodoTrailingSwipeActionsModifier");
+  });
+
+  it("every swipe affordance the app declares is applied somewhere", () => {
+    const violations = SWIPE_HELPERS.filter(
+      (helper) => referenceSites(helper.name, helper).length === 0,
+    ).map(
+      (helper) =>
+        `${relPath(helper.file)}:${helper.line} → \`${helper.name}\` is a swipe nothing applies. ` +
+        "Apply it on the live row or delete it: a gesture that exists only in the source reads " +
+        "as a shipped feature in review, and on iOS it is also the row's assistive affordance.",
+    );
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+
+  // One test per `TodoListMode`, because "every mode reaches the live row" is
+  // the claim the deleted branch made falsely for years: `standardModeContent`
+  // held the swipe, and no mode could reach it. Asserting it per case is what
+  // makes the failure say WHICH mode lost its row actions.
+  it.each(MODE_CASES)("`.%s` reaches a row that carries the swipe actions", (mode) => {
+    const screen = TODO_LIST_SCREEN as ParsedFile;
+    const resolved = modeContentFor(screen, mode);
+    expect("unevaluable" in resolved ? resolved.unevaluable : "").toBe("");
+    if ("unevaluable" in resolved) return;
+
+    const reached = reachedDeclarations(screen, resolved.text);
+    const sites: { where: string; gated: boolean }[] = [];
+    for (const decl of reached) {
+      for (let i = decl.braceLine; i < decl.endLine; i += 1) {
+        if (!SWIPE_APPLICATION.test(screen.code[i])) continue;
+        sites.push({
+          where: `${relPath(screen.file)}:${i + 1} (in \`${decl.name}\`)`,
+          gated: screen.structure.enclosing[i].length > 0,
+        });
+      }
+    }
+
+    expect(
+      sites.length,
+      `\`.${mode}\` resolves to ${resolved.where} and reaches ${reached.length} view ` +
+        "declarations, none of which applies a swipe action — the mode renders rows the user " +
+        "cannot act on, and VoiceOver rows with nothing on them.",
+    ).toBeGreaterThan(0);
+
+    const gated = sites.filter((site) => site.gated).map((site) => site.where);
+    expect(
+      gated,
+      `\`.${mode}\` reaches row actions that sit inside a branch: ${gated.join(", ")}. ` +
+        "The row's actions are its accessible actions; a branch around them is a mode or a " +
+        "state that silently has none. Gate the behaviour through the modifier's `enabled:` " +
+        "argument instead, which keeps the affordance on the row.",
+    ).toEqual([]);
+  });
+});
+
+// ─── The accessible half of a row action ───────────────────────────
+//
+// The rule above asks whether every mode reaches a row that carries the swipe.
+// This one asks the question the swipe cannot answer for itself: a
+// `UIPanGestureRecognizer` is not in the accessibility tree, so a capability
+// whose only entry point is that pan is a capability VoiceOver, Switch Control
+// and Full Keyboard Access all report as absent. The row read as text and
+// nothing else, and no compiler here says a word about it — the app target has
+// no Swift toolchain on this machine and the tree had no `accessibilityAction`
+// in it at all.
+//
+// So the invariant is parity, not presence: every action input the swipe
+// modifier takes must be named inside its accessible-actions block. A fifth
+// pill added next year lands as a fifth rotor entry or lands red.
+
+/** The locales `Localizable.xcstrings` carries a value for; `en` is the key. */
+const IOS_LOCALES = ["de", "es", "fr", "it", "ja", "ms", "pt", "ru", "zh"];
+const STRING_CATALOG = path.join(MONO, "ios-swiftUI", "Tday", "Resources", "Localizable.xcstrings");
+
+interface StringCatalog {
+  strings: Record<string, { localizations?: Record<string, { stringUnit?: { value?: string } }> }>;
+}
+
+/**
+ * Inputs a helper takes that DO something: a closure, or a value carrying one.
+ *
+ * Both halves of the modifier declare the same four, one as parameters and one
+ * as stored properties, so reading the union costs nothing and means neither
+ * half can be edited alone into disagreeing with the rule. The type test for the
+ * second form is anchored on an uppercase name so `tint: TaskSwipeActionTint.edit`
+ * — a colour, not an action — stays out of it.
+ */
+function actionInputs(helper: ViewHelper): string[] {
+  const names = new Set<string>();
+  for (const match of helper.body.matchAll(/\b(?:let|var)?\s*(\w+)\s*:\s*(?:@escaping\s+)?\(\s*\)\s*->/g)) {
+    names.add(match[1]);
+  }
+  for (const match of helper.body.matchAll(/\b(\w+)\s*:\s*[A-Z]\w*Action\w*\??(?![\w.])/g)) {
+    names.add(match[1]);
+  }
+  return [...names];
+}
+
+/**
+ * The 0-based line span of every accessible-actions block in a file.
+ *
+ * Taken off the stripped code so a brace inside a string cannot move it, and
+ * returned as a span rather than as text because the localisation rule below
+ * has to read the same lines back out of the raw source with the literals still
+ * in them. Both API spellings count: `.accessibilityActions { … }` and a single
+ * `.accessibilityAction(named:)` with a trailing closure are the same claim.
+ */
+function accessibleActionSpans(parsed: ParsedFile): { start: number; end: number }[] {
+  const spans: { start: number; end: number }[] = [];
+  for (let i = 0; i < parsed.code.length; i += 1) {
+    if (!/\.accessibilityActions?\s*[({]/.test(parsed.code[i])) continue;
+    let open = i;
+    while (open < parsed.code.length && !parsed.code[open].includes("{")) open += 1;
+    if (open >= parsed.code.length) continue;
+    spans.push({ start: i, end: blockEnd(parsed.code, open) });
+  }
+  return spans;
+}
+
+/** The spans of [accessibleActionSpans] that fall inside a helper's declaration. */
+function helperActionSpans(helper: ViewHelper): { start: number; end: number }[] {
+  const parsed = PARSED.find((entry) => entry.file === helper.file);
+  if (!parsed) return [];
+  return accessibleActionSpans(parsed).filter(
+    (span) => span.start + 1 >= helper.line && span.end + 1 <= helper.endLine,
+  );
+}
+
+const ACTION_HELPERS = SWIPE_HELPERS.filter((helper) => actionInputs(helper).length > 0);
+
+describeIOS("iOS row actions reach the accessibility tree", () => {
+  it("still sees the action inputs the rule is about", () => {
+    // Without this the two rules below are green over an empty set the moment
+    // the signature is reformatted past the regex — which is the same failure
+    // mode as the swipe nobody applied, one layer up.
+    const inputs = new Set(ACTION_HELPERS.flatMap(actionInputs));
+    for (const name of ["onEdit", "onCopy", "onDelete", "extraAction"]) {
+      expect([...inputs], `\`${name}\` among the swipe modifier's action inputs`).toContain(name);
+    }
+    // `extensionViewHelpers` slices a declaration from its opening brace, so the
+    // `extension View` half's parameters are outside the text this reads and the
+    // set comes from the `ViewModifier` half alone. That is the half that renders
+    // the pills and would have to grow a fifth one, so naming it is the floor
+    // that matters — a count would only have said "one of something".
+    expect(
+      ACTION_HELPERS.map((helper) => helper.name),
+      "the half that renders the row's actions",
+    ).toContain("TodoTrailingSwipeActionsModifier");
+  });
+
+  it("every action the swipe performs is also an accessibility action", () => {
+    const violations: string[] = [];
+    for (const helper of ACTION_HELPERS) {
+      const spans = helperActionSpans(helper);
+      const parsed = PARSED.find((entry) => entry.file === helper.file) as ParsedFile;
+      const surface = spans
+        .map((span) => parsed.code.slice(span.start, span.end + 1).join("\n"))
+        .join("\n");
+      for (const name of actionInputs(helper)) {
+        if (new RegExp(`\\b${name}\\b`).test(surface)) continue;
+        violations.push(
+          `${relPath(helper.file)}:${helper.line} → \`${helper.name}\` takes \`${name}\` and ` +
+            "never names it inside an accessibility action. The reveal is a pan, and a pan is " +
+            "not in the accessibility tree: an action reachable only that way does not exist " +
+            "for VoiceOver, Switch Control or Full Keyboard Access.",
+        );
+      }
+    }
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+
+  it("names those actions in a string every locale has", () => {
+    const catalog = JSON.parse(readFileSync(STRING_CATALOG, "utf-8")) as StringCatalog;
+    const violations: string[] = [];
+    let labelled = 0;
+
+    for (const helper of ACTION_HELPERS) {
+      const parsed = PARSED.find((entry) => entry.file === helper.file) as ParsedFile;
+      for (const span of helperActionSpans(helper)) {
+        const raw = parsed.raw.slice(span.start, span.end + 1).join("\n");
+        const literals = [...raw.matchAll(/"([^"\\]*)"/g)].map((match) => match[1]);
+        const keys = [...raw.matchAll(/\bL\(\s*"([^"\\]*)"/g)].map((match) => match[1]);
+        labelled += keys.length;
+
+        for (const literal of literals.filter((value) => !keys.includes(value))) {
+          violations.push(
+            `${relPath(helper.file)}:${span.start + 1} → "${literal}" is an accessibility ` +
+              "action name written in English. It is the only name a VoiceOver user ever " +
+              "hears for that action; put it through `L(…)` like every other string here.",
+          );
+        }
+
+        for (const key of keys) {
+          const missing = IOS_LOCALES.filter(
+            (locale) => !catalog.strings[key]?.localizations?.[locale]?.stringUnit?.value,
+          );
+          if (missing.length === 0) continue;
+          violations.push(
+            `${relPath(helper.file)}:${span.start + 1} → \`L("${key}")\` has no value for ` +
+              `${missing.join(", ")}. A missing key falls back to the English key silently, so ` +
+              "the action is reachable and unreadable at once.",
+          );
+        }
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+    expect(labelled, "localised accessibility action names").toBeGreaterThanOrEqual(3);
+  });
+});
+
+// ─── A count the user just changed ─────────────────────────────────
+//
+// `.contentTransition(.numericText(value:))` fails the way a `.transition`
+// does, and more quietly. It is not a spec that runs; it is a rendering mode
+// that means nothing unless the text change it describes happens inside an
+// animation transaction. Written on its own it costs nothing, breaks nothing
+// and does nothing — the label swaps 7 for 6 between two frames exactly as it
+// did before — while reading, in review, like the fix.
+//
+// Rule A cannot ask this: it is keyed on `.transition(`, and a count writes
+// none. The label is never inserted or removed, only relabelled, so the pair
+// that has to be held together here is `.contentTransition` and the
+// `.animation(_:value:)` keyed on the count itself.
+//
+// The surfaces are the four feed counts — the date card's 34 pt number, the
+// category tiles, the scheduled list rows and the floater list cards — whose
+// only job is to report a number the user just changed. A fifth one added next
+// year either rolls or lands red; there is no allowlist, because a count that
+// hard-swaps is not a decision anyone has argued for.
+//
+// The gate is asserted here too. Reduce Motion for a roll means the new number
+// arriving whole on the frame it changed, which is what `tdayAnimation`
+// returning nil does — and a device pass cannot tell a missing gate from a
+// short one, so the only place that distinction can be caught is the text.
+
+/** A label whose entire content is the interpolated count, and nothing else. */
+const COUNT_LABEL = /^Text\("\\\(count\)"\)$/;
+
+interface CountLabel {
+  file: string;
+  /** 1-based, the `Text(` line. */
+  line: number;
+  chain: string;
+}
+
+/**
+ * The modifier chain a label owns: the lines after it that open with `.`, plus
+ * whatever a multi-line call carries between its parentheses.
+ *
+ * Walked off the stripped code, so a comment between two modifiers is a blank
+ * line rather than the end of the chain, and so no paren inside a string can
+ * move the depth counter. A blank line is skipped at depth 0 for the same
+ * reason; the chain still ends at the first line that is neither — the `}` that
+ * closes the stack the label sits in.
+ */
+function modifierChain(parsed: ParsedFile, index: number): string {
+  const lines: string[] = [];
+  let depth = 0;
+  for (let i = index + 1; i < parsed.code.length; i += 1) {
+    const trimmed = parsed.code[i].trim();
+    if (depth === 0) {
+      if (trimmed.length === 0) continue;
+      if (!trimmed.startsWith(".")) break;
+    }
+    lines.push(parsed.code[i]);
+    for (const ch of parsed.code[i]) {
+      if (ch === "(") depth += 1;
+      else if (ch === ")") depth -= 1;
+    }
+  }
+  return lines.join("\n");
+}
+
+const COUNT_LABELS: CountLabel[] = PARSED.flatMap((parsed) =>
+  parsed.raw.flatMap((line, index) =>
+    COUNT_LABEL.test(line.trim())
+      ? [{ file: parsed.file, line: index + 1, chain: modifierChain(parsed, index) }]
+      : [],
+  ),
+);
+
+describeIOS("iOS feed counts roll rather than swap", () => {
+  it("still sees the labels and the chains the rule is about", () => {
+    // The label is matched on raw source because the stripper blanks the very
+    // interpolation that identifies it, and a chain read off the wrong array is
+    // an empty string that passes nothing — so both halves are checked here
+    // rather than discovered as a green run over no sites.
+    expect(COUNT_LABELS.length, '`Text("\\(count)")` feed labels').toBeGreaterThanOrEqual(4);
+    expect(
+      [...new Set(COUNT_LABELS.map((label) => relPath(label.file)))].sort(),
+      "the files the feed's counts live in",
+    ).toEqual([
+      "ios-swiftUI/Tday/Feature/ScheduledTaskHome/ScheduledTaskHomeScreen.swift",
+      "ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift",
+    ]);
+    const unread = COUNT_LABELS.filter((label) => !label.chain.includes(".font("));
+    expect(
+      unread.map((label) => `${relPath(label.file)}:${label.line}`),
+      "a count whose chain carries no `.font(` is a chain the walk stopped reading early",
+    ).toEqual([]);
+  });
+
+  it("every feed count carries the digit roll and a transaction to run it in", () => {
+    const violations: string[] = [];
+
+    for (const label of COUNT_LABELS) {
+      const site = `${relPath(label.file)}:${label.line}`;
+
+      if (!label.chain.includes(".contentTransition(.numericText(")) {
+        violations.push(
+          `${site} → no \`.contentTransition(.numericText(\` on the label. The count reports a ` +
+            "number the user just changed; without the roll it swaps between two frames and " +
+            "says nothing about having changed.",
+        );
+        continue;
+      }
+
+      const keyed = animatedValueSites(label.chain).filter((animation) =>
+        rootIdentifiers(animation.expr).includes("count"),
+      );
+      if (keyed.length === 0) {
+        violations.push(
+          `${site} → \`.numericText\` with no \`.animation(_:value:)\` keyed on \`count\`. A ` +
+            "content transition is a rendering mode, not a spec: outside a transaction the " +
+            "modifier is inert and the label hard-swaps exactly as it did before.",
+        );
+        continue;
+      }
+
+      if (!/\.animation\s*\(\s*tdayAnimation\s*\(/.test(label.chain)) {
+        violations.push(
+          `${site} → the roll's \`.animation(\` does not open on \`tdayAnimation(\`, so Reduce ` +
+            "Motion gets a shorter roll instead of the finished number on the frame it changed.",
+        );
       }
     }
 

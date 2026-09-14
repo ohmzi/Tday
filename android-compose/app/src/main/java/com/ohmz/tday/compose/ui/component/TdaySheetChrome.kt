@@ -4,7 +4,6 @@ import android.view.Gravity
 import android.view.ViewParent
 import android.view.WindowManager
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -43,7 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -60,6 +57,8 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.ui.TdayHaptics
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 
 object TdaySheetDefaults {
@@ -123,6 +122,12 @@ object TdaySheetDefaults {
     }
 }
 
+/**
+ * The Material3 half of Android's two sheet mechanisms: this one brings its own animated
+ * scrim and its own card timing, so it names no specs. The other half — the hand-built
+ * `AnimatedVisibility`-inside-a-`Dialog` sheets, where the scrim and the card are separate
+ * composables that have to be told to agree — runs on `TdaySheetMotion`.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TdayModalBottomSheet(
@@ -429,10 +434,6 @@ fun TdaySheetActionButton(
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enabled) 0.93f else 1f,
-        label = "tdaySheetActionButtonScale",
-    )
     val elevation by animateDpAsState(
         targetValue = when {
             pressed && enabled -> 2.dp
@@ -441,19 +442,27 @@ fun TdaySheetActionButton(
         },
         label = "tdaySheetActionButtonElevation",
     )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed && enabled) 1.dp else 0.dp,
-        label = "tdaySheetActionButtonOffsetY",
-    )
 
     Card(
         modifier = modifier
             .size(TdaySheetDefaults.ActionSize)
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
+            .tdayPressable(
+                interactionSource,
+                scale = TdayMotionTokens.PressScales.Bar,
+                // 1 dp rather than the 2 dp every other Android press takes, and
+                // deliberately so: this is the sheet's toolbar action, and iOS sinks
+                // its toolbar buttons 1 pt against the 2 pt it gives everything else
+                // (`TdayToolbarButtonEffectModifier`,
+                // `ios-swiftUI/Tday/Core/UI/TaskFloatingActionButton.swift:168`). The
+                // button sits inside a sheet's chrome with a border drawn round it, and
+                // the full drop reads as the border tearing away from the edge.
+                offsetY = 1.dp,
+                // A disabled action is a confirm with nothing to confirm, and it must
+                // not travel however hard it is held. The elevation above still has to
+                // read `pressed && enabled` for itself: it is a three-way step —
+                // pressed, enabled, disabled — and `cardElevation` has two states.
+                enabled = enabled,
+            )
             .border(
                 width = TdaySheetDefaults.ActionBorderWidth,
                 color = accentColor.copy(alpha = if (enabled) 0.55f else 0.30f),

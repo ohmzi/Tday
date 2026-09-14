@@ -2,13 +2,10 @@ package com.ohmz.tday.compose.feature.guide
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +14,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,6 +33,8 @@ import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -52,7 +50,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -76,6 +73,52 @@ import com.ohmz.tday.shared.guide.GuideSearch
 import com.ohmz.tday.shared.guide.GuideSectionId
 import com.ohmz.tday.shared.guide.GuideStringsGenerated
 import com.ohmz.tday.shared.guide.GuideTopic
+
+// What the guide draws that the scale has no rung for, named here rather than snapped onto a
+// neighbouring step. The page margin is the reason the list is worth reading: this screen has always
+// inset 16 where every other page insets ContentPaddingHorizontal's 18, and pulling it across would
+// redraw every card edge on the screen rather than migrate one.
+
+/** The guide's own page margin, two dp inside the app's. */
+private val PageHorizontalPadding = 16.dp
+
+/** Subtitle to first section. Falls between SpacingXl and SpacingXxl, where the scale has no step. */
+private val HeaderBottomSpacing = 16.dp
+
+/** Topic card to topic card. 10 falls between SpacingMd and SpacingLg. */
+private val TopicCardSpacing = 10.dp
+
+/** The glyph inside the toolbar's circular button, sized against that button rather than the icon scale. */
+private val BarButtonIconSize = 22.dp
+
+// The tinted square a topic's glyph sits in. One shape's proportions: the tile, its corner and the
+// glyph move together or not at all.
+private val TopicIconTileSize = 36.dp
+private val TopicIconTileRadius = 10.dp
+private val TopicIconSize = 18.dp
+
+/** The row's trailing chevron. The same 18 as the tile glyph, named apart because nothing moves both. */
+private val TopicChevronSize = 18.dp
+
+/** Divider, body blocks and the Try it button, stacked inside an expanded card. */
+private val BodyBlockSpacing = 10.dp
+
+/** Try it. Corners at 12, between RadiusSm and RadiusMd and not either of them. */
+private val TryItButtonRadius = 12.dp
+
+/** NEW / HIDDEN GEM / SERVER. Under RadiusSm, because a badge this small reads square at 8. */
+private val PillRadius = 6.dp
+
+// A numbered step: the circle carrying the digit, and the gap to the text beside it. The circle is
+// 20 and is not IconSm — it holds a number, not a glyph.
+private val StepNumberSize = 20.dp
+private val StepNumberGap = 10.dp
+
+/** The tip callout's corner, rounder than the code block's RadiusSm so the two read as different blocks. */
+private val TipBlockRadius = 10.dp
+
+/** Inline code pads wider than tall, so a monospace run clears its own box. */
+private val CodeBlockHorizontalPadding = 10.dp
 
 /**
  * The in-app How-To / feature guide. Reads the shared [GuideCatalog] natively via
@@ -166,15 +209,15 @@ fun HelpGuideScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(guideScrollState)
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 32.dp),
+                .padding(horizontal = PageHorizontalPadding)
+                .padding(bottom = TdayDimens.Spacing4xl),
         ) {
             TdayHeroTitleBlock(
                 title = res("guide.title"),
                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_help),
                 accentColor = colorScheme.primary,
                 collapseProgress = heroCollapse.progress,
-                modifier = Modifier.padding(horizontal = 2.dp),
+                modifier = Modifier.padding(horizontal = TdayDimens.SpacingXxs),
             )
             Text(
                 text = res("guide.subtitle"),
@@ -182,21 +225,21 @@ fun HelpGuideScreen(
                 color = colorScheme.onSurface.copy(alpha = 0.6f),
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(HeaderBottomSpacing))
 
             if (trimmed.isNotEmpty()) {
                 Text(
                     text = res("guide.results").replace("{{count}}", rankedIds.size.toString()),
                     style = MaterialTheme.typography.labelMedium,
                     color = colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(bottom = 8.dp, start = 4.dp),
+                    modifier = Modifier.padding(bottom = TdayDimens.SpacingMd, start = TdayDimens.SpacingXs),
                 )
                 if (rankedIds.isEmpty()) {
                     Text(
                         text = res("guide.noResults"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = colorScheme.onSurface.copy(alpha = 0.6f),
-                        modifier = Modifier.padding(vertical = 24.dp),
+                        modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
                     )
                 } else {
                     rankedIds.forEach { id ->
@@ -204,7 +247,7 @@ fun HelpGuideScreen(
                             TopicCard(topic, expandedId == id, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
                                 expandedId = if (expandedId == id) null else id
                             }
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(TopicCardSpacing))
                         }
                     }
                 }
@@ -215,9 +258,9 @@ fun HelpGuideScreen(
                         TopicCard(topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
                             expandedId = if (expandedId == topic.id) null else topic.id
                         }
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(TopicCardSpacing))
                     }
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(TdayDimens.SpacingLg))
                 }
                 GuideSectionId.entries.sortedBy { it.order }.forEach { section ->
                     val sectionTopics = topics.filter { it.section == section }
@@ -227,9 +270,9 @@ fun HelpGuideScreen(
                             TopicCard(topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
                                 expandedId = if (expandedId == topic.id) null else topic.id
                             }
-                            Spacer(Modifier.height(10.dp))
+                            Spacer(Modifier.height(TopicCardSpacing))
                         }
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(TdayDimens.SpacingLg))
                     }
                 }
             }
@@ -310,23 +353,10 @@ private fun GuideBarButton(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "guideBarButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "guideBarButtonOffsetY",
-    )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -336,7 +366,7 @@ private fun GuideBarButton(
         colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.BarButtonElevation,
-            pressedElevation = 0.dp,
+            pressedElevation = TdayDimens.CardElevationDefault,
         ),
     ) {
         Box(
@@ -347,7 +377,7 @@ private fun GuideBarButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(BarButtonIconSize),
             )
         }
     }
@@ -360,7 +390,7 @@ private fun SectionLabel(text: String) {
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-        modifier = Modifier.padding(bottom = 8.dp, start = 4.dp),
+        modifier = Modifier.padding(bottom = TdayDimens.SpacingMd, start = TdayDimens.SpacingXs),
     )
 }
 
@@ -376,9 +406,9 @@ private fun TopicCard(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusLg),
         color = colorScheme.surface,
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.06f)),
+        border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.06f)),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column {
@@ -386,13 +416,13 @@ private fun TopicCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(onClick = onToggle)
-                    .padding(14.dp),
+                    .padding(TdayDimens.SpacingXl),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .size(TopicIconTileSize)
+                        .clip(RoundedCornerShape(TopicIconTileRadius))
                         .background(colorScheme.primary.copy(alpha = 0.10f)),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -400,10 +430,10 @@ private fun TopicCard(
                         imageVector = ImageVector.vectorResource(guideIconRes(topic.icon)),
                         contentDescription = null,
                         tint = colorScheme.primary,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(TopicIconSize),
                     )
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(TdayDimens.SpacingLg))
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -420,27 +450,31 @@ private fun TopicCard(
                         color = colorScheme.onSurface.copy(alpha = 0.6f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 2.dp),
+                        modifier = Modifier.padding(top = TdayDimens.SpacingXxs),
                     )
                 }
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(TdayDimens.SpacingMd))
                 Icon(
                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_right),
                     contentDescription = null,
                     tint = colorScheme.onSurface.copy(alpha = 0.4f),
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(TopicChevronSize),
                 )
             }
 
             if (expanded) {
                 Column(
-                    modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(
+                        start = TdayDimens.SpacingXl,
+                        end = TdayDimens.SpacingXl,
+                        bottom = TdayDimens.SpacingXl,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(BodyBlockSpacing),
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(1.dp)
+                            .height(TdayDimens.BorderWidth)
                             .background(colorScheme.onSurface.copy(alpha = 0.06f)),
                     )
                     topic.body.forEach { block ->
@@ -449,10 +483,10 @@ private fun TopicCard(
                     val deepLink = topic.deepLink?.android
                     if (deepLink != null && !(isLocalMode && topic.serverOnly)) {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(TryItButtonRadius),
                             color = colorScheme.primary,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(TryItButtonRadius))
                                 .clickable { onOpenDeepLink(deepLink) },
                         ) {
                             Text(
@@ -460,7 +494,7 @@ private fun TopicCard(
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = colorScheme.onPrimary,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingMd),
                             )
                         }
                     }
@@ -491,10 +525,10 @@ private fun Pill(text: String) {
         fontSize = 9.sp,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier
-            .padding(start = 6.dp)
-            .clip(RoundedCornerShape(6.dp))
+            .padding(start = TdayDimens.SpacingSm)
+            .clip(RoundedCornerShape(PillRadius))
             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+            .padding(horizontal = TdayDimens.SpacingSm, vertical = TdayDimens.SpacingXxs),
     )
 }
 
@@ -503,12 +537,12 @@ private fun BodyBlock(type: GuideBlockType, texts: List<String>) {
     val colorScheme = MaterialTheme.colorScheme
     val text = texts.firstOrNull().orEmpty()
     when (type) {
-        GuideBlockType.STEPS -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        GuideBlockType.STEPS -> Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingSm)) {
             texts.forEachIndexed { i, step ->
                 Row {
                     Box(
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(StepNumberSize)
                             .clip(CircleShape)
                             .background(colorScheme.primary.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center,
@@ -520,7 +554,7 @@ private fun BodyBlock(type: GuideBlockType, texts: List<String>) {
                             color = colorScheme.primary,
                         )
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(StepNumberGap))
                     Text(step, style = MaterialTheme.typography.bodyMedium, color = colorScheme.onSurface)
                 }
             }
@@ -532,9 +566,9 @@ private fun BodyBlock(type: GuideBlockType, texts: List<String>) {
             color = colorScheme.onSurface.copy(alpha = 0.75f),
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(TipBlockRadius))
                 .background(colorScheme.primary.copy(alpha = 0.06f))
-                .padding(12.dp),
+                .padding(TdayDimens.SpacingLg),
         )
 
         GuideBlockType.KBD, GuideBlockType.EXAMPLE -> Text(
@@ -543,9 +577,9 @@ private fun BodyBlock(type: GuideBlockType, texts: List<String>) {
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
             color = colorScheme.onSurface,
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(TdayDimens.RadiusSm))
                 .background(colorScheme.onSurface.copy(alpha = 0.06f))
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .padding(horizontal = CodeBlockHorizontalPadding, vertical = TdayDimens.SpacingSm),
         )
 
         GuideBlockType.PARAGRAPH -> Text(

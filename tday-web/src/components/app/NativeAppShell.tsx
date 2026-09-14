@@ -2,13 +2,15 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { usePathname } from "@/lib/navigation";
 import MoreNavigationSheet from "./MoreNavigationSheet";
-import RootDock from "./RootDock";
+import RootDock, { activeDockTab } from "./RootDock";
 import TaskFloatingActionButton from "./TaskFloatingActionButton";
 import InstallPromptBanner from "./InstallPromptBanner";
 import ForcePasswordChangeGate from "./ForcePasswordChangeGate";
 import SetSecurityQuestionsGate from "./SetSecurityQuestionsGate";
 import { useNativeRouteCounts } from "./nativeRouteConfig";
 import { usePrefetchRoutes } from "@/hooks/usePrefetchRoutes";
+import { useDuckPresence } from "@/hooks/useDuckPresence";
+import { useRootDockCollapsed } from "@/hooks/useRootDockCollapsed";
 import { useBulkSelectionActive } from "@/lib/bulk/bulk-selection-signal";
 
 export default function NativeAppShell({
@@ -21,7 +23,10 @@ export default function NativeAppShell({
   const pathname = usePathname();
   usePrefetchRoutes();
   // A task list in selection mode puts its own action bar in this slot; the two
-  // share the same fixed bottom metrics and must never be on screen together.
+  // share the same fixed bottom metrics and must never come to REST on the
+  // screen together. They do now overlap while the swap plays — the bar rises as
+  // the chrome below ducks out — which is the hand-over the bar's own doc comment
+  // says it was missing, not the collision this note was written about.
   const bulkSelecting = useBulkSelectionActive();
   const showTaskFab =
     !bulkSelecting &&
@@ -29,15 +34,46 @@ export default function NativeAppShell({
     !pathname.includes("/app/guide") &&
     !pathname.includes("/app/admin");
 
+  // The two conditionals below used to be the whole story, which meant the dock
+  // and the button were on the screen and then simply were not, in the paint the
+  // thing taking their slot arrived in. They duck now — down and out through the
+  // bottom edge, and back up the same way — so each one keeps its own predicate
+  // and gains the travel. The dock and the button are asked separately because
+  // they leave for different reasons: the More sheet takes the button's slot and
+  // not the dock's.
+  const dock = useDuckPresence(!bulkSelecting);
+  const taskFab = useDuckPresence(showTaskFab && !moreOpen);
+
+  // Only the two root feeds fold the dock. Android and iOS drive `collapsed`
+  // from `TodoListScreen` and `ScheduledTaskHomeScreen` and from nowhere else,
+  // and the distinction is not "does this route scroll" — Settings scrolls too.
+  // It is that a feed is the thing the dock is FOR: on a feed the dock is in the
+  // way of what you came to read, and everywhere else it is the way back out.
+  // Asked through `RootDock`'s own rule rather than a second copy of the path
+  // matching, so the shell can never think a route is a feed while the dock,
+  // which would then be folding with no tab selected in it, does not.
+  const dockCollapsed = useRootDockCollapsed(activeDockTab(pathname) !== "more");
+
   return (
     <div className="relative flex h-screen min-h-screen overflow-hidden bg-background text-foreground">
       <div className="relative z-0 flex min-w-0 flex-1 flex-col overflow-hidden">
         {children}
       </div>
-      {!bulkSelecting && (
-        <RootDock onOpenMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
+      {dock.mounted && (
+        <RootDock
+          onOpenMore={() => setMoreOpen(true)}
+          moreOpen={moreOpen}
+          duckClassName={dock.className}
+          duckInteractive={dock.interactive}
+          collapsed={dockCollapsed}
+        />
       )}
-      {showTaskFab && !moreOpen && <TaskFloatingActionButton />}
+      {taskFab.mounted && (
+        <TaskFloatingActionButton
+          duckClassName={taskFab.className}
+          duckInteractive={taskFab.interactive}
+        />
+      )}
       <InstallPromptBanner />
       <ForcePasswordChangeGate />
       <SetSecurityQuestionsGate />

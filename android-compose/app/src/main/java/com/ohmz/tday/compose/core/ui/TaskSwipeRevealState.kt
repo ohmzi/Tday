@@ -18,7 +18,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 
 private const val SWIPE_OPEN_VELOCITY_PX_PER_SECOND = -1450f
@@ -151,22 +150,42 @@ class TaskSwipeRevealState internal constructor(
         settleTo(0f, 0f)
     }
 
-    suspend fun playHint() {
+    /**
+     * Nudges the row open and lets it fall closed again, to show there is
+     * something under it.
+     *
+     * Takes the animator scale rather than reading it, because this class is not
+     * a composable and the springs it starts are run for it by
+     * [animateTaskSwipeOffsetAsState] — every caller is a composable that can
+     * ask [rememberTdayMotionScale] and hand the answer down. The two waits are
+     * gaps between those two springs and nothing else, so they are scaled with
+     * them.
+     *
+     * @param scale the animator duration scale, from [rememberTdayMotionScale].
+     */
+    suspend fun playHint(scale: Float) {
         // The hint is a suggestion, and a suggestion never overrules a finger:
         // it does not start under one, and it abandons its own second half if
         // one arrives while it is running.
         if (isHinting || isDragging) return
+        // With animations off there is no hint to give. The whole gesture is
+        // movement — a row that ends exactly where it started — so the finished
+        // state this would have to draw instead is the row as it already is.
+        // Playing it anyway would put the row 42 dp out and back inside a single
+        // frame, which is a flicker rather than a suggestion. Written as "not
+        // greater than zero" so that a NaN read off the setting lands here too.
+        if (!(scale > 0f)) return
         isHinting = true
         try {
             val generation = dragGeneration
             settleTo(-hintOffsetPx, 0f)
-            delay(SWIPE_HINT_MS)
+            scaledDelay(SWIPE_HINT_MS, scale)
             // A finger that came and went inside the hold counts as much as one
             // that is still there: either way the row is no longer the hint's to
             // move.
             if (isDragging || dragGeneration != generation) return
             settleTo(0f, 0f)
-            delay(SWIPE_HINT_SETTLE_MS)
+            scaledDelay(SWIPE_HINT_SETTLE_MS, scale)
         } finally {
             isHinting = false
         }

@@ -29,6 +29,8 @@ import { useTaskSelection } from "@/providers/TaskSelectionProvider";
 import { TodoItemTypeWithDateChecksum } from "@/features/todayTodos/query/update-todo";
 import { setTodoTimeOfDay } from "@/lib/setTodoTimeOfDay";
 import { hapticDragStart, hapticDragOver, hapticDrop } from "@/lib/haptics";
+import { dragOverlayDropAnimation } from "@/lib/dragLiftMotion";
+import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
 import {
   headerActiveClass,
   headerToBodyGap,
@@ -110,6 +112,10 @@ export function TodayBucketDndContext({
   children: React.ReactNode;
 }) {
   const reschedule = useTodayBucketReschedule(timeZone);
+  // Read here rather than inside the drop config so the overlay follows a
+  // preference the user flips mid-session: a value captured once would leave a
+  // landing running that the OS has just asked to stop.
+  const reduceMotion = usePrefersReducedMotion();
   const [activeTodo, setActiveTodo] = useState<TodoItemType | null>(null);
   const [overBucket, setOverBucket] = useState<TodayBucketLabel | null>(null);
 
@@ -179,7 +185,7 @@ export function TodayBucketDndContext({
       <OverBucketContext.Provider value={overBucket}>
         {children}
       </OverBucketContext.Provider>
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={dragOverlayDropAnimation(reduceMotion)}>
         {activeTodo ? (
           <div className={overlayCardClass}>
             <p className="line-clamp-1 text-[0.98rem] font-black leading-5 text-foreground">
@@ -234,7 +240,7 @@ export function TodayBucketDroppable({
     <section
       ref={setNodeRef}
       className={cn(
-        "scroll-mt-24 rounded-3xl px-1 transition-all duration-200",
+        "scroll-mt-24 rounded-xl px-1 transition-all duration-enter",
         isFirst ? sectionTopGapFirst : sectionTopGapFilled,
         isActive && sectionActiveClass,
       )}
@@ -242,7 +248,7 @@ export function TodayBucketDroppable({
       <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
         <h3
           className={cn(
-            "select-none text-2xl font-black tracking-tight transition-colors duration-200",
+            "select-none text-2xl font-black tracking-tight transition-colors duration-enter",
             isActive ? headerActiveClass : "text-muted-foreground",
           )}
         >

@@ -4,6 +4,10 @@ import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -11,6 +15,7 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -90,6 +95,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -128,10 +134,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -164,22 +170,38 @@ import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.TdayDragLift
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.TdayPress
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
+import com.ohmz.tday.compose.core.ui.TdayTaskRowMetrics
+import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeleton
+import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeletonGroup
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
+import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
+import com.ohmz.tday.compose.core.ui.rememberTdayTaskRowSkeletonMounted
+import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.shareList
 import com.ohmz.tday.compose.core.ui.taskCopyText
+import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.RootFeedDock
+import com.ohmz.tday.compose.ui.component.RootFeedDockCollapse
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
@@ -249,7 +271,117 @@ private val TimelineDateGroupSpacing = 6.dp
 private val TimelineSectionTopSpacing = 6.dp
 private val TimelineHeaderBodySpacing = 2.dp
 private val TimelineCollapsedSectionSpacing = 4.dp
-private val RootFeedDockCollapseThreshold = 44.dp
+
+// What this screen draws that the scale has no rung for. Named here rather than snapped
+// onto a neighbouring step, because the differences are what they say: 21 dp against
+// 23 dp is the ripple of a colour swatch against the ripple of an icon one, and a rung
+// minted for one call site is a rung nobody can reason about.
+
+/** How flat a pressed card presses, against the row's own resting elevation below. */
+private val PressedCardElevation = 2.dp
+
+/** The target a finger gets where the control drawn inside it is smaller than a finger. */
+private val MinTouchTargetSize = 48.dp
+
+/** List mode insets 16 where the Today and root-feed styles inset
+ *  `ContentPaddingHorizontal`'s 18; pulling it across would move a page margin. */
+private val ListModeContentHorizontalPadding = 16.dp
+
+/** The gap under every card in the floater feed — search results, tile, list rows. */
+private val FloaterFeedRowSpacing = 10.dp
+
+// The header's circular buttons, and the bar that replaces the FAB while selecting.
+private val HeaderButtonIconSize = 22.dp
+private val BulkSelectionBarElevation = 14.dp
+private val BulkSelectionBarVerticalPadding = 10.dp
+private val BulkSelectionCountHorizontalPadding = 10.dp
+private val BulkSelectionActionIconSize = 22.dp
+
+// The full-screen confirmation dialog: its scrim's inset, the card floating in it, and
+// the gap between Cancel and the button that destroys.
+private val OverlayDialogScrimInset = 34.dp
+private val OverlayDialogMaxWidth = 420.dp
+private val OverlayDialogElevation = 18.dp
+private val OverlayDialogBottomPadding = 20.dp
+private val OverlayDialogSectionSpacing = 22.dp
+private val OverlayDialogButtonGap = 10.dp
+
+// The search overlay: a card hung under the field, and the result rows inside it.
+private val SearchResultsOverlayElevation = 8.dp
+private val SearchResultsMaxHeight = 320.dp
+private val SearchResultRowVerticalPadding = 9.dp
+private val SearchResultRowSpacing = 10.dp
+private val SearchResultIconSize = 17.dp
+
+// A list row in the floater feed, and the oversized glyph hung off its right edge and
+// half out of frame.
+private val ListRowHeight = 70.dp
+private val ListRowElevation = 8.dp
+private val ListRowIconSize = 24.dp
+private val FeedCardHorizontalPadding = 16.dp
+private val ListRowWatermarkOffsetX = 14.dp
+private val ListRowWatermarkOffsetY = 8.dp
+private val ListRowWatermarkSize = 82.dp
+
+// The summary sheet's spinner. This app's progress indicators run 18 to 32 dp with no
+// agreement between them, so this one says what it is instead of claiming an icon size.
+private val SummarySpinnerSize = 20.dp
+private val SummarySpinnerStroke = 2.dp
+
+// The list-settings sheet: the icon preview, then the colour and icon pickers under it.
+private val ListCardSpacing = 16.dp
+private val ListIconPreviewSize = 86.dp
+private val ListIconPreviewGlyphSize = 42.dp
+private val ListColorSwatchSize = 42.dp
+private val ListColorSwatchRippleRadius = 21.dp
+private val ListIconSwatchSize = 46.dp
+private val ListIconSwatchRippleRadius = 23.dp
+private val ListIconOptionSpacing = 10.dp
+
+/** The colour swatch rings heavier because the ring is all it has: a selected icon
+ *  option also tints its fill and its glyph. */
+private val ListColorSwatchSelectedOutline = 3.dp
+private val ListIconSwatchSelectedOutline = 2.dp
+
+// That sheet's Sharing row: two tiles side by side, then one tile's icon and label, then
+// the Delete button under both, which is wider inside than they are.
+private val ListSettingsActionTileSpacing = 10.dp
+private val ListSettingsActionContentSpacing = 10.dp
+private val ListSettingsDeleteHorizontalPadding = 16.dp
+
+// A timeline section header and the placeholder a dragged task opens under it. Each
+// draws at two heights and the pairs are the point — the minimal one is what Today
+// wears — so neither half is rounded onto the other.
+private val TimelineSectionHeaderMinHeight = 44.dp
+private val TimelineSectionHeaderMinHeightMinimal = 32.dp
+private val TimelineSectionChevronSize = 18.dp
+private val TimelineDropPlaceholderActiveHeight = 72.dp
+private val TimelineDropPlaceholderActiveHeightMinimal = 66.dp
+private val TimelineDropPlaceholderHeight = 52.dp
+private val TimelineDropPlaceholderHeightMinimal = 46.dp
+
+/** A header can collapse to nothing but still has to catch a task dropped on it, so it
+ *  keeps a hairline of height for the drop target to live in. */
+private val TimelineSectionHeaderDropTargetMinHeight = 1.dp
+
+// The drag preview rides under the finger, not beside it: the pointer is offset into the
+// card so the task being carried is the thing the hand is over.
+private val TimelineDragPreviewAnchorX = 130.dp
+private val TimelineDragPreviewAnchorY = 34.dp
+private val TimelineDragPreviewMinWidth = 220.dp
+private val TimelineDragPreviewMaxWidth = 280.dp
+private val TimelineDragPreviewContentSpacing = 10.dp
+private val TimelineDragPreviewIconSize = 22.dp
+
+// A task row: the swipe pills behind it, the rise it leaves on, and the badges it
+// carries — in the preview above as well as in the row itself.
+private val SwipeRevealWidth = 256.dp
+private val SwipeRevealWidthWithExtraAction = 336.dp
+private val SwipeActionSpacing = 16.dp
+private val TaskCompletionRiseOffsetY = (-10).dp
+private val TaskRowTitleStartPadding = 10.dp
+private val RowTrailingIconSize = 18.dp
+private val CompletionToggleRippleRadius = 24.dp
 
 private fun timelineTaskBottomSpacing(
     itemIndex: Int,
@@ -325,7 +457,7 @@ private fun LazyItemScope.displacedFeedItemMotion(
  *
  * The inline empty state holds its celebration back by
  * [TdayFeedItemMotion.CelebrationStartDelayMillis] first, so what has to fit
- * inside this window is that hold plus the flight — 2.1s of the 4s, today. Widen
+ * inside this window is that hold plus the flight — 2.3s of the 4s, today. Widen
  * the hold a long way and this has to follow it.
  */
 private const val CompletionCelebrationWindowMs = 4_000L
@@ -907,14 +1039,32 @@ fun TodoListScreen( // skipcq: KT-R1006
     val screenScope = rememberCoroutineScope()
     val hasScrollableContent =
         listState.canScrollForward || listState.canScrollBackward
-    val dockCollapseThresholdPx = with(LocalDensity.current) {
-        RootFeedDockCollapseThreshold.roundToPx()
+    val dockCollapsePx = with(LocalDensity.current) {
+        RootFeedDockCollapse.CollapseThreshold.roundToPx()
     }
-    val hasScrolledPastDockCollapseThreshold =
-        listState.firstVisibleItemIndex > 0 ||
-                listState.firstVisibleItemScrollOffset > dockCollapseThresholdPx
-    val dockCollapsed =
-        hasScrollableContent && hasScrolledPastDockCollapseThreshold
+    val dockExpandPx = with(LocalDensity.current) {
+        RootFeedDockCollapse.ExpandThreshold.roundToPx()
+    }
+    // Held rather than derived: which edge applies depends on the answer before it. The
+    // position is sampled in a snapshotFlow instead of in composition because the offset
+    // moves every frame of a fling, and this screen has no business recomposing at that
+    // rate to settle one boolean.
+    var scrolledPastDockFold by remember { mutableStateOf(false) }
+    LaunchedEffect(listState, dockCollapsePx, dockExpandPx) {
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { (index, offsetPx) ->
+            scrolledPastDockFold = RootFeedDockCollapse.next(
+                previous = scrolledPastDockFold,
+                firstVisibleItemIndex = index,
+                scrollOffsetPx = offsetPx,
+                collapsePx = dockCollapsePx,
+                expandPx = dockExpandPx,
+            )
+        }
+    }
+    // A feed too short to scroll never folds the dock, whatever the fold point says.
+    val dockCollapsed = hasScrollableContent && scrolledPastDockFold
     LaunchedEffect(dockCollapsed) {
         onRootDockCollapsedChange(dockCollapsed)
     }
@@ -925,6 +1075,25 @@ fun TodoListScreen( // skipcq: KT-R1006
         onDispose { onRootControlsVisibleChange(true) }
     }
     val density = LocalDensity.current
+    // The settle before a search result *navigated to* is scrolled to, on the app's
+    // scale: what it waits out is `navigationEnterTransition` in `TdayApp`, and that
+    // handover answers the in-app switch now as well as the animator scale. Left on
+    // the device's it would be the 380 ms of a tapped result doing nothing that
+    // [SEARCH_RESULT_NAV_SETTLE_DELAY_MS] already names — over a destination drawn
+    // whole on the first frame, for the users who asked for less motion.
+    val navSettleMotionScale = rememberTdayMotionScale()
+    // Every other wait on this screen reads the SYSTEM scale, because each covers an
+    // animation the in-app switch does not reach: the floater settle waits out the
+    // feed re-laying itself under `animateItem` once the results card is dropped from
+    // it (no route changes there — `closeFloaterTaskHomeSearch` is a state flip), the
+    // two holds wait out `SwipeTaskRow`'s ungated highlight pulses, and the Earlier
+    // hand-off waits out `TdayFeedItemMotion.FadeOut`, again through `animateItem`.
+    // The only gate on any of the three is `timelineAnimationsEnabled`, a first-frame
+    // guard rather than a preference. A wait zeroed while the motion it covers plays
+    // on is the fifth idiom rule broken the other way about — see
+    // [effectiveMotionScale]. Each moves to `rememberTdayMotionScale` as its
+    // animation is gated.
+    val motionScale = rememberSystemMotionScale()
     val heroCollapse = rememberLazyListHeroTitleCollapse(
         listState = listState,
         enabled = usesTodayStyle && !usesRootFeedChrome,
@@ -1179,6 +1348,13 @@ fun TodoListScreen( // skipcq: KT-R1006
         earlierCollapsed = collapsedSectionKeys.contains(EARLIER_SECTION_KEY),
         celebrateEmptyState = celebrateEmptyState,
     )
+    // The flat feed's placeholder, and how long its lazy item outlives it. Both
+    // hoisted because `LazyListScope` is not a composition — by the time the list
+    // builds itself its guard has to already be a plain Boolean.
+    val taskFeedSkeletonVisible = !showSectionedTimeline &&
+            uiState.items.isEmpty() &&
+            uiState.isLoading
+    val taskFeedSkeletonMounted = rememberTdayTaskRowSkeletonMounted(taskFeedSkeletonVisible)
     // Exactly the "today-earlier-empty-scene" item's own gate below, pulled
     // out under its own name because `sectionedTimelineContent` needs it too:
     // see [earlierHeaderSkipsPlacementSpec] for why Earlier's header cares
@@ -1277,9 +1453,12 @@ fun TodoListScreen( // skipcq: KT-R1006
     var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var createListIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     val fabInteractionSource = remember { MutableInteractionSource() }
-    val editTargetTodo = remember(editTargetTodoId, uiState.items) {
-        editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
-    }
+    val editTargetTodo = rememberEditSheetTarget(
+        id = editTargetTodoId,
+        current = remember(editTargetTodoId, uiState.items) {
+            editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
+        },
+    )
     val draggedScheduledTodo =
         remember(draggedScheduledTodoId, uiState.items, uiState.earlierItems) {
             draggedTimelineTodo(
@@ -1417,15 +1596,6 @@ fun TodoListScreen( // skipcq: KT-R1006
             null
         },
     )
-    val fabPressed by fabInteractionSource.collectIsPressedAsState()
-    val fabScale by animateFloatAsState(
-        targetValue = if (fabPressed) 0.93f else 1f,
-        label = "todoFabScale",
-    )
-    val fabOffsetY by animateDpAsState(
-        targetValue = if (fabPressed) 2.dp else 0.dp,
-        label = "todoFabOffsetY",
-    )
     val timelineItemSpacing = TimelineDateGroupSpacing
     fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
         // Starts at 1: the hero block holds index 0 on this path, so every row
@@ -1467,7 +1637,9 @@ fun TodoListScreen( // skipcq: KT-R1006
         if (uiState.mode != TodoListMode.ALL || highlightedTodoId.isNullOrBlank()) return@LaunchedEffect
         val target = highlightedTodoListTarget(highlightedTodoId)
         if (target != null) {
-            delay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS)
+            // The one settle that is genuinely waiting on a route change: this effect
+            // runs because the screen was navigated to with a row to highlight.
+            scaledDelay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS, navSettleMotionScale)
             val viewportHeight =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
             val estimatedRowHeight =
@@ -1481,7 +1653,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                 estimatedItemSizePx = estimatedRowHeight,
             )
             flashTodoId = highlightedTodoId
-            delay(2300)
+            scaledDelay(SEARCH_RESULT_FLASH_HOLD_MS, motionScale)
             if (flashTodoId == highlightedTodoId) {
                 flashTodoId = null
             }
@@ -1491,7 +1663,9 @@ fun TodoListScreen( // skipcq: KT-R1006
         closeFloaterTaskHomeSearch()
         val target = floaterTaskHomeTodoListTarget(todo.id) ?: return
         screenScope.launch {
-            delay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS)
+            // Same constant, the other scale: nothing navigates here. What settles is
+            // the feed closing over the results card, so the clock is the feed's.
+            scaledDelay(SEARCH_RESULT_NAV_SETTLE_DELAY_MS, motionScale)
             val viewportHeight =
                 listState.layoutInfo.viewportEndOffset - listState.layoutInfo.viewportStartOffset
             val estimatedRowHeight =
@@ -1505,7 +1679,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                 estimatedItemSizePx = estimatedRowHeight,
             )
             flashTodoId = todo.id
-            delay(2300)
+            scaledDelay(SEARCH_RESULT_FLASH_HOLD_MS, motionScale)
             if (flashTodoId == todo.id || flashTodoId == todo.canonicalId) {
                 flashTodoId = null
             }
@@ -1641,7 +1815,14 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // is still on screen.
                     earlierExpandPending = true
                     screenScope.launch {
-                        delay(EarlierExpandDeferMillis)
+                        // Scaled, because what it is holding for is that exit: with
+                        // the device's animations off the scene is gone on the first
+                        // frame and this would be 150 ms of an Earlier header that
+                        // answered a tap by doing nothing. The device's and not the
+                        // app's, because that exit is `animateItem`'s ungated
+                        // fade; see [motionScale]. Web's `useEarlierExpandHandoff`
+                        // takes its immediate branch for the same reason.
+                        scaledDelay(EarlierExpandDeferMillis, motionScale)
                         collapsedSectionKeys = collapsedSectionKeys - key
                         earlierExpandPending = false
                     }
@@ -1696,12 +1877,6 @@ fun TodoListScreen( // skipcq: KT-R1006
             // selecting; the two must never share it.
             if (showCreateTaskButton && !isViewerList && !selectionActive) {
                 CreateTaskButton(
-                    modifier = Modifier
-                        .offset(y = fabOffsetY)
-                        .graphicsLayer {
-                            scaleX = fabScale
-                            scaleY = fabScale
-                        },
                     interactionSource = fabInteractionSource,
                     backgroundColor = fabColor,
                     onClick = {
@@ -1770,18 +1945,25 @@ fun TodoListScreen( // skipcq: KT-R1006
                     userScrollEnabled = activeTimelineDrag == null,
                     contentPadding = when {
                         usesRootFeedChrome -> PaddingValues(
-                            start = 18.dp,
-                            end = 18.dp,
-                            bottom = 18.dp,
+                            start = TdayDimens.ContentPaddingHorizontal,
+                            end = TdayDimens.ContentPaddingHorizontal,
+                            bottom = TdayDimens.SpacingXxl,
                         )
                         // No top padding: the hero item reserves the bar's
                         // height itself, so the scroll offset is a clean count
                         // from the top.
-                        usesTodayStyle -> PaddingValues(start = 18.dp, end = 18.dp, bottom = 2.dp)
-                        else -> PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                        usesTodayStyle -> PaddingValues(
+                            start = TdayDimens.ContentPaddingHorizontal,
+                            end = TdayDimens.ContentPaddingHorizontal,
+                            bottom = TdayDimens.SpacingXxs,
+                        )
+                        else -> PaddingValues(
+                            horizontal = ListModeContentHorizontalPadding,
+                            vertical = TdayDimens.SpacingLg,
+                        )
                     },
                     verticalArrangement = Arrangement.spacedBy(
-                        if (showSectionedTimeline) 0.dp else timelineItemSpacing,
+                        if (showSectionedTimeline) TdayDimens.SpacingNone else timelineItemSpacing,
                     ),
                 ) {
                     // One branch, so index 0 is always well defined — the
@@ -1818,7 +2000,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                                 listsById = floaterTaskHomeListById,
                                 onOpenTodo = ::openFloaterTaskHomeSearchResult,
                                 modifier = Modifier
-                                    .padding(bottom = 10.dp)
+                                    .padding(bottom = FloaterFeedRowSpacing)
                                     .onGloballyPositioned { coordinates ->
                                         floaterSearchResultsBounds = coordinates.boundsInRoot()
                                     },
@@ -1831,17 +2013,50 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // dismisses the field.
                     if (!showFloaterTaskHomeSearchResults) {
 
-                    if (!showSectionedTimeline && uiState.items.isEmpty() && uiState.isLoading) {
-                        item {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-                                shape = RoundedCornerShape(18.dp),
+                    // The flat feed's first paint. This was a card with the word
+                    // "Loading" in it, and the rows then appeared underneath in
+                    // one frame; the skeleton draws the rows' own geometry
+                    // instead, so the frame the data lands on changes colour and
+                    // nothing else.
+                    //
+                    // Mounted for a window rather than removed by its guard: an
+                    // item that its guard has already taken out of the list has no
+                    // exit left to play, and the exit is the whole mechanism here.
+                    // The window closes one hand-over later, because this
+                    // `LazyColumn` spaces its items and a mounted item that draws
+                    // nothing is still charged `timelineItemSpacing` — see
+                    // [rememberTdayTaskRowSkeletonMounted].
+                    // Two lazy items cannot cross-fade over each other — they are
+                    // stacked, not layered — so the hand-over is the placeholder
+                    // fading AND retracting on one spec while the feed takes the
+                    // space it gives up. Fading alone would hold the skeleton's
+                    // full height for the length of the fade and then drop three
+                    // rows' worth of feed upward in a single frame, which is the
+                    // pop this is here to remove, moved later and made larger.
+                    // `AnimatedVisibility` with a paired fade and shrink is the
+                    // same answer the Earlier scene below already gives.
+                    if (taskFeedSkeletonMounted) {
+                        item(
+                            key = "task-feed-skeleton",
+                            contentType = "task-feed-skeleton",
+                        ) {
+                            AnimatedVisibility(
+                                visible = taskFeedSkeletonVisible,
+                                // No enter. A placeholder that fades itself in is
+                                // a wait in front of the notice that there is a
+                                // wait; the fifth idiom rule cuts that way round
+                                // as well.
+                                enter = EnterTransition.None,
+                                exit = if (rememberTdayMotionEnabled()) {
+                                    fadeOut(animationSpec = TdayTaskRowSkeleton.handoff()) +
+                                        shrinkVertically(
+                                            animationSpec = TdayTaskRowSkeleton.handoff(),
+                                        )
+                                } else {
+                                    ExitTransition.None
+                                },
                             ) {
-                                Text(
-                                    modifier = Modifier.padding(18.dp),
-                                    text = stringResource(R.string.label_loading),
-                                    color = colorScheme.onSurfaceVariant,
-                                )
+                                TdayTaskRowSkeletonGroup()
                             }
                         }
                     }
@@ -2074,16 +2289,48 @@ fun TodoListScreen( // skipcq: KT-R1006
                         onOpenFloaterList = onOpenFloaterList,
                     )
 
+                    // Keyed, because a load failure genuinely adds and removes a
+                    // row here and `animateItem` cannot animate either on an item
+                    // whose identity is its index. Unlike the blocks above it this
+                    // one takes all three specs: it is added and removed rather
+                    // than merely displaced, which is the one case on this feed a
+                    // fade describes.
+                    //
+                    // Nothing below it travels — this is the last content item and
+                    // only a keyless spacer follows — so the inherited
+                    // [TdayFeedItemMotion.Placement] earns its place in the other
+                    // direction: the skeleton leaving and the empty scene arriving
+                    // change the row count ABOVE the card while it is already up,
+                    // and it should glide into the slot they leave it in rather
+                    // than be re-laid-out into it.
+                    //
+                    // It sits inside the `!showFloaterTaskHomeSearchResults`
+                    // branch, so it does take the fades [displacedFeedItemMotion]
+                    // argues itself out of: opening a live query takes this whole
+                    // body away in one frame and leaves the card fading alone over
+                    // the blank. Accepted, not gated — an error banner and a live
+                    // query rarely coexist, and a gate read inside this lambda
+                    // could never fire, because the item is only ever composed
+                    // while the flag is false.
                     uiState.errorMessage?.let { message ->
-                        item {
+                        item(key = "error-retry", contentType = "error_retry") {
+                            // `timelineAnimationsEnabled` is a first-frame gate,
+                            // not the preference one — it only says the feed has
+                            // settled enough to animate at all — so the card asks
+                            // the preference itself, and motion off draws the card
+                            // where it belongs with no wait in front of it.
+                            val errorCardMotionEnabled = rememberTdayMotionEnabled()
                             com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                                 message = message,
                                 onRetry = onRefresh,
+                                modifier = feedItemMotion(
+                                    timelineAnimationsEnabled && errorCardMotionEnabled,
+                                ),
                             )
                         }
                     }
 
-                    item { Spacer(Modifier.height(96.dp)) }
+                    item { Spacer(Modifier.height(TdayDimens.BottomScrollSpacer)) }
                     }
                 }
             }
@@ -2211,7 +2458,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                                 onClick = exitSelection,
                                 icon = ImageVector.vectorResource(R.drawable.ic_lucide_x),
                                 contentDescription = stringResource(R.string.action_cancel),
-                                iconSize = 22.dp,
+                                iconSize = HeaderButtonIconSize,
                             )
                             Text(
                                 text = if (selectionCapReached) {
@@ -2229,7 +2476,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .padding(horizontal = 10.dp),
+                                    .padding(horizontal = BulkSelectionCountHorizontalPadding),
                             )
                             TextButton(
                                 onClick = {
@@ -2296,7 +2543,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                                     onClick = action.onClick,
                                     icon = action.icon,
                                     contentDescription = action.contentDescription,
-                                    iconSize = 22.dp,
+                                    iconSize = HeaderButtonIconSize,
                                 )
                             }
                         }
@@ -2353,8 +2600,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                         .offset {
                             val localPosition = drag.position - timelineDragContainerOrigin
                             IntOffset(
-                                x = (localPosition.x - with(density) { 130.dp.toPx() }).roundToInt(),
-                                y = (localPosition.y - with(density) { 34.dp.toPx() }).roundToInt(),
+                                x = (localPosition.x - with(density) { TimelineDragPreviewAnchorX.toPx() }).roundToInt(),
+                                y = (localPosition.y - with(density) { TimelineDragPreviewAnchorY.toPx() }).roundToInt(),
                             )
                         }
                         .zIndex(20f),
@@ -2385,12 +2632,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                     onCreateTaskFlowFinished()
                 }
             },
-            onCreateTask = { payload ->
-                onAddTask(payload)
-                showCreateTaskSheet = false
-                quickAddDueEpochMs = null
-                onCreateTaskFlowFinished()
-            },
+            onCreateTask = onAddTask,
         )
     }
 
@@ -2491,10 +2733,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             onParseTaskTitleNlp = if (uiState.mode == TodoListMode.FLOATER) null else onParseTaskTitleNlp,
             onDismiss = { editTargetTodoId = null },
             onCreateTask = { _ -> },
-            onUpdateTask = { target, payload ->
-                onUpdateTask(target, payload)
-                editTargetTodoId = null
-            },
+            onUpdateTask = onUpdateTask,
         )
     }
 
@@ -2921,7 +3160,7 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
             CategoryCard(
                 modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
                     .fillMaxWidth()
-                    .padding(bottom = 10.dp),
+                    .padding(bottom = FloaterFeedRowSpacing),
                 color = TdayCompletedTileAccent,
                 iconRes = R.drawable.ic_lucide_circle_check_big,
                 watermarkRes = R.drawable.ic_lucide_circle_check_big,
@@ -2938,7 +3177,7 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
         ) {
             FloaterTaskHomeMyListsHeader(
                 modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                    .padding(top = 4.dp, bottom = 10.dp),
+                    .padding(top = TdayDimens.SpacingXs, bottom = FloaterFeedRowSpacing),
             )
         }
         items(
@@ -2948,7 +3187,7 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
         ) { (list, count) ->
             FloaterTaskHomeListRow(
                 modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                    .padding(bottom = 10.dp),
+                    .padding(bottom = FloaterFeedRowSpacing),
                 name = list.name,
                 colorKey = list.color,
                 iconKey = list.iconKey,
@@ -3109,14 +3348,14 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                 TimelineSectionHeader(
                     modifier = headerModifier
                         .fillMaxWidth()
-                        .heightIn(min = 1.dp)
+                        .heightIn(min = TimelineSectionHeaderDropTargetMinHeight)
                         .timelineInAppDropTarget(
                             targetId = "header-${section.key}",
                             section = section,
                             enabled = isDropEligibleSection,
                             dropTargets = timelineDropTargetBounds,
                         )
-                        .padding(top = if (sectionIndex == 0) 0.dp else TimelineSectionTopSpacing),
+                        .padding(top = if (sectionIndex == 0) TdayDimens.SpacingNone else TimelineSectionTopSpacing),
                     section = section,
                     useMinimalStyle = usesTodayStyle,
                     isCollapsed = isCollapsed,
@@ -3151,19 +3390,17 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
             ) {
                 var placeholderModifier: Modifier = Modifier
                 if (timelineAnimationsEnabled) {
+                    // The placeholder is an item in this feed like any other: it arrives,
+                    // the rows under it move down, and it goes. Three numbers of its own
+                    // bought it nothing except a gap that faded in and out at a different
+                    // speed from everything moving around it. The placement leg is the one
+                    // that never plays here — nothing displaces the gap while it is up —
+                    // and it is taken whole anyway, because a site that adopts two legs of
+                    // three is a site that drifts back off the third.
                     placeholderModifier = placeholderModifier.animateItem(
-                        fadeInSpec = tween(
-                            durationMillis = 150,
-                            easing = FastOutSlowInEasing,
-                        ),
-                        placementSpec = tween(
-                            durationMillis = 260,
-                            easing = FastOutSlowInEasing,
-                        ),
-                        fadeOutSpec = tween(
-                            durationMillis = 120,
-                            easing = FastOutSlowInEasing,
-                        ),
+                        fadeInSpec = TdayFeedItemMotion.FadeIn,
+                        placementSpec = TdayFeedItemMotion.Placement,
+                        fadeOutSpec = TdayFeedItemMotion.FadeOut,
                     )
                 }
                 TimelineDropPlaceholder(
@@ -3298,16 +3535,19 @@ private fun BulkSelectionActionBar(
         modifier = modifier
             .navigationBarsPadding()
             .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 14.dp),
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, TdaySheetDefaults.cardStrokeColor()),
+            .padding(
+                horizontal = TdayDimens.ContentPaddingHorizontal,
+                vertical = TdayDimens.ContentPaddingVertical,
+            ),
+        shape = RoundedCornerShape(TdayDimens.RadiusField),
+        border = BorderStroke(TdayDimens.BorderWidth, TdaySheetDefaults.cardStrokeColor()),
         colors = CardDefaults.cardColors(containerColor = TdaySheetDefaults.surfaceColor()),
-        elevation = CardDefaults.cardElevation(defaultElevation = 14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = BulkSelectionBarElevation),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp),
+                .padding(vertical = BulkSelectionBarVerticalPadding),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -3356,20 +3596,20 @@ private fun BulkSelectionAction(
 
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(TdayDimens.RadiusRow))
             .clickable(enabled = enabled) {
                 TdayHaptics.buttonPress(view)
                 onClick()
             }
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+            .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingSm),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs),
     ) {
         Icon(
             imageVector = ImageVector.vectorResource(icon),
             contentDescription = null,
             tint = tint.copy(alpha = contentAlpha),
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(BulkSelectionActionIconSize),
         )
         Text(
             text = label,
@@ -3443,30 +3683,35 @@ private fun TdayConfirmationDialog(
                     indication = null,
                     onClick = onDismissRequest,
                 )
-                .padding(horizontal = 34.dp),
+                .padding(horizontal = OverlayDialogScrimInset),
             contentAlignment = Alignment.Center,
         ) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .sizeIn(maxWidth = 420.dp)
+                    .sizeIn(maxWidth = OverlayDialogMaxWidth)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {},
                     ),
                 shape = TdaySheetDefaults.OverlayShape,
-                border = BorderStroke(1.dp, TdaySheetDefaults.cardStrokeColor()),
+                border = BorderStroke(TdayDimens.BorderWidth, TdaySheetDefaults.cardStrokeColor()),
                 colors = CardDefaults.cardColors(containerColor = dialogContainerColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 18.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = OverlayDialogElevation),
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(22.dp),
+                        .padding(
+                            start = TdayDimens.Spacing3xl,
+                            top = TdayDimens.Spacing3xl,
+                            end = TdayDimens.Spacing3xl,
+                            bottom = OverlayDialogBottomPadding,
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(OverlayDialogSectionSpacing),
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl)) {
                         Text(
                             text = title,
                             style = MaterialTheme.typography.headlineSmall,
@@ -3502,7 +3747,7 @@ private fun TdayConfirmationDialog(
                                 fontWeight = FontWeight.ExtraBold,
                             )
                         }
-                        Spacer(Modifier.size(10.dp))
+                        Spacer(Modifier.size(OverlayDialogButtonGap))
                         TextButton(
                             onClick = {
                                 // This is the tap that destroys; the one that
@@ -3541,15 +3786,18 @@ private fun FloaterTaskHomeSearchResultsCard(
     val colorScheme = MaterialTheme.colorScheme
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.2f)),
+        shape = RoundedCornerShape(TdayDimens.RadiusField),
+        border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.2f)),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = SearchResultsOverlayElevation),
     ) {
         if (results.isEmpty()) {
             Text(
                 text = stringResource(R.string.scheduled_task_home_search_no_results),
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                modifier = Modifier.padding(
+                    horizontal = TdayDimens.SpacingXl,
+                    vertical = TdayDimens.SpacingLg,
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurfaceVariant,
             )
@@ -3557,8 +3805,8 @@ private fun FloaterTaskHomeSearchResultsCard(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 320.dp),
-                contentPadding = PaddingValues(vertical = 4.dp),
+                    .heightIn(max = SearchResultsMaxHeight),
+                contentPadding = PaddingValues(vertical = TdayDimens.SpacingXs),
             ) {
                 items(
                     items = results,
@@ -3569,17 +3817,20 @@ private fun FloaterTaskHomeSearchResultsCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .semantics(mergeDescendants = true) {}
-                            .heightIn(min = 48.dp)
+                            .heightIn(min = MinTouchTargetSize)
                             .clickable { onOpenTodo(todo) }
-                            .padding(horizontal = 12.dp, vertical = 9.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            .padding(
+                                horizontal = TdayDimens.SpacingLg,
+                                vertical = SearchResultRowVerticalPadding,
+                            ),
+                        horizontalArrangement = Arrangement.spacedBy(SearchResultRowSpacing),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             imageVector = tdayListIconForKey(listMeta?.iconKey),
                             contentDescription = null,
                             tint = tdayListAccentColor(listMeta?.color).copy(alpha = 0.92f),
-                            modifier = Modifier.size(17.dp),
+                            modifier = Modifier.size(SearchResultIconSize),
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -3631,19 +3882,6 @@ private fun FloaterTaskHomeListRow(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        label = "floaterTaskHomeListRowScale",
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "floaterTaskHomeListRowOffsetY",
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 8.dp,
-        label = "floaterTaskHomeListRowElevation",
-    )
     val accent = tdayListAccentColor(colorKey)
     val icon = tdayListIconForKey(iconKey)
     val containerColor =
@@ -3653,23 +3891,21 @@ private fun FloaterTaskHomeListRow(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(70.dp)
+            .height(ListRowHeight)
             .semantics(mergeDescendants = true) {}
-            .offset(y = animatedOffsetY)
-            .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusCard),
         colors = CardDefaults.cardColors(containerColor = containerColor),
+        // Was a third `animateDpAsState` off the same press fed into both slots.
+        // `cardElevation` holds exactly this pair and animates between them.
         elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation,
+            defaultElevation = ListRowElevation,
+            pressedElevation = PressedCardElevation,
         ),
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -3679,13 +3915,13 @@ private fun FloaterTaskHomeListRow(
                 tint = lerpColor(containerColor, Color.White, 0.34f).copy(alpha = 0.42f),
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .offset(x = 14.dp, y = 8.dp)
-                    .size(82.dp),
+                    .offset(x = ListRowWatermarkOffsetX, y = ListRowWatermarkOffsetY)
+                    .size(ListRowWatermarkSize),
             )
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = FeedCardHorizontalPadding, vertical = TdayDimens.SpacingLg),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
@@ -3697,7 +3933,7 @@ private fun FloaterTaskHomeListRow(
                         imageVector = icon,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(ListRowIconSize),
                     )
                     Text(
                         text = displayName,
@@ -3706,7 +3942,7 @@ private fun FloaterTaskHomeListRow(
                         fontWeight = FontWeight.ExtraBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = 8.dp),
+                        modifier = Modifier.padding(start = TdayDimens.SpacingMd),
                     )
                 }
                 Text(
@@ -3714,7 +3950,7 @@ private fun FloaterTaskHomeListRow(
                     color = Color.White,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.padding(start = 12.dp),
+                    modifier = Modifier.padding(start = TdayDimens.SpacingLg),
                 )
             }
         }
@@ -3753,7 +3989,7 @@ private fun TodayTitleLabel(
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -3761,7 +3997,7 @@ private fun TodayTitleLabel(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconTint,
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(TdayDimens.IconMd),
             )
         }
         Text(
@@ -3780,33 +4016,20 @@ private fun TodayHeaderButton(
     onClick: () -> Unit,
     icon: ImageVector,
     contentDescription: String,
-    iconSize: Dp = 30.dp,
+    iconSize: Dp = TdayDimens.IconXl,
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
     // The same fill the back button beside it carries. These were painted with
     // `background` and a hairline instead, which on a bar whose own strip is
     // that colour left them as outlines next to a solid white circle.
     val containerColor = tdayBarButtonContainerColor()
     val iconTint = MaterialTheme.colorScheme.onSurface
     val buttonSize = TdayDimens.FabSize
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "todayHeaderButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "todayHeaderButtonOffsetY",
-    )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -3819,7 +4042,7 @@ private fun TodayHeaderButton(
         // three separate implementations.
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.BarButtonElevation,
-            pressedElevation = 0.dp,
+            pressedElevation = TdayDimens.CardElevationDefault,
         ),
     ) {
         Box(
@@ -3857,8 +4080,11 @@ private fun SummaryBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(
+                    horizontal = TdayDimens.ContentPaddingHorizontal,
+                    vertical = TdayDimens.ContentPaddingVertical,
+                ),
+            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
         ) {
             TdaySheetHeader(
                 title = stringResource(R.string.todos_summary_title),
@@ -3871,12 +4097,12 @@ private fun SummaryBottomSheet(
             if (isLoading) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(SummarySpinnerSize),
+                        strokeWidth = SummarySpinnerStroke,
                     )
                     Text(
                         text = stringResource(R.string.todos_summary_loading),
@@ -3891,8 +4117,8 @@ private fun SummaryBottomSheet(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                     ) {
                         Text(
                             text = summaryText,
@@ -3927,7 +4153,6 @@ private fun SummaryBottomSheet(
 
 @Composable
 private fun CreateTaskButton(
-    modifier: Modifier,
     interactionSource: MutableInteractionSource,
     backgroundColor: Color,
     onClick: () -> Unit,
@@ -3935,14 +4160,18 @@ private fun CreateTaskButton(
     val view = LocalView.current
 
     Card(
-        modifier = modifier,
+        // The press sits with the Card that owns the source rather than being
+        // handed in from the Scaffold slot, which is where `RootCreateTaskButton`
+        // keeps its own. `FabScale`, not `PressScales.Bar`: this is the other of
+        // the two Android FABs that were each spelling 0.93 out.
+        modifier = Modifier.tdayPressable(interactionSource, scale = TdayPress.FabScale),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
         shape = CircleShape,
-        border = BorderStroke(1.dp, backgroundColor.copy(alpha = 0.72f)),
+        border = BorderStroke(TdayDimens.BorderWidth, backgroundColor.copy(alpha = 0.72f)),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.FabElevation,
@@ -3957,7 +4186,7 @@ private fun CreateTaskButton(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
                 contentDescription = stringResource(R.string.action_create_task),
                 tint = Color.White,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(TdayDimens.FabIconSize),
             )
         }
     }
@@ -4001,8 +4230,11 @@ private fun ListSettingsBottomSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .navigationBarsPadding()
-                    .padding(horizontal = 18.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                    .padding(
+                        horizontal = TdayDimens.ContentPaddingHorizontal,
+                        vertical = TdayDimens.ContentPaddingVertical,
+                    ),
+                verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
             ) {
                 TdaySheetHeader(
                     title = title,
@@ -4025,7 +4257,7 @@ private fun ListSettingsBottomSheet(
                         .fillMaxWidth()
                         .weight(1f, fill = false)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
                 ) {
                     TdaySheetSectionTitle(
                         text = stringResource(R.string.scheduled_task_home_section_list),
@@ -4034,13 +4266,13 @@ private fun ListSettingsBottomSheet(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 18.dp, vertical = 18.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                                .padding(horizontal = TdayDimens.SpacingXxl, vertical = TdayDimens.SpacingXxl),
+                            verticalArrangement = Arrangement.spacedBy(ListCardSpacing),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(86.dp)
+                                    .size(ListIconPreviewSize)
                                     .background(selectedAccent, CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -4048,7 +4280,7 @@ private fun ListSettingsBottomSheet(
                                     imageVector = selectedIcon,
                                     contentDescription = null,
                                     tint = Color.White,
-                                    modifier = Modifier.size(42.dp),
+                                    modifier = Modifier.size(ListIconPreviewGlyphSize),
                                 )
                             }
 
@@ -4088,13 +4320,18 @@ private fun ListSettingsBottomSheet(
                                     },
                                 decorationBox = { innerTextField ->
                                     Box(
+                                        // RadiusRow and not RadiusField, which is the rung a
+                                        // text field would otherwise take: this one has always
+                                        // been drawn at 16 dp, and rounding it up to 22 would
+                                        // be a redraw rather than a name. Same call and same
+                                        // reason as the create-list field in the root feed.
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .background(
                                                 TdaySheetDefaults.controlSurfaceColor(),
-                                                RoundedCornerShape(16.dp)
+                                                RoundedCornerShape(TdayDimens.RadiusRow)
                                             )
-                                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                                            .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingLg),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         if (listName.isBlank()) {
@@ -4126,8 +4363,8 @@ private fun ListSettingsBottomSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 14.dp, vertical = 14.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
                         ) {
                             TdayListColorOptions.forEach { option ->
                                 val colorKey = option.key
@@ -4136,22 +4373,22 @@ private fun ListSettingsBottomSheet(
                                 val interactionSource = remember { MutableInteractionSource() }
                                 Box(
                                     modifier = Modifier
-                                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                        .sizeIn(minWidth = MinTouchTargetSize, minHeight = MinTouchTargetSize)
                                         .wrapContentSize(Alignment.Center)
-                                        .size(42.dp)
+                                        .size(ListColorSwatchSize)
                                         .clip(CircleShape)
                                         .background(swatchColor, CircleShape)
                                         .clickable(
                                             interactionSource = interactionSource,
                                             indication = ripple(
                                                 bounded = true,
-                                                radius = 21.dp,
+                                                radius = ListColorSwatchRippleRadius,
                                             ),
                                         ) { onListColorChange(colorKey) }
                                         .then(
                                             if (selected) {
                                                 Modifier.border(
-                                                    width = 3.dp,
+                                                    width = ListColorSwatchSelectedOutline,
                                                     color = colorScheme.onBackground.copy(alpha = 0.32f),
                                                     shape = CircleShape,
                                                 )
@@ -4172,15 +4409,15 @@ private fun ListSettingsBottomSheet(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 14.dp, vertical = 14.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                            horizontalArrangement = Arrangement.spacedBy(ListIconOptionSpacing),
                         ) {
                             TdayListIconOptions.forEach { option ->
                                 val selected = listIconKey == option.key
                                 val interactionSource = remember { MutableInteractionSource() }
                                 Box(
                                     modifier = Modifier
-                                        .size(46.dp)
+                                        .size(ListIconSwatchSize)
                                         .clip(CircleShape)
                                         .background(
                                             color = if (selected) {
@@ -4194,13 +4431,13 @@ private fun ListSettingsBottomSheet(
                                             interactionSource = interactionSource,
                                             indication = ripple(
                                                 bounded = true,
-                                                radius = 23.dp,
+                                                radius = ListIconSwatchRippleRadius,
                                             ),
                                         ) { onListIconChange(option.key) }
                                         .then(
                                             if (selected) {
                                                 Modifier.border(
-                                                    width = 2.dp,
+                                                    width = ListIconSwatchSelectedOutline,
                                                     color = selectedAccent.copy(alpha = 0.55f),
                                                     shape = CircleShape,
                                                 )
@@ -4224,7 +4461,7 @@ private fun ListSettingsBottomSheet(
                         TdaySheetSectionTitle(
                             text = stringResource(R.string.share_section_title),
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(ListSettingsActionTileSpacing)) {
                             if (onMembers != null) {
                                 ListSettingsActionTile(
                                     icon = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
@@ -4243,7 +4480,7 @@ private fun ListSettingsBottomSheet(
                             }
                         }
                     }
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(TdayDimens.SpacingXxs))
                     if (showDelete) {
                         ListSettingsDeleteButton(onClick = onDelete)
                     }
@@ -4267,35 +4504,37 @@ private fun ListSettingsActionTile(
     val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
-        label = "listSettingsActionTileScale",
-    )
 
     Card(
+        // `offsetY = TdayDimens.SpacingNone`: these two tiles sit side by side inside the
+        // sheet and never had a sink. A tile dropping while the one beside it holds
+        // still reads as the pair misaligning, not as a tile going down.
         modifier = modifier
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(
+                interactionSource,
+                scale = TdayMotionTokens.PressScales.Card,
+                offsetY = TdayDimens.SpacingNone,
+            ),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.5.dp, colorScheme.onSurfaceVariant.copy(alpha = 0.3f)),
+        shape = RoundedCornerShape(TdayDimens.RadiusXl),
+        border = BorderStroke(TdayDimens.BorderWidthThick, colorScheme.onSurfaceVariant.copy(alpha = 0.3f)),
         colors = CardDefaults.cardColors(
             containerColor = TdaySheetDefaults.controlSurfaceColor(),
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = TdayDimens.CardElevationDefault,
+            pressedElevation = TdayDimens.CardElevationDefault,
+        ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+            horizontalArrangement = Arrangement.spacedBy(ListSettingsActionContentSpacing, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -4321,19 +4560,17 @@ private fun ListSettingsDeleteButton(
     val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
-        label = "listSettingsDeleteButtonScale",
-    )
 
     Card(
+        // Flat, full width, and the last thing in the sheet: `offsetY =
+        // TdayDimens.SpacingNone` for the same reason the tiles above it take it.
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(
+                interactionSource,
+                scale = TdayMotionTokens.PressScales.Card,
+                offsetY = TdayDimens.SpacingNone,
+            ),
         onClick = {
             // Opens the confirmation, destroys nothing — Cancel is still there.
             // The thud is fired by the dialog's confirm button instead.
@@ -4341,20 +4578,23 @@ private fun ListSettingsDeleteButton(
             onClick()
         },
         interactionSource = interactionSource,
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.5.dp, colorScheme.error.copy(alpha = 0.45f)),
+        shape = RoundedCornerShape(TdayDimens.RadiusXl),
+        border = BorderStroke(TdayDimens.BorderWidthThick, colorScheme.error.copy(alpha = 0.45f)),
         colors = CardDefaults.cardColors(
             containerColor = colorScheme.error.copy(
                 alpha = if (TdaySheetDefaults.isDarkTheme()) 0.14f else 0.04f,
             ),
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = TdayDimens.CardElevationDefault,
+            pressedElevation = TdayDimens.CardElevationDefault,
+        ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = ListSettingsDeleteHorizontalPadding, vertical = TdayDimens.SpacingXl),
+            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -4395,7 +4635,12 @@ private fun TimelineSectionHeader(
     )
     val animatedBottomSpacing by animateDpAsState(
         targetValue = bottomSpacing,
-        animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+        // A spacing is a size, and the rung for a size is Emphasis. The 240 it was
+        // written on named nothing and was shared with nothing.
+        animationSpec = tween(
+            durationMillis = TdayMotionTokens.Durations.Emphasis,
+            easing = FastOutSlowInEasing,
+        ),
         label = "sectionBottomSpacing",
     )
     val baseHeaderColor = if (useMinimalStyle) {
@@ -4417,7 +4662,11 @@ private fun TimelineSectionHeader(
     } else {
         baseChevronColor
     }
-    val minimumHeaderHeight = if (useMinimalStyle) 32.dp else 44.dp
+    val minimumHeaderHeight = if (useMinimalStyle) {
+        TimelineSectionHeaderMinHeightMinimal
+    } else {
+        TimelineSectionHeaderMinHeight
+    }
     val headerClickModifier = when {
         onHeaderClick != null -> Modifier.clickable(
             interactionSource = headerInteractionSource,
@@ -4442,9 +4691,9 @@ private fun TimelineSectionHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
+                .clip(RoundedCornerShape(TdayDimens.RadiusLg))
                 .background(Color.Transparent)
-                .padding(horizontal = 4.dp)
+                .padding(horizontal = TdayDimens.SpacingXs)
                 .heightIn(min = minimumHeaderHeight)
                 .then(headerClickModifier),
             verticalAlignment = Alignment.CenterVertically,
@@ -4469,8 +4718,8 @@ private fun TimelineSectionHeader(
                     },
                     tint = chevronColor,
                     modifier = Modifier
-                        .padding(start = 6.dp)
-                        .size(18.dp)
+                        .padding(start = TdayDimens.SpacingSm)
+                        .size(TimelineSectionChevronSize)
                         .graphicsLayer {
                             rotationZ = collapseChevronRotation
                         },
@@ -4489,18 +4738,33 @@ private fun TimelineDropPlaceholder(
     val colorScheme = MaterialTheme.colorScheme
     val placeholderHeight by animateDpAsState(
         targetValue = if (active) {
-            if (useMinimalStyle) 66.dp else 72.dp
+            if (useMinimalStyle) {
+                TimelineDropPlaceholderActiveHeightMinimal
+            } else {
+                TimelineDropPlaceholderActiveHeight
+            }
         } else {
-            if (useMinimalStyle) 46.dp else 52.dp
+            if (useMinimalStyle) {
+                TimelineDropPlaceholderHeightMinimal
+            } else {
+                TimelineDropPlaceholderHeight
+            }
         },
-        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        // The box's own size, so the same rung as the section spacing above. It plays
+        // seldom — the one caller always passes `active = true`, which leaves the style
+        // flag as the only thing that can move the target — but 180 named no rung, and
+        // when it does play it must not undercut the placement the rows around it take.
+        animationSpec = tween(
+            durationMillis = TdayMotionTokens.Durations.Emphasis,
+            easing = FastOutSlowInEasing,
+        ),
         label = "timelineDropPlaceholderHeight",
     )
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(placeholderHeight)
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(TdayDimens.RadiusLg))
             .background(
                 if (active) {
                     colorScheme.error.copy(alpha = 0.10f)
@@ -4510,14 +4774,14 @@ private fun TimelineDropPlaceholder(
             )
             .border(
                 BorderStroke(
-                    width = if (active) 1.5.dp else 1.dp,
+                    width = if (active) TdayDimens.BorderWidthThick else TdayDimens.BorderWidth,
                     color = if (active) {
                         colorScheme.error.copy(alpha = 0.64f)
                     } else {
                         colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
                     },
                 ),
-                RoundedCornerShape(18.dp),
+                RoundedCornerShape(TdayDimens.RadiusLg),
             ),
     )
 }
@@ -4532,29 +4796,43 @@ private fun TimelineTaskDragPreview(
     val colorScheme = MaterialTheme.colorScheme
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val showListIndicator = listMeta != null && mode != TodoListMode.LIST
-    val previewShape = RoundedCornerShape(18.dp)
+    val previewShape = RoundedCornerShape(TdayDimens.RadiusLg)
+    // The pick-up itself. This card used to be composed straight into its final
+    // size and elevation, so the one frame that says "the app has your task"
+    // never existed; [TdayDragLift] argues the rise and its two ends.
+    val lift by TdayDragLift.rememberProgress(rememberTdayMotionEnabled())
     Card(
         modifier = modifier
-            .sizeIn(minWidth = 220.dp, maxWidth = 280.dp),
+            .sizeIn(minWidth = TimelineDragPreviewMinWidth, maxWidth = TimelineDragPreviewMaxWidth)
+            .graphicsLayer {
+                val scale = TdayDragLift.scaleAt(lift)
+                scaleX = scale
+                scaleY = scale
+            },
         shape = previewShape,
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface.copy(alpha = 0.88f)),
-        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.55f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+        // Opaque. A card the finger is holding is not a card the user may not
+        // have, and partial alpha is what this app says everywhere else.
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        border = BorderStroke(TdayDimens.BorderWidth, colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDragLift.elevationAt(lift)),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(
+                horizontal = TdayDimens.SpacingXl,
+                vertical = TimelineDragPreviewContentSpacing,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(TimelineDragPreviewContentSpacing),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle),
                 contentDescription = null,
                 tint = colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(TimelineDragPreviewIconSize),
             )
             Column(
                 modifier = Modifier.weight(1f, fill = false),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
             ) {
                 Text(
                     text = todo.title,
@@ -4578,7 +4856,7 @@ private fun TimelineTaskDragPreview(
                     imageVector = tdayListIconForKey(listMeta?.iconKey),
                     contentDescription = null,
                     tint = tdayListAccentColor(listMeta?.color),
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(RowTrailingIconSize),
                 )
             }
             priorityIconFor(todo.priority)?.let { priorityIcon ->
@@ -4586,7 +4864,7 @@ private fun TimelineTaskDragPreview(
                     imageVector = priorityIcon,
                     contentDescription = null,
                     tint = tdayPriorityColor(todo.priority),
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(RowTrailingIconSize),
                 )
             }
         }
@@ -5442,6 +5720,19 @@ private fun searchResultScrollDurationMillis(distancePx: Float): Int =
             SEARCH_RESULT_SCROLL_MAX_DURATION_MS,
         )
 
+/**
+ * The wait before a search result is scrolled to — not a token — see docs/motion.md.
+ *
+ * What it is waiting for is the feed stopping: scrolling a list whose rows are still
+ * moving aims at final positions that are not final yet, and the correction passes
+ * below spend themselves chasing the movement rather than the target. Its two call
+ * sites are waiting on different movement — one on the route handover into this
+ * screen, one on the floater feed re-laying itself out once the search card leaves it
+ * — which is why they are handed different scales; [effectiveMotionScale] has the
+ * argument. [scaledDelay] and not `delay` at both, because both are covering Compose
+ * animations: with those refused the screen is whole on the first frame and this
+ * would be 380 ms of a tapped result doing nothing.
+ */
 private const val SEARCH_RESULT_NAV_SETTLE_DELAY_MS = 380L
 private const val SEARCH_RESULT_SCROLL_CORRECTION_PASSES = 2
 private const val SEARCH_RESULT_SCROLL_MIN_DISTANCE_PX = 2f
@@ -5450,9 +5741,77 @@ private const val SEARCH_RESULT_SCROLL_MIN_DURATION_MS = 720
 private const val SEARCH_RESULT_SCROLL_MAX_DURATION_MS = 2400
 private const val SEARCH_RESULT_CENTER_SCROLL_DURATION_MS = 520
 private const val SEARCH_RESULT_ESTIMATED_ROW_HEIGHT_DP = 72f
+
+/**
+ * How long a navigated-to row stays flagged as the flashing one — not a token — see
+ * docs/motion.md.
+ *
+ * The flash is two pulses of 420 up and 620 down with
+ * [SEARCH_RESULT_FLASH_PULSE_GAP_MS] between them, in [SwipeTaskRow]: 2230 ms, which
+ * this outlasts by seventy. Pinned rather than summed from those four numbers on
+ * purpose, the same call `EarlierIllustrationMotionTest` argues for — a hold defined
+ * as its own contents can never be caught disagreeing with them.
+ *
+ * [scaledDelay] and not `delay`, because every millisecond of it is spent waiting on
+ * pulses Compose already scales: at 0x they land instantly and this would keep a row
+ * flagged for two and a third seconds with nothing drawn on it, and at 2x it would
+ * drop the flag with the second pulse still climbing.
+ */
+private const val SEARCH_RESULT_FLASH_HOLD_MS = 2300L
+
+/**
+ * The dark between the two pulses — not a token — see docs/motion.md.
+ *
+ * A gap and not a motion: nobody watches it, they watch the pulses either side. So it
+ * stays a plain integer rather than taking the Quick rung it happens to equal, the
+ * same way `taskCompletionTiming.ts` keeps its own offsets plain.
+ */
+private const val SEARCH_RESULT_FLASH_PULSE_GAP_MS = 150L
+
+/**
+ * The tick landing, then the strike beginning.
+ *
+ * Every leg of this sequence is handed to [scaledDelay] rather than to `delay`, and
+ * that is the whole of what the row has to get right under the animator scale. The
+ * three beats the gaps separate are each gated on the same answer the gaps are — the
+ * tint crossfade is a `snap()` when motion is off, `rememberTaskStrikeProgress` hands
+ * back its finished progress, and `completionAlpha` snaps rather than fading — so the
+ * row is drawn ticked, struck and gone on the first frame and the only thing left to
+ * remove is the 780 ms the user would otherwise spend in front of it. That is
+ * `docs/motion.md`'s fifth idiom rule read from the other side, and it lands on the
+ * app's most-performed interaction.
+ *
+ * All three being gated is also what lets the gaps take the app's scale rather than
+ * the device's. The fade was a bare `tween` until the in-app switch existed, and the
+ * two would have come apart the moment it did: the row pulled out of the list at full
+ * opacity, by a wait of nothing, while the fade meant to carry it off ran on.
+ * [effectiveMotionScale] has the general shape of that trap.
+ *
+ * Android cuts deeper here than web does — `taskCompletionStaging.ts` keeps these
+ * first two legs and drops only the last — because the two preferences are not the
+ * same question. `prefers-reduced-motion: reduce` asks for less movement; an
+ * animator scale of 0 is the platform stating that every animation lands in one
+ * frame, and a scale is also a *number*: the same call has to be right at 2x, where
+ * holding these two at 160 and 360 would start the strike over a tint still
+ * crossfading and the fade over a rule barely half swept.
+ */
 private const val TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160L
+
+/** The strike holding — title and notes both — before the row starts fading. */
 private const val TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
-private const val TASK_COMPLETION_FADE_MS = 260L
+
+/**
+ * The ink leaving, and the wait before the row is handed to the list.
+ *
+ * The two are one number because they are one motion — the coroutine that ticks
+ * the task off waits exactly as long as the fade it started — so it is read from
+ * the vocabulary once rather than typed on both sides. Change is the rung: the
+ * row's content goes where it stands and nothing moves, which is the geometry
+ * test `docs/motion.md`'s second idiom rule decides this by. The two offsets
+ * above are gaps rather than motions and stay plain, the same way web's
+ * `taskCompletionTiming.ts` keeps them.
+ */
+private val TASK_COMPLETION_FADE_MS = TdayMotionTokens.Durations.Change.toLong()
 private val SWIPE_ROW_CONTENT_VERTICAL_PADDING = 2.dp
 private val SWIPE_ROW_HEIGHT = 56.dp
 private val TASK_CHECKMARK_GREEN = TdayTaskCompleteAccent
@@ -5631,7 +5990,7 @@ private fun SwipeTaskRow(
     // step already established between the 2- and 3-pill widths below.
     val swipeRevealState = rememberTaskSwipeRevealState(
         todo.id,
-        revealWidth = if (hasExtraSwipeAction) 336.dp else 256.dp,
+        revealWidth = if (hasExtraSwipeAction) SwipeRevealWidthWithExtraAction else SwipeRevealWidth,
     )
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
@@ -5665,22 +6024,91 @@ private fun SwipeTaskRow(
         label = "swipeTaskOffset",
     )
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
+    // The beats the row used to cut straight to. Tint and title colour are one
+    // event each and travel with the glyph and the rule they belong to; the rule
+    // itself is `taskStrikethrough`, which argues the mechanism where it lives;
+    // the fade below is the last of them. Under reduced motion every one of these
+    // is handed its finished value rather than the first frame of a trip nobody is
+    // taking.
+    val motionEnabled = rememberTdayMotionEnabled()
+    // Gated like the two beats in front of it, and read alongside them rather than
+    // left to Compose. The three legs of the check-off are timed against these
+    // specs, so a fade that kept running while its own wait was zeroed would pull
+    // the row out of the list at full opacity — the pop the last leg exists to
+    // prevent. See [TASK_COMPLETION_CHECK_TO_STRIKE_MS].
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
-        animationSpec = tween(
-            durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
-        ),
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "swipeTaskCompletionAlpha",
     )
     val completionOffsetY by animateDpAsState(
-        targetValue = if (completionFading) (-10).dp else 0.dp,
-        animationSpec = tween(
-            durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
-        ),
+        targetValue = if (completionFading) TaskCompletionRiseOffsetY else TdayDimens.SpacingNone,
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "swipeTaskCompletionOffsetY",
     )
+    // The scale behind that switch, for this row's waits: the hint's hold and the
+    // three legs of the check-off. Every one of them is a gap between animations
+    // rather than a spec handed to one, which is the line [scaledDelay] draws — and
+    // every one of them sits between beats this row gates on [motionEnabled], which
+    // is what makes the app's scale the right clock for them.
+    val rowMotionScale = rememberTdayMotionScale()
+    // The flash is the exception, so it gets its own number. Its two pulses are
+    // ungated `tween`s below, which means they keep playing at the device's scale
+    // with the in-app switch on; a gap between them timed on the app's scale would
+    // close while the first pulse was still climbing. Free per row — both scales come
+    // down a composition local. See [effectiveMotionScale].
+    val rowFlashMotionScale = rememberSystemMotionScale()
+    val toggleTint by animateColorAsState(
+        targetValue = if (selectionActive) {
+            if (selected) colorScheme.primary else colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+        } else if (visuallyChecked) {
+            TASK_CHECKMARK_GREEN
+        } else {
+            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "swipeTaskToggleTint",
+    )
+    val titleColor by animateColorAsState(
+        targetValue = if (visuallyStruck) {
+            colorScheme.onSurface.copy(alpha = 0.78f)
+        } else {
+            colorScheme.onSurface
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Emphasis,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "swipeTaskTitleColor",
+    )
+    var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
+    var noteLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
+    val titleStrikeProgress = rememberTaskStrikeProgress(visuallyStruck, "swipeTaskTitleStrike")
     val isOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
     val dueBodyText = todo.due?.let {
         if (showDueDateInSubtitle) {
@@ -5698,7 +6126,7 @@ private fun SwipeTaskRow(
             text
         }
     }
-    val rowShape = RoundedCornerShape(16.dp)
+    val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
     val foregroundColor = colorScheme.background
     val highlightStrength = highlightAnim.value.coerceIn(0f, 1f)
     val contentGlowBrush = Brush.horizontalGradient(
@@ -5736,6 +6164,15 @@ private fun SwipeTaskRow(
     val priorityIcon = priorityIconFor(todo.priority)
     val showPriorityIcon = priorityIcon != null
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
+    // The other half of the pick-up: the slot this card came out of. It used to
+    // cut to 70 % on the frame the long press fired, alongside a preview that
+    // cut to full size, which is two events for one gesture. Same rung as the
+    // rise, so the row empties exactly as the card leaves it.
+    val vacatedAlpha by animateFloatAsState(
+        targetValue = if (dragging) TdayDragLift.VacatedAlpha else 1f,
+        animationSpec = TdayDragLift.spec(motionEnabled),
+        label = "timelineTaskDragVacated",
+    )
     LaunchedEffect(openSwipeTaskId, todo.id) {
         if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
             swipeRevealState.close()
@@ -5751,6 +6188,10 @@ private fun SwipeTaskRow(
         closeSwipeSlot()
         highlightAnim.stop()
         highlightAnim.snapTo(0f)
+        // not a token — see docs/motion.md. Neither leg is on the ladder and neither is
+        // meant to be: the two are timed against each other and against the dark between
+        // them, so that the pulse reads as a heartbeat rather than as two arrivals. The
+        // 620 is longer than Scene, the app's longest motion, which makes it a wait.
         repeat(2) { pulseIndex ->
             highlightAnim.animateTo(
                 targetValue = 0.46f,
@@ -5761,7 +6202,7 @@ private fun SwipeTaskRow(
                 animationSpec = tween(durationMillis = 620, easing = FastOutSlowInEasing),
             )
             if (pulseIndex < 1) {
-                delay(150)
+                scaledDelay(SEARCH_RESULT_FLASH_PULSE_GAP_MS, rowFlashMotionScale)
             }
         }
     }
@@ -5770,10 +6211,10 @@ private fun SwipeTaskRow(
         modifier = Modifier
             .fillMaxWidth()
             .graphicsLayer {
-                alpha = if (dragging) completionAlpha * 0.7f else completionAlpha
+                alpha = completionAlpha * vacatedAlpha
                 translationY = completionOffsetY.toPx()
             },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs),
     ) {
             Box(
                 modifier = Modifier
@@ -5784,8 +6225,8 @@ private fun SwipeTaskRow(
                 Row(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .padding(end = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        .padding(end = TdayDimens.SpacingXxs),
+                    horizontalArrangement = Arrangement.spacedBy(SwipeActionSpacing),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (promoteAction != null) {
@@ -5968,7 +6409,7 @@ private fun SwipeTaskRow(
                             } else if (!swipeRevealState.isHinting && !pendingCompletion && !dragging) {
                                 claimSwipeSlot()
                                 coroutineScope.launch {
-                                    swipeRevealState.playHint()
+                                    swipeRevealState.playHint(rowMotionScale)
                                     if (latestOpenSwipeTaskId.value == todo.id && !swipeRevealState.isOpenOrDragging) {
                                         onOpenSwipeTaskIdChange(null)
                                     }
@@ -5977,13 +6418,13 @@ private fun SwipeTaskRow(
                         },
                     shape = rowShape,
                     colors = CardDefaults.cardColors(containerColor = foregroundColor),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(
-                                horizontal = 4.dp,
+                                horizontal = TdayDimens.SpacingXs,
                                 vertical = SWIPE_ROW_CONTENT_VERTICAL_PADDING
                             )
                             .semantics(mergeDescendants = true) {},
@@ -5993,10 +6434,10 @@ private fun SwipeTaskRow(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                                .padding(vertical = 2.dp)
-                                .clip(RoundedCornerShape(18.dp))
-                                .background(foregroundColor, RoundedCornerShape(18.dp))
-                                .background(contentGlowBrush, RoundedCornerShape(18.dp)),
+                                .padding(vertical = TdayDimens.SpacingXxs)
+                                .clip(RoundedCornerShape(TdayDimens.RadiusLg))
+                                .background(foregroundColor, RoundedCornerShape(TdayDimens.RadiusLg))
+                                .background(contentGlowBrush, RoundedCornerShape(TdayDimens.RadiusLg)),
                             // Top-align so the toggle sits on the first line of a
                             // multi-line title rather than centring across all lines.
                             verticalAlignment = Alignment.Top,
@@ -6028,17 +6469,7 @@ private fun SwipeTaskRow(
                                 } else {
                                     stringResource(R.string.label_mark_complete)
                                 },
-                                tint = if (selectionActive) {
-                                    if (selected) {
-                                        colorScheme.primary
-                                    } else {
-                                        colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                                    }
-                                } else if (!visuallyChecked) {
-                                    colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                                } else {
-                                    TASK_CHECKMARK_GREEN
-                                },
+                                tint = toggleTint,
                                 enabled = if (selectionActive) {
                                     true
                                 } else {
@@ -6058,11 +6489,24 @@ private fun SwipeTaskRow(
                                         localChecked = true
                                         pendingCompletion = true
                                         coroutineScope.launch {
-                                            delay(TASK_COMPLETION_CHECK_TO_STRIKE_MS)
+                                            // Three gaps, three animations they
+                                            // are covering, so all three are on
+                                            // the animator's clock. See
+                                            // [TASK_COMPLETION_CHECK_TO_STRIKE_MS].
+                                            scaledDelay(
+                                                TASK_COMPLETION_CHECK_TO_STRIKE_MS,
+                                                rowMotionScale,
+                                            )
                                             localStruck = true
-                                            delay(TASK_COMPLETION_STRIKE_TO_FADE_MS)
+                                            scaledDelay(
+                                                TASK_COMPLETION_STRIKE_TO_FADE_MS,
+                                                rowMotionScale,
+                                            )
                                             completionFading = true
-                                            delay(TASK_COMPLETION_FADE_MS)
+                                            scaledDelay(
+                                                TASK_COMPLETION_FADE_MS,
+                                                rowMotionScale,
+                                            )
                                             onComplete()
                                         }
                                     }
@@ -6073,27 +6517,32 @@ private fun SwipeTaskRow(
                                 // top pad centres the first title line against the
                                 // (taller) toggle so the toggle lands on line one.
                                 modifier = Modifier
-                                    .padding(start = 10.dp, top = 12.dp, end = 8.dp)
+                                    .padding(
+                                        start = TaskRowTitleStartPadding,
+                                        top = TdayDimens.SpacingLg,
+                                        end = TdayDimens.SpacingMd,
+                                    )
                                     .weight(1f),
                             ) {
                                 Text(
                                     text = todo.title,
-                                    color = if (visuallyStruck) {
-                                        colorScheme.onSurface.copy(alpha = 0.78f)
-                                    } else {
-                                        colorScheme.onSurface
-                                    },
+                                    // Drawn rather than declared. `TextDecoration.LineThrough`
+                                    // is a boolean and this is a beat the user is meant to
+                                    // watch land; `taskStrikethrough` sweeps one rule per line,
+                                    // which is what the decoration would have drawn on a
+                                    // wrapped title had it been animatable.
+                                    modifier = Modifier.taskStrikethrough(
+                                        progress = titleStrikeProgress,
+                                        layout = titleLayoutResult,
+                                        color = titleColor,
+                                        thickness = TdayDimens.BorderWidthThick,
+                                    ),
+                                    color = titleColor,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.ExtraBold,
-                                    // Real per-line strikethrough crosses out every line of a
-                                    // wrapped title instead of one rule down the middle.
-                                    textDecoration = if (visuallyStruck) {
-                                        TextDecoration.LineThrough
-                                    } else {
-                                        TextDecoration.None
-                                    },
                                     // No line cap in-app: show the whole title.
                                     maxLines = Int.MAX_VALUE,
+                                    onTextLayout = { titleLayoutResult = it },
                                 )
                                 if (showDueText && dueSubtitleText != null) {
                                     Text(
@@ -6103,21 +6552,29 @@ private fun SwipeTaskRow(
                                     )
                                 }
                                 flattenNotesToPlainText(todo.description).takeIf { it.isNotBlank() }?.let { note ->
+                                    val noteColor = colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                                     Text(
                                         text = note,
-                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                        // Struck alongside the title, on the title's own sweep,
+                                        // so the whole task reads as one edit rather than as a
+                                        // rule that grows and a rule that appears.
+                                        modifier = Modifier.taskStrikethrough(
+                                            progress = titleStrikeProgress,
+                                            layout = noteLayoutResult,
+                                            color = noteColor,
+                                            thickness = TdayDimens.BorderWidthThick,
+                                        ),
+                                        color = noteColor,
                                         style = MaterialTheme.typography.bodySmall,
-                                        // Struck alongside the title so the whole
-                                        // task reads as done during the animation.
-                                        textDecoration = if (visuallyStruck) TextDecoration.LineThrough else null,
+                                        onTextLayout = { noteLayoutResult = it },
                                     )
                                 }
                             }
                         }
                         if (showListIndicator || showPriorityIcon) {
                             Row(
-                                modifier = Modifier.padding(start = 8.dp, end = 24.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(start = TdayDimens.SpacingMd, end = TdayDimens.Spacing3xl),
+                                horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 if (showListIndicator) {
@@ -6125,7 +6582,7 @@ private fun SwipeTaskRow(
                                         imageVector = tdayListIconForKey(listMeta?.iconKey),
                                         contentDescription = stringResource(R.string.label_task_list),
                                         tint = listIndicatorColor,
-                                        modifier = Modifier.size(18.dp),
+                                        modifier = Modifier.size(RowTrailingIconSize),
                                     )
                                 }
                                 if (priorityIcon != null) {
@@ -6133,7 +6590,7 @@ private fun SwipeTaskRow(
                                         imageVector = priorityIcon,
                                         contentDescription = stringResource(R.string.label_priority_task),
                                         tint = tdayPriorityColor(todo.priority),
-                                        modifier = Modifier.size(18.dp),
+                                        modifier = Modifier.size(RowTrailingIconSize),
                                     )
                                 }
                             }
@@ -6145,7 +6602,7 @@ private fun SwipeTaskRow(
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
+                    .height(TdayDimens.BorderWidth)
                     .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
             )
         }
@@ -6169,14 +6626,18 @@ private fun TodayTodoRow(
         }
     }
 
+    // The geometry below is `TdayTaskRowMetrics`, not literals:
+    // `TdayTaskRowSkeleton` draws this same shape with the ink taken out, and a
+    // placeholder that merely happens to match the row stops matching the first
+    // time the row is re-spaced.
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayTaskRowMetrics.RowSpacing),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(vertical = TdayTaskRowMetrics.RowVerticalPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
@@ -6195,7 +6656,7 @@ private fun TodayTodoRow(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = 10.dp),
+                        .padding(start = TdayTaskRowMetrics.TextColumnStartPadding),
                 ) {
                     Text(
                         text = todo.title,
@@ -6233,8 +6694,10 @@ private fun TodayTodoRow(
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
-                .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
+                .height(TdayTaskRowMetrics.DividerThickness)
+                .background(
+                    colorScheme.outlineVariant.copy(alpha = TdayTaskRowMetrics.DividerAlpha),
+                ),
         )
     }
 }
@@ -6250,13 +6713,13 @@ private fun TodoRow(
 
     Card(
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusRow),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(TdayDimens.SpacingXl),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -6273,7 +6736,7 @@ private fun TodoRow(
                     onClick = onComplete,
                 )
 
-                Column(modifier = Modifier.padding(start = 12.dp)) {
+                Column(modifier = Modifier.padding(start = TdayDimens.SpacingLg)) {
                     Text(
                         text = todo.title,
                         color = colorScheme.onSurface,
@@ -6319,7 +6782,10 @@ private fun CircularCheckToggleIcon(
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .sizeIn(
+                minWidth = TdayTaskRowMetrics.CheckTargetMinSize,
+                minHeight = TdayTaskRowMetrics.CheckTargetMinSize,
+            )
             .wrapContentSize(Alignment.Center)
             .clip(CircleShape)
             .clickable(
@@ -6327,18 +6793,40 @@ private fun CircularCheckToggleIcon(
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 24.dp,
+                    radius = CompletionToggleRippleRadius,
                 ),
                 onClick = onClick,
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(24.dp),
-        )
+        // The glyph crosses over rather than swapping. On web the check mark
+        // appears inside a disc whose fill is already transitioning, so the
+        // control reads as changing even though the mark itself does not; here
+        // the glyph IS the whole control, and swapping it in one frame is the
+        // toggle hard-cutting. Same behaviour, different mechanism — which is
+        // what copying behaviour rather than implementation means.
+        Crossfade(
+            targetState = imageVector,
+            animationSpec = if (rememberTdayMotionEnabled()) {
+                tween(
+                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    easing = TdayMotionTokens.Easings.Standard,
+                )
+            } else {
+                snap()
+            },
+            label = "circularCheckToggleGlyph",
+        ) { glyph ->
+            Icon(
+                imageVector = glyph,
+                // Only the glyph being crossed TO carries the description: for
+                // the frames both exist, two identical labels in the tree would
+                // have TalkBack announce the control twice.
+                contentDescription = contentDescription.takeIf { glyph == imageVector },
+                tint = tint,
+                modifier = Modifier.size(TdayTaskRowMetrics.CheckGlyphSize),
+            )
+        }
     }
 }
 

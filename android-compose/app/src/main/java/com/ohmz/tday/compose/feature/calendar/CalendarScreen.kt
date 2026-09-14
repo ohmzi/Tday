@@ -1,14 +1,20 @@
 package com.ohmz.tday.compose.feature.calendar
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -96,7 +102,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -112,19 +118,29 @@ import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
+import com.ohmz.tday.compose.core.ui.TdayDragLift
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
+import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.taskCopyText
+import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdaySwipeCopyBackground
@@ -134,7 +150,6 @@ import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
@@ -157,6 +172,8 @@ private val CalendarCardHeaderHorizontalPadding = 6.dp
 private val CalendarCardNavButtonWidth = 40.dp
 private val CalendarCardNavButtonHeight = 36.dp
 private val CalendarCardNavIconSize = 28.dp
+private val CalendarCardNavButtonRadius = 12.dp
+private val CalendarCardNavButtonRippleRadius = 20.dp
 private val CalendarCardHorizontalPadding = 16.dp
 private val CalendarMonthCardTopPadding = 16.dp
 private val CalendarMonthCardBottomPadding = 20.dp
@@ -171,6 +188,7 @@ private val CalendarMonthDayNumberWidth = 34.dp
 private val CalendarMonthDayNumberHeight = 24.dp
 private val CalendarMonthTaskCountHeight = 13.dp
 private val CalendarMonthTaskDotSize = 4.6.dp
+private val CalendarMonthDayCellContentSpacing = 1.dp
 private val CalendarMonthHeaderTitleSize = 21.sp
 private val CalendarPeriodHeaderTitleSize = 21.sp
 private val CalendarDaySummaryTitleSize = 25.sp
@@ -178,12 +196,60 @@ private val CalendarDaySummaryCountSize = 18.sp
 private val CalendarPeriodCardPageHeight = 78.dp
 private val CalendarPeriodWeekDayCellHeight = 72.dp
 private val CalendarPeriodPageHorizontalGutter = 2.dp
+private val CalendarPeriodCardTopPadding = 16.dp
 private val CalendarPeriodCardBottomPadding = 18.dp
+private val CalendarWeekDayCellContentSpacing = 3.dp
 private val CalendarTaskListSameDateSpacing = 2.dp
 private val CalendarTaskRowHeight = 56.dp
+private val CalendarTaskCompletionRiseOffsetY = (-10).dp
+private val CalendarTaskRowTitleStartPadding = 10.dp
+private val CalendarRowTrailingIconSize = 18.dp
+private val CalendarSwipeRevealWidth = 256.dp
+private val CalendarSwipeActionSpacing = 16.dp
+private val CalendarSwipeActionMinWidth = 60.dp
+private val CalendarSwipeActionButtonWidth = 56.dp
+private val CalendarSwipeActionButtonHeight = 34.dp
+private val CalendarSwipeActionIconSize = 21.dp
+private val CalendarCompletionToggleTouchTarget = 48.dp
+private val CalendarCompletionToggleRippleRadius = 24.dp
+private val CalendarCompletionToggleIconSize = 24.dp
+private val CalendarBarButtonIconSize = 22.dp
+
+// The drag preview rides under the finger, not beside it: the pointer is offset
+// into the card so the task being carried is the thing the hand is over.
+private val CalendarDragPreviewAnchorX = 130.dp
+private val CalendarDragPreviewAnchorY = 34.dp
+private val CalendarDragPreviewMinWidth = 220.dp
+private val CalendarDragPreviewMaxWidth = 280.dp
+private val CalendarDragPreviewContentSpacing = 10.dp
+private val CalendarDragPreviewIconSize = 22.dp
+
+// Four states of one day-cell outline, and they are deliberately off any spacing
+// scale: 0.2 dp apart is what separates today from selected when both are drawn
+// at once, so a rung that rounded them would make two states one.
+private val CalendarDayCellBorderDropTarget = 2.dp
+private val CalendarDayCellBorderSelected = 1.6.dp
+private val CalendarDayCellBorderToday = 1.4.dp
+private val CalendarDayCellBorderPressed = 1.2.dp
+
+/**
+ * The tick landing, then the strike beginning — the check-off's first gap.
+ *
+ * Both rows below hand all three legs to [scaledDelay] rather than to `delay`: each
+ * gap exists only to let the beat before it land, and every one of those beats is
+ * already on the animator's clock. The argument is written out once, against the
+ * identically shaped constants in `TodoListScreen.kt`.
+ */
 private const val CALENDAR_TASK_COMPLETION_CHECK_TO_STRIKE_MS = 160L
 private const val CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS = 360L
-private const val CALENDAR_TASK_COMPLETION_FADE_MS = 260L
+
+/**
+ * The ink leaving, and the wait before the row is handed to the list — one
+ * number because they are one motion, read from the rung rather than typed.
+ * Change, because the row's content goes where it stands. See the identically
+ * shaped constants in `TodoListScreen.kt` and `ScheduledTaskHomeScreen.kt`.
+ */
+private val CALENDAR_TASK_COMPLETION_FADE_MS = TdayMotionTokens.Durations.Change.toLong()
 private val CalendarTaskDragDueTimeFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()).withZone(ZoneId.systemDefault())
 // Internal rather than private because `CalendarPageSelection.kt` owns the page
@@ -379,11 +445,14 @@ fun CalendarScreen(
             openSwipeTaskId = null
         }
     }
-    val editTarget = remember(editTargetId, uiState.items) {
-        editTargetId?.let { targetId ->
-            uiState.items.firstOrNull { it.id == targetId }
-        }
-    }
+    val editTarget = rememberEditSheetTarget(
+        id = editTargetId,
+        current = remember(editTargetId, uiState.items) {
+            editTargetId?.let { targetId ->
+                uiState.items.firstOrNull { it.id == targetId }
+            }
+        },
+    )
     val draggedCalendarTodo = remember(draggedCalendarTodoId, uiState.items) {
         draggedCalendarTodoId?.let { targetId ->
             uiState.items.firstOrNull { it.id == targetId || it.canonicalId == targetId }
@@ -524,8 +593,12 @@ fun CalendarScreen(
                     state = listState,
                     // No top padding: the hero item reserves the bar's height
                     // itself, so the scroll offset is a clean count from the top.
-                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, bottom = 2.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(
+                        start = TdayDimens.ContentPaddingHorizontal,
+                        end = TdayDimens.ContentPaddingHorizontal,
+                        bottom = TdayDimens.SpacingXxs,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
                 ) {
                 tdayHeroTitleItem(
                     title = calendarTitle,
@@ -543,7 +616,20 @@ fun CalendarScreen(
                                 data = mapOf("mode" to mode.name.lowercase()),
                             )
                             selectedViewKey = mode.name
-                            if (mode != CalendarViewMode.MONTH) {
+                            if (mode == CalendarViewMode.MONTH &&
+                                selectedViewMode != CalendarViewMode.MONTH
+                            ) {
+                                // The grid opens on the selected date's month.
+                                // This was written on the way OUT of Month, which
+                                // was invisible while the grid vanished in one
+                                // frame — but the card is composed for the whole
+                                // cross now, so an exit write re-paged the grid to
+                                // another month while it was still fully opaque.
+                                // Written on entry, the only card that reads it is
+                                // the one coming in, and nothing reads it between
+                                // the two taps: `searchRange` only consults the
+                                // visible month in Month mode, and picking a date
+                                // in Week or Day moves it anyway.
                                 visibleMonthIso = YearMonth.from(selectedDate).toString()
                             }
                         },
@@ -551,75 +637,123 @@ fun CalendarScreen(
                 }
 
                 item {
+                    val viewModeMotionEnabled = rememberTdayMotionEnabled()
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .animateContentSize(
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                    stiffness = Spring.StiffnessMediumLow,
-                                ),
+                                // A month grid collapsing to a week strip is a
+                                // card finding its height, which is what Settle
+                                // is for. What it replaces was never chosen:
+                                // both docs/motion.md and the budget fixture's
+                                // `android._spring` note say on the record that
+                                // StiffnessMediumLow here was a library default.
+                                animationSpec = if (viewModeMotionEnabled) {
+                                    TdayMotionTokens.Springs.settle()
+                                } else {
+                                    snap()
+                                },
                             )
                             .calendarCardChrome(),
                     ) {
-                        when (selectedViewMode) {
-                            CalendarViewMode.MONTH -> CalendarMonthCard(
-                                visibleMonth = visibleMonth,
-                                minNavigableMonth = minNavigableMonth,
-                                canGoPrevMonth = visibleMonth > minNavigableMonth,
-                                selectedDate = selectedDate,
-                                today = today,
-                                tasksByDate = plottedTasksByDate,
-                                draggedTodo = draggedCalendarTodo,
-                                activeDropDate = activeDropDate,
-                                dropTargets = calendarDropTargetBounds,
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onVisibleMonthChanged = { targetMonth ->
-                                    if (targetMonth >= minNavigableMonth) {
-                                        visibleMonthIso = targetMonth.toString()
-                                    }
-                                },
-                                onSelectDate = ::selectDate,
-                                onDropDateChanged = { date ->
-                                    activeDropDateIso = date?.toString()
-                                },
-                                onMoveTaskToDate = ::requestTaskReschedule,
-                                resolveTodo = resolveTodoForDrop,
-                            )
+                        // The height above is animated; the content inside it was
+                        // not, so the grid was replaced by the strip in one frame
+                        // while the card around it was still travelling. Crossing
+                        // the two over fixes that, and the cross is deliberately
+                        // shorter than the spring: the eye lands on a resolved
+                        // grid inside a still-settling card rather than on two
+                        // ghosted grids. Both branches hand back `using null`,
+                        // because the height is already owned above: every
+                        // SizeTransform, clipping or not, carries a default
+                        // 400-stiffness spring on the AnimatedContent's own size,
+                        // and a 250 spring chasing that is not a card finding its
+                        // height, it is two springs negotiating. Null, the inner
+                        // box is simply the tapped mode's height on the frame it
+                        // changes, and the card's own clip is the one edge that
+                        // moves — the outgoing grid is drawn where it was and
+                        // that edge travels down across it.
+                        AnimatedContent(
+                            targetState = selectedViewMode,
+                            transitionSpec = {
+                                if (viewModeMotionEnabled) {
+                                    fadeIn(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Enter,
+                                            easing = TdayMotionTokens.Easings.Enter,
+                                        ),
+                                    ) togetherWith fadeOut(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Quick,
+                                            easing = TdayMotionTokens.Easings.Exit,
+                                        ),
+                                    ) using null
+                                } else {
+                                    // Motion off still means the mode the user
+                                    // asked for, drawn at its own height, now.
+                                    EnterTransition.None togetherWith ExitTransition.None using null
+                                }
+                            },
+                            label = "calendarViewMode",
+                        ) { viewMode ->
+                            when (viewMode) {
+                                CalendarViewMode.MONTH -> CalendarMonthCard(
+                                    visibleMonth = visibleMonth,
+                                    minNavigableMonth = minNavigableMonth,
+                                    canGoPrevMonth = visibleMonth > minNavigableMonth,
+                                    selectedDate = selectedDate,
+                                    today = today,
+                                    tasksByDate = plottedTasksByDate,
+                                    draggedTodo = draggedCalendarTodo,
+                                    activeDropDate = activeDropDate,
+                                    dropTargets = calendarDropTargetBounds,
+                                    canSelectDate = ::canNavigateTo,
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
+                                    onVisibleMonthChanged = { targetMonth ->
+                                        if (targetMonth >= minNavigableMonth) {
+                                            visibleMonthIso = targetMonth.toString()
+                                        }
+                                    },
+                                    onSelectDate = ::selectDate,
+                                    onDropDateChanged = { date ->
+                                        activeDropDateIso = date?.toString()
+                                    },
+                                    onMoveTaskToDate = ::requestTaskReschedule,
+                                    resolveTodo = resolveTodoForDrop,
+                                )
 
-                            CalendarViewMode.WEEK -> CalendarWeekCard(
-                                selectedDate = selectedDate,
-                                minNavigableMonth = minNavigableMonth,
-                                today = today,
-                                tasksByDate = plottedTasksByDate,
-                                draggedTodo = draggedCalendarTodo,
-                                activeDropDate = activeDropDate,
-                                dropTargets = calendarDropTargetBounds,
-                                canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onSelectDate = ::selectDate,
-                                onDropDateChanged = { date ->
-                                    activeDropDateIso = date?.toString()
-                                },
-                                onMoveTaskToDate = ::requestTaskReschedule,
-                                resolveTodo = resolveTodoForDrop,
-                            )
+                                CalendarViewMode.WEEK -> CalendarWeekCard(
+                                    selectedDate = selectedDate,
+                                    minNavigableMonth = minNavigableMonth,
+                                    today = today,
+                                    tasksByDate = plottedTasksByDate,
+                                    draggedTodo = draggedCalendarTodo,
+                                    activeDropDate = activeDropDate,
+                                    dropTargets = calendarDropTargetBounds,
+                                    canGoPrevWeek = canNavigateTo(selectedDate.minusWeeks(1)),
+                                    canSelectDate = ::canNavigateTo,
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
+                                    onSelectDate = ::selectDate,
+                                    onDropDateChanged = { date ->
+                                        activeDropDateIso = date?.toString()
+                                    },
+                                    onMoveTaskToDate = ::requestTaskReschedule,
+                                    resolveTodo = resolveTodoForDrop,
+                                )
 
-                            CalendarViewMode.DAY -> CalendarDayCard(
-                                selectedDate = selectedDate,
-                                minNavigableMonth = minNavigableMonth,
-                                today = today,
-                                tasksByDate = plottedTasksByDate,
-                                canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
-                                canSelectDate = ::canNavigateTo,
-                                todayJumpRequest = todayJumpRequest,
-                                onTodayJumpHandled = ::clearTodayJumpRequest,
-                                onSelectDate = ::selectDate,
-                            )
+                                CalendarViewMode.DAY -> CalendarDayCard(
+                                    selectedDate = selectedDate,
+                                    minNavigableMonth = minNavigableMonth,
+                                    today = today,
+                                    tasksByDate = plottedTasksByDate,
+                                    canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
+                                    canSelectDate = ::canNavigateTo,
+                                    todayJumpRequest = todayJumpRequest,
+                                    onTodayJumpHandled = ::clearTodayJumpRequest,
+                                    onSelectDate = ::selectDate,
+                                )
+                            }
                         }
                     }
                 }
@@ -641,7 +775,7 @@ fun CalendarScreen(
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(horizontal = 4.dp),
+                            modifier = Modifier.padding(horizontal = TdayDimens.SpacingXs),
                         )
                     }
                 }
@@ -673,29 +807,49 @@ fun CalendarScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(
-                                        start = 4.dp,
-                                        top = if (index == 0) 0.dp else 14.dp,
-                                        bottom = 6.dp,
+                                        start = TdayDimens.SpacingXs,
+                                        top = if (index == 0) {
+                                            TdayDimens.SpacingNone
+                                        } else {
+                                            TdayDimens.SpacingXl
+                                        },
+                                        bottom = TdayDimens.SpacingSm,
                                     ),
                                 )
                             }
                         }
                         CalendarTodoRow(
                             modifier = Modifier
+                                // The day list is a task feed, so it takes the feed's
+                                // own clock. It used to run 180 in and 140 out — ten
+                                // milliseconds under [TdayFeedItemMotion] on each leg,
+                                // naming no rung and shared with nothing, which is
+                                // exactly the drift that object exists to stop. Rule 1
+                                // still holds across the swap: 150 out stays shorter
+                                // than 190 in.
+                                //
+                                // `placementSpec` stays null, and that is the one
+                                // thing this list does NOT take from the object. It is
+                                // not that nothing is displaced: completing, deleting
+                                // or rescheduling a task off the selected date each
+                                // remove exactly one keyed row, so today the rows
+                                // below a departure take their new slots in a single
+                                // frame while the departing one fades over 150 — the
+                                // same clock splitting that [TdayFeedItemMotion]'s
+                                // header argues against, and that `CompletedScreen`,
+                                // on the same object, does not have. Left standing
+                                // rather than fixed in passing: this unit is retiring
+                                // drifted literals, and starting to animate something
+                                // this feed has never animated is a behaviour change
+                                // that needs its own argument and its own device pass.
                                 .animateItem(
-                                    fadeInSpec = tween(
-                                        durationMillis = 180,
-                                        easing = FastOutSlowInEasing,
-                                    ),
+                                    fadeInSpec = TdayFeedItemMotion.FadeIn,
                                     placementSpec = null,
-                                    fadeOutSpec = tween(
-                                        durationMillis = 140,
-                                        easing = FastOutSlowInEasing,
-                                    ),
+                                    fadeOutSpec = TdayFeedItemMotion.FadeOut,
                                 )
                                 .padding(
                                     bottom = if (index == listedTasks.lastIndex) {
-                                        0.dp
+                                        TdayDimens.SpacingNone
                                     } else {
                                         CalendarTaskListSameDateSpacing
                                     },
@@ -747,7 +901,7 @@ fun CalendarScreen(
                                 accentColor = CalendarAccentPurple,
                                 title = stringResource(R.string.scheduled_task_home_search_no_results),
                                 description = stringResource(R.string.search_no_results_body),
-                                modifier = Modifier.padding(vertical = 12.dp),
+                                modifier = Modifier.padding(vertical = TdayDimens.SpacingLg),
                             )
                         } else {
                             TdayEmptyState(
@@ -755,22 +909,40 @@ fun CalendarScreen(
                                 accentColor = CalendarAccentPurple,
                                 title = stringResource(R.string.calendar_no_pending),
                                 description = stringResource(R.string.calendar_no_pending_body),
-                                modifier = Modifier.padding(vertical = 12.dp),
+                                modifier = Modifier.padding(vertical = TdayDimens.SpacingLg),
                             )
                         }
                     }
                 }
 
+                // Keyed, because a load failure genuinely adds and removes a row
+                // here and `animateItem` cannot animate either on an item whose
+                // identity is its index. It takes [TdayFeedItemMotion] whole —
+                // the rows above it take its two fades but pass
+                // `placementSpec = null` (argued there, and not because they are
+                // never displaced), while this card is the one item on this feed
+                // that already glides to whatever slot the rows above leave it
+                // in.
                 uiState.errorMessage?.let { message ->
-                    item {
+                    item(key = "error-retry", contentType = "error_retry") {
+                        val errorCardMotionEnabled = rememberTdayMotionEnabled()
                         com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                             message = message,
                             onRetry = onRefresh,
+                            modifier = if (errorCardMotionEnabled) {
+                                Modifier.animateItem(
+                                    fadeInSpec = TdayFeedItemMotion.FadeIn,
+                                    placementSpec = TdayFeedItemMotion.Placement,
+                                    fadeOutSpec = TdayFeedItemMotion.FadeOut,
+                                )
+                            } else {
+                                Modifier
+                            },
                         )
                     }
                 }
 
-                    item { Spacer(modifier = Modifier.height(96.dp)) }
+                    item { Spacer(modifier = Modifier.height(TdayDimens.BottomScrollSpacer)) }
                 }
             }
 
@@ -779,9 +951,11 @@ fun CalendarScreen(
                     modifier = Modifier
                         .offset {
                             val localPosition = drag.position - calendarDragContainerOrigin
+                            val anchorX = with(density) { CalendarDragPreviewAnchorX.toPx() }
+                            val anchorY = with(density) { CalendarDragPreviewAnchorY.toPx() }
                             IntOffset(
-                                x = (localPosition.x - with(density) { 130.dp.toPx() }).roundToInt(),
-                                y = (localPosition.y - with(density) { 34.dp.toPx() }).roundToInt(),
+                                x = (localPosition.x - anchorX).roundToInt(),
+                                y = (localPosition.y - anchorY).roundToInt(),
                             )
                         }
                         .zIndex(20f),
@@ -869,11 +1043,7 @@ fun CalendarScreen(
                 showCreateTaskSheet = false
                 createDueEpochMs = null
             },
-            onCreateTask = { payload ->
-                onCreateTask(payload)
-                showCreateTaskSheet = false
-                createDueEpochMs = null
-            },
+            onCreateTask = onCreateTask,
         )
     }
 
@@ -921,10 +1091,7 @@ fun CalendarScreen(
             onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = { editTargetId = null },
             onCreateTask = { _ -> },
-            onUpdateTask = { targetTodo, payload ->
-                onUpdateTask(targetTodo, payload)
-                editTargetId = null
-            },
+            onUpdateTask = onUpdateTask,
         )
     }
 }
@@ -953,7 +1120,7 @@ private fun CalendarCreateTaskFab(
         Icon(
             imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
             contentDescription = stringResource(R.string.action_create_task),
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(TdayDimens.FabIconSize),
         )
     }
 }
@@ -998,7 +1165,7 @@ private fun Modifier.calendarCardChrome(): Modifier {
             shape = shape,
         )
         .border(
-            width = 1.dp,
+            width = TdayDimens.BorderWidth,
             color = strokeColor,
             shape = shape,
         )
@@ -1135,18 +1302,18 @@ private fun CalendarWeekCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
                     start = CalendarCardHorizontalPadding,
-                    top = 16.dp,
+                    top = CalendarPeriodCardTopPadding,
                     end = CalendarCardHorizontalPadding,
                     bottom = CalendarPeriodCardBottomPadding,
                 ),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
         ) {
             Row(
                 modifier = Modifier
@@ -1207,7 +1374,7 @@ private fun CalendarWeekCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = CalendarPeriodPageHorizontalGutter),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingSm),
                 ) {
                     weekDays.forEach { day ->
                         val isSelected = day == selectedDate
@@ -1272,10 +1439,10 @@ private fun CalendarWeekDayCell(
         else -> Color.Transparent
     }
     val borderWidth = when {
-        isDropTarget -> 2.dp
-        isSelected -> 1.6.dp
-        isToday -> 1.4.dp
-        else -> 0.dp
+        isDropTarget -> CalendarDayCellBorderDropTarget
+        isSelected -> CalendarDayCellBorderSelected
+        isToday -> CalendarDayCellBorderToday
+        else -> TdayDimens.SpacingNone
     }
     val stateTint = when {
         isDropTarget -> colorScheme.error
@@ -1311,22 +1478,22 @@ private fun CalendarWeekDayCell(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(CalendarPeriodWeekDayCellHeight),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(TdayDimens.RadiusRow),
             colors = CardDefaults.cardColors(containerColor = containerColor),
             border = BorderStroke(
                 width = borderWidth,
                 color = borderColor,
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
             enabled = isEnabled,
             onClick = onClick,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = TdayDimens.SpacingSm),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+                verticalArrangement = Arrangement.spacedBy(CalendarWeekDayCellContentSpacing),
             ) {
                 Text(
                     text = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
@@ -1516,18 +1683,18 @@ private fun CalendarDayCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
                     start = CalendarCardHorizontalPadding,
-                    top = 16.dp,
+                    top = CalendarPeriodCardTopPadding,
                     end = CalendarCardHorizontalPadding,
                     bottom = CalendarPeriodCardBottomPadding,
                 ),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
         ) {
             Row(
                 modifier = Modifier
@@ -1583,10 +1750,10 @@ private fun CalendarDayCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(TdayDimens.RadiusRow))
                         .background(Color.Transparent)
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                        .padding(horizontal = TdayDimens.SpacingSm, vertical = TdayDimens.SpacingXs),
+                    verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
                 ) {
                     Text(
                         text = displayDate.format(
@@ -1650,23 +1817,10 @@ private fun CalendarBarButton(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "calendarBarButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "calendarBarButtonOffsetY",
-    )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -1676,7 +1830,7 @@ private fun CalendarBarButton(
         colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.BarButtonElevation,
-            pressedElevation = 0.dp,
+            pressedElevation = TdayDimens.CardElevationDefault,
         ),
     ) {
         Box(
@@ -1687,7 +1841,7 @@ private fun CalendarBarButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(CalendarBarButtonIconSize),
             )
         }
     }
@@ -1710,35 +1864,26 @@ private fun CalendarTodayButton(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
     val showLabel = collapseProgress().coerceIn(0f, 1f) < 0.5f
 
     val containerColor = CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.22f else 0.12f)
     val buttonBorder = BorderStroke(
-        1.dp,
+        TdayDimens.BorderWidth,
         CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.62f else 0.48f),
     )
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "calendarTodayButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "calendarTodayButtonOffsetY",
-    )
     val horizontalPadding by animateDpAsState(
-        targetValue = if (showLabel) 18.dp else 0.dp,
+        targetValue = if (showLabel) {
+            TdayDimens.SpacingXxl
+        } else {
+            TdayDimens.SpacingNone
+        },
         label = "calendarTodayButtonPadding",
     )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar)
             .animateContentSize(),
         onClick = {
             TdayHaptics.buttonPress(view)
@@ -1755,7 +1900,7 @@ private fun CalendarTodayButton(
         // accented pill that grows a label, and that is deliberate.
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.BarButtonElevation,
-            pressedElevation = 0.dp,
+            pressedElevation = TdayDimens.CardElevationDefault,
         ),
     ) {
         Row(
@@ -1770,7 +1915,7 @@ private fun CalendarTodayButton(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_calendar),
                 contentDescription = contentDescription,
                 tint = CalendarAccentPurple,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(TdayDimens.IconLg),
             )
             if (showLabel) {
                 Text(
@@ -1779,7 +1924,7 @@ private fun CalendarTodayButton(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(start = TdayDimens.SpacingMd),
                 )
             }
         }
@@ -1888,7 +2033,7 @@ private fun CalendarMonthCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CalendarCardCornerRadius),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
     ) {
         Column(
             modifier = Modifier
@@ -1978,7 +2123,7 @@ private fun CalendarMonthCard(
                     monthDays.chunked(7).forEach { week ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(0.dp),
+                            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingNone),
                         ) {
                             week.forEach { cell ->
                                 val taskCount = tasksByDate[cell.date]?.size ?: 0
@@ -2029,7 +2174,7 @@ private fun MiniCalendarNavButton(
         modifier = Modifier
             .width(CalendarCardNavButtonWidth)
             .height(CalendarCardNavButtonHeight)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(CalendarCardNavButtonRadius))
             .background(
                 color = if (enabled && isPressed) {
                     colorScheme.surfaceVariant.copy(alpha = 0.6f)
@@ -2042,7 +2187,7 @@ private fun MiniCalendarNavButton(
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 20.dp,
+                    radius = CalendarCardNavButtonRippleRadius,
                 ),
                 onClick = onClick,
             ),
@@ -2104,11 +2249,11 @@ private fun CalendarDayCell(
         label = "calendarMonthDateCellBorder",
     )
     val targetCellBorderWidth = when {
-        isDropTarget -> 2.dp
-        isSelected -> 1.6.dp
-        isToday -> 1.4.dp
-        isPressed && isEnabled -> 1.2.dp
-        else -> 0.dp
+        isDropTarget -> CalendarDayCellBorderDropTarget
+        isSelected -> CalendarDayCellBorderSelected
+        isToday -> CalendarDayCellBorderToday
+        isPressed && isEnabled -> CalendarDayCellBorderPressed
+        else -> TdayDimens.SpacingNone
     }
     val cellBorderWidth by animateDpAsState(
         targetValue = targetCellBorderWidth,
@@ -2120,7 +2265,7 @@ private fun CalendarDayCell(
         isToday -> CalendarTodayBlue
         else -> CalendarAccentPurple
     }
-    val cellShape = RoundedCornerShape(16.dp)
+    val cellShape = RoundedCornerShape(TdayDimens.RadiusRow)
     val dayTextColor = when {
         isDropTarget || isSelected || isToday -> stateTint
         cell.isCurrentMonth -> colorScheme.onSurface
@@ -2168,7 +2313,10 @@ private fun CalendarDayCell(
                     shape = cellShape,
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
+            verticalArrangement = Arrangement.spacedBy(
+                CalendarMonthDayCellContentSpacing,
+                Alignment.CenterVertically,
+            ),
         ) {
             Box(
                 modifier = Modifier
@@ -2188,7 +2336,7 @@ private fun CalendarDayCell(
             Row(
                 modifier = Modifier.height(CalendarMonthTaskCountHeight),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
             ) {
                 if (taskCount > 0 && isEnabled) {
                     Box(
@@ -2223,29 +2371,43 @@ private fun CalendarTaskDragPreview(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
-    val previewShape = RoundedCornerShape(18.dp)
+    val previewShape = RoundedCornerShape(TdayDimens.RadiusLg)
+    // The pick-up itself. This card used to be composed straight into its final
+    // size and elevation, so the one frame that says "the app has your task"
+    // never existed; [TdayDragLift] argues the rise and its two ends.
+    val lift by TdayDragLift.rememberProgress(rememberTdayMotionEnabled())
     Card(
         modifier = modifier
-            .sizeIn(minWidth = 220.dp, maxWidth = 280.dp),
+            .sizeIn(minWidth = CalendarDragPreviewMinWidth, maxWidth = CalendarDragPreviewMaxWidth)
+            .graphicsLayer {
+                val scale = TdayDragLift.scaleAt(lift)
+                scaleX = scale
+                scaleY = scale
+            },
         shape = previewShape,
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surface.copy(alpha = 0.88f)),
-        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.55f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
+        // Opaque. A card the finger is holding is not a card the user may not
+        // have, and partial alpha is what this app says everywhere else.
+        colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
+        border = BorderStroke(TdayDimens.BorderWidth, colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = TdayDragLift.elevationAt(lift)),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(
+                horizontal = TdayDimens.SpacingXl,
+                vertical = CalendarDragPreviewContentSpacing,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(CalendarDragPreviewContentSpacing),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle),
                 contentDescription = null,
                 tint = colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(CalendarDragPreviewIconSize),
             )
             Column(
                 modifier = Modifier.weight(1f, fill = false),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
             ) {
                 Text(
                     text = todo.title,
@@ -2269,7 +2431,7 @@ private fun CalendarTaskDragPreview(
                     imageVector = tdayListIconForKey(listMeta.iconKey),
                     contentDescription = null,
                     tint = tdayListAccentColor(listMeta.color),
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(CalendarRowTrailingIconSize),
                 )
             }
             priorityIconFor(todo.priority)?.let { priorityIcon ->
@@ -2277,7 +2439,7 @@ private fun CalendarTaskDragPreview(
                     imageVector = priorityIcon,
                     contentDescription = null,
                     tint = tdayPriorityColor(todo.priority),
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(CalendarRowTrailingIconSize),
                 )
             }
         }
@@ -2309,7 +2471,7 @@ private fun CalendarTodoRow(
     val coroutineScope = rememberCoroutineScope()
     // Edit + Copy + Delete: matches the 3-pill width used elsewhere (see
     // SwipeTaskRow.revealWidth).
-    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = 256.dp)
+    val swipeRevealState = rememberTaskSwipeRevealState(todo.id, revealWidth = CalendarSwipeRevealWidth)
     val clipboardManager = LocalClipboardManager.current
     val snackbarManager = LocalSnackbarManager.current
     val copyContext = LocalContext.current
@@ -2338,26 +2500,90 @@ private fun CalendarTodoRow(
         state = swipeRevealState,
         label = "calendarTaskSwipeOffset",
     )
+    val motionEnabled = rememberTdayMotionEnabled()
+    // Gated like the beats in front of it. The last leg of the check-off is timed
+    // against this fade, so a fade still running while its own wait had been zeroed
+    // would pull the row out of the list at full opacity — exactly the pop that leg
+    // exists to prevent.
     val completionAlpha by animateFloatAsState(
         targetValue = if (completionFading) 0f else 1f,
-        animationSpec = tween(
-            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
-        ),
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "calendarTaskCompletionAlpha",
     )
     val completionOffsetY by animateDpAsState(
-        targetValue = if (completionFading) (-10).dp else 0.dp,
-        animationSpec = tween(
-            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
-        ),
+        targetValue = if (completionFading) {
+            CalendarTaskCompletionRiseOffsetY
+        } else {
+            TdayDimens.SpacingNone
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "calendarTaskCompletionOffsetY",
     )
-    val titleStrikeProgress by animateFloatAsState(
-        targetValue = if (localStruck) 1f else 0f,
-        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing),
-        label = "calendarTaskTitleStrikeProgress",
+    // This used to be computed and never read — a 320ms animation nothing drew,
+    // left behind when the swept rule came out of the row. It is back on the
+    // screen now, through the modifier every task row shares.
+    val titleStrikeProgress = rememberTaskStrikeProgress(localStruck, "calendarTaskTitleStrike")
+    var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
+    var noteLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
+    // The number behind that switch, for this row's waits rather than its specs:
+    // the hint's two holds and the three legs of the check-off are all gaps
+    // between beats this row gates on [motionEnabled], which is what makes the
+    // app's own scale the right clock for them. See [scaledDelay].
+    val rowMotionScale = rememberTdayMotionScale()
+    val toggleTint by animateColorAsState(
+        targetValue = if (localChecked) {
+            TdayTaskCompleteAccent
+        } else {
+            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "calendarTaskToggleTint",
+    )
+    val titleColor by animateColorAsState(
+        targetValue = if (localStruck) {
+            colorScheme.onSurface.copy(alpha = 0.78f)
+        } else {
+            colorScheme.onSurface
+        },
+        animationSpec = if (motionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Emphasis,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "calendarTaskTitleColor",
+    )
+    // The other half of the pick-up: the slot this card came out of. It used to
+    // cut to 70 % on the frame the long press fired, alongside a preview that
+    // cut to full size, which is two events for one gesture. Same rung as the
+    // rise, so the row empties exactly as the card leaves it.
+    val vacatedAlpha by animateFloatAsState(
+        targetValue = if (dragging) TdayDragLift.VacatedAlpha else 1f,
+        animationSpec = TdayDragLift.spec(motionEnabled),
+        label = "calendarTaskDragVacated",
     )
     val dueText = todo.due
         ?.let {
@@ -2369,7 +2595,7 @@ private fun CalendarTodoRow(
     val priorityIcon = priorityIconFor(todo.priority)
     val showPriorityIcon = priorityIcon != null
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
-    val rowShape = RoundedCornerShape(16.dp)
+    val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
     val foregroundColor = colorScheme.background
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     LaunchedEffect(openSwipeTaskId, todo.id) {
@@ -2382,11 +2608,11 @@ private fun CalendarTodoRow(
         modifier = modifier
             .fillMaxWidth()
             .graphicsLayer {
-                alpha = if (dragging) completionAlpha * 0.7f else completionAlpha
+                alpha = completionAlpha * vacatedAlpha
                 translationY = completionOffsetY.toPx()
             }
             .semantics(mergeDescendants = true) { },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs),
     ) {
         Box(
             modifier = Modifier
@@ -2397,8 +2623,8 @@ private fun CalendarTodoRow(
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(end = TdayDimens.SpacingXxs),
+                horizontalArrangement = Arrangement.spacedBy(CalendarSwipeActionSpacing),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CalendarSwipeActionButton(
@@ -2520,7 +2746,7 @@ private fun CalendarTodoRow(
                         } else if (!swipeRevealState.isHinting && !pendingCompletion) {
                             claimSwipeSlot()
                             coroutineScope.launch {
-                                swipeRevealState.playHint()
+                                swipeRevealState.playHint(rowMotionScale)
                                 if (latestOpenSwipeTaskId.value == todo.id &&
                                     !swipeRevealState.isOpenOrDragging
                                 ) {
@@ -2531,12 +2757,12 @@ private fun CalendarTodoRow(
                     },
                 shape = rowShape,
                 colors = CardDefaults.cardColors(containerColor = foregroundColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                        .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CalendarCompletionToggleIcon(
@@ -2550,11 +2776,7 @@ private fun CalendarTodoRow(
                         } else {
                             stringResource(R.string.label_mark_complete)
                         },
-                        tint = if (localChecked) {
-                            TdayTaskCompleteAccent
-                        } else {
-                            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                        },
+                        tint = toggleTint,
                         enabled = !pendingCompletion,
                         onClick = {
                             TdayHaptics.completion(view)
@@ -2563,11 +2785,20 @@ private fun CalendarTodoRow(
                             localChecked = true
                             pendingCompletion = true
                             coroutineScope.launch {
-                                delay(CALENDAR_TASK_COMPLETION_CHECK_TO_STRIKE_MS)
+                                scaledDelay(
+                                    CALENDAR_TASK_COMPLETION_CHECK_TO_STRIKE_MS,
+                                    rowMotionScale,
+                                )
                                 localStruck = true
-                                delay(CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS)
+                                scaledDelay(
+                                    CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS,
+                                    rowMotionScale,
+                                )
                                 completionFading = true
-                                delay(CALENDAR_TASK_COMPLETION_FADE_MS)
+                                scaledDelay(
+                                    CALENDAR_TASK_COMPLETION_FADE_MS,
+                                    rowMotionScale,
+                                )
                                 onComplete()
                             }
                         },
@@ -2575,26 +2806,24 @@ private fun CalendarTodoRow(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = 10.dp),
+                            .padding(start = CalendarTaskRowTitleStartPadding),
                     ) {
                         Text(
                             text = todo.title,
-                            color = if (localStruck) {
-                                colorScheme.onSurface.copy(alpha = 0.78f)
-                            } else {
-                                colorScheme.onSurface
-                            },
+                            // One rule per line, swept — the same modifier the task list's
+                            // own row draws, which is why a two-line title here crosses
+                            // out both lines rather than the gap between them.
+                            modifier = Modifier.taskStrikethrough(
+                                progress = titleStrikeProgress,
+                                layout = titleLayoutResult,
+                                color = titleColor,
+                                thickness = TdayDimens.BorderWidthThick,
+                            ),
+                            color = titleColor,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
-                            // Real per-line strikethrough crosses out every line of a
-                            // wrapped title instead of one rule down the middle, the same
-                            // as the task list's own row.
-                            textDecoration = if (localStruck) {
-                                TextDecoration.LineThrough
-                            } else {
-                                TextDecoration.None
-                            },
                             maxLines = 2,
+                            onTextLayout = { titleLayoutResult = it },
                         )
                         dueText?.let { text ->
                             Text(
@@ -2604,20 +2833,26 @@ private fun CalendarTodoRow(
                             )
                         }
                         flattenNotesToPlainText(todo.description).takeIf { it.isNotBlank() }?.let { note ->
+                            val noteColor = colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                             Text(
                                 text = note,
-                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                // Struck alongside the title, on the title's own sweep.
+                                modifier = Modifier.taskStrikethrough(
+                                    progress = titleStrikeProgress,
+                                    layout = noteLayoutResult,
+                                    color = noteColor,
+                                    thickness = TdayDimens.BorderWidthThick,
+                                ),
+                                color = noteColor,
                                 style = MaterialTheme.typography.bodySmall,
-                                // Struck alongside the title so the whole task
-                                // reads as done during the completion animation.
-                                textDecoration = if (localStruck) TextDecoration.LineThrough else null,
+                                onTextLayout = { noteLayoutResult = it },
                             )
                         }
                     }
                     if (showListIndicator || showPriorityIcon) {
                         Row(
-                            modifier = Modifier.padding(end = 24.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(end = TdayDimens.Spacing3xl),
+                            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             if (showListIndicator) {
@@ -2625,7 +2860,7 @@ private fun CalendarTodoRow(
                                     imageVector = tdayListIconForKey(listMeta?.iconKey),
                                     contentDescription = stringResource(R.string.label_task_list),
                                     tint = listIndicatorColor,
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(CalendarRowTrailingIconSize),
                                 )
                             }
                             if (priorityIcon != null) {
@@ -2633,7 +2868,7 @@ private fun CalendarTodoRow(
                                     imageVector = priorityIcon,
                                     contentDescription = stringResource(R.string.label_priority_task),
                                     tint = tdayPriorityColor(todo.priority),
-                                    modifier = Modifier.size(18.dp),
+                                    modifier = Modifier.size(CalendarRowTrailingIconSize),
                                 )
                             }
                         }
@@ -2645,7 +2880,7 @@ private fun CalendarTodoRow(
             Spacer(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
+                    .height(TdayDimens.BorderWidth)
                     .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
             )
         }
@@ -2666,21 +2901,79 @@ private fun CalendarCompletedTodoRow(
     var fading by remember(item.id) { mutableStateOf(false) }
     val showCompletedState = !pendingUncomplete
     val showStrikethrough = !unstruck
+    val restoreMotionEnabled = rememberTdayMotionEnabled()
+    // Gated like the beats in front of it. The last leg of the restore is timed
+    // against this fade, so a fade still running while its own wait had been zeroed
+    // would pull the row out of the list at full opacity — exactly the pop that leg
+    // exists to prevent.
     val rowAlpha by animateFloatAsState(
         targetValue = if (fading) 0f else 1f,
-        animationSpec = tween(
-            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
-        ),
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "calendarCompletedRestoreAlpha",
     )
     val rowOffsetY by animateDpAsState(
-        targetValue = if (fading) (-10).dp else 0.dp,
-        animationSpec = tween(
-            durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-            easing = FastOutSlowInEasing
-        ),
+        targetValue = if (fading) {
+            CalendarTaskCompletionRiseOffsetY
+        } else {
+            TdayDimens.SpacingNone
+        },
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
         label = "calendarCompletedRestoreOffsetY",
+    )
+    // Un-completing is the check-off played backwards, and the rule retracts the
+    // way it swept. `animateFloatAsState` starts AT its target, so a row that was
+    // already complete when the screen opened is simply drawn struck — the sweep
+    // only ever plays for the tap that asked for it.
+    val titleStrikeProgress =
+        rememberTaskStrikeProgress(showStrikethrough, "calendarCompletedTitleStrike")
+    var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
+    // Same three legs as the check-off, so the same clock. See [scaledDelay].
+    val restoreMotionScale = rememberTdayMotionScale()
+    val restoreToggleTint by animateColorAsState(
+        targetValue = if (showCompletedState) {
+            TdayTaskCompleteAccent
+        } else {
+            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
+        },
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "calendarCompletedToggleTint",
+    )
+    val restoreTitleColor by animateColorAsState(
+        targetValue = if (showStrikethrough) {
+            colorScheme.onSurface.copy(alpha = 0.78f)
+        } else {
+            colorScheme.onSurface
+        },
+        animationSpec = if (restoreMotionEnabled) {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Emphasis,
+                easing = TdayMotionTokens.Easings.Standard,
+            )
+        } else {
+            snap()
+        },
+        label = "calendarCompletedTitleColor",
     )
     val dueText = item.due
         ?.let {
@@ -2694,7 +2987,7 @@ private fun CalendarCompletedTodoRow(
     val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
     val priorityIcon = priorityIconFor(item.priority)
     val showPriorityIcon = priorityIcon != null
-    val rowShape = RoundedCornerShape(16.dp)
+    val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
 
     Column(
         modifier = Modifier
@@ -2704,7 +2997,7 @@ private fun CalendarCompletedTodoRow(
                 translationY = rowOffsetY.toPx()
             }
             .semantics(mergeDescendants = true) { },
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs),
     ) {
         Card(
             modifier = Modifier
@@ -2712,12 +3005,12 @@ private fun CalendarCompletedTodoRow(
                 .height(CalendarTaskRowHeight),
             shape = rowShape,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CalendarCompletionToggleIcon(
@@ -2727,21 +3020,30 @@ private fun CalendarCompletedTodoRow(
                         ImageVector.vectorResource(R.drawable.ic_lucide_circle)
                     },
                     contentDescription = stringResource(R.string.label_undo_complete),
-                    tint = if (showCompletedState) {
-                        TdayTaskCompleteAccent
-                    } else {
-                        colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-                    },
+                    tint = restoreToggleTint,
                     enabled = !pendingUncomplete,
                     onClick = {
                         TdayHaptics.toggle(view, on = false)
                         pendingUncomplete = true
+                        // The check-off's own beats, run backwards. This row used to
+                        // keep a third set — 180 / 180 — so undoing a completion took
+                        // a different length of time from making one, on the same
+                        // screen, through the same control.
                         coroutineScope.launch {
-                            delay(180)
+                            scaledDelay(
+                                CALENDAR_TASK_COMPLETION_CHECK_TO_STRIKE_MS,
+                                restoreMotionScale,
+                            )
                             unstruck = true
-                            delay(180)
+                            scaledDelay(
+                                CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS,
+                                restoreMotionScale,
+                            )
                             fading = true
-                            delay(CALENDAR_TASK_COMPLETION_FADE_MS)
+                            scaledDelay(
+                                CALENDAR_TASK_COMPLETION_FADE_MS,
+                                restoreMotionScale,
+                            )
                             onUndoComplete()
                         }
                     },
@@ -2750,23 +3052,21 @@ private fun CalendarCompletedTodoRow(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = 10.dp),
+                        .padding(start = CalendarTaskRowTitleStartPadding),
                 ) {
                     Text(
                         text = item.title,
-                        color = if (showStrikethrough) {
-                            colorScheme.onSurface.copy(alpha = 0.78f)
-                        } else {
-                            colorScheme.onSurface
-                        },
+                        modifier = Modifier.taskStrikethrough(
+                            progress = titleStrikeProgress,
+                            layout = titleLayoutResult,
+                            color = restoreTitleColor,
+                            thickness = TdayDimens.BorderWidthThick,
+                        ),
+                        color = restoreTitleColor,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
-                        textDecoration = if (showStrikethrough) {
-                            TextDecoration.LineThrough
-                        } else {
-                            TextDecoration.None
-                        },
                         maxLines = 2,
+                        onTextLayout = { titleLayoutResult = it },
                     )
                     dueText?.let { text ->
                         Text(
@@ -2778,8 +3078,8 @@ private fun CalendarCompletedTodoRow(
                 }
                 if (showPriorityIcon) {
                     Row(
-                        modifier = Modifier.padding(end = 24.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(end = TdayDimens.Spacing3xl),
+                        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (showListIndicator) {
@@ -2787,7 +3087,7 @@ private fun CalendarCompletedTodoRow(
                                 imageVector = tdayListIconForKey(listMeta?.iconKey),
                                 contentDescription = stringResource(R.string.label_task_list),
                                 tint = listIndicatorColor,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(CalendarRowTrailingIconSize),
                             )
                         }
                         Icon(
@@ -2795,7 +3095,7 @@ private fun CalendarCompletedTodoRow(
                                 ?: ImageVector.vectorResource(R.drawable.ic_lucide_flag),
                             contentDescription = stringResource(R.string.label_priority_task),
                             tint = tdayPriorityColor(item.priority),
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(CalendarRowTrailingIconSize),
                         )
                     }
                 } else if (showListIndicator) {
@@ -2804,8 +3104,8 @@ private fun CalendarCompletedTodoRow(
                         contentDescription = stringResource(R.string.label_task_list),
                         tint = listIndicatorColor,
                         modifier = Modifier
-                            .padding(end = 24.dp)
-                            .size(18.dp),
+                            .padding(end = TdayDimens.Spacing3xl)
+                            .size(CalendarRowTrailingIconSize),
                     )
                 }
             }
@@ -2814,7 +3114,7 @@ private fun CalendarCompletedTodoRow(
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
+                .height(TdayDimens.BorderWidth)
                 .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
         )
     }
@@ -2847,7 +3147,7 @@ private fun CalendarSwipeActionButton(
 
     Column(
         modifier = Modifier
-            .sizeIn(minWidth = 60.dp)
+            .sizeIn(minWidth = CalendarSwipeActionMinWidth)
             .graphicsLayer {
                 alpha = easedReveal
                 val revealScale = 0.38f + (0.62f * easedReveal)
@@ -2855,17 +3155,20 @@ private fun CalendarSwipeActionButton(
                 scaleY = pressedScale * revealScale
             },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs),
     ) {
         Card(
-            modifier = Modifier.size(width = 56.dp, height = 34.dp),
+            modifier = Modifier.size(
+                width = CalendarSwipeActionButtonWidth,
+                height = CalendarSwipeActionButtonHeight,
+            ),
             onClick = onClick,
             interactionSource = interactionSource,
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(TdayDimens.RadiusLg),
             colors = CardDefaults.cardColors(containerColor = background),
             elevation = CardDefaults.cardElevation(
-                defaultElevation = 0.dp,
-                pressedElevation = 0.dp,
+                defaultElevation = TdayDimens.CardElevationDefault,
+                pressedElevation = TdayDimens.CardElevationDefault,
             ),
         ) {
             Box(
@@ -2876,7 +3179,7 @@ private fun CalendarSwipeActionButton(
                     imageVector = icon,
                     contentDescription = contentDescription,
                     tint = tint,
-                    modifier = Modifier.size(21.dp),
+                    modifier = Modifier.size(CalendarSwipeActionIconSize),
                 )
             }
         }
@@ -2901,25 +3204,44 @@ private fun CalendarCompletionToggleIcon(
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .sizeIn(
+                minWidth = CalendarCompletionToggleTouchTarget,
+                minHeight = CalendarCompletionToggleTouchTarget,
+            )
             .clip(CircleShape)
             .clickable(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    radius = 24.dp,
+                    radius = CalendarCompletionToggleRippleRadius,
                 ),
                 onClick = onClick,
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = imageVector,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(24.dp),
-        )
+        // Crossed over rather than swapped, for the reason the task list's own
+        // toggle gives: here the glyph is the whole control, so a one-frame swap
+        // is the control hard-cutting.
+        Crossfade(
+            targetState = imageVector,
+            animationSpec = if (rememberTdayMotionEnabled()) {
+                tween(
+                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    easing = TdayMotionTokens.Easings.Standard,
+                )
+            } else {
+                snap()
+            },
+            label = "calendarCompletionToggleGlyph",
+        ) { glyph ->
+            Icon(
+                imageVector = glyph,
+                contentDescription = contentDescription.takeIf { glyph == imageVector },
+                tint = tint,
+                modifier = Modifier.size(CalendarCompletionToggleIconSize),
+            )
+        }
     }
 }
 

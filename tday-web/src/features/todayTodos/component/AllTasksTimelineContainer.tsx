@@ -22,7 +22,13 @@ import { useTodayBuckets } from "../lib/useTodayBuckets";
 import { useTimelineSections } from "../lib/useTimelineSections";
 import { useTimelineEmptyState } from "../lib/useTimelineEmptyState";
 import { isTimelineScope } from "../lib/timelineScopeHelpers";
-import { TODAY_EARLIER_EXIT_MS } from "../lib/todayEarlierIllustration";
+import {
+  earlierIsExpanding,
+  OVERDUE_ROWS_FADE_MS,
+  TODAY_EARLIER_EXIT_MS,
+} from "../lib/todayEarlierIllustration";
+import { useRowPlacement } from "@/hooks/useRowPlacement";
+import { DELAY_MS } from "@/lib/motion";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import TaskSelectionProvider from "@/providers/TaskSelectionProvider";
 import BulkSelectButton from "@/components/todo/bulk/BulkSelectButton";
@@ -102,14 +108,16 @@ const AllTasksTimelineContainer = ({
   // `useEarlierExpandHandoff`'s own doc comment.
   const {
     expanded: earlierExpanded,
-    handoffPending: earlierHandoffPending,
+    handoff: earlierHandoff,
+    beginSceneExit,
     toggle: toggleEarlierExpanded,
     setExpandedImmediately: setEarlierExpandedImmediately,
-  } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS);
+  } = useEarlierExpandHandoff(TODAY_EARLIER_EXIT_MS, OVERDUE_ROWS_FADE_MS);
   // Empty date buckets are drop targets and nothing else, so they exist only for
   // the length of a drag.
   const [dragActive, setDragActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const placementRef = useRowPlacement<HTMLDivElement>();
   const { icon: ScopeIcon, emptyTitle, emptyBody, heading: scopeHeading } = SCOPE_CONFIG[scope];
   const pageHeading = getPageHeading(scope, scopeHeading, appDict);
   const barSlots = useNativePageBarSlots();
@@ -165,8 +173,14 @@ const AllTasksTimelineContainer = ({
 
   // Today/Overdue's own paging, plus what Select all reaches — see
   // `useTimelinePaging`'s own doc comment.
-  const { earlierSections, regularSections, hasMore, sentinelRef, selectableTodos } =
-    useTimelinePaging({
+  const {
+    earlierSections,
+    regularSections,
+    hasMore,
+    pageReveal,
+    sentinelRef,
+    selectableTodos,
+  } = useTimelinePaging({
       scopeFilteredItems,
       timeline,
       timelineSections,
@@ -186,6 +200,7 @@ const AllTasksTimelineContainer = ({
     isDayDone,
     celebrate,
     showEmptyIllustration,
+    earlierSlotChangesHands,
     showTodayEarlierSection,
   } = useTimelineEmptyState({
     scope,
@@ -194,7 +209,8 @@ const AllTasksTimelineContainer = ({
     todoLoading,
     isSearching,
     earlierExpanded,
-    earlierHandoffPending,
+    earlierHandoff,
+    beginSceneExit,
     todayHasEarlierItems,
   });
 
@@ -208,7 +224,15 @@ const AllTasksTimelineContainer = ({
       useReorderTodo={useReorderTodo}
     >
       <TaskSelectionProvider rows={selectableTodos}>
-        <div className="mb-20">
+        {/* The page's children travel when one of them takes a new slot. The empty
+            state is why: it is `min-h-[42vh]`, so the frame that prunes the last row
+            also hands that block of the screen to a scene that was not there before —
+            and everything under it (the Earlier bucket, the no-results state, the
+            pager) was put in its new place in that same frame, which is the one moment
+            on this screen with no motion of any kind to read it by. The scene's own
+            arrival is unchanged and stays on the Scene rung; this is the Emphasis one
+            the geometry asks for, because a slot is a position. */}
+        <div ref={placementRef} className="mb-20">
           <ScreenWatermark icon={ScopeIcon} />
           {/* The search field is this page's pinned bar, so the header below
               renders only the block that scrolls away and docks its title into
@@ -250,7 +274,7 @@ const AllTasksTimelineContainer = ({
               time-of-day drop targets are suppressed below. */}
           {showTodayScope && <WeekInReviewCard />}
 
-          {todoLoading && <TodoListLoading heading={pageHeading} />}
+          <TodoListLoading heading={pageHeading} loading={todoLoading} />
 
           {/* The three time buckets are drop targets, so they stay visible (even
               empty ones) as long as the day holds at least one task — but under a
@@ -275,8 +299,8 @@ const AllTasksTimelineContainer = ({
               `showEmptyIllustration` (not `showEmpty` directly): identical to
               `showEmpty` everywhere except a scope with a non-empty, expanded
               Earlier bucket — see `shouldShowTodayEmptyIllustration`. The
-              wrapper div only ever carries the exit animation while
-              `earlierHandoffPending` is genuinely true, so it is inert outside
+              wrapper div only ever carries the exit animation while the scene
+              is the half of the swap that is leaving, so it is inert outside
               an Earlier hand-off.
 
               Rendered BEFORE the Earlier-holding blocks below (Today's own
@@ -294,7 +318,13 @@ const AllTasksTimelineContainer = ({
               accentColor={timelineScopeAccentColors[scope]}
               isDayDone={isDayDone}
               celebrate={celebrate}
-              earlierHandoffPending={earlierHandoffPending}
+              // The scene is drawn inline, so mounting it is what moves everything
+              // below into a new slot (the travel the wrapper above owns). The burst
+              // waits that out rather than firing across it, and the scene's own lead
+              // is added on top of the wait — travel, then burst, then scene, which is
+              // what `TdayFeedItemMotion.CelebrationStartDelayMillis` buys on Android.
+              celebrationStartDelayMs={DELAY_MS.placementLead}
+              earlierHandoff={earlierHandoff}
               locale={locale}
               emptyTitle={emptyTitle}
               emptyBody={emptyBody}
@@ -311,18 +341,25 @@ const AllTasksTimelineContainer = ({
               // A live query outranks a shut bucket: these screens open with
               // Earlier closed, and a task the search turns up in there must not
               // stay hidden behind its header. Native makes the same call.
-              // `!earlierHandoffPending`: mid hand-off, Earlier's own rows stay
-              // hidden until the illustration above has actually finished
-              // exiting — same requirement-3 sequencing Today's own Earlier
-              // section observes.
-              earlierExpanded={(earlierExpanded && !earlierHandoffPending) || isSearching}
-              // Passes `showEmptyIllustration` through exactly like Today's own
-              // `TodayEarlierSection` does below: when the illustration
-              // currently owns the slot, expanding Earlier hands off through
-              // it first (requirement 3) instead of the plain immediate toggle
-              // this used to always be — see `useEarlierExpandHandoff`'s own
-              // doc comment for why a single boolean is enough to cover both.
-              onToggleEarlier={() => toggleEarlierExpanded(showEmptyIllustration)}
+              // `earlierExpanded` alone is the whole sequencing signal: the
+              // hand-off holds it false until the illustration above has
+              // finished exiting, and on the way back it goes false first and
+              // the rows linger on their own fade (`useFadeUnmount`) — so
+              // there is no second flag to read here.
+              earlierExpanded={earlierExpanded || isSearching}
+              // The one thing `earlierExpanded` cannot say, and the header is
+              // the only part of the screen that needs it: on the way open
+              // that flag is false for the whole hand-off, so the chevron
+              // would sit there looking untapped. See `earlierIsExpanding`.
+              earlierExpanding={earlierIsExpanding({ earlierHandoff })}
+              // Passes `earlierSlotChangesHands` through exactly like Today's
+              // own `TodayEarlierSection` does below: when the scene and
+              // Earlier's rows are trading the slot, the tap is sequenced —
+              // whichever way it goes — instead of being the plain immediate
+              // toggle this used to always be on the way back. See
+              // `useEarlierExpandHandoff`'s own doc comment for why one
+              // boolean covers both directions.
+              onToggleEarlier={() => toggleEarlierExpanded(earlierSlotChangesHands)}
               onDragActiveChange={setDragActive}
             />
           )}
@@ -342,8 +379,9 @@ const AllTasksTimelineContainer = ({
             <TodayEarlierSection
               todos={earlierItems}
               label={appDict("overdue")}
-              expanded={earlierExpanded && !earlierHandoffPending}
-              onToggle={() => toggleEarlierExpanded(showEmptyIllustration)}
+              expanded={earlierExpanded}
+              expanding={earlierIsExpanding({ earlierHandoff })}
+              onToggle={() => toggleEarlierExpanded(earlierSlotChangesHands)}
               highlightedTodoId={focusedTaskId}
             />
           )}
@@ -368,9 +406,32 @@ const AllTasksTimelineContainer = ({
             />
           )}
 
+          {/* Rows land ten at a time with nothing on screen to mark it, so the
+              reveal is the one event this feed owes a reader. A live region only
+              speaks when its contents change, and `hasMore` does not change when
+              a page lands — it is still true — so the sentence has to be the
+              count. `pageReveal` is null through the first page, which leaves
+              this node mounted and empty: a status region that arrives already
+              carrying text is announced at the reader's discretion, while text
+              added to one that was already in the document is announced
+              reliably, and that is the frame the rows arrive on. It goes back to
+              null when the scope changes under the feed and paging resets — a
+              removal, which the default `aria-relevant` leaves silent, so the
+              completion that caused it is not followed by a page count. */}
+          <div role="status" aria-live="polite" className="sr-only">
+            {pageReveal
+              ? appDict("tasksShownOfTotal", {
+                  shown: pageReveal.shown,
+                  total: pageReveal.total,
+                })
+              : ""}
+          </div>
+          {/* The visible half says what the gesture is, not what the app is
+              doing: there is no request behind this strip, only rows already in
+              memory waiting to be slid into view. */}
           {hasMore && (
             <div ref={sentinelRef} className="flex h-12 items-center justify-center">
-              <span className="text-xs text-muted-foreground">Loading more tasks...</span>
+              <span className="text-xs text-muted-foreground">{appDict("scrollForMore")}</span>
             </div>
           )}
         </div>

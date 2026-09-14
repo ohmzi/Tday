@@ -2,6 +2,9 @@ package com.ohmz.tday.compose.feature.onboarding
 
 import android.content.Context
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -9,6 +12,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -90,9 +98,12 @@ import com.ohmz.tday.compose.core.data.auth.LoginCredentialSource
 import com.ohmz.tday.compose.core.data.auth.SystemCredential
 import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.core.model.SecurityQuestion
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.feature.auth.AuthUiState
 import com.ohmz.tday.compose.feature.auth.ForgotPasswordPanel
 import com.ohmz.tday.compose.feature.auth.LoginCredentialCoordinator
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -110,6 +121,24 @@ private enum class WizardViewState {
     LOGIN,
     AUTHENTICATING,
 }
+
+/**
+ * Where this state sits in the wizard's sequence, or `null` if it is not a place in it.
+ *
+ * Spelled out rather than read off `ordinal`, and the reason is not only that CONNECTING
+ * is declared between SERVER and LOGIN. CONNECTING and AUTHENTICATING are panels the
+ * wizard raises *over* wherever the user already is while it waits on the network; they
+ * are not steps, and the chips above them never mark one complete. Giving them a position
+ * would make the wizard slide for them — and slide backwards on the way out of a failed
+ * connect — telling the user they had moved when the step they are on never changed.
+ */
+private val WizardViewState.stepOrder: Int?
+    get() = when (this) {
+        WizardViewState.MODE -> 0
+        WizardViewState.SERVER -> 1
+        WizardViewState.LOGIN -> 2
+        WizardViewState.CONNECTING, WizardViewState.AUTHENTICATING -> null
+    }
 
 private enum class AuthPanelMode {
     SIGN_IN,
@@ -455,6 +484,7 @@ fun OnboardingWizardOverlay(
         step == WizardStep.SERVER -> WizardViewState.SERVER
         else -> WizardViewState.MODE
     }
+    val motionEnabled = rememberTdayMotionEnabled()
 
     // A certificate the device cannot verify is never trusted silently: the user sees the exact
     // fingerprint and confirms it here, and only that fingerprint is then pinned.
@@ -463,7 +493,7 @@ fun OnboardingWizardOverlay(
             onDismissRequest = onDismissServerTrust,
             title = { Text(stringResource(R.string.onboarding_trust_dialog_title)) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg)) {
                     Text(
                         text = stringResource(R.string.onboarding_trust_dialog_body),
                         style = MaterialTheme.typography.bodyMedium,
@@ -549,10 +579,10 @@ fun OnboardingWizardOverlay(
         Card(
             modifier = Modifier
                 .width(cardWidth),
-            shape = RoundedCornerShape(34.dp),
+            shape = RoundedCornerShape(TdayDimens.RadiusSheet),
             colors = CardDefaults.cardColors(containerColor = colorScheme.background),
-            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp),
-            border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.08f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = WIZARD_CARD_ELEVATION),
+            border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.08f)),
         ) {
             Box(
                 modifier = Modifier
@@ -575,18 +605,18 @@ fun OnboardingWizardOverlay(
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXl),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_sun),
                             contentDescription = null,
                             tint = TdayTitleIconDayAccent,
-                            modifier = Modifier.size(27.dp),
+                            modifier = Modifier.size(WIZARD_BRAND_ICON_SIZE),
                         )
                         Text(
                             text = stringResource(R.string.app_name),
@@ -596,7 +626,7 @@ fun OnboardingWizardOverlay(
                         )
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING)) {
                         WizardStepChip(
                             modifier = Modifier.weight(1f),
                             title = stringResource(R.string.onboarding_step_mode),
@@ -622,17 +652,88 @@ fun OnboardingWizardOverlay(
                         )
                     }
 
-                    AnimatedContent(targetState = viewState, label = "wizardState") { state ->
+                    // The three chips above say WHERE the user is; until now nothing said
+                    // which WAY they had just gone. A crossfade — which is what an
+                    // AnimatedContent with no transitionSpec plays — is the one answer an
+                    // ordered sequence cannot give, and tapping Back off the server form
+                    // looked exactly like tapping Continue onto it.
+                    //
+                    // The direction comes from `stepOrder` and never from the enum: two of
+                    // the five states are transient panels with no position, and the spec
+                    // below refuses to slide for them rather than inventing one.
+                    //
+                    // A step panel ARRIVES, so the incoming half is Enter; the panel being
+                    // left is an absence and takes Quick, which is the first idiom rule
+                    // capping an exit at the enter it undoes. `SizeTransform(clip = false)`
+                    // in every branch because the three panels are different heights and
+                    // the default clips — the taller one would be chopped mid-slide.
+                    AnimatedContent(
+                        targetState = viewState,
+                        transitionSpec = {
+                            val from = initialState.stepOrder
+                            val to = targetState.stepOrder
+                            when {
+                                !motionEnabled ->
+                                    // `using null` as well as the two Nones: the default
+                                    // size transform is a spring, and leaving it on would
+                                    // keep the trip the preference asked to remove.
+                                    EnterTransition.None togetherWith ExitTransition.None using null
+
+                                from != null && to != null -> {
+                                    // Forward means the arriving panel starts to the right
+                                    // of the slot and the one it replaces leaves to the
+                                    // left; going back reverses both.
+                                    val sign = if (to > from) 1 else -1
+                                    slideInHorizontally(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Enter,
+                                            easing = TdayMotionTokens.Easings.Enter,
+                                        ),
+                                    ) { sign * (it / 3) } + fadeIn(
+                                        tween(
+                                            durationMillis = TdayMotionTokens.Durations.Enter,
+                                            easing = TdayMotionTokens.Easings.Enter,
+                                        ),
+                                    ) togetherWith slideOutHorizontally(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Quick,
+                                            easing = TdayMotionTokens.Easings.Exit,
+                                        ),
+                                    ) { -sign * (it / 3) } + fadeOut(
+                                        tween(
+                                            durationMillis = TdayMotionTokens.Durations.Quick,
+                                            easing = TdayMotionTokens.Easings.Exit,
+                                        ),
+                                    ) using SizeTransform(clip = false)
+                                }
+
+                                // A spinner going up over the step the user is still on, or
+                                // coming back down off it. Nobody moved, so nothing slides.
+                                else -> fadeIn(
+                                    tween(
+                                        durationMillis = TdayMotionTokens.Durations.Enter,
+                                        easing = TdayMotionTokens.Easings.Enter,
+                                    ),
+                                ) togetherWith fadeOut(
+                                    tween(
+                                        durationMillis = TdayMotionTokens.Durations.Quick,
+                                        easing = TdayMotionTokens.Easings.Exit,
+                                    ),
+                                ) using SizeTransform(clip = false)
+                            }
+                        },
+                        label = "wizardState",
+                    ) { state ->
                         when (state) {
                             WizardViewState.MODE -> {
-                                Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(WIZARD_MODE_PANEL_SPACING)) {
                                     WizardHeroTile(
                                         title = stringResource(R.string.onboarding_mode_title),
                                         subtitle = stringResource(R.string.onboarding_mode_subtitle),
                                         imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_sparkles),
                                         color = Color(0xFF6EA8E1),
                                     )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING)) {
                                         WizardModeChoiceButton(
                                             modifier = Modifier.weight(1f),
                                             title = stringResource(R.string.onboarding_mode_server_short_title),
@@ -668,7 +769,7 @@ fun OnboardingWizardOverlay(
                             }
 
                             WizardViewState.SERVER -> {
-                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING)) {
                                     WizardHeroTile(
                                         title = stringResource(R.string.onboarding_mode_server_title),
                                         subtitle = stringResource(R.string.onboarding_server_hero_subtitle),
@@ -691,13 +792,13 @@ fun OnboardingWizardOverlay(
                                             onGo = { connectToServer() },
                                             onDone = { connectToServer() },
                                         ),
-                                        shape = RoundedCornerShape(22.dp),
+                                        shape = RoundedCornerShape(TdayDimens.RadiusField),
                                         colors = fieldColors,
                                     )
 
                                     serverError?.let { message ->
                                         Text(
-                                            modifier = Modifier.padding(top = 8.dp),
+                                            modifier = Modifier.padding(top = TdayDimens.SpacingMd),
                                             text = message,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = colorScheme.error,
@@ -705,7 +806,7 @@ fun OnboardingWizardOverlay(
 
                                         if (serverCanResetTrust) {
                                             TextButton(
-                                                modifier = Modifier.padding(top = 4.dp),
+                                                modifier = Modifier.padding(top = TdayDimens.SpacingXs),
                                                 onClick = {
                                                     val value = serverUrl.trim()
                                                     if (value.isBlank()) return@TextButton
@@ -754,7 +855,7 @@ fun OnboardingWizardOverlay(
                                     Button(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(48.dp),
+                                            .height(WIZARD_PRIMARY_BUTTON_HEIGHT),
                                         enabled = serverUrl.isNotBlank() && !isResettingTrust,
                                         onClick = connectToServer,
                                         colors = ButtonDefaults.buttonColors(
@@ -768,7 +869,7 @@ fun OnboardingWizardOverlay(
                                     TextButton(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(top = 4.dp),
+                                            .padding(top = TdayDimens.SpacingXs),
                                         enabled = !isResettingTrust,
                                         onClick = {
                                             keyboardController?.hide()
@@ -803,7 +904,7 @@ fun OnboardingWizardOverlay(
                                             OutlinedTextField(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 10.dp)
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING)
                                                     .tdayAutofill(
                                                         autofillTypes = listOf(
                                                             AutofillType.Username,
@@ -825,13 +926,13 @@ fun OnboardingWizardOverlay(
                                                 keyboardActions = KeyboardActions(
                                                     onNext = { passwordFocusRequester.requestFocus() },
                                                 ),
-                                                shape = RoundedCornerShape(22.dp),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
                                                 colors = fieldColors,
                                             )
                                             OutlinedTextField(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 10.dp)
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING)
                                                     .focusRequester(passwordFocusRequester)
                                                     .tdayAutofill(
                                                         autofillTypes = listOf(AutofillType.Password),
@@ -853,13 +954,13 @@ fun OnboardingWizardOverlay(
                                                     onDone = { signIn() },
                                                 ),
                                                 visualTransformation = PasswordVisualTransformation(),
-                                                shape = RoundedCornerShape(22.dp),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
                                                 colors = fieldColors,
                                             )
 
                                             localAuthError?.let { message ->
                                                 Text(
-                                                    modifier = Modifier.padding(top = 8.dp),
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
                                                     text = message,
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.error,
@@ -867,7 +968,7 @@ fun OnboardingWizardOverlay(
                                             }
                                             authUiState.errorMessage?.let { message ->
                                                 Text(
-                                                    modifier = Modifier.padding(top = 8.dp),
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
                                                     text = message,
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.error,
@@ -875,7 +976,7 @@ fun OnboardingWizardOverlay(
                                             }
                                             authUiState.infoMessage?.let { message ->
                                                 Text(
-                                                    modifier = Modifier.padding(top = 8.dp),
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
                                                     text = message,
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.tertiary,
@@ -885,7 +986,7 @@ fun OnboardingWizardOverlay(
                                                 ?.takeIf { it != authUiState.infoMessage }
                                                 ?.let { message ->
                                                 Text(
-                                                    modifier = Modifier.padding(top = 8.dp),
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
                                                     text = message,
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.tertiary,
@@ -895,8 +996,8 @@ fun OnboardingWizardOverlay(
                                             Button(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 4.dp)
-                                                    .height(48.dp),
+                                                    .padding(top = TdayDimens.SpacingXs)
+                                                    .height(WIZARD_PRIMARY_BUTTON_HEIGHT),
                                                 enabled = username.isNotBlank() && password.isNotBlank() && !authUiState.isLoading,
                                                 onClick = signIn,
                                                 colors = ButtonDefaults.buttonColors(
@@ -972,7 +1073,7 @@ fun OnboardingWizardOverlay(
                                             OutlinedTextField(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 10.dp),
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING),
                                                 value = firstName,
                                                 onValueChange = {
                                                     firstName = it
@@ -985,13 +1086,13 @@ fun OnboardingWizardOverlay(
                                                 keyboardActions = KeyboardActions(
                                                     onNext = { passwordFocusRequester.requestFocus() },
                                                 ),
-                                                shape = RoundedCornerShape(22.dp),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
                                                 colors = fieldColors,
                                             )
                                             OutlinedTextField(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 10.dp)
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING)
                                                     .focusRequester(passwordFocusRequester)
                                                     .tdayAutofill(
                                                         autofillTypes = listOf(
@@ -1014,13 +1115,13 @@ fun OnboardingWizardOverlay(
                                                 keyboardActions = KeyboardActions(
                                                     onNext = { registerPasswordFocusRequester.requestFocus() },
                                                 ),
-                                                shape = RoundedCornerShape(22.dp),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
                                                 colors = fieldColors,
                                             )
                                             OutlinedTextField(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 10.dp)
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING)
                                                     .focusRequester(registerPasswordFocusRequester)
                                                     .tdayAutofill(
                                                         autofillTypes = listOf(AutofillType.NewPassword),
@@ -1042,13 +1143,13 @@ fun OnboardingWizardOverlay(
                                                     onNext = { registerConfirmFocusRequester.requestFocus() },
                                                 ),
                                                 visualTransformation = PasswordVisualTransformation(),
-                                                shape = RoundedCornerShape(22.dp),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
                                                 colors = fieldColors,
                                             )
                                             OutlinedTextField(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 10.dp)
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING)
                                                     .focusRequester(registerConfirmFocusRequester)
                                                     .tdayAutofill(
                                                         autofillTypes = listOf(AutofillType.NewPassword),
@@ -1070,13 +1171,13 @@ fun OnboardingWizardOverlay(
                                                     onDone = { createAccount() },
                                                 ),
                                                 visualTransformation = PasswordVisualTransformation(),
-                                                shape = RoundedCornerShape(22.dp),
+                                                shape = RoundedCornerShape(TdayDimens.RadiusField),
                                                 colors = fieldColors,
                                             )
 
                                             localAuthError?.let { message ->
                                                 Text(
-                                                    modifier = Modifier.padding(top = 8.dp),
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
                                                     text = message,
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.error,
@@ -1084,7 +1185,7 @@ fun OnboardingWizardOverlay(
                                             }
                                             authUiState.errorMessage?.let { message ->
                                                 Text(
-                                                    modifier = Modifier.padding(top = 8.dp),
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
                                                     text = message,
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.error,
@@ -1092,7 +1193,7 @@ fun OnboardingWizardOverlay(
                                             }
                                             authUiState.infoMessage?.let { message ->
                                                 Text(
-                                                    modifier = Modifier.padding(top = 8.dp),
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
                                                     text = message,
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.tertiary,
@@ -1102,8 +1203,8 @@ fun OnboardingWizardOverlay(
                                             Button(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 4.dp)
-                                                    .height(48.dp),
+                                                    .padding(top = TdayDimens.SpacingXs)
+                                                    .height(WIZARD_PRIMARY_BUTTON_HEIGHT),
                                                 enabled = firstName.isNotBlank() &&
                                                         username.isNotBlank() &&
                                                     registerPassword.isNotBlank() &&
@@ -1163,7 +1264,7 @@ fun OnboardingWizardOverlay(
                                             SecurityQuestionPicker(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 10.dp),
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING),
                                                 label = stringResource(R.string.security_questions_question_1),
                                                 questions = securityQuestions,
                                                 excludeIds = setOfNotNull(
@@ -1185,7 +1286,7 @@ fun OnboardingWizardOverlay(
                                             SecurityQuestionPicker(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 10.dp),
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING),
                                                 label = stringResource(R.string.security_questions_question_2),
                                                 questions = securityQuestions,
                                                 excludeIds = setOfNotNull(
@@ -1207,7 +1308,7 @@ fun OnboardingWizardOverlay(
                                             SecurityQuestionPicker(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 10.dp),
+                                                    .padding(top = WIZARD_FIELD_TOP_PADDING),
                                                 label = stringResource(R.string.security_questions_question_3),
                                                 questions = securityQuestions,
                                                 excludeIds = setOfNotNull(
@@ -1229,7 +1330,7 @@ fun OnboardingWizardOverlay(
 
                                             localAuthError?.let { message ->
                                                 Text(
-                                                    modifier = Modifier.padding(top = 8.dp),
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
                                                     text = message,
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.error,
@@ -1237,7 +1338,7 @@ fun OnboardingWizardOverlay(
                                             }
                                             authUiState.errorMessage?.let { message ->
                                                 Text(
-                                                    modifier = Modifier.padding(top = 8.dp),
+                                                    modifier = Modifier.padding(top = TdayDimens.SpacingMd),
                                                     text = message,
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.error,
@@ -1247,8 +1348,8 @@ fun OnboardingWizardOverlay(
                                             Button(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 4.dp)
-                                                    .height(48.dp),
+                                                    .padding(top = TdayDimens.SpacingXs)
+                                                    .height(WIZARD_PRIMARY_BUTTON_HEIGHT),
                                                 enabled = securityQuestionId1 != null &&
                                                         securityQuestionId2 != null &&
                                                         securityQuestionId3 != null &&
@@ -1280,7 +1381,7 @@ fun OnboardingWizardOverlay(
                                             TextButton(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(top = 4.dp),
+                                                    .padding(top = TdayDimens.SpacingXs),
                                                 onClick = {
                                                     authMode = AuthPanelMode.CREATE_ACCOUNT
                                                     localAuthError = null
@@ -1335,7 +1436,7 @@ private fun SecurityQuestionPicker(
     val selectableQuestions = questions.filter { it.id == selectedId || it.id !in excludeIds }
     val selectedText = questions.firstOrNull { it.id == selectedId }?.text.orEmpty()
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd)) {
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = it },
@@ -1352,7 +1453,7 @@ private fun SecurityQuestionPicker(
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(22.dp),
+                shape = RoundedCornerShape(TdayDimens.RadiusField),
                 colors = fieldColors,
             )
             ExposedDropdownMenu(
@@ -1377,7 +1478,7 @@ private fun SecurityQuestionPicker(
             label = { Text(stringResource(R.string.security_questions_answer_label)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            shape = RoundedCornerShape(22.dp),
+            shape = RoundedCornerShape(TdayDimens.RadiusField),
             colors = fieldColors,
         )
     }
@@ -1440,6 +1541,10 @@ private fun WizardLoading(
     val rotation by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
+        // not a token — see docs/motion.md. The same category as
+        // `TdayPullRefresh`'s wave: a spinner that repeats forever has a period
+        // rather than a duration, and the ladder only names lengths of motions
+        // that end.
         animationSpec = infiniteRepeatable(tween(durationMillis = 1300, easing = LinearEasing)),
         label = "wizardRotation",
     )
@@ -1447,29 +1552,29 @@ private fun WizardLoading(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(26.dp),
+            .padding(vertical = TdayDimens.SpacingXs),
+        shape = RoundedCornerShape(TdayDimens.RadiusCard),
         colors = CardDefaults.cardColors(containerColor = colorScheme.surface),
-        border = BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.08f)),
+        border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.08f)),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 20.dp),
+                .padding(vertical = WIZARD_LOADING_VERTICAL_PADDING),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING),
         ) {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_languages),
                 contentDescription = null,
                 tint = colorScheme.primary,
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(WIZARD_LOADING_GLYPH_SIZE)
                     .graphicsLayer(rotationZ = rotation),
             )
             CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.5.dp,
+                modifier = Modifier.size(WIZARD_LOADING_SPINNER_SIZE),
+                strokeWidth = WIZARD_LOADING_SPINNER_STROKE,
             )
             Text(
                 text = title,
@@ -1498,9 +1603,9 @@ internal fun WizardHeroTile(
         modifier = modifier
             .fillMaxWidth()
             .height(WIZARD_HERO_TILE_HEIGHT),
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusCard),
         colors = CardDefaults.cardColors(containerColor = color),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = WIZARD_TILE_ELEVATION),
     ) {
         Box(
             modifier = Modifier
@@ -1527,32 +1632,32 @@ internal fun WizardHeroTile(
                 tint = Color.White.copy(alpha = 0.2f),
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .size(86.dp)
-                    .offset(x = 22.dp, y = 12.dp),
+                    .size(WIZARD_HERO_WATERMARK_SIZE)
+                    .offset(x = WIZARD_HERO_WATERMARK_OFFSET_X, y = WIZARD_HERO_WATERMARK_OFFSET_Y),
             )
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = TdayDimens.SpacingXl),
+                horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
-                        .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(16.dp)),
+                        .size(WIZARD_HERO_GLYPH_SLOT_SIZE)
+                        .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(WIZARD_HERO_GLYPH_SLOT_RADIUS)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = imageVector,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(23.dp),
+                        modifier = Modifier.size(WIZARD_HERO_GLYPH_SIZE),
                     )
                 }
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalArrangement = Arrangement.spacedBy(WIZARD_HERO_TEXT_SPACING),
                 ) {
                     Text(
                         text = title,
@@ -1590,11 +1695,13 @@ private fun WizardModeChoiceButton(
         modifier = modifier
             .height(WIZARD_MODE_TILE_HEIGHT)
             .clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusCard),
         colors = CardDefaults.cardColors(
             containerColor = color.copy(alpha = if (enabled) 1f else 0.55f),
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (enabled) 8.dp else 0.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (enabled) WIZARD_TILE_ELEVATION else TdayDimens.CardElevationDefault,
+        ),
     ) {
         Box(
             modifier = Modifier
@@ -1625,20 +1732,20 @@ private fun WizardModeChoiceButton(
                 tint = Color.White.copy(alpha = 0.22f),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .size(76.dp)
-                    .offset(x = 18.dp, y = 16.dp),
+                    .size(WIZARD_MODE_TILE_WATERMARK_SIZE)
+                    .offset(x = WIZARD_MODE_TILE_WATERMARK_OFFSET_X, y = WIZARD_MODE_TILE_WATERMARK_OFFSET_Y),
             )
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(13.dp),
+                    .padding(WIZARD_MODE_TILE_PADDING),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 Icon(
                     imageVector = imageVector,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(TdayDimens.IconSm),
                 )
                 Text(
                     text = title,
@@ -1673,7 +1780,11 @@ private fun WizardStepChip(
     val highlighted = active || completed
     val scale by animateFloatAsState(
         targetValue = if (active) 1.02f else 1f,
-        animationSpec = tween(durationMillis = 180),
+        // A chip swelling by a fiftieth when the wizard walks onto its step: a
+        // control changing state under its own steam, which is Enter's own
+        // description of itself. The 180 it ran on named no rung and was shared
+        // with nothing.
+        animationSpec = tween(durationMillis = TdayMotionTokens.Durations.Enter),
         label = "wizardStepChipScale",
     )
     val colorScheme = MaterialTheme.colorScheme
@@ -1685,32 +1796,34 @@ private fun WizardStepChip(
             scaleX = scale,
             scaleY = scale,
         ),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusLg),
         colors = CardDefaults.cardColors(containerColor = if (highlighted) color else colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (highlighted) 8.dp else 0.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (highlighted) WIZARD_TILE_ELEVATION else TdayDimens.CardElevationDefault,
+        ),
         border = BorderStroke(
             // A hairline, not an animation: this width used to come from an
             // `animateDpAsState` targeting this same literal `1.dp`, so it had nothing to
             // animate towards and never ran a frame. Only the border COLOUR changes with
             // `highlighted`, and it changes on the same frame as the card's own.
-            1.dp,
+            TdayDimens.BorderWidth,
             if (highlighted) ringColor.copy(alpha = 0.62f) else colorScheme.onSurface.copy(alpha = 0.08f),
         ),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.padding(horizontal = WIZARD_STEP_CHIP_HORIZONTAL_PADDING, vertical = TdayDimens.SpacingMd)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = if (completed) ImageVector.vectorResource(R.drawable.ic_lucide_check) else imageVector,
                     contentDescription = null,
                     tint = contentColor,
-                    modifier = Modifier.size(13.dp),
+                    modifier = Modifier.size(WIZARD_STEP_CHIP_ICON_SIZE),
                 )
                 Text(
                     text = title,
                     color = contentColor,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 6.dp),
+                    modifier = Modifier.padding(start = TdayDimens.SpacingSm),
                 )
             }
         }
@@ -1726,3 +1839,53 @@ private val WIZARD_WIDE_LAYOUT_BREAKPOINT = 600.dp
 private val WIZARD_WIDE_CARD_WIDTH = 360.dp
 private val WIZARD_HERO_TILE_HEIGHT = 78.dp
 private val WIZARD_MODE_TILE_HEIGHT = 116.dp
+
+/** The one card the whole wizard is drawn on, floating over whatever it covers. */
+private val WIZARD_CARD_ELEVATION = 12.dp
+private val WIZARD_BRAND_ICON_SIZE = 27.dp
+
+/**
+ * The gap between the card's stacked parts — the step chips, the mode choices, a panel's rows.
+ *
+ * [WIZARD_FIELD_TOP_PADDING] is the same 10 dp carried by a different mechanism: the login panel's
+ * column has no arrangement, because it wraps `animateContentSize` around a body whose height
+ * changes with the auth mode, so each field spaces itself off the one above.
+ */
+private val WIZARD_PANEL_SPACING = 10.dp
+private val WIZARD_FIELD_TOP_PADDING = 10.dp
+
+/** One dp wider than every other panel's, and drawn beside them. Left as it renders today. */
+private val WIZARD_MODE_PANEL_SPACING = 11.dp
+
+/** Connect, sign in, create account: the one button that ends a step, at a finger's height. */
+private val WIZARD_PRIMARY_BUTTON_HEIGHT = 48.dp
+
+private val WIZARD_LOADING_VERTICAL_PADDING = 20.dp
+private val WIZARD_LOADING_GLYPH_SIZE = 34.dp
+private val WIZARD_LOADING_SPINNER_SIZE = 20.dp
+private val WIZARD_LOADING_SPINNER_STROKE = 2.5.dp
+
+/** Hero tile and mode tile alike: the lift that tells a coloured tile from the card behind it. */
+private val WIZARD_TILE_ELEVATION = 8.dp
+
+/** The oversized glyph behind a tile, hung off its edge so it reads as texture, not as an icon. */
+private val WIZARD_HERO_WATERMARK_SIZE = 86.dp
+private val WIZARD_HERO_WATERMARK_OFFSET_X = 22.dp
+private val WIZARD_HERO_WATERMARK_OFFSET_Y = 12.dp
+private val WIZARD_MODE_TILE_WATERMARK_SIZE = 76.dp
+private val WIZARD_MODE_TILE_WATERMARK_OFFSET_X = 18.dp
+private val WIZARD_MODE_TILE_WATERMARK_OFFSET_Y = 16.dp
+
+/**
+ * The hero tile's glyph badge. Its 16 dp corner is not `RadiusRow`: that rung names rows and cells
+ * in a list or a grid, and a badge borrowing its value is how a rung stops meaning anything.
+ */
+private val WIZARD_HERO_GLYPH_SLOT_SIZE = 42.dp
+private val WIZARD_HERO_GLYPH_SLOT_RADIUS = 16.dp
+private val WIZARD_HERO_GLYPH_SIZE = 23.dp
+private val WIZARD_HERO_TEXT_SPACING = 3.dp
+
+private val WIZARD_MODE_TILE_PADDING = 13.dp
+
+private val WIZARD_STEP_CHIP_HORIZONTAL_PADDING = 10.dp
+private val WIZARD_STEP_CHIP_ICON_SIZE = 13.dp
