@@ -281,9 +281,10 @@ describe("the Android half of the same hand-over", () => {
   });
 
   it("wires all four directions through the gate, so the hand-over has no hole in it", () => {
-    // Push and pop share one pair because nothing travels any more and there is no
-    // direction left to express — which means a missing wiring is not a missing flourish,
-    // it is one of the four ways out of a screen cutting while the other three fade.
+    // Three of the four share one pair because nothing travels on a committed change and
+    // there is no direction left to express; the fourth is the scrub and has its own. Either
+    // way a missing wiring is not a missing flourish, it is one of the four ways out of a
+    // screen cutting while the other three animate.
     //
     // The argument is asserted with the slot and not separately, because the other way to
     // lose the gate is to keep all four wirings and hand one of them a literal `true`. That
@@ -294,7 +295,7 @@ describe("the Android half of the same hand-over", () => {
       ["enterTransition", "navigationEnterTransition"],
       ["exitTransition", "navigationExitTransition"],
       ["popEnterTransition", "navigationEnterTransition"],
-      ["popExitTransition", "navigationExitTransition"],
+      ["popExitTransition", "navigationPopExitTransition"],
     ]) {
       expect(args, `NavHost does not wire ${slot} through the preference`).toContain(
         `${slot} = { ${transition}(motionEnabled) }`,
@@ -341,5 +342,81 @@ describe("the Android half of the same hand-over", () => {
       code.slice(hoist, navHost),
       "the hoist the NavHost reads is in some other function",
     ).not.toMatch(/\bfun\s/);
+  });
+
+  /**
+   * THE FOURTH WIRING, WHICH IS A GESTURE AND NOT A ROUTE CHANGE
+   *
+   * The block above pins a hand-over the app PLAYS. This one pins the single slot the
+   * platform SEEKS: `enableOnBackInvokedCallback` is on in the manifest and
+   * `navigation-compose` drives `popExitTransition` from a `SeekableTransitionState`, so
+   * mid-drag what is on screen is this spec sampled at the thumb. That makes a crossfade
+   * uniquely wrong here and nowhere else — two screens at half opacity say the same thing at
+   * every point of the pull — and it is why the argument four slots up, that nothing moves
+   * because nothing has a direction to express, stops at the edge of this one.
+   *
+   * The regression these guard is the easy one: someone reads the toolbar argument, sees a
+   * slide, and takes it back out. What they would leave behind still animates, still passes
+   * every assertion in the block above, and returns the gesture to saying nothing.
+   */
+  const popExit = () => declaration("private fun navigationPopExitTransition(");
+
+  it("gives the back scrub a distance to report, which a crossfade has none of", () => {
+    // Both legs, not either: opacity alone is the defect, and a scale alone at screen size
+    // is a few pixels of inset at the edges that no thumb can read as progress.
+    expect(popExit(), "the pop exit has no travel in it").toMatch(/slideOut\w*\(/);
+    expect(popExit(), "the pop exit has no recede in it").toMatch(/scaleOut\(/);
+  });
+
+  it("finishes the scrub where the back BUTTON would have finished it", () => {
+    // This slot plays whole when back arrives as a press rather than as a drag. Let the two
+    // drift and a released scrub lands on a different animation than the button plays, which
+    // is two backs on one screen.
+    //
+    // Counted, and counted against the number of tweens, rather than contained. The spec is
+    // written as more than one tween because Compose types an animation by what it animates,
+    // and a `toContain` is satisfied by whichever leg still names the rung — which leaves the
+    // travel free to slide off it while the fade holds it, the exact split the declaration's
+    // own comment says is the risk. Comparing against the leg count rather than against 2
+    // also lets a later third leg through on the rung and stops it off the rung, which is the
+    // rule being asserted and not the shape it happens to have today.
+    const spec = popExit();
+    const legs = spec.match(/tween</g) ?? [];
+    expect(legs.length, "the pop exit's legs are no longer tweens").toBeGreaterThan(1);
+    // `toEqual` against a filled array is one assertion doing two jobs: every rung named is
+    // `Enter` AND every leg names one, so a leg that reaches for `Quick` and a leg that writes
+    // a bare millisecond literal both come up short.
+    expect(spec.match(/Durations\.\w+/g) ?? []).toEqual(legs.map(() => "Durations.Enter"));
+    expect(spec.match(/\w*Easing\b/g) ?? []).toEqual(
+      legs.map(() => "FastOutLinearInEasing"),
+    );
+  });
+
+  it("keeps the committed push's exit fading in place, which is what the toolbars ride on", () => {
+    // The direction is granted to the dragged screen and to nothing else. A slide copied from
+    // here into the forward exit is the 18% sideways trip the NavHost comment refuses, and it
+    // would be a one-line diff away from looking symmetric.
+    const exit = declaration("private fun navigationExitTransition(");
+    expect(exit).not.toMatch(/slideOut|scaleOut/);
+    expect(callArguments("NavHost")).toContain(
+      "popEnterTransition = { navigationEnterTransition(motionEnabled) }",
+    );
+  });
+
+  it("takes the dragged screen away rather than parking it mid-recede when motion is refused", () => {
+    expect(popExit()).toContain("ExitTransition.None");
+  });
+
+  it("marks the recede depth as a considered non-token, since no counter can see it", () => {
+    // `android.pressScale` greps for `[Ss]cale` beside a 0.9x literal and this constant spells
+    // it `SCALE`, so the ratchet is blind to it — the same honest limit 31a recorded for the
+    // two `NAV_FADE_*` constants. The marker and `docs/motion.md`'s non-tokens table are the
+    // whole of what stands between this number and being invisible, so the marker is asserted
+    // rather than left to a reader. Searched in the RAW text: this one IS the comment.
+    const at = raw.indexOf("private const val PREDICTIVE_BACK_MIN_SCALE");
+    expect(at, "PREDICTIVE_BACK_MIN_SCALE is gone").toBeGreaterThan(-1);
+    expect(raw.slice(Math.max(0, at - 1400), at)).toContain(
+      "not a token — see docs/motion.md",
+    );
   });
 });

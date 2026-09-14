@@ -1198,7 +1198,36 @@ Restore it from git history rather than adjusting the number.
     last one is asserted at the wiring rather than at the hoist, because a `rememberTdayMotionEnabled()`
     line is not rare in `TdayApp.kt` {D} two screens further down hold one {D} and a whole-file search
     for it would have stayed green with the graph's gate deleted outright.
-- [ ] `android-predictive-back-scrub` — edge drag scrubs a pure crossfade — communicates nothing · and · Impact O3 · S · Gate D
+- [x] `android-predictive-back-scrub` — edge drag scrubs a pure crossfade — communicates nothing · and · Impact O3 · S · Gate D
+  - **The gesture was already live, already seeked, and had nothing to say.** `enableOnBackInvokedCallback`
+    has been on since the manifest was written and `navigation-compose` 2.8.5 drives `popExitTransition`
+    from a `SeekableTransitionState`, so the finger has always been scrubbing this spec rather than
+    watching it play. What it was scrubbing was 31a's crossfade, which is the one spec that cannot be
+    scrubbed: two screens at half opacity read the same at a third of the pull and at two thirds of it,
+    so the gesture could report neither how far it had come nor whether letting go would commit it.
+    `navigationPopExitTransition` gives it a quarter-width travel and a recede to 0.90 to report with.
+  - **It does not reopen the NavHost's toolbar argument, and the wiring is where that is visible.**
+    Only `popExitTransition` moved. `popEnterTransition` is still `navigationEnterTransition`, so the
+    arriving screen still fades where it stands and the back chevron and the action cluster are still
+    handed to their counterparts rather than carried 18 % sideways and dropped back — which is the
+    half of the :336-347 comment that was ever about travel. Push is untouched in both directions:
+    forward has no gesture to answer, so it has no direction to express.
+  - **Same rung, same curve as the committed exit, on purpose.** This slot also plays whole when back
+    arrives as a button press, so a scrub released at the threshold and a back button tapped now land
+    on one animation instead of two. `Durations.Enter` and `FastOutLinearInEasing`, both named.
+  - **The ceiling did not move, and that is the finding.** The brief costed this at `android.pressScale`
+    31 → 32; the ceiling was 8 by the time it was written (9b1–9b4 had taken it there) and it is still
+    8 after this. `PREDICTIVE_BACK_MIN_SCALE` never matched the counter: the regex wants `[Ss]cale`
+    beside the literal and a SCREAMING_SNAKE constant spells it `SCALE`. Raising a ceiling for a literal
+    no measurement can see would have been a number contradicted by the next run, so the escape is
+    recorded instead — in the fixture's own note, in `docs/motion.md`'s non-tokens table, and in a
+    guardrail that asserts the marker comment is still at the declaration. Precedent: 31a recorded the
+    two `NAV_FADE_*` constants escaping `android.tween` exactly this way.
+  - **Reduce Motion gets a cut and not a held recede.** `ExitTransition.None`, like the other three,
+    reading the same hoisted `rememberTdayMotionEnabled()`. A screen that cannot animate must still be
+    gone rather than parked at 0.9 scale halfway off the side.
+  - Gate D. There is no device in this session and a scrub is the one thing in the programme that
+    cannot be read off source: `docs/verification/phase-9-device-pass.md` carries the row, unticked.
 
 ### PR 32 — iOS cold launch and zoom navigation
 
