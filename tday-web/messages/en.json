@@ -796,6 +796,14 @@
       "title": "Resting floaters",
       "toggle": "Fade untouched Anytime tasks"
     },
+    "sound": {
+      "title": "Sound",
+      "toggle": "Play a sound when a task is completed"
+    },
+    "haptics": {
+      "title": "Vibration",
+      "toggle": "Vibrate on taps and drags"
+    },
     "workspace": {
       "title": "Workspace",
       "localTitle": "Local workspace",
@@ -999,6 +1007,20 @@
         "summary": "Drag tasks into the order you want.",
         "keywords": "drag, reorder, move, sort, order, arrange",
         "body": "Your lists keep the order you give them. Drag a task up or down to arrange your day the way you think about it."
+      },
+      "sound-and-vibration": {
+        "title": "Sound and vibration",
+        "summary": "Turn off the completion pop, the buzz, or both.",
+        "keywords": "sound, mute, silent, silence, audio, volume, vibration, vibrate, haptics, buzz, quiet, feedback, accessibility",
+        "body": "Ticking a task off plays a short pop, and on a phone the app answers your taps and drags with a small vibration. Settings has a switch for each one — turn either off and everything else stays exactly as it was.",
+        "tip": "The switches belong to this browser rather than to your account, so a quiet laptop and a buzzing phone can each have their own answer."
+      },
+      "reduce-motion": {
+        "title": "Reduce motion",
+        "summary": "Turn T'Day's animations off without changing the rest of your phone.",
+        "keywords": "motion, animation, animations, reduce motion, accessibility, vestibular, still, transitions, dizzy",
+        "body": "Settings has a Reduce motion switch. With it on, T'Day stops playing the animations it writes itself: a task ticks off, strikes through and leaves at once instead of over three beats, the swipe hint and the confetti stay away, and the empty-day illustration is simply there rather than rising into place. Every wait that was only there to cover one of those goes with it, so the app gets faster rather than slower. Sliding between screens, and sheets coming up, are Android's own animations rather than T'Day's, so those keep following your phone's animation setting.",
+        "tip": "It only ever takes motion away. If Android's own animation setting is already off, T'Day is already still, and the switch says so instead of offering to undo it."
       },
       "floaters-vs-todos": {
         "title": "Floaters vs dated tasks",

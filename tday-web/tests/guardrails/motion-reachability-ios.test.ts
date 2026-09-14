@@ -1042,3 +1042,428 @@ describeIOS("iOS dead view branches", () => {
     expect(violations, violations.join("\n")).toEqual([]);
   });
 });
+
+// ─── Row actions ───────────────────────────────────────────────────
+//
+// `extension View` is where a modifier with no caller hides best. Rule C reads
+// `private` declarations only, and says why: `private` is file-scoped in Swift,
+// so a one-file reference search is a proof. An `internal` helper is visible to
+// the whole module — but the module is exactly this tree (`project.yml` gives
+// the app target the single source path `Tday`), so a search across the scan is
+// the same proof, one target wide instead of one file wide.
+//
+// That gap is how the app came to ship a swipe nobody could perform. The dead
+// `standardModeContent` branch went, and with it the `todoRow` that applied
+// `.swipeActions` — but `todoSwipeActions`, the helper holding the
+// `.swipeActions` call itself, stayed behind in `extension View` with every
+// caller gone, which reads in review as a feature the app has.
+//
+// A modifier is declared in two halves, and the `extension View` half is the
+// one review tends to read. `SwipeRevealHintModifier` stranded for longer than
+// `todoSwipeActions` did and was found by eye rather than by rule, because the
+// half it lived in was a `private struct … : ViewModifier` — the sort of
+// declaration no scan here collected. Both halves are searched now: the
+// reference proof is the same one, and a `.modifier(X())` call is as findable
+// as a `.x()` one.
+
+interface ViewHelper {
+  name: string;
+  /** 1-based line the declaration starts on, which a wrapped signature moves. */
+  line: number;
+  endLine: number;
+  body: string;
+  file: string;
+}
+
+/** `func …(…) -> some View {` declared directly in an `extension View`. */
+function extensionViewHelpers(parsed: ParsedFile): ViewHelper[] {
+  const { code } = parsed;
+  const helpers: ViewHelper[] = [];
+  for (const scope of parsed.scopes) {
+    // `typeScopes` rejoins wrapped headers, so a member whose own `{` sits
+    // within reach of the `extension View {` line above it is also recorded as
+    // a scope called `View`. Reading the opening line back settles which one is
+    // the extension and keeps every helper inside it from being found twice.
+    if (scope.name !== "View" || !/\bextension\s+View\b/.test(code[scope.start - 1])) continue;
+    let i = scope.start;
+    while (i <= scope.end - 2) {
+      if (!code[i].trim().endsWith("{")) {
+        i += 1;
+        continue;
+      }
+      const close = blockEnd(code, i);
+      const header = joinedHeader(code, i, DECLARATION_HEADER);
+      const match = header ? /\bfunc\s+(\w+)/.exec(header.text) : null;
+      if (header && match) {
+        helpers.push({
+          name: match[1],
+          line: header.start + 1,
+          endLine: close + 1,
+          body: code.slice(i, close + 1).join("\n"),
+          file: parsed.file,
+        });
+      }
+      i = close + 1;
+    }
+  }
+  return helpers;
+}
+
+/** `struct X: ViewModifier { … }` — the half a `.modifier(X())` call reaches. */
+function viewModifierTypes(parsed: ParsedFile): ViewHelper[] {
+  const { code } = parsed;
+  const types: ViewHelper[] = [];
+  for (const scope of parsed.scopes) {
+    const header = joinedHeader(code, scope.start - 1, TYPE_HEADER);
+    if (!header) continue;
+    // `typeScopes` rejoins wrapped headers, so a member declared inside a
+    // `struct X: ViewModifier {` is recorded a second time under that struct's
+    // name, opening at the member's own brace. A declaration header carries
+    // exactly one brace and it is the last thing on it; the rejoined member
+    // drags the struct's along, which is what tells the two apart — and unlike
+    // reading the brace line back, it still admits a header that wraps.
+    if (header.text.split("{").length !== 2 || !header.text.endsWith("{")) continue;
+    if (!/\bstruct\s+\w+/.test(header.text)) continue;
+    if (!/:\s*[^{]*\bViewModifier\b/.test(header.text)) continue;
+    types.push({
+      name: scope.name,
+      line: header.start + 1,
+      endLine: scope.end,
+      body: code.slice(scope.start - 1, scope.end).join("\n"),
+      file: parsed.file,
+    });
+  }
+  return types;
+}
+
+/** Every line in the scan naming `name`, outside the declaration itself. */
+function referenceSites(name: string, home: ViewHelper): string[] {
+  const pattern = new RegExp(`\\b${name}\\b`);
+  const sites: string[] = [];
+  for (const parsed of PARSED) {
+    for (let i = 0; i < parsed.code.length; i += 1) {
+      if (parsed.file === home.file && i + 1 >= home.line && i + 1 <= home.endLine) continue;
+      if (pattern.test(parsed.code[i])) sites.push(`${relPath(parsed.file)}:${i + 1}`);
+    }
+  }
+  return sites;
+}
+
+/**
+ * Which view `modeContent` hands back for one `TodoListMode` case.
+ *
+ * A guard it cannot read is reported rather than skipped. The whole subject here
+ * is a branch structure that looked exhaustive and was not, so a rule that goes
+ * quiet the moment the branching gets interesting would be the same failure in a
+ * new place.
+ */
+function modeContentFor(
+  parsed: ParsedFile,
+  mode: string,
+): { text: string; where: string } | { unevaluable: string } {
+  const decl = viewDeclarations(parsed).find((entry) => entry.name === "modeContent");
+  if (!decl) {
+    return { unevaluable: `${relPath(parsed.file)} declares no \`modeContent\`` };
+  }
+
+  const { code, structure } = parsed;
+  const predicates = boolPredicates(parsed);
+  const guards: Branch[] = [];
+  const loose: number[] = [];
+  for (let i = decl.braceLine; i < decl.endLine - 1; i += 1) {
+    if (structure.depthAt[i] !== decl.bodyDepth) continue;
+    const index = structure.branches.findIndex((entry) => entry.line === i + 1);
+    const branch = index >= 0 ? structure.branches[index] : null;
+    if (branch && branch.cond.length > 0 && branch.chainRoot === index) guards.push(branch);
+    else if (!branch && code[i].trim().length > 0) loose.push(i);
+  }
+
+  for (const guard of guards) {
+    const cover = coveredCases(guard.cond, predicates);
+    if (!cover) {
+      return {
+        unevaluable:
+          `${relPath(parsed.file)}:${guard.line} branches on \`${guard.cond}\`, which is not a ` +
+          "plain test of enum cases — nothing here can say which mode reaches which view. " +
+          "`modeContent` routes on the mode and on nothing else; a guard about any other state " +
+          "belongs inside the view it routes to, where it cannot cost a whole mode its rows.",
+      };
+    }
+    if (cover.cases.has(mode)) {
+      return {
+        text: code.slice(guard.line, guard.endLine - 1).join("\n"),
+        where: `${relPath(parsed.file)}:${guard.line}`,
+      };
+    }
+  }
+
+  if (loose.length === 0) {
+    return {
+      unevaluable:
+        `${relPath(parsed.file)}:${decl.line} sends \`.${mode}\` into no branch and has no ` +
+        "fallback — the case renders nothing at all",
+    };
+  }
+  return {
+    text: loose.map((line) => code[line]).join("\n"),
+    where: `${relPath(parsed.file)}:${decl.line}`,
+  };
+}
+
+/** Every private view declaration a view expression reaches, transitively. */
+function reachedDeclarations(parsed: ParsedFile, start: string): Declaration[] {
+  const byName = new Map(viewDeclarations(parsed).map((entry) => [entry.name, entry]));
+  const reached = new Map<string, Declaration>();
+  let frontier = [start];
+  for (let round = 0; round < 16 && frontier.length > 0; round += 1) {
+    const next: string[] = [];
+    for (const text of frontier) {
+      for (const name of bareIdentifiers(text)) {
+        const decl = byName.get(name);
+        if (!decl || reached.has(name)) continue;
+        reached.set(name, decl);
+        next.push(parsed.code.slice(decl.braceLine, decl.endLine - 1).join("\n"));
+      }
+    }
+    frontier = next;
+  }
+  return [...reached.values()];
+}
+
+const SWIPE = /swipe/i;
+const SWIPE_APPLICATION = /\.(?:todoTrailingSwipeActions|swipeActions)\s*\(?/;
+
+const SWIPE_HELPERS = PARSED.flatMap((parsed) => [
+  ...extensionViewHelpers(parsed),
+  ...viewModifierTypes(parsed),
+]).filter((helper) => SWIPE.test(helper.name) || SWIPE.test(helper.body));
+
+const TODO_LIST_SCREEN =
+  PARSED.find((parsed) => parsed.file.endsWith(`Todos${path.sep}TodoListScreen.swift`)) ?? null;
+
+const MODE_CASES = [...(collectEnumCases().get("TodoListMode") ?? [])].sort();
+
+describeIOS("iOS row actions", () => {
+  // The mode list is read from `TodoListMode` itself rather than written out
+  // here, so a new case arrives with its own reachability test instead of
+  // arriving with six of seven still asserted. The floor is what catches the
+  // parse going wrong: seven cases and one screen, or these rules are asserting
+  // nothing about an empty set.
+  it("still sees the modes and the affordances the rules are about", () => {
+    expect(TODO_LIST_SCREEN, "TodoListScreen.swift in the scan").not.toBeNull();
+    expect(MODE_CASES.length, "TodoListMode cases").toBeGreaterThanOrEqual(7);
+    // One name from each half. The `extension View` arm alone was green over a
+    // dead `SwipeRevealHintModifier` for as long as that struct existed, so an
+    // arm that silently collects nothing is the failure this floor is for.
+    const names = SWIPE_HELPERS.map((helper) => helper.name);
+    expect(names).toContain("todoTrailingSwipeActions");
+    expect(names).toContain("TodoTrailingSwipeActionsModifier");
+  });
+
+  it("every swipe affordance the app declares is applied somewhere", () => {
+    const violations = SWIPE_HELPERS.filter(
+      (helper) => referenceSites(helper.name, helper).length === 0,
+    ).map(
+      (helper) =>
+        `${relPath(helper.file)}:${helper.line} → \`${helper.name}\` is a swipe nothing applies. ` +
+        "Apply it on the live row or delete it: a gesture that exists only in the source reads " +
+        "as a shipped feature in review, and on iOS it is also the row's assistive affordance.",
+    );
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+
+  // One test per `TodoListMode`, because "every mode reaches the live row" is
+  // the claim the deleted branch made falsely for years: `standardModeContent`
+  // held the swipe, and no mode could reach it. Asserting it per case is what
+  // makes the failure say WHICH mode lost its row actions.
+  it.each(MODE_CASES)("`.%s` reaches a row that carries the swipe actions", (mode) => {
+    const screen = TODO_LIST_SCREEN as ParsedFile;
+    const resolved = modeContentFor(screen, mode);
+    expect("unevaluable" in resolved ? resolved.unevaluable : "").toBe("");
+    if ("unevaluable" in resolved) return;
+
+    const reached = reachedDeclarations(screen, resolved.text);
+    const sites: { where: string; gated: boolean }[] = [];
+    for (const decl of reached) {
+      for (let i = decl.braceLine; i < decl.endLine; i += 1) {
+        if (!SWIPE_APPLICATION.test(screen.code[i])) continue;
+        sites.push({
+          where: `${relPath(screen.file)}:${i + 1} (in \`${decl.name}\`)`,
+          gated: screen.structure.enclosing[i].length > 0,
+        });
+      }
+    }
+
+    expect(
+      sites.length,
+      `\`.${mode}\` resolves to ${resolved.where} and reaches ${reached.length} view ` +
+        "declarations, none of which applies a swipe action — the mode renders rows the user " +
+        "cannot act on, and VoiceOver rows with nothing on them.",
+    ).toBeGreaterThan(0);
+
+    const gated = sites.filter((site) => site.gated).map((site) => site.where);
+    expect(
+      gated,
+      `\`.${mode}\` reaches row actions that sit inside a branch: ${gated.join(", ")}. ` +
+        "The row's actions are its accessible actions; a branch around them is a mode or a " +
+        "state that silently has none. Gate the behaviour through the modifier's `enabled:` " +
+        "argument instead, which keeps the affordance on the row.",
+    ).toEqual([]);
+  });
+});
+
+// ─── The accessible half of a row action ───────────────────────────
+//
+// The rule above asks whether every mode reaches a row that carries the swipe.
+// This one asks the question the swipe cannot answer for itself: a
+// `UIPanGestureRecognizer` is not in the accessibility tree, so a capability
+// whose only entry point is that pan is a capability VoiceOver, Switch Control
+// and Full Keyboard Access all report as absent. The row read as text and
+// nothing else, and no compiler here says a word about it — the app target has
+// no Swift toolchain on this machine and the tree had no `accessibilityAction`
+// in it at all.
+//
+// So the invariant is parity, not presence: every action input the swipe
+// modifier takes must be named inside its accessible-actions block. A fifth
+// pill added next year lands as a fifth rotor entry or lands red.
+
+/** The locales `Localizable.xcstrings` carries a value for; `en` is the key. */
+const IOS_LOCALES = ["de", "es", "fr", "it", "ja", "ms", "pt", "ru", "zh"];
+const STRING_CATALOG = path.join(MONO, "ios-swiftUI", "Tday", "Resources", "Localizable.xcstrings");
+
+interface StringCatalog {
+  strings: Record<string, { localizations?: Record<string, { stringUnit?: { value?: string } }> }>;
+}
+
+/**
+ * Inputs a helper takes that DO something: a closure, or a value carrying one.
+ *
+ * Both halves of the modifier declare the same four, one as parameters and one
+ * as stored properties, so reading the union costs nothing and means neither
+ * half can be edited alone into disagreeing with the rule. The type test for the
+ * second form is anchored on an uppercase name so `tint: TaskSwipeActionTint.edit`
+ * — a colour, not an action — stays out of it.
+ */
+function actionInputs(helper: ViewHelper): string[] {
+  const names = new Set<string>();
+  for (const match of helper.body.matchAll(/\b(?:let|var)?\s*(\w+)\s*:\s*(?:@escaping\s+)?\(\s*\)\s*->/g)) {
+    names.add(match[1]);
+  }
+  for (const match of helper.body.matchAll(/\b(\w+)\s*:\s*[A-Z]\w*Action\w*\??(?![\w.])/g)) {
+    names.add(match[1]);
+  }
+  return [...names];
+}
+
+/**
+ * The 0-based line span of every accessible-actions block in a file.
+ *
+ * Taken off the stripped code so a brace inside a string cannot move it, and
+ * returned as a span rather than as text because the localisation rule below
+ * has to read the same lines back out of the raw source with the literals still
+ * in them. Both API spellings count: `.accessibilityActions { … }` and a single
+ * `.accessibilityAction(named:)` with a trailing closure are the same claim.
+ */
+function accessibleActionSpans(parsed: ParsedFile): { start: number; end: number }[] {
+  const spans: { start: number; end: number }[] = [];
+  for (let i = 0; i < parsed.code.length; i += 1) {
+    if (!/\.accessibilityActions?\s*[({]/.test(parsed.code[i])) continue;
+    let open = i;
+    while (open < parsed.code.length && !parsed.code[open].includes("{")) open += 1;
+    if (open >= parsed.code.length) continue;
+    spans.push({ start: i, end: blockEnd(parsed.code, open) });
+  }
+  return spans;
+}
+
+/** The spans of [accessibleActionSpans] that fall inside a helper's declaration. */
+function helperActionSpans(helper: ViewHelper): { start: number; end: number }[] {
+  const parsed = PARSED.find((entry) => entry.file === helper.file);
+  if (!parsed) return [];
+  return accessibleActionSpans(parsed).filter(
+    (span) => span.start + 1 >= helper.line && span.end + 1 <= helper.endLine,
+  );
+}
+
+const ACTION_HELPERS = SWIPE_HELPERS.filter((helper) => actionInputs(helper).length > 0);
+
+describeIOS("iOS row actions reach the accessibility tree", () => {
+  it("still sees the action inputs the rule is about", () => {
+    // Without this the two rules below are green over an empty set the moment
+    // the signature is reformatted past the regex — which is the same failure
+    // mode as the swipe nobody applied, one layer up.
+    const inputs = new Set(ACTION_HELPERS.flatMap(actionInputs));
+    for (const name of ["onEdit", "onCopy", "onDelete", "extraAction"]) {
+      expect([...inputs], `\`${name}\` among the swipe modifier's action inputs`).toContain(name);
+    }
+    // `extensionViewHelpers` slices a declaration from its opening brace, so the
+    // `extension View` half's parameters are outside the text this reads and the
+    // set comes from the `ViewModifier` half alone. That is the half that renders
+    // the pills and would have to grow a fifth one, so naming it is the floor
+    // that matters — a count would only have said "one of something".
+    expect(
+      ACTION_HELPERS.map((helper) => helper.name),
+      "the half that renders the row's actions",
+    ).toContain("TodoTrailingSwipeActionsModifier");
+  });
+
+  it("every action the swipe performs is also an accessibility action", () => {
+    const violations: string[] = [];
+    for (const helper of ACTION_HELPERS) {
+      const spans = helperActionSpans(helper);
+      const parsed = PARSED.find((entry) => entry.file === helper.file) as ParsedFile;
+      const surface = spans
+        .map((span) => parsed.code.slice(span.start, span.end + 1).join("\n"))
+        .join("\n");
+      for (const name of actionInputs(helper)) {
+        if (new RegExp(`\\b${name}\\b`).test(surface)) continue;
+        violations.push(
+          `${relPath(helper.file)}:${helper.line} → \`${helper.name}\` takes \`${name}\` and ` +
+            "never names it inside an accessibility action. The reveal is a pan, and a pan is " +
+            "not in the accessibility tree: an action reachable only that way does not exist " +
+            "for VoiceOver, Switch Control or Full Keyboard Access.",
+        );
+      }
+    }
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+
+  it("names those actions in a string every locale has", () => {
+    const catalog = JSON.parse(readFileSync(STRING_CATALOG, "utf-8")) as StringCatalog;
+    const violations: string[] = [];
+    let labelled = 0;
+
+    for (const helper of ACTION_HELPERS) {
+      const parsed = PARSED.find((entry) => entry.file === helper.file) as ParsedFile;
+      for (const span of helperActionSpans(helper)) {
+        const raw = parsed.raw.slice(span.start, span.end + 1).join("\n");
+        const literals = [...raw.matchAll(/"([^"\\]*)"/g)].map((match) => match[1]);
+        const keys = [...raw.matchAll(/\bL\(\s*"([^"\\]*)"/g)].map((match) => match[1]);
+        labelled += keys.length;
+
+        for (const literal of literals.filter((value) => !keys.includes(value))) {
+          violations.push(
+            `${relPath(helper.file)}:${span.start + 1} → "${literal}" is an accessibility ` +
+              "action name written in English. It is the only name a VoiceOver user ever " +
+              "hears for that action; put it through `L(…)` like every other string here.",
+          );
+        }
+
+        for (const key of keys) {
+          const missing = IOS_LOCALES.filter(
+            (locale) => !catalog.strings[key]?.localizations?.[locale]?.stringUnit?.value,
+          );
+          if (missing.length === 0) continue;
+          violations.push(
+            `${relPath(helper.file)}:${span.start + 1} → \`L("${key}")\` has no value for ` +
+              `${missing.join(", ")}. A missing key falls back to the English key silently, so ` +
+              "the action is reachable and unreadable at once.",
+          );
+        }
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+    expect(labelled, "localised accessibility action names").toBeGreaterThanOrEqual(3);
+  });
+});

@@ -14,7 +14,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -58,6 +57,7 @@ fun TdayConfetti(
     startDelayMillis: Long = 0L,
 ) {
     val motionEnabled = rememberTdayMotionEnabled()
+    val motionScale = rememberTdayMotionScale()
     if (!play || !motionEnabled) return
 
     // Fixed per run, so a recomposition mid-flight does not re-roll the pieces
@@ -69,8 +69,11 @@ fun TdayConfetti(
     LaunchedEffect(runKey) {
         progress.snapTo(0f)
         // Held at 0, where the canvas below draws nothing at all, so the wait
-        // costs a composition and not a frame of half-drawn paper.
-        if (startDelayMillis > 0L) delay(startDelayMillis)
+        // costs a composition and not a frame of half-drawn paper. And held on the
+        // animator's clock, like the flight it leads: the caller times this lead
+        // against the scene rising behind it, so a lead that did not stretch with
+        // the burst would fire it into a scene that has not started moving yet.
+        if (startDelayMillis > 0L) scaledDelay(startDelayMillis, motionScale)
         progress.animateTo(
             targetValue = 1f,
             // Linear: the arc is the physics below, and an eased clock on top of

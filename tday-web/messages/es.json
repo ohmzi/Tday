@@ -796,6 +796,14 @@
       "title": "Flotantes en reposo",
       "toggle": "Atenuar tareas de Anytime sin tocar"
     },
+    "sound": {
+      "title": "Sonido",
+      "toggle": "Reproducir un sonido al completar una tarea"
+    },
+    "haptics": {
+      "title": "Vibración",
+      "toggle": "Vibrar al tocar y arrastrar"
+    },
     "workspace": {
       "title": "Espacio de trabajo",
       "localTitle": "Espacio local",
@@ -999,6 +1007,20 @@
         "summary": "Arrastra las tareas al orden que quieras.",
         "keywords": "arrastrar, reordenar, mover, ordenar, orden, organizar",
         "body": "Tus listas conservan el orden que les des. Arrastra una tarea arriba o abajo para organizar tu día tal como lo piensas."
+      },
+      "sound-and-vibration": {
+        "title": "Sonido y vibración",
+        "summary": "Desactiva el sonido de finalización, la vibración o ambos.",
+        "keywords": "sonido, silencio, silenciar, audio, volumen, vibración, vibrar, háptica, zumbido, accesibilidad",
+        "body": "Al completar una tarea suena un pop corto y, en el teléfono, la app responde a tus toques y arrastres con una pequeña vibración. Ajustes tiene un interruptor para cada uno: desactiva el que quieras y todo lo demás sigue igual.",
+        "tip": "Los interruptores pertenecen a este navegador y no a tu cuenta, así que un portátil en silencio y un teléfono que vibra pueden tener cada uno su propia respuesta."
+      },
+      "reduce-motion": {
+        "title": "Reducir el movimiento",
+        "summary": "Desactiva las animaciones de T'Day sin cambiar el resto del teléfono.",
+        "keywords": "movimiento, animación, animaciones, reducir, accesibilidad, quieto, transiciones, mareo",
+        "body": "Ajustes incluye un interruptor «Reducir el movimiento». Con él activado, T'Day deja de reproducir las animaciones que escribe por su cuenta: una tarea se marca, se tacha y desaparece de una vez en lugar de en tres tiempos, el aviso de deslizamiento y el confeti no aparecen, y la ilustración del día vacío simplemente está ahí en vez de subir a su sitio. Cada espera que solo estaba ahí para cubrir una de ellas desaparece con ella, así que la app se vuelve más rápida, no más lenta. El deslizamiento entre pantallas y las hojas que suben son animaciones de Android y no de T'Day, así que esas siguen la configuración de animaciones de tu teléfono.",
+        "tip": "Solo quita movimiento. Si la propia opción de animaciones de Android ya está desactivada, T'Day ya está quieto y el interruptor lo dice en vez de ofrecerse a deshacerlo."
       },
       "floaters-vs-todos": {
         "title": "Flotantes frente a tareas con fecha",

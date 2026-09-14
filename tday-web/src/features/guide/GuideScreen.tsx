@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight, CircleHelp, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "@/lib/navigation";
+import { scrollIntoView } from "@/lib/scroll";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
@@ -66,8 +67,7 @@ export default function GuideScreen() {
   useEffect(() => {
     if (!focusTopicId) return;
     setExpandedId(focusTopicId);
-    const node = rowRefs.current[focusTopicId];
-    if (node) node.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollIntoView(rowRefs.current[focusTopicId], { block: "center" });
   }, [focusTopicId]);
 
   const whatsNew = useMemo(() => whatsNewTopics(), []);

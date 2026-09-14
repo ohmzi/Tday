@@ -48,6 +48,7 @@ import {
 import { useEditCalendarTodo } from "../query/update-calendar-todo";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { moveTodoToDay } from "@/lib/moveTodoToDay";
+import { scrollIntoView } from "@/lib/scroll";
 import type { TodoItemTypeWithDateChecksum } from "@/lib/todo/patch-todo";
 import AnimatedHeight from "@/components/ui/AnimatedHeight";
 import {
@@ -706,7 +707,7 @@ export function CalendarTaskRow({
 
   useEffect(() => {
     if (!highlighted || !itemElement) return;
-    itemElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollIntoView(itemElement, { block: "center" });
   }, [highlighted, itemElement]);
 
   const completeTask = () => {

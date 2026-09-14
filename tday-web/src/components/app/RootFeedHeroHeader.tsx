@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DURATION_MS, EASE } from "@/lib/motion";
 import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
+import { scrollTo } from "@/lib/scroll";
 import { cn } from "@/lib/utils";
 import { nativeAppScrollAttribute } from "./nativeAppLayout";
 import { clamp01, stagger } from "./nativeHeaderEasing";
@@ -249,7 +250,7 @@ export default function RootFeedHeroHeader({
   }, [mark]);
 
   const scrollToTop = useCallback(() => {
-    scrollerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    scrollTo(scrollerRef.current, { top: 0 });
   }, []);
 
   // The morph is applied by writing styles straight onto the nodes inside a

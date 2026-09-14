@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { nativeAppScrollAttribute } from "@/components/app/nativeAppLayout";
 import { hapticTick } from "@/lib/haptics";
+import { scrollTo } from "@/lib/scroll";
 import { useCompletedTodo } from "../query/get-completedTodo";
 import { useCompletedFloater } from "../query/get-completedFloater";
 import CompletedTodoContainer from "./CompletedTodoContainer";
@@ -12,9 +13,9 @@ import CompletedFloaterContainer from "./CompletedFloaterContainer";
 type CompletedScope = "tasks" | "floater";
 
 function scrollCompletedToTop() {
-  document
-    .querySelector<HTMLElement>(`[${nativeAppScrollAttribute}]`)
-    ?.scrollTo({ top: 0, behavior: "smooth" });
+  scrollTo(document.querySelector<HTMLElement>(`[${nativeAppScrollAttribute}]`), {
+    top: 0,
+  });
 }
 
 /**
