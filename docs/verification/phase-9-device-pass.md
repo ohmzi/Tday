@@ -129,6 +129,17 @@ animates.
               than its own enter; or the calendar `Modal` fades out only part-way before the card
               is cut away, which is the JavaScript half of its exit having drifted from the CSS.
 
+- [ ] **PR G7 · web · The page dims with the panel, not ahead of it** — a phone, light AND dark
+      (the scrim's two alphas differ, and the early-finish is easier to catch on the lighter one).
+      Do:     open the right-hand `Sheet` from the More tab, watch only the page BEHIND the panel,
+              then close it and watch the same thing. Repeat once at 1/4 speed if the browser's
+              animation inspector offers it — the whole margin here is about a tenth of a second.
+      Watch:  the page reaches its full dim at the moment the panel stops moving, and starts coming
+              back only as the panel leaves — the two halves finish together in both directions.
+      Fails:  the page is fully dark while the panel is still sliding in — that is the 0.15 s
+              library fallback still winning, which means the utility is not reaching tw-animate's
+              `animation-duration`; or the page is bright again with the panel still on screen.
+
 - [ ] **PR 39a · web · The burst is paper, and the apex is not cut** — any list with exactly one
       task left on it, so completing it empties the list and celebrates. Run it twice: once in a
       tall window, and once with the browser window short enough that the empty state is at its
