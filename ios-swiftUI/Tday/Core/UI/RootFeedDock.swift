@@ -47,6 +47,7 @@ struct RootFeedDock: View {
 
     private let tabs: [RootFeedTab] = [.scheduledTaskHome, .floaterTaskHome]
     @Environment(\.tdayColors) private var colors
+    @Environment(\.tdayAnimation) private var tdayAnimation
     @State private var expandedByTap = false
 
     init(
@@ -73,23 +74,52 @@ struct RootFeedDock: View {
         !collapsed || expandedByTap
     }
 
+    /// How the collapsed pill and the expanded control replace each other.
+    ///
+    /// The scale is anchored `.leading` because the dock grows rightwards out of the
+    /// icon rather than out of its own centre; 0.82 is an eighteen-percent size change,
+    /// which is well past the amplitude a crossfade is a substitute FOR rather than a
+    /// substitute for nothing. So Reduce Motion keeps the opacity and drops the scale:
+    /// the two controls cross over in place, at the size each of them is.
+    ///
+    /// Built once and handed to both branches, because an asymmetry here would be a
+    /// typo rather than a decision — the expanded control appearing is the collapsed
+    /// one disappearing, and they are the same event seen from two `if` arms.
+    private var swapTransition: AnyTransition {
+        tdayAnimation.transition(
+            .scale(scale: 0.82, anchor: .leading).combined(with: .opacity),
+            reduced: .opacity
+        )
+    }
+
     var body: some View {
         ZStack {
             if isExpanded {
                 expandedControl
-                    .transition(
-                        .scale(scale: 0.82, anchor: .leading)
-                        .combined(with: .opacity)
-                    )
+                    .transition(swapTransition)
             } else {
                 collapsedButton
-                    .transition(
-                        .scale(scale: 0.82, anchor: .leading)
-                        .combined(with: .opacity)
-                    )
+                    .transition(swapTransition)
             }
         }
-        .animation(.spring(response: 0.34, dampingFraction: 0.82), value: isExpanded)
+        // 0.34 / 0.82 was the Gesture spring written out — the same numbers, and the
+        // same intent: a control continuing under its own momentum after a finger has
+        // let go, which is what expand-on-tap and collapse-on-scroll both are. Naming
+        // the token is not a retiming; what it buys is the gate beside it.
+        //
+        // Under Reduce Motion the spring is the wrong shape whatever its length, so the
+        // substitute is a plain crossfade on Quick — the rung for the app answering a
+        // finger that is on it, which this still is. It is not `nil`: the two halves of
+        // this ZStack are DIFFERENT views at different widths, so a cut would replace a
+        // 56 pt pill with a full segmented control between two frames, in the corner of
+        // the screen the user is least likely to be looking at.
+        .animation(
+            tdayAnimation(
+                TdayMotion.gesture,
+                reduced: TdayMotion.standard(duration: TdayMotion.Durations.quick)
+            ),
+            value: isExpanded
+        )
         .onChange(of: collapsed) { _, isCollapsed in
             // Scrolling back to the top expands the dock on its own, so drop the tap override.
             if !isCollapsed {

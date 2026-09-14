@@ -192,7 +192,7 @@ struct CalendarScreen: View {
     /// Gates the day list's own motion — see `pendingDayAnimationKey`'s
     /// `.animation(_:value:)`, `calendarDayListTransition()` and
     /// `TdayFeedItemMotion.row(reduceMotion:)`.
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.tdayAnimation) private var tdayAnimation
     private let calendarAccentColor = Color.tdayCalendarPurple
 
     @State private var selectedDate = Date()
@@ -642,7 +642,7 @@ struct CalendarScreen: View {
                         // completed away, the rest travelling. These are feed
                         // items, and the `ForEach`'s `id` keeps them addressable
                         // across such an edit.
-                        .transition(TdayFeedItemMotion.row(reduceMotion: reduceMotion))
+                        .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
                     }
                 }
                 // Identity, and the half the rungs alone could not fix. Without
@@ -679,7 +679,7 @@ struct CalendarScreen: View {
             }
         }
         .animation(
-            reduceMotion ? nil : TdayFeedItemMotion.placement,
+            tdayAnimation(TdayFeedItemMotion.placement),
             value: pendingDayAnimationKey
         )
     }
@@ -703,13 +703,13 @@ struct CalendarScreen: View {
     /// underneath them changed. Sliding both days down from the top through each
     /// other was the other half of the mush.
     ///
-    /// `reduceMotion` collapses it to `.identity` — the finished state drawn
+    /// Reduced motion collapses it to `.identity` — the finished state drawn
     /// directly, which at a day swap is the new day, already there. The travel is
     /// refused separately, on the `.animation(_:value:)` above; see
     /// `TdayFeedItemMotion.row(reduceMotion:)` for why a transition cannot turn off
     /// a transaction it did not open.
     private func calendarDayListTransition() -> AnyTransition {
-        guard !reduceMotion else {
+        guard tdayAnimation.isEnabled else {
             return .identity
         }
         return .asymmetric(

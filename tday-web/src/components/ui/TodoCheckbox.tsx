@@ -2,6 +2,7 @@ import clsx from "clsx";
 import React, { useEffect, useRef, useState } from "react";
 import { RefreshCcw } from "lucide-react";
 import { hapticSuccess } from "@/lib/haptics";
+import { isSoundEnabled } from "@/lib/feedbackPreferences";
 import { DURATION_MS } from "@/lib/motion";
 
 export default function TodoCheckbox({
@@ -46,14 +47,19 @@ export default function TodoCheckbox({
           onChange(e);
         }}
         onClick={() => {
-          if (!complete) {
-            if (popAudio.current) popAudio.current.currentTime = 0;
-            popAudio.current?.play();
-            hapticSuccess();
-          } else {
-            if (unpopAudio.current) unpopAudio.current.currentTime = 0;
-            unpopAudio.current?.play();
+          // One question for both clips, asked at the tap rather than at the
+          // `new Audio` above: the preference is about whether this browser makes
+          // a noise, and it can be turned off in Settings while a list is on
+          // screen — a clip decided at mount would keep popping until the row
+          // remounted. Rewind first either way, so two quick taps pop twice.
+          const audio = complete ? unpopAudio.current : popAudio.current;
+          if (audio && isSoundEnabled()) {
+            audio.currentTime = 0;
+            audio.play();
           }
+          // The haptic stays on the completing half only, and reaches the
+          // vibrator through `haptics.ts`, which asks the user the same question.
+          if (!complete) hapticSuccess();
         }}
         checked={checked}
       />

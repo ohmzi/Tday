@@ -3,6 +3,7 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { useFadeUnmount } from "@/hooks/useFadeUnmount"
 import { DURATION_MS } from "@/lib/motion"
+import { scrollBy } from "@/lib/scroll"
 import { cn } from "@/lib/utils"
 
 /**
@@ -292,7 +293,7 @@ const DrawerContent = React.forwardRef<
         const targetRect = target.getBoundingClientRect();
         const delta =
           targetRect.top - bodyRect.top - (body.clientHeight - targetRect.height) / 2;
-        body.scrollBy({ top: delta, behavior: "smooth" });
+        scrollBy(body, { top: delta });
       });
     },
     [],

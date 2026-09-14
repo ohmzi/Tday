@@ -372,6 +372,42 @@
       "sinceVersion": null
     },
     {
+      "id": "sound-and-vibration",
+      "section": "GESTURES",
+      "icon": "waves",
+      "platforms": [
+        "WEB"
+      ],
+      "titleKey": "guide.topics.sound-and-vibration.title",
+      "summaryKey": "guide.topics.sound-and-vibration.summary",
+      "keywordsKey": "guide.topics.sound-and-vibration.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.sound-and-vibration.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.sound-and-vibration.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": {
+        "web": "settings",
+        "android": null,
+        "ios": null
+      },
+      "helpAnchors": [
+        "settings-feature-toggle"
+      ],
+      "serverOnly": false,
+      "sinceVersion": "0.7.23"
+    },
+    {
       "id": "floaters-vs-todos",
       "section": "ORGANIZING",
       "icon": "waves",

@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { DRAG_VACATED_TRANSITION } from "@/lib/dragLiftMotion";
 import { TASK_COMPLETION_REMOVING_TRANSITION } from "@/lib/taskCompletionTiming";
 import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
+import { scrollIntoView } from "@/lib/scroll";
 import {
   stageTaskCompletion,
   useTaskCompletionPhase,
@@ -186,7 +187,7 @@ export const TodoItemCard = ({
       return;
     }
 
-    itemElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollIntoView(itemElement, { block: "center" });
   }, [highlighted, itemElement]);
 
   return (

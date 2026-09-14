@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import com.ohmz.tday.compose.core.ui.ProvideTdayMotionScale
 
 private val DarkColorScheme = darkColorScheme(
     primary = TdayDarkPrimary,
@@ -64,9 +65,14 @@ fun TdayTheme(
         else -> LightColorScheme
     }
 
+    // The motion scale rides in here rather than at each `setContent`, because this is
+    // the one wrapper all four of them already share — and because a screen that reads
+    // the theme for its colours and the platform for its animations should not be able
+    // to get one of the two and not the other.
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content,
-    )
+    ) {
+        ProvideTdayMotionScale(content)
+    }
 }

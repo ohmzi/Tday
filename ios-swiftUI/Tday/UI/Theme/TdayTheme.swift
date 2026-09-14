@@ -381,6 +381,10 @@ private struct TdayAppThemeModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .environment(\.tdayColors, colors)
+            // The motion gate rides with the palette because it answers the same shape of
+            // question — one root decision every surface below reads — and because this
+            // modifier is already the one wrapper both window roots go through.
+            .tdayResolvedMotion()
             .tint(colors.primary)
             .background(colors.backgroundGradient.ignoresSafeArea())
             .preferredColorScheme(themeMode.colorScheme)

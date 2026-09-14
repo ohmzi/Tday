@@ -137,7 +137,7 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   `globals.css` argues in place for why anything longer there reads as a stall.
   Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:372`,
-  `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:272`,
+  `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:270`,
   `tday-web/src/globals.css:608`.
 
 ## Delays
@@ -250,12 +250,13 @@ unchanged.
   little or it reads as a snap-back. The one token here that was already a
   working two-platform conversion before it had a name —
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskSwipeRevealState.kt:49` converts
-  `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:368` explicitly, and
-  `ios-swiftUI/Tday/Core/UI/RootFeedDock.swift:92` is the third site. **Do not
-  round 340 to the arithmetic 342**: it would break the Android site that
-  already matches.
+  `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:353` explicitly, and
+  `ios-swiftUI/Tday/Core/UI/RootFeedDock.swift:118` is the third site — it wrote
+  0.34 / 0.82 out until Reduce Motion needed a gate there, and naming the token
+  is what bought one. **Do not round 340 to the arithmetic 342**: it would break
+  the Android site that already matches.
 - **`Settle`.** One anchoring site today,
-  `ios-swiftUI/Tday/UI/Component/TdaySheetChrome.swift:222` (`cardIn`). Android
+  `ios-swiftUI/Tday/UI/Component/TdaySheetChrome.swift:227` (`cardIn`). Android
   has no exact match — `Spring.StiffnessLow` is 200 f and `StiffnessMediumLow`
   is 400 f, and this rung sits between them on purpose.
 
@@ -361,14 +362,94 @@ Both halves, side by side:
 Reduced motion removes the trip, never the destination. A scene held at the
 start of its fade looks half-drawn — which is worse than no animation at all,
 because the user cannot tell it from a broken render. Android reads
-`ANIMATOR_DURATION_SCALE` through `rememberTdayMotionEnabled()`
-(`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayMotion.kt:19`); web uses
-`prefers-reduced-motion`.
+`ANIMATOR_DURATION_SCALE` through
+`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayMotion.kt`;
+web uses `prefers-reduced-motion`; iOS reads `accessibilityReduceMotion` through
+`ios-swiftUI/Tday/UI/Theme/TdayMotionEnvironment.swift`.
+
+Android's half of that file answers in two shapes, because the setting is a
+**scale** and not a switch — the user is offered 0x, 0.5x, 1x, 2x, 5x and 10x.
+`rememberTdayMotionEnabled()` is the boolean, for the call sites that can only
+choose between a `tween` and a `snap`; `rememberTdayMotionScale()` is the number
+underneath it, published live by `ProvideTdayMotionScale` in `TdayTheme` — one
+`ContentObserver` for the whole app, so that a user who flips the setting from
+the quick settings tile is not left looking at the answer this app read at
+mount.
+
+That number is also where Android's own **"Reduce motion"** switch lands
+(Settings → Motion, persisted by `ReduceMotionPreferenceStore`). The two answers
+compose in `effectiveMotionScale`, and the composition is one-way: the in-app
+switch can subtract motion and can never add any back, so a device whose
+animator scale is 0 stays at 0 whatever the switch says. Android needs the
+switch because it is the one client with nothing better: web is handed
+`prefers-reduced-motion` and iOS `UIAccessibility.isReduceMotionEnabled`, both of
+them accessibility settings a user has already been taught to find, while
+`ANIMATOR_DURATION_SCALE` is device-wide and lives behind developer options on
+many builds. The Settings row reads the system half on its own
+(`rememberSystemMotionScale()`) for one reason: when the device has already
+removed animations the switch cannot change anything, and a control that cannot
+act must say so rather than claim the app is still moving.
+
+Having two answers means having two **clocks**, and a `scaledDelay` has to be
+handed the right one. The device's scale is also Compose's own
+`MotionDurationScale`, so every ungated `tween` obeys it whether or not anybody
+wrote code for it; the in-app switch reaches only what asks. A wait therefore
+runs on the clock of the motion it is covering — `rememberTdayMotionScale()`
+where that motion is gated on the preference, `rememberSystemMotionScale()`
+where it is a Compose animation nobody has gated yet. Getting that backwards
+breaks the fifth idiom rule from the side nobody watches: the motion is kept and
+the wait is removed, so the app tears a surface out from under a transition that
+is still running. Where the choice is available, gating the covered animation is
+the better half of the fix — the run then has one clock instead of two.
+
+iOS has one clock and no switch of its own, so its file is about reach rather
+than arithmetic. `\.tdayAnimation` in the environment answers in the two shapes
+an ordinary call site needs — `tdayAnimation(TdayMotion.settle)` for anything
+that takes an `Animation?`, and `tdayAnimation.isEnabled` for a `.transition`,
+which cannot be handed a nil because it does not open the transaction it plays
+in; a third shape, for the surfaces whose amplitude rather than whose existence
+is the thing being refused, is below. The value is composed rather than stored:
+an override written by `tdayResolvedMotion()` at the app root, falling back to
+`accessibilityReduceMotion` from the same environment wherever nobody has
+written one. The fallback is what covers the surfaces the root cannot reach — a
+hand-built `UIHostingController`, of which the calendar's pager makes one per
+month page, inherits none of the app's own environment while still resolving the
+system keys from its traits. The override is what makes the answer
+live: an accessor reading a key it never declared a dependency on is right at
+first draw and silent afterwards, which is the runtime half of what this row was
+filed for.
+
+**Refusing an animation is not always the accommodation.** The rule above says a
+surface must be drawn finished; it does not say the way to that surface must be a
+cut. What the accessibility setting is actually about is *amplitude* — a card
+crossing the screen, a grid paging sideways, a control jumping a fifth of its own
+size — and the standard substitute for a large travel is a crossfade, not nothing.
+Refusing everything fails the same user twice: a full-bleed modal that replaces
+the screen between two frames gives the eye nothing to follow to it, and a toast
+that blinks in and out over a feed reads as the app glitching rather than as the
+app doing what it was asked. So iOS's resolver answers in a third shape,
+`tdayAnimation(spec, reduced: substitute)` and its `.transition` twin, and the
+five surfaces that had to make that judgement each carry it at the call site:
+
+| Surface | Amplitude | Under Reduce Motion |
+|---|---|---|
+| `TdaySheetChrome`'s bottom-sheet card | a whole screen height | Crossfades in place, on the scrim's own curve — it is placed where it will stay |
+| `CalendarPagingScrollView`'s chevron page turn | a whole screen width | Refused. The grid *is* the page, so there is nothing to crossfade that is not the thing being asked for |
+| `RootFeedDock`'s collapse/expand swap | an 18 % anchored scale | Keeps the crossfade, drops the scale. The two arms are different controls at different widths |
+| `AppRootView`'s snackbar | a full toast height | Keeps the crossfade on `Enter`, drops the slide |
+| `TdayCenteredSelectorMotion` (and the 0.96 / 0.985 overlays that share its shape) | 3 % and travels nowhere | Kept as it is. This is already a crossfade; gating it removes no amplitude and leaves the picker pasted on |
+
+The calendar row is the one worth reading before writing another of these. The
+travel it refuses was carrying `scrollViewDidEndScrollingAnimation`, which is the
+only notification the parent ever gets that a page turn finished — so removing the
+motion removed the completion, and the fix is the un-animated path reporting its
+own arrival. Removing the trip must not remove what arriving at the destination
+told somebody.
 
 - Android: `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:126` seeds the
   appearance `Animatable` at `1f` — fully arrived — when motion is off, rather
   than at `0f` with the animation skipped.
-- iOS: `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:112` sets `entered = true`
+- iOS: `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:110` sets `entered = true`
   and returns before the `withAnimation` block.
 - Web: `tday-web/src/globals.css:744` switches the scene's animations off and
   pins the sparkle to `opacity: 1`, with the reason in the block.
@@ -381,6 +462,50 @@ because the user cannot tell it from a broken render. Android reads
   trip and keeps the wait, which is the rule broken from the other side:
   `useEarlierExpandHandoff` therefore takes its immediate branch rather than
   holding the finished state behind 520 ms of a scene that cannot animate.
+- Android, the coroutine half: the same hole, one platform over. Compose already
+  scales the animations themselves — an `animateTo` runs against a
+  `MotionDurationScale` in its coroutine context — but `delay()` is outside that
+  clock, so at 0x a choreography's gaps outlive the motion they were covering and
+  at 2x they fire with it still half-played. `scaledDelay(millis, scale)` in
+  `TdayMotion.kt` closes it. The test for whether a wait belongs to it is whether
+  the wait would still make sense with the screen frozen; the ones that would not,
+  and now go through it, are:
+  - The staged check-off, and the restore that plays it backwards — the app's
+    most-performed interaction, on all four screens that own a task row
+    (`TodoListScreen.kt`, `CalendarScreen.kt` twice, `ScheduledTaskHomeScreen.kt`,
+    `CompletedScreen.kt`). All three legs, not just the last: at 0x the tint is a
+    `snap()`, `rememberTaskStrikeProgress` hands back its finished progress and the
+    fade is a `tween` Compose collapses to a frame, so the row is finished on frame
+    one and every millisecond of the 780 is a wait in front of a destination already
+    drawn. Web cuts this shallower — `taskCompletionStaging.ts` keeps the first two
+    legs — because `prefers-reduced-motion: reduce` is a request for less movement
+    while an animator scale of 0 is the platform stating that animations land in one
+    frame, and because a *scale* also has to be right at 2x, where a fixed 160 would
+    start the strike over a tint still crossfading.
+  - The swipe hint (`TaskSwipeRevealState.playHint`), which is two gaps between two
+    springs. It takes the scale as a parameter rather than reading it, because it is
+    not a composable; at 0x it does not play at all, since a gesture that ends where
+    it started has no finished state to draw and a 42 dp flick inside one frame is a
+    flicker rather than a suggestion.
+  - The search-result path in `TodoListScreen.kt`: the flash hold, the gap between
+    its two pulses, the settle before a result is scrolled to — and in
+    `ScheduledTaskHomeScreen.kt` the wait before the search surface is torn down
+    behind a push that is still running.
+  - `EarlierExpandDeferMillis` — Android's twin of `useEarlierExpandHandoff` above —
+    and the hero header's focus hand-off in `RootFeedHeroHeader.kt`.
+  - The celebration lead in `TdayEmptyState.kt` and `TdayConfetti.kt`, which is
+    already dead at 0x behind a `motionEnabled` guard but was not stretching at 2x
+    with the burst it is timed against.
+
+  It is deliberately **not** for a wait that would still make sense with the screen
+  frozen, and the ones left on a plain `delay()` are all of that kind: keystroke
+  debounces, the pull-to-refresh spinner's minimum visible time, the undo window,
+  a toast's reading time, network backoff, a clock ticking to the next minute, the
+  root dock's dwell before it folds itself away. Scaling those takes away time the
+  user needs rather than time they spend watching. One is a judgement rather than a
+  class: `CREDENTIAL_PROMPT_SETTLE_DELAY_MS` in `OnboardingWizardOverlay.kt` waits
+  out a *system* credential dialog, which Compose is not animating and this app
+  cannot observe — scaling our side of a hand-off we do not own would be guessing.
 
 ---
 
@@ -391,7 +516,7 @@ change pixels or destroy an argument that is worth more than the tidiness.
 
 | Not a token | Where | Why it is excluded |
 |---|---|---|
-| The 340–420 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/TdayApp.kt:119` (360, nav fade-in); `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5757` (420); `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:214` and `:452` (340 ms hand-off sleeps) | Four values, no two of them the same motion, and nothing that would still be true if they were merged. The web press ripple was the fifth at 340 ms and is no longer in the band: it grows from a third of its surface to nearly twice it, which rule 2 puts on `Emphasis`, and 320 is that same motion to within a frame. A rung here would sit one frame from `Emphasis` and could not be told from it by eye — exactly the case the five-rung ladder exists to refuse |
+| The 340–420 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/TdayApp.kt:119` (360, nav fade-in); `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5757` (420); `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:199` (340 ms hand-off sleep) | Three values, no two of them the same motion, and nothing that would still be true if they were merged. This row said four until Phase 8's 48, and the fourth was never a fourth motion: `SwipeRevealHintModifier` held a second copy of `revealHint()`'s own hint sequence, sleep included, and went out with the modifier — the same duplication the budget fixture records for that sequence's two springs. The web press ripple sat in the band at 340 ms too and is no longer in it: it grows from a third of its surface to nearly twice it, which rule 2 puts on `Emphasis`, and 320 is that same motion to within a frame. A rung here would sit one frame from `Emphasis` and could not be told from it by eye — exactly the case the five-rung ladder exists to refuse |
 | The 600–620 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:5761` (620); `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:136` (0.62 flash delay) | Both are legs of the search-result reveal, timed against the legs either side of them rather than against a ladder. They are longer than `Scene`, which is the app's longest *motion* — these are waits |
 | The iOS sub-frame sequencing constant | `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:133` (0.08 s pre-scroll delay) | Below the two-frame floor the ladder is built on. It orders events; it is not a motion anybody watches. `CompletedScreen.swift`'s 0.1 s was listed here and did not belong: it was the `.easeOut` on a row transition's removal leg, which is a motion somebody watches, and it is now `TdayFeedItemMotion.departure` — a departure that got 50 % longer, deliberately, because this row was the only thing claiming it was a sequencing constant |
 | `cubic-bezier(0.3, 0, 0.4, 1)` | `tday-web/src/globals.css:683` (`--tday-empty-sink-ease`, ridden by `.tday-empty-exit` and by the `.tday-empty-slot` track it closes) | The empty scene *sinking*. Deliberately not `Scene`'s curve read backwards — the exit is played only during an "Earlier" hand-off and is tuned against that hand-off's own timing. Named as a property rather than written twice: the ink and the slot under it have to leave on one curve or they read as two departures |

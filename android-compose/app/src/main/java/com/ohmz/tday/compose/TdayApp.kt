@@ -82,6 +82,8 @@ import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdayToastData
 import com.ohmz.tday.compose.core.ui.TdayToastHost
 import com.ohmz.tday.compose.core.ui.TdayToastKind
+import com.ohmz.tday.compose.core.ui.actionToastTimeoutMillis
+import com.ohmz.tday.compose.core.ui.informationalToastTimeoutMillis
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
@@ -1722,15 +1724,16 @@ private fun HandlePendingFloaterCreateTask(
 private fun AppUiState.showsOfflineNotice(): Boolean =
     isOffline && authenticated && !isLocalMode
 
-private const val TOAST_AUTO_DISMISS_SHORT_MS = 4_000L
-private const val TOAST_AUTO_DISMISS_WITH_ACTION_MS = 8_000L
-
 @Composable
 private fun CollectAppSnackbars(
     appViewModel: AppViewModel,
     onShowToast: (TdayToastData) -> Unit,
 ) {
-    LaunchedEffect(Unit) {
+    // The application context, not this composition's: the window is asked for once per
+    // toast from inside a collect that outlives any single Activity, and an accessibility
+    // setting is a user-level answer that no Activity has a different one of.
+    val context = LocalContext.current.applicationContext
+    LaunchedEffect(context) {
         appViewModel.snackbarManager.events.collect { event ->
             onShowToast(
                 TdayToastData(
@@ -1741,10 +1744,16 @@ private fun CollectAppSnackbars(
                         SnackbarKind.SUCCESS -> TdayToastKind.SUCCESS
                         SnackbarKind.INFO -> TdayToastKind.INFO
                     },
+                    // Read per toast rather than once at the top of the collect: a user
+                    // can change "Time to take action" while the app is open, and the
+                    // next toast is the first place they would look for it to have
+                    // taken. The two branches are two different questions — see
+                    // AccessibilityTimeout.kt — and only the one with a button reaches
+                    // the interactive half of the setting.
                     autoDismissMillis = if (event.actionLabel != null) {
-                        TOAST_AUTO_DISMISS_WITH_ACTION_MS
+                        actionToastTimeoutMillis(context)
                     } else {
-                        TOAST_AUTO_DISMISS_SHORT_MS
+                        informationalToastTimeoutMillis(context)
                     },
                     actionLabel = event.actionLabel,
                     onAction = event.onAction,

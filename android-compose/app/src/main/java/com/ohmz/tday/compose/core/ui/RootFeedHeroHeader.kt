@@ -240,6 +240,23 @@ enum class RootFeedHeroMark {
 private const val MARK_CLOCK_TICK_MS = 60_000L
 
 /**
+ * How long the caret and the keyboard hold off while the capsule grows — not a token
+ * — see docs/motion.md.
+ *
+ * One client, one site, and no second caller to agree with. It is read against
+ * [SearchField]'s own [TdayMotionTokens.Durations.Emphasis] morph rather than against
+ * the ladder, and it sits just inside that morph deliberately: the caret and the
+ * keyboard arrive as the field finishes arriving, where waiting the full rung would
+ * leave a beat of grown, empty, unfocused field with nothing happening in it.
+ *
+ * [scaledDelay] and not `delay`, because that morph is the whole of what it is
+ * waiting for: with animations off the field is already full width on the first
+ * frame, and a wait left standing in front of it is a keyboard that takes a third of
+ * a second to arrive for no reason the user can see.
+ */
+private const val SEARCH_FOCUS_SETTLE_MS = 300L
+
+/**
  * Whether the wall clock says it is daytime right now. Read at each tick rather than
  * once, which is the whole of the fix below.
  *
@@ -359,9 +376,10 @@ fun RootFeedHeroHeader(
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
 
+    val motionScale = rememberTdayMotionScale()
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
-            delay(300)
+            scaledDelay(SEARCH_FOCUS_SETTLE_MS, motionScale)
             focusRequester.requestFocus()
             keyboardController?.show()
         } else {

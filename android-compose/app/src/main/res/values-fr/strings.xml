@@ -209,6 +209,9 @@
     <string name="error_update_name_failed">Impossible de mettre à jour votre nom. Veuillez réessayer.</string>
     <string name="error_change_password_failed">Impossible de modifier votre mot de passe. Veuillez réessayer.</string>
     <string name="settings_appearance">Apparence</string>
+    <string name="settings_motion">Mouvement</string>
+    <string name="settings_reduce_motion">Réduire les animations</string>
+    <string name="settings_reduce_motion_system">Les animations sont déjà désactivées dans les paramètres Android.</string>
     <string name="settings_behavior">Comportement</string>
     <string name="settings_default_home_screen">Écran d\'accueil par défaut</string>
     <string name="settings_reminders">Rappels</string>

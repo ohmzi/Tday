@@ -104,6 +104,7 @@ import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.calendar.CalendarEntryPoint
 import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
+import com.ohmz.tday.compose.core.data.ReduceMotionPreferenceStore
 import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.db.hasUnmigratedPlaintextCache
 import com.ohmz.tday.compose.core.data.server.VersionCheckResult
@@ -128,6 +129,7 @@ import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
@@ -228,6 +230,7 @@ fun SettingsScreen(
     // sits under: searching "reminders" keeps the whole group rather than only
     // the one row that happens to draw the heading.
     val appearanceTitle = stringResource(R.string.settings_appearance)
+    val motionTitle = stringResource(R.string.settings_motion)
     val behaviorTitle = stringResource(R.string.settings_behavior)
     val remindersTitle = stringResource(R.string.settings_reminders)
     // Whether a notification would actually arrive — the OS permission AND the
@@ -300,6 +303,23 @@ fun SettingsScreen(
                 selectedThemeMode = selectedThemeMode,
                 onThemeModeSelected = onThemeModeSelected,
             )
+        },
+        SettingsEntry(
+            key = "reduce-motion",
+            visible = search.matches(
+                motionTitle,
+                stringResource(R.string.settings_reduce_motion),
+            ),
+            // Its own heading rather than a second row under "Appearance". Appearance is
+            // what the app looks like standing still; this is how long it takes to get
+            // there, and the two are answered by different people for different reasons.
+            // The heading is also the only place this card can hang a "?" — only the first
+            // row of a same-section run draws one — and the guide topic is where the
+            // system setting this composes with gets explained.
+            section = motionTitle,
+            sectionHelpTopicId = GuideTopicIds.REDUCE_MOTION,
+        ) {
+            ReduceMotionRow()
         },
         SettingsEntry(
             key = "default-home-screen",
@@ -1860,6 +1880,88 @@ private fun ThemeModeSelector(
         onOptionSelected = onThemeModeSelected,
         label = { mode -> context.getString(mode.labelRes) },
     )
+}
+
+/**
+ * The app's own "Reduce motion" switch — and the one state where it has nothing to say.
+ *
+ * It composes with Android's animator duration scale rather than competing with it (see
+ * `effectiveMotionScale`): either answer asking for less is enough, and this switch can
+ * only ever subtract. Which leaves exactly one case worth drawing differently — a device
+ * whose own setting has already removed animations, where this switch cannot change what
+ * the app does either way. Drawing it off there would claim the app is animating when it
+ * is not; drawing it on and live would be a control that springs back the moment it is
+ * touched, since turning it off would change nothing. So it shows the truth (reduced) and
+ * is silenced, the same treatment the reminder rows get while notifications are off, with
+ * a line naming who made the decision — this one is worth saying out loud because, unlike
+ * the notification switch, the setting responsible is in another app entirely.
+ */
+@Composable
+private fun ReduceMotionRow() {
+    val colorScheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    val store = remember(context) { ReduceMotionPreferenceStore(context.applicationContext) }
+    var enabled by remember(store) { mutableStateOf(store.isEnabled()) }
+    val systemReduced = rememberSystemMotionScale() == 0f
+
+    SettingsSilencedWhen(systemReduced) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SettingsRowIcon(R.drawable.ic_lucide_activity)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_reduce_motion),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = colorScheme.onSurface,
+                )
+                if (systemReduced) {
+                    Text(
+                        text = stringResource(R.string.settings_reduce_motion_system),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Switch(
+                checked = enabled || systemReduced,
+                // `enabled` as well as the wrapper, because the wrapper only stops
+                // fingers: it is a transparent `clickable` laid over the row, and
+                // TalkBack does not go through the overlay — it activates the
+                // toggle's own semantics node underneath. Without this, the one
+                // control on the screen that cannot change anything is the one a
+                // screen-reader user can still write to, and the row would go on
+                // drawing `on` while a preference they never chose waited to take
+                // effect the moment Android's animations came back. Passing it here
+                // removes the action from the node rather than hiding it, which is
+                // the same argument the doc above makes for not drawing this row
+                // live.
+                enabled = !systemReduced,
+                onCheckedChange = {
+                    enabled = it
+                    store.setEnabled(it)
+                },
+                // The disabled colours restate the checked ones so the dimming stays
+                // [SettingsSilencedWhen]'s single 0.45, and this row reads as the
+                // silenced neighbours do. Material's own disabled palette on top of
+                // that alpha would wash the track out until "on" stopped being
+                // legible — and "on" is the whole thing this row has to say.
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = colorScheme.secondary,
+                    checkedBorderColor = Color.Transparent,
+                    disabledCheckedThumbColor = Color.White,
+                    disabledCheckedTrackColor = colorScheme.secondary,
+                    disabledCheckedBorderColor = Color.Transparent,
+                ),
+            )
+        }
+    }
 }
 
 /** The "Behavior" card row: label plus [RootFeedTabSelector]. Its own composable, out of

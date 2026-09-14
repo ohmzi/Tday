@@ -33,6 +33,8 @@ import {
   Trash2,
   User,
   UsersRound,
+  Vibrate,
+  Volume2,
   Waves,
   Webhook,
   type LucideIcon,
@@ -65,7 +67,13 @@ import {
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { api } from "@/lib/api-client";
 import parseApiDateTime from "@/lib/date/parseApiDateTime";
-import { hapticTick } from "@/lib/haptics";
+import { hapticTick, hapticsSupported } from "@/lib/haptics";
+import {
+  isHapticsEnabled,
+  isSoundEnabled,
+  setHapticsEnabled,
+  setSoundEnabled,
+} from "@/lib/feedbackPreferences";
 import { getErrorMessage } from "@/lib/error-message";
 import { deleteLocalWorkspace } from "@/lib/local/localApi";
 import {
@@ -523,6 +531,12 @@ export default function SettingsPage() {
   const [restingFloatersOn, setRestingFloatersOn] = useState(() =>
     isRestingFloatersEnabled(),
   );
+  const [soundOn, setSoundOn] = useState(() => isSoundEnabled());
+  const [hapticsOn, setHapticsOn] = useState(() => isHapticsEnabled());
+  // Whether the browser has a vibrator to switch off at all. Read once, like the
+  // preferences beside it: `navigator.vibrate` does not appear or disappear
+  // mid-session, and a re-read per render would suggest it might.
+  const [canVibrate] = useState(() => hapticsSupported());
 
   const [apiKeys, setApiKeys] = useState<ApiKeyInfo[] | null>(null);
   const [generatedApiKey, setGeneratedApiKey] = useState<string | null>(null);
@@ -1152,6 +1166,11 @@ export default function SettingsPage() {
     // the words people type, so they stay in the term list.
     t("restingFloaters.title"),
     t("restingFloaters.toggle"),
+    t("sound.title"),
+    t("sound.toggle"),
+    // "vibrate" is only a word people type at this box on a device that can do it;
+    // on a desktop the row is not drawn and a hit would scroll to nothing.
+    ...(canVibrate ? [t("haptics.title"), t("haptics.toggle")] : []),
     ...(push.isSupported ? [t("notifications.title"), t("notifications.push")] : []),
   );
   // Server Mode only. Export and import are an account's data moving in and out
@@ -1668,14 +1687,16 @@ export default function SettingsPage() {
       {showPreferencesCard && (
       <SheetCard className="space-y-4 p-[18px] shadow-[0_16px_34px_-24px_hsl(var(--shadow)/0.5)]">
         {/* One card, one title, one "?" — Android and iOS both draw these
-            switches under a single `Feature toggle` heading, and three headings
-            with three help links each was more chrome than the three rows they
-            introduced. The link lands on `ai-summary` because the guide now
-            lists it first under Integrations and it is this card's own first
-            row, so the reader arrives at the top of a section rather than
-            mid-list. The other two switches are documented in their own
-            sections (resting-floaters under Organizing, push-notifications
-            under Reminders), which is where their topics belong. */}
+            switches under a single `Feature toggle` heading, and a heading plus
+            a help link per switch would be more chrome than the three to five
+            rows they introduce, the count depending on whether the device can
+            vibrate and the browser can be pushed to. The link lands on
+            `ai-summary` because the guide now lists it first under Integrations
+            and it is this card's own first row, so the reader arrives at the top
+            of a section rather than mid-list. The other switches are documented
+            in their own sections (resting-floaters under Organizing,
+            sound-and-vibration under Gestures, push-notifications under
+            Reminders), which is where their topics belong. */}
         <SectionHeading
           title={t("featureToggle.title")}
           titleAction={<GuideHelpLink topic="ai-summary" />}
@@ -1720,6 +1741,54 @@ export default function SettingsPage() {
             }}
           />
         </div>
+
+        {/* The two cues that are not on the screen. They sit in this card rather
+            than under Appearance because nothing about them is visual, and next
+            to each other because they answer one question — how loudly the app
+            is allowed to answer back. Android and iOS have no rows for these:
+            the ringer switch and the system touch-feedback setting already
+            decide it there, and a browser is handed neither. */}
+        <CardDivider />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <RowIcon icon={Volume2} />
+            <div className="min-w-0">
+              <p className="text-[1.05rem] font-black text-foreground">{t("sound.title")}</p>
+            </div>
+          </div>
+          <SettingsSwitch
+            checked={soundOn}
+            ariaLabel={t("sound.toggle")}
+            onClick={() => {
+              const next = !soundOn;
+              setSoundEnabled(next);
+              setSoundOn(next);
+            }}
+          />
+        </div>
+
+        {canVibrate && (
+          <>
+            <CardDivider />
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3.5">
+                <RowIcon icon={Vibrate} />
+                <div className="min-w-0">
+                  <p className="text-[1.05rem] font-black text-foreground">{t("haptics.title")}</p>
+                </div>
+              </div>
+              <SettingsSwitch
+                checked={hapticsOn}
+                ariaLabel={t("haptics.toggle")}
+                onClick={() => {
+                  const next = !hapticsOn;
+                  setHapticsEnabled(next);
+                  setHapticsOn(next);
+                }}
+              />
+            </div>
+          </>
+        )}
 
         {push.isSupported && (
           <>

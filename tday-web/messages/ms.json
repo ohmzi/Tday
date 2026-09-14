@@ -796,6 +796,14 @@
       "title": "Floater berehat",
       "toggle": "Pudarkan tugasan Anytime yang tidak disentuh"
     },
+    "sound": {
+      "title": "Bunyi",
+      "toggle": "Mainkan bunyi apabila tugasan selesai"
+    },
+    "haptics": {
+      "title": "Getaran",
+      "toggle": "Bergetar semasa ketik dan seret"
+    },
     "workspace": {
       "title": "Ruang kerja",
       "localTitle": "Ruang kerja setempat",
@@ -999,6 +1007,20 @@
         "summary": "Seret tugasan ke susunan yang anda mahu.",
         "keywords": "seret, susun semula, alih, isih, susunan, atur",
         "body": "Senarai anda mengekalkan susunan yang anda berikan. Seret tugasan ke atas atau ke bawah untuk mengatur hari anda mengikut cara anda memikirkannya."
+      },
+      "sound-and-vibration": {
+        "title": "Bunyi dan getaran",
+        "summary": "Matikan bunyi siap, getaran, atau kedua-duanya.",
+        "keywords": "bunyi, senyap, audio, kelantangan, getaran, bergetar, haptik, maklum balas, kebolehaksesan",
+        "body": "Menanda tugasan sebagai selesai memainkan bunyi pop yang pendek, dan pada telefon apl membalas ketikan serta seretan anda dengan getaran kecil. Tetapan mempunyai suis untuk setiap satu — matikan mana-mana satu dan yang lain kekal sama.",
+        "tip": "Suis ini milik pelayar ini dan bukan akaun anda, jadi komputer riba yang senyap dan telefon yang bergetar boleh mempunyai jawapan masing-masing."
+      },
+      "reduce-motion": {
+        "title": "Kurangkan gerakan",
+        "summary": "Matikan animasi T'Day tanpa mengubah tetapan telefon yang lain.",
+        "keywords": "gerakan, animasi, kurangkan, kebolehcapaian, pegun, peralihan, pening",
+        "body": "Tetapan mempunyai suis Kurangkan gerakan. Apabila dihidupkan, T'Day berhenti memainkan animasi yang ditulisnya sendiri: tugasan ditanda, dipangkah dan hilang sekali gus, bukan dalam tiga rentak; petunjuk leret dan konfeti tidak muncul; dan ilustrasi hari kosong terus berada di situ dan bukannya naik ke tempatnya. Setiap masa menunggu yang hanya ada untuk menutup salah satu daripadanya turut hilang — jadi apl menjadi lebih pantas, bukan lebih perlahan. Leretan antara skrin dan helaian yang naik ialah animasi Android dan bukan T'Day, jadi yang itu terus mengikut tetapan animasi telefon anda.",
+        "tip": "Ia hanya membuang gerakan. Jika tetapan animasi Android sendiri sudah dimatikan, T'Day memang sudah pegun dan suis itu menyatakannya, bukan menawarkan untuk membatalkannya."
       },
       "floaters-vs-todos": {
         "title": "Floater vs tugasan berjadual",

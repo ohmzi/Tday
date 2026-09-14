@@ -24,7 +24,16 @@ struct AppRootView: View {
     // Optional biometric gate, default OFF. When disabled every member below is inert.
     @State private var appLock = AppLockController()
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The app's one motion gate — see `TdayMotionEnvironment.swift`. Every
+    /// `.animation` in this view's body passes its spec through it, so Reduce Motion
+    /// refuses the trip in one place rather than at each of them. It resolves against
+    /// the provider `TdayApp` installs above this view, not the one `tdayAppTheme`
+    /// applies to this body: a property wrapper reads the environment the view was
+    /// placed in, so a gate this view installs would reach its children and miss it.
+    /// `AppSnackbar` below is a separate view with an environment of its own and is
+    /// not covered — its drag snap-back still animates, and is owed to the open
+    /// `reduced-motion-coverage` box.
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     init(container: AppContainer) {
         self.container = container
@@ -133,7 +142,7 @@ struct AppRootView: View {
                         // cuts to the arriving feed finished rather than holding it
                         // half-faded (`docs/motion.md`'s fifth idiom rule).
                         .animation(
-                            reduceMotion ? nil : TdayMotion.standard(duration: TdayMotion.Durations.quick),
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)),
                             value: rootFeedTab
                         )
                         // The dock and the create button used to be nothing but the `if`
@@ -159,7 +168,7 @@ struct AppRootView: View {
                         // Reduce Motion passes nil, so the controls are taken away and put
                         // back finished (`docs/motion.md`'s fifth idiom rule).
                         .animation(
-                            reduceMotion ? nil : TdayMotion.settle,
+                            tdayAnimation(TdayMotion.settle),
                             value: rootControlsVisible
                         )
                         // The other way these controls come and go: `isWorkspaceAvailable` in
@@ -340,7 +349,7 @@ struct AppRootView: View {
                     // drawn unlocked and in focus, finished, rather than held mid-blur
                     // (`docs/motion.md`'s fifth idiom rule).
                     .animation(
-                        reduceMotion ? nil : TdayMotion.standard(duration: TdayMotion.Durations.quick),
+                        tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)),
                         value: showOnboardingOverlay
                     )
                 }
@@ -356,10 +365,39 @@ struct AppRootView: View {
                         AppSnackbar(content: content) {
                             container.snackbarManager.dismiss()
                         }
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .transition(
+                            tdayAnimation.transition(
+                                .move(edge: .bottom).combined(with: .opacity),
+                                reduced: .opacity
+                            )
+                        )
                     }
                 }
-                .animation(.snappy(duration: 0.3), value: container.snackbarManager.content?.id)
+                // `.snappy(duration: 0.3)` was SwiftUI's own preset — `spring(duration:
+                // 0.3, bounce: 0.15)` — and the Snappy token is `response: 0.28,
+                // dampingFraction: 0.86`, the same bounce and the same perceptual length
+                // to within a frame. The literal was approximating this token, so naming
+                // it is not a retiming. What the site gained in 35a was the gate.
+                //
+                // 35a refused the whole thing, slide and fade together, and that was the
+                // wrong half of the judgement to make here. A toast is the one surface
+                // in this app with nothing around it to explain its arrival: no row
+                // closes over it, no scrim dims for it, and it carries an Undo the user
+                // has a few seconds to reach. Cut in and cut out, it reads as the screen
+                // glitching, and a user who did not happen to be looking at the bottom
+                // edge never learns it was there. So the travel goes — that is the
+                // amplitude, a full toast height up from off the screen — and the
+                // crossfade stays, on Enter, the rung for one element arriving with
+                // nothing arguing for another length. The finished state is still drawn
+                // either way, which is what the fifth idiom rule asks; what the fade
+                // adds is that the user can tell it apart from a redraw.
+                .animation(
+                    tdayAnimation(
+                        TdayMotion.snappy,
+                        reduced: TdayMotion.standard(duration: TdayMotion.Durations.enter)
+                    ),
+                    value: container.snackbarManager.content?.id
+                )
             }
         }
         // FALLBACK layer only. Applied INSIDE the theme/locale modifiers below so it is themed

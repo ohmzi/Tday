@@ -209,6 +209,9 @@
     <string name="error_update_name_failed">名前を更新できませんでした。もう一度お試しください。</string>
     <string name="error_change_password_failed">パスワードを変更できませんでした。もう一度お試しください。</string>
     <string name="settings_appearance">外観</string>
+    <string name="settings_motion">モーション</string>
+    <string name="settings_reduce_motion">アニメーションを減らす</string>
+    <string name="settings_reduce_motion_system">Android の設定でアニメーションはすでにオフになっています。</string>
     <string name="settings_behavior">動作</string>
     <string name="settings_default_home_screen">デフォルトのホーム画面</string>
     <string name="settings_reminders">リマインダー</string>
