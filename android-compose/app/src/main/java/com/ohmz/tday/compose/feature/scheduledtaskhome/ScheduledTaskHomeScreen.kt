@@ -1,7 +1,6 @@
 package com.ohmz.tday.compose.feature.scheduledtaskhome
 
 import androidx.activity.compose.BackHandler
-import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
@@ -31,7 +30,6 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -154,6 +152,7 @@ import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.rememberSheetDismissState
@@ -234,7 +233,6 @@ fun ScheduledTaskHomeScreen(
     onSummarize: () -> Unit = {},
     summaryAvailable: Boolean = true,
     showRootFeedDock: Boolean = true,
-    showCreateTaskButton: Boolean = true,
     pullRefreshEnabled: Boolean = true,
     createTaskRequestKey: Int = 0,
     onCreateTaskRequestHandled: (Int) -> Unit = {},
@@ -246,16 +244,6 @@ fun ScheduledTaskHomeScreen(
     val colorScheme = MaterialTheme.colorScheme
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val fabInteractionSource = remember { MutableInteractionSource() }
-    val fabPressed by fabInteractionSource.collectIsPressedAsState()
-    val fabScale by animateFloatAsState(
-        targetValue = if (fabPressed) 0.93f else 1f,
-        label = "fabScale",
-    )
-    val fabOffsetY by animateDpAsState(
-        targetValue = if (fabPressed) 2.dp else 0.dp,
-        label = "fabOffsetY",
-    )
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val imeVisible = WindowInsets.isImeVisible
@@ -434,25 +422,7 @@ fun ScheduledTaskHomeScreen(
         }
     }
 
-    Scaffold(
-        containerColor = colorScheme.background,
-        floatingActionButton = {
-            if (showCreateTaskButton) {
-                CreateTaskButton(
-                    modifier = Modifier
-                        .offset(y = fabOffsetY)
-                        .graphicsLayer {
-                            scaleX = fabScale
-                            scaleY = fabScale
-                        },
-                    interactionSource = fabInteractionSource,
-                    onClick = {
-                        showCreateTask = true
-                    },
-                )
-            }
-        },
-    ) { padding ->
+    Scaffold(containerColor = colorScheme.background) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
             val isDaytime = rememberIsDaytime()
             EmptyTaskWatermark(
@@ -1317,45 +1287,6 @@ private fun CreateListBottomSheet(
 }
 
 @Composable
-private fun CreateTaskButton(
-    modifier: Modifier,
-    interactionSource: MutableInteractionSource,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    val fabBlue = Color(0xFF6EA8E1)
-    val fabBlueBorder = Color(0xFF3D7FEA).copy(alpha = 0.58f)
-
-    Card(
-        modifier = modifier,
-        onClick = {
-            TdayHaptics.buttonPress(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        border = BorderStroke(1.dp, fabBlueBorder),
-        colors = CardDefaults.cardColors(containerColor = fabBlue),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = TdayDimens.FabElevation,
-            pressedElevation = TdayDimens.FabPressedElevation,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.size(TdayDimens.FabSize),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_plus),
-                contentDescription = stringResource(R.string.action_create_task),
-                tint = Color.White,
-                modifier = Modifier.size(40.dp),
-            )
-        }
-    }
-}
-
-@Composable
 private fun rememberIsDaytime(): Boolean {
     val hour = remember { mutableIntStateOf(LocalTime.now().hour) }
 
@@ -1388,65 +1319,6 @@ private fun MyListsHeader(modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-private fun PressableIconButton(
-    @DrawableRes icon: Int,
-    contentDescription: String,
-    tint: Color,
-    compact: Boolean = false,
-    onClick: () -> Unit,
-) {
-    val view = LocalView.current
-    val colorScheme = MaterialTheme.colorScheme
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "scheduledTaskHomeIconButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "scheduledTaskHomeIconButtonOffsetY",
-    )
-    val buttonSize = if (compact) 30.dp else TdayDimens.FabSize
-    val defaultElevation = if (compact) 0.dp else TdayDimens.FabElevation
-    val pressedElevation = if (compact) 0.dp else TdayDimens.FabPressedElevation
-
-    Card(
-        modifier = Modifier
-            .size(buttonSize)
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
-        onClick = {
-            TdayHaptics.buttonPress(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = if (compact) RoundedCornerShape(999.dp) else CircleShape,
-        border = if (compact) null else BorderStroke(1.dp, colorScheme.onSurface.copy(alpha = 0.34f)),
-        colors = CardDefaults.cardColors(containerColor = if (compact) Color.Transparent else colorScheme.background),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = defaultElevation,
-            pressedElevation = pressedElevation,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(if (compact) 24.dp else 22.dp),
-            )
-        }
-    }
-}
-
 /**
  * The check-off's beats, the same four every task row in every client plays:
  * the tick lands, the rule crosses the task, the ink leaves, the row is handed
@@ -1475,19 +1347,6 @@ private fun ScheduledTaskHomeTodayCard(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        label = "todayCardScale"
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "todayCardOffsetY"
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 9.dp,
-        label = "todayCardElevation"
-    )
     val dateLabel = remember { SCHEDULED_TASK_HOME_TODAY_DATE_FORMATTER.format(Instant.now()) }
     val color = Color(0xFF6EA8E1)
 
@@ -1495,17 +1354,21 @@ private fun ScheduledTaskHomeTodayCard(
         modifier = Modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {}
-            .offset(y = animatedOffsetY)
-            .graphicsLayer { scaleX = animatedScale; scaleY = animatedScale },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
         colors = CardDefaults.cardColors(containerColor = color),
+        // The elevation is Material's to animate now. It was a third
+        // `animateDpAsState` fed into BOTH slots, which is a way of telling
+        // `CardDefaults` that this card has one elevation and then animating it
+        // behind its back; handing it the two ends instead says the same thing
+        // in the API's own terms.
         elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation
+            defaultElevation = 9.dp,
+            pressedElevation = 2.dp
         ),
         shape = RoundedCornerShape(26.dp),
     ) {
@@ -2095,19 +1958,6 @@ private fun ListRow(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.98f else 1f,
-        label = "listRowScale",
-    )
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 0.dp,
-        label = "listRowOffsetY",
-    )
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isPressed) 2.dp else 8.dp,
-        label = "listRowElevation",
-    )
     val animatedCount by animateIntAsState(
         targetValue = count,
         animationSpec = tween(durationMillis = 220),
@@ -2123,11 +1973,7 @@ private fun ListRow(
             .fillMaxWidth()
             .height(70.dp)
             .semantics(mergeDescendants = true) {}
-            .offset(y = animatedOffsetY)
-            .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -2136,8 +1982,8 @@ private fun ListRow(
         shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation,
-            pressedElevation = animatedElevation,
+            defaultElevation = 8.dp,
+            pressedElevation = 2.dp,
         ),
     ) {
         Box(

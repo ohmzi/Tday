@@ -1452,7 +1452,6 @@ private fun ScheduledTaskHomeFeed(
         onSummarize = scheduledTaskHomeViewModel::summarizeToday,
         summaryAvailable = !appUiState.isLocalMode,
         showRootFeedDock = false,
-        showCreateTaskButton = false,
         createTaskRequestKey = rootCreateTaskRequestKey,
         onCreateTaskRequestHandled = onCreateTaskRequestHandled,
         scrollToTopRequestKey = scrollToTopRequestKey,
@@ -1509,28 +1508,53 @@ private fun FloaterTaskHomeFeed(
  */
 @Composable
 private fun LockedRootFeed(uiState: ScheduledTaskHomeUiState) {
-    ScheduledTaskHomeScreen(
-        uiState = uiState,
-        onRefresh = {},
-        onOpenToday = {},
-        onOpenOverdue = {},
-        onOpenScheduled = {},
-        onOpenAll = {},
-        onOpenPriority = {},
-        onOpenCompleted = {},
-        onOpenCalendar = {},
-        onOpenFloater = {},
-        onOpenSettings = {},
-        onOpenTaskFromSearch = {},
-        onOpenList = { _, _ -> },
-        onCreateTask = { _ -> },
-        onParseTaskTitleNlp = { _, _ -> null },
-        onCreateList = { _, _, _ -> },
-        onCompleteTask = {},
-        onDeleteTask = {},
-        onUpdateTask = { _, _ -> },
-        summaryAvailable = false,
-    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        ScheduledTaskHomeScreen(
+            uiState = uiState,
+            onRefresh = {},
+            onOpenToday = {},
+            onOpenOverdue = {},
+            onOpenScheduled = {},
+            onOpenAll = {},
+            onOpenPriority = {},
+            onOpenCompleted = {},
+            onOpenCalendar = {},
+            onOpenFloater = {},
+            onOpenSettings = {},
+            onOpenTaskFromSearch = {},
+            onOpenList = { _, _ -> },
+            onCreateTask = { _ -> },
+            onParseTaskTitleNlp = { _, _ -> null },
+            onCreateList = { _, _, _ -> },
+            onCompleteTask = {},
+            onDeleteTask = {},
+            onUpdateTask = { _, _ -> },
+            summaryAvailable = false,
+        )
+
+        // The backdrop draws its own create button now instead of inheriting one from the
+        // screen's `Scaffold` slot, which is where it used to come from: this was the single
+        // caller still taking that slot's default, and it was the last reason the slot existed.
+        // Dropping the slot without putting the button back here would have taken the root
+        // feed's most prominent control off the backdrop, which is the opposite of what this
+        // composable is for — a layout with a hole where the "+" goes is the empty screen the
+        // KDoc above says it exists to avoid.
+        //
+        // Placed at `RootFeedContent`'s geometry down to the padding, because these two are the
+        // branches of one Crossfade: at sign-in the circle is already where the live one is
+        // about to be drawn, so the feed changes under a button that holds still rather than
+        // one that pops in beside the outgoing frame. Inert like everything else here.
+        RootCreateTaskButton(
+            onClick = {},
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
+                .padding(
+                    end = TdayDimens.ContentPaddingHorizontal,
+                    bottom = TdayDimens.ContentPaddingHorizontal,
+                ),
+        )
+    }
 }
 
 /** The sign-in / server-setup wizard, and the two holding screens that can stand in for it. */

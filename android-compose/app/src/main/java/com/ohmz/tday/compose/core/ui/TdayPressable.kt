@@ -25,14 +25,14 @@ import androidx.compose.ui.unit.dp
  * an argument so a call site can name the class its surface belongs to instead
  * of inventing a number for it.
  *
- * There is no scale constant in this file, deliberately. A press depth is
- * [TdayMotionTokens.PressScales] and nothing else — `Bar` for a round bar
- * button, `Card` for a card or tile, `Row` for a full-width row. The default is
- * `Card`, the middle of the three: a call site that has not thought about which
- * class its surface is gets the middle depth rather than the deepest, and the
- * two ends both have to be asked for. It is NOT the commonest number in the
- * tree — that is 0.93, which is not on a token at all and is what the seventeen
- * are being migrated off.
+ * A press depth is [TdayMotionTokens.PressScales] and nothing else — `Bar` for
+ * a round bar button, `Card` for a card or tile, `Row` for a full-width row.
+ * The default is `Card`, the middle of the three: a call site that has not
+ * thought about which class its surface is gets the middle depth rather than
+ * the deepest, and the two ends both have to be asked for. It is NOT the
+ * commonest number in the tree — that is 0.93, which is not on a token at all
+ * and is what the seventeen are being migrated off. [FabScale] is the single
+ * exception, and it is exactly that 0.93; every other call site names a token.
  */
 object TdayPress {
 
@@ -54,6 +54,32 @@ object TdayPress {
      * share and not a token for anybody to migrate onto.
      */
     val SinkOffset: Dp = 2.dp
+
+    /**
+     * How far the create button squashes. Deliberately not
+     * [TdayMotionTokens.PressScales.Bar].
+     *
+     * The FAB presses to 0.93 on Android and to 0.93 on iOS
+     * (`TdayPressEffectModifier`,
+     * `ios-swiftUI/Tday/Core/UI/TaskFloatingActionButton.swift:224`), against
+     * 0.94 for a bar button on both. Two clients that already agree to the
+     * hundredth are not the divergence the press-scale migration exists to
+     * close, and the extra depth is earned: the FAB is the one control on the
+     * screen with nothing beside it to be measured against, so it can travel
+     * further before the travel starts reading as a glitch. `docs/motion.md`
+     * records the disagreement as an open question the token layer chose not to
+     * settle; this is that answer written down, not a new one.
+     *
+     * Named here so that the two Android FABs — the root create button and
+     * `TodoListScreen`'s — read one constant instead of two literals that
+     * nothing ties together. Promoting it to a fourth `PressScales` entry is a
+     * bigger decision than it looks: `MotionTokens.kt` is code-generated into
+     * three clients, the parity test asserts the whole table by value
+     * (`expect(source.pressScales).toEqual({ bar: 0.94, card: 0.97, row: 0.985 })`),
+     * and web's FAB is 0.95 — so a fourth token has to arrive in all three at
+     * once, with web either argued onto 0.93 or argued out of the family.
+     */
+    const val FabScale: Float = 0.93f
 
     /**
      * What a press draws right now: the animation's value, or the destination

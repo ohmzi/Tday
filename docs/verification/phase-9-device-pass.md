@@ -334,6 +334,33 @@ animates.
               scale, so it ripples and flattens and does not travel. Expected: no Phase 9 unit
               migrates it.
 
+- [ ] **PR 9b · and · The create button answers a finger, and it does not jump at sign-in** — both
+      root feeds (scheduled and Anytime), then the car surface, then the onboarding wizard.
+      Do:     press and HOLD the blue "+" circle in the bottom-right of each root feed, watching the
+              circle rather than the ripple, and let go. Repeat on the car surface, where the same
+              button is drawn at a forced size in a row of controls. Then sign out far enough to
+              reach the onboarding wizard, look at the blurred feed behind it, and sign back in
+              watching the bottom-right corner through the hand-over.
+      Watch:  the circle shrinks and sinks about 2 dp under the finger and comes back when it lifts
+              — the same trip the header circles make, a little deeper: a FAB presses to 0.93 where
+              a bar button presses to 0.94. Behind the wizard the backdrop is the app's own layout:
+              the dock in the bottom-left AND one "+" circle in the bottom-right, both inert. Signing
+              in changes the feed under that circle while the circle itself stays put.
+      Fails:  the button not moving at all, which is the bug this row closes — it was handed an
+              interaction source and never read it. Also a fail: the button jumping sideways or up
+              as it presses, or the navigation-bar gap under it changing, which would be the press
+              applied inside the padding instead of outside it. On the car surface, the circle
+              changing the spacing of the controls beside it. Behind the wizard, a bottom-right
+              corner with NO "+" circle in it. And at sign-in, the circle popping, sliding or
+              flashing twice as the two feeds cross-fade — that would be the backdrop's button
+              sitting at different padding from the live one.
+      Known:  the two root feeds draw the same button from the same place, so they cannot disagree;
+              if one presses and the other does not, the fault is above this button. On the car
+              surface the button carries a forced `FabSize`, so the press has to move the drawing
+              inside that fixed slot and nothing else. The backdrop's circle is a real
+              `RootCreateTaskButton` and will press under a finger even though it opens nothing;
+              that is cosmetic and not a fail.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
