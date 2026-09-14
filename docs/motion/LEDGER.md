@@ -467,7 +467,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 8f — the one-line default-duration change
 
-- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **DROPPED, not deferred**; the box stays open because the change was not made and will not be. Four committed places now forbid it: `docs/motion.md:359-366` makes "Do not rebind Tailwind's default transition duration" idiom rule 3, `docs/CODING_STANDARDS.md:209` says "never rebind", `tday-web/src/globals.css:239-242` argues it in place at the one declaration block that would have carried it (~159 bare `transition-*` sites riding an un-overridden 150 ms, which is exactly `Quick`, so they are on the vocabulary for free), and `motion-budget.json`'s `_excluded.notCountedOnPurpose` excludes those same utilities on those same grounds. The value no longer names anything either: `4c941b1c` moved `Enter` 190 → 200 because 190 matched 2 sites against 200's 57. Rule 3 landed in `bc521d0d`, inside Phase 4's own PR #204 — the same PR that would have carried 8f — so this is a decision taken at the time, not a lapse · web · XS · Gate n/a — dropped
+- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **DROPPED, not deferred**; the box stays open because the change was not made and will not be. Four committed places now forbid it: `docs/motion.md` makes "Do not rebind Tailwind's default transition duration" idiom rule 3, `docs/CODING_STANDARDS.md:209` says "never rebind", `tday-web/src/globals.css:239-242` argues it in place at the one declaration block that would have carried it (~159 bare `transition-*` sites riding an un-overridden 150 ms, which is exactly `Quick`, so they are on the vocabulary for free), and `motion-budget.json`'s `_excluded.notCountedOnPurpose` excludes those same utilities on those same grounds. The value no longer names anything either: `4c941b1c` moved `Enter` 190 → 200 because 190 matched 2 sites against 200's 57. Rule 3 landed in `bc521d0d`, inside Phase 4's own PR #204 — the same PR that would have carried 8f — so this is a decision taken at the time, not a lapse · web · XS · Gate n/a — dropped
 
 ## Phase 5 — web primitives, in dependency order
 
@@ -1606,7 +1606,7 @@ Restore it from git history rather than adjusting the number.
   - **The row's iOS half — `cardIn → 0.46/0.82` — is superseded, and writing it back would have
     cost more than it bought.** `TdaySheetChrome.swift:271` already reads
     `static let cardIn = TdayMotion.settle`, which is response 0.40 / dampingFraction 0.86, and
-    `docs/motion.md:286-289` names that exact line as the `Settle` rung's **one** anchoring site in
+    `docs/motion.md`'s `Settle` bullet names that exact line as the rung's **one** anchoring site in
     the repo. Putting 0.46/0.82 there would strand `Settle` with zero call sites, add 2 to
     `ios.spring` — measured at 98 against a ceiling of 98 when this was argued, and 60 against 60
     after 8g and 8h, so zero headroom either way — and spend `Gesture`'s 0.82 damping on a
@@ -1676,7 +1676,7 @@ Restore it from git history rather than adjusting the number.
     written at the gesture is a second thing to keep in step with it. `dragTranslation` is
     deliberately *not* reset on a commit, so the exit carries on from where the finger left the card
     instead of snapping it home first. A refused drag springs back on `TdayMotion.gesture` —
-    response 0.34 / dampingFraction 0.82, the rung `docs/motion.md:267` defines as a surface
+    response 0.34 / dampingFraction 0.82, the rung `docs/motion.md`'s spring table defines as a surface
     continuing under its own momentum after a finger lets go, and the place the 0.82 the
     `sheet-presentation-unification` row above declined to spend on an *arrival* actually belongs.
   - **The keyboard resigns at the gesture and not at the dismissal, and that is the trap.**
