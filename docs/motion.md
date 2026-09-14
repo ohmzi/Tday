@@ -172,7 +172,7 @@ silently retime the confetti on all three clients.
   overlay moves. See the open question below.
 - **`CelebrationLead`.** One site per client:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:388`,
-  `ios-swiftUI/Tday/Core/UI/TdayConfetti.swift:160`,
+  `ios-swiftUI/Tday/Core/UI/TdayConfetti.swift:380`,
   `tday-web/src/globals.css:623`. Web's is the one that shows the two delays
   adding: `.tday-empty-enter-celebrating` is
   `calc(var(--tday-celebration-start, 0s) + var(--tday-delay-celebration-lead))`,
