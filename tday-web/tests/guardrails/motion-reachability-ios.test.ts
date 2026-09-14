@@ -1311,3 +1311,159 @@ describeIOS("iOS row actions", () => {
     ).toEqual([]);
   });
 });
+
+// ─── The accessible half of a row action ───────────────────────────
+//
+// The rule above asks whether every mode reaches a row that carries the swipe.
+// This one asks the question the swipe cannot answer for itself: a
+// `UIPanGestureRecognizer` is not in the accessibility tree, so a capability
+// whose only entry point is that pan is a capability VoiceOver, Switch Control
+// and Full Keyboard Access all report as absent. The row read as text and
+// nothing else, and no compiler here says a word about it — the app target has
+// no Swift toolchain on this machine and the tree had no `accessibilityAction`
+// in it at all.
+//
+// So the invariant is parity, not presence: every action input the swipe
+// modifier takes must be named inside its accessible-actions block. A fifth
+// pill added next year lands as a fifth rotor entry or lands red.
+
+/** The locales `Localizable.xcstrings` carries a value for; `en` is the key. */
+const IOS_LOCALES = ["de", "es", "fr", "it", "ja", "ms", "pt", "ru", "zh"];
+const STRING_CATALOG = path.join(MONO, "ios-swiftUI", "Tday", "Resources", "Localizable.xcstrings");
+
+interface StringCatalog {
+  strings: Record<string, { localizations?: Record<string, { stringUnit?: { value?: string } }> }>;
+}
+
+/**
+ * Inputs a helper takes that DO something: a closure, or a value carrying one.
+ *
+ * Both halves of the modifier declare the same four, one as parameters and one
+ * as stored properties, so reading the union costs nothing and means neither
+ * half can be edited alone into disagreeing with the rule. The type test for the
+ * second form is anchored on an uppercase name so `tint: TaskSwipeActionTint.edit`
+ * — a colour, not an action — stays out of it.
+ */
+function actionInputs(helper: ViewHelper): string[] {
+  const names = new Set<string>();
+  for (const match of helper.body.matchAll(/\b(?:let|var)?\s*(\w+)\s*:\s*(?:@escaping\s+)?\(\s*\)\s*->/g)) {
+    names.add(match[1]);
+  }
+  for (const match of helper.body.matchAll(/\b(\w+)\s*:\s*[A-Z]\w*Action\w*\??(?![\w.])/g)) {
+    names.add(match[1]);
+  }
+  return [...names];
+}
+
+/**
+ * The 0-based line span of every accessible-actions block in a file.
+ *
+ * Taken off the stripped code so a brace inside a string cannot move it, and
+ * returned as a span rather than as text because the localisation rule below
+ * has to read the same lines back out of the raw source with the literals still
+ * in them. Both API spellings count: `.accessibilityActions { … }` and a single
+ * `.accessibilityAction(named:)` with a trailing closure are the same claim.
+ */
+function accessibleActionSpans(parsed: ParsedFile): { start: number; end: number }[] {
+  const spans: { start: number; end: number }[] = [];
+  for (let i = 0; i < parsed.code.length; i += 1) {
+    if (!/\.accessibilityActions?\s*[({]/.test(parsed.code[i])) continue;
+    let open = i;
+    while (open < parsed.code.length && !parsed.code[open].includes("{")) open += 1;
+    if (open >= parsed.code.length) continue;
+    spans.push({ start: i, end: blockEnd(parsed.code, open) });
+  }
+  return spans;
+}
+
+/** The spans of [accessibleActionSpans] that fall inside a helper's declaration. */
+function helperActionSpans(helper: ViewHelper): { start: number; end: number }[] {
+  const parsed = PARSED.find((entry) => entry.file === helper.file);
+  if (!parsed) return [];
+  return accessibleActionSpans(parsed).filter(
+    (span) => span.start + 1 >= helper.line && span.end + 1 <= helper.endLine,
+  );
+}
+
+const ACTION_HELPERS = SWIPE_HELPERS.filter((helper) => actionInputs(helper).length > 0);
+
+describeIOS("iOS row actions reach the accessibility tree", () => {
+  it("still sees the action inputs the rule is about", () => {
+    // Without this the two rules below are green over an empty set the moment
+    // the signature is reformatted past the regex — which is the same failure
+    // mode as the swipe nobody applied, one layer up.
+    const inputs = new Set(ACTION_HELPERS.flatMap(actionInputs));
+    for (const name of ["onEdit", "onCopy", "onDelete", "extraAction"]) {
+      expect([...inputs], `\`${name}\` among the swipe modifier's action inputs`).toContain(name);
+    }
+    // `extensionViewHelpers` slices a declaration from its opening brace, so the
+    // `extension View` half's parameters are outside the text this reads and the
+    // set comes from the `ViewModifier` half alone. That is the half that renders
+    // the pills and would have to grow a fifth one, so naming it is the floor
+    // that matters — a count would only have said "one of something".
+    expect(
+      ACTION_HELPERS.map((helper) => helper.name),
+      "the half that renders the row's actions",
+    ).toContain("TodoTrailingSwipeActionsModifier");
+  });
+
+  it("every action the swipe performs is also an accessibility action", () => {
+    const violations: string[] = [];
+    for (const helper of ACTION_HELPERS) {
+      const spans = helperActionSpans(helper);
+      const parsed = PARSED.find((entry) => entry.file === helper.file) as ParsedFile;
+      const surface = spans
+        .map((span) => parsed.code.slice(span.start, span.end + 1).join("\n"))
+        .join("\n");
+      for (const name of actionInputs(helper)) {
+        if (new RegExp(`\\b${name}\\b`).test(surface)) continue;
+        violations.push(
+          `${relPath(helper.file)}:${helper.line} → \`${helper.name}\` takes \`${name}\` and ` +
+            "never names it inside an accessibility action. The reveal is a pan, and a pan is " +
+            "not in the accessibility tree: an action reachable only that way does not exist " +
+            "for VoiceOver, Switch Control or Full Keyboard Access.",
+        );
+      }
+    }
+    expect(violations, violations.join("\n")).toEqual([]);
+  });
+
+  it("names those actions in a string every locale has", () => {
+    const catalog = JSON.parse(readFileSync(STRING_CATALOG, "utf-8")) as StringCatalog;
+    const violations: string[] = [];
+    let labelled = 0;
+
+    for (const helper of ACTION_HELPERS) {
+      const parsed = PARSED.find((entry) => entry.file === helper.file) as ParsedFile;
+      for (const span of helperActionSpans(helper)) {
+        const raw = parsed.raw.slice(span.start, span.end + 1).join("\n");
+        const literals = [...raw.matchAll(/"([^"\\]*)"/g)].map((match) => match[1]);
+        const keys = [...raw.matchAll(/\bL\(\s*"([^"\\]*)"/g)].map((match) => match[1]);
+        labelled += keys.length;
+
+        for (const literal of literals.filter((value) => !keys.includes(value))) {
+          violations.push(
+            `${relPath(helper.file)}:${span.start + 1} → "${literal}" is an accessibility ` +
+              "action name written in English. It is the only name a VoiceOver user ever " +
+              "hears for that action; put it through `L(…)` like every other string here.",
+          );
+        }
+
+        for (const key of keys) {
+          const missing = IOS_LOCALES.filter(
+            (locale) => !catalog.strings[key]?.localizations?.[locale]?.stringUnit?.value,
+          );
+          if (missing.length === 0) continue;
+          violations.push(
+            `${relPath(helper.file)}:${span.start + 1} → \`L("${key}")\` has no value for ` +
+              `${missing.join(", ")}. A missing key falls back to the English key silently, so ` +
+              "the action is reachable and unreadable at once.",
+          );
+        }
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
+    expect(labelled, "localised accessibility action names").toBeGreaterThanOrEqual(3);
+  });
+});

@@ -130,6 +130,35 @@ goes looking for.
               leading edge, the toast springs up. A retiming here means the gate was written the
               wrong way round and every user got the substitute.
 
+- [ ] **PR 37 · ios · VoiceOver can act on a task row** — **Settings → Accessibility → VoiceOver**
+      on. Needs four feeds: a scheduled list holding a dated non-recurring task, the floater feed,
+      an overdue row, and the Completed screen. Also needs a list you are only a viewer of, which
+      is the half that checks the gate rather than the actions.
+      Do:     focus a task row, swipe up or down to reach the Actions rotor, and run each entry in
+              turn — Edit, Copy, the mode's own third action, Delete — returning to the feed
+              between them. The third action is Defer on a dated row, Schedule on a floater and
+              Float on an overdue one, so this is four rows, not one. Repeat on the Completed
+              screen and on the Calendar day list. Then focus a row in the viewer list, and start
+              a multi-select sweep in a normal one and focus a row inside it.
+      Watch:  the row says "Actions available" and the rotor holds four entries on a dated row,
+              three on Completed and on Calendar. Each one is read in the device language — switch
+              the app language to one you can recognise and hear it change. Each one does on
+              activation exactly what the matching pill does on a swipe, haptic included: Edit
+              opens the edit sheet, Copy puts the task on the clipboard, Delete removes the row
+              and raises the Undo toast. In the viewer list and mid-sweep there are NO actions on
+              the row at all.
+      Fails:  the row reading as title and date with nothing else — no "Actions available" — which
+              is the defect the whole row exists for, and the state the app shipped in. Also a
+              fail: the actions present on the row's text but absent when focus is on the complete
+              toggle, which would mean they are attached to one child element rather than to the
+              row; a Delete offered in the viewer list, which is an action the app then refuses;
+              or a rotor entry whose name is English while the rest of the screen is not.
+      Also:   explore the row left-to-right with VoiceOver and count the stops. There must be no
+              Edit, Copy or Delete BUTTON anywhere in it — those are the swipe pills, which sit in
+              the row permanently at zero opacity, and hearing one is the tree exposing something
+              the eye cannot see and the finger cannot reach. Then turn VoiceOver off and swipe a
+              row open by hand: the pills must still reveal, still stagger, and still fire.
+
 ## Android
 
 - [ ] **PR 36 · and · The Undo waits as long as the user asked it to** — Settings →
