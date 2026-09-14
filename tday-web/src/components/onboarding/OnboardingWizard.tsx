@@ -787,7 +787,7 @@ function HeroTile({
         strokeWidth={1.5}
       />
       <div className="relative flex min-w-0 items-center gap-3">
-        <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-2xl bg-white/[0.18]">
+        <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-lg bg-white/[0.18]">
           <Icon className="h-[23px] w-[23px] text-white" strokeWidth={2.25} />
         </div>
         <div className="min-w-0">

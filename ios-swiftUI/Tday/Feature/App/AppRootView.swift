@@ -24,6 +24,14 @@ struct AppRootView: View {
     // Optional biometric gate, default OFF. When disabled every member below is inert.
     @State private var appLock = AppLockController()
     @Environment(\.scenePhase) private var scenePhase
+    /// The namespace the six home tiles and the screens they open are matched in.
+    ///
+    /// Owned here because this is the one view that contains both ends: the tiles are
+    /// built inside `ScheduledTaskHomeScreen`, the destinations by `destinationView(for:)`
+    /// below, and a `@Namespace` only matches views that share the one instance. It is
+    /// published into the environment rather than passed down — see `ZoomNavigation.swift`
+    /// for why a parameter chain through two private types was not the way to spend it.
+    @Namespace private var zoomNamespace
     /// The app's one motion gate — see `TdayMotionEnvironment.swift`. Every
     /// `.animation` in this view's body passes its spec through it, so Reduce Motion
     /// refuses the trip in one place rather than at each of them. It resolves against
@@ -47,10 +55,30 @@ struct AppRootView: View {
         ))
     }
 
+    /// Whether the launch splash still owns the screen.
+    ///
+    /// Hoisted out of the `if` below so the hand-over has ONE `Equatable` value to key an
+    /// `.animation(_:value:)` on. Two `||`-ed properties are two things changing, and the
+    /// boundary the user sees is neither of them separately — a bootstrap that finishes
+    /// while a finger is still holding the splash down must be one arrival, not two.
+    private var showsLaunchSplash: Bool {
+        !appViewModel.hasCompletedInitialBootstrap || isLaunchSplashHeld
+    }
+
     var body: some View {
         Group {
-            if !appViewModel.hasCompletedInitialBootstrap || isLaunchSplashHeld {
+            if showsLaunchSplash {
                 AppLaunchSplashView(isHeld: $isLaunchSplashHeld)
+                    // The half that leaves, on `Exit` — something departing should commit
+                    // rather than drift off, and it is the curve web hands the outgoing
+                    // snapshot of a route change (`::view-transition-old(root)`). Its own
+                    // `.animation` because a `.transition` with none takes the enclosing
+                    // transaction's single curve, which is the one thing a two-curve
+                    // hand-over cannot be spelled as. Same rung as the arm below: one
+                    // length, two curves, which is exactly the web pairing.
+                    .transition(AnyTransition.opacity.animation(
+                        tdayAnimation(TdayMotion.exit(duration: TdayMotion.Durations.enter))
+                    ))
             } else {
                 let showOnboardingOverlay = !appViewModel.isWorkspaceAvailable && appViewModel.versionCheckResult == .compatible
 
@@ -200,7 +228,12 @@ struct AppRootView: View {
                     .navigationBarBackButtonHidden(true)
                     .toolbar(.hidden, for: .navigationBar)
                     .navigationDestination(for: AppRoute.self) { route in
+                        // One site covers every push. `tdayZoomDestination` reads the route's
+                        // own source id, so the six home tiles grow into their screens and
+                        // everything else falls through to the stock push without a list here
+                        // to keep in step with the one in `ZoomNavigation.swift`.
                         destinationView(for: route)
+                            .tdayZoomDestination(route)
                     }
                     .onChange(of: appViewModel.navigationPath) { _, path in
                         normalizeRootNavigationPath(path)
@@ -353,6 +386,9 @@ struct AppRootView: View {
                         value: showOnboardingOverlay
                     )
                 }
+                // Above the stack, so both ends read the same namespace: the root feed's
+                // tiles inside it, and the destinations `.navigationDestination` builds.
+                .environment(\.tdayZoomNamespace, zoomNamespace)
                 .navigationInteractivePopGesture()
                 // The snackbar overlays the NavigationStack itself, not the
                 // stack's root content: toasts scheduled while a destination
@@ -398,8 +434,41 @@ struct AppRootView: View {
                     ),
                     value: container.snackbarManager.content?.id
                 )
+                // The half that arrives, on `Enter` — the first screen settles in rather
+                // than stopping. Paired with the splash's `Exit` above and played in the
+                // one transaction below them both.
+                .transition(AnyTransition.opacity.animation(
+                    tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter))
+                ))
             }
         }
+        // The splash handing over to the app was the one boundary in this file with
+        // nothing on it: a bare `if`, no transition and no transaction, so the first
+        // screen of every launch arrived by cutting the splash out between two frames.
+        // This line is that transaction — the two `.transition`s above are inert without
+        // one, and inert-because-nobody-opened-a-transaction is the failure
+        // `motion-reachability-ios` exists to catch.
+        //
+        // `Enter`, and not a length of its own. The first screen is a thing arriving with
+        // nothing arguing for another rung; the wait this fade could be accused of
+        // sitting in front of is the bootstrap, and the bootstrap is what flipped the
+        // value, so it has already finished by the time the fade starts. That is PR 55's
+        // argument for the web route fade, on the boundary one level further out. Web
+        // times this same hand-over the same way — `.tday-route-fade` and
+        // `::view-transition-old(root)` are both `var(--tday-duration-enter)`, on
+        // `--tday-ease-enter` and `--tday-ease-exit` — and the arms above are that pair.
+        // SwiftUI has no way to carry two curves through one `.animation(_:value:)`, so
+        // the curves live per-arm and the length is named here as well, where the
+        // transaction is opened.
+        //
+        // Reduce Motion needs no branch of its own: `tdayAnimation(…)` returns nil, the
+        // arms still swap, and the app is drawn finished in the frame the bootstrap
+        // completes. That is `docs/motion.md`'s fifth idiom rule, and an `if` here would
+        // be re-deriving an answer this view already reads out of the environment.
+        .animation(
+            tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter)),
+            value: showsLaunchSplash
+        )
         // FALLBACK layer only. Applied INSIDE the theme/locale modifiers below so it is themed
         // and localized like the rest of the app, and it covers every state above it — splash,
         // onboarding, all pushed destinations. What it CANNOT cover is a `.sheet` or
@@ -1301,7 +1370,15 @@ struct AppLaunchSplashView: View {
     @Environment(\.colorScheme) private var colorScheme
     /// The English line is the catalog key; `L` resolves it against the in-app
     /// language so the splash speaks the same language as the rest of the app.
-    @State private var taglineKey = splashTaglines.randomElement() ?? "Running on your server, running your life"
+    ///
+    /// Read out of `launchTagline` rather than seeded per view, and that is the whole
+    /// reason `launchTagline` exists: this view is built TWICE on every cold launch, once
+    /// by `TdayApp` while `AppContainer` is under construction and once by `AppRootView`
+    /// until the bootstrap finishes. Two structural positions is two identities, so a
+    /// `@State` seed here would draw twice and land a different line each time — a new
+    /// tagline blinking in at the one boundary in this app that is supposed to look like
+    /// nothing happened.
+    private let taglineKey = launchTagline
 
     var body: some View {
         ZStack {
@@ -1357,6 +1434,16 @@ struct AppLaunchSplashView: View {
         colorScheme == .dark ? .tdayDarkMuted : .tdayLightMuted
     }
 }
+
+/// The tagline for THIS launch, chosen once per process.
+///
+/// A Swift global initializes lazily and exactly once, which is precisely the lifetime
+/// the line needs: still a fresh tagline on every cold launch, but the same one for both
+/// of the `AppLaunchSplashView`s a launch draws (see `taglineKey`). Picking inside the
+/// view instead made `TdayApp`'s splash hand over to `AppRootView`'s with a new line
+/// under it — 89 times in 90 — which is a hard cut on the only screen where both sides
+/// of the boundary are meant to be the same pixels.
+private let launchTagline = splashTaglines.randomElement() ?? "Running on your server, running your life"
 
 private let splashTaglines = [
     "Your server remembers, so you don\u{2019}t have to",

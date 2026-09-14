@@ -1010,6 +1010,13 @@
         "keywords": "seret, susun semula, alih, isih, susunan, atur",
         "body": "Senarai anda mengekalkan susunan yang anda berikan. Seret tugasan ke atas atau ke bawah untuk mengatur hari anda mengikut cara anda memikirkannya."
       },
+      "swipe-sheet-away": {
+        "title": "Leret helaian untuk menutupnya",
+        "summary": "Tarik helaian tugas baharu ke bawah untuk menutupnya.",
+        "keywords": "leret, seret, tarik, tutup, buang, helaian, kad, pemegang, gerak isyarat, ke bawah",
+        "body": "Bar kecil di bahagian atas helaian tugas baharu bermaksud kad itu boleh ditarik ke bawah. Seret dan ia mengikut jari anda; lepaskan selepas kira-kira satu perempat perjalanan dan ia ditutup, sama seperti anda mengetik kawasan gelap di belakangnya. Lambaian pantas juga dikira — yang penting ke mana anda menuju, bukan di mana anda melepaskannya — dan tarikan yang anda ubah fikiran akan melantun kembali ke tempatnya.",
+        "tip": "Jika kandungan sesebuah helaian boleh ditatal, seret dari bahagian atas kad: bahagian tengahnya milik senarai."
+      },
       "sound-and-vibration": {
         "title": "Bunyi dan getaran",
         "summary": "Matikan bunyi siap, getaran, atau kedua-duanya.",
