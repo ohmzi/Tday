@@ -20,7 +20,7 @@ export default function NativeAppBrandButton({
       className={cn(
         // inline-flex + w-fit keeps the box (and the press ripple, which fills it)
         // hugging just the icon + text instead of stretching across the header.
-        "group inline-flex w-fit max-w-full items-center gap-2 rounded-2xl transition-opacity duration-enter",
+        "group inline-flex w-fit max-w-full items-center gap-2 rounded-lg transition-opacity duration-enter",
         "hover:opacity-90 active:opacity-80",
         className,
       )}

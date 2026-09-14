@@ -132,7 +132,7 @@ export default function NativeFloaterTaskHomeDashboard() {
                     <button
                       type="button"
                       key={floater.id}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors hover:bg-muted/65"
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/65"
                       onClick={() => router.push(`/app/todo?todo=${encodeURIComponent(floater.id)}`)}
                     >
                       <span

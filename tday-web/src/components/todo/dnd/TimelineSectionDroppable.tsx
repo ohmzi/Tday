@@ -97,7 +97,7 @@ export default function TimelineSectionDroppable({
       ref={setNodeRef}
       id={getTodoDateSectionId(section.key)}
       className={cn(
-        "scroll-mt-24 rounded-3xl px-1 transition-all duration-enter",
+        "scroll-mt-24 rounded-xl px-1 transition-all duration-enter",
         sectionTopGap,
         isActive && sectionActiveClass,
       )}

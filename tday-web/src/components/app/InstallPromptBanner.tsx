@@ -38,7 +38,7 @@ export default function InstallPromptBanner() {
         "data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom-4 data-[state=closed]:fade-out data-[state=closed]:duration-quick",
       )}
     >
-      <div className="relative overflow-hidden rounded-2xl border border-white/70 bg-card/95 p-4 shadow-[0_20px_50px_-20px_hsl(var(--shadow)/0.5)] backdrop-blur-xl dark:border-white/10">
+      <div className="relative overflow-hidden rounded-lg border border-white/70 bg-card/95 p-4 shadow-[0_20px_50px_-20px_hsl(var(--shadow)/0.5)] backdrop-blur-xl dark:border-white/10">
         <button
           type="button"
           onClick={dismiss}
@@ -49,7 +49,7 @@ export default function InstallPromptBanner() {
         </button>
 
         <div className="flex items-start gap-3 pr-6">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/15">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-accent/15">
             <Download className="h-5 w-5 text-accent" />
           </div>
           <div className="min-w-0">
@@ -69,7 +69,7 @@ export default function InstallPromptBanner() {
                 <button
                   type="button"
                   onClick={promptInstall}
-                  className="mt-2.5 inline-flex h-9 items-center gap-1.5 rounded-xl bg-accent px-4 text-xs font-black text-white transition-colors hover:bg-accent/90"
+                  className="mt-2.5 inline-flex h-9 items-center gap-1.5 rounded-sm bg-accent px-4 text-xs font-black text-white transition-colors hover:bg-accent/90"
                 >
                   <Download className="h-3.5 w-3.5" />
                   Install

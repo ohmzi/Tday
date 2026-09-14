@@ -197,9 +197,38 @@
   --color-chart-4: hsl(var(--chart-4));
   --color-chart-5: hsl(var(--chart-5));
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  /* The radius ladder, whole. It used to be three lines — `lg`, `md`, `sm` —
+     and Tailwind supplied the other five from `theme.css:397-404`, which is how
+     `rounded-xl` came to render 12px while `rounded-md` rendered 14px: a rung
+     that is not declared is a rung the framework picks, and it picked one that
+     sorts below the rung under it. So the whole namespace is declared here, the
+     unused keys included, rather than half of it.
+
+     Five rungs, because five distinct corners are what the app actually draws —
+     2, 12, 14, 16, 24. `2xl` and `3xl` are gone as names and not as pixels: the
+     fix was a rename at the call sites, not a revalue here. Lifting `--radius-xl`
+     above `md` would have moved the rendered corner at 35 sites and, with `2xl`
+     folded onto `lg`, at 84 more — most of the app, and a device pass this row
+     does not have. Renaming leaves every corner byte-identical and costs a diff,
+     the two `<pre>` blocks in `public/content/blog` included: they ride the same
+     stylesheet and rule C walks them for exactly that reason.
+
+     It is also the same argument the easings below make: a value that already
+     has a name does not get a second one. `lg` and `2xl` both meaning 16px was
+     exactly that, and one of them had to go.
+
+     `xs` keeps Tailwind's own `0.125rem` rather than the `2px` the two
+     `rounded-[2px]` sites spell, so that declaring the rung stays a pure
+     declaration — the app pins no root font size, and `2px` would diverge from
+     what renders today for anyone who has changed theirs. */
+  --radius-xs: 0.125rem;
+  --radius-sm: calc(var(--radius) - 4px); /* 12px */
+  --radius-md: calc(var(--radius) - 2px); /* 14px */
+  --radius-lg: var(--radius); /* 16px */
+  --radius-xl: calc(var(--radius) + 8px); /* 24px */
+  --radius-2xl: initial;
+  --radius-3xl: initial;
+  --radius-4xl: initial;
 
   /* The two easings Tailwind does not already ship, and only those two. Its own
      `--ease-in-out`, `--ease-out` and `--ease-in` (theme.css:434-436) are

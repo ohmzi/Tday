@@ -35,7 +35,7 @@ type ListSidebarSectionProps = {
 };
 
 const expandedItemBase =
-  "group flex h-12 w-full min-w-0 items-center gap-3 overflow-hidden rounded-2xl px-2 text-base font-black transition-colors duration-enter";
+  "group flex h-12 w-full min-w-0 items-center gap-3 overflow-hidden rounded-lg px-2 text-base font-black transition-colors duration-enter";
 
 const expandedItemIdle =
   "text-muted-foreground transition-colors duration-enter hover:bg-card/70 hover:text-foreground";
@@ -44,10 +44,10 @@ const expandedItemActive =
   "bg-card text-foreground shadow-sm";
 
 const collapsedItemBase =
-  "group flex h-10 min-h-10 w-10 items-center justify-center rounded-xl text-sidebar-foreground/70 transition-colors duration-enter hover:bg-sidebar-accent/50 hover:text-sidebar-foreground";
+  "group flex h-10 min-h-10 w-10 items-center justify-center rounded-sm text-sidebar-foreground/70 transition-colors duration-enter hover:bg-sidebar-accent/50 hover:text-sidebar-foreground";
 
 const listIconSlot =
-  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/70";
+  "flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-muted/70";
 const listDotClass = "text-[1.05rem] leading-none";
 
 type SidebarListItem = {
@@ -449,7 +449,7 @@ export default function ListSidebarSection({
                   <div
                     key={list.id}
                     className={cn(
-                      "flex items-center gap-3 rounded-2xl border px-3 py-3 transition-colors",
+                      "flex items-center gap-3 rounded-lg border px-3 py-3 transition-colors",
                       isSelected
                         ? "border-destructive/35 bg-destructive/5"
                         : "border-border/60 bg-background/80 hover:bg-accent/40",
@@ -474,7 +474,7 @@ export default function ListSidebarSection({
                         toggleBulkDeleteSelection(list.id);
                       }}
                     >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sidebar-accent/35 text-sidebar-foreground/80">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-sidebar-accent/35 text-sidebar-foreground/80">
                         <ListDot id={list.id} className="text-base leading-none" />
                       </span>
 
@@ -500,7 +500,7 @@ export default function ListSidebarSection({
             </div>
 
             {selectedBulkLists.length > 0 && (
-              <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3">
+              <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3">
                 <div className="flex items-start gap-3">
                   <div className="rounded-full bg-destructive/10 p-2">
                     <AlertTriangle className="h-4 w-4 text-destructive" />

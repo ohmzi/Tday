@@ -506,7 +506,7 @@ function MonthCalendarGrid({
             disabled={disabled}
             onSelectDate={onSelectDate}
             className={cn(
-              "mx-auto flex h-[3.1rem] w-[2.9rem] flex-col items-center justify-center rounded-2xl text-center transition-colors duration-enter",
+              "mx-auto flex h-[3.1rem] w-[2.9rem] flex-col items-center justify-center rounded-lg text-center transition-colors duration-enter",
               "hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-30",
               selected && "bg-accent text-accent-foreground shadow-[0_12px_24px_-18px_hsl(var(--accent)/0.8)] hover:bg-accent",
               !selected && todayDate && "border border-accent/45 text-accent",

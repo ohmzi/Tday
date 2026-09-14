@@ -52,7 +52,7 @@ export default function CompletedContainer() {
     <div
       role="tablist"
       aria-label={completedDict("title")}
-      className="relative mx-auto mt-4 flex h-11 w-full max-w-xs rounded-2xl bg-muted/60 p-1"
+      className="relative mx-auto mt-4 flex h-11 w-full max-w-xs rounded-lg bg-muted/60 p-1"
     >
       {/* Enter, not Emphasis, and that is a choice rather than an oversight.
           The thumb travels, so rule 2 would put it on Emphasis — but it is the
@@ -64,7 +64,7 @@ export default function CompletedContainer() {
           not to the pass that stopped the durations being numbers. */}
       <span
         aria-hidden
-        className="absolute bottom-1 top-1 w-[calc(50%-0.25rem)] rounded-xl bg-card shadow-sm transition-transform duration-enter ease-out"
+        className="absolute bottom-1 top-1 w-[calc(50%-0.25rem)] rounded-sm bg-card shadow-sm transition-transform duration-enter ease-out"
         style={{ transform: `translateX(${activeIndex * 100}%)` }}
       />
       {tabs.map((tab, index) => (
@@ -80,7 +80,7 @@ export default function CompletedContainer() {
             scrollCompletedToTop();
           }}
           className={cn(
-            "relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-xl text-sm font-black transition-colors duration-enter",
+            "relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-sm text-sm font-black transition-colors duration-enter",
             index === activeIndex ? "text-foreground" : "text-muted-foreground",
           )}
         >

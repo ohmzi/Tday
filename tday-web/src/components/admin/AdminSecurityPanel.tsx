@@ -99,7 +99,7 @@ const MetaText = ({ children }: { children: ReactNode }) => (
 );
 
 const AlertRow = ({ alert }: { alert: SecurityAlert }) => (
-  <div className="rounded-2xl border border-border/70 bg-muted/20 p-3.5">
+  <div className="rounded-lg border border-border/70 bg-muted/20 p-3.5">
     <p className="text-[1.05rem] font-black text-foreground">{alertTypeLabel(alert.type)}</p>
     <p className="mt-1 break-words text-sm font-extrabold text-muted-foreground">{alert.detail}</p>
     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -127,7 +127,7 @@ const BlockRow = ({
 }) => {
   const busy = clearingId === block.id;
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-lg border border-border/70 bg-muted/20 p-3.5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="text-[1.05rem] font-black text-foreground">
           {blockScopeLabel(block.scope)} blocked
@@ -171,7 +171,7 @@ const BlockRow = ({
 /** The reassuring resting state: nothing happened, and that is stated outright
  * instead of leaving two empty boxes to interpret. */
 const AllClearRow = () => (
-  <div className="flex items-start gap-3 rounded-2xl border border-border/70 bg-muted/25 px-3.5 py-3">
+  <div className="flex items-start gap-3 rounded-lg border border-border/70 bg-muted/25 px-3.5 py-3">
     <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
     <div className="min-w-0">
       <p className="text-[1.05rem] font-black text-foreground">All clear</p>
@@ -183,7 +183,7 @@ const AllClearRow = () => (
 );
 
 const NoticeRow = ({ children }: { children: ReactNode }) => (
-  <p className="rounded-2xl border border-border/70 bg-muted/25 px-3.5 py-3 text-sm font-extrabold text-muted-foreground">
+  <p className="rounded-lg border border-border/70 bg-muted/25 px-3.5 py-3 text-sm font-extrabold text-muted-foreground">
     {children}
   </p>
 );
@@ -267,7 +267,7 @@ export default function AdminSecurityPanel() {
 
     if (loadFailed) {
       return (
-        <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-3.5 py-3">
+        <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 py-3">
           <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
           <div className="min-w-0">
             <p className="text-[1.05rem] font-black text-destructive">Status unavailable</p>

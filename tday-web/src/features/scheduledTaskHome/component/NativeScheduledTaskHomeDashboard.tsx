@@ -211,7 +211,7 @@ export default function NativeScheduledTaskHomeDashboard() {
                     <button
                       type="button"
                       key={todo.id}
-                      className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-left transition-colors hover:bg-muted/65"
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/65"
                       onClick={() => router.push(`/app/todo?todo=${encodeURIComponent(todo.id)}`)}
                     >
                       <span className="h-2.5 w-2.5 rounded-full bg-accent" />

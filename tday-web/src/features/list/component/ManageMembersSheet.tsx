@@ -222,7 +222,7 @@ export default function ManageMembersSheet({
                 placeholder={appDict("searchUsersPlaceholder")}
                 autoCapitalize="none"
                 autoCorrect="off"
-                className="h-12 rounded-2xl border-transparent bg-muted/60 font-bold focus-visible:ring-0"
+                className="h-12 rounded-lg border-transparent bg-muted/60 font-bold focus-visible:ring-0"
               />
               {debouncedSearch.trim().length >= 2 ? (
                 <MemberSearchResults
@@ -236,7 +236,7 @@ export default function ManageMembersSheet({
             </SheetCard>
           </>
         ) : confirmingLeave ? (
-          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
             <p className="text-sm font-extrabold text-destructive">
               {appDict("leaveListConfirm", { name: listName })}
             </p>
@@ -244,7 +244,7 @@ export default function ManageMembersSheet({
               <button
                 type="button"
                 onClick={() => setConfirmingLeave(false)}
-                className="rounded-2xl border border-border/70 bg-card px-5 py-2.5 text-sm font-black"
+                className="rounded-lg border border-border/70 bg-card px-5 py-2.5 text-sm font-black"
               >
                 {appDict("cancel")}
               </button>
@@ -252,7 +252,7 @@ export default function ManageMembersSheet({
                 type="button"
                 disabled={leaveListPending}
                 onClick={() => void handleLeave()}
-                className="rounded-2xl bg-destructive px-5 py-2.5 text-sm font-black text-destructive-foreground disabled:opacity-50"
+                className="rounded-lg bg-destructive px-5 py-2.5 text-sm font-black text-destructive-foreground disabled:opacity-50"
               >
                 {appDict("leaveList")}
               </button>
@@ -267,7 +267,7 @@ export default function ManageMembersSheet({
                   onOpenChange(false);
                   onShareExternal();
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border/70 bg-muted/60 px-5 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-border/70 bg-muted/60 px-5 py-2.5 text-sm font-black text-foreground transition-colors hover:bg-muted active:scale-[0.99]"
               >
                 <Share2 className="h-4 w-4 stroke-[2.4]" />
                 {appDict("share")}
@@ -276,7 +276,7 @@ export default function ManageMembersSheet({
             <button
               type="button"
               onClick={() => setConfirmingLeave(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-5 py-2.5 text-sm font-black text-destructive transition-colors hover:bg-destructive/10 active:scale-[0.99]"
             >
               {appDict("leaveList")}
             </button>
