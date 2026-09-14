@@ -233,7 +233,7 @@ export default function NativeScheduledTaskHomeDashboard() {
 
         <Link
           href="/app/today"
-          className="relative flex h-[70px] items-center justify-between overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(50,90,130,0.62)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
+          className="relative flex h-[70px] items-center justify-between overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(50,90,130,0.62)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
           style={{ backgroundColor: todayTileColor }}
         >
           {renderTileOverlay()}
@@ -287,7 +287,7 @@ export default function NativeScheduledTaskHomeDashboard() {
                 href={route.path}
                 className={cn(
                   "group relative min-h-[94px] overflow-hidden rounded-[26px] p-3 text-white",
-                  "shadow-[0_14px_30px_-18px_rgba(60,70,90,0.55)] transition-transform duration-200",
+                  "shadow-[0_14px_30px_-18px_rgba(60,70,90,0.55)] transition-transform duration-enter",
                   "hover:-translate-y-0.5 active:translate-y-0.5",
                   active && "ring-2 ring-white/50",
                 )}
@@ -330,7 +330,7 @@ export default function NativeScheduledTaskHomeDashboard() {
                     key={list.id}
                     href={`/app/list/${list.id}`}
                     aria-label={scheduledTaskHomeDict("openList", { name: formatListName(list.name) })}
-                    className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-200 hover:-translate-y-0.5 active:translate-y-0.5"
+                    className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
                     style={{
                       background: `color-mix(in srgb, hsl(var(--card-muted)) 34%, ${accent} 66%)`,
                     }}

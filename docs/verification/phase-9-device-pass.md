@@ -233,6 +233,24 @@ animates.
               being unmounted before its animation runs; or an exit that takes as long as the
               arrival, which is the class not reaching tw-animate's `animation-duration`.
 
+- [ ] **PR 8j · web · The calendar's view switcher and the view it switched arrive together** — any
+      viewport; the Calendar screen, standing on Month.
+      Do:     tap Week, then Day, then back to Month, watching the WHITE THUMB behind the labels and
+              the grid below it at the same time. Once at full speed and once at 1/4 in the
+              browser's animation inspector if it offers one.
+      Watch:  the thumb slides a segment and the grid slides in from the side, and both stop on the
+              same frame — about a third of a second, 320 ms. The card's height settles with them;
+              it was already on that rung.
+      Fails:  the thumb arriving first and the grid still travelling under a switcher that has
+              already finished — one tap reading as two events. That is the 300 ms this row
+              retired, and 20 ms is at the edge of what the eye catches at full speed, which is why
+              the 1/4 pass is part of the row rather than a nicety.
+      Note:   jsdom computes no layout, so the suite can prove the thumb spells `duration-emphasis`
+              and the keyframes spell `--tday-duration-emphasis`, and can say nothing about whether
+              the two play as one. Not a fail: the OTHER two segmented controls in the app — the
+              Completed tab strip and Settings' two switchers — still move their thumbs over 200 ms.
+              That is deliberate and argued at the call site; they have no grid moving beside them.
+
 ## Android
 
 - [ ] **PR 39b · android · The burst is paper, and it still fits the celebrate window** — any list

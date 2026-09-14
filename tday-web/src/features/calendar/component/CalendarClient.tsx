@@ -160,7 +160,14 @@ function makeMonthDays(date: Date) {
   });
 }
 
-function CalendarViewSlider({
+/**
+ * Exported for `calendar-pager-height.test.tsx`, which asserts the thumb's rung beside the
+ * slide's and the box's. The rung is the whole point of the control and nothing else can hold
+ * it: the budget counter only forbids a NUMBER here, so an edit back to `duration-enter` would
+ * re-open the 20ms gap below and leave every guardrail green. The argument in the comment
+ * inside is exactly what a later rename would erase without noticing.
+ */
+export function CalendarViewSlider({
   view,
   onViewChange,
 }: {
@@ -172,8 +179,17 @@ function CalendarViewSlider({
 
   return (
     <div className="relative flex w-full rounded-[25px] border border-white/70 bg-muted/80 p-1.5 shadow-[0_18px_42px_-30px_hsl(var(--shadow)/0.62)] backdrop-blur-xl dark:border-white/10">
+      {/* Emphasis, and the thumb is the one site in this file where the rung
+          changes something. It travels a full segment on every view change,
+          which is rule 2's own case — but the reason it matters is that the
+          journey is not the only thing the tap starts: `changeView` also bumps
+          `animKey` and sets `slideDirection`, so the grid below plays
+          `cal-native-slide-from-*`, and `calendar-styles.css` runs both of
+          those on `--tday-duration-emphasis`. The 300 meant the control that
+          picks a view and the view it picked stopped 20ms apart, in the same
+          gesture, every time. One page turn, one clock — the thumb included. */}
       <div
-        className="absolute bottom-1.5 left-1.5 top-1.5 rounded-[20px] bg-card shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)] transition-transform duration-300 ease-out"
+        className="absolute bottom-1.5 left-1.5 top-1.5 rounded-[20px] bg-card shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)] transition-transform duration-emphasis ease-out"
         style={{
           width: "calc((100% - 0.75rem) / 3)",
           transform: `translateX(${selectedIndex * 100}%)`,
@@ -185,7 +201,7 @@ function CalendarViewSlider({
           type="button"
           onClick={() => onViewChange(option)}
           className={cn(
-            "relative z-10 flex h-12 flex-1 items-center justify-center rounded-[20px] px-3 text-sm font-black capitalize transition-colors duration-200",
+            "relative z-10 flex h-12 flex-1 items-center justify-center rounded-[20px] px-3 text-sm font-black capitalize transition-colors duration-enter",
             option === view ? "text-foreground" : "text-muted-foreground hover:text-foreground",
           )}
           aria-pressed={option === view}
@@ -216,7 +232,7 @@ function CalendarNavButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-card/90 text-muted-foreground shadow-sm transition-all duration-200 hover:bg-card hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35 dark:border-white/10 sm:h-11 sm:w-11"
+      className="flex h-10 w-10 items-center justify-center rounded-full border border-white/70 bg-card/90 text-muted-foreground shadow-sm transition-all duration-enter hover:bg-card hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35 dark:border-white/10 sm:h-11 sm:w-11"
     >
       <Icon className="h-5 w-5 stroke-[2.5]" />
     </button>
@@ -490,7 +506,7 @@ function MonthCalendarGrid({
             disabled={disabled}
             onSelectDate={onSelectDate}
             className={cn(
-              "mx-auto flex h-[3.1rem] w-[2.9rem] flex-col items-center justify-center rounded-2xl text-center transition-colors duration-200",
+              "mx-auto flex h-[3.1rem] w-[2.9rem] flex-col items-center justify-center rounded-2xl text-center transition-colors duration-enter",
               "hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-30",
               selected && "bg-accent text-accent-foreground shadow-[0_12px_24px_-18px_hsl(var(--accent)/0.8)] hover:bg-accent",
               !selected && todayDate && "border border-accent/45 text-accent",
@@ -543,7 +559,7 @@ function WeekCalendarStrip({
             date={date}
             onSelectDate={onSelectDate}
             className={cn(
-              "flex min-h-[4.8rem] flex-col items-center justify-center rounded-[20px] border text-center transition-colors duration-200",
+              "flex min-h-[4.8rem] flex-col items-center justify-center rounded-[20px] border text-center transition-colors duration-enter",
               selected
                 ? "border-accent bg-accent text-accent-foreground shadow-[0_12px_24px_-18px_hsl(var(--accent)/0.8)]"
                 : "border-white/60 bg-muted/45 text-foreground hover:bg-muted/70 dark:border-white/10",
@@ -1042,7 +1058,7 @@ function CalendarTodayButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex h-14 shrink-0 items-center justify-center rounded-full border border-white/70 bg-card/90 px-5 text-sm font-black text-accent shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-200 dark:border-white/10 sm:px-6",
+        "flex h-14 shrink-0 items-center justify-center rounded-full border border-white/70 bg-card/90 px-5 text-sm font-black text-accent shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-enter dark:border-white/10 sm:px-6",
         "hover:-translate-y-0.5 hover:bg-card hover:shadow-[0_12px_32px_-22px_hsl(var(--shadow)/0.5)]",
         "disabled:cursor-default disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:bg-card/90 disabled:hover:shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)]",
       )}
