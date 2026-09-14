@@ -1,13 +1,18 @@
 package com.ohmz.tday.compose.feature.completed
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -80,12 +85,15 @@ import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
+import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeleton
+import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeletonGroup
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
+import com.ohmz.tday.compose.core.ui.rememberTdayTaskRowSkeletonMounted
 import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
@@ -236,6 +244,15 @@ fun CompletedScreen(
     BackHandler(enabled = searchExpanded) {
         closeSearch()
     }
+    // The placeholder, and how long its lazy item outlives it. Hoisted because
+    // `LazyListScope` is not a composition; same window as the timeline's copy,
+    // and deliberately the same call rather than an "it does not matter here"
+    // — this list happens to space at 0 dp, so the gap a permanent mount leaves
+    // costs nothing today, and the next person to give it spacing would inherit
+    // the timeline's bug without a line anywhere saying they had.
+    val completedFeedSkeletonVisible = uiState.items.isEmpty() && uiState.isLoading
+    val completedFeedSkeletonMounted =
+        rememberTdayTaskRowSkeletonMounted(completedFeedSkeletonVisible)
 
     Scaffold(containerColor = colorScheme.background) { padding ->
         Box(
@@ -357,11 +374,36 @@ fun CompletedScreen(
                         }
                     }
 
-                    if (uiState.items.isEmpty() && uiState.isLoading) {
-                        item {
-                            EmptyCompletedState(
-                                message = stringResource(R.string.label_loading),
-                            )
+                    // This screen said "Loading" as a centred `displaySmall`
+                    // ExtraBold word with 290 dp of padding around it — the
+                    // timeline said the same thing in a card at body size, and
+                    // neither looked anything like the feed that replaced it.
+                    // Both are the skeleton now, at the row's own geometry.
+                    //
+                    // Mounted for a window and hidden by `visible`: removing
+                    // the item on the loading flag would leave the exit nothing
+                    // to play on, and the exit is what makes this a hand-over
+                    // rather than a cut. See the timeline's copy for why the
+                    // fade is paired with a shrink.
+                    if (completedFeedSkeletonMounted) {
+                        item(
+                            key = "completed-feed-skeleton",
+                            contentType = "completed-feed-skeleton",
+                        ) {
+                            AnimatedVisibility(
+                                visible = completedFeedSkeletonVisible,
+                                enter = EnterTransition.None,
+                                exit = if (rememberTdayMotionEnabled()) {
+                                    fadeOut(animationSpec = TdayTaskRowSkeleton.handoff()) +
+                                        shrinkVertically(
+                                            animationSpec = TdayTaskRowSkeleton.handoff(),
+                                        )
+                                } else {
+                                    ExitTransition.None
+                                },
+                            ) {
+                                TdayTaskRowSkeletonGroup()
+                            }
                         }
                     }
 
@@ -1068,25 +1110,6 @@ private fun CompletedBarButton(
                 modifier = Modifier.size(22.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun EmptyCompletedState(
-    message: String,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 110.dp, bottom = 180.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = message,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.52f),
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.ExtraBold,
-        )
     }
 }
 

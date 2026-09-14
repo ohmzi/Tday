@@ -5,6 +5,8 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -174,6 +176,9 @@ import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
+import com.ohmz.tday.compose.core.ui.TdayTaskRowMetrics
+import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeleton
+import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeletonGroup
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
@@ -181,6 +186,7 @@ import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
+import com.ohmz.tday.compose.core.ui.rememberTdayTaskRowSkeletonMounted
 import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.shareList
 import com.ohmz.tday.compose.core.ui.taskCopyText
@@ -1201,6 +1207,13 @@ fun TodoListScreen( // skipcq: KT-R1006
         earlierCollapsed = collapsedSectionKeys.contains(EARLIER_SECTION_KEY),
         celebrateEmptyState = celebrateEmptyState,
     )
+    // The flat feed's placeholder, and how long its lazy item outlives it. Both
+    // hoisted because `LazyListScope` is not a composition — by the time the list
+    // builds itself its guard has to already be a plain Boolean.
+    val taskFeedSkeletonVisible = !showSectionedTimeline &&
+            uiState.items.isEmpty() &&
+            uiState.isLoading
+    val taskFeedSkeletonMounted = rememberTdayTaskRowSkeletonMounted(taskFeedSkeletonVisible)
     // Exactly the "today-earlier-empty-scene" item's own gate below, pulled
     // out under its own name because `sectionedTimelineContent` needs it too:
     // see [earlierHeaderSkipsPlacementSpec] for why Earlier's header cares
@@ -1863,17 +1876,50 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // dismisses the field.
                     if (!showFloaterTaskHomeSearchResults) {
 
-                    if (!showSectionedTimeline && uiState.items.isEmpty() && uiState.isLoading) {
-                        item {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
-                                shape = RoundedCornerShape(18.dp),
+                    // The flat feed's first paint. This was a card with the word
+                    // "Loading" in it, and the rows then appeared underneath in
+                    // one frame; the skeleton draws the rows' own geometry
+                    // instead, so the frame the data lands on changes colour and
+                    // nothing else.
+                    //
+                    // Mounted for a window rather than removed by its guard: an
+                    // item that its guard has already taken out of the list has no
+                    // exit left to play, and the exit is the whole mechanism here.
+                    // The window closes one hand-over later, because this
+                    // `LazyColumn` spaces its items and a mounted item that draws
+                    // nothing is still charged `timelineItemSpacing` — see
+                    // [rememberTdayTaskRowSkeletonMounted].
+                    // Two lazy items cannot cross-fade over each other — they are
+                    // stacked, not layered — so the hand-over is the placeholder
+                    // fading AND retracting on one spec while the feed takes the
+                    // space it gives up. Fading alone would hold the skeleton's
+                    // full height for the length of the fade and then drop three
+                    // rows' worth of feed upward in a single frame, which is the
+                    // pop this is here to remove, moved later and made larger.
+                    // `AnimatedVisibility` with a paired fade and shrink is the
+                    // same answer the Earlier scene below already gives.
+                    if (taskFeedSkeletonMounted) {
+                        item(
+                            key = "task-feed-skeleton",
+                            contentType = "task-feed-skeleton",
+                        ) {
+                            AnimatedVisibility(
+                                visible = taskFeedSkeletonVisible,
+                                // No enter. A placeholder that fades itself in is
+                                // a wait in front of the notice that there is a
+                                // wait; the fifth idiom rule cuts that way round
+                                // as well.
+                                enter = EnterTransition.None,
+                                exit = if (rememberTdayMotionEnabled()) {
+                                    fadeOut(animationSpec = TdayTaskRowSkeleton.handoff()) +
+                                        shrinkVertically(
+                                            animationSpec = TdayTaskRowSkeleton.handoff(),
+                                        )
+                                } else {
+                                    ExitTransition.None
+                                },
                             ) {
-                                Text(
-                                    modifier = Modifier.padding(18.dp),
-                                    text = stringResource(R.string.label_loading),
-                                    color = colorScheme.onSurfaceVariant,
-                                )
+                                TdayTaskRowSkeletonGroup()
                             }
                         }
                     }
@@ -6373,14 +6419,18 @@ private fun TodayTodoRow(
         }
     }
 
+    // The geometry below is `TdayTaskRowMetrics`, not literals:
+    // `TdayTaskRowSkeleton` draws this same shape with the ink taken out, and a
+    // placeholder that merely happens to match the row stops matching the first
+    // time the row is re-spaced.
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(TdayTaskRowMetrics.RowSpacing),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(vertical = TdayTaskRowMetrics.RowVerticalPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
@@ -6399,7 +6449,7 @@ private fun TodayTodoRow(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = 10.dp),
+                        .padding(start = TdayTaskRowMetrics.TextColumnStartPadding),
                 ) {
                     Text(
                         text = todo.title,
@@ -6437,8 +6487,10 @@ private fun TodayTodoRow(
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.dp)
-                .background(colorScheme.outlineVariant.copy(alpha = 0.58f)),
+                .height(TdayTaskRowMetrics.DividerThickness)
+                .background(
+                    colorScheme.outlineVariant.copy(alpha = TdayTaskRowMetrics.DividerAlpha),
+                ),
         )
     }
 }
@@ -6523,7 +6575,10 @@ private fun CircularCheckToggleIcon(
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .sizeIn(
+                minWidth = TdayTaskRowMetrics.CheckTargetMinSize,
+                minHeight = TdayTaskRowMetrics.CheckTargetMinSize,
+            )
             .wrapContentSize(Alignment.Center)
             .clip(CircleShape)
             .clickable(
@@ -6562,7 +6617,7 @@ private fun CircularCheckToggleIcon(
                 // have TalkBack announce the control twice.
                 contentDescription = contentDescription.takeIf { glyph == imageVector },
                 tint = tint,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(TdayTaskRowMetrics.CheckGlyphSize),
             )
         }
     }
