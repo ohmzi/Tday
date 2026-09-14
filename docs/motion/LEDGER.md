@@ -1158,9 +1158,16 @@ Restore it from git history rather than adjusting the number.
 
 - [ ] `confetti-kinematics` — Land the recovered confetti physics — linear drag, flip split off rotation, smoothstep fade — on all three clients at once · all · Impact O3 · L · Gate self + V + J + X + G + D + TF — **final part (5 of 5)**; PR 38, PR 39a, PR 39b, PR 39c carried the rest
 
-### PR 40a/b/c — one skeleton per client
+### PR 40a — the web task-row skeleton
+
+- ↳ part 1 of 4 of `skeleton-loading-vocabulary` — web `TaskRowSkeleton` at `TodoItemContainer`'s own row classes; the `ui/TodoListLoading` re-export shim retired. Box lives under **PR 40c**.
+
+### PR 40b/40c — the Android and iOS skeletons
 
 - [ ] `skeleton-loading-vocabulary` — one skeleton per client at real row geometry, 190 ms crossfade · all · Impact O4 · M ea · Gate V/J/X
+
+### PR 40d — the web infinite-scroll sentinel
+
 - [ ] `web-infinite-scroll-sentinel` — hardcoded English in a ten-locale app, no `aria-live`, 48 px growth per page · web · Impact O2 · S · Gate V
 
 ### PR 41a — the web sheet language
