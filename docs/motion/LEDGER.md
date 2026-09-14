@@ -524,10 +524,10 @@ Restore it from git history rather than adjusting the number.
     runs Phases 5 and 6 as one sitting, so there is no `phase-6-device-pass.md` and every row below
     is in `phase-5-device-pass.md` — including the iOS thirds, since TF1 is the cycle that runs the
     parity pairs side by side and it has not been cut. That file grew an `## Android` and a `## Web`
-    section it did not have — the Web one arriving from PR 23 on the same merge, whose one row now
-    sits in it beside these and is a Phase 5 leg rather than one of the parity pairs, as the note
-    above it there says. **Written and unrun** is the state these ten rows are in: unverified,
-    which is cheap, and not unscheduled, which is not.
+    section it did not have; PR 23 arrived on the same merge with a `## Web` section of its own, and
+    its one row now sits at the foot of this one — a Phase 5 leg rather than one of the parity
+    pairs, as the note above it there says. **Written and unrun** is the state these ten rows are
+    in: unverified, which is cheap, and not unscheduled, which is not.
 - [x] `and-hero-mark-clock-frozen` — sun/moon samples the hour once in a keyless `remember` · and · Sev 2 · S · Gate J+D
   - **The band is now reachable by a test, and the hour is re-read.** `isDaytimeHour` is split off
     the clock read so a JVM test can push a 5 and an 18 through the boundary —
@@ -1072,15 +1072,26 @@ Restore it from git history rather than adjusting the number.
   - **The property list displaces `transition-all` too, and no closed list is a superset of `all`.**
     It IS a superset of the two named utilities — `transition-colors` adds
     outline-color/text-decoration-color/fill/stroke, `transition-transform` adds transform/rotate,
-    so displacing either costs the call site nothing. `transition-all` is on 19 class strings and
-    the list has to be checked against them one at a time: on all but one the properties actually in
-    flight (translate, scale, background-color, color, opacity, box-shadow) are already in it. The
-    exception is the dock tab, `RootDock.tsx:185`, `sm:min-w-[104px]` when selected against
-    `sm:min-w-12` when not — measured in Chromium against the compiled stylesheet, it went from
-    easing over 200 ms to reaching 104 px in the first frame, beside an indicator pill that is a
-    `pointer-events-none` div this selector does not match and so still glides for 300 ms. That is
-    this unit's own defect shape relocated, and it would have taken the written argument at
-    `RootDock.tsx:101` — the re-measure timed against "the tab width transition (200ms)" — with it.
+    so displacing either costs the call site nothing. `transition-all` was on 19 class strings when
+    this was checked and is on 21 in the tree today — develop's 8i added two, both plain `div`s in
+    `RootDock.tsx` (`:330`, `:384`) that the pressable selector does not match, so neither changes
+    the answer — and the list has to be checked against them one at a time: on all but one the
+    properties actually in flight (translate, scale, background-color, color, opacity, box-shadow)
+    are already in it. The exception is the dock tab, `RootDock.tsx:439`, `sm:min-w-[104px]` when
+    selected against `sm:min-w-12` when not — measured in Chromium against the compiled stylesheet,
+    it went from easing over its rung to reaching 104 px in the first frame, beside an indicator
+    pill that is a `pointer-events-none` div this selector does not match and so still glides for
+    the whole of it.
+    That rung is Emphasis, 320 ms, on both of them now: the tab's class string at `:435` and the
+    pill's at `:326` each spell `duration-emphasis`. This paragraph was written against a tab on
+    `duration-200` and a pill on `duration-300` — two numbers develop's 8i retired in favour of the
+    one rung on the merge that brought this file up to date — so the gap the property list would
+    open is 320 against a single frame rather than 200 against 300: wider than it was, not narrower.
+    That is this unit's own defect shape relocated. The written argument it would have taken with it
+    is gone on its own account: 8i deleted the re-measure timed against "the tab width transition
+    (200ms)" — the comment this row used to cite at `RootDock.tsx:101` — and put a per-frame
+    rect-follower in its place, argued at `RootDock.tsx:174-193`.
+
     `min-width` is therefore in the list, and it has to be there rather than at the call site: a
     `transition-[min-width]` on the button is displaced by this same declaration, and the
     `!important` that would beat it is the escalation the layer exists to retire. `width` and
@@ -2040,14 +2051,16 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 ### PR 176 — web app index skeleton double chrome
 
 - [ ] `web:shell-sidebar-settings#4` — 4 · web · Sev 2 · S · Gate V
-  - citation corrected: tday-web/src/components/app/AppShellSkeleton.tsx:36-39 (dock placeholder); tday-web/src/pages/AppHomeRedirectPage.tsx:24-26; tday-web/src/components/app/NativeAppShell.tsx:37-40; tday-web/src/components/app/RootDock.tsx:105
+  - citation corrected: tday-web/src/components/app/AppShellSkeleton.tsx:52-54 (the dock placeholder — the audit's :36-39 is the hero tile; the placeholder is the `h-16 w-44 rounded-[25px]` div under the `{/* Dock placeholder */}` comment); tday-web/src/pages/AppHomeRedirectPage.tsx:24-26; tday-web/src/components/app/NativeAppShell.tsx:37-40 (both still exact); tday-web/src/components/app/RootDock.tsx:291 (the real capsule the placeholder is standing in for, `h-16 … rounded-[25px]`) — re-read after develop's 8i rewrote RootDock.tsx from 206 to 483 lines, which is what moved the audit's :105
 
 ### PR 177 — web dock pill measure and first paint
 
 - [ ] `web:shell-sidebar-settings#2` — 2 · web · Sev 2 · S · Gate G
-  - citation corrected: tday-web/src/components/app/RootDock.tsx:81-92 (the measure effect), :122 (pill class), :159-163 (button transition + min-width)
+  - citation corrected: tday-web/src/components/app/RootDock.tsx:161-172 (`updatePill`), :174-226 (the measure effect), :326 (pill class), :435 and :439 (button transition, and the `sm:min-w-[104px]`/`sm:min-w-12` pair). The audit's :81-92 / :122 / :159-163 were read off the pre-8i file and land on unrelated lines in the tree today.
+  - **Probably already closed by develop's 8i — re-check before spending a PR on it.** The defect is the pill measuring a rect that is still moving. 8i replaced the single re-measure on a timer with a follower that calls `updatePill` once per frame for the length of the rung (`:207-225`) and a `transitionend` settle bound to the nav (`:228-258`), so the last word on where the tab stopped comes from the tab rather than from a clock beside it; `tday-web/tests/fixtures/motion-budget.json`'s `_durationUtility` records the same change from the other end. If a device pass confirms it, close this row instead of re-fixing it.
 - [ ] `web:shell-sidebar-settings#3` — 3 · web · Sev 2 · S · Gate G
-  - citation corrected: tday-web/src/components/app/RootDock.tsx:65 (pillStyle init), :81-92 (post-paint measure), :122 (unconditional transition-all)
+  - citation corrected: tday-web/src/components/app/RootDock.tsx:157-160 (the note on writing the pill straight onto the node — there is no `pillStyle` state any more, so the audit's :65 cites something that no longer exists), :174-226 (the post-paint measure), :326 (the unconditional `transition-all`).
+  - **Still open as far as the merged tree shows.** 8i changed how the pill is measured, not when it is measured FIRST: the node at `:326` is rendered with no width, height or transform and nothing gating its `transition-all duration-emphasis`, and the first `updatePill` runs from a `useEffect` — after paint. So the first paint still has the pill grow out of the capsule's top-left corner. Unlike #2 above, the follower does not close this one.
 
 ### PR 178 — web root feed search overlay cut
 
