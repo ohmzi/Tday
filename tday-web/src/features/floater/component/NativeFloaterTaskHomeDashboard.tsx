@@ -19,6 +19,8 @@ import { useFloater } from "@/features/floater/query/get-floater";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 import { useCompletedFloater } from "@/features/completed/query/get-completedFloater";
 import FloaterGroup from "./FloaterGroup";
+import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
+import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
 import FloaterListFormSheet from "@/features/floaterList/component/FloaterListFormSheet";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 
@@ -36,6 +38,9 @@ export default function NativeFloaterTaskHomeDashboard() {
   const router = useRouter();
   const { t: appDict } = useTranslation("app");
   const { floaters, floaterLoading } = useFloater();
+  // The feed hands over to its rows instead of swapping to them in one frame;
+  // the exit class lives on the wrapper, never on the pulsing bars inside it.
+  const { showSkeleton, skeletonClassName } = useSkeletonCrossfade(floaterLoading);
   const { floaterListMetaData } = useFloaterListMetaData();
   const { completedFloaters } = useCompletedFloater();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -188,14 +193,6 @@ export default function NativeFloaterTaskHomeDashboard() {
           </span>
         </Link>
 
-        {floaterLoading ? (
-          <div className="space-y-3 px-1 py-6">
-            <div className="h-6 w-36 animate-pulse rounded-full bg-muted" />
-            <div className="h-16 animate-pulse rounded-2xl bg-muted/70" />
-            <div className="h-16 animate-pulse rounded-2xl bg-muted/70" />
-          </div>
-        ) : null}
-
         {!floaterLoading && !hasFloaters && !isSearching ? (
           <EmptyState
             icon={Leaf}
@@ -237,8 +234,32 @@ export default function NativeFloaterTaskHomeDashboard() {
           />
         ) : null}
 
-        {!floaterLoading && sortedFloaters.length > 0 ? (
-          <FloaterGroup floaters={sortedFloaters} reorderable={false} />
+        {/* Placeholder and rows in one column child, because the column is a flex box with a
+            gap: a second child holding the fading placeholder would keep 16 px of gap open
+            for the length of the fade and then drop it, which is a step this row exists to
+            remove. The exiting skeleton releases its own height immediately and paints over
+            the rows that have taken the slot.
+
+            What arrives here is a bare `FloaterGroup` — no section label above it — so the
+            pill this used to draw stood in for a heading that never comes, and its two
+            64 px cards stood in for a flat row of 62. `TaskRowSkeletonGroup` is the feed's
+            own row geometry, and it is the same primitive the sibling list screen loads
+            behind: two root feeds that load differently are two root feeds. */}
+        {showSkeleton || (!floaterLoading && sortedFloaters.length > 0) ? (
+          <div>
+            {showSkeleton ? (
+              <div className={skeletonClassName}>
+                <TaskRowSkeletonGroup />
+              </div>
+            ) : null}
+            {!floaterLoading && sortedFloaters.length > 0 ? (
+              <FloaterGroup
+                floaters={sortedFloaters}
+                reorderable={false}
+                className="tday-content-enter"
+              />
+            ) : null}
+          </div>
         ) : null}
 
         {lists.length > 0 ? (
