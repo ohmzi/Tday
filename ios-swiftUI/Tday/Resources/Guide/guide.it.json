@@ -424,6 +424,39 @@
       "searchBody": "trascina le attivita nell'ordine che preferisci. i tuoi elenchi mantengono l'ordine che imposti. trascina un'attivita in alto o in basso per organizzare la giornata nel modo in cui la pensi."
     },
     {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Trascina giù una scheda per chiuderla",
+      "summary": "Tira verso il basso la scheda della nuova attività per chiuderla.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "La piccola barra in cima alla scheda della nuova attività significa che puoi tirarla verso il basso. Trascinala e segue il tuo dito; lasciala dopo circa un quarto del percorso e si chiude, esattamente come se avessi toccato l'area scurita dietro di essa. Vale anche un colpetto rapido: conta dove stavi andando, non dove hai lasciato. E se ci ripensi a metà strada, torna al suo posto."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Se il contenuto di una scheda scorre, trascinala dall'alto: il centro appartiene all'elenco."
+          ]
+        }
+      ],
+      "searchTitle": "trascina giu una scheda per chiuderla",
+      "searchKeywords": "scorrere, trascinare, tirare, chiudere, annullare, scheda, maniglia, gesto, verso il basso",
+      "searchBody": "tira verso il basso la scheda della nuova attivita per chiuderla. la piccola barra in cima alla scheda della nuova attivita significa che puoi tirarla verso il basso. trascinala e segue il tuo dito; lasciala dopo circa un quarto del percorso e si chiude, esattamente come se avessi toccato l'area scurita dietro di essa. vale anche un colpetto rapido: conta dove stavi andando, non dove hai lasciato. e se ci ripensi a meta strada, torna al suo posto. se il contenuto di una scheda scorre, trascinala dall'alto: il centro appartiene all'elenco."
+    },
+    {
       "id": "floaters-vs-todos",
       "section": "ORGANIZING",
       "sectionOrder": 3,

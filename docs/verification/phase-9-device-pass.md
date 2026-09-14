@@ -470,6 +470,77 @@ animates.
               the card has gone, which is the activity's own transparent window still standing there
               waiting for a sync.
 
+- [ ] **PR 42a · and · Morning Sweep deals the next card instead of swapping it** — Morning Sweep,
+      with at least three carried-over overdue tasks waiting, so there are cards to deal and a
+      finish line to reach.
+      Do:     tap **Tomorrow**, twice. Then triage the rest until the last card is gone.
+      Watch:  the card you have dealt with slides about a quarter of the screen LEFT and fades as it
+              goes, over 150 ms, while the next one comes in from the right over 200 ms and settles.
+              The whole stack travels as one thing — the card, the five action rows and the
+              Skip / Sweep-all row arrive together, not six times. After the last card the finish
+              line fades up into the space rather than appearing on the frame the card left.
+      Fails:  the next stack drawn complete in one frame with no travel at all, which is the state
+              this screen shipped in. Also a fail: the outgoing card taking as long as the incoming
+              one or longer, which reads as the app hesitating over a decision already made; the
+              tally on the leaving card ticking down while it leaves; and "all swept" flashing up
+              when you OPEN Morning Sweep with cards waiting, which is the finish line playing
+              before the deck has been read.
+      Also:   with Settings → **Reduce motion** on (or the system's "Remove animations"), tap
+              Tomorrow again. The next card is simply there, at its own height, on the next frame —
+              no slide, no fade, and no frame where the panel is caught mid-resize. The finish line
+              is the same: there, or not there.
+
+- [ ] **PR 42d · and · The onboarding wizard says which way it moved** — a fresh install, or the
+      app signed out so the wizard comes up at the Mode step.
+      Do:     tap **Self-hosted** to go to Server, then **Change setup** to come back to Mode, then
+              Self-hosted again. Connect to a server, and from the sign-in panel tap
+              **Change setup** once more.
+      Watch:  going forward, the arriving panel comes in from the RIGHT over 200 ms while the one
+              it replaces leaves to the LEFT over 150 ms; coming back, both directions reverse. The
+              panel that is leaving is always the quicker of the two. The three chips above do not
+              slide with it — they stay put and only their own fill changes.
+      Fails:  both panels simply dissolving into each other with no travel, which is the default
+              spec this screen shipped on; the two directions looking identical, so Back and
+              Continue are indistinguishable; or a taller panel clipped square across the bottom
+              while it travels, which is the size transform clipping.
+      Also:   the connect spinner and the "signing you in" panel must NOT slide. Watch the hop from
+              Server to sign-in specifically — it goes Server → connecting → sign-in, and both of
+              those hops are a crossfade in place with no sideways movement at all. A slide there,
+              and especially a BACKWARD slide as the spinner goes away, is the wizard claiming the
+              user moved a step when they did not.
+      Also:   with Settings → **Reduce motion** on (or the system's "Remove animations"), walk Mode
+              → Server → Mode again. Each panel is simply there on the next frame at its own full
+              height — no slide, no fade, and no frame where the card is caught mid-resize.
+
+- [ ] **PR G2 · and · A toast leaves when it is asked to, and not before** — any screen that puts a
+      toast up with an Undo on it: delete a task from a list, which is the toast with the most to
+      lose. Five gestures, one toast each; work quickly, the auto-dismiss window is the clock.
+      Do:     (1) press the middle of the card and let go without meaning to move. (2) Take it down
+              about a centimetre — a third of the card's own height — and let go slowly. (3) From
+              rest, flick it down hard and let go at once, without taking it far. (4) Take it down
+              a centimetre and then flick it back UP before letting go. (5) Swipe straight across
+              the card, sideways.
+      Watch:  (1) and (4) leave the card on screen and spring it back to where it sat — the same
+              return a half-opened task row makes when you let go of it, on the same spring
+              (0.82 / 340), carrying whatever speed it had. (2) and (3) throw it off the bottom in
+              160 ms and the Undo goes with it. (5) does not move the card at all. Under the finger
+              the card still fades towards 45 % and shrinks 3 % over the first 96 dp, exactly as it
+              did before.
+      Fails:  the card leaving on (1) — that is the old "any downward pixel commits", which is the
+              whole point of this row. Also a fail: (4) dismissing, which means an upward flick is
+              being read as distance already given up. Also a fail: a refused card arriving back at
+              rest in one frame instead of springing, or snapping home and then springing from
+              there — that is the hand-off between the finger and the spring going through zero.
+              Also a fail: (5) dragging the card sideways-and-down, or eating a swipe meant for the
+              screen underneath.
+      Known:  (3)'s flick leaves on the same fixed 160 ms accelerating exit as (2)'s slow drag, so
+              a hard throw hangs for a frame or two at lift-off before the card goes. The speed is
+              carried into the refusal spring only; making the exit answer it is
+              `toast-drag-two-stage-exit`, and it is not a fail here. A toast that is already past
+              the threshold when something else claims the pointer still commits. A cancelled drag reaches the app as a release with no velocity, so it
+              is judged on distance like any other release; that is argued at `TdayToastDismissState`
+              and pinned by a test, and is not what this row is looking for.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
@@ -535,3 +606,45 @@ animates.
               again. The placeholder is there, fully drawn and perfectly still — never parked at the
               faded end of its own pulse — and when the data lands the rows are simply there on the
               next frame. No fade, and no wait where the fade would have been.
+
+- [ ] **PR 41c · ios · The create sheet can be pulled down, and says so** — the root feed, on a
+      phone. Both sheets on the custom mechanism: the create-task sheet (the + button) and the
+      create-list sheet, which is the one whose contents scroll.
+      Do:     open the create-task sheet and pull it down slowly until it goes. Open it again and
+              flick it down 40 pt or so, fast. A third time, drag it two thirds of the way down and
+              then walk it most of the way back up before letting go. Then open the create-list
+              sheet and try to scroll its colour and icon rows.
+      Watch:  a 36 × 5 bar at the top of the card, the same one iOS draws on its own sheets. The
+              card tracks the finger exactly while it is down, and a released drag that commits
+              carries on and leaves on the same curve the scrim tap leaves on — the two must be
+              indistinguishable, because they are the same code path. A quarter of the card's own
+              height is where a slow pull commits; the flick commits long before that. The walked-
+              back drag springs home on the Gesture spring, with a little overshoot rather than a
+              snap. On the create-list sheet the scrolling regions still scroll and the header and
+              the margins still drag the card.
+      Fails:  the grabber reading as a second header — too dark, too far down, or crowding the
+              title and the two round buttons under it, which start 14 pt below the top edge. Also
+              a fail: the card oscillating or stuttering under the finger (that is the drag being
+              measured in local space, which the global coordinate space here exists to prevent);
+              a committed drag that snaps the card home first and then plays the exit; the
+              walked-back drag dismissing anyway; and the create-list sheet refusing to scroll
+              because the card's drag has taken the gesture.
+      Keyboard: open the create-task sheet, tap into the title field so the keyboard lifts the card,
+              and drag from there. The keyboard must go down as the drag begins, not at the release
+              — and the card must not jump or fight the inset collapsing under it. This is the one
+              interaction source cannot answer: the inset is animated on the keyboard's own
+              ~0.25 s curve while the finger is still moving the card.
+      Selector: on the create-task sheet, open List, then Priority, then Due date. The grabber must
+              fade out as the picker's dim comes up and fade back as it goes — never sit lit on top
+              of the dim — and while the picker is open a downward drag anywhere on the dim must do
+              nothing at all. A fail: the drag dismissing the whole sheet and losing what was typed,
+              where a tap on those same pixels only closes the picker. The picker's own rows and its
+              tap-to-close must still work throughout; this stands the card's drag down, not the
+              layer over it.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, repeat the first three.
+              The card still follows the finger — a surface under a thumb is direct manipulation and
+              is not what the setting turns off — and a refused drag is simply home on the next
+              frame rather than springing. A committed drag still dismisses, and the card crossfades
+              out where the full-motion build slides it. The grabber still fades under a picker,
+              on both settings: that is a dim arriving over it rather than anything travelling, and
+              it has to leave at the same rate the dim comes up.

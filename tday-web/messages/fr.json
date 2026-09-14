@@ -1010,6 +1010,13 @@
         "keywords": "glisser, réorganiser, déplacer, trier, ordre, arranger",
         "body": "Vos listes conservent l'ordre que vous leur donnez. Faites glisser une tâche vers le haut ou le bas pour organiser votre journée comme vous la concevez."
       },
+      "swipe-sheet-away": {
+        "title": "Faire glisser une carte pour la fermer",
+        "summary": "Tire la carte de nouvelle tâche vers le bas pour la fermer.",
+        "keywords": "glisser, faire glisser, tirer, fermer, abandonner, carte, poignée, geste, vers le bas",
+        "body": "La petite barre en haut de la carte de nouvelle tâche signifie que tu peux la tirer vers le bas. Elle suit ton doigt ; lâche-la après environ un quart du trajet et elle se ferme, exactement comme si tu avais touché la zone assombrie derrière elle. Un geste bref compte aussi : ce qui compte, c'est la direction que tu prenais, pas l'endroit où tu as lâché. Et si tu changes d'avis en route, elle revient à sa place.",
+        "tip": "Si le contenu d'une carte défile, tire-la par le haut : le milieu appartient à la liste."
+      },
       "sound-and-vibration": {
         "title": "Son et vibration",
         "summary": "Coupez le son de fin, la vibration, ou les deux.",

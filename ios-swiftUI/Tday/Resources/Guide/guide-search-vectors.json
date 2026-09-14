@@ -9,6 +9,7 @@
     ],
     "swipe": [
       "swipe-actions",
+      "swipe-sheet-away",
       "copy-task-text",
       "calendar-views"
     ],
@@ -64,6 +65,7 @@
       "carplay",
       "morning-sweep",
       "overdue-view",
+      "swipe-sheet-away",
       "scheduled-lists",
       "completed-history",
       "reminder-snooze",
