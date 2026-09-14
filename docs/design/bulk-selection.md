@@ -311,7 +311,8 @@ a wrong "not recurring" costs the series.
    server yet**. This is exactly what single complete already does.
 3. Show **one** undoable-complete toast for the batch:
    - web `showTodoCompletedToast` → `useUndoableDelete` (5 s),
-   - Android `UndoableDeleteCoordinator.showUndoableComplete(...)` (8.5 s commit),
+   - Android `UndoableDeleteCoordinator.showUndoableComplete(...)` (8.5 s commit by
+     default, longer where the user's "Time to take action" says so — see §4.3),
    - iOS `UndoableDeleteScheduler.schedule(...)` (8.5 s commit).
 4. `onCommit` loops the existing per-item complete call (`completeTodo` /
    `completeFloater`), then calls `reminderScheduler.rescheduleAll()` **once** at the
@@ -370,15 +371,20 @@ collect the `StagedTodoDeletion` / `StagedFloaterDeletion` records), then **one*
 calls `reminderScheduler.rescheduleAll()` once.
 
 Because undo genuinely exists, the dialog body promises undo rather than claiming
-permanence. Do **not** invent a second undo framework, and do not change the 5 s / 8.5 s
-windows — Android's 8 500 ms commit is deliberately tuned against
-`TOAST_AUTO_DISMISS_WITH_ACTION_MS = 8_000`.
+permanence. Do **not** invent a second undo framework, and do not hardcode a window of
+your own. On Android neither of that pair is a fixed number any more: the toast's window
+follows the user's "Time to take action" setting and the commit is *derived* from it
+(`undoCommitDelayMillis` in `core/ui/AccessibilityTimeout.kt`), so the commit outlives
+the toast by construction and the two cannot drift. A batch takes the same call and the
+same derivation. Where a batch does need a number of its own — a per-item commit budget,
+say — it must be measured off the resolved window rather than written down beside it.
 
 Hazard to be aware of (pre-existing, documented in `docs/PLAN_UNDO_TOAST_DELETE.md`):
 during the staged window a refetch or realtime pull can resurrect the pruned rows. With
-N tasks staged that exposure is N× wider. This is not a regression introduced here and
-must not be worked around with a bespoke mechanism; it is one more reason the cap
-exists.
+N tasks staged that exposure is N× wider, and on Android it is also longer than it used
+to be wherever the user's timeout has stretched the window — up to two minutes rather
+than 8.5 s. This is not a regression introduced here and must not be worked around with
+a bespoke mechanism; it is one more reason the cap exists.
 
 ### 4.4 Priority
 

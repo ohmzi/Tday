@@ -13,6 +13,13 @@ Every iOS row here is checked twice, once normally and once with **Settings → 
 → Reduce Motion** on, which is the half TF2 exists for. Phase 6's parity work whose iOS third missed
 the TF1 build, and Phase 8's own rows, land here alongside these.
 
+The Android section below is not part of TF2 and costs a cable rather than a cycle, but it is run in
+the same sitting for one reason: Phase 8 is the accessibility phase, and several of its Android rows
+are checked against a platform setting rather than against a frame. Those rows each name the setting
+to change first, and every one of them says what the default must still look like — a change that
+only ever reads a setting can regress the people who never opened it, and that is the failure nobody
+goes looking for.
+
 ## iOS
 
 - [ ] **PR 26 · ios · The today block leaves instead of vanishing** — the Scheduled task home
@@ -122,3 +129,49 @@ the TF1 build, and Phase 8's own rows, land here alongside these.
               card rises and settles, the grid slides a full width, the dock scales out of its
               leading edge, the toast springs up. A retiming here means the gate was written the
               wrong way round and every user got the substitute.
+
+## Android
+
+- [ ] **PR 36 · and · The Undo waits as long as the user asked it to** — Settings →
+      Accessibility → **Time to take action** set to **30 seconds**, then back in the app on
+      any feed with at least one task. The setting is the whole setup: at its default this
+      row is indistinguishable from the old behaviour and passes by doing nothing.
+      Do:     delete a task, start counting, and leave the toast alone until ~25 s — then
+              tap **Undo** at ~28 s.
+      Watch:  the toast is still on screen at 25 s, and the tap at 28 s actually puts the
+              row back in the feed. Then pull to refresh: the row stays. Repeat the whole
+              thing with the setting at **2 minutes** — the toast is still up at ~1:50 and
+              Undo still restores.
+      Fails:  the toast leaving at ~8 s, which is the platform call returning our own
+              number rather than the user's — the defect, and the only check in the
+              programme that can see it. Also a fail, and the worse one: the toast still up
+              but Undo doing nothing, or appearing to work and the row gone again after a
+              refresh. That is the commit having fired underneath a button still offering
+              to undo it, and it means the window and the commit came apart.
+      Also:   at the default setting, delete a task and let the toast time out without
+              touching it. It must still go at ~8 s and the delete must stick. Everyone
+              who has asked for nothing gets exactly what they had.
+
+- [ ] **PR 36 · and · TalkBack is told the toast is there, and can put it away** — TalkBack
+      on, **Time to take action** at 30 s, same feed.
+      Do:     delete a task without moving focus, listen, then swipe to the toast and use
+              TalkBack's dismiss gesture (swipe up-then-left) on it.
+      Watch:  the message is SPOKEN when the toast arrives, without having to go looking for
+              it, and politely — it waits for what TalkBack was already saying about the
+              deleted row rather than cutting across it. The toast is then ONE focus stop
+              that reads the message, the dismiss gesture closes it, and the **Undo** button
+              is still its own separate stop that activates.
+      Fails:  silence on arrival, which is the whole point of the row: the extra seconds are
+              worth nothing if nobody is told there is something to reach. Also a fail: the
+              dismiss gesture doing nothing; the message and the Undo landing on the same
+              stop so the button cannot be activated on its own; or focus stopping on the
+              message text as a separate node from the card.
+
+- [ ] **PR 36 · and · The dock stops closing on people** — **Time to take action** at 30 s,
+      a root feed scrolled far enough down that the dock has collapsed to its icon.
+      Do:     tap the collapsed dock to open it, then wait — hands off — for 25 s.
+      Watch:  it is still open at 25 s, and a tab tap then still switches feeds. At the
+              default setting it must still close itself at ~2.4 s, unchanged.
+      Fails:  it shutting at ~2.4 s with the setting at 30 s. Also a fail: it staying open
+              for good at the default, which would be the base and the resolved window the
+              wrong way round.
