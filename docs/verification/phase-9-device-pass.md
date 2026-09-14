@@ -66,3 +66,21 @@ The rows below are the half that has to be looked at.
       Watch:  both blocks pulse, at the same rhythm as every other skeleton in the app.
       Fails:  they sit perfectly still — which is how a control that has rendered empty looks, not
               how one still loading does.
+
+- [ ] **PR 40a · web · The cold-start shell draws the row the route draws** — a phone, network
+      throttled to Slow 3G so the lazy chunk takes a visible moment, on a hard refresh of
+      `/app/tday` (and again of `/app`, which holds on the same shell while it decides where to
+      send you).
+      Do:     watch the three grey task-row bars at the point the shell becomes the real feed.
+      Watch:  the bars are flat and flush — no card, no border, no fill, no gap between them —
+              and the block of them is the height the three rows that replace it are. Three
+              bars of grey, three rows of text, same block.
+      Fails:  the placeholder is a bordered tinted card and the rows replacing it are flat; or
+              the block of rows closes ~20 px as the spacing between three cards goes.
+      Known:  the whole column still steps down at the swap, and this row is not asking about
+              that. One shell is the fallback for every lazy route, so it stands a single 56 px
+              header in for whichever one resolves; the root feed's own is a 64 px toolbar over
+              a 78 px hero block under the safe-area inset — roughly 100 px lower — and its
+              gutter is 4 px narrower on a phone (`px-4` against the shell's `px-5`). That is
+              pre-existing shell geometry this unit did not touch and could not fix without a
+              shell per route. Read the step as expected; judge the bars.
