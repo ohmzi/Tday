@@ -222,7 +222,14 @@ struct HelpGuideScreen: View {
     private func topicCard(_ topic: GuideTopicDTO) -> some View {
         let expanded = expandedId == topic.id
         return VStack(alignment: .leading, spacing: 0) {
-            Button(action: { withAnimation(.easeInOut(duration: 0.15)) { expandedId = expanded ? nil : topic.id } }) {
+            // `quick` names the number that is already here; it is not a finding that
+            // Quick is the right rung for this. A topic card opening grows a box, and
+            // docs/motion.md decides Change vs Emphasis by geometry — if size changes
+            // it is Emphasis. The open `disclosure-expand-collapse` box in
+            // docs/motion/LEDGER.md still holds this site and is where the retiming is
+            // argued, beside Android's mid-growth glyph slice and web's snapped height:
+            // one spec across three clients, not an iOS-only nudge.
+            Button(action: { withAnimation(.easeInOut(duration: TdayMotion.Durations.quick)) { expandedId = expanded ? nil : topic.id } }) {
                 HStack(spacing: 12) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10).fill(colors.primary.opacity(0.10)).frame(width: 36, height: 36)

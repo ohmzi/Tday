@@ -98,7 +98,7 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   the blast radius of rebinding the default; 123 is the narrower figure that
   would actually move, being the utilities that name no duration of their own.
   Anchors: `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:60`,
-  `ios-swiftUI/Tday/Feature/Guide/HelpGuideScreen.swift:225`,
+  `ios-swiftUI/Tday/Feature/Guide/HelpGuideScreen.swift:232`,
   `tday-web/src/globals.css:146`.
 - **`Enter` (200).** 52 web `duration-200` utilities and 7 iOS sites (5 in the
   app, 2 in the widget extension); **zero** on Android at the census. The first

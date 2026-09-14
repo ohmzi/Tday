@@ -419,3 +419,27 @@ animates.
               exactly the sixteen literals that came off, and `TdayMotion.snappy` reads the same
               0.28/0.86 out of `TdayMotionGenerated` — plus xctest in CI. Neither can watch a search
               bar open.
+
+- [ ] **PR 8m · ios · Two rungs stopped being spelled as numbers, and nothing retimed** — any build,
+      signed in or not; the guide is reachable without an account and the wizard is what a fresh
+      install opens on. The narrowest row in this batch: five `duration:` numbers became
+      `TdayMotion.Durations.quick` and `.enter`, which hold the same 0.15 and 0.2, so every frame
+      should be the frame it was.
+      Do:     open Help & Guide and expand and collapse four or five topic cards, including one
+              long enough to push the cards below it well down the screen. Then delete and
+              reinstall, or sign out, and walk the onboarding wizard through a connect, a sign-in
+              with a wrong password, and a security-question step, so each of the four loading
+              flags actually flips.
+      Watch:  a topic card opens and closes in about a sixth of a second, eased at both ends, with
+              the cards below it sliding rather than jumping. In the wizard, the spinner and the
+              content it replaces cross in about a fifth of a second on each of the four
+              transitions, at the same weight as the step change beside them.
+      Fails:  a card or a loading swap that reads noticeably faster or slower — the only way that
+              happens is a site picking up the wrong rung. Motion that leaves a longer tail than it
+              did is the more likely shape of the mistake: it would mean a site moved onto
+              `TdayMotion.standard(duration:)` instead of keeping SwiftUI's `.easeInOut`, which
+              this unit deliberately did not do. Say which of the two screens.
+      Why:    no Swift toolchain here, so this unit's gates are textual — `ios.easeDuration` fell by
+              exactly the five literals that came off, and both constants read out of
+              `TdayMotionGenerated` at the values the call sites had typed — plus xctest in CI.
+              Neither can watch a card expand.
