@@ -165,15 +165,15 @@ silently retime the confetti on all three clients.
   (`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:76`);
   web spends it at the two screens with the same shape, as `EmptyState`'s
   `celebrationStartDelayMs` —
-  `tday-web/src/features/todayTodos/component/AllTasksTimelineContainer.tsx:320`
+  `tday-web/src/features/todayTodos/component/AllTasksTimelineContainer.tsx:326`
   and
-  `tday-web/src/features/floater/component/NativeFloaterTaskHomeDashboard.tsx:218`.
+  `tday-web/src/features/floater/component/NativeFloaterTaskHomeDashboard.tsx:215`.
   The overlay callers on both clients pass nothing, because nothing behind the
   overlay moves. See the open question below.
 - **`CelebrationLead`.** One site per client:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:391`,
-  `ios-swiftUI/Tday/Core/UI/TdayConfetti.swift:160`,
-  `tday-web/src/globals.css:854`. Web's is the one that shows the two delays
+  `ios-swiftUI/Tday/Core/UI/TdayConfetti.swift:381`,
+  `tday-web/src/globals.css:873`. Web's is the one that shows the two delays
   adding: `.tday-empty-enter-celebrating` is
   `calc(var(--tday-celebration-start, 0s) + var(--tday-delay-celebration-lead))`,
   where the first term is whatever `PlacementLead` the host handed over. What the
