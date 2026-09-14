@@ -120,6 +120,7 @@ import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TdayDragLift
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
@@ -855,11 +856,29 @@ fun CalendarScreen(
                     }
                 }
 
+                // Keyed, because a load failure genuinely adds and removes a row
+                // here and `animateItem` cannot animate either on an item whose
+                // identity is its index. It takes [TdayFeedItemMotion] whole —
+                // the rows above it spell their own fades out by hand and pass
+                // `placementSpec = null`, but those rows are only ever swapped
+                // wholesale when the day changes, while this card arrives and
+                // leaves on its own and has to travel to whatever slot the rows
+                // above leave it in.
                 uiState.errorMessage?.let { message ->
-                    item {
+                    item(key = "error-retry", contentType = "error_retry") {
+                        val errorCardMotionEnabled = rememberTdayMotionEnabled()
                         com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                             message = message,
                             onRetry = onRefresh,
+                            modifier = if (errorCardMotionEnabled) {
+                                Modifier.animateItem(
+                                    fadeInSpec = TdayFeedItemMotion.FadeIn,
+                                    placementSpec = TdayFeedItemMotion.Placement,
+                                    fadeOutSpec = TdayFeedItemMotion.FadeOut,
+                                )
+                            } else {
+                                Modifier
+                            },
                         )
                     }
                 }

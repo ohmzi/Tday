@@ -2139,11 +2139,43 @@ fun TodoListScreen( // skipcq: KT-R1006
                         onOpenFloaterList = onOpenFloaterList,
                     )
 
+                    // Keyed, because a load failure genuinely adds and removes a
+                    // row here and `animateItem` cannot animate either on an item
+                    // whose identity is its index. Unlike the blocks above it this
+                    // one takes all three specs: it is added and removed rather
+                    // than merely displaced, which is the one case on this feed a
+                    // fade describes.
+                    //
+                    // Nothing below it travels — this is the last content item and
+                    // only a keyless spacer follows — so the inherited
+                    // [TdayFeedItemMotion.Placement] earns its place in the other
+                    // direction: the skeleton leaving and the empty scene arriving
+                    // change the row count ABOVE the card while it is already up,
+                    // and it should glide into the slot they leave it in rather
+                    // than be re-laid-out into it.
+                    //
+                    // It sits inside the `!showFloaterTaskHomeSearchResults`
+                    // branch, so it does take the fades [displacedFeedItemMotion]
+                    // argues itself out of: opening a live query takes this whole
+                    // body away in one frame and leaves the card fading alone over
+                    // the blank. Accepted, not gated — an error banner and a live
+                    // query rarely coexist, and a gate read inside this lambda
+                    // could never fire, because the item is only ever composed
+                    // while the flag is false.
                     uiState.errorMessage?.let { message ->
-                        item {
+                        item(key = "error-retry", contentType = "error_retry") {
+                            // `timelineAnimationsEnabled` is a first-frame gate,
+                            // not the preference one — it only says the feed has
+                            // settled enough to animate at all — so the card asks
+                            // the preference itself, and motion off draws the card
+                            // where it belongs with no wait in front of it.
+                            val errorCardMotionEnabled = rememberTdayMotionEnabled()
                             com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                                 message = message,
                                 onRetry = onRefresh,
+                                modifier = feedItemMotion(
+                                    timelineAnimationsEnabled && errorCardMotionEnabled,
+                                ),
                             )
                         }
                     }
