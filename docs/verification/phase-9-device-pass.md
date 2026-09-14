@@ -471,3 +471,44 @@ animates.
               built. The guardrails prove the transaction still exists and that the budget did not
               move; only a device can say whether 320 ms on Standard is the right length for this
               card, which is the whole of the `disclosure-expand-collapse` claim on iOS.
+
+- [ ] **PR 42f · ios · The counts roll their digits instead of swapping them** — any build with a
+      handful of scheduled tasks and at least two lists that have tasks on them, plus one Anytime
+      list on the Todos screen. Checked twice, the second time with Reduce Motion on.
+      Do:     on the root feed task tab, create a task first. Creating rewrites the cache and the
+              dashboard summary at once, so the big date-card count rolls up on the spot, along
+              with the tile and list-row counts for whatever the new task lands under — put one
+              under a category tile (Today, Priority, Overdue) and one on a named list, so a 26 pt
+              tile count and a 22 pt list-row count each move too. Then complete a task, and keep
+              the screen up while you do: completing stages the row out of the list immediately
+              but does not rewrite the summary those three counts read, so the number does not
+              move on the tick. It rolls down about eight and a half seconds later, when the Undo
+              snackbar's window closes and the completion commits. Then the Todos screen and a
+              floater list card, which is the one exception — that count is tallied off the rows
+              held in memory, so it drops on the frame the row leaves.
+      Watch:  each count's digits roll over about a quarter of a second — the old glyph travelling
+              out as the new one travels in, in the same slot — rather than one number replacing
+              another between two frames. The 34 pt one on the date card is the one to judge; the
+              others are the same motion at a size where it is easy to miss. Nothing beside a
+              count moves while it rolls: the date label, the tile title and the list name hold
+              still, and neither card nor row changes height.
+      Fails:  a count that hard-swaps at the moment it changes — that is the modifier not reaching
+              the label. Silence after a tick on the three summary-backed counts is not that: the
+              new number is not due yet, and the swap to watch for there is the one that lands
+              when the Undo window closes. A whole
+              number cross-dissolving as one blurry block instead of per-digit, which would mean
+              `.numericText` is not what is playing. A count that rolls noticeably longer than the
+              row's own check-off fade beside it, which would mean it picked up `Emphasis` rather
+              than `Change`. And a two-digit count where only one digit moves and the layout
+              jitters sideways as the width changes.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, create and complete
+              again on all four surfaces, on the same clock as above. The new number is simply
+              there, whole, on the frame the count changed — no roll, and no pause where the roll
+              would have been.
+      Why:    there is no Swift toolchain on the machine this was written on, so none of it was
+              built. `motion-reachability-ios` pins the pair textually — each of the four labels
+              carries `.contentTransition(.numericText(`, an `.animation(_:value:)` keyed on
+              `count`, and a spec that opens on `tdayAnimation` — and the budget did not move. No
+              static rule can see the roll itself: whether SwiftUI plays it per-digit, whether 260
+              is the right length for it and whether it reads at 34 pt are the whole of the claim,
+              and only a screen answers them.

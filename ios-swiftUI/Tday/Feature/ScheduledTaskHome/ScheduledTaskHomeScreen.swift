@@ -867,6 +867,8 @@ private struct ScheduledTaskHomeTodayCard: View {
     let count: Int
     let action: () -> Void
 
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
     private var dateLabel: String {
         Date.now.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().locale(AppLocale.current))
     }
@@ -896,9 +898,24 @@ private struct ScheduledTaskHomeTodayCard: View {
 
                     Spacer()
 
+                    // The count rolls its digits instead of hard-swapping them, and it
+                    // rolls on `Change` rather than `Enter` or `Emphasis`. Rule 2 of
+                    // `docs/motion.md` decides that boundary by geometry: 7 → 6 after
+                    // the user ticks a task is their own edit replayed back to them in
+                    // place, with the label not moving and not changing size, which is
+                    // exactly what `Change` is for. The roll is also what earns 260 —
+                    // cross-dissolving a whole string for that long reads as a smear,
+                    // while digits travelling read as a number counting down.
+                    // No `#available` guard: `.numericText(value:)` is iOS 17 and the
+                    // deployment target is 17.0, so a guard here would be dead code.
                     Text("\(count)")
                         .font(.tdayRounded(size: 34, weight: .black))
                         .foregroundStyle(.white)
+                        .contentTransition(.numericText(value: Double(count)))
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                            value: count
+                        )
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
@@ -1000,6 +1017,8 @@ private struct ScheduledTaskHomeCategoryTile: View {
     let count: Int
     let action: () -> Void
 
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: ScheduledTaskHomeMetrics.tileCornerRadius, style: .continuous)
 
@@ -1057,9 +1076,15 @@ private struct ScheduledTaskHomeCategoryTile: View {
                             .frame(width: 24, height: 24)
                             .foregroundStyle(.white)
                         Spacer()
+                        // Same roll, same rung — see `ScheduledTaskHomeTodayCard`.
                         Text("\(count)")
                             .font(.tdayRounded(size: 26, weight: .black))
                             .foregroundStyle(.white)
+                            .contentTransition(.numericText(value: Double(count)))
+                            .animation(
+                                tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                                value: count
+                            )
                     }
 
                     Text(title)
@@ -1120,6 +1145,7 @@ private struct ScheduledTaskHomeListRow: View {
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     private var accent: Color {
         scheduledTaskHomeListAccentColor(for: colorKey)
@@ -1189,9 +1215,15 @@ private struct ScheduledTaskHomeListRow: View {
 
                     Spacer()
 
+                    // Same roll, same rung — see `ScheduledTaskHomeTodayCard`.
                     Text("\(count)")
                         .font(.tdayRounded(size: 22, weight: .bold))
                         .foregroundStyle(.white)
+                        .contentTransition(.numericText(value: Double(count)))
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                            value: count
+                        )
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
