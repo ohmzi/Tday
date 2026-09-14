@@ -398,3 +398,24 @@ animates.
       Why:    iOS does not compile on the machine this was written on, so the only gates it passed
               are textual — the literal counter fell by exactly the twenty-two it should have — and
               xctest in CI. Neither of those can see a spring play.
+
+- [ ] **PR 8h · ios · The four feed screens' search bars now name the spring they always used** — a
+      signed-in build with enough history that Completed and the calendar have rows to filter. Same
+      shape of row as 8g's above: its whole claim is that nothing looks different.
+      Do:     open and close the search bar twice on each of the four feeds — Todos (both of them:
+              the list's own search and the floater task home's), Completed, Calendar, and the
+              scheduled-task home. Type into one and close it from the X as well as from the back
+              gesture, so the close path runs with a populated field and with an empty one.
+      Watch:  the bar expands and collapses at exactly the weight it did before — a short spring,
+              one soft settle, no overshoot worth naming — and the feed under it reflows at the same
+              moment it always did. Query text still clears on close, which is the behaviour the
+              comment next to each of these functions promises and is untouched here.
+      Fails:  any of the eight reading slower, looser or bouncier than its siblings, which would
+              mean a call site picked up one of the 0.24/0.9 or 0.26/0.9 springs these same files
+              still carry. A bar that hard-cuts open instead of springing is the other failure: a
+              `withAnimation` that stopped opening a transaction. Both are per-site, so name the
+              feed and say open or close.
+      Why:    no Swift toolchain here, so the gates this passed are textual — `ios.spring` fell by
+              exactly the sixteen literals that came off, and `TdayMotion.snappy` reads the same
+              0.28/0.86 out of `TdayMotionGenerated` — plus xctest in CI. Neither can watch a search
+              bar open.
