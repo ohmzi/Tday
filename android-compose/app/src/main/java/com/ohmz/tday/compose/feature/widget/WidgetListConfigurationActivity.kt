@@ -46,6 +46,7 @@ import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotWriter
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
@@ -184,6 +185,21 @@ internal data class WidgetListPickerUiState(
     val floaterLists: List<CachedFloaterListRecord> = emptyList(),
 )
 
+// The picker's own geometry, sited at the head of the render path rather than the file's, which
+// opens with an Activity. This screen is a Compose surface the launcher never composites — the
+// RemoteViews metrics `WidgetCornerRadiusTest` pins belong to the widget itself, not to it.
+
+// The section header hangs over the rows under it, so its inset is `ListItem`'s own 16 dp gutter
+// rather than a page margin, and its two halves are named as a pair.
+private val PickerSectionHeaderHorizontalPadding = 16.dp
+private val PickerSectionHeaderVerticalPadding = 8.dp
+
+/** The tinted disc a list's icon sits in. */
+private val PickerListAvatarSize = 36.dp
+
+/** The icon inside that disc, under `IconSm` because the disc is what is being aimed at. */
+private val PickerListIconSize = 18.dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun WidgetListPickerScreen(
@@ -216,7 +232,7 @@ internal fun WidgetListPickerScreen(
             }
 
             uiState.todoLists.isEmpty() && uiState.floaterLists.isEmpty() -> Box(
-                modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+                modifier = Modifier.fillMaxSize().padding(padding).padding(TdayDimens.Spacing3xl),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -228,7 +244,7 @@ internal fun WidgetListPickerScreen(
 
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(bottom = 24.dp),
+                contentPadding = PaddingValues(bottom = TdayDimens.Spacing3xl),
             ) {
                 if (uiState.todoLists.isNotEmpty()) {
                     item { WidgetListPickerSectionHeader(stringResource(R.string.widget_list_picker_section_todo)) }
@@ -267,7 +283,10 @@ private fun WidgetListPickerSectionHeader(title: String) {
         text = title,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.padding(
+            horizontal = PickerSectionHeaderHorizontalPadding,
+            vertical = PickerSectionHeaderVerticalPadding,
+        ),
     )
 }
 
@@ -288,14 +307,14 @@ private fun WidgetListPickerRow(
             Surface(
                 shape = CircleShape,
                 color = accent.copy(alpha = 0.16f),
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(PickerListAvatarSize),
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     Icon(
                         imageVector = tdayListIconForKey(iconKey),
                         contentDescription = null,
                         tint = accent,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(PickerListIconSize),
                     )
                 }
             }

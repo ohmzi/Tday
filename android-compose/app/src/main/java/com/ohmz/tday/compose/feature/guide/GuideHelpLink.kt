@@ -21,6 +21,13 @@ import com.ohmz.tday.compose.R
  */
 val LocalOpenGuideTopic = staticCompositionLocalOf<((String) -> Unit)?> { null }
 
+/** The "?" button's tap target. Smaller than an `IconButton`'s own 48, because it is tucked beside
+ *  a title rather than sitting in a bar. */
+private val HelpLinkTouchTargetSize = 32.dp
+
+/** The glyph inside it, under `IconSm` so the link stays quiet. */
+private val HelpLinkGlyphSize = 18.dp
+
 /**
  * A quiet contextual "?" that deep-links from a feature surface into its guide
  * topic — the Android counterpart of the web `GuideHelpLink`. Renders nothing
@@ -31,13 +38,13 @@ fun GuideHelpLink(topicId: String, modifier: Modifier = Modifier) {
     val openGuideTopic = LocalOpenGuideTopic.current ?: return
     IconButton(
         onClick = { openGuideTopic(topicId) },
-        modifier = modifier.size(32.dp),
+        modifier = modifier.size(HelpLinkTouchTargetSize),
     ) {
         Icon(
             imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_help),
             contentDescription = stringResource(R.string.settings_help_guide),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(HelpLinkGlyphSize),
         )
     }
 }
