@@ -274,7 +274,7 @@ const AllTasksTimelineContainer = ({
               time-of-day drop targets are suppressed below. */}
           {showTodayScope && <WeekInReviewCard />}
 
-          {todoLoading && <TodoListLoading heading={pageHeading} />}
+          <TodoListLoading heading={pageHeading} loading={todoLoading} />
 
           {/* The three time buckets are drop targets, so they stay visible (even
               empty ones) as long as the day holds at least one task — but under a

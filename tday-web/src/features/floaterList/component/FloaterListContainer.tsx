@@ -17,6 +17,10 @@ import { Button } from "@/components/ui/button";
 import { getListIcon } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import FloaterGroup from "@/features/floater/component/FloaterGroup";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
+import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
+import { cn } from "@/lib/utils";
 import { buildFloaterSections } from "@/lib/floater/buildFloaterSections";
 import { useFloaterList } from "@/features/floaterList/query/get-floater-list";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
@@ -30,6 +34,9 @@ export default function FloaterListContainer({ id }: { id: string }) {
   const resetList = useResetFloaterList();
   const { floaterListMetaData } = useFloaterListMetaData();
   const { floaterList, floaterListTodos, floaterListLoading } = useFloaterList({ id });
+  // Keeps the placeholder on screen for its own fade-out, so the rows do not
+  // replace it between two frames — `useSkeletonCrossfade` owns both halves.
+  const { showSkeleton, skeletonClassName } = useSkeletonCrossfade(floaterListLoading);
   const [searchQuery, setSearchQuery] = useState("");
   const [editListOpen, setEditListOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
@@ -170,11 +177,19 @@ export default function FloaterListContainer({ id }: { id: string }) {
         }
       />
 
-      {floaterListLoading ? (
-        <div className="space-y-3 px-1 py-6">
-          <div className="h-6 w-36 animate-pulse rounded-full bg-muted" />
-          <div className="h-16 animate-pulse rounded-2xl bg-muted/70" />
-          <div className="h-16 animate-pulse rounded-2xl bg-muted/70" />
+      {showSkeleton ? (
+        // `space-y-1` and nothing else, because that is what the section below is: the
+        // placeholder used to draw two 64 px cards inside `space-y-3 px-1 py-6`, which is
+        // neither the row's height nor the section's rhythm nor where the section starts.
+        <div className={cn("space-y-1", skeletonClassName)}>
+          {/* Unlike `TodoListLoading`'s heading, this one is genuinely not in hand while the
+              list is in flight: which buckets `buildFloaterSections` returns depends on the
+              tasks that have not arrived. So it keeps a bar — drawn by `Skeleton` rather
+              than by a hand-rolled `animate-pulse` div, and at the `leading-8` line box of
+              the `h2` it stands in for, so the rows under it land where they were already
+              sitting instead of 32 px lower. */}
+          <Skeleton className="ml-1 h-8 w-36 rounded-full" />
+          <TaskRowSkeletonGroup />
         </div>
       ) : null}
 
@@ -211,7 +226,9 @@ export default function FloaterListContainer({ id }: { id: string }) {
       ) : null}
 
       {!floaterListLoading && sections.length > 0 ? (
-        <div className="space-y-5">
+        // The other half of the crossfade: the rows arrive over the placeholder fading out
+        // above them rather than appearing in the frame it vanishes.
+        <div className="tday-content-enter space-y-5">
           {sections.map((section) => (
             <section key={section.id} className="space-y-1">
               <h2 className="px-1 text-[1.75rem] font-black leading-8 text-foreground">
