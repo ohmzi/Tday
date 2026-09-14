@@ -512,3 +512,49 @@ animates.
               static rule can see the roll itself: whether SwiftUI plays it per-digit, whether 260
               is the right length for it and whether it reads at 34 pt are the whole of the claim,
               and only a screen answers them.
+
+- [ ] **PR 32a · ios · The splash hands over to the first screen instead of being cut out** — a
+      cold launch, which means force-quitting the app between every run: this is the one motion
+      here that only plays on a launch that had no process to return to. Checked twice, the second
+      time with Reduce Motion on, and worth doing once on a device slow enough (or a network poor
+      enough) that the splash is up for more than a blink.
+      Do:     swipe the app out of the app switcher, wait a beat, and launch it from the home
+              screen. Watch the moment the splash stops being on screen — not the launch itself.
+              Repeat it signed in with a workspace, and again in local mode, which reaches the
+              same boundary by a different bootstrap. Then launch once more and hold a finger down
+              on the splash while it is up: that pins it (`isLaunchSplashHeld`), so the bootstrap
+              can finish underneath and the hand-over plays when the finger lifts instead.
+      Watch:  the splash fades away while the first screen fades up in its place, over about a
+              fifth of a second, and the two halves overlap — at no point is the screen empty or
+              showing both at full strength. The first screen is complete when it appears: the
+              feed, the dock and the create button are all where they belong rather than arriving
+              after it. The held-finger launch does the same thing on release, once, not twice.
+      Fails:  the splash disappearing between two frames with the feed simply there — that is the
+              transaction not reaching the arms, and it is exactly what this row exists to catch.
+              A fade that is visibly longer than a route change inside the app, which would mean
+              the rung drifted. A splash that dims out and leaves the screen blank before the app
+              arrives, which would mean the two halves are running one after the other rather than
+              across each other. And the held-finger case playing the fade twice, or playing it on
+              the press rather than on the release, which would mean the boundary is keyed on the
+              two properties separately rather than on `showsLaunchSplash`.
+      Also:   watch the TAGLINE across the whole splash, on the same launches. It is drawn by two
+              different view instances — `TdayApp`'s while `AppContainer` builds, `AppRootView`'s
+              until the bootstrap finishes — and `launchTagline` is a process-wide global so both
+              draw the same one. It must not change at any point while the splash is up; a line
+              that swaps part-way through is that global having gone back to being per-view state,
+              and it puts a hard cut on the one boundary above this that has nothing to fade it.
+              A different line on the NEXT launch is correct and expected.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, cold launch again. The
+              first screen is simply there, whole and finished, on the frame the bootstrap
+              completes — no fade, and no pause where the fade would have been. A launch that
+              takes measurably longer with the setting on is the fifth idiom rule broken from the
+              side nobody watches.
+      Why:    there is no Swift toolchain on the machine this was written on, so none of it was
+              built. `launch-handover.test.ts` pins the shape textually — a `.transition` on each
+              arm naming its curve, the `Group`'s `.animation(_:value:)` keyed on
+              `showsLaunchSplash`, both resolving through `tdayAnimation`, and no numeric duration
+              in the block — and the budget did not move. What no static rule can see is whether
+              SwiftUI actually plays a `Group`'s two arms across each other on a cold launch, when
+              the first frame of the app is also the first frame of a bootstrap that has just
+              finished. That, and whether 200 ms is the right length for the one motion every user
+              sees, are the whole of the claim.
