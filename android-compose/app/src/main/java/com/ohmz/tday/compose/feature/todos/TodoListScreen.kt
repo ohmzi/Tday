@@ -336,7 +336,7 @@ private fun LazyItemScope.displacedFeedItemMotion(
  *
  * The inline empty state holds its celebration back by
  * [TdayFeedItemMotion.CelebrationStartDelayMillis] first, so what has to fit
- * inside this window is that hold plus the flight — 2.1s of the 4s, today. Widen
+ * inside this window is that hold plus the flight — 2.3s of the 4s, today. Widen
  * the hold a long way and this has to follow it.
  */
 private const val CompletionCelebrationWindowMs = 4_000L

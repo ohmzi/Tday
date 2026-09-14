@@ -14,22 +14,29 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.sin
+import kotlin.math.PI
 import kotlin.random.Random
 
 /**
  * The burst that plays when the user ticks off the last thing they had left.
  *
- * Deliberately not a library and not a bitmap: a few dozen rounded rectangles
- * on one [Canvas], thrown from a single point and pulled back down, is the whole
- * effect. Pieces flip as they fly — the width is scaled by the cosine of their
- * own spin — which is what reads as paper rather than as coloured dots.
+ * Deliberately not a library and not a bitmap: a few dozen rounded rectangles on
+ * one [Canvas] is the whole effect. They leave a thumb-sized patch at the scene's
+ * heart, the throw is spent against drag so each one has a finite reach rather
+ * than a straight line out of the box, and the fall settles to that piece's own
+ * terminal speed instead of gathering pace forever. On the way down each turns
+ * edge-on at a rate of its own, unrelated to how fast it is spinning in the plane
+ * — that separation is what reads as paper rather than as a coloured propeller.
+ *
+ * This file is the clock, the palette and the draw. [TdayConfettiKinematics] is
+ * the arithmetic, and it is a separate file because a `Canvas` cannot be asked
+ * what it drew — the numbers are the part that can be wrong, so they live
+ * somewhere a plain JUnit test can reach them. `docs/confetti-spec.md` is
+ * normative for both halves.
  *
  * The twin of the web `Confetti` component and the iOS `TdayConfetti` view; the
- * three share piece count, fan, timing and palette so completing a list feels
- * the same wherever the user does it.
+ * three share piece count, fan, timing, physics and palette so completing a list
+ * feels the same wherever the user does it.
  *
  * This draws outside its own bounds on purpose (pieces fly above the scene it
  * sits on), so give it a parent that does not clip — `matchParentSize` on a
@@ -56,16 +63,24 @@ fun TdayConfetti(
     runKey: Any? = Unit,
     startDelayMillis: Long = 0L,
 ) {
+    if (!play) return
+
     val motionEnabled = rememberTdayMotionEnabled()
     val motionScale = rememberTdayMotionScale()
-    if (!play || !motionEnabled) return
 
     // Fixed per run, so a recomposition mid-flight does not re-roll the pieces
     // and teleport all of them at once.
-    val pieces = remember(runKey) { confettiPieces(Random(PieceCount * 31L)) }
+    val pieces = remember(runKey) { confettiFan(Random(PieceCount * 31L)) }
     val progress = remember(runKey) { Animatable(0f) }
     val palette = remember(accentColor) { ConfettiPalette + accentColor }
 
+    // `play` is the only thing that decides whether this composable exists; the
+    // preference decides whether the Canvas below it draws. The two are not the
+    // same question, and collapsing them into one early return — which is what
+    // this used to do — puts the whole run out of reach at 0x, effect included.
+    // `docs/confetti-spec.md`'s haptic section is written against the shape this
+    // leaves behind: a burst is an event as well as an animation, and the event
+    // still happens for someone who has asked not to watch it.
     LaunchedEffect(runKey) {
         progress.snapTo(0f)
         // Held at 0, where the canvas below draws nothing at all, so the wait
@@ -74,13 +89,17 @@ fun TdayConfetti(
         // against the scene rising behind it, so a lead that did not stretch with
         // the burst would fire it into a scene that has not started moving yet.
         if (startDelayMillis > 0L) scaledDelay(startDelayMillis, motionScale)
+        if (!motionEnabled) return@LaunchedEffect
         progress.animateTo(
             targetValue = 1f,
-            // Linear: the arc is the physics below, and an eased clock on top of
-            // it makes the pieces hang at the apex like they are buffering.
+            // Linear: the arc is the physics in TdayConfettiKinematics, and an
+            // eased clock on top of it makes the pieces hang at the apex like they
+            // are buffering.
             animationSpec = tween(durationMillis = FlightMillis, easing = LinearEasing),
         )
     }
+
+    if (!motionEnabled) return
 
     Canvas(modifier = modifier) {
         val t = progress.value
@@ -93,37 +112,22 @@ fun TdayConfetti(
         val origin = Offset(size.width * OriginX, size.height * OriginY)
 
         pieces.forEach { piece ->
-            // Staggered launches: one salvo of forty pieces reads as a single
-            // expanding ring rather than as confetti.
-            val local = (t - piece.delay) / (1f - piece.delay)
-            if (local <= 0f) return@forEach
+            val f = frame(piece, t) ?: return@forEach
 
-            val travelled = piece.speed * local
-            val x = origin.x + cos(piece.angle) * travelled * span
-            val y = origin.y +
-                sin(piece.angle) * travelled * span +
-                Gravity * local * local * span
-
-            // Full opacity for the first half of the flight, then out — pieces
-            // that vanish at the apex look like a dropped frame.
-            val alpha = if (local < FadeStart) {
-                1f
-            } else {
-                1f - (local - FadeStart) / (1f - FadeStart)
-            }
-
-            val spin = piece.spinPhase + piece.spin * local
-            // |cos| of the spin is the piece turning edge-on to the viewer; the
-            // floor keeps it from disappearing completely on the way round.
-            val flip = MinFlip + (1f - MinFlip) * abs(cos(spin))
-            val width = piece.width.dp.toPx() * flip
+            val x = origin.x + f.dx * span
+            val y = origin.y + f.dy * span
+            // Only the width turns: the height is the piece seen along the axis it
+            // is flipping about, which does not foreshorten.
+            val width = piece.width.dp.toPx() * f.widthScale
             val height = piece.height.dp.toPx()
 
-            rotate(degrees = spin * DegreesPerRadian, pivot = Offset(x, y)) {
+            rotate(degrees = f.rot * DegreesPerRadian, pivot = Offset(x, y)) {
                 drawRoundRect(
-                    color = palette[piece.colorIndex % palette.size].copy(alpha = alpha),
+                    color = palette[piece.colorIndex % palette.size].copy(alpha = f.alpha),
                     topLeft = Offset(x - width / 2f, y - height / 2f),
                     size = Size(width, height),
+                    // Of the DRAWN width, so a piece turning edge-on keeps its
+                    // proportions instead of squaring off as it narrows.
                     cornerRadius = CornerRadius(width * 0.4f, width * 0.4f),
                 )
             }
@@ -131,43 +135,11 @@ fun TdayConfetti(
     }
 }
 
-/** One piece of paper: thrown in fractions of the burst box, sized in dp. */
-private class ConfettiPiece(
-    val angle: Float,
-    val speed: Float,
-    val spin: Float,
-    val spinPhase: Float,
-    val width: Float,
-    val height: Float,
-    val colorIndex: Int,
-    val delay: Float,
-)
-
-/**
- * The fan, rolled from a fixed seed: the burst is the same every time, which is
- * what makes it read as a designed celebration instead of a random one, and what
- * lets a screenshot test see the same frame twice.
- */
-private fun confettiPieces(random: Random): List<ConfettiPiece> = List(PieceCount) { index ->
-    // Fanned upward and outward rather than in a full circle. A ring throws half
-    // its pieces straight down through the copy, where they read as a glitch.
-    val spread = FanStartRadians + (FanSweepRadians * (index + random.nextFloat()) / PieceCount)
-    ConfettiPiece(
-        angle = spread,
-        speed = MinSpeed + random.nextFloat() * (MaxSpeed - MinSpeed),
-        spin = (if (random.nextBoolean()) 1f else -1f) * (MinSpin + random.nextFloat() * MaxSpin),
-        spinPhase = random.nextFloat() * TwoPi,
-        width = MinPieceWidthDp + random.nextFloat() * (MaxPieceWidthDp - MinPieceWidthDp),
-        height = MinPieceHeightDp + random.nextFloat() * (MaxPieceHeightDp - MinPieceHeightDp),
-        colorIndex = random.nextInt(ConfettiPalette.size + 1),
-        delay = random.nextFloat() * MaxLaunchDelay,
-    )
-}
-
 /**
  * A festive subset of the list palette rather than a new set of colours, so the
  * burst is made of shades the app already uses; the screen's accent is appended
- * by the caller.
+ * by the caller, which is what makes the drawn array [ColorCount] long and the
+ * fan's `colorIndex` draw an index into it.
  */
 private val ConfettiPalette = listOf(
     Color(0xFFE05299), // PINK
@@ -179,32 +151,5 @@ private val ConfettiPalette = listOf(
     Color(0xFFE6664C), // CORAL
 )
 
-private const val PieceCount = 46
-private const val FlightMillis = 1800
-
-/** Where the burst is thrown from, as a fraction of the box: the scene's heart. */
-private const val OriginX = 0.5f
-private const val OriginY = 0.28f
-
-private const val TwoPi = (Math.PI * 2).toFloat()
-private const val DegreesPerRadian = (180.0 / Math.PI).toFloat()
-
-/** Up and out: 200°..340°, measured with y growing downward. */
-private const val FanStartRadians = (Math.PI * 200.0 / 180.0).toFloat()
-private const val FanSweepRadians = (Math.PI * 140.0 / 180.0).toFloat()
-
-private const val MinSpeed = 0.30f
-private const val MaxSpeed = 0.78f
-private const val Gravity = 0.95f
-
-private const val MinSpin = 3.5f
-private const val MaxSpin = 9f
-private const val MinFlip = 0.25f
-
-private const val MinPieceWidthDp = 5f
-private const val MaxPieceWidthDp = 9f
-private const val MinPieceHeightDp = 8f
-private const val MaxPieceHeightDp = 13f
-
-private const val MaxLaunchDelay = 0.16f
-private const val FadeStart = 0.55f
+/** The one place degrees exist: the kinematics are radians end to end. */
+private const val DegreesPerRadian = (180.0 / PI).toFloat()

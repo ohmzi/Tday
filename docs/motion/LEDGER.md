@@ -1148,7 +1148,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 39b — Android confetti kinematics
 
-- ↳ part 3 of 5 of `confetti-kinematics` — Android `TdayConfettiKinematics.kt` + JVM I1–I6 + `MaxSpin`→`SpinRange`. Box lives under **PR 39d**.
+- ↳ part 3 of 5 of `confetti-kinematics` — Android `TdayConfettiKinematics.kt` + JVM I1–I6 + `MinSpin`/`MaxSpin` → `MinSpinRadians`/`SpinRadiansRange`, which is the pair `docs/confetti-spec.md` names and both halves of the rename, not just the misleading one. Box lives under **PR 39d**.
 
 ### PR 39c — iOS confetti kinematics
 
