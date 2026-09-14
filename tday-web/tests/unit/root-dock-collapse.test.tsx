@@ -20,10 +20,19 @@
  *
  * The pill is the exception, and it has to be: where the pill lands is a
  * measurement, and "does it re-measure when the dock folds" cannot be asked of a
- * DOM whose every rect is zero. So the last case hands the component a layout —
+ * DOM whose every rect is zero. So the pill cases hand the component a layout —
  * one derived from the classes the component itself rendered, not a fixed script,
  * so a tab that stopped folding would move the expected answer with it — and
- * asks the pill where it went.
+ * ask the pill where it went.
+ *
+ * The reduced-motion pair needs one thing more, because it is about a FRAME
+ * rather than a state. In a browser the measurement taken as the fold commits
+ * reads the transition's first frame — the shape the dock is leaving — and jsdom,
+ * which runs no transitions, cannot produce that frame on its own. `lagged` is
+ * that frame, handed over: the rects report the open dock whatever classes the
+ * tabs carry, until `land()` says the transition is over. With motion on the
+ * per-frame follower reads through it; with motion off the follower does not run,
+ * and the only thing left to correct the pill is the transition's own completion.
  */
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -63,6 +72,11 @@ import {
   ROOT_DOCK_EXPAND_PX,
   nextRootDockCollapsed,
 } from "@/lib/rootDockCollapse";
+import { installReducedMotion } from "../setup/reduced-motion";
+
+// The shared stub replaces `window.matchMedia` outright and leaves putting it
+// back to the caller, so the original is held from before any test installs one.
+const originalMatchMedia = window.matchMedia;
 
 /** Folds an offset series through the decision the way a scroll stream does. */
 function fold(offsets: number[]): boolean[] {
@@ -97,13 +111,23 @@ const PILL_INSET_PX = 6;
  * happening moves the expected answer rather than quietly agreeing with a stale
  * script. `more` is zero at every state: it is `hidden sm:grid`, and this is a
  * phone-width dock.
+ *
+ * @param lagged - Report the OPEN dock's widths regardless of what the tabs are
+ *   wearing, which is what a browser reports on the frame a transition starts:
+ *   the classes have changed, the used value has not moved off them yet. `land()`
+ *   ends it. Off by default, so a caller that does not care about the frame gets
+ *   the finished layout the moment the classes say so.
+ * @returns `land`, the end of that frame.
  */
-function stubDockLayout() {
+function stubDockLayout({ lagged = false }: { lagged?: boolean } = {}) {
   const order = ["scheduledTaskHome", "root_feed_tab_floater", "more"];
+  let inFlight = lagged;
   const widthOf = (label: string) => {
     if (label === "more") return 0;
     const button = screen.queryByLabelText(label);
-    if (!button || button.className.includes("pointer-events-none")) return 0;
+    if (!button) return 0;
+    if (inFlight) return TAB_WIDTH_PX;
+    if (button.className.includes("pointer-events-none")) return 0;
     return TAB_WIDTH_PX;
   };
   const leftOf = (label: string) => {
@@ -133,6 +157,11 @@ function stubDockLayout() {
       toJSON: () => ({}),
     } as DOMRect;
   });
+  return {
+    land: () => {
+      inFlight = false;
+    },
+  };
 }
 
 /** The wrapper that carries the fold; the button is what the label finds. */
@@ -153,6 +182,7 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  window.matchMedia = originalMatchMedia;
 });
 
 describe("nextRootDockCollapsed", () => {
@@ -243,6 +273,57 @@ describe("RootDock, folded", () => {
     rerender(<RootDock onOpenMore={() => {}} moreOpen={false} collapsed />);
 
     expect(pill.style.transform).toBe(`translateX(${NAV_INSET_PX - PILL_INSET_PX}px)`);
+  });
+
+  it("finishes the pill's trip off the transition when there is no motion to follow", () => {
+    // The same fold, on the branch the per-frame follower is switched off for.
+    // `globals.css` floors the transition to 1ms rather than removing it, so the
+    // rects still move — a frame later, and with nobody watching. Left there the
+    // pill keeps the open dock's slot for as long as the dock stays folded, which
+    // is the defect the follower exists to prevent surviving in the one branch
+    // that cannot use it: reduced motion drops the travel, not the destination.
+    installReducedMotion(true);
+    route.pathname = "/en/app/floater";
+    const layout = stubDockLayout({ lagged: true });
+    const { rerender } = renderDock(false);
+    const pill = screen.getByLabelText("Primary app navigation")
+      .firstElementChild as HTMLElement;
+    const openSlot = `translateX(${NAV_INSET_PX + TAB_WIDTH_PX + TAB_GAP_PX - PILL_INSET_PX}px)`;
+    expect(pill.style.transform).toBe(openSlot);
+
+    rerender(<RootDock onOpenMore={() => {}} moreOpen={false} collapsed />);
+
+    // Still the open slot, and this is the half that makes the case mean
+    // something: the measurement taken as the fold commits is the fold's FIRST
+    // frame, so the listener below is correcting a real staleness rather than
+    // agreeing with a pill that was already right.
+    expect(pill.style.transform).toBe(openSlot);
+
+    layout.land();
+    fireEvent.transitionEnd(tabWrapper("scheduledTaskHome"), {
+      propertyName: "grid-template-columns",
+    });
+
+    expect(pill.style.transform).toBe(`translateX(${NAV_INSET_PX - PILL_INSET_PX}px)`);
+  });
+
+  it("does not re-measure for a transition that cannot have moved a tab", () => {
+    // The wrapper fades as well as closing, and the tab under it tints on hover.
+    // Both land on this subtree and neither moves a rect, so a listener that took
+    // every `transitionend` would spend a forced layout on a pointer crossing the
+    // dock. Fired here on the element that really does carry `opacity`.
+    installReducedMotion(true);
+    route.pathname = "/en/app/floater";
+    stubDockLayout({ lagged: true }).land();
+    const { rerender } = renderDock(false);
+    const pill = screen.getByLabelText("Primary app navigation")
+      .firstElementChild as HTMLElement;
+
+    rerender(<RootDock onOpenMore={() => {}} moreOpen={false} collapsed />);
+    pill.style.transform = "translateX(999px)";
+    fireEvent.transitionEnd(tabWrapper("scheduledTaskHome"), { propertyName: "opacity" });
+
+    expect(pill.style.transform).toBe("translateX(999px)");
   });
 
   it("gives the tap-expanded dock back after its dwell", () => {

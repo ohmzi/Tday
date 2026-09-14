@@ -286,6 +286,31 @@ animates.
               pill that arrives after the tab has stopped or overshoots and comes back — not one
               parked in the open dock's slot, which is what the suite now pins.
 
+- [ ] **PR 57b · web · The folded dock is folded, not half-folded** — the same phone-width
+      viewport and the same two feeds, with reduce-motion on (Chromium: DevTools → Rendering →
+      **Emulate CSS prefers-reduced-motion: reduce**; or the OS setting, which is the one a real
+      user has). The Anytime feed is where to spend the time: there the tab that closes is to the
+      LEFT of the one you are on, so the fold moves the active tab 52 px without changing which
+      tab is active.
+      Do:     scroll past 44 px, then back to the top, then past it again. At a desktop width,
+              also switch tabs with the dock open.
+      Watch:  the dock is its folded shape on the next frame — no glide, no half-closed capsule —
+              and the white pill is UNDER the one tab that is left, flush inside the 62 px
+              capsule. The same in reverse: the open dock arrives already open with the pill under
+              the active tab. Nothing travels at any point, and nothing needs a second gesture to
+              settle.
+      Fails:  the pill parked to the RIGHT of the tab it marks, or clipped to a sliver against the
+              capsule's border — the defect this PR is for. With motion off there is no follower
+              re-reading the tab's rect, so the only thing that can correct the measurement taken
+              as the fold committed is the transition's own completion; a pill in the wrong slot
+              means that never arrived. Also a fail: anything gliding, which would mean the 1 ms
+              floor is not reaching this subtree, and a pill that snaps to the right slot only
+              once you touch the dock again.
+      Note:   `globals.css` floors transitions to 1 ms rather than to zero precisely so the
+              completion still reports itself, and this row is the only place that bargain is
+              checked by eye. An engine that decided not to fire `transitionend` for a 1 ms
+              transition would show exactly the failure above with every automated gate green.
+
 ## Android
 
 - [ ] **PR 39b · android · The burst is paper, and it still fits the celebrate window** — any list

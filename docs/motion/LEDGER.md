@@ -1459,6 +1459,22 @@ Restore it from git history rather than adjusting the number.
     desktop one 233 → 177 instead of 233 → 129. `w-0` genuinely cannot go on the button (the press
     layer deletes a `width` transition declared there); the padding never needed to transition,
     because the wrapper's `1fr` → `0fr` track is what travels.
+  - **57b's brief was written against a `setTimeout(updatePill, 260)` that 57a had already
+    replaced with a per-frame follower, so its steps 1–3, 5 and 7 were spent or moot before it
+    ran.** What was left is the case neither the follower nor the timer before it ever covered:
+    reduced motion. `updatePill` is called from the effect that COMMITS the fold, and the
+    `getBoundingClientRect` there is what forces the layout that starts the transition — so it
+    reads that transition's first frame, which is the shape the dock is leaving. Re-reading until
+    that stops being true is the follower's whole job, and the follower deliberately does not run
+    when motion is off; so the pill held the open dock's slot for good on exactly the branch with
+    no travel to hide it. A `transitionend` listener on the nav closes it, filtered to two
+    properties: `grid-template-columns`, the fold's own track, and `min-width`, a desktop
+    selection change. The tab row's `gap-1` → `gap-0` moves a tab's rect too and still needs no
+    entry — it rides the same `expanded` flip at the same rung and curve as the track, so the two
+    land together and the track's event is already the last word. The brief's `propertyName === 'width'`
+    would have matched nothing — the press layer deletes a `width` transition declared on the
+    button, which is why the fold is a grid track at all. No counter moves: the fix is an event
+    name and two property names.
 
 ### PR 59 — compositor hints for the always-on blurs
 
