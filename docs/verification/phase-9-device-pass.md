@@ -330,6 +330,28 @@ animates.
               no slide, no fade, and no frame where the panel is caught mid-resize. The finish line
               is the same: there, or not there.
 
+- [ ] **PR 42d · and · The onboarding wizard says which way it moved** — a fresh install, or the
+      app signed out so the wizard comes up at the Mode step.
+      Do:     tap **Self-hosted** to go to Server, then **Change setup** to come back to Mode, then
+              Self-hosted again. Connect to a server, and from the sign-in panel tap
+              **Change setup** once more.
+      Watch:  going forward, the arriving panel comes in from the RIGHT over 200 ms while the one
+              it replaces leaves to the LEFT over 150 ms; coming back, both directions reverse. The
+              panel that is leaving is always the quicker of the two. The three chips above do not
+              slide with it — they stay put and only their own fill changes.
+      Fails:  both panels simply dissolving into each other with no travel, which is the default
+              spec this screen shipped on; the two directions looking identical, so Back and
+              Continue are indistinguishable; or a taller panel clipped square across the bottom
+              while it travels, which is the size transform clipping.
+      Also:   the connect spinner and the "signing you in" panel must NOT slide. Watch the hop from
+              Server to sign-in specifically — it goes Server → connecting → sign-in, and both of
+              those hops are a crossfade in place with no sideways movement at all. A slide there,
+              and especially a BACKWARD slide as the spinner goes away, is the wizard claiming the
+              user moved a step when they did not.
+      Also:   with Settings → **Reduce motion** on (or the system's "Remove animations"), walk Mode
+              → Server → Mode again. Each panel is simply there on the next frame at its own full
+              height — no slide, no fade, and no frame where the card is caught mid-resize.
+
 - [ ] **PR G2 · and · A toast leaves when it is asked to, and not before** — any screen that puts a
       toast up with an Undo on it: delete a task from a list, which is the toast with the most to
       lose. Five gestures, one toast each; work quickly, the auto-dismiss window is the clock.
