@@ -120,10 +120,10 @@ struct OnboardingWizardOverlay: View {
         .animation(TdayMotion.snappy, value: isCreatingAccount)
         .animation(TdayMotion.snappy, value: isChoosingSecurityQuestions)
         .animation(TdayMotion.snappy, value: isShowingForgotPassword)
-        .animation(.easeInOut(duration: 0.2), value: isConnecting)
-        .animation(.easeInOut(duration: 0.2), value: isLoadingSecurityQuestions)
-        .animation(.easeInOut(duration: 0.2), value: authViewModel.isLoading)
-        .animation(.easeInOut(duration: 0.2), value: isCompletingAuthentication)
+        .animation(.easeInOut(duration: TdayMotion.Durations.enter), value: isConnecting)
+        .animation(.easeInOut(duration: TdayMotion.Durations.enter), value: isLoadingSecurityQuestions)
+        .animation(.easeInOut(duration: TdayMotion.Durations.enter), value: authViewModel.isLoading)
+        .animation(.easeInOut(duration: TdayMotion.Durations.enter), value: isCompletingAuthentication)
         .alert("Save server URL?", isPresented: serverURLSavePromptBinding) {
             Button("Not Now", role: .cancel) {
                 pendingServerURLSavePrompt = nil
