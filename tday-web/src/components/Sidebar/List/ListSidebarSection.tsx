@@ -35,16 +35,16 @@ type ListSidebarSectionProps = {
 };
 
 const expandedItemBase =
-  "group flex h-12 w-full min-w-0 items-center gap-3 overflow-hidden rounded-2xl px-2 text-base font-black transition-colors duration-200";
+  "group flex h-12 w-full min-w-0 items-center gap-3 overflow-hidden rounded-2xl px-2 text-base font-black transition-colors duration-enter";
 
 const expandedItemIdle =
-  "text-muted-foreground transition-colors duration-200 hover:bg-card/70 hover:text-foreground";
+  "text-muted-foreground transition-colors duration-enter hover:bg-card/70 hover:text-foreground";
 
 const expandedItemActive =
   "bg-card text-foreground shadow-sm";
 
 const collapsedItemBase =
-  "group flex h-10 min-h-10 w-10 items-center justify-center rounded-xl text-sidebar-foreground/70 transition-colors duration-200 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground";
+  "group flex h-10 min-h-10 w-10 items-center justify-center rounded-xl text-sidebar-foreground/70 transition-colors duration-enter hover:bg-sidebar-accent/50 hover:text-sidebar-foreground";
 
 const listIconSlot =
   "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/70";

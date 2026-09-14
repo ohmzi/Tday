@@ -240,7 +240,7 @@ export function TodayBucketDroppable({
     <section
       ref={setNodeRef}
       className={cn(
-        "scroll-mt-24 rounded-3xl px-1 transition-all duration-200",
+        "scroll-mt-24 rounded-3xl px-1 transition-all duration-enter",
         isFirst ? sectionTopGapFirst : sectionTopGapFilled,
         isActive && sectionActiveClass,
       )}
@@ -248,7 +248,7 @@ export function TodayBucketDroppable({
       <div className={cn(headerToBodyGap, "flex items-center gap-2")}>
         <h3
           className={cn(
-            "select-none text-2xl font-black tracking-tight transition-colors duration-200",
+            "select-none text-2xl font-black tracking-tight transition-colors duration-enter",
             isActive ? headerActiveClass : "text-muted-foreground",
           )}
         >

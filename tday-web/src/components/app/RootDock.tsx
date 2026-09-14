@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { usePathname, useRouter } from "@/lib/navigation";
 import { hapticTick } from "@/lib/haptics";
 import { scrollTo } from "@/lib/scroll";
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useCallback } from "react";
+import { DURATION_MS } from "@/lib/motion";
+import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
 import {
   nativeAppContentClassName,
   nativeAppHorizontalPaddingClassName,
@@ -82,33 +84,64 @@ export default function RootDock({
   // Sliding indicator pill
   const navRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<Map<DockTab, HTMLButtonElement>>(new Map());
-  const [pillStyle, setPillStyle] = useState<React.CSSProperties>({});
+  const pillRef = useRef<HTMLDivElement>(null);
 
+  // Written straight onto the node rather than held as state, because the
+  // follower below measures once per frame and a `setState` from inside a rAF
+  // lands on the NEXT one — a pill a frame behind the tab it is marking is the
+  // whole defect this is here to avoid, reintroduced by the plumbing.
   const updatePill = useCallback(() => {
     const btn = buttonRefs.current.get(activeTab);
     const nav = navRef.current;
-    if (!btn || !nav) return;
+    const pill = pillRef.current;
+    if (!btn || !nav || !pill) return;
     const navRect = nav.getBoundingClientRect();
     const btnRect = btn.getBoundingClientRect();
-    setPillStyle({
-      transform: `translateX(${btnRect.left - navRect.left - 6}px)`,
-      width: `${btnRect.width}px`,
-      height: `${btnRect.height}px`,
-      opacity: 1,
-    });
+    pill.style.transform = `translateX(${btnRect.left - navRect.left - 6}px)`;
+    pill.style.width = `${btnRect.width}px`;
+    pill.style.height = `${btnRect.height}px`;
+    pill.style.opacity = "1";
   }, [activeTab]);
 
   useEffect(() => {
-    // Measure now, then again after the tab width transition (200ms) settles —
-    // when the active tab collapses/expands the immediate rects are mid-anim,
-    // which would otherwise leave the indicator offset.
+    // The pill's target is a tab's rect, and on a selection change that rect is
+    // still moving when the change commits: the tab LOSING selection collapses
+    // `sm:min-w-[104px]` → `sm:min-w-12` over Emphasis and slides every tab to
+    // its right along with it. Measured once up front, the pill sets off for
+    // where the arriving tab was standing BEFORE the collapse — which, measured
+    // in Chromium, is 56px past where it is going — and then has to come back.
+    // A single re-measure on a timer was doing the coming back, and it showed:
+    // the pill reached the stale slot, turned round, and landed a quarter of a
+    // second after the tabs had stopped.
+    //
+    // So follow the rect for as long as it can still be moving, instead of
+    // sampling it twice and hoping. The pill keeps its own transition, which
+    // absorbs the per-frame re-targeting into one unbroken path rather than a
+    // stutter: same harness, the 56px round trip is gone, the pill settles onto
+    // its mark from about five past it, and it is within a pixel of resting on
+    // the frame the tabs stop on. Chasing a moving target under an ease-out is
+    // what leaves those five, and they read as momentum rather than as a second
+    // journey — which is the difference the 260 could not make however it was
+    // timed.
     updatePill();
-    const raf = requestAnimationFrame(updatePill);
-    const timer = window.setTimeout(updatePill, 260);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.clearTimeout(timer);
+    // Nothing is in flight under reduced motion — `globals.css` floors every
+    // transition on the page to 1ms — so the first measurement is already the
+    // finished state, and a follower would be twenty forced layouts spent
+    // watching a rect that cannot change.
+    if (prefersReducedMotion()) return;
+    let start: number | null = null;
+    let raf = 0;
+    const follow = (now: number) => {
+      // Clocked from the first animation frame rather than from this effect:
+      // the transition starts when that frame does. `<=` runs one frame past
+      // the rung, so the last measurement is taken after the tab has landed and
+      // the pill inherits the tab's own idea of where it stopped.
+      start ??= now;
+      updatePill();
+      if (now - start <= DURATION_MS.emphasis) raf = requestAnimationFrame(follow);
     };
+    raf = requestAnimationFrame(follow);
+    return () => cancelAnimationFrame(raf);
   }, [updatePill]);
 
   return (
@@ -144,10 +177,31 @@ export default function RootDock({
             "dark:border-white/10 dark:bg-muted/80",
           )}
         >
-          {/* Sliding indicator pill */}
+          {/* Sliding indicator pill.
+
+              Emphasis, and the same rung as the tabs below it — that pairing is
+              the point, not a coincidence. The pill travels to the new tab AND
+              resizes to it, which rule 2 calls geometry twice over.
+
+              What it is paired WITH is the tab that just LOST selection. That one
+              collapses `sm:min-w-[104px]` → `sm:min-w-12` once its label is gone,
+              and in doing so slides every tab to its right — the arriving tab
+              included. The pill's journey and the tabs' journey are the same
+              journey seen from two ends, so they answer to one rung; they ran on
+              300 and 200, two lengths neither of which named one, close enough to
+              look deliberate and far enough apart that the tabs had stopped while
+              the pill was still moving.
+
+              Not the arriving tab's own width, which is what a `min-width` pair
+              looks like it ought to be timing. That tab's label makes it wider
+              than the 104px floor — measured in Chromium, 128px for "Scheduled"
+              and within about five of the floor for "Floater" — so on the way IN
+              the floor never binds and the tab has its width in the first frame,
+              at any duration. The floor earns its keep on the way OUT, where the
+              label is hidden and 48px is all the content asks for. */}
           <div
-            className="pointer-events-none absolute left-1.5 top-1.5 rounded-[20px] bg-card shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)] transition-all duration-300 ease-[cubic-bezier(0.25,1,0.5,1)]"
-            style={pillStyle}
+            ref={pillRef}
+            className="pointer-events-none absolute left-1.5 top-1.5 rounded-[20px] bg-card shadow-[0_10px_24px_-18px_hsl(var(--shadow)/0.7)] transition-all duration-emphasis ease-[cubic-bezier(0.25,1,0.5,1)]"
           />
           <div className="relative flex h-full items-center gap-1">
             {dockTabs.map((tab) => {
@@ -183,7 +237,21 @@ export default function RootDock({
                   className={cn(
                     isMore ? "hidden sm:flex" : "flex",
                     "relative z-[1] h-12 min-w-12 items-center justify-center gap-2 rounded-[20px] px-3",
-                    "text-sm font-black transition-all duration-200",
+                    // Emphasis, paired with the indicator pill above — see the
+                    // comment there. `all` is not the mechanism: the press layer
+                    // in `globals.css` replaces `transition-property` wholesale
+                    // on anything pressable, and enumerates `min-width` by hand
+                    // for exactly this element because this call site says `all`.
+                    // What the call site still owns is the LENGTH, and one
+                    // duration covers every property on that list — so the hover
+                    // tint and the press squash come up to Emphasis from 200 with
+                    // the width. They cannot be split from here: a per-property
+                    // duration would have to be positional against a fifteen-entry
+                    // list this file cannot see. The width is the half that was
+                    // visibly wrong, so the trade is taken here and the other half
+                    // is a device row of its own — whether the tab still reads as
+                    // answering a finger at 320.
+                    "text-sm font-black transition-all duration-emphasis",
                     selected
                       ? ""
                       : "text-muted-foreground hover:bg-card/55 hover:text-foreground",

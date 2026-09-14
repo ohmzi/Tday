@@ -292,7 +292,7 @@ function ThemeSegmentedControl({
     <div className="relative flex h-14 rounded-[22px] bg-muted/60 p-1.5">
       <span
         aria-hidden
-        className="absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/3)] rounded-[16px] bg-card shadow-sm transition-transform duration-200 ease-out"
+        className="absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/3)] rounded-[16px] bg-card shadow-sm transition-transform duration-enter ease-out"
         style={{ transform: `translateX(${index * 100}%)` }}
       />
       {themeOptions.map((option) => {
@@ -341,7 +341,7 @@ function DefaultHomeScreenSegmentedControl({
     <div className="relative flex h-14 rounded-[22px] bg-muted/60 p-1.5">
       <span
         aria-hidden
-        className="absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/2)] rounded-[16px] bg-card shadow-sm transition-transform duration-200 ease-out"
+        className="absolute bottom-1.5 left-1.5 top-1.5 w-[calc((100%-0.75rem)/2)] rounded-[16px] bg-card shadow-sm transition-transform duration-enter ease-out"
         style={{ transform: `translateX(${index * 100}%)` }}
       />
       {defaultHomeScreenOptions.map((option) => {
@@ -421,7 +421,7 @@ function Collapse({ open, children }: { open: boolean; children: ReactNode }) {
   return (
     <div
       className={cn(
-        "grid transition-[grid-template-rows] duration-200 ease-out",
+        "grid transition-[grid-template-rows] duration-enter ease-out",
         open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
       )}
     >
@@ -2084,7 +2084,7 @@ export default function SettingsPage() {
                       </div>
                       <ChevronRight
                         className={cn(
-                          "h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform duration-200",
+                          "h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform duration-enter",
                           expanded && "rotate-90",
                         )}
                       />
