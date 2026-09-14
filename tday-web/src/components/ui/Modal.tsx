@@ -1,15 +1,20 @@
 import { cn } from '@/lib/utils';
+import { DURATION_MS } from '@/lib/motion';
 import { useFadeUnmount } from '@/hooks/useFadeUnmount';
 import React, { createContext, useContext, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
  * How long the modal's exit is given to play. Read twice on purpose: once by the CSS
- * (`data-[state=closed]:duration-200` below) and once by `useModalPresence`, which is what
+ * (`data-[state=closed]:duration-quick` below) and once by `useModalPresence`, which is what
  * actually keeps the portal in the DOM for that long. Two numbers tuned to look alike is how
- * an exit ends up half-played; one number read twice cannot drift.
+ * an exit ends up half-played; one number read twice cannot drift — and naming the rung is
+ * what keeps the two halves from drifting apart in different languages, the way
+ * `DRAWER_EXIT_MS` already names Emphasis for vaul's injected stylesheet.
+ *
+ * Quick and not Enter: this is the modal leaving, and nobody is meant to watch it go.
  */
-export const MODAL_EXIT_MS = 200;
+export const MODAL_EXIT_MS = DURATION_MS.quick;
 
 /**
  * Whether the modal's subtree should still be rendered right now — true while it is open, and
@@ -108,7 +113,7 @@ const ModalOverlay = ({ children }: { children: React.ReactElement }) => {
 
         <div
             data-state={isOpen ? "open" : "closed"}
-            className="fixed inset-0 z-50 bg-black/65 flex items-center justify-center data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:duration-200"
+            className="fixed inset-0 z-50 bg-sheet-scrim flex items-center justify-center data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:duration-enter data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:duration-quick"
             onMouseDown={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
@@ -134,10 +139,14 @@ const ModalContent = ({ children, className }: { children: React.ReactNode, clas
     return (
         <div
             data-state={isOpen ? "open" : "closed"}
+            // The same two lines `dialog.tsx` draws, spelled the same way: no
+            // slide, because a card pinned to the centre of the viewport has
+            // nowhere to travel from, and the fade-and-zoom beside it is already
+            // the whole arrival. Enter in, Quick out.
             className={cn(
                 "bg-background rounded-lg w-full max-w-lg p-6",
-                "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-bottom-8 data-[state=open]:duration-200",
-                "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-bottom-8 data-[state=closed]:duration-200",
+                "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:duration-enter",
+                "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:duration-quick",
                 className,
             )}
             onMouseDown={(e) => e.stopPropagation()}

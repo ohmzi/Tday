@@ -22,6 +22,8 @@ import { cn } from "@/lib/utils";
 import { getListIcon } from "@/lib/listIcons";
 import type { ListColor } from "@/types";
 import { useRowPlacement } from "@/hooks/useRowPlacement";
+import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
+import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
 import { useTodo } from "@/features/todayTodos/query/get-todo";
 import { useTodoTimeline } from "@/features/todayTodos/query/get-todo-timeline";
@@ -101,13 +103,18 @@ export default function NativeScheduledTaskHomeDashboard() {
   const { t: sidebarDict } = useTranslation("sidebar");
   const userTimeZone = useUserTimezone();
   const counts = useNativeRouteCounts();
-  const { todos: todayTodos } = useTodo();
+  const { todos: todayTodos, todoLoading } = useTodo();
   const { todos: timelineTodos } = useTodoTimeline();
   const { listMetaData } = useListMetaData();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [createListOpen, setCreateListOpen] = useState(false);
   const placementRef = useRowPlacement<HTMLDivElement>();
+  // This screen drew nothing at all while its tasks were in flight — the tiles
+  // simply sat above an empty column until the rows appeared under them. Its
+  // sibling root feed (`NativeFloaterTaskHomeDashboard`) has always shown a
+  // placeholder, and two root feeds that load differently are two root feeds.
+  const { showSkeleton, skeletonClassName } = useSkeletonCrossfade(todoLoading);
   const titleDate = format(new Date(), "EEE, MMM d", {
     locale: getDateFnsLocale(locale),
   });
@@ -238,15 +245,30 @@ export default function NativeScheduledTaskHomeDashboard() {
           </span>
         </Link>
 
-        {todayIncomplete.length > 0 && (
-          <section className="space-y-1">
-            <TodoGroup
-              todos={todayIncomplete}
-              reorderable={false}
-              perTaskOverdue
-              showOverdueTag={false}
-            />
-          </section>
+        {/* One column child for the whole Today block, placeholder and rows alike, so the
+            fading placeholder never buys a second `gap` from the column above it — the
+            exiting skeleton releases its height immediately and keeps painting, and a
+            second flex item would have held 16 px open for the length of the fade and then
+            dropped it. The wrapper goes when both halves are gone, which is the same single
+            departure the column's own comment above describes. */}
+        {(showSkeleton || todayIncomplete.length > 0) && (
+          <div>
+            {showSkeleton && (
+              <div className={skeletonClassName}>
+                <TaskRowSkeletonGroup />
+              </div>
+            )}
+            {todayIncomplete.length > 0 && (
+              <section className="tday-content-enter space-y-1">
+                <TodoGroup
+                  todos={todayIncomplete}
+                  reorderable={false}
+                  perTaskOverdue
+                  showOverdueTag={false}
+                />
+              </section>
+            )}
+          </div>
         )}
 
         <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">

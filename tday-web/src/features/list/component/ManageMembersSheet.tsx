@@ -4,6 +4,8 @@ import { Crown, Share2, X } from "lucide-react";
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import { Input } from "@/components/ui/input";
 import { SheetCard, SheetSectionTitle } from "@/components/ui/sheet-chrome";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
 import { cn } from "@/lib/utils";
 import { hapticTick } from "@/lib/haptics";
 import {
@@ -55,6 +57,7 @@ export default function ManageMembersSheet({
   const isOwner = myRole === "OWNER";
 
   const { members, membersLoading } = useListMembers(listType, listId, open);
+  const { showSkeleton, skeletonClassName } = useSkeletonCrossfade(membersLoading);
   const { addMemberMutateFn, addMemberPending } = useAddListMember(listType, listId);
   const { updateRoleMutateFn } = useUpdateListMemberRole(listType, listId);
   const { removeMemberMutateFn } = useRemoveListMember(listType, listId);
@@ -183,13 +186,26 @@ export default function ManageMembersSheet({
       <div className="flex flex-col gap-3 pb-2">
         <SheetSectionTitle>{listName}</SheetSectionTitle>
         <SheetCard className="px-3 py-1.5">
-          {membersLoading ? (
-            <div className="space-y-2 p-2">
-              <div className="h-10 animate-pulse rounded-2xl bg-muted/70" />
-              <div className="h-10 animate-pulse rounded-2xl bg-muted/70" />
+          {showSkeleton ? (
+            // A member row, not a task row: the same primitive as the feed's skeleton but
+            // at this row's own geometry — the 40 px avatar circle, the `text-sm` name and
+            // the `text-xs` handle under it, inside the row's own `px-1 py-2`. What it
+            // replaced was two 40 px slabs at `rounded-2xl`, which is neither the circle
+            // nor the two lines and stood 32 px short of the two rows it stood in for.
+            <div className={skeletonClassName} aria-busy="true">
+              {[0, 1].map((index) => (
+                <div key={`member-skeleton-${index}`} className="flex items-center gap-3 px-1 py-2">
+                  <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                  <div className="min-w-0 flex-1">
+                    <Skeleton className="mb-1 h-5 w-1/2" />
+                    <Skeleton className="h-4 w-1/3" />
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : members ? (
-            <div className="divide-y divide-border/50">
+          ) : null}
+          {!membersLoading && members ? (
+            <div className="tday-content-enter divide-y divide-border/50">
               {renderMemberRow(members.owner, true)}
               {members.members.map((member) => renderMemberRow(member, false))}
             </div>

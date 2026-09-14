@@ -173,8 +173,14 @@ const AllTasksTimelineContainer = ({
 
   // Today/Overdue's own paging, plus what Select all reaches — see
   // `useTimelinePaging`'s own doc comment.
-  const { earlierSections, regularSections, hasMore, sentinelRef, selectableTodos } =
-    useTimelinePaging({
+  const {
+    earlierSections,
+    regularSections,
+    hasMore,
+    pageReveal,
+    sentinelRef,
+    selectableTodos,
+  } = useTimelinePaging({
       scopeFilteredItems,
       timeline,
       timelineSections,
@@ -268,7 +274,7 @@ const AllTasksTimelineContainer = ({
               time-of-day drop targets are suppressed below. */}
           {showTodayScope && <WeekInReviewCard />}
 
-          {todoLoading && <TodoListLoading heading={pageHeading} />}
+          <TodoListLoading heading={pageHeading} loading={todoLoading} />
 
           {/* The three time buckets are drop targets, so they stay visible (even
               empty ones) as long as the day holds at least one task — but under a
@@ -400,9 +406,32 @@ const AllTasksTimelineContainer = ({
             />
           )}
 
+          {/* Rows land ten at a time with nothing on screen to mark it, so the
+              reveal is the one event this feed owes a reader. A live region only
+              speaks when its contents change, and `hasMore` does not change when
+              a page lands — it is still true — so the sentence has to be the
+              count. `pageReveal` is null through the first page, which leaves
+              this node mounted and empty: a status region that arrives already
+              carrying text is announced at the reader's discretion, while text
+              added to one that was already in the document is announced
+              reliably, and that is the frame the rows arrive on. It goes back to
+              null when the scope changes under the feed and paging resets — a
+              removal, which the default `aria-relevant` leaves silent, so the
+              completion that caused it is not followed by a page count. */}
+          <div role="status" aria-live="polite" className="sr-only">
+            {pageReveal
+              ? appDict("tasksShownOfTotal", {
+                  shown: pageReveal.shown,
+                  total: pageReveal.total,
+                })
+              : ""}
+          </div>
+          {/* The visible half says what the gesture is, not what the app is
+              doing: there is no request behind this strip, only rows already in
+              memory waiting to be slid into view. */}
           {hasMore && (
             <div ref={sentinelRef} className="flex h-12 items-center justify-center">
-              <span className="text-xs text-muted-foreground">Loading more tasks...</span>
+              <span className="text-xs text-muted-foreground">{appDict("scrollForMore")}</span>
             </div>
           )}
         </div>

@@ -196,8 +196,10 @@ const ListContainer = ({ id }: { id: string }) => {
                         }
                     />
 
-                    {/* Loading state */}
-                    {listTodosLoading && <TodoListLoading />}
+                    {/* Rendered rather than gated: the flag goes down to the
+                        placeholder so it can fade out over the rows, instead of
+                        being unmounted in the frame it is supposed to fade in. */}
+                    <TodoListLoading loading={listTodosLoading} />
 
                     {/* Empty state — no current tasks (Earlier's own overdue
                         tasks, if any, render below via `TimelineSections`;

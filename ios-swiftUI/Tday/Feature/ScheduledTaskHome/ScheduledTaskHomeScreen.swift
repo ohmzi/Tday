@@ -154,6 +154,14 @@ struct ScheduledTaskHomeScreen: View {
         searchExpanded && !normalizedSearchQuery.isEmpty
     }
 
+    /// The first load, and only the first. A pull-to-refresh with rows already on
+    /// screen has something to show, and swapping those for grey bars would be the
+    /// app forgetting what it already knows — which is why this asks the item list
+    /// as well as the flag, the same pair Android's feed asks.
+    private var showsTodayFeedSkeleton: Bool {
+        viewModel.isLoading && viewModel.todayTodos.isEmpty
+    }
+
     private var shouldCollapseRootDock: Bool {
         rootDockCollapsed
     }
@@ -234,39 +242,76 @@ struct ScheduledTaskHomeScreen: View {
                                     }
                                 )
 
-                                // The block's travel, hung on the `Group` and
-                                // NOT inside the `if`. A modifier written inside
-                                // the branch is part of that branch: the update
-                                // that empties `todayTodos` takes the modifier out
-                                // of the tree in the same pass it takes the rows
-                                // out, so there is no open transaction at the
-                                // moment the removal is decided and roughly 72pt
-                                // of layout closes up in one frame — including the
-                                // rows' own `.transition` legs, which are inert
-                                // outside one. Out here the modifier outlives both
-                                // states of the branch, which is the only position
-                                // from which it can animate either.
-                                Group {
-                                    if !viewModel.todayTodos.isEmpty {
-                                        VStack(spacing: 0) {
-                                            ForEach(viewModel.todayTodos) { todo in
-                                                scheduledTaskHomeTodayTaskRow(todo)
-                                                    .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
-                                            }
+                                // One slot, not two rows of the stack.
+                                //
+                                // Before this a cold open drew the header, the Today
+                                // card and then nothing at all until the first response
+                                // landed — a frame that reads as a screen that failed
+                                // rather than one that is working.
+                                //
+                                // The `ZStack` is what makes the hand-over a crossfade
+                                // instead of a shuffle. Written as two siblings of the
+                                // `LazyVStack` the bars and the rows are in sequence, and
+                                // SwiftUI holds a view being removed in the layout for
+                                // the whole of its removal — so for the length of the
+                                // dissolve the stack would carry three placeholder rows
+                                // AND the rows that replace them, shoving the category
+                                // board below down by the better part of a screen and
+                                // snapping it back. Stacked, the two halves occupy the
+                                // same space and the block is only ever as tall as the
+                                // taller of them.
+                                //
+                                // `.topLeading` so the bars sit where the first row will,
+                                // and so a short list settles from the top rather than
+                                // from the middle of where the placeholder was. Each half
+                                // keeps its own `.animation` — they are siblings here, so
+                                // neither is inside the other and neither can override it.
+                                ZStack(alignment: .topLeading) {
+                                    Group {
+                                        if showsTodayFeedSkeleton {
+                                            TdayTaskRowSkeletonGroup()
+                                                .transition(.opacity)
                                         }
-                                        // The block is what a feed adds and removes
-                                        // alongside its rows, so it leaves on the
-                                        // departure rung rather than inheriting the
-                                        // travel below — an exit that outlasts the
-                                        // arrival it undoes is the thing the rung
-                                        // split exists to prevent.
-                                        .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
                                     }
+                                    .animation(
+                                        tdayAnimation(TdayTaskRowSkeleton.crossfade),
+                                        value: showsTodayFeedSkeleton
+                                    )
+
+                                    // The block's travel, hung on the `Group` and
+                                    // NOT inside the `if`. A modifier written inside
+                                    // the branch is part of that branch: the update
+                                    // that empties `todayTodos` takes the modifier out
+                                    // of the tree in the same pass it takes the rows
+                                    // out, so there is no open transaction at the
+                                    // moment the removal is decided and roughly 72pt
+                                    // of layout closes up in one frame — including the
+                                    // rows' own `.transition` legs, which are inert
+                                    // outside one. Out here the modifier outlives both
+                                    // states of the branch, which is the only position
+                                    // from which it can animate either.
+                                    Group {
+                                        if !viewModel.todayTodos.isEmpty {
+                                            VStack(spacing: 0) {
+                                                ForEach(viewModel.todayTodos) { todo in
+                                                    scheduledTaskHomeTodayTaskRow(todo)
+                                                        .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
+                                                }
+                                            }
+                                            // The block is what a feed adds and removes
+                                            // alongside its rows, so it leaves on the
+                                            // departure rung rather than inheriting the
+                                            // travel below — an exit that outlasts the
+                                            // arrival it undoes is the thing the rung
+                                            // split exists to prevent.
+                                            .transition(TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled))
+                                        }
+                                    }
+                                    .animation(
+                                        tdayAnimation(TdayFeedItemMotion.placement),
+                                        value: viewModel.todayTodos.map(\.id)
+                                    )
                                 }
-                                .animation(
-                                    tdayAnimation(TdayFeedItemMotion.placement),
-                                    value: viewModel.todayTodos.map(\.id)
-                                )
 
                                 ScheduledTaskHomeCategoryBoard(
                                     overdueCount: overdueCount,
@@ -692,17 +737,17 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
     }
 
     private var rowContent: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: TdayTaskRowMetrics.contentSpacing) {
             Button(action: startCompletion) {
                 Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 24, weight: .regular))
+                    .font(.system(size: TdayTaskRowMetrics.checkGlyph, weight: .regular))
                     .foregroundStyle(showCheckmark ? Color.green : colors.onSurfaceVariant.opacity(0.78))
-                    .frame(width: 38, height: 38)
+                    .frame(width: TdayTaskRowMetrics.checkSlot, height: TdayTaskRowMetrics.checkSlot)
             }
             .buttonStyle(TdayPressButtonStyle(shadowColor: .black, pressedShadowOpacity: 0, normalShadowOpacity: 0))
             .disabled(isCompleting)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: TdayTaskRowMetrics.textSpacing) {
                 ScheduledTaskHomeTodayTaskTitle(
                     text: todo.title,
                     isCompleted: showStrikethrough,
@@ -712,7 +757,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
 
                 if let subtitleText {
                     Text(subtitleText)
-                        .font(.tdayRounded(size: 13, weight: .semibold))
+                        .font(.tdayRounded(size: TdayTaskRowMetrics.subtitleFontSize, weight: .semibold))
                         .foregroundStyle(subtitleColor)
                 }
 
@@ -720,7 +765,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 if !flattenedDescription.isEmpty {
                     Text(flattenedDescription)
-                        .font(.tdayRounded(size: 12, weight: .semibold))
+                        .font(.tdayRounded(size: TdayTaskRowMetrics.notesFontSize, weight: .semibold))
                         .foregroundStyle(colors.onSurfaceVariant)
                         // Struck alongside the title so the whole task reads as
                         // done during the completion animation. Uses the real
@@ -734,22 +779,22 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
             Spacer(minLength: 0)
 
             if listMeta != nil || priorityIcon != nil {
-                HStack(spacing: 8) {
+                HStack(spacing: TdayTaskRowMetrics.metaSpacing) {
                     if let listMeta {
-                        TdayListIcon(iconKey: listMeta.iconKey, size: 14)
+                        TdayListIcon(iconKey: listMeta.iconKey, size: TdayTaskRowMetrics.metaIcon)
                             .foregroundStyle(scheduledTaskHomeListAccentColor(for: listMeta.color))
                     }
                     if let priorityIcon {
                         Image(systemName: priorityIcon)
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: TdayTaskRowMetrics.metaIcon, weight: .semibold))
                             .foregroundStyle(priorityColor(todo.priority))
                     }
                 }
-                .padding(.trailing, 8)
+                .padding(.trailing, TdayTaskRowMetrics.metaTrailingPadding)
             }
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 4)
+        .padding(.vertical, TdayTaskRowMetrics.verticalPadding)
+        .padding(.horizontal, TdayTaskRowMetrics.horizontalPadding)
         .contentShape(Rectangle())
     }
 
@@ -799,7 +844,7 @@ private struct ScheduledTaskHomeTodayTaskTitle: View {
 
     var body: some View {
         Text(text)
-            .font(.tdayRounded(size: 18, weight: .bold))
+            .font(.tdayRounded(size: TdayTaskRowMetrics.titleFontSize, weight: .bold))
             .foregroundStyle(titleColor)
             .lineLimit(1)
             .overlay {

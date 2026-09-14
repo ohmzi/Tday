@@ -397,6 +397,8 @@
     "floaterListEmptyBody": "Aggiungi un flottante e aspetterà proprio qui.",
     "noMatchingTasks": "Nessuna attività corrispondente",
     "searchEmptyBody": "Prova un'altra parola o cancella la ricerca.",
+    "scrollForMore": "Scorri per vedere altro",
+    "tasksShownOfTotal": "Visualizzate {{shown}} attività su {{total}}",
     "todayEmpty": "Nessuna attività per oggi",
     "todayEmptyBody": "Aggiungi qualcosa per oggi e comparirà proprio qui.",
     "overdueEmpty": "Nessuna attività in ritardo",

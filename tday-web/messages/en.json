@@ -397,6 +397,8 @@
     "floaterListEmptyBody": "Add a floater and it will wait right here.",
     "noMatchingTasks": "No matching tasks",
     "searchEmptyBody": "Try a different word, or clear the search.",
+    "scrollForMore": "Scroll for more",
+    "tasksShownOfTotal": "Showing {{shown}} of {{total}} tasks",
     "todayEmpty": "No tasks for today",
     "todayEmptyBody": "Add something for today and it will show up right here.",
     "overdueEmpty": "No overdue tasks",
