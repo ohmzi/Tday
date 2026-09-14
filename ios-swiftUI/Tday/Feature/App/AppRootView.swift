@@ -25,8 +25,14 @@ struct AppRootView: View {
     @State private var appLock = AppLockController()
     @Environment(\.scenePhase) private var scenePhase
     /// The app's one motion gate — see `TdayMotionEnvironment.swift`. Every
-    /// `.animation` below passes its spec through it, so Reduce Motion refuses the
-    /// trip in one place rather than at each of them.
+    /// `.animation` in this view's body passes its spec through it, so Reduce Motion
+    /// refuses the trip in one place rather than at each of them. It resolves against
+    /// the provider `TdayApp` installs above this view, not the one `tdayAppTheme`
+    /// applies to this body: a property wrapper reads the environment the view was
+    /// placed in, so a gate this view installs would reach its children and miss it.
+    /// `AppSnackbar` below is a separate view with an environment of its own and is
+    /// not covered — its drag snap-back still animates, and is owed to the open
+    /// `reduced-motion-coverage` box.
     @Environment(\.tdayAnimation) private var tdayAnimation
 
     init(container: AppContainer) {
@@ -362,7 +368,18 @@ struct AppRootView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
-                .animation(.snappy(duration: 0.3), value: container.snackbarManager.content?.id)
+                // `.snappy(duration: 0.3)` was SwiftUI's own preset — `spring(duration:
+                // 0.3, bounce: 0.15)` — and the Snappy token is `response: 0.28,
+                // dampingFraction: 0.86`, the same bounce and the same perceptual length
+                // to within a frame. The literal was approximating this token, so naming
+                // it is not a retiming. What the site gains is the gate: under Reduce
+                // Motion the toast is simply there and simply gone, the slide and the
+                // fade refused rather than shortened (`docs/motion.md`'s fifth idiom
+                // rule), which is what the rest of this body has done since 35a.
+                .animation(
+                    tdayAnimation(TdayMotion.snappy),
+                    value: container.snackbarManager.content?.id
+                )
             }
         }
         // FALLBACK layer only. Applied INSIDE the theme/locale modifiers below so it is themed

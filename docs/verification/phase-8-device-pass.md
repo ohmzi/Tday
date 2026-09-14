@@ -78,7 +78,19 @@ the TF1 build, and Phase 8's own rows, land here alongside these.
       Fails:  the first completion still animating, which is the defect this row exists for: the
               answer was read once at mount and the subtree was never invalidated. Also a fail: the
               feed animating again only after you navigate away and return.
+      Also:   with Reduce Motion still on, exercise the three animations `AppRootView` owns itself
+              rather than hands to a child: swap feeds on the root tab bar, scroll until the dock
+              and create button hide and come back, and (on a signed-out or unreachable-server
+              build) the onboarding blur. All three should cut. These are the sites a feed-only
+              pass cannot see — they read the gate through `AppRootView`'s own property, which is
+              why the provider had to move above the root view — so a fail here is the provider in
+              the wrong place, not the flip going unnoticed.
       Also:   the same flip on the Calendar screen's month grid, which is the one surface built from
               hand-made `UIHostingController` pages. Swap to another day with Reduce Motion on: the
               new day is simply there. A hosted page inherits none of the app's environment, so this
-              is the fallback being exercised rather than the override.
+              is the fallback being exercised rather than the override — and, since a get-only
+              `accessibilityReduceMotion` keeps it out of `TdayMotionEnvironmentTests`, the only
+              place that half of the accessor is checked at all.
+      Also:   the snackbar: complete a task so the Undo toast appears with Reduce Motion on. It
+              should be there and gone without sliding up from the bottom edge. Its drag snap-back
+              is NOT covered — `AppSnackbar` reads its own environment — and still animates.
