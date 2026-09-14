@@ -105,6 +105,15 @@ struct CompletedScreen: View {
         searchedItems.isEmpty && !viewModel.isLoading
     }
 
+    /// The opposite half of [showsCompletedEmptyState], and deliberately its
+    /// mirror: history that is still arriving is neither empty nor a list, and
+    /// before this the screen answered that third case with the empty frame it
+    /// also uses for "there is nothing". A refresh over rows that are already on
+    /// screen keeps the rows — the item list is asked as well as the flag.
+    private var showsCompletedFeedSkeleton: Bool {
+        searchedItems.isEmpty && viewModel.isLoading
+    }
+
     /// The empty scene's insertion and removal. The same shape, for the same
     /// reasons, as `TodoListScreen.emptyStateIllustrationTransition`:
     ///
@@ -281,6 +290,35 @@ struct CompletedScreen: View {
                     }
                 }
 
+                // Until this branch a cold open drew the title and then a blank
+                // page: `isLoading` was consumed only to suppress the empty scene,
+                // so the screen's answer to "still loading" was to show nothing at
+                // all and let the rows appear out of it.
+                if showsCompletedFeedSkeleton {
+                    // Today stacks its placeholder over its rows so the two share one
+                    // slot; a `List` has no such move — its sections are siblings by
+                    // construction, and a `Section` cannot be overlaid on the ones after
+                    // it. So this one is above the rows it hands over to, and whether the
+                    // feed reflows as they swap depends on something source cannot settle:
+                    // SwiftUI holds a removing view in the layout, while a `List` on iOS
+                    // resolves the same change as a UIKit batch update that animates the
+                    // delete and the inserts into their final places together. The two
+                    // look different, and only a device can say which one this is — so it
+                    // is a line in docs/verification/phase-9-device-pass.md rather than a
+                    // claim here.
+                    Section {
+                        // History's row, not Today's: same toggle, but 8 pt of
+                        // vertical padding to Today's 10 and no horizontal padding
+                        // of its own, so the default set would stand a line taller
+                        // than the rows it is standing in for.
+                        TdayTaskRowSkeletonGroup(metrics: .completedTimeline)
+                            .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .transition(.opacity)
+                    }
+                }
+
                 ForEach(Array(groupedItems.enumerated()), id: \.element.id) { index, section in
                     completedTimelineSection(
                         section,
@@ -304,6 +342,22 @@ struct CompletedScreen: View {
             .listSectionSpacing(0)
             .environment(\.defaultMinListRowHeight, 1)
             .disableVerticalScrollBounce()
+            // The placeholder's hand-over, on the List rather than beside the
+            // branch that holds it: inside a `List` the modifiers written around an
+            // `if` are handed down to the rows themselves and leave with them, so
+            // the removal would have no transaction left to run in.
+            //
+            // BELOW the travel, and the order is the point. `searchedItems` drives
+            // both values, so the first page landing changes both in one update,
+            // and between two `.animation(_:value:)` that fire together the one
+            // nearest the content wins. Above the travel this lost every time it
+            // mattered and the dissolve ran at Emphasis instead of Enter. Below it,
+            // the travel still carries every update this one is not about, because
+            // a modifier whose value held still leaves the transaction alone.
+            .animation(
+                tdayAnimation(TdayTaskRowSkeleton.crossfade),
+                value: showsCompletedFeedSkeleton
+            )
             // The history's travel. Rows that arrive and leave override this from
             // their own legs (`completedRowTransition`); this is what carries
             // everything a search narrowing the list merely moves.
@@ -543,7 +597,7 @@ private struct CompletedTimelineRow: View {
         let priorityIcon = priorityIndicatorSymbolName(item.priority)
 
         VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: TodoTimelineMetrics.minimalRowContentSpacing) {
                 Button {
                     startRestore()
                 } label: {
@@ -565,7 +619,7 @@ private struct CompletedTimelineRow: View {
                 .disabled(isRestoring)
                 .accessibilityLabel("Undo complete")
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: TodoTimelineMetrics.minimalRowTextSpacing) {
                     TodoTimelineTaskTitle(
                         text: item.title,
                         isCompleted: showStrikethrough,
