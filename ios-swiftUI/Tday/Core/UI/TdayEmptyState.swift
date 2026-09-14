@@ -47,10 +47,16 @@ struct TdayEmptyState: View {
     /// Half of the web keyframe's duration in each direction: `autoreverses` makes
     /// the round trip, so 3s here is the 6s float there.
     private var floatAnimation: Animation? {
+        // not a token — see docs/motion.md. Ambience, not a transition: these
+        // repeat forever, so 3 and 1.4 are half-periods rather than lengths, and
+        // every rung on the ladder measures a motion that ends. The longest of
+        // them is 0.52 s, which would make this a flicker.
         tdayAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true))
     }
 
     private func twinkleAnimation(delay: Double) -> Animation? {
+        // not a token — see docs/motion.md. The half-period of the twinkle, for
+        // the reason `floatAnimation` above gives.
         tdayAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true).delay(delay))
     }
 
