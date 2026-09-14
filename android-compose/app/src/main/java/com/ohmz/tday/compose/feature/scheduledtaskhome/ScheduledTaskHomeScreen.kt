@@ -617,11 +617,38 @@ fun ScheduledTaskHomeScreen(
                         }
                     }
 
+                    // Keyed, because a load failure genuinely adds and removes a
+                    // row here and `animateItem` cannot animate either on an item
+                    // whose identity is its index. The one item on this feed that
+                    // is NOT a case for [scheduledTaskHomeDisplacedItemMotion]:
+                    // the grid and the list rows are only ever moved by a
+                    // completion, this card is added and removed by a load, so it
+                    // wants the fades that block argues itself out of — on this
+                    // screen's own clock, so it lands with its neighbours rather
+                    // than against them.
+                    //
+                    // That block's other half does reach here, though: this item
+                    // is inside the `!showSearchResultsOverlay` branch, so typing
+                    // takes the Today card, the grid and the rows in one frame and
+                    // leaves this card fading out alone over the blank. Accepted,
+                    // not gated — an error banner and a live query rarely coexist,
+                    // and a gate read inside this lambda could never fire, because
+                    // the item is only ever composed while the flag is false.
                     uiState.errorMessage?.let { message ->
-                        item {
+                        item(key = "error-retry", contentType = "error_retry") {
+                            val errorCardMotionEnabled = rememberTdayMotionEnabled()
                             com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                                 message = message,
                                 onRetry = onRefresh,
+                                modifier = if (errorCardMotionEnabled) {
+                                    Modifier.animateItem(
+                                        fadeInSpec = ScheduledTaskHomeItemFadeIn,
+                                        placementSpec = ScheduledTaskHomeItemPlacement,
+                                        fadeOutSpec = ScheduledTaskHomeItemFadeOut,
+                                    )
+                                } else {
+                                    Modifier
+                                },
                             )
                         }
                     }

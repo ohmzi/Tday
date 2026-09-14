@@ -481,6 +481,31 @@ animates.
       Also:   with Reduce motion on, the mode that was tapped is simply there on the next frame at
               its own height — no cross, and no wait where the cross would have been.
 
+- [ ] **PR 42g · and · The error card joins the feed it lands in** — needs a load that actually
+      fails, so: airplane mode ON before opening the screen, then off again for the retry. Four
+      surfaces, and all four: a task list (Todos), Calendar, Completed, and the root feed's task
+      tab.
+      Do:     with airplane mode on, open each of the four so the retry card appears at the bottom
+              of the feed. Pick a short or empty list on each, so the BOTTOM OF THE FEED is on
+              screen when the error lands — the card is appended last, and Compose runs no
+              appearance animation for an item that arrives below the fold, so scrolling down
+              afterwards shows nothing either way. Then turn airplane mode off and tap Retry.
+      Watch:  the card fades up over ~190 ms rather than arriving in one frame, and on Retry fades
+              out over ~150 ms rather than being cut. Its placement only shows when something
+              ABOVE it changes, so add one case on Calendar and Completed: with the card up, make
+              a mutation fail so the empty-state or skeleton item leaves from above it — the card
+              should glide down into the freed slot rather than jump.
+      Fails:  the card appearing or vanishing in one frame; or the card landing in the wrong slot
+              and then sliding to the right one, which would mean the key is colliding with
+              something else in the list. Nothing below the card should move — the only thing
+              under it is an invisible spacer, and it is not animated.
+      Note:   the root feed's task tab runs its own clock — ~180/~140 ms and a spring placement
+              rather than the 320 ms tween — so it is allowed to read slightly softer than the
+              other three. What must be true on all four is that the card never jumps.
+      Also:   with Reduce motion on, repeat all four. The card is simply there, at the bottom of
+              the feed, on the frame the error arrives, and gone on the frame the retry succeeds —
+              no fade, and no wait where the fade would have been.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on

@@ -80,6 +80,7 @@ import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
@@ -429,11 +430,28 @@ fun CompletedScreen(
                         }
                     }
 
+                    // Keyed, because a load failure genuinely adds and removes a
+                    // row here and `animateItem` cannot animate either on an item
+                    // whose identity is its index. All three specs, not placement
+                    // alone: the card is added and removed rather than displaced,
+                    // and [TdayFeedItemMotion] is the same clock the rows above
+                    // spell out by hand — a card that appears in one frame while
+                    // its neighbours are mid-travel is the defect.
                     uiState.errorMessage?.let { message ->
-                        item {
+                        item(key = "error-retry", contentType = "error_retry") {
+                            val errorCardMotionEnabled = rememberTdayMotionEnabled()
                             com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                                 message = message,
                                 onRetry = onRefresh,
+                                modifier = if (errorCardMotionEnabled) {
+                                    Modifier.animateItem(
+                                        fadeInSpec = TdayFeedItemMotion.FadeIn,
+                                        placementSpec = TdayFeedItemMotion.Placement,
+                                        fadeOutSpec = TdayFeedItemMotion.FadeOut,
+                                    )
+                                } else {
+                                    Modifier
+                                },
                             )
                         }
                     }
