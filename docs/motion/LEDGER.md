@@ -1161,7 +1161,8 @@ Restore it from git history rather than adjusting the number.
 ### PR 40a/b/c — one skeleton per client
 
 - [ ] `skeleton-loading-vocabulary` — one skeleton per client at real row geometry, crossfading on the `Enter` rung · all · Impact O4 · M ea · Gate V/J/X — **iOS part landed (PR 40c)**; web (40a) and Android (40b) still owe theirs, and the last of the three ticks this box
-- [ ] `web-infinite-scroll-sentinel` — hardcoded English in a ten-locale app, no `aria-live`, 48 px growth per page · web · Impact O2 · S · Gate V
+- [x] `web-infinite-scroll-sentinel` — hardcoded English in a ten-locale app, no `aria-live` on the pager strip · web · Impact O2 · S · Gate V — the strip reads the locale file in all ten languages, and the reveal is spoken: a `role="status"` region mounts empty and gains "Showing n of total tasks" on the frame each page lands, because a region whose text does not change announces nothing (PR 40d)
+- [ ] `web-infinite-scroll-skeleton` — the pager strip is 48 px of empty chrome above ten rows that arrive in one frame · web · Impact O2 · S · Gate V — split out of `web-infinite-scroll-sentinel` by PR 40d, which fixed the other two defects in that row: this one is the `TaskRowSkeletonGroup` swap, PR 40a's component, which exists on no branch, so it ticks with 40a's batch and not before
 
 ### PR 41a — the web sheet language
 

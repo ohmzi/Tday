@@ -74,3 +74,34 @@ anything at all. That gap is what these rows are.
               again. The placeholder is there, fully drawn and perfectly still — never parked at the
               faded end of its own pulse — and when the data lands the rows are simply there on the
               next frame. No fade, and no wait where the fade would have been.
+
+## Web
+
+- [ ] **PR 40d · web · The pager speaks when the rows land** — the Overdue screen (or Today) on an
+      account with more than twenty tasks in that scope, so the feed pages at least twice. A screen
+      reader is the whole point of the row: VoiceOver on Safari, or NVDA on Firefox.
+      Do:     open the screen with the reader running and listen through the first frame without
+              scrolling. Then scroll until the strip is on screen and the next ten rows are
+              revealed, and keep going to the end of the feed. Then complete or delete a task and
+              listen again. Then switch the app's language to French and to Japanese in Settings
+              and repeat the scroll.
+      Watch:  on the frame the ten rows land, the reader speaks a count — "Showing 20 of 25 tasks"
+              — politely, so it waits its turn rather than cutting the row the reader is on, and
+              in the app's language. The last page is spoken too, on the true total, which is how
+              the reader learns the feed is complete. The strip itself reads "Scroll for more" in
+              the same language: there is no request behind it, so it must not claim to be
+              loading.
+      Fails:  silence while ten rows are inserted above the strip, which is the defect this row
+              exists for — and the one a passing `tests/unit/timeline-sentinel.test.tsx` cannot
+              rule out on its own, because whether a reader voices a change inside a `role="status"`
+              node is a browser/reader question and not a DOM one. Also a fail: a count spoken at
+              mount, before anything has been revealed; a count spoken after completing or
+              deleting a task, when nothing was revealed and the toast has already said what
+              happened; and the sentence cutting into the row the reader was on, which would mean
+              the region is not polite.
+      Note:   the unit test pages the real container through its own observer and asserts the
+              region's text CHANGED across the page-in, so the one thing that cannot be faked
+              locally is whether that change is voiced. This row is that half.
+      Left:   the strip is still 48 px of empty chrome above ten rows arriving in one frame. That
+              is now its own ledger row (`web-infinite-scroll-skeleton`) and it waits on PR 40a's
+              `TaskRowSkeletonGroup`. Nothing to check for it yet.

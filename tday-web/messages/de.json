@@ -397,6 +397,8 @@
     "floaterListEmptyBody": "Füge einen Floater hinzu, er wartet genau hier.",
     "noMatchingTasks": "Keine passenden Aufgaben",
     "searchEmptyBody": "Probiere ein anderes Wort oder lösche die Suche.",
+    "scrollForMore": "Weiter scrollen für mehr",
+    "tasksShownOfTotal": "{{shown}} von {{total}} Aufgaben werden angezeigt",
     "todayEmpty": "Keine Aufgaben für heute",
     "todayEmptyBody": "Füge etwas für heute hinzu, dann erscheint es genau hier.",
     "overdueEmpty": "Keine überfälligen Aufgaben",

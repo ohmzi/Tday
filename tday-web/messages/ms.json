@@ -397,6 +397,8 @@
     "floaterListEmptyBody": "Tambah floater dan ia akan menunggu di sini.",
     "noMatchingTasks": "Tiada tugasan yang sepadan",
     "searchEmptyBody": "Cuba perkataan lain, atau kosongkan carian.",
+    "scrollForMore": "Skrol untuk lihat lagi",
+    "tasksShownOfTotal": "Memaparkan {{shown}} daripada {{total}} tugasan",
     "todayEmpty": "Tiada tugasan untuk hari ini",
     "todayEmptyBody": "Tambah sesuatu untuk hari ini dan ia akan muncul di sini.",
     "overdueEmpty": "Tiada tugasan tertunggak",
