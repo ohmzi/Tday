@@ -175,7 +175,7 @@ const ListContainer = ({ id }: { id: string }) => {
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        className="h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
+                                        className="h-14 w-14 shrink-0 rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-enter hover:-translate-y-0.5 hover:bg-card dark:border-white/10"
                                         onClick={() =>
                                             myRole === "OWNER" ? setEditListOpen(true) : setMembersOpen(true)
                                         }

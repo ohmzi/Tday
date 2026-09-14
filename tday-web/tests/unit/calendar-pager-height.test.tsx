@@ -24,7 +24,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CalendarModeCard } from "@/features/calendar/component/CalendarClient";
+import { CalendarModeCard, CalendarViewSlider } from "@/features/calendar/component/CalendarClient";
 
 /**
  * What the pager reports as its own height. jsdom lays nothing out and answers
@@ -161,6 +161,25 @@ describe("the calendar card's height follows the page it is showing", () => {
         `.${rule} {\n  animation: ${rule.replace("-from-", "-in-")} var(--tday-duration-emphasis)`,
       );
     }
+  });
+
+  it("puts the switcher that picked the page on the same clock as the page", () => {
+    // The third half of that page turn. One tap runs all three: `changeView`
+    // moves the thumb, bumps `animationKey` and sets `slideDirection` in the
+    // same call, so a thumb on a different rung means the control finishes
+    // before the view it chose, which is one gesture arriving as two events.
+    //
+    // This assertion exists because nothing else can make it. The budget
+    // counter forbids a duration LITERAL here and is satisfied by any rung
+    // name, so spelling the thumb `duration-enter` would re-open the 20ms gap
+    // with every guardrail still green. The case above reads the stylesheet
+    // for the slide's length; this one reads the class for the thumb's, and
+    // the pair is the claim that they are one clock.
+    const { container } = render(<CalendarViewSlider view="month" onViewChange={vi.fn()} />);
+
+    const thumb = container.firstElementChild!.firstElementChild!;
+    expect(thumb.classList.contains("duration-emphasis")).toBe(true);
+    expect(thumb.classList.contains("transition-transform")).toBe(true);
   });
 
   it("leaves the day cells room to paint outside themselves", () => {
