@@ -548,6 +548,29 @@ animates.
               rule out. Also a fail: the blocks jumping a row height in one frame, which is the
               keys coming off rather than anything to do with these timings.
 
+- [ ] **PR 8l · and · The drop placeholder opens at the speed of the feed it opens in** — a
+      timeline list (Today or All) with at least two dated sections and three or four tasks under
+      the one you drag into, so the gap has neighbours to be seen against. This is a retiming of
+      two legs, not three: the placeholder's fades were 150 in and 120 out of its own and are the
+      feed's 190 and 150 now. Its placement leg took the feed's 320 in the same change and is the
+      leg you cannot see here — nothing displaces the gap while it is up — so what is on the
+      screen is those two fades against rows that were already gliding on 320.
+      Do:     long-press a task, drag it over another day's section and hold there without
+              dropping. Watch the gap fade in while the rows below it move down. Then drag back
+              out of that section and watch it fade out as they close over it. Do it again, and
+              this time watch only the gap.
+      Watch:  the gap fades in at the pace of a row arriving — it is the same 190 — and fades out
+              at the pace of a row leaving. The rows under it glide on their own 320 and settle
+              after the gap has finished filling; that lag is what every arriving row in this
+              feed does, and it is what passing looks like here.
+      Fails:  the gap blinking in or out, a fade too quick to follow, which is the placeholder
+              back on its own 150/120; or the placeholder still drawn after the rows have closed
+              over the space it had.
+      Note:   the section header's bottom spacing moved onto the same rung in this unit. Do not
+              go looking for it: the only two values it takes are 2 dp and 4 dp, so the whole
+              travel is 2 dp and no duration is legible in it. Naming Emphasis there is for the
+              next size that gets animated off that line, not for this one.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on

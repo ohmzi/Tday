@@ -3240,19 +3240,17 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
             ) {
                 var placeholderModifier: Modifier = Modifier
                 if (timelineAnimationsEnabled) {
+                    // The placeholder is an item in this feed like any other: it arrives,
+                    // the rows under it move down, and it goes. Three numbers of its own
+                    // bought it nothing except a gap that faded in and out at a different
+                    // speed from everything moving around it. The placement leg is the one
+                    // that never plays here — nothing displaces the gap while it is up —
+                    // and it is taken whole anyway, because a site that adopts two legs of
+                    // three is a site that drifts back off the third.
                     placeholderModifier = placeholderModifier.animateItem(
-                        fadeInSpec = tween(
-                            durationMillis = 150,
-                            easing = FastOutSlowInEasing,
-                        ),
-                        placementSpec = tween(
-                            durationMillis = 260,
-                            easing = FastOutSlowInEasing,
-                        ),
-                        fadeOutSpec = tween(
-                            durationMillis = 120,
-                            easing = FastOutSlowInEasing,
-                        ),
+                        fadeInSpec = TdayFeedItemMotion.FadeIn,
+                        placementSpec = TdayFeedItemMotion.Placement,
+                        fadeOutSpec = TdayFeedItemMotion.FadeOut,
                     )
                 }
                 TimelineDropPlaceholder(
@@ -4456,7 +4454,12 @@ private fun TimelineSectionHeader(
     )
     val animatedBottomSpacing by animateDpAsState(
         targetValue = bottomSpacing,
-        animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+        // A spacing is a size, and the rung for a size is Emphasis. The 240 it was
+        // written on named nothing and was shared with nothing.
+        animationSpec = tween(
+            durationMillis = TdayMotionTokens.Durations.Emphasis,
+            easing = FastOutSlowInEasing,
+        ),
         label = "sectionBottomSpacing",
     )
     val baseHeaderColor = if (useMinimalStyle) {
@@ -4554,7 +4557,14 @@ private fun TimelineDropPlaceholder(
         } else {
             if (useMinimalStyle) 46.dp else 52.dp
         },
-        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        // The box's own size, so the same rung as the section spacing above. It plays
+        // seldom — the one caller always passes `active = true`, which leaves the style
+        // flag as the only thing that can move the target — but 180 named no rung, and
+        // when it does play it must not undercut the placement the rows around it take.
+        animationSpec = tween(
+            durationMillis = TdayMotionTokens.Durations.Emphasis,
+            easing = FastOutSlowInEasing,
+        ),
         label = "timelineDropPlaceholderHeight",
     )
     Box(
@@ -5980,6 +5990,10 @@ private fun SwipeTaskRow(
         closeSwipeSlot()
         highlightAnim.stop()
         highlightAnim.snapTo(0f)
+        // not a token — see docs/motion.md. Neither leg is on the ladder and neither is
+        // meant to be: the two are timed against each other and against the dark between
+        // them, so that the pulse reads as a heartbeat rather than as two arrivals. The
+        // 620 is longer than Scene, the app's longest motion, which makes it a wait.
         repeat(2) { pulseIndex ->
             highlightAnim.animateTo(
                 targetValue = 0.46f,

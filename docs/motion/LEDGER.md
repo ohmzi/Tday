@@ -1400,7 +1400,7 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 
 ### PR 143 — drop placeholder off clock
 
-- [ ] `android:todo-list#drop-placeholder-own-clock` — drop placeholder own clock · and · Sev 2 · XS · Gate J
+- [x] `android:todo-list#drop-placeholder-own-clock` — drop placeholder own clock · and · Sev 2 · XS · Gate J
 
 ### PR 144 — earlier celebrate window exit
 
