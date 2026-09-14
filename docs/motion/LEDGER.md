@@ -1443,7 +1443,22 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 57a/57b — the web dock collapses on scroll
 
-- [ ] `web-dock-scroll-collapse` — web dock never collapses; both native clients do past 44 dp · web · Impact O3 · L · Gate V+D
+- [x] `web-dock-scroll-collapse` — web dock never collapses; both native clients do past 44 dp · web · Impact O3 · L · Gate V+D
+  - **The fold and the pill that travels with it are one commit, so the row is ticked once for
+    both.** Split between 57a and 57b the fold ships visibly broken: the indicator pill is measured
+    off the active tab's rect, and folding the dock moves that rect without changing which tab is
+    selected — on the Anytime feed the tab that closes is the one to its LEFT, so the active tab
+    slides from 59px to 7px off the capsule's edge, measured in Chromium. A pill keyed on selection
+    alone does not lag and recover there; it stays in the open dock's slot for as long as the dock
+    stays folded, most of it outside a 62px capsule that clips. 57b's step 3 is therefore in this
+    commit, and everything else in 57b's brief is still 57b's.
+  - **`px-0` is layout, not motion, and the first draft dropped it with `w-0`.** `min-width: 0`
+    lets a folded tab's CONTENT go to nothing, but `box-sizing: border-box` will not let a box be
+    used narrower than its own padding, so `px-3` surviving the fold leaves a 24px stub of every
+    closed tab inside the capsule — a phone dock folding 114 → 86 instead of 114 → 62, and a
+    desktop one 233 → 177 instead of 233 → 129. `w-0` genuinely cannot go on the button (the press
+    layer deletes a `width` transition declared there); the padding never needed to transition,
+    because the wrapper's `1fr` → `0fr` track is what travels.
 
 ### PR 59 — compositor hints for the always-on blurs
 
