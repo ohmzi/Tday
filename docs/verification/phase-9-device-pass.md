@@ -310,6 +310,26 @@ animates.
               the card has gone, which is the activity's own transparent window still standing there
               waiting for a sync.
 
+- [ ] **PR 42a · and · Morning Sweep deals the next card instead of swapping it** — Morning Sweep,
+      with at least three carried-over overdue tasks waiting, so there are cards to deal and a
+      finish line to reach.
+      Do:     tap **Tomorrow**, twice. Then triage the rest until the last card is gone.
+      Watch:  the card you have dealt with slides about a quarter of the screen LEFT and fades as it
+              goes, over 150 ms, while the next one comes in from the right over 200 ms and settles.
+              The whole stack travels as one thing — the card, the five action rows and the
+              Skip / Sweep-all row arrive together, not six times. After the last card the finish
+              line fades up into the space rather than appearing on the frame the card left.
+      Fails:  the next stack drawn complete in one frame with no travel at all, which is the state
+              this screen shipped in. Also a fail: the outgoing card taking as long as the incoming
+              one or longer, which reads as the app hesitating over a decision already made; the
+              tally on the leaving card ticking down while it leaves; and "all swept" flashing up
+              when you OPEN Morning Sweep with cards waiting, which is the finish line playing
+              before the deck has been read.
+      Also:   with Settings → **Reduce motion** on (or the system's "Remove animations"), tap
+              Tomorrow again. The next card is simply there, at its own height, on the next frame —
+              no slide, no fade, and no frame where the panel is caught mid-resize. The finish line
+              is the same: there, or not there.
+
 - [ ] **PR G2 · and · A toast leaves when it is asked to, and not before** — any screen that puts a
       toast up with an Undo on it: delete a task from a list, which is the toast with the most to
       lose. Five gestures, one toast each; work quickly, the auto-dismiss window is the clock.
