@@ -777,16 +777,32 @@ fun CalendarScreen(
                         }
                         CalendarTodoRow(
                             modifier = Modifier
+                                // The day list is a task feed, so it takes the feed's
+                                // own clock. It used to run 180 in and 140 out — ten
+                                // milliseconds under [TdayFeedItemMotion] on each leg,
+                                // naming no rung and shared with nothing, which is
+                                // exactly the drift that object exists to stop. Rule 1
+                                // still holds across the swap: 150 out stays shorter
+                                // than 190 in.
+                                //
+                                // `placementSpec` stays null, and that is the one
+                                // thing this list does NOT take from the object. It is
+                                // not that nothing is displaced: completing, deleting
+                                // or rescheduling a task off the selected date each
+                                // remove exactly one keyed row, so today the rows
+                                // below a departure take their new slots in a single
+                                // frame while the departing one fades over 150 — the
+                                // same clock splitting that [TdayFeedItemMotion]'s
+                                // header argues against, and that `CompletedScreen`,
+                                // on the same object, does not have. Left standing
+                                // rather than fixed in passing: this unit is retiring
+                                // drifted literals, and starting to animate something
+                                // this feed has never animated is a behaviour change
+                                // that needs its own argument and its own device pass.
                                 .animateItem(
-                                    fadeInSpec = tween(
-                                        durationMillis = 180,
-                                        easing = FastOutSlowInEasing,
-                                    ),
+                                    fadeInSpec = TdayFeedItemMotion.FadeIn,
                                     placementSpec = null,
-                                    fadeOutSpec = tween(
-                                        durationMillis = 140,
-                                        easing = FastOutSlowInEasing,
-                                    ),
+                                    fadeOutSpec = TdayFeedItemMotion.FadeOut,
                                 )
                                 .padding(
                                     bottom = if (index == listedTasks.lastIndex) {
@@ -859,11 +875,11 @@ fun CalendarScreen(
                 // Keyed, because a load failure genuinely adds and removes a row
                 // here and `animateItem` cannot animate either on an item whose
                 // identity is its index. It takes [TdayFeedItemMotion] whole —
-                // the rows above it spell their own fades out by hand and pass
-                // `placementSpec = null`, but those rows are only ever swapped
-                // wholesale when the day changes, while this card arrives and
-                // leaves on its own and has to travel to whatever slot the rows
-                // above leave it in.
+                // the rows above it take its two fades but pass
+                // `placementSpec = null` (argued there, and not because they are
+                // never displaced), while this card is the one item on this feed
+                // that already glides to whatever slot the rows above leave it
+                // in.
                 uiState.errorMessage?.let { message ->
                     item(key = "error-retry", contentType = "error_retry") {
                         val errorCardMotionEnabled = rememberTdayMotionEnabled()
