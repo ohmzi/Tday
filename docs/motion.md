@@ -97,8 +97,17 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   `tday-web/src/globals.css:149` quotes 159 — the property-specific count — as
   the blast radius of rebinding the default; 123 is the narrower figure that
   would actually move, being the utilities that name no duration of their own.
+  The `iOS 1` is a census figure and the site it counted has since left the rung:
+  the Guide's topic card expands on `Emphasis` now, because it grows a box and
+  rule 2 below decides that by geometry. Nothing on iOS spells this rung as a
+  number any more — every site reaches it through `TdayMotion.Durations.quick`,
+  which is seven `withAnimation` / `.animation` transactions plus
+  `RootFeedDock`'s reduced-motion substitute and `TdayFeedItemMotion.departure`,
+  the rung under a second name for a row on its way out. The anchor below is
+  named rather than numeric for that reason, and a `duration:` grep now finds
+  none of the nine.
   Anchors: `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:60`,
-  `ios-swiftUI/Tday/Feature/Guide/HelpGuideScreen.swift:225`,
+  `ios-swiftUI/Tday/Feature/App/AppRootView.swift:173`,
   `tday-web/src/globals.css:146`.
 - **`Enter` (200).** 52 web `duration-200` utilities and 7 iOS sites (5 in the
   app, 2 in the widget extension); **zero** on Android at the census. The first
@@ -123,7 +132,7 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   which is a call site to settle rather than a reason to widen the rung.
   Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
-  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3162`,
+  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3170`,
   `tday-web/src/lib/taskCompletionTiming.ts:36`.
 - **`Emphasis` (320).** 15 Android tweens at the census (eleven of them reached
   through a named constant rather than written out), 5 iOS, 1 on web. Long
@@ -335,7 +344,7 @@ same answer from every reviewer.
 Both rungs, inside one motion — the staged check-off every task row in every
 client plays. The row's content fades where it stands at 260 (`Change`):
 `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
-`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3162`,
+`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3170`,
 `tday-web/src/lib/taskCompletionTiming.ts:36`. The rule crossing out the title
 grows across it, so it takes 320 (`Emphasis`):
 `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskStrikethrough.kt:63`,

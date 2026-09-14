@@ -117,7 +117,7 @@ struct ForgotPasswordView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .animation(.spring(response: 0.28, dampingFraction: 0.86), value: step)
+        .animation(TdayMotion.snappy, value: step)
     }
 
     private var card: some View {

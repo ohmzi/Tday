@@ -315,7 +315,7 @@ Restore it from git history rather than adjusting the number.
 
 - [x] `ios-calendar-empty-state-blanked-by-isloading` — pull-to-refresh blanks the empty state for the whole sync · ios · Sev 3 · S · Gate G+TF
   - **The row's trigger is wrong; the gate it names is real.** Pull-to-refresh is not wired on this
-    screen either — `pullRefreshEnabled` defaults to false and `AppRootView.swift:450` builds
+    screen either — `pullRefreshEnabled` defaults to false and `AppRootView.swift:680` builds
     `CalendarScreen` without it — so the gesture cannot be what blanks anything. The defect is
     `CalendarScreen.swift:606`, `} else if !viewModel.isLoading {` in front of
     `calendarDayEmptyState`, and `isLoading` is raised only by `refresh()`: a force sync over a
@@ -467,7 +467,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 8f — the one-line default-duration change
 
-- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **DROPPED, not deferred**; the box stays open because the change was not made and will not be. Four committed places now forbid it: `docs/motion.md:350-357` makes "Do not rebind Tailwind's default transition duration" idiom rule 3, `docs/CODING_STANDARDS.md:209` says "never rebind", `tday-web/src/globals.css:239-242` argues it in place at the one declaration block that would have carried it (~159 bare `transition-*` sites riding an un-overridden 150 ms, which is exactly `Quick`, so they are on the vocabulary for free), and `motion-budget.json`'s `_excluded.notCountedOnPurpose` excludes those same utilities on those same grounds. The value no longer names anything either: `4c941b1c` moved `Enter` 190 → 200 because 190 matched 2 sites against 200's 57. Rule 3 landed in `bc521d0d`, inside Phase 4's own PR #204 — the same PR that would have carried 8f — so this is a decision taken at the time, not a lapse · web · XS · Gate n/a — dropped
+- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **DROPPED, not deferred**; the box stays open because the change was not made and will not be. Four committed places now forbid it: `docs/motion.md:359-366` makes "Do not rebind Tailwind's default transition duration" idiom rule 3, `docs/CODING_STANDARDS.md:209` says "never rebind", `tday-web/src/globals.css:239-242` argues it in place at the one declaration block that would have carried it (~159 bare `transition-*` sites riding an un-overridden 150 ms, which is exactly `Quick`, so they are on the vocabulary for free), and `motion-budget.json`'s `_excluded.notCountedOnPurpose` excludes those same utilities on those same grounds. The value no longer names anything either: `4c941b1c` moved `Enter` 190 → 200 because 190 matched 2 sites against 200's 57. Rule 3 landed in `bc521d0d`, inside Phase 4's own PR #204 — the same PR that would have carried 8f — so this is a decision taken at the time, not a lapse · web · XS · Gate n/a — dropped
 
 ## Phase 5 — web primitives, in dependency order
 
@@ -1379,8 +1379,8 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 32 — iOS cold launch and zoom navigation
 
-- [ ] `ios-cold-launch-fade` — splash → first screen is a hard cut, every launch · ios · Impact O4 · S · Gate TF
-- [ ] `ios-zoom-navigation-transition` — six home tiles push with the stock slide; zero shared elements in the target · ios · Impact O4 · M · Gate X+TF
+- [x] `ios-cold-launch-fade` — splash → first screen is a hard cut, every launch · ios · Impact O4 · S · Gate TF — the boundary is a transaction now. `AppRootView`'s outermost `Group` was a bare `if` with no `.transition` on either arm and nothing to key one on, so the splash was cut out from under the first screen on every launch — the one motion in the app that every user sees. The condition is hoisted into `showsLaunchSplash` so `.animation(_:value:)` has a single `Equatable` value to watch: a bootstrap that finishes while a finger is still holding the splash down is one arrival, not an arrival and then a second one. The two arms crossfade on `Enter`, the arriving app on the Enter curve and the departing splash on Exit — web's own pairing, where `.tday-route-fade` and `::view-transition-old(root)` are both `var(--tday-duration-enter)` on `--tday-ease-enter` / `--tday-ease-exit` — and the rung is PR 55's argument one boundary further out: a first screen is a thing arriving with nothing arguing for another length, and the wait this fade could be accused of sitting in front of is the bootstrap, which is what flipped the value it runs on. SwiftUI cannot carry two curves through one `.animation(_:value:)`, so the curves sit per-arm on the `.transition`s and the `Group`'s own modifier is the transaction they are inert without. `TdayApp`'s `Group` one level up is deliberately left bare and now says so: `appContainer` arrives long before the bootstrap does, so the arm it switches to is `AppRootView` still drawing `AppLaunchSplashView` — that boundary is splash → splash. It was not yet invisible, though, and saying it was is what the bare `Group` needed to be true: the two splashes are two structural positions, so two identities, so the `@State` tagline re-rolled across the swap and 89 launches in 90 hard-cut one line to another on the one screen where both sides are meant to be the same pixels. The tagline is now the process-wide `launchTagline` — a lazy global is one draw per launch, which is the lifetime it always wanted — and with the logo a static `Canvas` and nothing else on the screen varying, the outer boundary is a boundary between identical frames and needs no fade. Reduce Motion needs no branch of its own; `tdayAnimation(…)` returns nil, the arms still swap, and the app is drawn finished in the frame the bootstrap completes (fifth idiom rule). The gate is a new guardrail, `tests/guardrails/launch-handover.test.ts`, which reads the Swift as text for the reason `route-handover.test.ts` gives about jsdom and one worse — no Swift toolchain where vitest runs, and no way to render a SwiftUI hierarchy from node — and holds the five things that have no local symptom when they go missing: the one keyed value, a `.transition` on each arm naming its curve and its rung, the transaction on the `Group`, the gate rather than a returning `reduceMotion ?` ternary, and no numeric duration anywhere in the block. The two arm rules are depth-bounded to the arm's own modifier chain rather than its subtree: the app arm is a `NavigationStack` over three feed screens that carry `.transition`s of their own, so a scan that accepted any `.transition(` down there would go green on the launch fade having been moved onto a tab swap — written, readable, and on a node no launch touches, which is the Phase-7 shape this file exists to not repeat. Four of its six rules land red on the parent commit, and moving the app-arm modifier onto a child lands the third. No literal added or retired: `duration: TdayMotion.Durations.enter` puts no digit after the colon, so `ios.easeDuration` holds at 22 (PR 32a)
+- [x] `ios-zoom-navigation-transition` — six home tiles push with the stock slide; zero shared elements in the target · ios · Impact O4 · M · Gate X+TF — the six tiles grow into what they open now. iOS 18 pairs `.matchedTransitionSource(id:in:)` on a source with `.navigationTransition(.zoom(sourceID:in:))` on a destination, and the category board is the one place in this tree that qualifies: six large distinct rectangles, each counting the list its screen is about. Three things kept it from being two modifiers written at the call sites. The deployment target is 17.0 and is not moving, so both APIs sit behind `#available(iOS 18.0, *)` and iOS 17 comes out the far side with the stock push. The tiles are built inside a private struct in `ScheduledTaskHomeScreen.swift` and the destinations by `AppRootView.destinationView(for:)` two files away, so the `Namespace.ID` travels in the environment rather than down a parameter chain through two private types — the call Phase 8 made for the motion gate, for the same reason. And the two ends have to agree on a string, which is what `AppRoute.zoomSourceID` is: one exhaustive switch, read by the tile that publishes and by the destination that asks, so a renamed case is a compile error rather than a transition that quietly stopped happening. `.allTodos` is the case that needed an argument about it — a highlight id means the arrival came from the home screen's own search results or a deep link, and the All tile is on screen either way, so zooming out of it would be the animation claiming the user pressed something they did not. Reduce Motion is the fourth condition on both halves: a zoom is the large-amplitude travel Apple's guidance names, and the substitute is the platform's own stock push, which draws the finished screen and adds no wait (fifth idiom rule). The X gate is `ZoomNavigationTests` — six routes carry ids, the six are distinct, a highlighted All arrival carries none — and the local proof is `launch-handover.test.ts`, extended with a sibling block because this is the same view's other unasked-for navigation boundary and is unbuildable here for the same reason: both APIs under the availability check, one namespace, one destination site, and each tile publishing the id of the route its OWN closure pushes, which is the failure that leaves every other rule green while a screen grows out of the wrong rectangle. Neither zoom API takes a length, so no counter moved.
 
 ### PR 38 — the confetti spec, into the repo
 
@@ -1507,19 +1507,20 @@ Restore it from git history rather than adjusting the number.
   - **The row's iOS half — `cardIn → 0.46/0.82` — is superseded, and writing it back would have
     cost more than it bought.** `TdaySheetChrome.swift:271` already reads
     `static let cardIn = TdayMotion.settle`, which is response 0.40 / dampingFraction 0.86, and
-    `docs/motion.md:277-280` names that exact line as the `Settle` rung's **one** anchoring site in
+    `docs/motion.md:286-289` names that exact line as the `Settle` rung's **one** anchoring site in
     the repo. Putting 0.46/0.82 there would strand `Settle` with zero call sites, add 2 to
-    `ios.spring` — measured at 98 against a ceiling of 98 — and spend `Gesture`'s 0.82 damping on a
+    `ios.spring` — measured at 98 against a ceiling of 98 when this was argued, and 60 against 60
+    after 8g and 8h, so zero headroom either way — and spend `Gesture`'s 0.82 damping on a
     presentation rather than on a release, which is the one thing that damping is for. The 0.82 is
     not wasted: unit 41c-b spends it on the drag release, where a finger has actually let go.
   - **The two mechanisms are named in the file that owns one of them, and the plan's counts were
     wrong on both sides of the split.** iOS applies this modifier at **nine** sites across four
     screens — `TodoListScreen`, `ScheduledTaskHomeScreen`, `CalendarScreen` and `CompletedScreen`,
     seven of them through the `createTaskSheet(…)` wrappers and two directly for create-list — not
-    four: the plan was counting `CreateTaskSheet.swift:617` and `:626`, which are the wrappers' own
+    four: the plan was counting `CreateTaskSheet.swift:623` and `:632`, which are the wrappers' own
     bodies, as application sites.
     UIKit's `.sheet` + `presentationDetents` has **six**, not seven: `ManageMembersSheet.swift:150`
-    is the presented view's own detents, and the presentation is `TodoListScreen.swift:1722`.
+    is the presented view's own detents, and the presentation is `TodoListScreen.swift:1730`.
     And the rule is not "the custom one has a keyboard" — list settings and members both carry
     `TextField`s. It is **whose the height is**: a sheet sized by its own content has nothing above
     it that will lift it off a keyboard, so the host opts out of SwiftUI's avoidance and computes
@@ -1533,7 +1534,7 @@ Restore it from git history rather than adjusting the number.
     on either mechanism wears `TdaySheetHeader` over `colors.bottomSheetBackground`, and the corner
     radius agrees at 34 everywhere it is stated — `TdaySheetMetrics.sheetCornerRadius` on the custom
     side, `presentationCornerRadius(34)` at `ManageMembersSheet.swift:152` and
-    `TodoListScreen.swift:2381`/`:5136`. Three native sheets state none at all (Morning Sweep's date
+    `TodoListScreen.swift:2389`/`:5144`. Three native sheets state none at all (Morning Sweep's date
     picker, promote-floater, the scheduled-home summary) and take UIKit's default; that is a
     one-line gap and is written down above the modifier rather than closed here, since closing it is
     a pixel change no gate on this branch can look at. The **scrim** is the piece the plan had
@@ -1562,7 +1563,7 @@ Restore it from git history rather than adjusting the number.
     — that a position-only rule reads the last frame of a gesture as though it were the end of one.
     SwiftUI hands the projection over ready made in `predictedEndTranslation`, so unlike web there
     was no sampler to build, only a threshold to name.
-  - **The toast's rule was the wrong one to copy, on both halves.** `AppRootView.swift:973` spells
+  - **The toast's rule was the wrong one to copy, on both halves.** `AppRootView.swift:1042` spells
     `translation > 30 || predictedEndTranslation > 90`. The `||` is what lets a long drag that is
     already being walked back through, and a flat 30 pt says nothing on a card whose height runs
     from about half the screen to `maximumScreenHeightFraction` of it — the same 30 pt is a decisive
@@ -1576,7 +1577,7 @@ Restore it from git history rather than adjusting the number.
     written at the gesture is a second thing to keep in step with it. `dragTranslation` is
     deliberately *not* reset on a commit, so the exit carries on from where the finger left the card
     instead of snapping it home first. A refused drag springs back on `TdayMotion.gesture` —
-    response 0.34 / dampingFraction 0.82, the rung `docs/motion.md:239` defines as a surface
+    response 0.34 / dampingFraction 0.82, the rung `docs/motion.md:267` defines as a surface
     continuing under its own momentum after a finger lets go, and the place the 0.82 the
     `sheet-presentation-unification` row above declined to spend on an *arrival* actually belongs.
   - **The keyboard resigns at the gesture and not at the dismissal, and that is the trap.**
@@ -1622,8 +1623,12 @@ Restore it from git history rather than adjusting the number.
     with the lines it names; that table is keyed by exact `path:line` and tracking it is the cost of
     inserting anything above a known site.
   - **No literal added or retired; all eight budget counters are untouched.** The release names
-    `TdayMotion.gesture` rather than writing a spring, so `ios.spring` stays at 98/98 and
-    `ios.easeDuration` at 27/27, both of which had zero headroom. The three geometry numbers (10 pt
+    `TdayMotion.gesture` rather than writing a spring, so it adds to neither `ios.spring` nor
+    `ios.easeDuration`, both of which have zero headroom. Those two read 98/98 and 27/27 when this
+    was written and read **60/60 and 22/22** in the merged tree: 8g and 8h took thirty-eight
+    longhand Snappy springs off between them and 8m took five `duration:` digits off, and
+    `motion-budget.json` came down by exactly those amounts in the same commits. Same zero headroom,
+    one batch further migrated — this unit still writes neither. The three geometry numbers (10 pt
     of slop, a 0.25 fraction, the 36 × 5 bar) are gesture and layout rather than motion and are on
     no counter. Seven cases in `TdaySheetChromeMotionTests.swift`, which is already registered in
     the pbxproj; the fourth of them — a 300 pt drag with a 90 pt projection — is the one a
@@ -1636,9 +1641,10 @@ Restore it from git history rather than adjusting the number.
 - *(container row — the seven rows below are the work: Morning Sweep · Android Settings inline forms · iOS Help Guide · Android onboarding steps · Android calendar mode switch · iOS numeric counts · Android error card)*
 - [x] `android-morning-sweep-motion` — 241 lines, zero `animate*`, bare-`Text` finish · and · Impact O3 · S · Gate D
 - [ ] `disclosure-expand-collapse` — Expand/collapse has no shared spec: Android slices glyphs mid-growth, iOS runs the app's fastest curve at 150ms, web snaps the height and swaps two chevron glyphs · all · Impact O3 · M · Gate V + D + TF — **final part (2 of 2)**; PR 56 carried the rest
+  - **The iOS third is in; the box waits on Android.** `HelpGuideScreen`'s topic card ran the one transaction that grows it — the chevron's rotation and the body's insert — on `.easeInOut(duration: 0.15)`, which is the app's fastest rung driving the largest thing on the screen. It is `TdayMotion.standard(duration: TdayMotion.Durations.emphasis)` now: a card that changes how big it is is geometry, and rule 2 of `docs/motion.md` decides that boundary by geometry rather than by importance, so it lands on the same rung web's height box already answers to. The curve changed with it and is the half a reviewer has to look at — SwiftUI's `.easeInOut` is (0.42, 0, 0.58, 1) against Standard's (0.4, 0, 0.2, 1), and at 320 ms the tail is what reads. The transaction stays inside `withAnimation` because the body is inserted by an `if`, and it passes through `tdayAnimation`, so Reduce Motion draws the open card finished on the frame of the tap instead of shortening the trip. No literal is added or retired: the site already named its rung, so `ios.easeDuration` neither sees the old value nor the new one and the budget is untouched. Android's mid-growth glyph slice is what the box is still open for.
 - [x] `android-onboarding-step-direction` — ordered steps crossfade on Compose's default spec · and · Impact O2 · S · Gate D
 - [ ] `android-calendar-mode-content-cut` — content hard-cuts inside a container whose height is springing · and · Impact O3 · S · Gate D
-- [ ] `ios-numeric-count-transition` — four plain `Text("\(count)")`, one at 34 pt; zero `contentTransition` in the codebase · ios · Impact O3 · S · Gate TF
+- [x] `ios-numeric-count-transition` — four plain `Text("\(count)")`, one at 34 pt; zero `contentTransition` in the codebase · ios · Impact O3 · S · Gate TF — all four roll now: `.contentTransition(.numericText(value:))` under `.animation(_:value:)` keyed on the count itself, on `Change` (260). Rule 2 of `docs/motion.md` puts them there — a count dropping after the user ticks a task is their own edit replayed in place, with the label neither moving nor resizing — and the digit roll is what makes 260 read as a number counting down rather than as a smear, which a crossfade of that length would be. The gate passes through `tdayAnimation`, so Reduce Motion draws the new number on the frame it changed. A `.contentTransition` outside a transaction is inert and looks exactly like a fix, so `motion-reachability-ios` now holds the pair together: every `Text("\(count)")` has to carry the roll, an `.animation(_:value:)` keyed on `count`, and a spec that opens on `tdayAnimation`. No literal added or retired: `duration: TdayMotion.Durations.change` puts no digit after the colon, so `ios.easeDuration` holds at 22 (PR 42f)
 - [ ] `android-error-card-feed-motion` — error card pops mid-feed, two directories from the spec that fixes it · and · Impact O2 · XS · Gate D
 
 ### PR 43a — the web radius scale becomes monotonic
