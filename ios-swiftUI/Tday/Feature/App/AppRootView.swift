@@ -365,19 +365,37 @@ struct AppRootView: View {
                         AppSnackbar(content: content) {
                             container.snackbarManager.dismiss()
                         }
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .transition(
+                            tdayAnimation.transition(
+                                .move(edge: .bottom).combined(with: .opacity),
+                                reduced: .opacity
+                            )
+                        )
                     }
                 }
                 // `.snappy(duration: 0.3)` was SwiftUI's own preset — `spring(duration:
                 // 0.3, bounce: 0.15)` — and the Snappy token is `response: 0.28,
                 // dampingFraction: 0.86`, the same bounce and the same perceptual length
                 // to within a frame. The literal was approximating this token, so naming
-                // it is not a retiming. What the site gains is the gate: under Reduce
-                // Motion the toast is simply there and simply gone, the slide and the
-                // fade refused rather than shortened (`docs/motion.md`'s fifth idiom
-                // rule), which is what the rest of this body has done since 35a.
+                // it is not a retiming. What the site gained in 35a was the gate.
+                //
+                // 35a refused the whole thing, slide and fade together, and that was the
+                // wrong half of the judgement to make here. A toast is the one surface
+                // in this app with nothing around it to explain its arrival: no row
+                // closes over it, no scrim dims for it, and it carries an Undo the user
+                // has a few seconds to reach. Cut in and cut out, it reads as the screen
+                // glitching, and a user who did not happen to be looking at the bottom
+                // edge never learns it was there. So the travel goes — that is the
+                // amplitude, a full toast height up from off the screen — and the
+                // crossfade stays, on Enter, the rung for one element arriving with
+                // nothing arguing for another length. The finished state is still drawn
+                // either way, which is what the fifth idiom rule asks; what the fade
+                // adds is that the user can tell it apart from a redraw.
                 .animation(
-                    tdayAnimation(TdayMotion.snappy),
+                    tdayAnimation(
+                        TdayMotion.snappy,
+                        reduced: TdayMotion.standard(duration: TdayMotion.Durations.enter)
+                    ),
                     value: container.snackbarManager.content?.id
                 )
             }

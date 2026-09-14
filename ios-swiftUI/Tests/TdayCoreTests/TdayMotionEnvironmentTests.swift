@@ -65,6 +65,43 @@ final class TdayMotionEnvironmentTests: XCTestCase {
         XCTAssertFalse(TdayMotionResolution.reduced.isEnabled)
     }
 
+    // MARK: - The amplitude half
+
+    /// The overload that exists because `nil` is the wrong answer where the travel
+    /// IS the animation. What a machine can hold is the one thing that would make
+    /// the whole judgement moot: that the substitute is a real `Animation` and not a
+    /// nil in a non-optional's clothing. Whether a fade is the right stand-in for a
+    /// slide is an eye question and is a device row.
+    ///
+    /// Its `AnyTransition` twin has no test and cannot have one: `AnyTransition` is
+    /// opaque and not `Equatable`, so nothing can ask a transition what it does. That
+    /// half is checked by the same device rows — a dock that scales under full motion
+    /// and crosses over in place under Reduce Motion is the assertion, made with eyes.
+    func testAReducedAmplitudeStillPlaysItsSubstitute() {
+        let substitute = TdayMotion.standard(duration: TdayMotion.Durations.enter)
+
+        XCTAssertEqual(
+            TdayMotionResolution.reduced(TdayMotion.snappy, reduced: substitute),
+            substitute
+        )
+        XCTAssertNotEqual(
+            TdayMotionResolution.reduced(TdayMotion.snappy, reduced: substitute),
+            TdayMotion.snappy
+        )
+    }
+
+    /// And the other direction, which is the one a wrong-way-round ternary breaks:
+    /// a gate that handed every user the reduced substitute would look correct on
+    /// the test above and would have quietly retimed four surfaces for everybody.
+    func testFullMotionNeverPlaysTheSubstitute() {
+        let substitute = TdayMotion.standard(duration: TdayMotion.Durations.enter)
+
+        XCTAssertEqual(
+            TdayMotionResolution.full(TdayMotion.snappy, reduced: substitute),
+            TdayMotion.snappy
+        )
+    }
+
     // MARK: - The environment value
 
     /// No override and no reduce request: the app animates. Stated as a test

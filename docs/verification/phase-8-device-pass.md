@@ -92,5 +92,33 @@ the TF1 build, and Phase 8's own rows, land here alongside these.
               `accessibilityReduceMotion` keeps it out of `TdayMotionEnvironmentTests`, the only
               place that half of the accessor is checked at all.
       Also:   the snackbar: complete a task so the Undo toast appears with Reduce Motion on. It
-              should be there and gone without sliding up from the bottom edge. Its drag snap-back
-              is NOT covered — `AppSnackbar` reads its own environment — and still animates.
+              should not slide up from the bottom edge. 35b revised what it does instead — it
+              crossfades rather than cutting, and the row below is where that is checked. Its drag
+              snap-back is NOT covered — `AppSnackbar` reads its own environment — and still
+              animates.
+
+- [ ] **PR 35b · ios · Less motion, not no motion** — every check here is run twice, once with
+      **Reduce Motion** off and once on, and the point of each is that the two look DIFFERENT
+      without the second one looking broken. Refusing a large travel outright was the other
+      candidate at four of these five sites and is what this row is looking for the symptoms of.
+      Do:     (a) open any create-task sheet. (b) On the Calendar screen, Month view, turn a page
+              with the chevrons — then turn one with a swipe. (c) Scroll a root feed down until the
+              dock collapses to its icon, tap it, and let it time out. (d) Complete a task so the
+              Undo toast appears. (e) In the create sheet, open the List picker.
+      Watch:  with Reduce Motion ON — (a) the sheet card is already at its resting height and fades
+              up with the scrim, one surface, no rise from the bottom edge. (b) The next month is
+              simply drawn, with no sideways travel; the chevrons stay live and a SECOND tap works,
+              and a swipe still follows the finger exactly as before. (c) The pill and the
+              segmented control cross over in place at the size each of them is, over ~150 ms. (d)
+              The toast fades in and out over ~200 ms without rising from the bottom edge. (e) The
+              picker is unchanged — it still fades and settles its 3 %, which is deliberate.
+      Fails:  (b) is the one to spend time on: a single chevron tap that moves the grid one month
+              and then leaves BOTH chevrons dead is the defect — the page turn's completion used to
+              ride the scroll animation, and refusing the animation is what would strand it. Also a
+              fail: (a) the card appearing between two frames with no fade at all, (c) the dock
+              swapping with a hard cut so a 56 pt pill is replaced by a full control in one frame,
+              (d) the toast blinking in and out, (e) the picker cutting in.
+      Also:   with Reduce Motion OFF, all five must be exactly what they were before this PR: the
+              card rises and settles, the grid slides a full width, the dock scales out of its
+              leading edge, the toast springs up. A retiming here means the gate was written the
+              wrong way round and every user got the substitute.
