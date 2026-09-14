@@ -1619,7 +1619,7 @@ Restore it from git history rather than adjusting the number.
     four: the plan was counting `CreateTaskSheet.swift:623` and `:632`, which are the wrappers' own
     bodies, as application sites.
     UIKit's `.sheet` + `presentationDetents` has **six**, not seven: `ManageMembersSheet.swift:150`
-    is the presented view's own detents, and the presentation is `TodoListScreen.swift:1730`.
+    is the presented view's own detents, and the presentation is `TodoListScreen.swift:1738`.
     And the rule is not "the custom one has a keyboard" — list settings and members both carry
     `TextField`s. It is **whose the height is**: a sheet sized by its own content has nothing above
     it that will lift it off a keyboard, so the host opts out of SwiftUI's avoidance and computes
@@ -1633,7 +1633,7 @@ Restore it from git history rather than adjusting the number.
     on either mechanism wears `TdaySheetHeader` over `colors.bottomSheetBackground`, and the corner
     radius agrees at 34 everywhere it is stated — `TdaySheetMetrics.sheetCornerRadius` on the custom
     side, `presentationCornerRadius(34)` at `ManageMembersSheet.swift:152` and
-    `TodoListScreen.swift:2389`/`:5144`. Three native sheets state none at all (Morning Sweep's date
+    `TodoListScreen.swift:2394`/`:5149`. Three native sheets state none at all (Morning Sweep's date
     picker, promote-floater, the scheduled-home summary) and take UIKit's default; that is a
     one-line gap and is written down above the modifier rather than closed here, since closing it is
     a pixel change no gate on this branch can look at. The **scrim** is the piece the plan had
@@ -2238,7 +2238,8 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 ### PR 184 — dock collapse threshold hysteresis
 
 - [x] `android:home-dock#10` — 10 · and · Sev 1 · S · Gate G
-  - the 44 now lives once on Android, at `RootFeedDockCollapse.CollapseThreshold` in `RootFeedDock.kt:122`; web's `rootDockCollapse.ts` landed on develop after this branch was cut and cited the two retired `TodoListScreen.kt`/`ScheduledTaskHomeScreen.kt` line numbers, which is what this row booked for the merge. Repointed there, at the merge: its comment now names the single Android declaration rather than a copy of the literal in each feed. Its three iOS citations were read against the merged tree and are still true, so they are left alone — the point of the row is that the number is declared once per client, and the comment could not say so while it named two Android sites
+  - the 44 now lives once on Android, at `RootFeedDockCollapse.CollapseThreshold` in `RootFeedDock.kt:123`; web's `rootDockCollapse.ts` landed on develop after this branch was cut and cited the two retired `TodoListScreen.kt`/`ScheduledTaskHomeScreen.kt` line numbers, which is what this row booked for the merge. Repointed there, at the merge: its comment now names the single Android declaration rather than a copy of the literal in each feed. Its three iOS citations were read against the merged tree and were true when that was written; they stopped being true when the iOS half of this PR landed later in the same phase, and both comments that carried them — web's and Android's own — name `RootFeedDockCollapse.collapseThreshold` in `ios-swiftUI/Tday/Core/UI/RootFeedDock.swift:222` now. The point of the row is that the number is declared once per client, and the comment could not say so while it named two Android sites
+  - the iOS half, same PR, and the reason the row's iOS citations had to be rewritten rather than left: `TodoTimelineMetrics.rootDockCollapseThreshold` and `ScheduledTaskHomeMetrics.rootDockCollapseThreshold` are gone, the 44 and the 24 are one `RootFeedDockCollapse` beside `RootFeedDockMetrics`, and both feeds fold through its `next(previous:offset:)`. `RootFeedHeaderScrollObserver` stopped taking a threshold at all — both callers passed it the same distance, and its `lastCollapsed` was already the memory the dead band needs — and `TodoListScreen`'s non-root-feed-header branch got a `legacyRootDockCollapsed` of its own, because `shouldCollapseRootDock` is a computed property with nowhere to remember the side it came from and re-deriving the comparison there is how a hysteresis becomes a threshold again. Nothing here compiles Swift, so the gate is `RootFeedDockCollapseTests` under xctest in CI, registered in all four pbxproj sections that `ios-target-membership.test.ts` resolves the graph through
 
 ### PR 185 — fab accent crossfade
 

@@ -110,11 +110,12 @@ private val RootFeedDockExpandedWidth =
  * numbers below is the dead band that swallows that hover. It costs a deliberate scroll
  * back to the top nothing: such a scroll passes both edges inside one gesture.
  *
- * [CollapseThreshold] is not ours alone. iOS spells the same 44 twice, at
- * `ScheduledTaskHomeMetrics.rootDockCollapseThreshold` and
- * `TodoTimelineMetrics.rootDockCollapseThreshold`, and web's root dock fold carries a third
- * copy in `tday-web/src/lib/rootDockCollapse.ts`. Moving it here moves one client of
- * three, and a dock that folds at three different distances is three docks.
+ * [CollapseThreshold] is not ours alone. iOS declares the same 44 at
+ * `RootFeedDockCollapse.collapseThreshold` in `ios-swiftUI/Tday/Core/UI/RootFeedDock.swift:222`
+ * — it spelled it twice, once per root feed, until that enum took it over — and web's root
+ * dock fold carries the third copy in `tday-web/src/lib/rootDockCollapse.ts`. Moving it here
+ * moves one client of three, and a dock that folds at three different distances is three
+ * docks.
  */
 object RootFeedDockCollapse {
 
