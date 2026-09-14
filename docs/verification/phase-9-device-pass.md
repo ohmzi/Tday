@@ -30,3 +30,26 @@ accelerating; nothing in this repository can say whether the result reads as pap
               in the origin); pieces accelerate out of the bottom instead of settling; a piece goes
               flat exactly when it is side-on to its own travel, which is the flip locked back onto
               the rotation; or the burst ends on an edge you can point at instead of fading out.
+
+## Android
+
+- [ ] **PR 39b · android · The burst is paper, and it still fits the celebrate window** — any list
+      with exactly one task left on it, so ticking that task empties the list and celebrates. Run
+      it twice: once on a list-detail screen, where the empty scene is an overlay and the burst is
+      thrown at once, and once on the floater home feed, where the scene is drawn inline and the
+      burst is held 320 ms while the rows below it settle into their new places.
+      Do:     tick the last task and watch the space above the illustration rather than the row.
+      Watch:  the pieces leave a thumb-sized patch at the centre rather than a single point; the
+              cloud has all but stopped spreading by ~300 ms and the highest pieces turn over about
+              a fifth of the box's WIDTH above the origin at ~415 ms; the scene rises at 320 ms
+              with paper already in the air above it; from ~840 ms everything left is falling at a
+              steady speed rather than gathering pace, drifting ±7–15 px sideways at about 1 Hz and
+              turning edge-on on a rhythm unrelated to how fast it is spinning; the last piece is
+              gone 2000 ms after the throw, well inside `CompletionCelebrationWindowMs`.
+      Fails:  pieces accelerate off the bottom of the screen instead of settling, which is the old
+              parabola; a piece goes flat exactly when it is side-on to its own travel, which is
+              the flip locked back onto the rotation; the burst ends on an edge you can point at
+              instead of fading out; the fan clears the sides of the box, which would mean the
+              speeds are being read as distances again; on the floater feed paper thrown across a
+              Completed tile that is still sliding; or the window closing on paper still in the
+              air, which is the 1800 → 2000 ms flight not fitting after all.
