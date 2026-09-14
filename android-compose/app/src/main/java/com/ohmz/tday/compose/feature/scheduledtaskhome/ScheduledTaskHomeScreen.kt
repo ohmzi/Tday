@@ -87,6 +87,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -160,6 +161,7 @@ import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.ui.component.RootFeedDock
+import com.ohmz.tday.compose.ui.component.RootFeedDockCollapse
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSheetContent
 import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
@@ -369,7 +371,8 @@ fun ScheduledTaskHomeScreen(
     val listState = rememberLazyListState()
     val hasScrollableContent =
         listState.canScrollForward || listState.canScrollBackward
-    val dockCollapseThresholdPx = with(density) { RootFeedDockCollapseThreshold.roundToPx() }
+    val dockCollapsePx = with(density) { RootFeedDockCollapse.CollapseThreshold.roundToPx() }
+    val dockExpandPx = with(density) { RootFeedDockCollapse.ExpandThreshold.roundToPx() }
     val headerCollapsePx = with(density) { RootFeedHeroHeaderMetrics.CollapseDistance.toPx() }
     // The header draws the refresh pill itself, so it can fly in from the top
     // and hover in front of the title instead of being painted underneath the
@@ -387,11 +390,26 @@ fun ScheduledTaskHomeScreen(
             (listState.firstVisibleItemScrollOffset / headerCollapsePx).coerceIn(0f, 1f)
         }
     }
-    val hasScrolledPastDockCollapseThreshold =
-        listState.firstVisibleItemIndex > 0 ||
-                listState.firstVisibleItemScrollOffset > dockCollapseThresholdPx
-    val dockCollapsed =
-        hasScrollableContent && hasScrolledPastDockCollapseThreshold
+    // Held rather than derived: which edge applies depends on the answer before it. The
+    // position is sampled in a snapshotFlow instead of in composition because the offset
+    // moves every frame of a fling, and this screen has no business recomposing at that
+    // rate to settle one boolean.
+    var scrolledPastDockFold by remember { mutableStateOf(false) }
+    LaunchedEffect(listState, dockCollapsePx, dockExpandPx) {
+        snapshotFlow {
+            listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        }.collect { (index, offsetPx) ->
+            scrolledPastDockFold = RootFeedDockCollapse.next(
+                previous = scrolledPastDockFold,
+                firstVisibleItemIndex = index,
+                scrollOffsetPx = offsetPx,
+                collapsePx = dockCollapsePx,
+                expandPx = dockExpandPx,
+            )
+        }
+    }
+    // A feed too short to scroll never folds the dock, whatever the fold point says.
+    val dockCollapsed = hasScrollableContent && scrolledPastDockFold
     LaunchedEffect(dockCollapsed) {
         onRootDockCollapsedChange(dockCollapsed)
     }
@@ -2175,7 +2193,6 @@ private const val CREATE_LIST_SHEET_KEYBOARD_HEIGHT_FRACTION = 0.80f
  * what it is timed against is the navigation leaving this screen, not a rung.
  */
 private const val SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS = 260L
-private val RootFeedDockCollapseThreshold = 44.dp
 
 @Composable
 private fun priorityIconFor(priority: String): ImageVector? {
