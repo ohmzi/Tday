@@ -558,3 +558,40 @@ animates.
               the first frame of the app is also the first frame of a bootstrap that has just
               finished. That, and whether 200 ms is the right length for the one motion every user
               sees, are the whole of the claim.
+
+- [ ] **PR 32b · ios · The six home tiles zoom into the screens they open** — an iOS **18** device
+      or simulator, on the scheduled home. Then the same build on an iOS **17** one, which is the
+      half nothing here can check: the deployment target is 17.0 and both APIs are 18.0, so the
+      whole feature is behind an `#available` branch that no machine in this repo can execute.
+      Do:     tap each of the six category tiles in turn — Scheduled, Priority, Overdue, All,
+              Completed, Calendar — and watch the push, then swipe back from the left edge and
+              watch the return. Then open **All** a second way: type into the home screen's search
+              field and tap a result, which pushes the same All screen with a highlight id.
+      Watch:  the pressed tile grows into the screen it opens, from its own rectangle and its own
+              corner radius, and the back swipe shrinks it home to the same tile. The other five
+              tiles stay where they are. The search result does NOT zoom — it pushes with the
+              stock slide, because nothing on screen was pressed to reach it.
+      Fails:  a stock slide on any of the six, which means the source and the destination did not
+              agree on an id and SwiftUI fell back without saying so — the one failure mode of
+              this unit that reports nothing anywhere. A screen growing out of the WRONG tile,
+              which is `zoomRoute` and `action` disagreeing at a construction. The interactive
+              back swipe losing the zoom and dropping to a slide only on the way back. And the
+              search-result arrival zooming out of the All tile, which is the animation claiming
+              the user pressed something they did not.
+      Also:   on an **iOS 17** device, run the same six taps. Every one of them is the stock push,
+              the screens are correct, and nothing is missing or misdrawn — the availability
+              branch is the one thing in this unit that compiles nowhere if it is wrong and is
+              checked by nothing on the machine this was written on.
+      Also:   with **Settings → Accessibility → Motion → Reduce Motion** on, tap three of the six.
+              Each is the stock push: the platform's own substitute for a large-amplitude travel,
+              which still puts the finished screen in front of the user and adds no wait
+              (`docs/motion.md`'s fifth idiom rule). A tap that is slower with the setting on, or
+              one that still zooms, is the gate not reaching one of the two halves.
+      Why:    there is no Swift toolchain here, so none of this was built. `ZoomNavigationTests`
+              pins the id table in CI — six routes, six distinct ids, and none for a highlighted
+              All arrival — and `launch-handover.test.ts` pins the wiring textually: both APIs
+              under `#available(iOS 18.0, *)`, each tile publishing the id of the route its own
+              closure pushes, one namespace, one destination site. What none of it can see is
+              whether SwiftUI actually finds the source rectangle for a tile that lives three
+              levels inside a `ScrollView` in a private struct two files from the destination —
+              which is the entire feature.

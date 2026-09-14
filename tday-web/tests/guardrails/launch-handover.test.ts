@@ -42,49 +42,49 @@ import { describe, expect, it } from "vitest";
  *      rung would move and this site would stay where somebody typed it. It would
  *      also move `ios.easeDuration`, which has no headroom.
  */
+const MONO = path.resolve(__dirname, "..", "..", "..");
+const ROOT_VIEW = path.join(MONO, "ios-swiftUI", "Tday", "Feature", "App", "AppRootView.swift");
+const ZOOM_NAV = path.join(MONO, "ios-swiftUI", "Tday", "Core", "Navigation", "ZoomNavigation.swift");
+const HOME_SCREEN = path.join(
+  MONO,
+  "ios-swiftUI",
+  "Tday",
+  "Feature",
+  "ScheduledTaskHome",
+  "ScheduledTaskHomeScreen.swift",
+);
+
+/**
+ * Comments and string literals blanked, length preserved.
+ *
+ * Both matter, for different reasons. The comments argue in prose about the rung
+ * and the curves — the call site quotes `--tday-duration-enter` while doing it —
+ * so a scan that read them would pass on the argument for the code instead of on
+ * the code, which is the mistake `motion-parity`'s own counters strip comments to
+ * avoid. The strings are for the brace walk: an interpolation carries braces that
+ * would desync the depth counter. `AppRootView`'s body holds exactly one string
+ * literal today and it is empty, so that half is insurance there — but the tile
+ * board below is built out of asset names and `L("…")` calls, so on that file it is
+ * load-bearing from the first line.
+ */
+function stripCommentsAndStrings(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/"(?:\\.|[^"\\\n])*"/g, (m) => " ".repeat(m.length));
+}
+
+/** The index of the closer that balances the bracket at `open`. */
+function balanced(source: string, open: number, close: string, where_ = "AppRootView.swift"): number {
+  const opener = source[open];
+  let depth = 0;
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === opener) depth++;
+    else if (source[i] === close && --depth === 0) return i;
+  }
+  throw new Error(`${where_}: unbalanced ${opener} at ${open} — the strip above desynced`);
+}
+
 describe("the cold launch hands over instead of cutting", () => {
-  const MONO = path.resolve(__dirname, "..", "..", "..");
-  const ROOT_VIEW = path.join(
-    MONO,
-    "ios-swiftUI",
-    "Tday",
-    "Feature",
-    "App",
-    "AppRootView.swift",
-  );
-
-  /**
-   * Comments and string literals blanked, length preserved.
-   *
-   * Both matter, for different reasons. The comments argue in prose about the rung
-   * and the curves — the call site quotes `--tday-duration-enter` while doing it —
-   * so a scan that read them would pass on the argument for the code instead of on
-   * the code, which is the mistake `motion-parity`'s own counters strip comments to
-   * avoid. The strings are for the brace walk: an interpolation carries braces that
-   * would desync the depth counter. This view's body holds exactly one string
-   * literal today and it is empty, so that half is insurance — and if an
-   * interpolated one ever lands, the walk throws rather than silently reading the
-   * wrong slice.
-   */
-  function stripCommentsAndStrings(source: string): string {
-    return source
-      .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, " "))
-      .replace(/"(?:\\.|[^"\\\n])*"/g, (m) => " ".repeat(m.length));
-  }
-
-  /** The index of the closer that balances the bracket at `open`. */
-  function balanced(source: string, open: number, close: string): number {
-    const opener = source[open];
-    let depth = 0;
-    for (let i = open; i < source.length; i++) {
-      if (source[i] === opener) depth++;
-      else if (source[i] === close && --depth === 0) return i;
-    }
-    throw new Error(
-      `AppRootView.swift: unbalanced ${opener} at ${open} — the strip above desynced`,
-    );
-  }
-
   /**
    * The `.transition(…)` argument lists on an arm's OWN modifier chain, as text.
    *
@@ -205,5 +205,165 @@ describe("the cold launch hands over instead of cutting", () => {
     // `ios.easeDuration` reads exactly this shape and is at its ceiling: a literal
     // here costs the budget AND goes quiet the next time the rung moves.
     expect(group + transaction).not.toMatch(/\bduration\s*:\s*\d*\.?\d+/);
+  });
+});
+
+/**
+ * THE SIX HOME TILES ZOOMING INTO WHAT THEY OPEN, READ AS TEXT
+ *
+ * In this file rather than one of its own because it is the same claim about the
+ * same view: `AppRootView` owns both navigation boundaries a user crosses without
+ * asking for one — the launch hand-over above, and every push out of the root feed
+ * here — and neither can be compiled, run or looked at on the machine this suite
+ * runs on. What differs is which way the shape can go wrong.
+ *
+ * The zoom is two iOS 18 modifiers on two views two files apart, matched by a
+ * string. Nothing reports a mismatch: `.navigationTransition(.zoom(sourceID:in:))`
+ * whose source is not on screen falls back to the stock push, and
+ * `.matchedTransitionSource` nobody asks for is inert. So every failure this unit
+ * can have looks identical from here and from review — the transition simply stops
+ * being the feature — and three of them have no other gate at all:
+ *
+ *   1. The availability guard. The deployment target is iOS 17.0 and both APIs are
+ *      iOS 18.0, so an unguarded call compiles nowhere; `ZoomNavigationTests` is a
+ *      value test and never touches the modifiers, and there is no Swift toolchain
+ *      here. This is the one mistake in the unit that nothing else would catch
+ *      before an Xcode build.
+ *   2. The six tiles naming the routes their own closures push. `zoomRoute` and
+ *      `action` are two independent arguments at each construction, and a tile
+ *      wired to the Overdue screen while publishing the All tile's id is six ids,
+ *      all distinct, every assertion in `ZoomNavigationTests` green, and a screen
+ *      growing out of the wrong rectangle.
+ *   3. One destination site. The zoom is applied over every route at a single
+ *      `.navigationDestination`, which is what lets a route with no source id fall
+ *      through without a list to keep in step; a second site is a second list.
+ */
+describe("the home tiles zoom into the screens they open", () => {
+  const zoom = stripCommentsAndStrings(readFileSync(ZOOM_NAV, "utf-8"));
+  const root = stripCommentsAndStrings(readFileSync(ROOT_VIEW, "utf-8"));
+  const home = stripCommentsAndStrings(readFileSync(HOME_SCREEN, "utf-8"));
+
+  /** Every `X(` argument list in `source`, sliced by paren rather than by line. */
+  function constructions(source: string, name: string, where_: string): string[] {
+    const found: string[] = [];
+    for (let at = source.indexOf(`${name}(`); at !== -1; at = source.indexOf(`${name}(`, at + 1)) {
+      const open = at + name.length;
+      found.push(source.slice(open + 1, balanced(source, open, ")", where_)));
+    }
+    return found;
+  }
+
+  /**
+   * The value passed for `label:` in one argument list, whitespace collapsed.
+   *
+   * Depth-aware, because `.allTodos(highlightTodoId: nil)` carries a comma-free
+   * paren of its own and a scan that stopped at the first `,` would read half of it.
+   */
+  function argument(args: string, label: string, where_: string): string | null {
+    const at = args.indexOf(`${label}:`);
+    if (at === -1) return null;
+    let depth = 0;
+    for (let i = at + label.length + 1; i < args.length; i++) {
+      const c = args[i];
+      if (c === "(" || c === "[" || c === "{") depth++;
+      else if (c === ")" || c === "]" || c === "}") depth--;
+      else if (c === "," && depth === 0) {
+        return args.slice(at + label.length + 1, i).trim().replace(/\s+/g, " ");
+      }
+      if (depth < 0) throw new Error(`${where_}: ${label} ran past its argument list`);
+    }
+    return args.slice(at + label.length + 1).trim().replace(/\s+/g, " ");
+  }
+
+  /** The `{ … }` bodies of every `if #available(iOS 18.0, *)` in `ZoomNavigation.swift`. */
+  const guarded: Array<[number, number]> = [];
+  const MARKER = "if #available(iOS 18.0, *)";
+  for (let at = zoom.indexOf(MARKER); at !== -1; at = zoom.indexOf(MARKER, at + MARKER.length)) {
+    const open = zoom.indexOf("{", at + MARKER.length);
+    guarded.push([open, balanced(zoom, open, "}", "ZoomNavigation.swift")]);
+  }
+
+  it("keeps both iOS 18 APIs behind the availability check the target needs", () => {
+    const uses: string[] = [];
+    for (const api of [".matchedTransitionSource(", ".navigationTransition("]) {
+      for (let at = zoom.indexOf(api); at !== -1; at = zoom.indexOf(api, at + api.length)) {
+        if (!guarded.some(([open, close]) => at > open && at < close)) uses.push(`${api} at ${at}`);
+      }
+    }
+    expect(
+      uses,
+      "the deployment target is iOS 17.0 and both of these are iOS 18.0 — an unguarded " +
+        "call compiles nowhere, and nothing else on this machine can say so",
+    ).toEqual([]);
+    // A floor, not a formality: the rule above passes for free the day the two
+    // modifiers stop being in this file at all.
+    expect(guarded.length, "`if #available(iOS 18.0, *)` blocks").toBe(2);
+  });
+
+  it("leaves reduced motion to the gate rather than reading the setting again", () => {
+    // A zoom is the large-amplitude case Apple's own guidance names, and the
+    // substitute is the platform's: the stock push, which draws the finished screen
+    // and adds no wait (`docs/motion.md`'s fifth idiom rule). Both halves have to
+    // refuse together — one alone leaves a source published for a destination that
+    // will not ask for it — so both are asserted, not the pair.
+    expect(zoom.match(/tdayAnimation\.isEnabled/g) ?? []).toHaveLength(2);
+    expect(zoom).not.toMatch(/accessibilityReduceMotion/);
+    // Neither API takes a length. A `duration:` here would be a literal bought with
+    // nothing, on a counter (`ios.easeDuration`) that has no headroom.
+    expect(zoom).not.toMatch(/\bduration\s*:\s*\d/);
+  });
+
+  it("publishes one namespace and applies the destination over every route once", () => {
+    expect(root).toMatch(/@Namespace private var zoomNamespace/);
+    expect(root.match(/\.environment\(\\\.tdayZoomNamespace/g) ?? []).toHaveLength(1);
+    expect(
+      root.match(/\.tdayZoomDestination\(/g) ?? [],
+      "one site covers every push — a second one is a second list of routes to keep in step",
+    ).toHaveLength(1);
+    expect(root.match(/\.navigationDestination\(for: AppRoute\.self\)/g) ?? []).toHaveLength(1);
+  });
+
+  it("makes every tile publish the id of the route its own closure pushes", () => {
+    const board = constructions(home, "ScheduledTaskHomeCategoryBoard", "ScheduledTaskHomeScreen.swift");
+    expect(board, "the board is built at exactly one site").toHaveLength(1);
+
+    const tiles = constructions(home, "ScheduledTaskHomeCategoryTile", "ScheduledTaskHomeScreen.swift");
+    expect(tiles, "the six category tiles").toHaveLength(6);
+
+    // The tile is handed an opaque `() -> Void`, so what it pushes is only knowable
+    // one level up: `action:` names the board's parameter, and the board's own
+    // argument at that label holds the `onNavigate(…)` the press runs.
+    const pushedBy = new Map<string, string>();
+    for (const label of ["onOpenOverdue", "onOpenScheduled", "onOpenAll", "onOpenPriority", "onOpenCompleted", "onOpenCalendar"]) {
+      const closure = argument(board[0], label, "ScheduledTaskHomeScreen.swift");
+      expect(closure, `the board must be handed ${label}`).not.toBeNull();
+      const at = closure!.indexOf("onNavigate(");
+      expect(at, `${label} must push a route`).toBeGreaterThan(-1);
+      const open = at + "onNavigate".length;
+      pushedBy.set(label, closure!.slice(open + 1, balanced(closure!, open, ")", "ScheduledTaskHomeScreen.swift")).trim());
+    }
+
+    const wiring = tiles.map((tile) => [
+      argument(tile, "action", "ScheduledTaskHomeScreen.swift"),
+      argument(tile, "zoomRoute", "ScheduledTaskHomeScreen.swift"),
+    ]);
+    expect(
+      wiring.filter(([, route]) => route === null),
+      "every tile carries the route it pushes — without it the tile publishes nothing and the push is the stock slide",
+    ).toEqual([]);
+    expect(
+      wiring.map(([action, route]) => `${action} → ${route}`).sort(),
+      "each tile must publish the id of the route its OWN closure pushes: a tile whose " +
+        "zoomRoute and action disagree grows the wrong screen out of the wrong rectangle, " +
+        "and every other rule in this unit stays green while it does",
+    ).toEqual(
+      wiring.map(([action]) => `${action} → ${pushedBy.get(action!)}`).sort(),
+    );
+
+    // And the source half is applied once, on the tile itself rather than on one of
+    // the gradients inside it — the Phase-7 shape, where a modifier is written, is
+    // read, and is attached to a node the transition never looks at.
+    expect(home.match(/\.tdayZoomSource\(/g) ?? []).toHaveLength(1);
+    expect(home).toMatch(/\.buttonStyle\(ScheduledTaskHomeTileButtonStyle\(\)\)\s*\.tdayZoomSource\(zoomRoute\)/);
   });
 });

@@ -170,6 +170,8 @@
 		F0A57E0000000000000000C2 /* TdayMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000C1 /* TdayMotionTests.swift */; };
 		F0A57E0000000000000000D2 /* TdayMotionEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000D1 /* TdayMotionEnvironment.swift */; };
 		F0A57E0000000000000000E2 /* TdayMotionEnvironmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000E1 /* TdayMotionEnvironmentTests.swift */; };
+		F0A57E0000000000000000F2 /* ZoomNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000F1 /* ZoomNavigation.swift */; };
+		F0A57E0000000000000000F4 /* ZoomNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000F3 /* ZoomNavigationTests.swift */; };
 		F1A2B3C4D5E6F708192A3B4D /* FloaterListRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */; };
 		F2C4D6E8A1B3456790ABCDE0 /* TdaySheetChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */; };
 		F2E1D0C9B8A7F6E5D4C3B2A1 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */; };
@@ -427,6 +429,8 @@
 		F0A57E0000000000000000C1 /* TdayMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionTests.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000D1 /* TdayMotionEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionEnvironment.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000E1 /* TdayMotionEnvironmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionEnvironmentTests.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000F1 /* ZoomNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomNavigation.swift; sourceTree = "<group>"; };
+		F0A57E0000000000000000F3 /* ZoomNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomNavigationTests.swift; sourceTree = "<group>"; };
 		F1A2B3C4D5E6F708192A3B4C /* FloaterListRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloaterListRepository.swift; sourceTree = "<group>"; };
 		F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdaySheetChrome.swift; sourceTree = "<group>"; };
 		FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
@@ -550,6 +554,7 @@
 				F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */,
 				F0A57E0000000000000000C1 /* TdayMotionTests.swift */,
 				F0A57E0000000000000000E1 /* TdayMotionEnvironmentTests.swift */,
+				F0A57E0000000000000000F3 /* ZoomNavigationTests.swift */,
 				7D4A9E1200000000000000A1 /* TdaySheetChromeMotionTests.swift */,
 				FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */,
 			);
@@ -680,6 +685,7 @@
 			isa = PBXGroup;
 			children = (
 				CEFF55971ADA0C60CD0F3074 /* AppRoute.swift */,
+				F0A57E0000000000000000F1 /* ZoomNavigation.swift */,
 			);
 			path = Navigation;
 			sourceTree = "<group>";
@@ -1302,6 +1308,7 @@
 				F0A57E0200000000000000C2 /* TdayTaskRowSkeletonTests.swift in Sources */,
 				F0A57E0000000000000000C2 /* TdayMotionTests.swift in Sources */,
 				F0A57E0000000000000000E2 /* TdayMotionEnvironmentTests.swift in Sources */,
+				F0A57E0000000000000000F4 /* ZoomNavigationTests.swift in Sources */,
 				7D4A9E1200000000000000A2 /* TdaySheetChromeMotionTests.swift in Sources */,
 				494E748270A233BECED5A359 /* TodayTasksWidgetSnapshotStoreTests.swift in Sources */,
 			);
@@ -1432,6 +1439,7 @@
 				F0A57E0200000000000000A2 /* TdayTaskRowSkeleton.swift in Sources */,
 				F0A57E0000000000000000A2 /* TdayMotion.swift in Sources */,
 				F0A57E0000000000000000D2 /* TdayMotionEnvironment.swift in Sources */,
+				F0A57E0000000000000000F2 /* ZoomNavigation.swift in Sources */,
 				F0A57E0000000000000000B2 /* TdayMotionGenerated.swift in Sources */,
 				BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */,
 				0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */,
