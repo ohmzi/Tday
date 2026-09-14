@@ -57,6 +57,8 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import com.ohmz.tday.compose.R
@@ -96,6 +98,58 @@ private val RootFeedDockInnerPadding = TdayDimens.RootFeedDockInnerPadding
 private val RootFeedDockTabWidth = TdayDimens.RootFeedDockTabWidth
 private val RootFeedDockExpandedWidth =
     (RootFeedDockTabWidth * RootFeedTabs.size) + (RootFeedDockInnerPadding * 2)
+
+/**
+ * Where a root feed's dock folds down to its pill, and where it opens back up again.
+ *
+ * Two thresholds and not one. A single comparison flips on its own boundary pixel, so a
+ * finger parked exactly at [CollapseThreshold] — which is where a finger parked anywhere
+ * near the top of a feed ends up, a list settling a pixel either way under its own
+ * fling — strobes the dock between [RootFeedDockCollapsedWidth] and
+ * [RootFeedDockExpandedWidth] for as long as it rests there. The 20 dp between the two
+ * numbers below is the dead band that swallows that hover. It costs a deliberate scroll
+ * back to the top nothing: such a scroll passes both edges inside one gesture.
+ *
+ * [CollapseThreshold] is not ours alone. iOS spells the same 44 twice, at
+ * `ScheduledTaskHomeMetrics.rootDockCollapseThreshold` and
+ * `TodoTimelineMetrics.rootDockCollapseThreshold`, and web's root dock fold carries a third
+ * copy in `tday-web/src/lib/rootDockCollapse.ts`. Moving it here moves one client of
+ * three, and a dock that folds at three different distances is three docks.
+ */
+object RootFeedDockCollapse {
+
+    /** How far a feed has to travel before its dock gives up its labels. */
+    val CollapseThreshold: Dp = 44.dp
+
+    /** How far back up it has to come before the dock gets them back. */
+    val ExpandThreshold: Dp = 24.dp
+
+    /**
+     * The dock's next folded state, given the one it is already in.
+     *
+     * [previous] is what makes the dead band a dead band rather than a second threshold
+     * nobody reaches: it picks which edge is being tested. Any feed scrolled off its
+     * first item is past both edges by definition and collapses regardless — a lazy list
+     * reports the offset within the first visible item, not the distance travelled, so
+     * without that clause a long scroll reads as a small one.
+     */
+    fun next(
+        previous: Boolean,
+        firstVisibleItemIndex: Int,
+        scrollOffsetPx: Int,
+        collapsePx: Int,
+        expandPx: Int,
+    ): Boolean {
+        if (firstVisibleItemIndex > 0) return true
+        // Distance travelled, never a position: an offset above the top of the first
+        // item is zero travel. With both edges positive this changes no answer on its
+        // own — it is here so the comparisons below read as "how far has this feed
+        // come", which is the question, rather than as "where is its first item",
+        // which is not.
+        val offset = scrollOffsetPx.coerceAtLeast(0)
+        return if (previous) offset > expandPx else offset > collapsePx
+    }
+}
 
 /**
  * How long the dock stays open after a tap has opened it, for a user who has asked

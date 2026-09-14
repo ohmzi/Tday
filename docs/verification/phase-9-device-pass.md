@@ -644,6 +644,26 @@ animates.
               any point of the drag; the destination is simply drawn finished. A screen caught part
               way off the side, or one that scrubs and then cuts, is a fail.
 
+- [ ] **PR 184a · and · The dock folds once instead of flickering at the fold point** — both root
+      feeds (the scheduled home and the Anytime/list feed), each with enough tasks to scroll well
+      past the header.
+      Do:     scroll down slowly until the dock folds to its pill and hold the finger still there;
+              then lift, let the list settle under its own fling, and scroll back up in small
+              increments, watching where it opens.
+      Watch:  one crossing each way. It folds about 44 dp in and stays folded with a finger parked
+              at that distance, and while the list rocks a pixel either way as a fling settles. On
+              the way back up it opens about 20 dp higher than it folded, so the two events are
+              visibly at different heights rather than at the same one.
+      Fails:  the pill and the capsule alternating under a held finger, or on the last frames of a
+              fling — that is the single-threshold behaviour this row exists to catch; and, the
+              other way, a deliberate scroll all the way to the top arriving with the dock still
+              folded, which would mean the release edge sits too low to be reached.
+      Also:   a feed too short to scroll must never fold the dock, including while an overscroll
+              bounces it past the top — check with a list of one or two tasks. And scroll hard on
+              both feeds with a frame-rate overlay up: the fold point is read off the scroll
+              outside composition now, so a fling must not be costing the screen a recomposition
+              per frame.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on

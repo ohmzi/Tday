@@ -1674,7 +1674,8 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 
 ### PR 184 — dock collapse threshold hysteresis
 
-- [ ] `android:home-dock#10` — 10 · and · Sev 1 · S · Gate G
+- [x] `android:home-dock#10` — 10 · and · Sev 1 · S · Gate G
+  - the 44 now lives once on Android, at `RootFeedDockCollapse.CollapseThreshold` in `RootFeedDock.kt`; web's `rootDockCollapse.ts`, which landed on develop after this branch was cut, still cites the two retired `TodoListScreen.kt`/`ScheduledTaskHomeScreen.kt` line numbers and wants repointing at the merge
 
 ### PR 185 — fab accent crossfade
 
