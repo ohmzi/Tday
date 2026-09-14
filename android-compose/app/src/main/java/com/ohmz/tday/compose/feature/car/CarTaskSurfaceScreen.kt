@@ -66,6 +66,58 @@ import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 
+// What the car surface draws that the scale has no rung for. Everything below is either the
+// header's own geometry or one control's proportions, which move together or not at all.
+
+/** The band the title, the mode slider and the create button share across the top. */
+private val CarHeaderHeight = 82.dp
+
+/** How much of the title's line the slider and the create button claim back from it. */
+private val CarHeaderTitleEndInset = 150.dp
+
+// The mode slider. Its track corner is `TdayDimens.RadiusField` — a segmented track is exactly what
+// that rung names — and the rest of the control is that corner's geometry, not the scale's.
+
+/** Two tabs wide; the selector takes half. Not the dock's tab width, which measures one tab. */
+private val CarModeSliderWidth = 112.dp
+
+/** Android's minimum touch target, claimed as a height. The target, not the drawing. */
+private val CarModeSliderHeight = 48.dp
+
+/**
+ * The track's corner inset by the `SpacingXs` the track pads, so the selector sits concentric
+ * inside it. It follows the track's corner, not a radius step.
+ */
+private val CarModeSelectorRadius = 18.dp
+
+/** A hairline, so the selector's fill never lands on the track's own border. */
+private val CarModeSelectorInset = 1.dp
+
+/** The tab's glyph is its whole label, which is why it is drawn past `IconSm`. */
+private val CarModeIconSize = 22.dp
+
+// The task list and its rows.
+
+/** Between rows; 10 sits between `SpacingMd` and `SpacingLg`. */
+private val CarTaskListSpacing = 10.dp
+
+/** The tail under the last row. Nothing floats over this list, so it is not `BottomScrollSpacer`. */
+private val CarTaskListBottomSpacer = 16.dp
+
+/** Barely off the background — a row in a car is read at a glance, not picked up. */
+private val CarTaskRowElevation = 1.dp
+
+// One row's interior, named as a pair. The vertical half is `SpacingXl`'s value, but a pair is what
+// stops a later edit moving one half across a step and leaving the other behind.
+private val CarTaskRowHorizontalPadding = 16.dp
+private val CarTaskRowVerticalPadding = 14.dp
+
+/** The priority dot ahead of the title. */
+private val CarTaskPriorityDotSize = 10.dp
+
+/** The complete glyph closing a row, between `IconSm` and `IconMd`. */
+private val CarTaskCompleteIconSize = 24.dp
+
 @Composable
 fun CarTaskSurfaceScreen(
     uiState: CarTaskSurfaceState,
@@ -177,7 +229,7 @@ private fun CarTaskHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(82.dp),
+            .height(CarHeaderHeight),
     ) {
         Text(
             text = stringResource(mode.titleRes),
@@ -188,7 +240,7 @@ private fun CarTaskHeader(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .padding(end = 150.dp),
+                .padding(end = CarHeaderTitleEndInset),
         )
 
         CarModeSlider(
@@ -221,27 +273,27 @@ private fun CarModeSlider(
     } else {
         colorScheme.surface.copy(alpha = 0.96f)
     }
-    val shape = RoundedCornerShape(22.dp)
-    val selectorShape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(TdayDimens.RadiusField)
+    val selectorShape = RoundedCornerShape(CarModeSelectorRadius)
 
     BoxWithConstraints(
         modifier = modifier
-            .width(112.dp)
-            .height(48.dp)
+            .width(CarModeSliderWidth)
+            .height(CarModeSliderHeight)
             .clip(shape)
             .background(trackColor, shape)
             .border(
                 BorderStroke(
-                    1.dp,
+                    TdayDimens.BorderWidth,
                     colorScheme.onSurfaceVariant.copy(alpha = if (isDark) 0.12f else 0.10f)
                 ),
                 shape,
             )
-            .padding(4.dp),
+            .padding(TdayDimens.SpacingXs),
     ) {
         val tabWidth = maxWidth / 2
         val selectorOffset by animateDpAsState(
-            targetValue = if (mode == CarTaskMode.TODAY) 0.dp else tabWidth,
+            targetValue = if (mode == CarTaskMode.TODAY) TdayDimens.SpacingNone else tabWidth,
             animationSpec = spring(
                 dampingRatio = 0.86f,
                 stiffness = Spring.StiffnessMediumLow,
@@ -254,7 +306,7 @@ private fun CarModeSlider(
                 .width(tabWidth)
                 .fillMaxHeight()
                 .align(Alignment.CenterStart)
-                .padding(1.dp)
+                .padding(CarModeSelectorInset)
                 .clip(selectorShape)
                 .background(selectorColor, selectorShape)
         )
@@ -297,7 +349,7 @@ private fun CarModeButton(
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(CarModeIconSize),
         )
     }
 }
@@ -343,7 +395,7 @@ private fun CarTaskContent(
         else -> {
             LazyColumn(
                 modifier = modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(CarTaskListSpacing),
             ) {
                 items(uiState.items, key = { it.id }) { item ->
                     CarTaskRow(
@@ -352,7 +404,7 @@ private fun CarTaskContent(
                     )
                 }
                 item {
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(CarTaskListBottomSpacer))
                 }
             }
         }
@@ -366,24 +418,27 @@ private fun CarTaskRow(
 ) {
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(TdayDimens.RadiusSm),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(TdayDimens.BorderWidth, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = CarTaskRowElevation),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(
+                    horizontal = CarTaskRowHorizontalPadding,
+                    vertical = CarTaskRowVerticalPadding,
+                ),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
         ) {
             Box(
                 modifier = Modifier
-                    .size(10.dp)
+                    .size(CarTaskPriorityDotSize)
                     .clip(CircleShape)
                     .background(tdayPriorityColor(item.priority)),
             )
@@ -411,7 +466,7 @@ private fun CarTaskRow(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
                 contentDescription = stringResource(R.string.car_complete_dialog_confirm),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(CarTaskCompleteIconSize),
             )
         }
     }

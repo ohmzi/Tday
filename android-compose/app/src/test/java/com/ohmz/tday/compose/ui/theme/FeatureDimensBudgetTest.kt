@@ -38,6 +38,16 @@ import org.junit.Test
  * layouts it replaces have to agree with `res/values/dimens.xml`, which `WidgetCornerRadiusTest`
  * already pins, and `TdayDimens` is not the layer that owns them. TODO(43n): that unit decides
  * whether the exemption is permanent or whether the widget gets a scale of its own.
+ *
+ * Two files are carved back out of it by name. `WidgetListConfigurationActivity.kt` and
+ * `WidgetCreateTaskActivity.kt` live in that directory because they belong to a widget's plumbing —
+ * one configures an instance, the other is the "+" it opens — but each renders Material into an
+ * Activity of our own, the picker in the first and in the second the create sheet
+ * `ShareReceiverActivity` also presents. Nothing about either is composited by a launcher, so the
+ * reason the exemption exists does not reach them, and a directory is the wrong shape for an
+ * argument about what draws the pixels. Carving them back in by name says that; widening the
+ * exemption to cover them would have said the opposite. They are the whole set, not the two noticed
+ * so far: every other file under `widget/` paints through Glance or nothing at all.
  */
 class FeatureDimensBudgetTest {
 
@@ -97,12 +107,12 @@ class FeatureDimensBudgetTest {
         )
     }
 
-    /** Every `.kt` under `feature/` except the exempt subtree, keyed by its path below `feature/`. */
+    /** Every `.kt` under `feature/` except the exempt ones, keyed by its path below `feature/`. */
     private fun featureSources(): Map<String, File> =
         featureDir.walkTopDown()
-            .onEnter { it.relativeTo(featureDir).invariantSeparatorsPath != EXEMPT_SUBTREE }
             .filter { it.isFile && it.extension == "kt" }
             .associateBy { it.relativeTo(featureDir).invariantSeparatorsPath }
+            .filterKeys { !it.startsWith("$EXEMPT_SUBTREE/") || it in EXEMPT_SUBTREE_CARVE_INS }
 
     /** The counting rule in the class KDoc, in the order it is written there. */
     private fun anonymousDpCount(file: File): Int =
@@ -126,6 +136,12 @@ class FeatureDimensBudgetTest {
         /** Relative to `featureDir`. See "The widget exemption" above. */
         const val EXEMPT_SUBTREE = "widget"
 
+        /** The files inside it that the exemption's reason does not reach. Same heading. */
+        val EXEMPT_SUBTREE_CARVE_INS = setOf(
+            "widget/WidgetListConfigurationActivity.kt",
+            "widget/WidgetCreateTaskActivity.kt",
+        )
+
         val BLOCK_COMMENT = Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL)
         val LINE_COMMENT = Regex("""//.*""")
         val NAMED_PRIVATE_DP = Regex("""^\s*private (const )?val \w+(\s*:\s*Dp)?\s*=\s*[0-9.]+\.dp""")
@@ -138,10 +154,6 @@ class FeatureDimensBudgetTest {
          */
         val CEILINGS: Map<String, Int> = mapOf(
             "todos/TodoListScreen.kt" to 182,
-            "car/CarTaskSurfaceScreen.kt" to 21,
-            "sweep/MorningSweepScreen.kt" to 16,
-            "lock/AppLock.kt" to 3,
-            "guide/GuideHelpLink.kt" to 2,
             "auth/ForgotPasswordPanel.kt" to 0,
             "app/UpdateRequiredOverlay.kt" to 0,
             "app/PendingApprovalOverlay.kt" to 0,
@@ -156,6 +168,10 @@ class FeatureDimensBudgetTest {
             "calendar/CalendarScreen.kt" to 0,
             "scheduledtaskhome/ScheduledTaskHomeScreen.kt" to 0,
             "onboarding/OnboardingWizardOverlay.kt" to 0,
+            "car/CarTaskSurfaceScreen.kt" to 0,
+            "sweep/MorningSweepScreen.kt" to 0,
+            "lock/AppLock.kt" to 0,
+            "guide/GuideHelpLink.kt" to 0,
         )
     }
 }
