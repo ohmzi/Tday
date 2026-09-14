@@ -192,6 +192,39 @@ describe("reduced motion D — one module owns the iOS accessibility read", () =
     expect(swiftFiles(IOS_SRC).length, "iOS .swift files").toBeGreaterThan(80);
   });
 
+  /**
+   * Both places the gate is installed, because one of them is not obvious and the
+   * rule above cannot see either.
+   *
+   * `AppRootView` reads `\.tdayAnimation` as its own property while applying
+   * `tdayAppTheme` — which carries the provider — to its own body, and a property
+   * wrapper resolves against the environment the view was *placed* in. So a
+   * provider a view installs reaches its children and never itself: every
+   * descendant was live and the three animations nearest the root ran on the
+   * accessor's fallback, which is right at first draw and silent about the flip.
+   * `TdayApp`'s scene is the one place that cannot be got wrong that way, and the
+   * theme keeps its own copy for `AppLockWindowHost`'s separate window, which
+   * inherits nothing from the scene.
+   *
+   * What this can see is the call going missing from either file. What it cannot
+   * see is the call being applied to the wrong thing inside one — that is the
+   * device row's half (`docs/verification/phase-8-device-pass.md`, PR 35a).
+   */
+  it("installs the gate above the root view and again for the lock window", () => {
+    const installs = (file: string) =>
+      /\.tdayResolvedMotion\(\)/.test(stripSwiftComments(readFileSync(file, "utf-8")));
+    expect(
+      installs(path.join(IOS_SRC, "TdayApp.swift")),
+      "TdayApp's scene must install .tdayResolvedMotion() ABOVE AppRootView — a provider " +
+        "AppRootView installs on its own body never reaches AppRootView's own @Environment",
+    ).toBe(true);
+    expect(
+      installs(path.join(IOS_SRC, "UI", "Theme", "TdayTheme.swift")),
+      "tdayAppTheme must keep its .tdayResolvedMotion() — AppLockWindowHost renders into a " +
+        "separate window and inherits nothing from the scene",
+    ).toBe(true);
+  });
+
   it("nothing outside it reads the accessibility setting for itself", () => {
     const offenders: string[] = [];
     for (const file of swiftFiles(IOS_SRC)) {

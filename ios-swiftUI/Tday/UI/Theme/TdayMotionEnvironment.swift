@@ -106,12 +106,17 @@ extension View {
 
     /// Installs the motion gate for this subtree.
     ///
-    /// Applied inside `tdayAppTheme`, which is the one wrapper both of the app's window
-    /// roots already go through — the main hierarchy and `AppLockWindowHost`'s separate
-    /// window, which re-applies the theme for the same reason it would have to re-apply
-    /// this. One read for the whole app, in the place the app already accepted as the
-    /// place a root decision is made, is the same call `ProvideTdayMotionScale` makes
-    /// inside Android's `TdayTheme`.
+    /// Applied in two places, and the second is not a duplicate of the first.
+    /// `tdayAppTheme` carries it because that is the one wrapper both window roots go
+    /// through — the main hierarchy and `AppLockWindowHost`'s separate window, which
+    /// re-applies the theme for the same reason it would have to re-apply this; the same
+    /// call `ProvideTdayMotionScale` makes inside Android's `TdayTheme`. But
+    /// `AppRootView` applies that theme to its *own body*, and a view's `@Environment`
+    /// resolves against the environment the view was placed in — so the theme's copy
+    /// reaches every descendant of `AppRootView` and none of `AppRootView`'s own
+    /// properties. `TdayApp`'s scene root installs it above the root view for exactly
+    /// that gap: it is what puts the tab hand-over, the dock and the onboarding blur on
+    /// the live answer rather than on the accessor's fallback below.
     func tdayResolvedMotion() -> some View {
         modifier(TdayResolvedMotionModifier())
     }
