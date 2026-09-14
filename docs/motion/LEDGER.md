@@ -1266,7 +1266,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 43b — the missing `TdayDimens` steps and the lint that holds them
 
-- ↳ part 2 of 3 of `dimension-radius-token-adoption` — 3 missing `TdayDimens` steps + lint forbidding new raw `.dp` under `feature/`. Box lives under **PR 43c…43n**.
+- ↳ part 2 of 3 of `dimension-radius-token-adoption` — `RadiusRow` (16), `RadiusField` (22) and `RadiusCard` (26), the three values the corpus actually carries and the scale had no step for, plus `FeatureDimensBudgetTest` — a per-file ceiling under `feature/` that only moves down, and a hard zero for any file not in it. Two corrections to this row as it was written: the radius scale is not merely under-used, `RadiusSm`/`Md`/`Lg`/`Xl`/`Full` have **zero** call sites outside `Dimens.kt` and `RadiusSheet` has two, against 99 raw `RoundedCornerShape(<n>.dp)`; and the lint counts **anonymous** `.dp`, not raw ones — `docs/CODING_STANDARDS.md` permits a named private `Dp` constant for local geometry and 50 of them exist under `feature/` today, so a rule that failed those would contradict the standard it enforces. Seeded at 845 across 19 files by running the rule, not by transcription; `feature/widget/` is exempt because its dp are RemoteViews metrics pinned by `WidgetCornerRadiusTest` against `res/values/dimens.xml`, with a TODO naming 43n as the unit that decides whether that is permanent. No call site migrates here — the box still lives under **PR 43c…43n** and is not ticked here.
 
 ### PR 43c…43n — one screen file per session, behind the lint
 

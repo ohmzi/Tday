@@ -21,11 +21,19 @@ object TdayDimens {
     val ContentPaddingHorizontal: Dp = 18.dp
     val ContentPaddingVertical: Dp = 14.dp
 
-    // Corner radii
+    // Corner radii. The Sm…Full steps say how round something is; the named rungs wedged between
+    // them say what is round, because 16, 18, 22 and 26 are four steps no eye separates in
+    // isolation and a call site that picks one by size picks a different one next time.
     val RadiusSm: Dp = 8.dp
     val RadiusMd: Dp = 14.dp
+    /** Rows and cells inside a scrolling list or a grid: feed rows, calendar days, the toast. */
+    val RadiusRow: Dp = 16.dp
     val RadiusLg: Dp = 18.dp
+    /** What a finger aims at in a form: text fields, filled buttons, chips, segmented tracks. */
+    val RadiusField: Dp = 22.dp
     val RadiusXl: Dp = 24.dp
+    /** The card a section is drawn on — the tiles that group rows, never the rows themselves. */
+    val RadiusCard: Dp = 26.dp
     val RadiusSheet: Dp = 34.dp
     val RadiusFull: Dp = 999.dp
 
