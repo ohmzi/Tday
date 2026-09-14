@@ -62,8 +62,10 @@ import androidx.compose.ui.unit.sp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.TdayPress
 import com.ohmz.tday.compose.core.ui.interactiveTimeoutMillis
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayRootFeedAccent
@@ -137,7 +139,14 @@ fun RootCreateTaskButton(
     val view = LocalView.current
 
     Card(
-        modifier = modifier,
+        // The press goes on the END of the incoming modifier, not in front of
+        // it. Both callers put the button where it lives from the outside —
+        // `.align()`, `.navigationBarsPadding()`, `.padding()` here and
+        // `.align().size()` on the car surface — and those have to stay
+        // outermost, so that the offset and the squash move the drawn circle
+        // inside a layout slot that does not budge. Put them first and a press
+        // shifts the slot instead, which drags the navigation-bar inset with it.
+        modifier = modifier.tdayPressable(interactionSource, scale = TdayPress.FabScale),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -290,7 +299,7 @@ fun RootFeedDock(
             )
             val activePressed = pressedStates.getOrNull(activeIndex)?.value == true
             val selectorScale by animateFloatAsState(
-                targetValue = if (activePressed) 0.985f else 1f,
+                targetValue = if (activePressed) TdayMotionTokens.PressScales.Row else 1f,
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioNoBouncy,
                     stiffness = Spring.StiffnessMediumLow,
@@ -399,8 +408,23 @@ fun RootFeedDock(
                     ),
                     label = "rootFeedDockTabAlpha",
                 )
+                // On `Row` rather than on the 0.98 this used to write, and it is
+                // allowed on a token despite being multiplied into the two
+                // `graphicsLayer` blocks below. `docs/motion.md` excludes a press
+                // factor that is one term of a composed transform, because there
+                // the token would name half of what a finger sees. The narrow
+                // reason it does not apply here: the dock settles at
+                // `expansionProgress` 0 or 1 and nowhere else, and at both of those
+                // the factor on whichever of the two is visible is exactly 1 — the
+                // icon's `1 - 0.08 * expansionProgress` at 0, where the icon is the
+                // opaque one, and the label's `0.94 + 0.06 * textAlpha` at 1, where
+                // the label is. In between, the other factor does leave 1, but that
+                // is the expansion running, and the expansion is a transient that
+                // fades the thing it is scaling. A press is measured against a
+                // settled tab, and a settled tab squashes by this number and
+                // nothing else.
                 val contentScale by animateFloatAsState(
-                    targetValue = if (tabPressed) 0.98f else 1f,
+                    targetValue = if (tabPressed) TdayMotionTokens.PressScales.Row else 1f,
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioNoBouncy,
                         stiffness = Spring.StiffnessMediumLow,
