@@ -229,7 +229,19 @@ Restore it from git history rather than adjusting the number.
 - [ ] *infra* — `tests/guardrails/motion-exit-animations.test.ts` (5 rules) **+ 4 fixes** · web · S · Gate G
 - ↳ part 1 of 2 of `web-dead-motion-code` — delete `.animate-scroll-left` (`globals.css:300`) + `.animate-task-complete` (`:529`). Box lives under **PR 18**.
 - [x] `web-centered-selector-has-no-exit` — Radix unmounts overlay + card on the same frame · web · Sev 3 · XS · Gate G
-- [ ] `web-sheet-overlay-outruns-panel` — overlay has no duration → 0.15 s fallback vs panel's 300/500 ms · web · Sev 2 · XS · Gate G
+- [x] `web-sheet-overlay-outruns-panel` — overlay has no duration → 0.15 s fallback vs the panel's Emphasis-in/Enter-out · web · Sev 2 · XS · Gate G
+  - Row text corrected: it said "panel's 300/500 ms", which **PR 41a** retired. 41a put the panel on
+    `Emphasis`-in/`Enter`-out and left the scrim on the library fallback, so the gap narrowed from
+    350/150 ms to 170/50 ms and stayed the same defect. The scrim takes the panel's own two rungs
+    rather than a pair of its own — it is that panel's backdrop, not a surface someone watches. That
+    is the one place this declines the ladder's `Quick`-on-the-way-out reading, and declines what the
+    native sheets do: `TdaySheetMotion.scrimOut()` is `Enter` against a card exiting on `Change`, so
+    their scrim may leave first; this panel exits on `Enter` too, so a `Quick` scrim would hand the
+    page back bright with the panel still crossing it. Both rungs are named utilities, so
+    `web.durationUtility` does not move — the ceiling stays at the 47 41a lowered it to. This closes
+    the sheet's own web leg, not the row above it: `dialog.tsx:21` is still a bare
+    `animate-in`/`animate-out` scrim on that same 0.15 s fallback, 50 ms short of the `duration-enter`
+    its own card names at `:44`, so **PR 41c** still inherits one untimed scrim on web.
 - [x] *new, not one of the 109* — `InstallPromptBanner.tsx:8` — `return null` against `animate-in slide-in-from-bottom-4` at `:14` · web · Sev 2 · XS · Gate G
 
 ### PR G8 — pbxproj registration and the zero-test assertion
