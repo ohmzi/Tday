@@ -107,7 +107,7 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   named rather than numeric for that reason, and a `duration:` grep now finds
   none of the nine.
   Anchors: `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:60`,
-  `ios-swiftUI/Tday/Feature/App/AppRootView.swift:145`,
+  `ios-swiftUI/Tday/Feature/App/AppRootView.swift:165`,
   `tday-web/src/globals.css:146`.
 - **`Enter` (200).** 52 web `duration-200` utilities and 7 iOS sites (5 in the
   app, 2 in the widget extension); **zero** on Android at the census. The first
