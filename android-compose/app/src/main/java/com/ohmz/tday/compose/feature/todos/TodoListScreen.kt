@@ -190,6 +190,7 @@ import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
@@ -1298,9 +1299,12 @@ fun TodoListScreen( // skipcq: KT-R1006
     var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var createListIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     val fabInteractionSource = remember { MutableInteractionSource() }
-    val editTargetTodo = remember(editTargetTodoId, uiState.items) {
-        editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
-    }
+    val editTargetTodo = rememberEditSheetTarget(
+        id = editTargetTodoId,
+        current = remember(editTargetTodoId, uiState.items) {
+            editTargetTodoId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
+        },
+    )
     val draggedScheduledTodo =
         remember(draggedScheduledTodoId, uiState.items, uiState.earlierItems) {
             draggedTimelineTodo(
@@ -2413,12 +2417,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                     onCreateTaskFlowFinished()
                 }
             },
-            onCreateTask = { payload ->
-                onAddTask(payload)
-                showCreateTaskSheet = false
-                quickAddDueEpochMs = null
-                onCreateTaskFlowFinished()
-            },
+            onCreateTask = onAddTask,
         )
     }
 
@@ -2519,10 +2518,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             onParseTaskTitleNlp = if (uiState.mode == TodoListMode.FLOATER) null else onParseTaskTitleNlp,
             onDismiss = { editTargetTodoId = null },
             onCreateTask = { _ -> },
-            onUpdateTask = { target, payload ->
-                onUpdateTask(target, payload)
-                editTargetTodoId = null
-            },
+            onUpdateTask = onUpdateTask,
         )
     }
 

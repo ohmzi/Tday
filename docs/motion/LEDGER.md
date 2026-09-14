@@ -393,14 +393,17 @@ Restore it from git history rather than adjusting the number.
     seven in screens; `WidgetCreateTaskActivity.kt:171` is an eighth the row does not count (its host
     is an Activity, not a composition flag) and it is carried by the same change, as is the create-LIST
     sheet named alongside it in `RULE_B_PENDING_FIX`, now empty.
-  - Still cutting after this, and not part of this row: the CONFIRM path. Tapping Create or Save runs
-    the caller's `onCreateTask`/`onUpdateTask`, and every one of them clears the composition flag on
-    the same frame — `CalendarScreen.kt:874` and `:926`, `ScheduledTaskHomeScreen.kt:818`, `:847` and
-    `:868` (create-list), `TodoListScreen.kt:2391` and `:2497`, `CompletedScreen.kt:456`. This row's
-    text is `sheetVisible` never set false, which is what was fixed; but confirming is the commonest
-    way a user leaves this sheet, so the sheet still cuts more often than it slides. It belongs to
-    **PR 41b / `sheet-presentation-unification`**, which unifies the sheet chrome and is the place to
-    route submit through `startDismiss` as well.
+  - Still cutting after this, and not part of this row: the CONFIRM path. Tapping Create or Save ran
+    the caller's `onCreateTask`/`onUpdateTask`, and every one of them cleared the composition flag on
+    the same frame — the create and edit lambdas in `CalendarScreen`, `ScheduledTaskHomeScreen`
+    (including the create-LIST sheet's `onCreate`), `TodoListScreen` and `CompletedScreen`. This
+    row's text is `sheetVisible` never set false, which is what was fixed; but confirming is the
+    commonest way a user leaves this sheet, so the sheet still cut more often than it slid. It
+    belonged to **PR 41b / `sheet-presentation-unification`**, which unifies the sheet chrome and is
+    the place to route submit through `startDismiss` as well.
+    **Discharged there** — see the confirm-path sub-bullet under **PR 41b**. The eight call sites
+    named above are line-less here on purpose: PR 41b deleted the lines, so a reader chasing a
+    number would be chasing a frame of the tree that no longer exists.
 - [x] `and-sheet-scrim-ripple-on-dismiss` — full-screen Material ripple on a dismiss tap · and · Sev 2 · XS · Gate D
 
 ### PR 15b — the create sheet’s IME height stops leaping
@@ -1170,6 +1173,60 @@ Restore it from git history rather than adjusting the number.
 ### PR 41b — the Android sheet language
 
 - ↳ part 2 of 3 of `sheet-presentation-unification` — `TdaySheetMotion` from iOS's 4 specs (card exit 320 → `Change`, both directions off `Standard`); the scrim fades with its card instead of with the `Dialog` window; both create-sheet constants retired; `TdayModalBottomSheet` named as the other mechanism. Also carries PR 15a's deferred confirm cut, per the note under **PR 15a**. Box lives under **PR 41c**.
+  - **PR 15a's deferred confirm cut is discharged.** `submitTask()` OPENS on
+    `sheetDismiss.start()` and returns if the exit was already claimed. The eight confirm lambdas
+    stop clearing the flag that composes the `Dialog`: teardown belongs to `onDismiss` alone, which
+    is the end of the exit, so the commonest way out of this sheet now leaves the same way the X
+    does. The create-LIST sheet's `onCreate` goes the same way, and its draft reset moves to the
+    host's `onDismiss` behind a `listCreated` flag, because blanking the name on the frame of the tap
+    is now something the user watches happen: the field empties and Create greys out under their
+    finger while the card is still sliding. A dismissal that created nothing keeps its draft, as
+    before.
+  - **The claim comes first because the payload must be refusable a second time.** Putting the
+    confirm inside the slide is what makes the card readable on the way out, and it leaves Create
+    lit and hit-testable for the whole 260 ms — deliberately, since greying a control the user is
+    still looking at would be them watching it go dead under their finger. So `start()` answers now:
+    true to the tap that claimed the exit, false to every one after it, and the confirm drops the
+    tap it cannot claim. Without that a second tap mid-slide hands the caller a second payload, and
+    `createTodo` mints a fresh local id per call — a duplicate task, queued as its own create and
+    synced to every device. The old shape was immune to this only by accident, because the host tore
+    the composition down on the frame of the tap. The same answer closes the older half of the same
+    window, from PR 15a: after the X is tapped, Create used to stay live for the length of the exit
+    and could still create the task the user had just cancelled.
+  - **Two things had to move that the deferral did not name, and both are the same defect one level
+    up.** The edit hosts resolve their target by looking an id up in the feed they are showing and
+    compose the sheet inside `target?.let { … }`; that was safe only while the confirm tore the sheet
+    down on the frame of the tap. Saving an edit that moves the task out of the feed underneath it —
+    a due date pushed off today, a list changed — drops the row while the card is still sliding and
+    the `let` stops composing, so the host cuts the sheet in place of the callback. `rememberEditSheetTarget`
+    retains the row the sheet was opened on until the id itself goes null, which is the host's own
+    teardown. And the widget create surface is an Activity, not a flag: its submit used to `finish()`
+    in a `finally`, which would now cut the slide, while exiting on the slide alone would have
+    cancelled a composition-scoped write and lost the task. So the write stops being
+    composition-scoped — `WidgetCreateTaskSubmitter.submitDetached` runs it on the singleton's own
+    process-lifetime scope, the way `WidgetRefresher` already runs its renders — and the card is the
+    only clock that ends the activity. Holding the window for the write instead was the first shape
+    tried, and it is worse than it sounds: `createTodo` does its local write and its widget repaint
+    first and then AWAITS a forced sync, so the user got the slide and then a fully transparent,
+    touch-swallowing window standing over their own home screen for as long as a connection probe
+    takes, with the new task already painted into the widget behind it. Nothing is lost by letting
+    the window go: the local write and its replayable `CREATE_TODO` mutation are committed within a
+    frame or two of the tap, and a sync cut short is the case pending-mutation replay exists for.
+  - **`dismissEnabled` is gone rather than bypassed.** It existed so the widget could refuse a
+    dismissal while a submit was in flight, because its own `finish()` could drop one that the sheet
+    had already latched. That host leaves with the card now, so there is nothing left to refuse — and
+    the veto could never have covered a confirm anyway: `submitTask` reaches `start()` inside the
+    same click that sets the host's flag, a frame before the refusal composes. A first confirm is
+    not a gesture a host is entitled to refuse; the user has committed. A repeat confirm of a sheet
+    that is already leaving is a different gesture, and the sheet refuses that one itself.
+  - No literal is added or retired, so all eight budget counters are untouched. `RULE_B_PENDING_FIX`
+    stays empty. The unit test is on `SheetDismissState` itself and pins two things the endpoints do
+    not show: the gap the defect lives in — `dismissing` true while `gone` is still false — and the
+    latch, by asserting on what `start()` ANSWERS, since a latch that did nothing would leave the
+    same `dismissing` and the same `targetState` behind as one that works. It cannot see the wiring
+    it exists for: there is no Compose test runtime on this module's JVM classpath, so that the
+    confirm opens on `start()` and drops the tap it is refused, and that no host still clears its own
+    flag, are read — and carry a device row.
 
 ### PR 41c — the iOS sheet language and drag-to-dismiss
 

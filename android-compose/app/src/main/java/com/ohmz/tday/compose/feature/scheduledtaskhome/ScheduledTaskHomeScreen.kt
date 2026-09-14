@@ -155,6 +155,7 @@ import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.rememberSheetDismissState
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
@@ -267,13 +268,17 @@ fun ScheduledTaskHomeScreen(
     var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
     var lastHandledCreateTaskRequestKey by rememberSaveable { mutableIntStateOf(0) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
-    val editTargetTodo = remember(editTargetTodoId, uiState.todayTodos) {
-        editTargetTodoId?.let { id -> uiState.todayTodos.firstOrNull { it.id == id } }
-    }
+    val editTargetTodo = rememberEditSheetTarget(
+        id = editTargetTodoId,
+        current = remember(editTargetTodoId, uiState.todayTodos) {
+            editTargetTodoId?.let { id -> uiState.todayTodos.firstOrNull { it.id == id } }
+        },
+    )
     var listName by rememberSaveable { mutableStateOf("") }
     var listColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var listIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
+    var listCreated by rememberSaveable { mutableStateOf(false) }
     var searchResultOpening by rememberSaveable { mutableStateOf(false) }
     val searchResultScope = rememberCoroutineScope()
     val closeSearch = {
@@ -830,10 +835,7 @@ fun ScheduledTaskHomeScreen(
             onParseTaskTitleNlp = onParseTaskTitleNlp,
             onSuggestRepeat = onSuggestRepeat,
             onDismiss = { showCreateTask = false },
-            onCreateTask = { payload ->
-                onCreateTask(payload)
-                showCreateTask = false
-            },
+            onCreateTask = onCreateTask,
         )
     }
 
@@ -859,10 +861,7 @@ fun ScheduledTaskHomeScreen(
             onParseTaskTitleNlp = onParseTaskTitleNlp,
             onDismiss = { editTargetTodoId = null },
             onCreateTask = { _ -> },
-            onUpdateTask = { target, payload ->
-                onUpdateTask(target, payload)
-                editTargetTodoId = null
-            },
+            onUpdateTask = onUpdateTask,
         )
     }
 
@@ -874,15 +873,26 @@ fun ScheduledTaskHomeScreen(
             onListColorChange = { listColor = it },
             listIconKey = listIconKey,
             onListIconChange = { listIconKey = it },
-            onDismiss = { showCreateList = false },
+            // The draft is cleared here and not in `onCreate`, and only when a list was
+            // actually made. The sheet is still on screen for the length of its exit now,
+            // so blanking the name at the moment of the tap would be watched: the field
+            // empties and the Create control greys out under the user's finger while the
+            // card is still sliding. Dismissing without creating keeps the draft, as it
+            // always has.
+            onDismiss = {
+                showCreateList = false
+                if (listCreated) {
+                    listName = ""
+                    listColor = TDAY_DEFAULT_LIST_COLOR_KEY
+                    listIconKey = TDAY_DEFAULT_LIST_ICON_KEY
+                    listCreated = false
+                }
+            },
             onCreate = {
                 val normalizedName = capitalizeFirstListLetter(listName).trim()
                 if (normalizedName.isNotBlank()) {
                     onCreateList(normalizedName, listColor, listIconKey)
-                    listName = ""
-                    listColor = TDAY_DEFAULT_LIST_COLOR_KEY
-                    listIconKey = TDAY_DEFAULT_LIST_ICON_KEY
-                    showCreateList = false
+                    listCreated = true
                 }
             },
         )
@@ -1022,7 +1032,9 @@ private fun CreateListBottomSheet(
             onDismiss()
         },
     )
-    val startDismiss = { sheetDismiss.start() }
+    // Typed `() -> Unit` so the dismiss affordances can discard the answer; only the
+    // confirm below has anything to do with it.
+    val startDismiss: () -> Unit = { sheetDismiss.start() }
     val colorScheme = MaterialTheme.colorScheme
     val selectedAccent = tdayListAccentColor(listColor)
     val canCreate = listName.isNotBlank()
@@ -1128,9 +1140,19 @@ private fun CreateListBottomSheet(
                                 leftContentDescription = stringResource(R.string.action_close),
                                 onLeftClick = startDismiss,
                                 confirmContentDescription = stringResource(R.string.action_create_list),
+                            // Confirm leaves the same way the X does, and the keyboard
+                            // goes with the caller's onDismiss at the end of that — see
+                            // where `sheetDismiss` is built for why it cannot go first.
+                            //
+                            // The exit is claimed BEFORE `onCreate`, and the list is made
+                            // only if this tap is the one that claimed it. The card is
+                            // still on screen and still hit-testable for the whole slide,
+                            // so a second tap on a Create that is deliberately left lit
+                            // would make a second list of the same name.
                             onConfirm = {
-                                dismissKeyboard()
-                                if (canCreate) onCreate()
+                                if (canCreate && sheetDismiss.start()) {
+                                    onCreate()
+                                }
                             },
                             confirmEnabled = canCreate,
                         )

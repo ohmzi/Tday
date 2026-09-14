@@ -94,6 +94,7 @@ import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
@@ -220,9 +221,12 @@ fun CompletedScreen(
     }
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
-    val editTarget = remember(editTargetId, uiState.items) {
-        editTargetId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
-    }
+    val editTarget = rememberEditSheetTarget(
+        id = editTargetId,
+        current = remember(editTargetId, uiState.items) {
+            editTargetId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
+        },
+    )
     LaunchedEffect(uiState.items, openSwipeTaskId) {
         val openId = openSwipeTaskId ?: return@LaunchedEffect
         if (uiState.items.none { it.id == openId }) {
@@ -479,10 +483,7 @@ fun CompletedScreen(
             showScheduleControls = !completed.isFloater,
             onDismiss = { editTargetId = null },
             onCreateTask = { _ -> },
-            onUpdateTask = { _, payload ->
-                onUpdateTask(completed, payload)
-                editTargetId = null
-            },
+            onUpdateTask = { _, payload -> onUpdateTask(completed, payload) },
         )
     }
 }

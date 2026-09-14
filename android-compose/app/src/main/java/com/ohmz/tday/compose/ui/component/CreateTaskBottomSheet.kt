@@ -187,11 +187,24 @@ internal class SheetDismissState(internal val transition: MutableTransitionState
     val gone: Boolean
         get() = dismissing && transition.isIdle && !transition.currentState
 
-    /** Start the exit. Repeat taps during the slide out are ignored, not queued. */
-    fun start() {
-        if (dismissing) return
+    /**
+     * Start the exit, and answer whether this call is the one that started it.
+     *
+     * Repeat taps during the slide out are ignored rather than queued, and the answer is
+     * what a *confirm* reads to know it is a repeat. A dismiss affordance can discard it:
+     * the second tap on the X wants what the first tap already asked for. A confirm cannot,
+     * because it hands a payload over on its way out. The card stays composed and
+     * hit-testable for the whole exit — that is the point of this class — and the exit
+     * accelerates, so a second tap a few frames later still lands on a Create button that
+     * has barely moved. Let it through and the caller mints a second task from a second
+     * payload, which is the duplicate the old shape was immune to only because the host
+     * tore the composition down on the frame of the tap.
+     */
+    fun start(): Boolean {
+        if (dismissing) return false
         dismissing = true
         transition.targetState = false
+        return true
     }
 }
 
@@ -216,6 +229,37 @@ internal fun rememberSheetDismissState(
     return state
 }
 
+/**
+ * The row an edit sheet is editing, held for as long as the sheet is on screen.
+ *
+ * Every host of the edit sheet keeps the *id* — it survives process death, the row does not
+ * — looks it up in the feed it is currently showing, and composes the sheet inside
+ * `target?.let { … }`. That was sound while confirming tore the sheet down on the frame of
+ * the tap. It stops being sound now that the sheet outlives the confirm by its exit: saving
+ * an edit that moves the task out of the feed underneath it — a due date pushed off today
+ * on the Today feed, a list changed on a list feed — drops the row from the state while the
+ * card is still sliding, the `let` stops composing, and the sheet is cut by its host
+ * instead of by its own callback. The same defect one level up, and reachable only by the
+ * change that fixed the first one.
+ *
+ * So the lookup is answered once and retained: the card keeps drawing the row it was opened
+ * on until [id] itself goes null, which is the host's teardown at the end of the exit.
+ * Retained in a plain holder rather than in snapshot state, because nothing should
+ * recompose when it is written — the recomposition doing the writing is the one the feed
+ * change already caused.
+ */
+@Composable
+internal fun <T : Any> rememberEditSheetTarget(id: Any?, current: T?): T? {
+    val holder = remember(id) { EditSheetTargetHolder<T>() }
+    if (id == null) return null
+    if (current != null) holder.value = current
+    return holder.value
+}
+
+private class EditSheetTargetHolder<T : Any> {
+    var value: T? = null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateTaskBottomSheet(
@@ -229,7 +273,6 @@ fun CreateTaskBottomSheet(
     initialTitle: String? = null,
     initialNotes: String? = null,
     presentImmediately: Boolean = false,
-    dismissEnabled: Boolean = true,
     onParseTaskTitleNlp: (suspend (
         title: String,
         referenceDueEpochMs: Long,
@@ -371,8 +414,9 @@ fun CreateTaskBottomSheet(
     var dueDatePickerOpen by rememberSaveable { mutableStateOf(false) }
     var dueTimePickerOpen by rememberSaveable { mutableStateOf(false) }
     // Every way out of this sheet goes through `startDismiss`: the scrim, the close
-    // button, the host Dialog's back press and outside tap, and so — one step later — each
-    // caller's own onDismiss. See [SheetDismissState] for why it is two steps.
+    // button, the host Dialog's back press and outside tap, the Create/Save confirm, and
+    // so — one step later — each caller's own onDismiss. See [SheetDismissState] for why
+    // it is two steps.
     //
     // The keyboard leaves with the caller's onDismiss, at the END of the exit, and not at
     // the start of it. Hiding it first collapses `WindowInsets.ime` while the slide is
@@ -390,14 +434,18 @@ fun CreateTaskBottomSheet(
             onDismiss()
         },
     )
-    // [dismissEnabled] is the host's veto — the widget create surface withdraws it while a
-    // submit is in flight. A refused gesture must not reach `start()`, because `start()`
-    // latches: a dismissal that the sheet accepts and the host then drops can never be
-    // retried, and it leaves the user looking at a bare full-screen scrim with no sheet in
-    // it. Refusing the gesture keeps the sheet on screen and every later tap a fresh try.
-    val startDismiss = {
-        if (dismissEnabled) sheetDismiss.start()
-    }
+    // No host gets a veto over this. The widget create surface used to hold one, because
+    // its submit finished the Activity out from under a dismissal the sheet had already
+    // accepted — and `start()` latches, so a dropped dismissal can never be retried and
+    // leaves a bare scrim with no sheet in it. That host gates its teardown on the exit
+    // now, so there is nothing left to refuse. A veto would not have reached the confirm
+    // in any case: `submitTask` gets to `start()` inside the same click that sets the
+    // host's flag, a frame before the refusal composes. And a confirm is not a gesture a
+    // host is entitled to refuse — the user has committed, so the sheet has to leave.
+    //
+    // Typed `() -> Unit` so the three dismiss affordances can go on discarding the answer.
+    // Only the confirm has anything to do with it; see `submitTask`.
+    val startDismiss: () -> Unit = { sheetDismiss.start() }
 
     val noListLabel = stringResource(R.string.create_task_no_list)
     val priorityOptions = remember { PRIORITY_OPTIONS_LOW_TO_HIGH }
@@ -500,6 +548,26 @@ fun CreateTaskBottomSheet(
     }
 
     fun submitTask() {
+        // Claim the exit first, and drop the confirm if it was already claimed.
+        //
+        // Confirming leaves the sheet the same way the X does. It was the one way out that
+        // still cut: every host cleared the flag that composes the `Dialog` inside its own
+        // `onCreateTask`/`onUpdateTask`, on the frame of the tap, so the exit spec played
+        // over a composition that had already gone. The hosts hand that teardown to
+        // `onDismiss` instead, which is the end of the exit.
+        //
+        // Which puts the payload inside the slide rather than before it, and that is why
+        // this is the first line of the function and not the last. The card is still under
+        // the finger for the whole 260 ms — that is what makes it readable on the way out —
+        // so Create is still lit and still hit-testable, and a second tap would hand over a
+        // second payload: a duplicated task, queued as its own create and synced to every
+        // device. `start()` latches, so asking it first is what makes the second tap
+        // answerable. Handing the payload over first and dismissing afterwards, which is
+        // how this landed, reads as the more careful order but defends nothing: a host that
+        // tears the composition down inside its own callback cuts the exit from either side
+        // of the call.
+        if (!sheetDismiss.start()) return
+
         val due =
             if (scheduleEnabled && showScheduleControls) {
                 Instant.ofEpochMilli(dueEpochMs).truncatedTo(ChronoUnit.MINUTES)
@@ -687,8 +755,20 @@ fun CreateTaskBottomSheet(
                                         R.string.action_create_task
                                     },
                                 ),
+                                // No `dismissKeyboard()` here: the keyboard goes at the
+                                // end of the exit with every other dismissal, for the
+                                // reason spelled out where `sheetDismiss` is built. The
+                                // confirm button is disabled unless `canSubmit`, so this
+                                // ran only on a tap that was already going to submit.
+                                //
+                                // A repeat tap during the exit is refused inside
+                                // `submitTask`, and not by taking `confirmEnabled` down
+                                // with it: the control is still on screen for the whole
+                                // slide, so greying it would be the user watching it go
+                                // dead under their own finger. It stays lit and does
+                                // nothing, which is what a control on a sheet that is
+                                // already leaving should look like.
                                 onConfirm = {
-                                    dismissKeyboard()
                                     if (canSubmit) {
                                         submitTask()
                                     }
