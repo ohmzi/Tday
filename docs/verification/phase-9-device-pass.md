@@ -189,6 +189,50 @@ animates.
               so its `TaskRowSkeletonGroup` is in the tree — the strip simply does not draw it yet,
               so there is still nothing to check here, and the row above is not asking about it.
 
+- [ ] **PR 8i · web · The dock selects one object, and the pill takes the direct route** — a
+      DESKTOP window, or any viewport at `sm` and wider: below that no tab changes width and there
+      is nothing to see. The dock with the More tab visible, standing on any tab but the one you
+      are about to tap.
+      Do:     tap a different tab and watch the tab you are moving AWAY from, and the pill. Once at
+              full speed and once with the browser's animation inspector at 1/4, if it offers one.
+      Watch:  the tab you left narrows to its icon over about a third of a second, 320 ms, sliding
+              the tabs beside it along with it, and the pill travels and stretches alongside them
+              and stops when they do. One journey: at 1/4 speed the pill settles onto its mark
+              from about five pixels past it, which is momentum, not a return trip.
+      Fails:  the pill setting off past the arriving tab and coming back from the far side — 56px
+              out and back, unmistakable even at full speed. That is the follower in `RootDock`
+              not running, and it is what the 260 ms sample this row retired looked like. Also a
+              fail: the tab you left snapping to its icon in one frame, which is `min-width`
+              having fallen out of the press layer's `transition-property` list in `globals.css`
+              — the call site cannot restore it.
+      Note:   the arriving tab is NOT what to watch. Its label makes it wider than the 104px floor,
+              so it reaches its width in the first frame at any duration — that is measured, not
+              a defect. jsdom computes no layout, so the suite can prove both elements spell
+              `duration-emphasis` and can say nothing about whether they arrive together.
+
+- [ ] **PR 8i · web · The dock tab still answers a finger** — the same dock, any width; a touch
+      screen if there is one, since this is the press and not the hover.
+      Do:     press and hold a dock tab, then release, without changing tabs.
+      Watch:  it squashes and dips under the finger and comes back on release. It now takes 320 ms
+              rather than 200 — one duration covers every property the press layer animates on
+              this element, and the tab's `min-width` had to come up to Emphasis to pair with the
+              pill.
+      Fails:  the squash reading as the tab thinking about it rather than answering — a press that
+              is still arriving when the finger has gone. If it does, the pairing is not worth its
+              price and the tab needs a press duration the pill does not share.
+
+- [ ] **PR 8i · web · The install banner leaves faster than it arrived** — iOS Safari, or any
+      browser where the PWA install prompt fires; the banner has to be on screen, which on Chrome
+      means a site not already installed.
+      Do:     let the banner slide up, then tap its X and watch the banner, not the page.
+      Watch:  it rises over about a third of a second and is gone in about half that — 320 ms in,
+              150 ms out — and it is fully gone before its space is reclaimed, never cut away
+              mid-fade.
+      Fails:  the banner vanishing between frames with no slide-out at all, which would mean
+              `BANNER_EXIT_MS` and the closed-state class have drifted apart again and the node is
+              being unmounted before its animation runs; or an exit that takes as long as the
+              arrival, which is the class not reaching tw-animate's `animation-duration`.
+
 ## Android
 
 - [ ] **PR 39b · android · The burst is paper, and it still fits the celebrate window** — any list

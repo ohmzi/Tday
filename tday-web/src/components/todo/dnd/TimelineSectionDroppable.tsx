@@ -77,7 +77,7 @@ export default function TimelineSectionDroppable({
   });
 
   const headingClass = cn(
-    "select-none text-2xl font-black tracking-tight transition-colors duration-200",
+    "select-none text-2xl font-black tracking-tight transition-colors duration-enter",
     isActive
       ? headerActiveClass
       : focusedDateKey === section.key
@@ -97,7 +97,7 @@ export default function TimelineSectionDroppable({
       ref={setNodeRef}
       id={getTodoDateSectionId(section.key)}
       className={cn(
-        "scroll-mt-24 rounded-3xl px-1 transition-all duration-200",
+        "scroll-mt-24 rounded-3xl px-1 transition-all duration-enter",
         sectionTopGap,
         isActive && sectionActiveClass,
       )}

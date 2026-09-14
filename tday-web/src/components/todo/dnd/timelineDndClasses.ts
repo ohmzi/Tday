@@ -24,7 +24,7 @@ export const headerActiveClass = "text-destructive";
 // destructive-tinted target while active. Honors reduced motion via Tailwind's
 // motion-reduce variants.
 export const placeholderBaseClass =
-  "rounded-[18px] border border-dashed border-border/60 transition-all duration-200 ease-out motion-reduce:transition-none";
+  "rounded-[18px] border border-dashed border-border/60 transition-all duration-enter ease-out motion-reduce:transition-none";
 export const placeholderRestClass = "h-6 opacity-60";
 export const placeholderActiveClass =
   "h-14 border-solid border-destructive/60 bg-destructive/[0.06] opacity-100 animate-in fade-in";

@@ -19,15 +19,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 
 const railButtonClass =
-  "group flex h-10 min-h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sidebar-foreground/70 transition-colors duration-200 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground";
+  "group flex h-10 min-h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sidebar-foreground/70 transition-colors duration-enter hover:bg-sidebar-accent/70 hover:text-sidebar-foreground";
 
 const expandedButtonClass =
-  "group flex h-12 min-h-12 w-full min-w-0 shrink-0 items-center gap-3 overflow-hidden rounded-2xl px-2 text-base font-black text-muted-foreground transition-colors duration-200 hover:bg-card/70 hover:text-foreground";
+  "group flex h-12 min-h-12 w-full min-w-0 shrink-0 items-center gap-3 overflow-hidden rounded-2xl px-2 text-base font-black text-muted-foreground transition-colors duration-enter hover:bg-card/70 hover:text-foreground";
 
 const railIconSlot = "flex h-10 w-10 shrink-0 items-center justify-center";
 const expandedIconChip =
   "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/70";
-const railIconClass = "h-4 w-4 transition-colors duration-200";
+const railIconClass = "h-4 w-4 transition-colors duration-enter";
 const expandedIconClass = "h-5 w-5";
 
 const UserCard = ({

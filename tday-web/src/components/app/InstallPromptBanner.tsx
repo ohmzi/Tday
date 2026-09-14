@@ -1,10 +1,18 @@
 import { Download, Share, X } from "lucide-react";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 import { cn } from "@/lib/utils";
+import { DURATION_MS } from "@/lib/motion";
 import { useFadeUnmount } from "@/hooks/useFadeUnmount";
 
-// Mirrors the exit declared below, so the node is removed the frame after it finishes.
-const BANNER_EXIT_MS = 200;
+/**
+ * Mirrors the exit declared below, so the node is removed the frame after it finishes.
+ *
+ * Read twice — once by the class, once by `useFadeUnmount` — so it names the rung rather
+ * than restating the number, the way `MODAL_EXIT_MS` does: a length spelled `duration-quick`
+ * on one side and `150` on the other drifts apart the first time the rung moves, and a
+ * half-played exit is the failure nobody sees in a test.
+ */
+const BANNER_EXIT_MS = DURATION_MS.quick;
 
 export default function InstallPromptBanner() {
   const { showBanner, isIosSafari, promptInstall, dismiss } = useInstallPrompt();
@@ -20,8 +28,14 @@ export default function InstallPromptBanner() {
       data-state={showBanner ? "open" : "closed"}
       className={cn(
         "fixed inset-x-0 bottom-[calc(90px+env(safe-area-inset-bottom))] z-50 mx-auto w-[calc(100%-2rem)] max-w-md",
-        "data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom-4 data-[state=open]:fade-in data-[state=open]:duration-300",
-        "data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom-4 data-[state=closed]:fade-out data-[state=closed]:duration-200",
+        // Emphasis in, Quick out. The banner rises from off-screen, which is a change
+        // of position and therefore rule 2's rung; the 300 it did that on named none.
+        // The way out is not the arrival played backwards: this is an offer being
+        // declined, and the user who tapped the X is looking at what is behind it
+        // already. Quick is the rung for something leaving that nobody is meant to
+        // watch go, and it keeps rule 1's cap with room to spare.
+        "data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom-4 data-[state=open]:fade-in data-[state=open]:duration-emphasis",
+        "data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom-4 data-[state=closed]:fade-out data-[state=closed]:duration-quick",
       )}
     >
       <div className="relative overflow-hidden rounded-2xl border border-white/70 bg-card/95 p-4 shadow-[0_20px_50px_-20px_hsl(var(--shadow)/0.5)] backdrop-blur-xl dark:border-white/10">
