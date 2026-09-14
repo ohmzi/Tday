@@ -1158,14 +1158,23 @@ Restore it from git history rather than adjusting the number.
 
 - [ ] `confetti-kinematics` — Land the recovered confetti physics — linear drag, flip split off rotation, smoothstep fade — on all three clients at once · all · Impact O3 · L · Gate self + V + J + X + G + D + TF — **final part (5 of 5)**; PR 38, PR 39a, PR 39b, PR 39c carried the rest
 
-### PR 40a/b/c — one skeleton per client
+### PR 40a — the web task-row skeleton, its crossfade, and the route shell
 
-- [ ] `skeleton-loading-vocabulary` — one skeleton per client at real row geometry, 190 ms crossfade · all · Impact O4 · M ea · Gate V/J/X
+- ↳ part 1 of 5 of `skeleton-loading-vocabulary` — web `TaskRowSkeleton` at `TodoItemContainer`'s own row classes; the `ui/TodoListLoading` re-export shim retired. Box lives under **PR 40c**.
+- ↳ part 2 of 5 of `skeleton-loading-vocabulary` — web `.tday-skeleton-exit`/`.tday-content-enter` on `Enter` + `useSkeletonCrossfade`; the four hand-rolled `animate-pulse` spellings retired and the scheduled root feed given the placeholder its sibling always had. `TodoListLoading`'s four callers (`AllTasksTimelineContainer`, `ListContainer`, `CompletedTodoContainer`, `CompletedFloaterContainer`) stop gating its mount and hand the flag down, so its crossfade is not inert — those four get the fade-out half only, having no single content block to carry `.tday-content-enter`. Box lives under **PR 40c**.
+- ↳ part 3 of 5 of `skeleton-loading-vocabulary` — web `AppShellSkeleton`, the Suspense fallback every lazy route and the home redirect show, drops its three `h-[62px] rounded-2xl` cards for `TaskRowSkeletonGroup` and routes its remaining blocks through the `Skeleton` primitive; the dock placeholder is left alone for **PR 176**, which removes it. No crossfade: React swaps a Suspense fallback without re-rendering the fallback, so `useSkeletonCrossfade` has no frame to hold. The user card this row was scoped with had already landed in part 2. Box lives under **PR 40c**.
+
+### PR 40b/40c — the Android and iOS skeletons
+
+- [ ] `skeleton-loading-vocabulary` — one skeleton per client at real row geometry, crossfading on the `Enter` rung · all · Impact O4 · M ea · Gate V/J/X
+
+### PR 40d — the web infinite-scroll sentinel
+
 - [ ] `web-infinite-scroll-sentinel` — hardcoded English in a ten-locale app, no `aria-live`, 48 px growth per page · web · Impact O2 · S · Gate V
 
 ### PR 41a — the web sheet language
 
-- ↳ part 1 of 3 of `sheet-presentation-unification` — one scrim token across 7 spellings; `sheet.tsx` 500→320; drop `slide-in-from-bottom-[48%]`. Box lives under **PR 41c**.
+- ↳ part 1 of 3 of `sheet-presentation-unification` — one `--sheet-scrim` token (0.40 light / 0.68 dark, byte-for-byte what `TdayTheme.swift` and `TdaySheetChrome.kt` already draw) behind `drawer`, `dialog`, `sheet`, `Modal` and `CenteredSelectorOverlay`; the sheet's 500-in/300-out becomes Emphasis/Enter, `Modal` and the centred selector spell Enter-in/Quick-out, and the dialog spells Enter both ways — its single bare `duration-enter` covers both directions, as the bare `duration-200` it replaced did — `MODAL_EXIT_MS` moving to `DURATION_MS.quick` alongside its own class so the exit cannot half-play; `slide-in-from-bottom-[48%]` and `slide-*-bottom-8` dropped, because a centred card arrives where it already is. Eleven `duration-<n>` literals retired and the `web.durationUtility` ceiling lowered 58→47. Two corrections to this row as it was written: the scrim was **5 sites carrying 4 alphas** (0.80 twice, 0.65, 0.50, 0.45), not 7 spellings, and the 48% slide was in `dialog.tsx`, not `sheet.tsx`. PR 50's nested-scrim branch survives untouched — only the dimming half of it moved. Box lives under **PR 41c**.
 
 ### PR 41b — the Android sheet language
 

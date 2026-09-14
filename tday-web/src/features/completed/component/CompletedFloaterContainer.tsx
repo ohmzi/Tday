@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import TodoListLoading from "@/components/ui/TodoListLoading";
+import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import { useCompletedFloater } from "../query/get-completedFloater";
 import { useGroupedHistory } from "../hooks/useGroupedHistory";
 import GroupedCompletedFloaterContainer from "./GroupedFloaterContainer";
@@ -80,7 +80,7 @@ const CompletedFloaterContainer = ({
         beneathTitle={tabSwitcher}
       />
 
-      {floaterLoading && <TodoListLoading className="mt-8" />}
+      <TodoListLoading className="mt-8" loading={floaterLoading} />
 
       {!floaterLoading && !isSearching && completedFloaters.length === 0 && (
         <EmptyState
