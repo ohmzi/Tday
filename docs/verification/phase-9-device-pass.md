@@ -437,6 +437,29 @@ animates.
               time to get there. The slider is not one of the four — see Known, and do not log it
               against this line.
 
+- [ ] **PR 42b · and · The account forms grow instead of being cut open** — Settings → Account, on a
+      signed-in account that has security questions configured, so all three forms have something
+      to draw.
+      Do:     open Change name, close it; then Change password, close it; then Change security
+              questions, close it. Watch the form's FIRST field rather than the button that opened
+              it, then do it again watching the bottom edge.
+      Watch:  the first field is pinned under the header from the first frame and does not travel —
+              the form grows DOWNWARDS out of its header over 320 ms, and the edge that moves is the
+              bottom one. The alpha rises WITH the growth, so the revealed edge is never a hard cut.
+              Closing folds it back up into the header over 150 ms — shorter than the open, and it
+              should not be worth watching.
+      Fails:  the form's LAST row (Save/Cancel) arriving first and the first field's label sliding
+              down into place last — that is the bottom anchor this closes, and it is the one thing
+              to look for. Growth with no alpha under it, so a hard edge travels down the outline
+              of a field: the expand running without the fade. Alpha with no growth — the form at
+              full height and only then fading. Or a close that takes as long as the open.
+      Known:  `expandVertically` clips, and it still does: the form is revealed through a cut, not
+              drawn overflowing. So the bottom edge does pass across whatever is at it, and at some
+              instant that is a field outline or a line of text. The fade is what keeps that from
+              reading as a saw — it is the moving edge, at low alpha, arriving. A glyph momentarily
+              incomplete at the BOTTOM edge is expected; one sliced at the TOP, under the header,
+              is the fail above.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
