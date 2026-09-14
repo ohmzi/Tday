@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.core.ui.TdayHaptics
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 
 private val TdaySegmentedSliderAccent = TdayTodayBlue
@@ -111,8 +112,19 @@ fun <T> TdaySegmentedSlider(
                 ),
                 label = "tdaySegmentedSliderSelectorOffset",
             )
+            // Not `Modifier.tdayPressable`, and not a retune: `PressScales.Row` is
+            // 0.985 to the byte, and this scale is not a surface reading its own
+            // press. It is the floating selector, whose interaction source belongs
+            // to an option Box in the Row below — and it shares the spring with
+            // the offset that slides it, so the squash and the slide are one
+            // movement. The shared modifier takes no spec, by argument.
             val selectorScale by animateFloatAsState(
-                targetValue = if (pressedOption == selectedOption) 0.985f else 1f,
+                targetValue =
+                    if (pressedOption == selectedOption) {
+                        TdayMotionTokens.PressScales.Row
+                    } else {
+                        1f
+                    },
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioNoBouncy,
                     stiffness = Spring.StiffnessMediumLow,
@@ -167,8 +179,14 @@ fun <T> TdaySegmentedSlider(
                     val selected = option == selectedOption
                     val interactionSource = interactionSources[index]
                     val isPressed = pressedStates[index].value
+                    // A half-hundredth shallower than the 0.98 typed here, and
+                    // on the selector's number on purpose: a segment's label and
+                    // the selector sitting under it are pressed by the same
+                    // finger, and two depths half a percent apart read as the
+                    // label sliding against its own pill. Spring kept for the
+                    // same coupling.
                     val contentScale by animateFloatAsState(
-                        targetValue = if (isPressed) 0.98f else 1f,
+                        targetValue = if (isPressed) TdayMotionTokens.PressScales.Row else 1f,
                         animationSpec = spring(
                             dampingRatio = Spring.DampingRatioNoBouncy,
                             stiffness = Spring.StiffnessMediumLow,

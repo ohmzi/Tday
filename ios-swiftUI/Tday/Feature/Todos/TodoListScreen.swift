@@ -452,6 +452,7 @@ private struct FloaterTaskHomeListCard: View {
     let onTap: () -> Void
 
     @Environment(\.tdayColors) private var colors
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     private var symbolName: String {
         todoListSymbolName(for: list.iconKey)
@@ -508,9 +509,16 @@ private struct FloaterTaskHomeListCard: View {
 
                     Spacer()
 
+                    // Same roll, same rung as the scheduled feed's counts — the
+                    // argument is at `ScheduledTaskHomeTodayCard`.
                     Text("\(count)")
                         .font(.tdayRounded(size: 22, weight: .bold))
                         .foregroundStyle(.white)
+                        .contentTransition(.numericText(value: Double(count)))
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)),
+                            value: count
+                        )
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -2631,7 +2639,7 @@ struct TodoListScreen: View {
 
     private func closeFloaterTaskHomeSearch() {
         floaterTaskHomeSearchFieldFocused = false
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             floaterTaskHomeSearchExpanded = false
         }
         floaterTaskHomeSearchQuery = ""
@@ -2639,7 +2647,7 @@ struct TodoListScreen: View {
 
     private func openListSearch() {
         HapticManager.buttonPress()
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             listSearchExpanded = true
         }
     }
@@ -2649,7 +2657,7 @@ struct TodoListScreen: View {
     private func closeListSearch() {
         HapticManager.buttonPress()
         listSearchFieldFocused = false
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+        withAnimation(TdayMotion.snappy) {
             listSearchExpanded = false
         }
         listSearchQuery = ""

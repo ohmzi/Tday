@@ -153,7 +153,7 @@ export const tdaySearchCapsuleClearClass =
  * across whatever passes underneath.
  */
 export const rootFeedHeaderButtonClass =
-  "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
+  "flex h-14 w-14 items-center justify-center rounded-full border border-white/70 bg-card/90 text-foreground shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] transition-all duration-enter hover:-translate-y-0.5 hover:bg-card active:translate-y-0 dark:border-white/10";
 
 const floaterAccent = "#4D8F83";
 
@@ -164,6 +164,24 @@ const floaterAccent = "#4D8F83";
  * one Android's `MARK_CLOCK_TICK_MS` polls on.
  */
 const MARK_CLOCK_TICK_MS = 60_000;
+
+/**
+ * How long after the last scroll frame the header drops its compositor hints.
+ * not a token — see docs/motion.md. It is a debounce on a hint, not a motion
+ * anybody watches: nothing on the screen is this long, and the only way to see
+ * the number at all is to go looking for a layer. Long enough that a finger
+ * pausing mid-flick does not throw away the layers the next flick needs; short
+ * enough that a header parked at the top of a feed is not holding three of them
+ * for the rest of the session.
+ *
+ * A clock is what bounds a hint here because there is nothing else to bound it
+ * with: a scroll pass has no end event, only a last frame that turns out later
+ * to have been the last. The compositor-hints block in `globals.css` argues why
+ * the app's only hint is this one and not a class — briefly, that a class hands
+ * the engine the hint and the `animation-name` in the same style recalculation,
+ * which is too late to have bought a frame.
+ */
+const HINT_IDLE_MS = 200;
 
 /** Whether the wall clock says it is daytime right now. */
 function isDaytimeNow(): boolean {
@@ -267,6 +285,34 @@ export default function RootFeedHeroHeader({
     if (!scroller) return;
 
     let frame = 0;
+    let hintTimer = 0;
+    let hinting = false;
+
+    // `apply` rewrites width, height and transform on these three every scroll
+    // frame, under a strip that is pinned over a feed still scrolling behind it
+    // — the one place in the app where a layer promotion lands mid-gesture, and
+    // the reason this is the app's only `will-change`. The hint is taken when a
+    // pass STARTS, a frame before `apply` first runs, which is the whole of what
+    // makes it worth anything; left on for the life of the header it would be
+    // three permanent textures, which is what the compositor-hints block in
+    // `globals.css` refuses and what `clearHints` exists to prevent.
+    //
+    // Each node promises only what this effect actually writes to it. A hint
+    // wider than the change is a promise the element never keeps, and an engine
+    // is entitled to reserve for all of it.
+    const hintTargets = (): [HTMLElement | null, string][] => [
+      [markRef.current, "width, height, transform"],
+      [titleRef.current, "transform, opacity"],
+      [capsuleRef.current, "width, transform"],
+    ];
+
+    const clearHints = () => {
+      hintTimer = 0;
+      hinting = false;
+      for (const [node] of hintTargets()) {
+        if (node) node.style.willChange = "";
+      }
+    };
 
     const apply = () => {
       frame = 0;
@@ -377,6 +423,20 @@ export default function RootFeedHeroHeader({
     };
 
     const schedule = () => {
+      // Written once when a pass starts, not once a frame: assigning the same
+      // string back every frame is a style mutation the engine still has to
+      // process, on the frames this exists to keep cheap.
+      if (!hinting) {
+        hinting = true;
+        for (const [node, properties] of hintTargets()) {
+          if (node) node.style.willChange = properties;
+        }
+      }
+      // Re-armed on every call, so a pass ends when the scrolling does rather
+      // than a fixed time after it began — a slow drag down the feed keeps its
+      // layers for as long as it lasts.
+      if (hintTimer) window.clearTimeout(hintTimer);
+      hintTimer = window.setTimeout(clearHints, HINT_IDLE_MS);
       if (frame) return;
       frame = requestAnimationFrame(apply);
     };
@@ -396,6 +456,11 @@ export default function RootFeedHeroHeader({
     return () => {
       applyRef.current = null;
       if (frame) cancelAnimationFrame(frame);
+      // The nodes outlive this effect on a re-run (`m` is a module constant, so
+      // in practice only StrictMode's double-invoke), and a hint left behind by
+      // a torn-down pass is an always-on hint by another route.
+      if (hintTimer) window.clearTimeout(hintTimer);
+      clearHints();
       scroller.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };

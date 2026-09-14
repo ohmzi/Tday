@@ -6,12 +6,9 @@ import android.net.Uri
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +18,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -76,7 +72,9 @@ import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
 import kotlinx.coroutines.launch
@@ -125,8 +123,10 @@ private val BrowserCardRadius = 20.dp
 private val BrowserRowVerticalPadding = 15.dp
 private val BrowserRowIconSize = 18.dp
 
-/** How far a pressed surface sinks — the same 2 dp the root feed presses by. */
-private val PressedSurfaceOffsetY = 2.dp
+// A `PressedSurfaceOffsetY` stood here, naming the 2 dp this header's buttons sank by. Its one
+// call site is gone: the button now presses through `Modifier.tdayPressable`, whose `offsetY`
+// already defaults to `TdayPress.SinkOffset` — the same 2 dp, named once for every surface
+// instead of once per screen.
 
 /** The back chevron outgrows IconLg because it is the only glyph inside a FabSize target. */
 private val BackButtonIconSize = 36.dp
@@ -402,7 +402,6 @@ private fun ReleaseHeaderButton(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
     val containerColor = if (isBackButton) {
         if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
@@ -417,22 +416,10 @@ private fun ReleaseHeaderButton(
     // Naming both branches showed them to be the same number; the condition was never a fork.
     val buttonSize = TdayDimens.FabSize
     val iconSize = if (isBackButton) BackButtonIconSize else TdayDimens.IconLg
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "releaseHeaderButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) PressedSurfaceOffsetY else TdayDimens.SpacingNone,
-        label = "releaseHeaderButtonOffsetY",
-    )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()

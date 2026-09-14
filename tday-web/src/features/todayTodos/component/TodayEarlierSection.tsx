@@ -52,7 +52,7 @@ export default function TodayEarlierSection({
   const rowsMounted = useFadeUnmount(expanded, OVERDUE_ROWS_FADE_MS);
 
   return (
-    <section className={cn("scroll-mt-24 rounded-3xl px-1", sectionTopGapFilled)}>
+    <section className={cn("scroll-mt-24 rounded-xl px-1", sectionTopGapFilled)}>
       <button
         type="button"
         onClick={onToggle}

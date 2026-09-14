@@ -1010,6 +1010,13 @@
         "keywords": "arrastar, reordenar, mover, ordenar, ordem, organizar",
         "body": "As suas listas mantêm a ordem que lhes dá. Arraste uma tarefa para cima ou para baixo para organizar o seu dia tal como pensa nele."
       },
+      "swipe-sheet-away": {
+        "title": "Arraste a folha para baixo para fechar",
+        "summary": "Puxe a folha de nova tarefa para baixo para fechá-la.",
+        "keywords": "deslizar, arrastar, puxar, fechar, descartar, folha, cartão, alça, gesto, para baixo",
+        "body": "A pequena barra no topo da folha de nova tarefa indica que o cartão pode ser puxado para baixo. Arraste e ele acompanha o seu dedo; solte depois de cerca de um quarto do caminho e ele fecha, exatamente como se você tocasse na área escurecida atrás dele. Um impulso rápido também conta — o que vale é para onde você estava indo, não onde soltou — e um puxo do qual você desiste volta ao lugar.",
+        "tip": "Se o conteúdo de uma folha rola, arraste-a pelo topo: o meio do cartão pertence à lista."
+      },
       "sound-and-vibration": {
         "title": "Som e vibração",
         "summary": "Desligue o som de conclusão, a vibração ou ambos.",

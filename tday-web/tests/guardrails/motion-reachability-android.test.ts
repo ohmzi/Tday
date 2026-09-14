@@ -658,6 +658,22 @@ describeAndroid("Rule D — an enter spec needs a frame where it is not yet visi
 // directory, a bad join — and a suite that passes on an empty file list is worse than no
 // suite, because it reports green. These numbers are floors, not counts: they only have to
 // be updated when the app genuinely shrinks.
+//
+// The `animate*AsState` floor was 80 against 92 real call sites. Phase 9's press migration is
+// the shrink the paragraph above anticipates: every hand-rolled press triplet folds two or
+// three of these calls into `Modifier.tdayPressable`, which lives in one file and is counted
+// once, so the tree loses call sites without losing any animation. Fifteen went in one unit
+// and the walk now reports 77.
+//
+// The floor is re-set at 50 and not at some margin under 77, because a floor that trails the
+// count makes every remaining unit of the sweep stop and re-argue this line in a file none of
+// them own. The press work still to land names fourteen more of these call sites — the list
+// screen's FAB, floater row, today-header button and two settings tiles; `CategoryCard`'s
+// triplet; the segmented slider's selector and content scales — which is 63 before the feed
+// surfaces are looked at, so 65 would have gone red on the next unit. 50 is under where this
+// sweep can finish and still nowhere near what a broken walk reports, which is nothing at
+// all; the `AnimatedVisibility` floor beside it has sat at half its real count all along for
+// the same reason.
 // ---------------------------------------------------------------------------
 
 describeAndroid("the scanner is actually reading the app", () => {
@@ -676,6 +692,6 @@ describeAndroid("the scanner is actually reading the app", () => {
       }
     }
     expect(animatedVisibility).toBeGreaterThanOrEqual(8);
-    expect(animateAsState).toBeGreaterThanOrEqual(80);
+    expect(animateAsState).toBeGreaterThanOrEqual(50);
   });
 });

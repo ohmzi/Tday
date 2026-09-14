@@ -213,6 +213,18 @@ class FeatureDimensBudgetTest {
          * files it names. The entries stay anyway: a zero here and a zero there are the same
          * ratchet, and deleting them would make the next migration look like it started from
          * nothing rather than from a number somebody drove down.
+         *
+         * **Re-measured at the develop merge, not carried over.** These numbers were seeded before
+         * batch 3 (9b1/9b4/42b/42e/42g/8k/8l/31a/184a) existed, and batch 3 edits the same eight
+         * screens 43c…43n rewrote — so the true count could have moved in either direction: our
+         * units retired literals, theirs added call sites. The rule above was run over the merged
+         * tree and every entry still measures exactly 0, as does the 77 the exempt subtree is
+         * frozen at, so no number here changes at the merge. One would have: develop's
+         * `tdayPressable` migration wrote `offsetY = 0.dp` into `todos/ManageMembersSheet.kt`,
+         * which the merge resolved into this branch's vocabulary as `TdayDimens.SpacingNone` —
+         * the same 0 dp — rather than re-seeding that file's ceiling up to 1. A ceiling above the
+         * real count is slack this ratchet exists to refuse, and "their side wrote it" is not a
+         * reason to keep a raw literal in a file that had reached zero.
          */
         val CEILINGS: Map<String, Int> = mapOf(
             "todos/TodoListScreen.kt" to 0,

@@ -556,10 +556,10 @@ function gatesOf(cond: string, scope: TypeScope): string[] {
 
 /** Rule A — `.transition` sites whose transaction is supplied outside this type. */
 const TRANSITION_DRIVEN_ELSEWHERE: Record<string, string> = {
-  "ios-swiftUI/Tday/UI/Component/CreateTaskSheet.swift:242":
+  "ios-swiftUI/Tday/UI/Component/CreateTaskSheet.swift:248":
     "`scheduleEnabled` is written through the Binding handed to " +
     "CreateTaskSheetScheduleToggleRow, which applies `$isOn.animation(.spring(…))` " +
-    "on the Toggle (:787). The Binding carries the transaction, so the due row's " +
+    "on the Toggle (:797). The Binding carries the transaction, so the due row's " +
     "transition runs on every user-driven flip of this gate.",
 };
 
@@ -1465,5 +1465,136 @@ describeIOS("iOS row actions reach the accessibility tree", () => {
 
     expect(violations, violations.join("\n")).toEqual([]);
     expect(labelled, "localised accessibility action names").toBeGreaterThanOrEqual(3);
+  });
+});
+
+// ─── A count the user just changed ─────────────────────────────────
+//
+// `.contentTransition(.numericText(value:))` fails the way a `.transition`
+// does, and more quietly. It is not a spec that runs; it is a rendering mode
+// that means nothing unless the text change it describes happens inside an
+// animation transaction. Written on its own it costs nothing, breaks nothing
+// and does nothing — the label swaps 7 for 6 between two frames exactly as it
+// did before — while reading, in review, like the fix.
+//
+// Rule A cannot ask this: it is keyed on `.transition(`, and a count writes
+// none. The label is never inserted or removed, only relabelled, so the pair
+// that has to be held together here is `.contentTransition` and the
+// `.animation(_:value:)` keyed on the count itself.
+//
+// The surfaces are the four feed counts — the date card's 34 pt number, the
+// category tiles, the scheduled list rows and the floater list cards — whose
+// only job is to report a number the user just changed. A fifth one added next
+// year either rolls or lands red; there is no allowlist, because a count that
+// hard-swaps is not a decision anyone has argued for.
+//
+// The gate is asserted here too. Reduce Motion for a roll means the new number
+// arriving whole on the frame it changed, which is what `tdayAnimation`
+// returning nil does — and a device pass cannot tell a missing gate from a
+// short one, so the only place that distinction can be caught is the text.
+
+/** A label whose entire content is the interpolated count, and nothing else. */
+const COUNT_LABEL = /^Text\("\\\(count\)"\)$/;
+
+interface CountLabel {
+  file: string;
+  /** 1-based, the `Text(` line. */
+  line: number;
+  chain: string;
+}
+
+/**
+ * The modifier chain a label owns: the lines after it that open with `.`, plus
+ * whatever a multi-line call carries between its parentheses.
+ *
+ * Walked off the stripped code, so a comment between two modifiers is a blank
+ * line rather than the end of the chain, and so no paren inside a string can
+ * move the depth counter. A blank line is skipped at depth 0 for the same
+ * reason; the chain still ends at the first line that is neither — the `}` that
+ * closes the stack the label sits in.
+ */
+function modifierChain(parsed: ParsedFile, index: number): string {
+  const lines: string[] = [];
+  let depth = 0;
+  for (let i = index + 1; i < parsed.code.length; i += 1) {
+    const trimmed = parsed.code[i].trim();
+    if (depth === 0) {
+      if (trimmed.length === 0) continue;
+      if (!trimmed.startsWith(".")) break;
+    }
+    lines.push(parsed.code[i]);
+    for (const ch of parsed.code[i]) {
+      if (ch === "(") depth += 1;
+      else if (ch === ")") depth -= 1;
+    }
+  }
+  return lines.join("\n");
+}
+
+const COUNT_LABELS: CountLabel[] = PARSED.flatMap((parsed) =>
+  parsed.raw.flatMap((line, index) =>
+    COUNT_LABEL.test(line.trim())
+      ? [{ file: parsed.file, line: index + 1, chain: modifierChain(parsed, index) }]
+      : [],
+  ),
+);
+
+describeIOS("iOS feed counts roll rather than swap", () => {
+  it("still sees the labels and the chains the rule is about", () => {
+    // The label is matched on raw source because the stripper blanks the very
+    // interpolation that identifies it, and a chain read off the wrong array is
+    // an empty string that passes nothing — so both halves are checked here
+    // rather than discovered as a green run over no sites.
+    expect(COUNT_LABELS.length, '`Text("\\(count)")` feed labels').toBeGreaterThanOrEqual(4);
+    expect(
+      [...new Set(COUNT_LABELS.map((label) => relPath(label.file)))].sort(),
+      "the files the feed's counts live in",
+    ).toEqual([
+      "ios-swiftUI/Tday/Feature/ScheduledTaskHome/ScheduledTaskHomeScreen.swift",
+      "ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift",
+    ]);
+    const unread = COUNT_LABELS.filter((label) => !label.chain.includes(".font("));
+    expect(
+      unread.map((label) => `${relPath(label.file)}:${label.line}`),
+      "a count whose chain carries no `.font(` is a chain the walk stopped reading early",
+    ).toEqual([]);
+  });
+
+  it("every feed count carries the digit roll and a transaction to run it in", () => {
+    const violations: string[] = [];
+
+    for (const label of COUNT_LABELS) {
+      const site = `${relPath(label.file)}:${label.line}`;
+
+      if (!label.chain.includes(".contentTransition(.numericText(")) {
+        violations.push(
+          `${site} → no \`.contentTransition(.numericText(\` on the label. The count reports a ` +
+            "number the user just changed; without the roll it swaps between two frames and " +
+            "says nothing about having changed.",
+        );
+        continue;
+      }
+
+      const keyed = animatedValueSites(label.chain).filter((animation) =>
+        rootIdentifiers(animation.expr).includes("count"),
+      );
+      if (keyed.length === 0) {
+        violations.push(
+          `${site} → \`.numericText\` with no \`.animation(_:value:)\` keyed on \`count\`. A ` +
+            "content transition is a rendering mode, not a spec: outside a transaction the " +
+            "modifier is inert and the label hard-swaps exactly as it did before.",
+        );
+        continue;
+      }
+
+      if (!/\.animation\s*\(\s*tdayAnimation\s*\(/.test(label.chain)) {
+        violations.push(
+          `${site} → the roll's \`.animation(\` does not open on \`tdayAnimation(\`, so Reduce ` +
+            "Motion gets a shorter roll instead of the finished number on the frame it changed.",
+        );
+      }
+    }
+
+    expect(violations, violations.join("\n")).toEqual([]);
   });
 });

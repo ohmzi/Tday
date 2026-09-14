@@ -372,7 +372,39 @@ export const TodoItemCard = ({
             selecting &&
               "cursor-pointer rounded-lg focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/70",
             selected && "bg-accent/10",
-            highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0",
+            // The mark a deep link or a search result leaves on the row it lands on, drawn INSIDE
+            // the box. Below `sm` this element's border box IS the clip box of the
+            // `overflow-hidden` wrapper it is the sole grid item of, so an outset `ring-2` was
+            // erased everywhere except the four rounded corners — the mark PR 25b taught to fade
+            // was almost entirely invisible on a phone. Moving the ring up onto the wrapper would
+            // have escaped the clip and lost the clock: the whitelist that fades it is written
+            // into this element's inline `transition`, and the wrapper declares none.
+            //
+            // Always declared, switched by colour, and load-bearing rather than tidy — though not
+            // because the conditional shape would cut. It would not: an unmarked row declares no
+            // `box-shadow` at all, and CSS pads a `none` against the other list adopting its
+            // `inset` flags, so `inset-ring-2` hung off `highlighted` still transitions — measured
+            // against the installed 4.2.2, by growing the ring from 0px to 2px. That growth is the
+            // objection. Size changing is `Emphasis` by the rung rule, and this mark shares the
+            // `Quick` leg of `swipeTransition` with the desktop tint, which is paint. A ring that
+            // is lighting up rather than arriving holds its geometry and moves alpha.
+            //
+            // It is also the only shape that stays safe. `--tw-inset-ring-shadow` sits at a
+            // NON-inset `0 0 #0000` initial, so the first `shadow-*`, ring or press rule to leave
+            // a composite `box-shadow` on this element at rest makes the flags disagree and stops
+            // the property transitioning altogether — `web-calendar-highlight-ring-cuts` back with
+            // every gate green, one utility away. Declaring the inset ring on both sides spends
+            // nothing and closes that off.
+            //
+            // Never both colours at once, hence a ternary and not two `&&`s: Tailwind emits
+            // `inset-ring-transparent` after `inset-ring-accent/25`, so the two in one string
+            // would resolve to the invisible one. The `sm:` reset is safe for the mirror reason —
+            // a variant always sorts after the utility it varies, which is what keeps the desktop
+            // mark the flat tint it has always been.
+            "inset-ring-2",
+            highlighted
+              ? "rounded-lg inset-ring-accent/25 sm:bg-accent/5 sm:inset-ring-transparent"
+              : "inset-ring-transparent",
           )}
         >
       <div className="flex min-w-0 items-start gap-3">

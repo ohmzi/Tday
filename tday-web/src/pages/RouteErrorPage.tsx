@@ -154,7 +154,7 @@ export default function RouteErrorPage() {
 
       <div className="relative z-10 mx-auto flex max-w-md flex-col items-center text-center">
         {/* icon badge */}
-        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground ring-1 ring-border/60">
+        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/60">
           {meta.icon}
         </div>
 

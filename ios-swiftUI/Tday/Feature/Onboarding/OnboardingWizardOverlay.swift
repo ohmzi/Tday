@@ -116,14 +116,14 @@ struct OnboardingWizardOverlay: View {
                 requestSavedCredentialIfAvailable()
             }
         }
-        .animation(.spring(response: 0.28, dampingFraction: 0.86), value: step)
-        .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isCreatingAccount)
-        .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isChoosingSecurityQuestions)
-        .animation(.spring(response: 0.28, dampingFraction: 0.86), value: isShowingForgotPassword)
-        .animation(.easeInOut(duration: 0.2), value: isConnecting)
-        .animation(.easeInOut(duration: 0.2), value: isLoadingSecurityQuestions)
-        .animation(.easeInOut(duration: 0.2), value: authViewModel.isLoading)
-        .animation(.easeInOut(duration: 0.2), value: isCompletingAuthentication)
+        .animation(TdayMotion.snappy, value: step)
+        .animation(TdayMotion.snappy, value: isCreatingAccount)
+        .animation(TdayMotion.snappy, value: isChoosingSecurityQuestions)
+        .animation(TdayMotion.snappy, value: isShowingForgotPassword)
+        .animation(.easeInOut(duration: TdayMotion.Durations.enter), value: isConnecting)
+        .animation(.easeInOut(duration: TdayMotion.Durations.enter), value: isLoadingSecurityQuestions)
+        .animation(.easeInOut(duration: TdayMotion.Durations.enter), value: authViewModel.isLoading)
+        .animation(.easeInOut(duration: TdayMotion.Durations.enter), value: isCompletingAuthentication)
         .alert("Save server URL?", isPresented: serverURLSavePromptBinding) {
             Button("Not Now", role: .cancel) {
                 pendingServerURLSavePrompt = nil
@@ -536,7 +536,7 @@ struct OnboardingWizardOverlay: View {
                     // build to say so. So it declares its own, over both flags it flips,
                     // in the panel spring the chain already applies — which is why the
                     // motion today is unchanged.
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                    withAnimation(TdayMotion.snappy) {
                         isChoosingSecurityQuestions = false
                         isCreatingAccount.toggle()
                     }
@@ -554,7 +554,7 @@ struct OnboardingWizardOverlay: View {
                     // The same borrowed transaction as the exit above, inherited from
                     // the chain's `step` entry rather than its `isCreatingAccount` one,
                     // and declared here for the same reason, with the spring `step` uses.
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                    withAnimation(TdayMotion.snappy) {
                         isCreatingAccount = false
                         isChoosingSecurityQuestions = false
                         step = .mode

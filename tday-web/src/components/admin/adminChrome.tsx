@@ -5,7 +5,7 @@ import { SheetCard } from "@/components/ui/sheet-chrome";
 // delete/clear) so they read as one family: same height, radius, weight, and icon
 // gap — full-width on mobile, auto-width from sm up. Colour conveys intent.
 export const ACTION_BUTTON_BASE =
-  "h-10 flex-1 gap-2 rounded-xl text-sm font-bold transition-colors sm:flex-none sm:px-4";
+  "h-10 flex-1 gap-2 rounded-sm text-sm font-bold transition-colors sm:flex-none sm:px-4";
 export const ACTION_PRIMARY = "bg-primary text-primary-foreground hover:bg-primary/90";
 export const ACTION_NEUTRAL =
   "border border-border/60 bg-muted/50 text-foreground hover:bg-muted";

@@ -2,7 +2,7 @@ import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const railSkeletonClass =
-  "h-10 w-10 shrink-0 rounded-xl border border-border/40 bg-border/70";
+  "h-10 w-10 shrink-0 rounded-sm border border-border/40 bg-border/70";
 
 /**
  * The sidebar's account block before the user is known.
@@ -26,8 +26,8 @@ const UserCardLoading = ({ collapsed = false }: { collapsed?: boolean }) => {
 
   return (
     <div className="space-y-2">
-      <Skeleton className="h-10 w-full rounded-xl border border-border/40 bg-border/70" />
-      <Skeleton className="h-10 w-full rounded-xl border border-border/40 bg-border/70" />
+      <Skeleton className="h-10 w-full rounded-sm border border-border/40 bg-border/70" />
+      <Skeleton className="h-10 w-full rounded-sm border border-border/40 bg-border/70" />
     </div>
   );
 };

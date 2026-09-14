@@ -2,13 +2,10 @@ package com.ohmz.tday.compose.feature.guide
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +14,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,6 +33,8 @@ import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -52,7 +50,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -90,9 +87,6 @@ private val HeaderBottomSpacing = 16.dp
 
 /** Topic card to topic card. 10 falls between SpacingMd and SpacingLg. */
 private val TopicCardSpacing = 10.dp
-
-/** How far a pressed surface sinks — the same 2 dp the root feed, the release header and Settings use. */
-private val PressedSurfaceOffsetY = 2.dp
 
 /** The glyph inside the toolbar's circular button, sized against that button rather than the icon scale. */
 private val BarButtonIconSize = 22.dp
@@ -359,23 +353,10 @@ private fun GuideBarButton(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "guideBarButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) PressedSurfaceOffsetY else TdayDimens.SpacingNone,
-        label = "guideBarButtonOffsetY",
-    )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()

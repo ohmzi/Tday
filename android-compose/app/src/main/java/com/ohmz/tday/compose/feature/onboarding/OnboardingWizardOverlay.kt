@@ -2,6 +2,9 @@ package com.ohmz.tday.compose.feature.onboarding
 
 import android.content.Context
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -9,6 +12,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -90,6 +98,8 @@ import com.ohmz.tday.compose.core.data.auth.LoginCredentialSource
 import com.ohmz.tday.compose.core.data.auth.SystemCredential
 import com.ohmz.tday.compose.core.model.SecurityAnswerInput
 import com.ohmz.tday.compose.core.model.SecurityQuestion
+import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.feature.auth.AuthUiState
 import com.ohmz.tday.compose.feature.auth.ForgotPasswordPanel
 import com.ohmz.tday.compose.feature.auth.LoginCredentialCoordinator
@@ -111,6 +121,24 @@ private enum class WizardViewState {
     LOGIN,
     AUTHENTICATING,
 }
+
+/**
+ * Where this state sits in the wizard's sequence, or `null` if it is not a place in it.
+ *
+ * Spelled out rather than read off `ordinal`, and the reason is not only that CONNECTING
+ * is declared between SERVER and LOGIN. CONNECTING and AUTHENTICATING are panels the
+ * wizard raises *over* wherever the user already is while it waits on the network; they
+ * are not steps, and the chips above them never mark one complete. Giving them a position
+ * would make the wizard slide for them — and slide backwards on the way out of a failed
+ * connect — telling the user they had moved when the step they are on never changed.
+ */
+private val WizardViewState.stepOrder: Int?
+    get() = when (this) {
+        WizardViewState.MODE -> 0
+        WizardViewState.SERVER -> 1
+        WizardViewState.LOGIN -> 2
+        WizardViewState.CONNECTING, WizardViewState.AUTHENTICATING -> null
+    }
 
 private enum class AuthPanelMode {
     SIGN_IN,
@@ -456,6 +484,7 @@ fun OnboardingWizardOverlay(
         step == WizardStep.SERVER -> WizardViewState.SERVER
         else -> WizardViewState.MODE
     }
+    val motionEnabled = rememberTdayMotionEnabled()
 
     // A certificate the device cannot verify is never trusted silently: the user sees the exact
     // fingerprint and confirms it here, and only that fingerprint is then pinned.
@@ -623,7 +652,78 @@ fun OnboardingWizardOverlay(
                         )
                     }
 
-                    AnimatedContent(targetState = viewState, label = "wizardState") { state ->
+                    // The three chips above say WHERE the user is; until now nothing said
+                    // which WAY they had just gone. A crossfade — which is what an
+                    // AnimatedContent with no transitionSpec plays — is the one answer an
+                    // ordered sequence cannot give, and tapping Back off the server form
+                    // looked exactly like tapping Continue onto it.
+                    //
+                    // The direction comes from `stepOrder` and never from the enum: two of
+                    // the five states are transient panels with no position, and the spec
+                    // below refuses to slide for them rather than inventing one.
+                    //
+                    // A step panel ARRIVES, so the incoming half is Enter; the panel being
+                    // left is an absence and takes Quick, which is the first idiom rule
+                    // capping an exit at the enter it undoes. `SizeTransform(clip = false)`
+                    // in every branch because the three panels are different heights and
+                    // the default clips — the taller one would be chopped mid-slide.
+                    AnimatedContent(
+                        targetState = viewState,
+                        transitionSpec = {
+                            val from = initialState.stepOrder
+                            val to = targetState.stepOrder
+                            when {
+                                !motionEnabled ->
+                                    // `using null` as well as the two Nones: the default
+                                    // size transform is a spring, and leaving it on would
+                                    // keep the trip the preference asked to remove.
+                                    EnterTransition.None togetherWith ExitTransition.None using null
+
+                                from != null && to != null -> {
+                                    // Forward means the arriving panel starts to the right
+                                    // of the slot and the one it replaces leaves to the
+                                    // left; going back reverses both.
+                                    val sign = if (to > from) 1 else -1
+                                    slideInHorizontally(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Enter,
+                                            easing = TdayMotionTokens.Easings.Enter,
+                                        ),
+                                    ) { sign * (it / 3) } + fadeIn(
+                                        tween(
+                                            durationMillis = TdayMotionTokens.Durations.Enter,
+                                            easing = TdayMotionTokens.Easings.Enter,
+                                        ),
+                                    ) togetherWith slideOutHorizontally(
+                                        animationSpec = tween(
+                                            durationMillis = TdayMotionTokens.Durations.Quick,
+                                            easing = TdayMotionTokens.Easings.Exit,
+                                        ),
+                                    ) { -sign * (it / 3) } + fadeOut(
+                                        tween(
+                                            durationMillis = TdayMotionTokens.Durations.Quick,
+                                            easing = TdayMotionTokens.Easings.Exit,
+                                        ),
+                                    ) using SizeTransform(clip = false)
+                                }
+
+                                // A spinner going up over the step the user is still on, or
+                                // coming back down off it. Nobody moved, so nothing slides.
+                                else -> fadeIn(
+                                    tween(
+                                        durationMillis = TdayMotionTokens.Durations.Enter,
+                                        easing = TdayMotionTokens.Easings.Enter,
+                                    ),
+                                ) togetherWith fadeOut(
+                                    tween(
+                                        durationMillis = TdayMotionTokens.Durations.Quick,
+                                        easing = TdayMotionTokens.Easings.Exit,
+                                    ),
+                                ) using SizeTransform(clip = false)
+                            }
+                        },
+                        label = "wizardState",
+                    ) { state ->
                         when (state) {
                             WizardViewState.MODE -> {
                                 Column(verticalArrangement = Arrangement.spacedBy(WIZARD_MODE_PANEL_SPACING)) {
