@@ -196,7 +196,7 @@ Restore it from git history rather than adjusting the number.
     that suite already statically reads Kotlin on Linux and runs on every PR, so these rows read `Gate G`
     rather than `Gate J`. The four rules and the canary are 9 tests, ~0.5 s.
 - [x] `and-toast-exit-never-plays` — toast content lambda returns null the frame `visible` flips · and · Sev 3 · XS · Gate G+D
-- [ ] `and-toast-drag-dismiss-has-no-threshold` — drag-dismiss commits on any downward movement (1 px twitch) · and · Sev 2 · S · Gate J+D
+- [x] `and-toast-drag-dismiss-has-no-threshold` — drag-dismiss commits on any downward movement (1 px twitch) · and · Sev 2 · S · Gate J+D
 
 ### PR G3 — Rule B, write-once visibility flag
 
@@ -238,15 +238,27 @@ Restore it from git history rather than adjusting the number.
     native sheets do: `TdaySheetMotion.scrimOut()` is `Enter` against a card exiting on `Change`, so
     their scrim may leave first; this panel exits on `Enter` too, so a `Quick` scrim would hand the
     page back bright with the panel still crossing it. Both rungs are named utilities, so
-    `web.durationUtility` does not move — the ceiling stays at the 47 41a lowered it to. This closes
-    the sheet's own web leg, not the row above it: `dialog.tsx:21` is still a bare
-    `animate-in`/`animate-out` scrim on that same 0.15 s fallback, 50 ms short of the `duration-enter`
-    its own card names at `:44`, so **PR 41c** still inherits one untimed scrim on web.
+    `web.durationUtility` does not move. Both halves of the clause that followed were restated on the
+    develop merge that brought this row in: the ceiling is **0**, not the 47 41a lowered it to —
+    8i and 8j emptied `tday-web/src` of `duration-<n>` outright — and the remainder is no longer
+    PR 41c's to inherit, because 41c has closed. What survives unchanged is the part that is still
+    true of the tree: this closes the sheet's own web leg, not the row above it, and `dialog.tsx:21`
+    is still a bare `animate-in`/`animate-out` scrim on the 0.15 s fallback, 50 ms short of the
+    `duration-enter` its own card names at `:44`. It is web's one untimed scrim and it is now
+    **unowned** — booked to no open PR — which is exactly the state this line exists to keep
+    visible.
 - [x] *new, not one of the 109* — `InstallPromptBanner.tsx:8` — `return null` against `animate-in slide-in-from-bottom-4` at `:14` · web · Sev 2 · XS · Gate G
 
 ### PR G8 — pbxproj registration and the zero-test assertion
 
-- [ ] *infra* — pbxproj-registration guardrail + `ios-tests.yml` zero-test assertion · ios · XS · Gate G
+- [x] *infra* — pbxproj-registration guardrail + `ios-tests.yml` zero-test assertion · ios · XS · Gate G
+  - **Both legs close the same hole from opposite sides: a Swift file that is not in the build, and a test run that is not a run.** `project.yml` says in its own first line that it does not generate the project and that the pbxproj is hand-maintained, and the pbxproj carries no `fileSystemSynchronized` group, so there is no fallback membership anywhere. Every machine this programme's work happens on has no Xcode. A `.swift` file added on one of them is invisible to the build until three objects are written by hand, and invisible does not look like a broken build — it looks like nothing at all. The two Phase 9 rows that book "**pbxproj registration**" as a manual step — `confetti-kinematics`' iOS part under PR 39d, `skeleton-loading-vocabulary`'s under PR 40b — were booking it against nothing; they are now booked against a check.
+  - **The guardrail resolves the object graph instead of grepping the `in Sources` comment, because the comment is written twice and only one of them compiles anything.** Every registered file carries that comment once on its `PBXBuildFile` declaration and once inside a phase's `files` list; a build file declared and never listed is precisely the half-registration being hunted, and a grep scores it as a pass. `ios-target-membership.test.ts` walks the phases, follows each id through its `PBXBuildFile` to its `PBXFileReference`, and asserts in both directions — a registered file that has been deleted from disk breaks the Xcode build exactly as hard, and the reverse check cost one rule. Two more fall out of the same parse for free: an id in a phase that resolves to nothing, and a source whose reference sits in no `PBXGroup` — which still builds, and which nobody can find in the navigator to edit.
+  - **Per-target membership is deliberately not asserted, and the reason is not the one the scoping note gave.** The note assumed `Tday/` files are shared into the widget and watch targets; they are not — the six Sources phases hold 145 build files between them and 145 distinct sources (Tday 114, TdayTests 26, and one or two apiece for the share extension, widget, watch widget and watch), so every file today belongs to exactly one target. The argument survives the correction and gets stronger: a per-target map would be a second copy of a decision the pbxproj already records, it would need editing every time a file moves, and a file in the wrong target fails the build loudly. Unregistered is the failure that is silent, and "registered somewhere" is what catches it.
+  - **It lands green and it bites.** 146 `.swift` on disk, minus `ios-swiftUI/Package.swift` — an SPM manifest SwiftPM reads and the target graph never does, excluded by exact path rather than a `Package*` glob so a real `PackageDefaults.swift` cannot slip out on a name match — against 145 registered. A file dropped into `Tday/Core/UI/` and left unregistered was confirmed to fail rule 2 by name. The canary is the lesson `motion-reachability-android.test.ts` writes down at its own foot: floors of 100 files and 100 registered entries, plus an exact 6 on the phase count, so a moved directory or a pbxproj format Apple changes reports itself rather than passing on an empty set. It runs on every iOS PR already — `web.yml`'s filter matches `ios-swiftUI/` for exactly this class of reason.
+  - **Leg 2 is the floor iOS was the only client without.** `test-without-building` exits 0 when nothing it ran failed, and running nothing clears that bar, so a scheme edit that drops `TdayTests` from the TestAction is a green run over an empty suite — on the one client nobody here can run locally. `android.yml` sums `tests=` across the JUnit XML and refuses zero; `web.yml` reads `numTotalTests` and refuses zero; this reads the result bundle the job was already writing. `xcresulttool get test-results summary` is the Xcode 16 CLI rather than the deprecated `get --path --format json`, matched to the Xcode the `IOS_XCODE_VERSION` variable selects two steps above. An unreadable bundle fails rather than skips, and a missing key is reported as a moved schema rather than defaulted to zero — a check that learned nothing must not be able to say everything is fine, which is the whole defect and not a milder version of it.
+  - **The count is a step of its own so the run page can tell an empty suite from a red one.** It runs when the tests failed and not when the compile did, because there is no bundle after a failed compile and a second error about a missing file would only point away from the first. The number feeds the existing `Summarise` table, which now reports tests/passed/failed/skipped the way android.yml's does and says "all N tests passed" instead of "every test passed".
+  - **What a local machine cannot say.** Leg 1 runs here and is green. Leg 2 has no macOS runner behind it: its five branches — bundle present, readable, numeric, zero, and non-zero — were exercised against a stubbed `xcrun`, and the `Summarise` rendering against each combination of step outcomes, but whether `xcresulttool` on the pinned Xcode emits `totalTestCount` under that spelling is something only the next iOS PR can confirm. It fails loudly rather than quietly if it does not.
 
 ## Phase 2 — the one-line sweeps (iOS batch 1 + web presence)
 
@@ -455,7 +467,7 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 8f — the one-line default-duration change
 
-- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **DROPPED, not deferred**; the box stays open because the change was not made and will not be. Four committed places now forbid it: `docs/motion.md:350-357` makes "Do not rebind Tailwind's default transition duration" idiom rule 3, `docs/CODING_STANDARDS.md:209` says "never rebind", `tday-web/src/globals.css:210-213` argues it in place at the one declaration block that would have carried it (~159 bare `transition-*` sites riding an un-overridden 150 ms, which is exactly `Quick`, so they are on the vocabulary for free), and `motion-budget.json`'s `_excluded.notCountedOnPurpose` excludes those same utilities on those same grounds. The value no longer names anything either: `4c941b1c` moved `Enter` 190 → 200 because 190 matched 2 sites against 200's 57. Rule 3 landed in `bc521d0d`, inside Phase 4's own PR #204 — the same PR that would have carried 8f — so this is a decision taken at the time, not a lapse · web · XS · Gate n/a — dropped
+- [ ] *no ledger row* — ⚠ value change: `--default-transition-duration: 190ms` — **DROPPED, not deferred**; the box stays open because the change was not made and will not be. Four committed places now forbid it: `docs/motion.md:350-357` makes "Do not rebind Tailwind's default transition duration" idiom rule 3, `docs/CODING_STANDARDS.md:209` says "never rebind", `tday-web/src/globals.css:239-242` argues it in place at the one declaration block that would have carried it (~159 bare `transition-*` sites riding an un-overridden 150 ms, which is exactly `Quick`, so they are on the vocabulary for free), and `motion-budget.json`'s `_excluded.notCountedOnPurpose` excludes those same utilities on those same grounds. The value no longer names anything either: `4c941b1c` moved `Enter` 190 → 200 because 190 matched 2 sites against 200's 57. Rule 3 landed in `bc521d0d`, inside Phase 4's own PR #204 — the same PR that would have carried 8f — so this is a decision taken at the time, not a lapse · web · XS · Gate n/a — dropped
 
 ## Phase 5 — web primitives, in dependency order
 
@@ -500,20 +512,67 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 29 — the Android hero search morph
 
-- [ ] `and-hero-search-morph-snaps` — capsule jumps pill→full width in one frame, 3 siblings blink to alpha 0 · and · Sev 4 · S · Gate D
-- [ ] `and-hero-mark-clock-frozen` — sun/moon samples the hour once in a keyless `remember` · and · Sev 2 · S · Gate J+D
+- [x] `and-hero-search-morph-snaps` — capsule jumps pill→full width in one frame, 3 siblings blink to alpha 0 · and · Sev 4 · S · Gate D
+  - **A fraction animates; the geometry is lerped from it.** `openFraction` is the only animated
+    value (`Emphasis`, because what changes is where the capsule is and how big it is). Animating
+    the width and the offset themselves would look identical and is not: both are also
+    scroll-derived, so a tween on them would put the whole fold a tween behind the finger. The
+    three controls the field takes the row from — the mark and the two round buttons — clear on
+    `Quick` through one `searchClearAlpha` helper, so no site can pick its own length for the same
+    departure.
+  - **Where this phase's device rows went, once, for all ten of them.** `docs/verification/README.md`
+    runs Phases 5 and 6 as one sitting, so there is no `phase-6-device-pass.md` and every row below
+    is in `phase-5-device-pass.md` — including the iOS thirds, since TF1 is the cycle that runs the
+    parity pairs side by side and it has not been cut. That file grew an `## Android` and a `## Web`
+    section it did not have; PR 23 arrived on the same merge with a `## Web` section of its own, and
+    its one row now sits at the foot of this one — a Phase 5 leg rather than one of the parity
+    pairs, as the note above it there says. **Written and unrun** is the state these ten rows are
+    in: unverified, which is cheap, and not unscheduled, which is not.
+- [x] `and-hero-mark-clock-frozen` — sun/moon samples the hour once in a keyless `remember` · and · Sev 2 · S · Gate J+D
+  - **The band is now reachable by a test, and the hour is re-read.** `isDaytimeHour` is split off
+    the clock read so a JVM test can push a 5 and an 18 through the boundary —
+    `RootFeedHeroMarkClockTest`, green — and the glyph polls on the same unaligned minute iOS's
+    `TimelineView(.periodic(…, by: 60))` gives it. Nothing animates, deliberately: the turnover
+    happens once a day while nobody is watching the header. `J` green locally; `D` written and
+    unrun, and its setup names both ways of reaching the boundary, because that is the whole cost
+    of the check.
 
 ### PR 29w — the web hero search capsule
 
-- [ ] `web-hero-search-capsule-snaps` — width + translateX written imperatively, no transition, no crossfade · web · Sev 3 · S · Gate V+D
-- [ ] `web-hero-title-opacity-transition-fights-raf` — 200 ms CSS transition on the element the rAF rewrites every frame · web · Sev 2 · XS · Gate V
-- [ ] `web-hero-capsule-relayout-one-frame-late` — input can paint clipped inside the old 56 px pill (PLAUSIBLE, not confirmed) · web · Sev 2 · XS · Gate D
+- [x] `web-hero-search-capsule-snaps` — width + translateX written imperatively, no transition, no crossfade · web · Sev 3 · S · Gate V+D
+  - **Armed the way a placement is armed, not by adding a transition.** A CSS transition on
+    `width`/`transform` would also catch every scroll frame of the fold, where the rAF rewrites
+    both continuously. So the morph measures where the capsule was, lets the rAF write where it
+    goes, and plays the gap back through `Element.animate` on `Emphasis` — the title's fade rides
+    `Quick` with the controls. `V` is `hero-search-capsule-morph.test.tsx`, which stubs `animate`
+    and asserts the rungs by token rather than by number; green.
+- [x] `web-hero-title-opacity-transition-fights-raf` — 200 ms CSS transition on the element the rAF rewrites every frame · web · Sev 2 · XS · Gate V
+  - **No device row, and that is the correct answer rather than an omission.** The transition is
+    gone from the node the scroll rewrites and the open/close step is played back explicitly
+    instead, so the outcome is binary and `V` can tell the two apart. A row asking somebody to look
+    at a fade that no longer fights anything would cost eye-time and prove nothing.
+- [x] `web-hero-capsule-relayout-one-frame-late` — input can paint clipped inside the old 56 px pill (PLAUSIBLE, not confirmed) · web · Sev 2 · XS · Gate D
+  - **The fix is a `useLayoutEffect`, and the device row is the only thing that can close the
+    filing.** Routing the open through a synthetic scroll event left the capsule's width unordered
+    against the paint of the commit that changed its contents, so whether the expanded field ever
+    showed clipped came down to where the browser put a frame. It is written synchronously now.
+    The row says in its own text that observing the defect on this build is a finding rather than
+    a new filing — a PLAUSIBLE row is closed by a look, in one direction or the other. Written and
+    unrun.
 
 ### PR 27 — the root feed tab swap, Android and iOS
 
-- [ ] `and-ios-root-feed-tab-swap-uncrossfaded` — root feed body swaps in one frame while the dock pill springs · and+ios · Sev 4 · S · Gate D+TF
-- [ ] `root-feed-tab-switch-transition` — The root feed tab switch — the app's most-used interaction — is a hard cut on both native clients while the dock selector that triggered it springs across · and+ios · Impact O4 · S · Gate D+TF
+- [x] `and-ios-root-feed-tab-swap-uncrossfaded` — root feed body swaps in one frame while the dock pill springs · and+ios · Sev 4 · S · Gate D+TF
+  - **One rung on both clients, and it is `Quick`.** Nothing in the body travels — the arriving
+    feed is drawn in the slot the leaving one had — so the geometry rule keeps it off `Emphasis`,
+    and a handover shorter than the selector's spring is the point: a body still resolving after
+    the control it answers has landed reads as lag. Two device rows, one per client, written as a
+    pair to be run side by side; unrun, and TF1 has not been cut.
+- [x] `root-feed-tab-switch-transition` — The root feed tab switch — the app's most-used interaction — is a hard cut on both native clients while the dock selector that triggered it springs across · and+ios · Impact O4 · S · Gate D+TF
   - **Duplicate of `and-ios-root-feed-tab-swap-uncrossfaded` (§2.2).** §2.2 dissolves a three-way tangle here: this row is the root-feed **body** inside a single route (`TdayApp.kt:1103-1126`), not the NavHost route transition (`TdayApp.kt:1942-1955`, wired at `:335-338`) that PR 31 retimes to 160/110. Different surfaces — give the tab swap its own spec and do not reuse `NAV_FADE_*`. Ticks with its twin.
+  - **Ticked with its twin, on its twin's device rows.** The spec stayed its own: `NAV_FADE_IN/OUT`
+    are untouched at 360/240 and the swap names `Quick` for itself. No rows of its own — two
+    filings of one behaviour get one check, not two.
 
 ### PR 28 — the Android onboarding blur and overlay
 
@@ -521,15 +580,41 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 46 — the iOS half of the same overlay
 
-- [ ] `and-onboarding-blur-and-overlay-snap` — Android: the onboarding blur goes 14dp→0dp in one frame, the wizard card pops, and the locked feed hard-swaps for the real one · and+ios · Sev 3 · M · Gate D + TF — **final part (2 of 2)**; PR 28 carried the rest
+- [x] `and-onboarding-blur-and-overlay-snap` — Android: the onboarding blur goes 14dp→0dp in one frame, the wizard card pops, and the locked feed hard-swaps for the real one · and+ios · Sev 3 · M · Gate D + TF — **final part (2 of 2)**; PR 28 carried the rest
+  - **Three surfaces on one clock, and a fourth deliberately held out of it.** Blur, wizard and the
+    locked-feed crossfade all run `Quick`/`Standard` on Android; iOS says the same thing in one
+    transaction over blur, scale and wizard. The floating controls are handed `.animation(nil)` on
+    that value precisely so the duck below cannot be driven through an event nothing else moves in.
+  - **The cold start is in both device rows as a `Known:`, not as a fail.** Neither client plays an
+    enter for a first composition that is already true, and that is the behaviour wanted rather
+    than a limit worked around — an insertion with nothing before it has nothing to hand over from.
+    A reviewer who does not know that files it as a defect, which is a row costing more than it
+    saves. Written and unrun.
 
 ### PR 30 — the dock and FAB duck instead of vanishing
 
-- [ ] `dock-fab-duck-not-vanish` — dock + FAB pop out of existence in one frame on all three clients · all · Impact O3 · S · Gate D+TF
+- [x] `dock-fab-duck-not-vanish` — dock + FAB pop out of existence in one frame on all three clients · all · Impact O3 · S · Gate D+TF
+  - **The fade is not decoration on any of the three.** A slide by the control's own height clears
+    its box and not the gesture-bar or home-indicator strip under it, so opacity is what makes the
+    thing gone rather than parked. Android and iOS spell the rung as the `Settle` spring; web, with
+    no spring runtime, spells it as `Emphasis` on the `Gesture` easing.
+  - **Web carries one observation the native clients cannot need.** `BulkSelectionBar` rises into
+    the slot the dock and the create button are leaving and both are painted above it, so for the
+    whole exit a tap aimed at the bar could land on chrome that is already on its way out;
+    `useDuckPresence` reports `interactive` off `present` for that reason. Which action is at risk
+    is a matter of where the chrome sits at phone width: the create button is pinned right over
+    Delete, the dock pinned left over Complete. It gets a device row of its own — a tap DURING the
+    duck, which is the only window the hazard exists in, aimed at both ends of the bar. Four rows
+    across three clients, written and unrun.
 
 ### PR 58 — the Android FAB accent crossfade
 
-- [ ] `android-fab-accent-crossfade` — FAB snaps accent while the dock 8 lines away crossfades at 180 ms · and · Impact O2 · XS · Gate D
+- [x] `android-fab-accent-crossfade` — FAB snaps accent while the dock 8 lines away crossfades at 180 ms · and · Impact O2 · XS · Gate D
+  - **The 180 went too.** The row asked for the button to stop cutting; leaving the dock on a
+    written 180 that is not a rung would have made three surfaces of one handover run on two
+    clocks. Both are `Quick` now, the same rung the body crosses on, and the accent is hoisted out
+    of the visibility gate so a button that ducks back in already wears the tab's colour instead of
+    arriving blue and then turning green. Device row written and unrun.
 
 ### PR 12a — Android completion choreography
 
@@ -538,16 +623,40 @@ Restore it from git history rather than adjusting the number.
 ### PR 12b — web completion choreography
 
 - ↳ part 2 of 3 of `completion-choreography` — 3 of 5 row types hardcode 280/620/960 against Today's 160/360/260. Box lives under **PR 12c**.
-- [ ] `web-checkbox-pointer-and-spring` — most-tapped control fires its pop on `onMouseDown`; touch gets the weakest feedback · web · Impact O3 · S · Gate V
-- [ ] `web-strike-notes-mismatch` — the comment claims one mechanism; the notes use a bare `line-through` · web · Impact O3 · XS · Gate V
+- [x] `web-checkbox-pointer-and-spring` — most-tapped control fires its pop on `onMouseDown`; touch gets the weakest feedback · web · Impact O3 · S · Gate V
+  - **`V` arrived after the fix did.** The control moved to pointer events in Phase 6 and the
+    assertions that pin it — `pointerdown` pops, a bare `mousedown` does not, the squash is the
+    press rung — landed in `todo-checkbox-pointer.test.tsx` this phase. Green. No device row: a
+    class is applied or it is not, and jsdom can see which.
+- [x] `web-strike-notes-mismatch` — the comment claims one mechanism; the notes use a bare `line-through` · web · Impact O3 · XS · Gate V
+  - **Both halves of the row are struck by `.task-strike` now, so the comment is true.** A rule
+    that snaps on under one that fades in reads as two edits to one task. The notes' beat is
+    covered by the row-completion tests; the *look* of it is not a separate check, it is the web
+    third of the completion row's device check below.
 
 ### PR 12c — iOS completion choreography
 
-- [ ] `completion-choreography` — One completion choreography across the three clients: Android flips three states instantly inside a 780ms wait, web runs three rogue rhythms, iOS Calendar fires the wrong haptic and no sound at all · all · Impact O4 · M · Gate J + D + V + X + TF — **final part (3 of 3)**; PR 12a, PR 12b carried the rest
+- [x] `completion-choreography` — One completion choreography across the three clients: Android flips three states instantly inside a 780ms wait, web runs three rogue rhythms, iOS Calendar fires the wrong haptic and no sound at all · all · Impact O4 · M · Gate J + D + V + X + TF — **final part (3 of 3)**; PR 12a, PR 12b carried the rest
+  - **The strike was the beat with no motion in it, and it is the beat the device rows watch.**
+    `TextDecoration.LineThrough` is a boolean; the rule now sweeps on `Emphasis`, one rule per line
+    on a wrapped title, and web fades `text-decoration-color` over the same rung on title and notes
+    together. Same four beats on all three clients — 160, the strike, 360, the ink out on `Change`.
+  - **iOS's Calendar row was the odd one out twice over.** It fired the plain tap where the other
+    rows fire the completion pulse, and it drew the whole sequence in silence — the one place in
+    the app where finishing something made no sound. Both are in its device row, because a haptic
+    and a sound are exactly the kind of thing `xctest` compiles and cannot hear. Three rows, one
+    per client, written to be run together and unrun.
 
 ### PR 47 — iOS feed item motion
 
-- [ ] `feed-item-motion-parity` — Bring iOS and web onto Android's TdayFeedItemMotion — web has no list motion at all, iOS uses one symmetric 220ms curve for insert, move and remove · ios+web · Impact O4 · M · Gate V + X — **final part (2 of 2)**; PR 22b carried the rest
+- [x] `feed-item-motion-parity` — Bring iOS and web onto Android's TdayFeedItemMotion — web has no list motion at all, iOS uses one symmetric 220ms curve for insert, move and remove · ios+web · Impact O4 · M · Gate V + X — **final part (2 of 2)**; PR 22b carried the rest
+  - **No number was copied across, which is what makes the three files readable against each
+    other.** `feedItemMotion.ts` and `TdayFeedItemMotion.swift` name the rung each Android constant
+    mirrors rather than restating `190`/`320`/`150`, so a rung that moves in `MotionTokens.kt`
+    moves on every client at once — and the one place the mirror is not a copy (Android's 190
+    against the `Enter` rung) is argued in the file rather than silently rounded. `V` is
+    `use-row-placement.test.tsx`, `X` is `TdayFeedItemMotionTests.swift`; both green. The displaced
+    rows travelling is already checked by PR 22b's own device row, so this half needs none.
 
 ## Phase 7 — remaining web areas
 
@@ -678,7 +787,7 @@ Restore it from git history rather than adjusting the number.
   - Found while fixing `web-calendar-highlight-ring-cuts`, which now fades a ring almost nobody can
     see. Identical in all three row types carrying
     `highlighted && "rounded-lg ring-2 ring-accent/25 sm:bg-accent/5 sm:ring-0"` —
-    `CalendarClient.tsx:880`, `TodoItemContainer.tsx:406`, `FloaterItemContainer.tsx:267` — because
+    `CalendarClient.tsx:896`, `TodoItemContainer.tsx:406`, `FloaterItemContainer.tsx:267` — because
     all three sit in the same `grid-rows-[1fr] overflow-hidden sm:overflow-visible` wrapper, which
     predates the programme (09225a04).
   - Not the one-line `inset-ring` swap it looks like, which is why it is `S`. The wrapper's clip is
@@ -713,7 +822,7 @@ Restore it from git history rather than adjusting the number.
     computes to `none`, and CSS pads a `none` against the other list adopting its `inset` flags.
     Measured in headless Chromium against the installed 4.2.2 with `transition: box-shadow 1000ms
     linear`, `inset-ring-2` hung off `highlighted` interpolates: spread 0.27px at t+150ms, 1.17px
-    at t+600ms, 2px at the end. The same comment already stands in this tree at `globals.css:1179`
+    at t+600ms, 2px at the end. The same comment already stands in this tree at `globals.css:1282`
     for the drag overlay. What is wrong with it is that *growing a ring is geometry*, and geometry
     is `Emphasis` by rule 2 while this mark rides the `Quick` leg of `swipeTransition` next to the
     desktop tint; a mark lighting up should move paint, which is what a fixed 2px ring changing
@@ -814,8 +923,8 @@ Restore it from git history rather than adjusting the number.
     through the bottom edge, which is position changing, which is Emphasis by the geometry rule.
     The window ran out mid-slide: the calendar's form sheet was pulled halfway down, with the
     confirm sheet stacked on it going in the same frame. `DRAWER_EXIT_MS` (`drawer.tsx:24`) and
-    `useDrawerPresence` (`:39`) are the drawer's own clock, and `CalendarClient.tsx:620` and
-    `:1055` read it; `globals.css:1359-1383` plays vaul's own exit animation on that same rung,
+    `useDrawerPresence` (`:39`) are the drawer's own clock, and `CalendarClient.tsx:636` and
+    `:1078` read it; `globals.css:1462-1486` plays vaul's own exit animation on that same rung,
     each selector carrying one attribute more than the injected rule it outranks, so no
     `!important` is needed. One number read twice cannot drift, which is the `MODAL_EXIT_MS`
     arrangement exactly. The enter deliberately keeps vaul's injected half-second: the identical
@@ -963,15 +1072,26 @@ Restore it from git history rather than adjusting the number.
   - **The property list displaces `transition-all` too, and no closed list is a superset of `all`.**
     It IS a superset of the two named utilities — `transition-colors` adds
     outline-color/text-decoration-color/fill/stroke, `transition-transform` adds transform/rotate,
-    so displacing either costs the call site nothing. `transition-all` is on 19 class strings and
-    the list has to be checked against them one at a time: on all but one the properties actually in
-    flight (translate, scale, background-color, color, opacity, box-shadow) are already in it. The
-    exception is the dock tab, `RootDock.tsx:185`, `sm:min-w-[104px]` when selected against
-    `sm:min-w-12` when not — measured in Chromium against the compiled stylesheet, it went from
-    easing over 200 ms to reaching 104 px in the first frame, beside an indicator pill that is a
-    `pointer-events-none` div this selector does not match and so still glides for 300 ms. That is
-    this unit's own defect shape relocated, and it would have taken the written argument at
-    `RootDock.tsx:101` — the re-measure timed against "the tab width transition (200ms)" — with it.
+    so displacing either costs the call site nothing. `transition-all` was on 19 class strings when
+    this was checked and is on 21 in the tree today — develop's 8i added two, both plain `div`s in
+    `RootDock.tsx` (`:330`, `:384`) that the pressable selector does not match, so neither changes
+    the answer — and the list has to be checked against them one at a time: on all but one the
+    properties actually in flight (translate, scale, background-color, color, opacity, box-shadow)
+    are already in it. The exception is the dock tab, `RootDock.tsx:439`, `sm:min-w-[104px]` when
+    selected against `sm:min-w-12` when not — measured in Chromium against the compiled stylesheet,
+    it went from easing over its rung to reaching 104 px in the first frame, beside an indicator
+    pill that is a `pointer-events-none` div this selector does not match and so still glides for
+    the whole of it.
+    That rung is Emphasis, 320 ms, on both of them now: the tab's class string at `:435` and the
+    pill's at `:326` each spell `duration-emphasis`. This paragraph was written against a tab on
+    `duration-200` and a pill on `duration-300` — two numbers develop's 8i retired in favour of the
+    one rung on the merge that brought this file up to date — so the gap the property list would
+    open is 320 against a single frame rather than 200 against 300: wider than it was, not narrower.
+    That is this unit's own defect shape relocated. The written argument it would have taken with it
+    is gone on its own account: 8i deleted the re-measure timed against "the tab width transition
+    (200ms)" — the comment this row used to cite at `RootDock.tsx:101` — and put a per-frame
+    rect-follower in its place, argued at `RootDock.tsx:174-193`.
+
     `min-width` is therefore in the list, and it has to be there rather than at the call site: a
     `transition-[min-width]` on the button is displaced by this same declaration, and the
     `!important` that would beat it is the escalation the layer exists to retire. `width` and
@@ -1368,15 +1488,155 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 41c — the iOS sheet language and drag-to-dismiss
 
-- [ ] `sheet-presentation-unification` — Four overlay systems on web, two on iOS, two on Android — one sheet language, one scrim, one set of timings · all · Impact O3 · L · Gate V + J + D + TF — **final part (3 of 3)**; PR 41a, PR 41b carried the rest
-- [ ] `ios-sheet-drag-to-dismiss` — the app's most-used sheet cannot be swiped down; no grabber · ios · Impact O4 · M · Gate TF
+- [x] `sheet-presentation-unification` — Four overlay systems on web, two on iOS, two on Android — one sheet language, one scrim, one set of timings · all · Impact O3 · L · Gate V + J + D + TF — **final part (3 of 3)**; PR 41a, PR 41b carried the rest
+  - **Ticked here by the fourth unit, not by the third PR.** Four units close this row: PR 41a's
+    `--sheet-scrim` and the web sheet timings; PR 41b's `TdaySheetMotion` and its scrim moving onto
+    the card's clock; PR 41b's confirm cut, carried over from PR 15a; and this one, which is the
+    iOS third and is paperwork on purpose. `ios-sheet-drag-to-dismiss` below is a separate row and
+    does not gate this box.
+  - **One web scrim outlives the tick, and the box stays ticked anyway.** The develop merge that
+    closed this unit also brought in G7's `web-sheet-overlay-outruns-panel`, which records that
+    `dialog.tsx:21` still draws its scrim with a bare `animate-in`/`animate-out` on the library's
+    0.15 s fallback while the card at `:44` names `duration-enter` — and books that remainder here.
+    It is not a fourth part of this row: all four parts named above are in the tree, the dialog's
+    scrim is already the shared `bg-sheet-scrim` so the row's "one scrim" holds, and what is left
+    is one overlay system's timing rather than a sheet language. The tick therefore stands and the
+    remainder does not travel with it: it is unowned, and the G7 row is where it is written down.
+    "One set of timings" in the row text above should be read as four overlay systems reduced to
+    one language with that single exception outstanding, not as every web scrim being on a rung.
+  - **The row's iOS half — `cardIn → 0.46/0.82` — is superseded, and writing it back would have
+    cost more than it bought.** `TdaySheetChrome.swift:271` already reads
+    `static let cardIn = TdayMotion.settle`, which is response 0.40 / dampingFraction 0.86, and
+    `docs/motion.md:277-280` names that exact line as the `Settle` rung's **one** anchoring site in
+    the repo. Putting 0.46/0.82 there would strand `Settle` with zero call sites, add 2 to
+    `ios.spring` — measured at 98 against a ceiling of 98 — and spend `Gesture`'s 0.82 damping on a
+    presentation rather than on a release, which is the one thing that damping is for. The 0.82 is
+    not wasted: unit 41c-b spends it on the drag release, where a finger has actually let go.
+  - **The two mechanisms are named in the file that owns one of them, and the plan's counts were
+    wrong on both sides of the split.** iOS applies this modifier at **nine** sites across four
+    screens — `TodoListScreen`, `ScheduledTaskHomeScreen`, `CalendarScreen` and `CompletedScreen`,
+    seven of them through the `createTaskSheet(…)` wrappers and two directly for create-list — not
+    four: the plan was counting `CreateTaskSheet.swift:617` and `:626`, which are the wrappers' own
+    bodies, as application sites.
+    UIKit's `.sheet` + `presentationDetents` has **six**, not seven: `ManageMembersSheet.swift:150`
+    is the presented view's own detents, and the presentation is `TodoListScreen.swift:1722`.
+    And the rule is not "the custom one has a keyboard" — list settings and members both carry
+    `TextField`s. It is **whose the height is**: a sheet sized by its own content has nothing above
+    it that will lift it off a keyboard, so the host opts out of SwiftUI's avoidance and computes
+    `keyboardBottomInset` itself, which is what lets the lift be clamped to
+    `maximumScreenHeightFraction` instead of pushing a tall card off the top. A detent sheet's
+    height is a choice UIKit already owns, and detents come with the system drag-to-dismiss.
+    Migrating those six would throw both away for an inset none of them needs, on a branch with no
+    Swift compiler. The argument now lives above `tdayBottomSheetPresentation` rather than in this
+    file, because the next person to ask the question will be reading the modifier.
+  - **The chrome is nearly one, and the plan named the wrong piece as the shared one.** Every sheet
+    on either mechanism wears `TdaySheetHeader` over `colors.bottomSheetBackground`, and the corner
+    radius agrees at 34 everywhere it is stated — `TdaySheetMetrics.sheetCornerRadius` on the custom
+    side, `presentationCornerRadius(34)` at `ManageMembersSheet.swift:152` and
+    `TodoListScreen.swift:2381`/`:5136`. Three native sheets state none at all (Morning Sweep's date
+    picker, promote-floater, the scheduled-home summary) and take UIKit's default; that is a
+    one-line gap and is written down above the modifier rather than closed here, since closing it is
+    a pixel change no gate on this branch can look at. The **scrim** is the piece the plan had
+    backwards:
+    `colors.bottomSheetScrim` has eight call sites on iOS and not one of them is a `.sheet`, because
+    UIKit dims a presented sheet itself and SwiftUI exposes no way to recolour that. So all six
+    native sheets are close to the app's scrim by luck, and matching them exactly would mean owning
+    their presentation — the trade this row refuses. What *is* a genuine
+    three-client agreement is the colour itself: `Color.black.opacity(isDark ? 0.68 : 0.40)` at
+    `TdayTheme.swift:76` is byte-for-byte `TdaySheetChrome.kt:111` on Android and, since PR 41a,
+    web's `--sheet-scrim`. That is a colour with no generated token and nothing in any build
+    watching it, so it is now a row in `docs/motion.md`'s deliberate non-tokens table — the one
+    place in the repo where a fact like that can be read on purpose instead of by accident.
+  - **No literal added or retired, and nothing here can be seen by a device.** All eight budget
+    counters are untouched: the only Swift change is a doc comment, and `stripComments` is what the
+    budget counts through. The gate is `motion-reachability-ios.test.ts` and `motion-parity.test.ts`,
+    both of which read Swift as text and would fail on a broken constant or a raised ceiling.
+    No new device row — PR 41a's and PR 41b's rows in `phase-9-device-pass.md` already carry every
+    frame this box is accountable for, and this unit changes none of them.
+- [x] `ios-sheet-drag-to-dismiss` — the app's most-used sheet cannot be swiped down; no grabber · ios · Impact O4 · M · Gate TF
+  - **The rule is a projection, and it is the only part a test can hold.** `TdaySheetDragToDismiss`
+    is a free enum beside `TdayKeyboardFrameProbe`, for the same reason that one is: what the card
+    does under a finger is one addition to an offset, but what a *release* means is a decision, and
+    a decision inside a `body` is one nothing can ask a question of. It reuses web's argument rather
+    than inventing a second one — `swipeGesture.ts`'s `projectedRest`, written up at LEDGER.md:731-736
+    — that a position-only rule reads the last frame of a gesture as though it were the end of one.
+    SwiftUI hands the projection over ready made in `predictedEndTranslation`, so unlike web there
+    was no sampler to build, only a threshold to name.
+  - **The toast's rule was the wrong one to copy, on both halves.** `AppRootView.swift:973` spells
+    `translation > 30 || predictedEndTranslation > 90`. The `||` is what lets a long drag that is
+    already being walked back through, and a flat 30 pt says nothing on a card whose height runs
+    from about half the screen to `maximumScreenHeightFraction` of it — the same 30 pt is a decisive
+    pull on the short create-floater card and a twitch on the tall create-task one. A quarter of the
+    card's own height is the same gesture on both, and a flick is projected past it rather than
+    dragged there. What the toast *did* hand over is the coordinate space: `.global`, with the
+    comment at `:964-968` explaining that a locally measured drag feeds the card's own offset back
+    into the translation and oscillates. This is the second site of that, not a second discovery.
+  - **The release goes through `dismiss()` and nothing else.** Not an `animateOut()` of its own:
+    that funnel is what resigns the keyboard and times the deferred teardown, and a second exit
+    written at the gesture is a second thing to keep in step with it. `dragTranslation` is
+    deliberately *not* reset on a commit, so the exit carries on from where the finger left the card
+    instead of snapping it home first. A refused drag springs back on `TdayMotion.gesture` —
+    response 0.34 / dampingFraction 0.82, the rung `docs/motion.md:239` defines as a surface
+    continuing under its own momentum after a finger lets go, and the place the 0.82 the
+    `sheet-presentation-unification` row above declined to spend on an *arrival* actually belongs.
+  - **The keyboard resigns at the gesture and not at the dismissal, and that is the trap.**
+    `keyboardBottomInset` lifts the card while a field is focused, so a resign that waited for the
+    release would collapse the lift underneath a card the finger was already moving — PR 15b's
+    Android failure and PR 44's `ios-selector-pops-while-card-slides` are the same shape. Resigning
+    on the first `onChanged` spends the collapse in the direction the finger is already going (the
+    inset is subtracted, so losing it drops the card) and gets it over with while the drag is young.
+    It is guarded on `keyboardFrame` rather than on a flag of its own: the first resign makes
+    `keyboardWillHide` fire, which nils the frame, so the check stops answering without anything
+    having to remember it already ran. A drag can be refused, so this resign is not a duplicate of
+    `animateOut()`'s — it has to happen before either outcome is known.
+  - **The grabber is the chrome's, not each caller's**, so both sheets on this mechanism get it
+    across all nine application sites at once. An overlay rather than a row above the content,
+    because the card's background and its clip shape belong to the content: a row inserted in the
+    host would sit in the transparent strip *above* the card. 36 × 5 at 5 pt from the top is UIKit's
+    own grabber to the point — the native mechanism's six sheets are handed exactly that bar, and
+    four of them currently answer `presentationDragIndicator(.hidden)`, so the app refuses the
+    affordance on both mechanisms today. Whichever way that gets settled, the two should not
+    disagree by a pixel at the one place a user looks to find out whether a sheet can be pulled.
+  - **The gesture is on the whole card and `.gesture`, not `.highPriorityGesture`.** A gesture
+    declared on an ancestor yields to one declared inside it, which is what should leave
+    `CreateListSheet`'s `ScrollView` scrolling under a card that still drags by its header and its
+    margins — the same division of a sheet UIKit makes. Source cannot settle that and the device row
+    says so.
+  - **Chrome applied to the content is chrome drawn over whatever the content draws over itself**,
+    and `CreateTaskSheet`'s centred selector is exactly that: a full scrim and a picker declared
+    *inside* the view this host is handed. So the grabber landed lit on top of the dim, and the
+    ancestor drag stayed live over the scrim's pixels — whose only competing recognizer is a
+    `.onTapGesture`, which does not claim a 10 pt pan. A pull downward on the dim discarded a
+    half-written task where a tap on the same pixels only closes the picker. Fixed the way z-order
+    has to be fixed when the layers are declared in two files: the content reports that it is
+    covered (`tdaySheetContentIsCovered`, a preference rather than an environment value because the
+    direction is inward-out) and the chrome stands down for as long as it is — the bar crossfades
+    out on `scrimIn`/`scrimOut`, and the drag is masked to `.subviews` so the picker's own rows and
+    its tap-to-close keep working. Not `.none`: the layer doing the covering is made of the
+    content's own subviews. The alternative — moving the grabber inside the content's clip — would
+    have put it back on each of the nine callers, which is the thing the chrome exists to stop.
+    Not routed through `tdayAnimation`: the layer doing the covering keeps its own crossfade under
+    Reduce Motion, for the reason `TdayCenteredSelectorMotion` writes out, and giving the setting to
+    one half of one crossfade is what would make the bar and the dim read as two surfaces.
+    `CreateTaskSheet.swift:242`'s allowlist key in `motion-reachability-ios.test.ts` moved to `:248`
+    with the lines it names; that table is keyed by exact `path:line` and tracking it is the cost of
+    inserting anything above a known site.
+  - **No literal added or retired; all eight budget counters are untouched.** The release names
+    `TdayMotion.gesture` rather than writing a spring, so `ios.spring` stays at 98/98 and
+    `ios.easeDuration` at 27/27, both of which had zero headroom. The three geometry numbers (10 pt
+    of slop, a 0.25 fraction, the 36 × 5 bar) are gesture and layout rather than motion and are on
+    no counter. Seven cases in `TdaySheetChromeMotionTests.swift`, which is already registered in
+    the pbxproj; the fourth of them — a 300 pt drag with a 90 pt projection — is the one a
+    position-only rule fails, which is what makes the others worth having. Whether the released card
+    settles on the same curve the scrim tap leaves on, and whether the grabber reads as a second
+    header, are the TestFlight row in `phase-9-device-pass.md`.
 
 ### PR 42a…42g — seven polish PRs, one surface each
 
 - *(container row — the seven rows below are the work: Morning Sweep · Android Settings inline forms · iOS Help Guide · Android onboarding steps · Android calendar mode switch · iOS numeric counts · Android error card)*
-- [ ] `android-morning-sweep-motion` — 241 lines, zero `animate*`, bare-`Text` finish · and · Impact O3 · S · Gate D
+- [x] `android-morning-sweep-motion` — 241 lines, zero `animate*`, bare-`Text` finish · and · Impact O3 · S · Gate D
 - [ ] `disclosure-expand-collapse` — Expand/collapse has no shared spec: Android slices glyphs mid-growth, iOS runs the app's fastest curve at 150ms, web snaps the height and swaps two chevron glyphs · all · Impact O3 · M · Gate V + D + TF — **final part (2 of 2)**; PR 56 carried the rest
-- [ ] `android-onboarding-step-direction` — ordered steps crossfade on Compose's default spec · and · Impact O2 · S · Gate D
+- [x] `android-onboarding-step-direction` — ordered steps crossfade on Compose's default spec · and · Impact O2 · S · Gate D
 - [ ] `android-calendar-mode-content-cut` — content hard-cuts inside a container whose height is springing · and · Impact O3 · S · Gate D
 - [ ] `ios-numeric-count-transition` — four plain `Text("\(count)")`, one at 34 pt; zero `contentTransition` in the codebase · ios · Impact O3 · S · Gate TF
 - [ ] `android-error-card-feed-motion` — error card pops mid-feed, two directories from the spec that fixes it · and · Impact O2 · XS · Gate D
@@ -1791,14 +2051,16 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 ### PR 176 — web app index skeleton double chrome
 
 - [ ] `web:shell-sidebar-settings#4` — 4 · web · Sev 2 · S · Gate V
-  - citation corrected: tday-web/src/components/app/AppShellSkeleton.tsx:36-39 (dock placeholder); tday-web/src/pages/AppHomeRedirectPage.tsx:24-26; tday-web/src/components/app/NativeAppShell.tsx:37-40; tday-web/src/components/app/RootDock.tsx:105
+  - citation corrected: tday-web/src/components/app/AppShellSkeleton.tsx:52-54 (the dock placeholder — the audit's :36-39 is the hero tile; the placeholder is the `h-16 w-44 rounded-[25px]` div under the `{/* Dock placeholder */}` comment); tday-web/src/pages/AppHomeRedirectPage.tsx:24-26; tday-web/src/components/app/NativeAppShell.tsx:37-40 (both still exact); tday-web/src/components/app/RootDock.tsx:291 (the real capsule the placeholder is standing in for, `h-16 … rounded-[25px]`) — re-read after develop's 8i rewrote RootDock.tsx from 206 to 483 lines, which is what moved the audit's :105
 
 ### PR 177 — web dock pill measure and first paint
 
 - [ ] `web:shell-sidebar-settings#2` — 2 · web · Sev 2 · S · Gate G
-  - citation corrected: tday-web/src/components/app/RootDock.tsx:81-92 (the measure effect), :122 (pill class), :159-163 (button transition + min-width)
+  - citation corrected: tday-web/src/components/app/RootDock.tsx:161-172 (`updatePill`), :174-226 (the measure effect), :326 (pill class), :435 and :439 (button transition, and the `sm:min-w-[104px]`/`sm:min-w-12` pair). The audit's :81-92 / :122 / :159-163 were read off the pre-8i file and land on unrelated lines in the tree today.
+  - **Probably already closed by develop's 8i — re-check before spending a PR on it.** The defect is the pill measuring a rect that is still moving. 8i replaced the single re-measure on a timer with a follower that calls `updatePill` once per frame for the length of the rung (`:207-225`) and a `transitionend` settle bound to the nav (`:228-258`), so the last word on where the tab stopped comes from the tab rather than from a clock beside it; `tday-web/tests/fixtures/motion-budget.json`'s `_durationUtility` records the same change from the other end. If a device pass confirms it, close this row instead of re-fixing it.
 - [ ] `web:shell-sidebar-settings#3` — 3 · web · Sev 2 · S · Gate G
-  - citation corrected: tday-web/src/components/app/RootDock.tsx:65 (pillStyle init), :81-92 (post-paint measure), :122 (unconditional transition-all)
+  - citation corrected: tday-web/src/components/app/RootDock.tsx:157-160 (the note on writing the pill straight onto the node — there is no `pillStyle` state any more, so the audit's :65 cites something that no longer exists), :174-226 (the post-paint measure), :326 (the unconditional `transition-all`).
+  - **Still open as far as the merged tree shows.** 8i changed how the pill is measured, not when it is measured FIRST: the node at `:326` is rendered with no width, height or transform and nothing gating its `transition-all duration-emphasis`, and the first `updatePill` runs from a `useEffect` — after paint. So the first paint still has the pill grow out of the capsule's top-left corner. Unlike #2 above, the follower does not close this one.
 
 ### PR 178 — web root feed search overlay cut
 

@@ -1010,6 +1010,13 @@
         "keywords": "arrastrar, reordenar, mover, ordenar, orden, organizar",
         "body": "Tus listas conservan el orden que les des. Arrastra una tarea arriba o abajo para organizar tu día tal como lo piensas."
       },
+      "swipe-sheet-away": {
+        "title": "Desliza la tarjeta para cerrarla",
+        "summary": "Arrastra hacia abajo la tarjeta de nueva tarea para cerrarla.",
+        "keywords": "deslizar, arrastrar, cerrar, descartar, tarjeta, hoja, tirador, gesto, hacia abajo",
+        "body": "La pequeña barra de la parte superior de la tarjeta de nueva tarea indica que puedes arrastrarla hacia abajo. Al arrastrarla sigue tu dedo; suéltala pasado aproximadamente un cuarto del recorrido y se cierra, igual que si tocaras la zona oscurecida que hay detrás. Un impulso rápido también cuenta: lo que importa es hacia dónde ibas, no dónde soltaste. Y si te arrepientes a mitad de camino, vuelve a su sitio.",
+        "tip": "Si el contenido de una tarjeta se desplaza, arrástrala desde arriba: el centro pertenece a la lista."
+      },
       "sound-and-vibration": {
         "title": "Sonido y vibración",
         "summary": "Desactiva el sonido de finalización, la vibración o ambos.",

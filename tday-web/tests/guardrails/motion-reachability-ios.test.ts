@@ -556,10 +556,10 @@ function gatesOf(cond: string, scope: TypeScope): string[] {
 
 /** Rule A — `.transition` sites whose transaction is supplied outside this type. */
 const TRANSITION_DRIVEN_ELSEWHERE: Record<string, string> = {
-  "ios-swiftUI/Tday/UI/Component/CreateTaskSheet.swift:242":
+  "ios-swiftUI/Tday/UI/Component/CreateTaskSheet.swift:248":
     "`scheduleEnabled` is written through the Binding handed to " +
     "CreateTaskSheetScheduleToggleRow, which applies `$isOn.animation(.spring(…))` " +
-    "on the Toggle (:787). The Binding carries the transaction, so the due row's " +
+    "on the Toggle (:797). The Binding carries the transaction, so the due row's " +
     "transition runs on every user-driven flip of this gate.",
 };
 
