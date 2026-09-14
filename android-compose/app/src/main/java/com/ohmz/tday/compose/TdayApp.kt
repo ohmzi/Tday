@@ -14,7 +14,9 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -54,6 +56,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -125,11 +128,22 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 import io.sentry.android.navigation.SentryNavigationListener
 
-// The slide durations and offsets that used to sit here went with the slide —
-// nothing is travelling any more, so there is no distance left to time.
-private const val NAV_FADE_IN_DURATION_MS = 360
-private const val NAV_FADE_OUT_DURATION_MS = 240
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
+
+// How far the screen a predictive-back drag has hold of recedes by the end of that drag.
+//
+// not a token — see docs/motion.md. The press scales are the nearest thing in the vocabulary
+// and they are a different quantity: they grade by surface class, and they grade the wrong
+// way for this — the table's own rule is that SMALLER surfaces move further, so extending it
+// past `Row`'s 0.985 to a whole screen gives a recede of nothing at all. That rule is about a
+// surface squashing under the finger that is on it. This is a screen being carried off the
+// side, and the number's job is to report how far the drag has got, not how hard it is being
+// pressed. Same distinction the table already draws for `pressedScale * revealScale`.
+//
+// A tenth, because that is the recede the platform itself plays when a back gesture takes the
+// whole app away, and an in-app back that pulls a smaller distance than the system's would
+// make the two gestures read as two different things on the same edge of the same screen.
+private const val PREDICTIVE_BACK_MIN_SCALE = 0.90f
 
 // How far out of focus the app is pushed behind the onboarding wizard. A radius, not a
 // motion spec: what the vocabulary fixes is how long it takes to get here, not how far.
@@ -332,6 +346,13 @@ fun TdayApp(
                     )
                     return@CompositionLocalProvider
                 }
+                // Hoisted, not read below: the four lambdas underneath are
+                // `AnimatedContentTransitionScope` receivers rather than composables, so this
+                // is the last scope that can ask the question. Compose's animator scale would
+                // zero these transitions on its own; the in-app Reduce Motion switch is the
+                // half Compose knows nothing about, and until now the NavHost was the one
+                // surface in the app still deaf to it.
+                val motionEnabled = rememberTdayMotionEnabled()
                 NavHost(
                     navController = navController,
                     startDestination = AppRoute.Splash.route,
@@ -345,12 +366,18 @@ fun TdayApp(
                     // on both screens, moving. Fading in place hands each button over
                     // to its counterpart instead of travelling it there and back.
                     //
-                    // Directional transitions go with it: there is no direction left to
-                    // express once nothing moves, so push and pop share one pair.
-                    enterTransition = { navigationEnterTransition() },
-                    exitTransition = { navigationExitTransition() },
-                    popEnterTransition = { navigationEnterTransition() },
-                    popExitTransition = { navigationExitTransition() },
+                    // Directional transitions go with it wherever the change is COMMITTED:
+                    // there is no direction left to express once nothing moves, so three of
+                    // the four slots below share one pair. The fourth is the one the system
+                    // SEEKS against a finger rather than plays, and a seeked crossfade is a
+                    // progress report nobody can read — see `navigationPopExitTransition`.
+                    // The screen being dragged off is the only thing that moves, and the
+                    // arriving screen still fades in place, so the hand-over argument above
+                    // survives in the half it was written about.
+                    enterTransition = { navigationEnterTransition(motionEnabled) },
+                    exitTransition = { navigationExitTransition(motionEnabled) },
+                    popEnterTransition = { navigationEnterTransition(motionEnabled) },
+                    popExitTransition = { navigationPopExitTransition(motionEnabled) },
                 ) {
                     splashAndAuthRoutes(
                         startupTagline = startupTagline,
@@ -431,11 +458,12 @@ private fun NavGraphBuilder.splashAndAuthRoutes(
     navController: NavHostController,
     appViewModel: AppViewModel,
 ) {
-    composable(
-        route = AppRoute.Splash.route,
-        enterTransition = { fadeIn(tween(300)) },
-        exitTransition = { fadeOut(tween(300)) },
-    ) {
+    // None of these three names its own transition any more. A splash handing over to the
+    // first real screen, and an auth screen handing over to the workspace, are route changes
+    // like any other and have nothing to say about their own length; the 300 ms each of them
+    // used to write was a third number in a hand-over that should only ever have had one.
+    // They inherit the NavHost defaults, which is also how they inherit the Reduce Motion gate.
+    composable(route = AppRoute.Splash.route) {
         // Same tagline as the pre-graph splash it takes over from, so the
         // hand-off between the two is not visible.
         SplashScreen(
@@ -444,29 +472,15 @@ private fun NavGraphBuilder.splashAndAuthRoutes(
         )
     }
 
-    composable(
-        route = AppRoute.ServerSetup.route,
-        enterTransition = { fadeIn(tween(300)) },
-        exitTransition = { fadeOut(tween(300)) },
-    ) {
+    composable(route = AppRoute.ServerSetup.route) {
         SplashScreen(onHoldChanged = onStartupSplashHoldChanged)
     }
 
-    composable(
-        route = AppRoute.Login.route,
-        enterTransition = { fadeIn(tween(300)) },
-        exitTransition = { fadeOut(tween(300)) },
-    ) {
+    composable(route = AppRoute.Login.route) {
         SplashScreen(onHoldChanged = onStartupSplashHoldChanged)
     }
 
-    composable(
-        route = AppRoute.ForgotPassword.route,
-        enterTransition = { settingsEnterTransition() },
-        exitTransition = { settingsExitTransition() },
-        popEnterTransition = { settingsEnterTransition() },
-        popExitTransition = { settingsExitTransition() },
-    ) {
+    composable(route = AppRoute.ForgotPassword.route) {
         val passwordResetMessage =
             stringResource(R.string.forgot_password_reset_success)
         ForgotPasswordScreen(
@@ -842,10 +856,6 @@ private fun NavGraphBuilder.utilityRoutes(
     composable(
         route = AppRoute.MorningSweep.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://morning-sweep" }),
-        enterTransition = { settingsEnterTransition() },
-        exitTransition = { settingsExitTransition() },
-        popEnterTransition = { settingsEnterTransition() },
-        popExitTransition = { settingsExitTransition() },
     ) {
         MorningSweepScreen(
             onBack = { navController.popBackStack() },
@@ -861,10 +871,6 @@ private fun NavGraphBuilder.utilityRoutes(
                 defaultValue = null
             },
         ),
-        enterTransition = { settingsEnterTransition() },
-        exitTransition = { settingsExitTransition() },
-        popEnterTransition = { settingsEnterTransition() },
-        popExitTransition = { settingsExitTransition() },
     ) { backStackEntry ->
         HelpGuideScreen(
             isLocalMode = isLocalMode(),
@@ -895,18 +901,6 @@ private fun NavGraphBuilder.settingsRoutes(
     composable(
         route = AppRoute.Settings.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://settings" }),
-        enterTransition = {
-            settingsEnterTransition()
-        },
-        exitTransition = {
-            settingsExitTransition()
-        },
-        popEnterTransition = {
-            settingsEnterTransition()
-        },
-        popExitTransition = {
-            settingsExitTransition()
-        },
     ) {
         OnRouteResume {
             appViewModel.refreshAiSummaryPreference()
@@ -976,13 +970,7 @@ private fun NavGraphBuilder.settingsRoutes(
         )
     }
 
-    composable(
-        route = AppRoute.LatestRelease.route,
-        enterTransition = { settingsEnterTransition() },
-        exitTransition = { settingsExitTransition() },
-        popEnterTransition = { settingsEnterTransition() },
-        popExitTransition = { settingsExitTransition() },
-    ) {
+    composable(route = AppRoute.LatestRelease.route) {
         OnRouteResume {
             appViewModel.refreshVersionInfo()
         }
@@ -1452,7 +1440,6 @@ private fun ScheduledTaskHomeFeed(
         onSummarize = scheduledTaskHomeViewModel::summarizeToday,
         summaryAvailable = !appUiState.isLocalMode,
         showRootFeedDock = false,
-        showCreateTaskButton = false,
         createTaskRequestKey = rootCreateTaskRequestKey,
         onCreateTaskRequestHandled = onCreateTaskRequestHandled,
         scrollToTopRequestKey = scrollToTopRequestKey,
@@ -1509,28 +1496,53 @@ private fun FloaterTaskHomeFeed(
  */
 @Composable
 private fun LockedRootFeed(uiState: ScheduledTaskHomeUiState) {
-    ScheduledTaskHomeScreen(
-        uiState = uiState,
-        onRefresh = {},
-        onOpenToday = {},
-        onOpenOverdue = {},
-        onOpenScheduled = {},
-        onOpenAll = {},
-        onOpenPriority = {},
-        onOpenCompleted = {},
-        onOpenCalendar = {},
-        onOpenFloater = {},
-        onOpenSettings = {},
-        onOpenTaskFromSearch = {},
-        onOpenList = { _, _ -> },
-        onCreateTask = { _ -> },
-        onParseTaskTitleNlp = { _, _ -> null },
-        onCreateList = { _, _, _ -> },
-        onCompleteTask = {},
-        onDeleteTask = {},
-        onUpdateTask = { _, _ -> },
-        summaryAvailable = false,
-    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        ScheduledTaskHomeScreen(
+            uiState = uiState,
+            onRefresh = {},
+            onOpenToday = {},
+            onOpenOverdue = {},
+            onOpenScheduled = {},
+            onOpenAll = {},
+            onOpenPriority = {},
+            onOpenCompleted = {},
+            onOpenCalendar = {},
+            onOpenFloater = {},
+            onOpenSettings = {},
+            onOpenTaskFromSearch = {},
+            onOpenList = { _, _ -> },
+            onCreateTask = { _ -> },
+            onParseTaskTitleNlp = { _, _ -> null },
+            onCreateList = { _, _, _ -> },
+            onCompleteTask = {},
+            onDeleteTask = {},
+            onUpdateTask = { _, _ -> },
+            summaryAvailable = false,
+        )
+
+        // The backdrop draws its own create button now instead of inheriting one from the
+        // screen's `Scaffold` slot, which is where it used to come from: this was the single
+        // caller still taking that slot's default, and it was the last reason the slot existed.
+        // Dropping the slot without putting the button back here would have taken the root
+        // feed's most prominent control off the backdrop, which is the opposite of what this
+        // composable is for — a layout with a hole where the "+" goes is the empty screen the
+        // KDoc above says it exists to avoid.
+        //
+        // Placed at `RootFeedContent`'s geometry down to the padding, because these two are the
+        // branches of one Crossfade: at sign-in the circle is already where the live one is
+        // about to be drawn, so the feed changes under a button that holds still rather than
+        // one that pops in beside the outgoing frame. Inert like everything else here.
+        RootCreateTaskButton(
+            onClick = {},
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
+                .padding(
+                    end = TdayDimens.ContentPaddingHorizontal,
+                    bottom = TdayDimens.ContentPaddingHorizontal,
+                ),
+        )
+    }
 }
 
 /** The sign-in / server-setup wizard, and the two holding screens that can stand in for it. */
@@ -2159,28 +2171,105 @@ private fun OnAppForegroundResume(
     }
 }
 
-private fun navigationEnterTransition(): EnterTransition =
-    fadeIn(
-        animationSpec = tween(
-            durationMillis = NAV_FADE_IN_DURATION_MS,
-            easing = LinearOutSlowInEasing,
-        ),
-    )
+/**
+ * The route hand-over: one length, two curves, and the same pair everywhere the change is
+ * already committed. The fourth wiring left this pair for a gesture; see
+ * [navigationPopExitTransition].
+ *
+ * The 360 this replaced carried half an argument and the half survives. A route fade sits
+ * between a tap and the screen the user asked for, and anything longer than that reads as
+ * lag — which against the long end is exactly right, and 360 was the long end it was
+ * written against. What 360 could not defend was 360: it named no rung, so nothing
+ * downstream could tell a decision from a number somebody liked. A thing arriving with no
+ * reason to be another length is `Enter`.
+ *
+ * One length and two curves is the model web already runs: `.tday-route-fade` and
+ * `::view-transition-old(root)` are both `var(--tday-duration-enter)` and differ only in
+ * `--tday-ease-enter` against `--tday-ease-exit`. The two Compose built-ins are those two
+ * curves byte for byte — `docs/motion.md`'s easing table says so and `TdayMotionTokensTest`
+ * pins it — so they are left where they are written rather than renamed for the look of it.
+ *
+ * There is nothing below these three: the splash, the auth screens and Settings each used to
+ * restate a transition here, and every one of them was restating this one. A route that
+ * names its own hand-over is a route that drifts off the rung, and — the reason it matters
+ * more than tidiness — a route that escapes a gate wired at the NavHost.
+ *
+ * [motionEnabled] is a parameter and not a `remember` because the callers are
+ * `AnimatedContentTransitionScope` lambdas, which are not composable. `None` is not "no
+ * transition", it is the destination drawn finished on its first frame, which is the whole
+ * of what a route change has to show for itself.
+ */
+private fun navigationEnterTransition(motionEnabled: Boolean): EnterTransition =
+    if (!motionEnabled) {
+        EnterTransition.None
+    } else {
+        fadeIn(
+            animationSpec = tween(
+                durationMillis = TdayMotionTokens.Durations.Enter,
+                easing = LinearOutSlowInEasing,
+            ),
+        )
+    }
 
-private fun navigationExitTransition(): ExitTransition =
-    fadeOut(
-        animationSpec = tween(
-            durationMillis = NAV_FADE_OUT_DURATION_MS,
+/** The other curve of the pair; see [navigationEnterTransition] for the length they share. */
+private fun navigationExitTransition(motionEnabled: Boolean): ExitTransition =
+    if (!motionEnabled) {
+        ExitTransition.None
+    } else {
+        fadeOut(
+            animationSpec = tween(
+                durationMillis = TdayMotionTokens.Durations.Enter,
+                easing = FastOutLinearInEasing,
+            ),
+        )
+    }
+
+/**
+ * The one direction left, and the only transition of the four a finger can hold open.
+ *
+ * [navigationEnterTransition]'s argument is about a route change that has already been
+ * COMMITTED: both screens are going to swap whatever happens, so there is nothing for a
+ * direction to tell anybody and a fade in place is the honest description. A predictive-back
+ * scrub is the case that argument does not reach. `enableOnBackInvokedCallback` is on in the
+ * manifest and `navigation-compose` drives this slot from a `SeekableTransitionState`, so
+ * mid-drag the user is not watching a transition play — they are watching this spec's own
+ * progress, scrubbed to wherever their thumb is. A crossfade is the one spec that cannot be
+ * scrubbed: two screens at half opacity look identical at a third of the pull and at two
+ * thirds of it, so the gesture can say neither how far it has come nor whether letting go
+ * now commits it or throws it back.
+ *
+ * Hence travel and a recede, on the screen the finger has hold of and on nothing else. The
+ * arriving screen keeps [navigationEnterTransition] and still fades where it stands, which is
+ * exactly what leaves the NavHost's toolbar argument intact: the back chevron and the action
+ * cluster are still handed to their counterparts rather than carried sideways and dropped
+ * back. Push is not touched at all — the forward direction has no gesture to answer.
+ *
+ * Same rung and same curve as the committed exit, deliberately: this slot also plays whole
+ * when back arrives as a button press rather than as a drag, and a scrub that released into a
+ * different animation than the button would have played is two backs instead of one. The
+ * quarter width is a travel and not a distance anybody measures, so it is written here rather
+ * than named; [PREDICTIVE_BACK_MIN_SCALE] is the number that needed an argument and carries
+ * one.
+ */
+private fun navigationPopExitTransition(motionEnabled: Boolean): ExitTransition =
+    if (!motionEnabled) {
+        ExitTransition.None
+    } else {
+        // Two tweens for one spec, because Compose types an animation by what it animates and
+        // the slide moves an `IntOffset` while the other two move a `Float`. The rung and the
+        // curve are the part that has to stay identical; the objects cannot be.
+        val fade = tween<Float>(
+            durationMillis = TdayMotionTokens.Durations.Enter,
             easing = FastOutLinearInEasing,
-        ),
-    )
-
-// Settings used to rise from below, which moved its toolbar down the screen and
-// back. It crossfades like everything else now; the durations it was tuned with
-// are gone with the movement they were timing.
-private fun settingsEnterTransition(): EnterTransition = navigationEnterTransition()
-
-private fun settingsExitTransition(): ExitTransition = navigationExitTransition()
+        )
+        val travel = tween<IntOffset>(
+            durationMillis = TdayMotionTokens.Durations.Enter,
+            easing = FastOutLinearInEasing,
+        )
+        fadeOut(animationSpec = fade) +
+            slideOutHorizontally(animationSpec = travel) { it / 4 } +
+            scaleOut(animationSpec = fade, targetScale = PREDICTIVE_BACK_MIN_SCALE)
+    }
 
 @Composable
 private fun SplashScreen(

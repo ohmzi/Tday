@@ -57,13 +57,17 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.TdayPress
 import com.ohmz.tday.compose.core.ui.interactiveTimeoutMillis
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayRootFeedAccent
@@ -94,6 +98,58 @@ private val RootFeedDockInnerPadding = TdayDimens.RootFeedDockInnerPadding
 private val RootFeedDockTabWidth = TdayDimens.RootFeedDockTabWidth
 private val RootFeedDockExpandedWidth =
     (RootFeedDockTabWidth * RootFeedTabs.size) + (RootFeedDockInnerPadding * 2)
+
+/**
+ * Where a root feed's dock folds down to its pill, and where it opens back up again.
+ *
+ * Two thresholds and not one. A single comparison flips on its own boundary pixel, so a
+ * finger parked exactly at [CollapseThreshold] — which is where a finger parked anywhere
+ * near the top of a feed ends up, a list settling a pixel either way under its own
+ * fling — strobes the dock between [RootFeedDockCollapsedWidth] and
+ * [RootFeedDockExpandedWidth] for as long as it rests there. The 20 dp between the two
+ * numbers below is the dead band that swallows that hover. It costs a deliberate scroll
+ * back to the top nothing: such a scroll passes both edges inside one gesture.
+ *
+ * [CollapseThreshold] is not ours alone. iOS spells the same 44 twice, at
+ * `ScheduledTaskHomeMetrics.rootDockCollapseThreshold` and
+ * `TodoTimelineMetrics.rootDockCollapseThreshold`, and web's root dock fold carries a third
+ * copy in `tday-web/src/lib/rootDockCollapse.ts`. Moving it here moves one client of
+ * three, and a dock that folds at three different distances is three docks.
+ */
+object RootFeedDockCollapse {
+
+    /** How far a feed has to travel before its dock gives up its labels. */
+    val CollapseThreshold: Dp = 44.dp
+
+    /** How far back up it has to come before the dock gets them back. */
+    val ExpandThreshold: Dp = 24.dp
+
+    /**
+     * The dock's next folded state, given the one it is already in.
+     *
+     * [previous] is what makes the dead band a dead band rather than a second threshold
+     * nobody reaches: it picks which edge is being tested. Any feed scrolled off its
+     * first item is past both edges by definition and collapses regardless — a lazy list
+     * reports the offset within the first visible item, not the distance travelled, so
+     * without that clause a long scroll reads as a small one.
+     */
+    fun next(
+        previous: Boolean,
+        firstVisibleItemIndex: Int,
+        scrollOffsetPx: Int,
+        collapsePx: Int,
+        expandPx: Int,
+    ): Boolean {
+        if (firstVisibleItemIndex > 0) return true
+        // Distance travelled, never a position: an offset above the top of the first
+        // item is zero travel. With both edges positive this changes no answer on its
+        // own — it is here so the comparisons below read as "how far has this feed
+        // come", which is the question, rather than as "where is its first item",
+        // which is not.
+        val offset = scrollOffsetPx.coerceAtLeast(0)
+        return if (previous) offset > expandPx else offset > collapsePx
+    }
+}
 
 /**
  * How long the dock stays open after a tap has opened it, for a user who has asked
@@ -137,7 +193,14 @@ fun RootCreateTaskButton(
     val view = LocalView.current
 
     Card(
-        modifier = modifier,
+        // The press goes on the END of the incoming modifier, not in front of
+        // it. Both callers put the button where it lives from the outside —
+        // `.align()`, `.navigationBarsPadding()`, `.padding()` here and
+        // `.align().size()` on the car surface — and those have to stay
+        // outermost, so that the offset and the squash move the drawn circle
+        // inside a layout slot that does not budge. Put them first and a press
+        // shifts the slot instead, which drags the navigation-bar inset with it.
+        modifier = modifier.tdayPressable(interactionSource, scale = TdayPress.FabScale),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
@@ -290,7 +353,7 @@ fun RootFeedDock(
             )
             val activePressed = pressedStates.getOrNull(activeIndex)?.value == true
             val selectorScale by animateFloatAsState(
-                targetValue = if (activePressed) 0.985f else 1f,
+                targetValue = if (activePressed) TdayMotionTokens.PressScales.Row else 1f,
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioNoBouncy,
                     stiffness = Spring.StiffnessMediumLow,
@@ -399,8 +462,23 @@ fun RootFeedDock(
                     ),
                     label = "rootFeedDockTabAlpha",
                 )
+                // On `Row` rather than on the 0.98 this used to write, and it is
+                // allowed on a token despite being multiplied into the two
+                // `graphicsLayer` blocks below. `docs/motion.md` excludes a press
+                // factor that is one term of a composed transform, because there
+                // the token would name half of what a finger sees. The narrow
+                // reason it does not apply here: the dock settles at
+                // `expansionProgress` 0 or 1 and nowhere else, and at both of those
+                // the factor on whichever of the two is visible is exactly 1 — the
+                // icon's `1 - 0.08 * expansionProgress` at 0, where the icon is the
+                // opaque one, and the label's `0.94 + 0.06 * textAlpha` at 1, where
+                // the label is. In between, the other factor does leave 1, but that
+                // is the expansion running, and the expansion is a transient that
+                // fades the thing it is scaling. A press is measured against a
+                // settled tab, and a settled tab squashes by this number and
+                // nothing else.
                 val contentScale by animateFloatAsState(
-                    targetValue = if (tabPressed) 0.98f else 1f,
+                    targetValue = if (tabPressed) TdayMotionTokens.PressScales.Row else 1f,
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioNoBouncy,
                         stiffness = Spring.StiffnessMediumLow,

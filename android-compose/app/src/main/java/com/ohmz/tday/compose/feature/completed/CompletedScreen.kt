@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -81,6 +80,7 @@ import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
+import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
@@ -101,6 +101,7 @@ import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
+import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
@@ -296,12 +297,14 @@ fun CompletedScreen(
                         item(key = "completed-header-${section.key}") {
                             CompletedTimelineSectionHeader(
                                 modifier = Modifier
+                                    // Placement and nothing else: a month header is
+                                    // never added or removed by a check-off, only
+                                    // displaced by one. That is [TdayFeedItemMotion]'s
+                                    // rule 1, which this site was already obeying by
+                                    // hand at the same 320.
                                     .animateItem(
                                         fadeInSpec = null,
-                                        placementSpec = tween(
-                                            durationMillis = 320,
-                                            easing = FastOutSlowInEasing,
-                                        ),
+                                        placementSpec = TdayFeedItemMotion.Placement,
                                         fadeOutSpec = null,
                                     )
                                     .padding(
@@ -336,18 +339,9 @@ fun CompletedScreen(
                                     CompletedSwipeRow(
                                         modifier = Modifier
                                             .animateItem(
-                                                fadeInSpec = tween(
-                                                    durationMillis = 190,
-                                                    easing = FastOutSlowInEasing,
-                                                ),
-                                                placementSpec = tween(
-                                                    durationMillis = 320,
-                                                    easing = FastOutSlowInEasing,
-                                                ),
-                                                fadeOutSpec = tween(
-                                                    durationMillis = 150,
-                                                    easing = FastOutSlowInEasing,
-                                                ),
+                                                fadeInSpec = TdayFeedItemMotion.FadeIn,
+                                                placementSpec = TdayFeedItemMotion.Placement,
+                                                fadeOutSpec = TdayFeedItemMotion.FadeOut,
                                             )
                                             .padding(
                                                 bottom = completedTaskBottomSpacing(
@@ -429,11 +423,28 @@ fun CompletedScreen(
                         }
                     }
 
+                    // Keyed, because a load failure genuinely adds and removes a
+                    // row here and `animateItem` cannot animate either on an item
+                    // whose identity is its index. All three specs, not placement
+                    // alone: the card is added and removed rather than displaced,
+                    // and [TdayFeedItemMotion] is the clock the rows above it
+                    // name too — a card that appears in one frame while its
+                    // neighbours are mid-travel is the defect.
                     uiState.errorMessage?.let { message ->
-                        item {
+                        item(key = "error-retry", contentType = "error_retry") {
+                            val errorCardMotionEnabled = rememberTdayMotionEnabled()
                             com.ohmz.tday.compose.core.ui.ErrorRetryCard(
                                 message = message,
                                 onRetry = onRefresh,
+                                modifier = if (errorCardMotionEnabled) {
+                                    Modifier.animateItem(
+                                        fadeInSpec = TdayFeedItemMotion.FadeIn,
+                                        placementSpec = TdayFeedItemMotion.Placement,
+                                        fadeOutSpec = TdayFeedItemMotion.FadeOut,
+                                    )
+                                } else {
+                                    Modifier
+                                },
                             )
                         }
                     }
@@ -1070,23 +1081,10 @@ private fun CompletedBarButton(
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
-        label = "completedBarButtonScale",
-    )
-    val offsetY by animateDpAsState(
-        targetValue = if (pressed) 2.dp else 0.dp,
-        label = "completedBarButtonOffsetY",
-    )
 
     Card(
         modifier = Modifier
-            .offset(y = offsetY)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()

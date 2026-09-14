@@ -13,10 +13,10 @@
  * tab you are on.
  *
  * The same number on all three clients, spelled in each one's own unit:
- * `RootFeedDockCollapseThreshold = 44.dp` at
- * `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:270`
- * and `.../feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:2302`, and
- * `rootDockCollapseThreshold: CGFloat = 44` at
+ * `RootFeedDockCollapse.CollapseThreshold = 44.dp` at
+ * `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/RootFeedDock.kt:122`
+ * — one declaration, read by both Android feeds, where this comment used to cite
+ * a copy of the literal in each of them — and `rootDockCollapseThreshold: CGFloat = 44` at
  * `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:126` and
  * `.../ScheduledTaskHome/ScheduledTaskHomeScreen.swift:12`. Moving it here
  * moves one client's dock away from the other two, which is worse than
