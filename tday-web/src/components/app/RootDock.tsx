@@ -68,6 +68,32 @@ export function activeDockTab(pathname: string): DockTab {
 const ROOT_DOCK_TAP_EXPAND_MS = 2400;
 
 /**
+ * The transitions whose landing means the pill's target has stopped moving.
+ *
+ * Both are read straight off the two class strings below rather than guessed at:
+ * the wrapper span's `1fr` -> `0fr` track IS the scroll fold, and the button's
+ * `sm:min-w-[104px]` -> `sm:min-w-12` is a selection change on a desktop dock.
+ *
+ * The tab row's `gap-1` -> `gap-0` moves a tab's rect too, and is deliberately
+ * not a third entry: it is driven by the same `expanded` flip at the same rung
+ * and the same curve as the track, so the two land together and the track's
+ * event is already the last word. Retiming the gap off that rung would break
+ * that, and this set is where it would have to be said.
+ *
+ * A filter rather than "any transition on the nav", because most of what fires
+ * here moves nothing the pill is measured against — the wrapper's `opacity`, the
+ * tab's hover tint, and the pill's own `width`/`transform`, which `updatePill`
+ * starts every time it writes them and which would have it re-measure a rect it
+ * did not change in order to rewrite values it already holds. The tab's padding
+ * is absent for a different reason again: `padding` is not on the press layer's
+ * `transition-property` list, which replaces whatever a pressable asked for (see
+ * the `px-0` argument down in the fold's class string), so it never fires this
+ * event at all. It lands in the commit frame instead — which is part of why the
+ * measurement taken there is the wrong one.
+ */
+const PILL_SETTLE_PROPERTIES = new Set(["grid-template-columns", "min-width"]);
+
+/**
  * The root feed's bottom navigation.
  *
  * @param onOpenMore - Opens the More sheet; the third tab is the only one that
@@ -199,6 +225,38 @@ export default function RootDock({
     return () => cancelAnimationFrame(raf);
   }, [updatePill, expanded]);
 
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    // The half the follower above cannot do, and the half reduced motion needs.
+    //
+    // `updatePill` runs inside the effect that COMMITS the fold, and the
+    // `getBoundingClientRect` it does there is what forces the layout that starts
+    // the transition — so the rect it reads back is that transition's first frame,
+    // which is the shape the dock is leaving rather than the one it is going to.
+    // With motion on, the follower re-reads until that stops being true. With
+    // motion off it returns immediately and nothing re-reads at all, so the pill
+    // keeps the open dock's slot for as long as the dock stays folded: the exact
+    // defect the follower exists to prevent, surviving in the one branch that
+    // cannot use it. Removing the travel must not mean keeping the wrong frame.
+    //
+    // The event is what closes it. `globals.css` floors every transition on the
+    // page to 1ms instead of switching it off precisely so the completion still
+    // reports itself, and this is the listener that was missing to hear it. On the
+    // animated path it costs one measurement and is the settle: the last word on
+    // where the tab stopped comes from the tab, not from a clock that ran beside
+    // it.
+    const settle = (event: TransitionEvent) => {
+      if (!PILL_SETTLE_PROPERTIES.has(event.propertyName)) return;
+      updatePill();
+    };
+    // On the nav rather than on the active button: `transitionend` bubbles, the
+    // fold is declared on a wrapper the button does not own, and which element is
+    // active changes under this listener while the nav does not.
+    nav.addEventListener("transitionend", settle);
+    return () => nav.removeEventListener("transitionend", settle);
+  }, [updatePill]);
+
   return (
     <div
       className={cn(
@@ -219,8 +277,17 @@ export default function RootDock({
           aria-label="Primary app navigation"
           className={cn(
             // overflow-hidden clips the sliding indicator so it can never poke
-            // out past the dock's right edge from a transient/stale measurement
-            // (e.g. when the More sheet opens and the active tab collapses).
+            // out past the dock's right edge from a transient or stale
+            // measurement. Two cases now, and the second is not the same size as
+            // the first. The More sheet opening collapses the one tab that held
+            // selection, which is what this was written for. The scroll fold
+            // collapses every tab but one, and there the pill is outside the
+            // capsule by construction rather than occasionally: on the Anytime
+            // feed the active tab is the second, so its slot ends 52px to the LEFT
+            // of where it starts while the capsule closes 114 -> 62 around it, and
+            // for most of the fold the pill's right edge is past the border it is
+            // supposed to be inside. Clipped, that reads as the pill shutting with
+            // the capsule; unclipped it is a white bar lying across the dock.
             "relative h-16 overflow-hidden rounded-[25px] border border-white/70 bg-muted/80 p-1.5",
             // Only while the dock is really the dock. On the way out it is a
             // picture of one, and the selection bar it is handing the row to
