@@ -26,8 +26,9 @@ extension View {
     /// on a per-pill stagger, which `.swipeActions` has no way to express, and a
     /// `List` row carrying both would hand the same horizontal drag to two
     /// recognizers at once. A `UIPanGestureRecognizer` is invisible to the
-    /// accessibility API, so a row whose only way to Edit / Copy / Delete is
-    /// this modifier needs those spelled out as accessibility actions too.
+    /// accessibility API, so the row also carries the same actions as
+    /// `.accessibilityActions` — see `body(content:)`. Anything added to the
+    /// pills belongs in both, and the guardrail suite says so out loud.
     func todoTrailingSwipeActions(
         rowID: String,
         openRowID: Binding<String?>,
@@ -110,6 +111,52 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                         closeActions()
                     }
                 }
+                // The pan recognizer this row installs is invisible to the
+                // accessibility API, and there is no context menu on a task row
+                // anywhere in the app — so without this block Edit, Copy, Delete
+                // and the mode's own third action have no way in at all, and the
+                // row is read-only to VoiceOver, Switch Control and Full Keyboard
+                // Access alike. They are the same four closures the pills call,
+                // haptic included: a second path to an action must not be a
+                // quieter one.
+                //
+                // `enabled` gates them because it is already the row's answer to
+                // "can this be acted on" — a viewer's list, a row mid-completion,
+                // a selection sweep. An action offered where the pills are not is
+                // one the app would refuse to perform.
+                .accessibilityActions {
+                    if enabled {
+                        // The extra action keeps the pill's own word rather than
+                        // a fuller phrase invented here. Schedule, Float and Defer
+                        // are what the app teaches this button is called; a second
+                        // name for it would only be a second name.
+                        if let extraAction {
+                            Button(extraAction.title) {
+                                HapticManager.buttonPress()
+                                closeActions()
+                                extraAction.action()
+                            }
+                        }
+
+                        Button(L("Edit task")) {
+                            HapticManager.buttonPress()
+                            closeActions()
+                            onEdit()
+                        }
+
+                        Button(L("Copy task")) {
+                            HapticManager.buttonPress()
+                            closeActions()
+                            onCopy()
+                        }
+
+                        Button(L("Delete task"), role: .destructive) {
+                            HapticManager.destructive()
+                            closeActions()
+                            onDelete()
+                        }
+                    }
+                }
 
             HStack(spacing: 16) {
                 Spacer()
@@ -165,6 +212,11 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
             }
             .padding(.trailing, 2)
             .frame(maxWidth: .infinity)
+            // Not decorative — the same four actions, behind a reveal only a pan
+            // can perform. Left exposed they are four transparent, un-hittable
+            // buttons sitting in the tree beside the real ones, so VoiceOver
+            // would read Edit twice and only one of them would do anything.
+            .accessibilityHidden(true)
         }
     }
 
