@@ -261,3 +261,18 @@ cycles, for the whole programme".
               release, with no ripple at all — including on a Save button, which is the half that
               used to go on animating under the setting because its own `transition-colors`
               outranked the floor.
+
+- [ ] **PR 50 · web · One dim for two sheets, and both of them leave** — the calendar on a phone, a
+      task open in the edit sheet with an unsaved edit typed into it, so the cancel-confirm sheet
+      can actually be reached.
+      Do:     tap the sheet's close control to raise the confirm sheet over it, then confirm.
+              Repeat, dismissing the confirm alone with its Cancel button; and once more by tapping
+              the scrim above it.
+      Watch:  the page behind the two sheets is exactly as dark with the confirm sheet up as it was
+              with only the form sheet up. When both go, they both TRAVEL out through the bottom
+              edge over 320 ms.
+      Fails:  the page visibly darkening a second time as the confirm sheet arrives, which is the
+              defect. Also a fail: either sheet vanishing on one frame instead of sliding; the
+              confirm sheet's backdrop turning black for the last frames of its own exit as the form
+              leaves underneath it; or a tap above the confirm sheet no longer dismissing it — the
+              transparent scrim still has to catch pointers.

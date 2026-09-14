@@ -733,7 +733,61 @@ Restore it from git history rather than adjusting the number.
 
 ### PR 50 — the nested confirm drawer’s double scrim
 
-- [ ] `web-nested-confirm-drawer-double-scrim` — two `black/80` scrims compose to ~96 % black, both close in one frame · web · Sev 2 · M · Gate D
+- [x] `web-nested-confirm-drawer-double-scrim` — two `black/80` scrims compose to ~96 % black, both close in one frame · web · Sev 2 · M · Gate D
+  - **Two defects, one stack.** The calendar's confirm sheet is a SIBLING of the form sheet it
+    covers — `EditDrawer` renders `ConfirmCancelEditDrawer` beside its own `Drawer` rather than
+    inside it — so two vaul roots put two portals and two scrims over the same pixels, and opacity
+    composes: `black/80` twice over resolves to 96 % black, darker than any surface in the app, so
+    raising a confirm sheet read as the page changing colour scheme. A scrim that finds one already
+    up now draws no dim of its own (`drawer.tsx:185-199`). The node stays, and stays catching
+    pointers — it is what a tap outside the sheet lands on and what vaul releases a drag against.
+    Only the dim is dropped.
+  - **The registry is keyed on the caller's OPEN flag, not on the scrim being in the document**
+    (`drawer.tsx:57`, `:77-83`, `:113`). This is the line that looks wrong in a diff — the document
+    is right there and the flag is a second source of truth — and it is the fix. Radix's `Presence`
+    holds a closed overlay until an `animationend`, so a drawer registered by MOUNT stays
+    registered for the whole `DRAWER_EXIT_MS`. A second sheet opened inside that window — two
+    calendar rows tapped in the same third of a second, or a sheet reopened off the one just
+    dismissed — found a scrim "already up" that was on its way OUT, declined to dim, and then
+    stayed undimmed for its whole life, because the answer below is taken once and never revisited.
+    Registering on the flag drops the entry on the frame the drawer is told to close, while the
+    scrim it belongs to is still fading, so a "yes" taken here is always about a sheet that is
+    staying.
+  - **Nestedness is decided once, in a layout effect, and never revised** (`drawer.tsx:165-178`) —
+    the other line that reads as a bug. Recomputing when the sheet underneath leaves is the more
+    principled rule and would look worse: two stacked sheets are normally dismissed together, so
+    the nested scrim would turn from transparent to 80 % black for the last few frames of its own
+    exit, and a flash on the way out is most of what this row exists to remove. A layout effect
+    rather than render, because a double-invoked render asks twice and, more to the point, asks
+    before the commit the answer belongs to; effect and state both land before paint, so the first
+    frame is already the right one. And the question is "any drawer but mine" rather than "more
+    than one drawer", because whether this scrim's own root has registered by the time it runs
+    depends on which commit vaul mounts the portal in — asked this way it has the same answer
+    either way.
+  - **The second leg is the half that took both sheets away at once.** `useModalPresence` — 200 ms
+    at the time, since moved to Quick by PR 41a — was gating a drawer whose exit travels out
+    through the bottom edge, which is position changing, which is Emphasis by the geometry rule.
+    The window ran out mid-slide: the calendar's form sheet was pulled halfway down, with the
+    confirm sheet stacked on it going in the same frame. `DRAWER_EXIT_MS` (`drawer.tsx:24`) and
+    `useDrawerPresence` (`:39`) are the drawer's own clock, and `CalendarClient.tsx:620` and
+    `:1055` read it; `globals.css:1359-1383` plays vaul's own exit animation on that same rung,
+    each selector carrying one attribute more than the injected rule it outranks, so no
+    `!important` is needed. One number read twice cannot drift, which is the `MODAL_EXIT_MS`
+    arrangement exactly. The enter deliberately keeps vaul's injected half-second: the identical
+    0.5s is also written inline as the transition a released drag settles on, so retiming the way
+    in without the way a drag lands would split one gesture in two.
+  - The gate is `tests/unit/nested-drawer-scrim.test.tsx`, and it asserts the RULE rather than the
+    shade — which is what let the shade move underneath it when PR 41a put every scrim on
+    `--sheet-scrim` (0.40 light / 0.68 dark). The arithmetic is gentler now; doubling is still
+    doubling. The awkward part is that jsdom computes no animation, so Radix drops every closed
+    overlay on the spot and the hazard cannot occur there at all: the file spies on
+    `getComputedStyle` to report vaul's own `fadeIn`/`fadeOut`, which is the only way to put a
+    scrim through the moment the one beneath it is still leaving. Six cases cover the stack — only
+    scrim, second scrim, the one beneath going away, the stack emptying and dimming again, a sheet
+    opened while the last is still sliding out, and a drawer opened from its own `DrawerTrigger`
+    with no flag at all. A seventh compares the exit's two halves, which live in different
+    languages and cannot see each other: it reads the rung out of `globals.css` and checks it
+    against `DRAWER_EXIT_MS` and the vocabulary, never against itself.
 
 ### PR 20 — velocity and rubber-banding on the web swipe
 
