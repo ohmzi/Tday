@@ -9,7 +9,6 @@ private enum ScheduledTaskHomeMetrics {
     static let tileInnerPadding: CGFloat = 12
     static let todayCardHeight: CGFloat = 70
     static let listRowHeight: CGFloat = 70
-    static let rootDockCollapseThreshold: CGFloat = 44
     static let listContainerColorWeight: CGFloat = 0.66
     static let tileWatermarkSize: CGFloat = 116
     static let tileWatermarkTrailingInset: CGFloat = 22
@@ -212,10 +211,7 @@ struct ScheduledTaskHomeScreen: View {
                                     .frame(height: RootFeedHeroHeaderMetrics.expandedHeight)
                                     .id(scheduledTaskHomeScrollTopID)
                                     .background {
-                                        RootFeedHeaderScrollObserver(
-                                            state: headerScroll,
-                                            collapseThreshold: ScheduledTaskHomeMetrics.rootDockCollapseThreshold
-                                        ) { collapsed in
+                                        RootFeedHeaderScrollObserver(state: headerScroll) { collapsed in
                                             guard rootDockCollapsed != collapsed else { return }
                                             rootDockCollapsed = collapsed
                                             onRootDockCollapsedChange(collapsed)

@@ -30,6 +30,32 @@ on, not a live figure: later PRs migrate call sites onto the tokens, which moves
 raw-literal counts down by design. `file:line` references point at the current
 tree.
 
+PRs 8g–8n are that sentence being cashed, and they are the last of it: the
+call-site migration moved 104 literals off the counters in eight units — 38 iOS
+spring parameters (8g, 8h), 47 web `duration-*` utilities (8i, 8j), 14 Android
+tweens (8k, 8l, 8n) and 5 iOS `duration:` arguments (8m). Three of the eight
+counters now say something a ceiling normally cannot. `web.durationUtility` is
+at **zero**, so the next `duration-<n>` written anywhere in `tday-web/src` is
+new by construction. `web.rawCubicBezier` has reached the state a ratchet is
+aiming at without ever reaching zero: all three survivors are enumerated one by
+one, each argued at its own call site and each with a row in the non-tokens
+table below, so the ceiling and the list of sites are the same thing and a
+fourth line is always a new decision. `android.pressScale`'s eight are
+enumerated too, but only three of them are argued where they are written — the
+swipe buttons' two composed factors and `TdayPressable`'s `FabScale`. The other
+five are unclaimed rather than owned: an enter scale and a scroll-driven dock
+reveal, which this counter's docstring admits it over-counts by design
+(`TdayEmptyState`'s `EnterStartScale`, `TdayHeroTitleHeader`'s
+`DockedTitleScaleFrom`), the dock label's text ramp, and the segmented slider's
+press halo. A ninth line is still always new; five of the eight are still
+waiting for whoever retimes those surfaces to say what they are. What
+is left elsewhere is deliberate and owned — the dock's six springs, the iOS
+springs that are off-token by damping rather than by choice, and the two iOS
+counters whose remainder is a retiming with a device behind it rather than an
+adoption. The live figures are in
+`tday-web/tests/fixtures/motion-budget.json`, which is the only place they are
+kept current; the ones in this file stay the census they were.
+
 Android counts cover `android-compose/app/src/main/java` (tests excluded); iOS
 counts cover `ios-swiftUI/` including the widget extension, and say so where the
 two differ; web counts cover `tday-web/src` excluding `src/generated/`.
@@ -94,7 +120,7 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   un-overridden 150 ms, and of the 183 `transition*` utilities in `tday-web/src`
   (159 property-specific `transition-<prop>`, 24 bare `transition`), **123 name
   no duration at all** and therefore already run on this rung.
-  `tday-web/src/globals.css:149` quotes 159 — the property-specific count — as
+  `tday-web/src/globals.css:242` quotes 159 — the property-specific count — as
   the blast radius of rebinding the default; 123 is the narrower figure that
   would actually move, being the utilities that name no duration of their own.
   The `iOS 1` is a census figure and the site it counted has since left the rung:
@@ -108,7 +134,7 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   none of the nine.
   Anchors: `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:60`,
   `ios-swiftUI/Tday/Feature/App/AppRootView.swift:173`,
-  `tday-web/src/globals.css:146`.
+  `tday-web/src/globals.css:233`.
 - **`Enter` (200).** 52 web `duration-200` utilities and 7 iOS sites (5 in the
   app, 2 in the widget extension); **zero** on Android at the census. The first
   two Android sites are the hand-built sheets' dim in both directions —
@@ -116,23 +142,27 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   the rung being reached for rather than the census moving. This rung is 200 and
   not 190 because 190 matched two hand-written Android tweens
   (`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayFeedItemMotion.kt:54`,
-  `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/completed/CompletedScreen.kt:290`, plus one conditional branch at
-  `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdaySegmentedSlider.kt:181`) against 200's 57 in the two
+  and the Completed rows' own fade-in, which has since gone the other way and
+  taken `TdayFeedItemMotion`'s spec wholesale, so the rung's rival is down to one
+  name in one file, plus one conditional branch at
+  `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdaySegmentedSlider.kt:199`) against 200's 57 in the two
   apps proper (52 web plus the 5 iOS app sites, the widget extension's two
-  aside). Anchors: `tday-web/src/components/settings/SettingsPage.tsx:287`,
+  aside). Anchors: `tday-web/src/components/settings/SettingsPage.tsx:295`,
   `ios-swiftUI/Tday/Feature/Onboarding/OnboardingWizardOverlay.swift:123`.
 - **`Change` (260).** 3 Android tweens, 8 iOS `.easeInOut(duration: 0.26)`, and
   2 on web, both named constants — thirteen sites across all three clients, with
   the weight on iOS. It was fifteen until the calendar's two paging animations
   moved to `Emphasis`: a page turn moves the grid, and moving is geometry.
   If the thing changes *where* or
-  *how big* it is, that is `Emphasis`, not this; one Android site already
-  disagrees, running a *placement* on 260 at
-  `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:3159`,
-  which is a call site to settle rather than a reason to widen the rung.
+  *how big* it is, that is `Emphasis`, not this. One Android site used to
+  disagree, running a *placement* on 260 — the timeline's drop placeholder, which
+  this paragraph called a call site to settle rather than a reason to widen the
+  rung. It is settled: a placeholder is an item in the feed, so it takes
+  `TdayFeedItemMotion` entire like everything else in that feed, and nothing in
+  the tree now runs a placement on this rung.
   Anchors:
-  `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
-  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3170`,
+  `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1463`,
+  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3180`,
   `tday-web/src/lib/taskCompletionTiming.ts:36`.
 - **`Emphasis` (320).** 15 Android tweens at the census (eleven of them reached
   through a named constant rather than written out), 5 iOS, 1 on web. Long
@@ -148,8 +178,8 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   `TdayFeedItemMotion.PlacementMillis`.
   Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskStrikethrough.kt:63`,
-  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:347`,
-  `tday-web/src/globals.css:579`.
+  `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:351`,
+  `tday-web/src/globals.css:813`.
 - **`Scene` (520).** 2 Android, 1 iOS, 2 web at the census. This rung is the
   empty-state illustration **arriving**: all three clients name their site for
   the enter (`EnterMillis`, `EmptyStateEnter.duration`, `.tday-empty-enter`).
@@ -164,8 +194,8 @@ choice from a lazy one — so the ladder is only as fine as it is enforceable.
   same thing about the 360 it replaced.
   Anchors:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:372`,
-  `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:270`,
-  `tday-web/src/globals.css:608`.
+  `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:276`,
+  `tday-web/src/globals.css:961`.
 
 ## Delays
 
@@ -230,9 +260,9 @@ against `animation-core`'s bytecode rather than assumed.
   `--ease-in-out` *and* `--default-transition-timing-function`, so all 123
   default-timed utilities are already on it, plus one explicit `ease-in-out` and
   one declaration of its own, `.task-strike-fade` at
-  `tday-web/src/globals.css:579`.
+  `tday-web/src/globals.css:813`.
 - **`Enter`.** 6 `LinearOutSlowInEasing` on Android; 8 `ease-out` utilities on
-  web (e.g. `tday-web/src/components/settings/SettingsPage.tsx:287`).
+  web (e.g. `tday-web/src/components/settings/SettingsPage.tsx:295`).
 - **`Exit`.** 7 `FastOutLinearInEasing` on Android; zero `ease-in` utilities on
   web today.
 - **`Scene`.** `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:375`, and three
@@ -280,7 +310,7 @@ unchanged.
   little or it reads as a snap-back. The one token here that was already a
   working two-platform conversion before it had a name —
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskSwipeRevealState.kt:49` converts
-  `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:353` explicitly, and
+  `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:412` explicitly, and
   `ios-swiftUI/Tday/Core/UI/RootFeedDock.swift:118` is the third site — it wrote
   0.34 / 0.82 out until Reduce Motion needed a gate there, and naming the token
   is what bought one. **Do not round 340 to the arithmetic 342**: it would break
@@ -302,23 +332,48 @@ bar button than on a full-width row.
 | `Card` | `0.97` | Cards and tiles |
 | `Row` | `0.985` | Full-width rows, where more travel would read as the list moving |
 
-- **`Bar`.** One site, and it carries its own argument:
-  `ios-swiftUI/Tday/Core/UI/TaskFloatingActionButton.swift:167`, argued at
-  `:162` — it sat at 0.95, which on a 56 pt circle is half a point of travel,
-  close enough to nothing that the press read as a tap landing rather than as a
-  button going down.
+- **`Bar`.** 10 Android press sites, all of them on
+  `Modifier.tdayPressable` — the round buttons in the top bar of Guide,
+  Calendar, Completed, Latest release and Settings, the calendar's "Today"
+  pill beside one of them, the root feed's search/close pair, the list header's
+  back chevron, the Today header button, and the sheet chrome's toolbar action,
+  which is the one that passes a 1 dp sink instead of the default 2. On iOS it
+  is one modifier, `TdayToolbarButtonEffectModifier`
+  (`ios-swiftUI/Tday/Core/UI/TaskFloatingActionButton.swift:167`), worn by 3
+  sites through `TdayToolbarButtonStyle`. The number is still what that
+  modifier's own argument at `:162` made it: it sat at 0.95, which on a 56 pt
+  circle is half a point of travel, close enough to nothing that the press read
+  as a tap landing rather than as a button going down. This bullet said "one
+  site" until Phase 9's 9b brought the Android half onto it: all ten had typed
+  0.93 for themselves — a depth nothing on Android ever argued for — so every
+  one of them is a retune of a hundredth as well as a migration.
 - **`Card`.** 5 Android press sites; 1 on web
-  (`tday-web/src/components/onboarding/OnboardingWizard.tsx:725`).
-- **`Row`.** 2 Android press sites; 2 on iOS
+  (`tday-web/src/components/onboarding/OnboardingWizard.tsx:725`). It is also
+  `Modifier.tdayPressable`'s default, so it is the depth a surface gets when its
+  author has not decided which class it belongs to — the middle of the three
+  rather than the deepest.
+- **`Row`.** 6 Android press sites: 2 on `Modifier.tdayPressable`, and 4 that
+  name the token without moving onto it — the root dock's selector and tab
+  content and the segmented slider's selector and segment label, each of which
+  is coupled to a spring or an offset that the shared modifier deliberately
+  cannot take. 2 on iOS
   (`ios-swiftUI/Tday/Feature/Onboarding/OnboardingWizardOverlay.swift:1347` and
   `:1359`); 6 `active:scale-[0.985]` on web, plus the global press rule at
-  `tday-web/src/globals.css:352`, which reads the token rather than writing
+  `tday-web/src/globals.css:416`, which reads the token rather than writing
   0.985 out again and stays in `@layer base` on purpose — a call site pressing
   to its own depth has to be able to beat it.
 
-These three are the narrowest part of the vocabulary and the tree is messier
-than they are — nine distinct press literals span 0.92–0.992. See the open
-questions.
+These three are the narrowest part of the vocabulary and the tree is no longer
+much messier than they are: 6 distinct press literals span 0.93–0.99, and
+exactly one of them is Android's. This paragraph said nine spanning 0.92–0.992
+before Phase 9's 9b. Only one of the three that went was a press depth: the
+segmented slider's segment label, which pressed to 0.98 of its own and now
+names `Row` so that it and the pill under it travel as one object. The other
+two never were — 0.92 is the swipe buttons' composed reveal factor and the
+slider's halo, and 0.992 is `AppRootView.swift:227`'s onboarding backdrop, both
+of which the old sentence swept in for being pressed-shaped numbers. What is
+left is the FAB disagreement in the open questions, and web's `[0.99]` and
+`scale-95`, which are that same disagreement's other end.
 
 ---
 
@@ -345,13 +400,13 @@ same answer from every reviewer.
 
 Both rungs, inside one motion — the staged check-off every task row in every
 client plays. The row's content fades where it stands at 260 (`Change`):
-`android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1569`,
-`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3170`,
+`android-compose/app/src/main/java/com/ohmz/tday/compose/feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt:1463`,
+`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:3180`,
 `tday-web/src/lib/taskCompletionTiming.ts:36`. The rule crossing out the title
 grows across it, so it takes 320 (`Emphasis`):
 `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskStrikethrough.kt:63`,
-`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:347`,
-`tday-web/src/globals.css:579`.
+`ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:351`,
+`tday-web/src/globals.css:813`.
 
 The same beat played backwards — a completed task being restored — stays on
 `Emphasis` rather than dropping to `Change`, because a rule that retracts is
@@ -365,7 +420,7 @@ undoes, and it sits exactly at that cap.
 Rebinding it is not a tidy-up — it is a visible change to the 123 utilities that
 name no duration of their own. Web's `globals.css` declares only the two easings
 Tailwind does not already ship, and says why at
-`tday-web/src/globals.css:146`.
+`tday-web/src/globals.css:233`.
 
 A bare utility already on `Quick`, with nothing to change:
 `tday-web/src/components/Sidebar/List/ListSidebarSection.tsx:452`.
@@ -479,9 +534,9 @@ told somebody.
 - Android: `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:126` seeds the
   appearance `Animatable` at `1f` — fully arrived — when motion is off, rather
   than at `0f` with the animation skipped.
-- iOS: `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:110` sets `entered = true`
+- iOS: `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:116` sets `entered = true`
   and returns before the `withAnimation` block.
-- Web: `tday-web/src/globals.css:744` switches the scene's animations off and
+- Web: `tday-web/src/globals.css:1186` switches the scene's animations off and
   pins the sparkle to `opacity: 1`, with the reason in the block.
 - Web, the JS half: CSS cannot see a `setTimeout`, so a sequence gated in
   JavaScript has to ask the same question. `tday-web/src/lib/prefersReducedMotion.ts`
@@ -546,14 +601,18 @@ change pixels or destroy an argument that is worth more than the tidiness.
 
 | Not a token | Where | Why it is excluded |
 |---|---|---|
-| The 340–420 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:6198` (420); `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:251` (340 ms hand-off sleep) | Two values, not the same motion, and nothing that would still be true if they were merged. This row said four until Phase 8's 48 and three until Phase 9's 31. The fourth was never a fourth motion: `SwipeRevealHintModifier` held a second copy of `revealHint()`'s own hint sequence, sleep included, and went out with the modifier — the same duplication the budget fixture records for that sequence's two springs. The web press ripple sat in the band at 340 ms too and is no longer in it: it grows from a third of its surface to nearly twice it, which rule 2 puts on `Emphasis`, and 320 is that same motion to within a frame. The third was the Android nav fade-in, and it left for the reason web's route fade left 140: a route change is a hand-over between two screens and not a motion of its own, so it takes the rung a thing arriving takes when it has no reason to be another length. What is left in the band is one flash and one sleep. A rung here would sit one frame from `Emphasis` and could not be told from it by eye — exactly the case the five-rung ladder exists to refuse |
-| The 600–620 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:6202` (620); `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:146` (0.62 flash delay) | Both are legs of the search-result reveal, timed against the legs either side of them rather than against a ladder. They are longer than `Scene`, which is the app's longest *motion* — these are waits |
-| The iOS sub-frame sequencing constant | `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:143` (0.08 s pre-scroll delay) | Below the two-frame floor the ladder is built on. It orders events; it is not a motion anybody watches. `CompletedScreen.swift`'s 0.1 s was listed here and did not belong: it was the `.easeOut` on a row transition's removal leg, which is a motion somebody watches, and it is now `TdayFeedItemMotion.departure` — a departure that got 50 % longer, deliberately, because this row was the only thing claiming it was a sequencing constant |
+| The 340–420 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:6198` (420); `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:320` (0.42, iOS's own leg of the same flash); `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:251` (340 ms hand-off sleep) | Two values, not the same motion, and nothing that would still be true if they were merged. This row said four until Phase 8's 48 and three until Phase 9's 31. The fourth was never a fourth motion: `SwipeRevealHintModifier` held a second copy of `revealHint()`'s own hint sequence, sleep included, and went out with the modifier — the same duplication the budget fixture records for that sequence's two springs. The web press ripple sat in the band at 340 ms too and is no longer in it: it grows from a third of its surface to nearly twice it, which rule 2 puts on `Emphasis`, and 320 is that same motion to within a frame. The third was the Android nav fade-in, and it left for the reason web's route fade left 140: a route change is a hand-over between two screens and not a motion of its own, so it takes the rung a thing arriving takes when it has no reason to be another length. What is left in the band is one flash and one sleep. A rung here would sit one frame from `Emphasis` and could not be told from it by eye — exactly the case the five-rung ladder exists to refuse |
+| The 600–620 ms band | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:6202` (620); `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:145` (0.62 flash delay) and `:324` (the 0.62 leg that delay waits out) | Both are legs of the search-result reveal, timed against the legs either side of them rather than against a ladder. They are longer than `Scene`, which is the app's longest *motion* — these are waits |
+| The iOS sub-frame sequencing constant | `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:142` (0.08 s pre-scroll delay) | Below the two-frame floor the ladder is built on. It orders events; it is not a motion anybody watches. `CompletedScreen.swift`'s 0.1 s was listed here and did not belong: it was the `.easeOut` on a row transition's removal leg, which is a motion somebody watches, and it is now `TdayFeedItemMotion.departure` — a departure that got 50 % longer, deliberately, because this row was the only thing claiming it was a sequencing constant |
 | `cubic-bezier(0.3, 0, 0.4, 1)` | `tday-web/src/globals.css:1041` (`--tday-empty-sink-ease`, ridden by `.tday-empty-exit` and by the `.tday-empty-slot` track it closes) | The empty scene *sinking*. Deliberately not `Scene`'s curve read backwards — the exit is played only during an "Earlier" hand-off and is tuned against that hand-off's own timing. Named as a property rather than written twice: the ink and the slot under it have to leave on one curve or they read as two departures |
-| `cubic-bezier(0.25, 1, 0.5, 1)` | `tday-web/src/components/app/RootDock.tsx:326` | The dock's sliding indicator pill. A hard-out curve with no counterpart on Android or iOS, which express the dock with springs |
+| `cubic-bezier(0.25, 1, 0.5, 1)` | `tday-web/src/components/app/RootDock.tsx:333` | The dock's sliding indicator pill. A hard-out curve with no counterpart on Android or iOS, which express the dock with springs |
 | `cubic-bezier(0.22, 0.61, 0.36, 1)` | `tday-web/src/components/ui/AnimatedHeight.tsx:62` | The app's only height transition, declared once in the primitive that owns it — promoted out of the onboarding wizard, where it was written inline. One declaration, one client, and a height animation is the one place a curve's tail is load-bearing against layout. Its 280 ms did not survive the promotion: a box changing size is `Emphasis` by the second idiom rule, and that half was never argued |
 | `SettleSpring` (0.9 damping, `StiffnessMediumLow`) | `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayHeroTitleHeader.kt:210` | Pinned to the iOS UIView spring its doc comment names, not to the vocabulary's `Settle`. Moving it onto the token would undo the cross-platform match the comment argues for — the opposite of what a token layer is for |
-| `TdayPullRefresh`'s specs | `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdayPullRefresh.kt:196` (0.72 damping), `:241` (220 ms), `:253` (1050 ms wave) | A pull-to-refresh is driven by the finger, not by a clock: the release spring is looser than anything in the vocabulary on purpose, and the wave is a loop rather than a transition |
+| `TdayPullRefresh`'s specs | `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdayPullRefresh.kt:196` (0.72 damping), `:245` (220 ms), `:261` (1050 ms wave) | A pull-to-refresh is driven by the finger, not by a clock: the release spring is looser than anything in the vocabulary on purpose, and the wave is a loop rather than a transition |
+| The refresh pill's 0.9 / `StiffnessLow` | `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/RootFeedHeroHeader.kt:525` | Neither half is the vocabulary's: 0.9 is damper than any spring in it, and `Spring.StiffnessLow` is a Compose library default rather than a chosen frequency. The same family as `TdayPullRefresh`'s 0.72 one row up — the pill is being let go by a finger rather than placed — and `Settle`, the rung for something heavy coming to rest, is the wrong description of a thing riding a thumb |
+| The car selector's 0.86 with `StiffnessMediumLow` | `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/car/CarTaskSurfaceScreen.kt:303` | The damping IS `Snappy`'s. The stiffness beside it is not: `StiffnessMediumLow` is 400 f against `Snappy`'s 504, a library default rather than a decision, so the pair as written is not the token and naming it would retime the selector. That retiming may well be right; it is a visible change on the one surface in the app reviewed from a car seat, and it belongs to a PR that admits to it |
+| The two loops | `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/TdayPullRefresh.kt:261` (1050 ms wave); `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/onboarding/OnboardingWizardOverlay.kt:1548` (1300 ms spinner); `ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift:54` (3 s float) and `:60` (1.4 s twinkle) | A loop has a period, not a duration. Every rung on the ladder names how long a change takes to *finish*, and none of these finishes — the longest rung is half a second, which would turn the empty scene's float into a flicker. Grouped here rather than given four rows because the argument is one argument |
+| `.interactiveSpring`'s `Gesture` pair | `ios-swiftUI/Tday/UI/Component/SwipeActions.swift:412` | The only entry in this table whose numbers ARE a token: 0.34 / 0.82 is `Gesture` exactly, and this is the site `TaskSwipeRevealState.kt:49` converts to Compose by hand. What is not the token is the constructor. `TdayMotion.gesture` is a plain `.spring`; this settle has to survive a second pan landing on the row before it finishes, and `.interactiveSpring` re-aims at the new target instead of fighting the one in flight. A row that can be grabbed again mid-settle is exactly the case the two constructors differ on |
 | The swipe sampler's two windows | `tday-web/src/lib/swipeGesture.ts` (100 ms velocity window, 16 ms floor under it) | Neither is a motion anybody watches: they are how long a release is measured over, and how little evidence is too little. The window is Android's `VelocityTracker` horizon, solved by people with far more device data than this repo has; the floor is one frame at 60 Hz, the same fact the five-rung ladder is built on, read for the other half of what it says — a finger cannot be observed to do anything inside one frame, so a distance divided by a sub-frame gap is the platform's event delivery and not a flick |
 | `pressedScale * revealScale` | `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TaskSwipeActionButton.kt:48`; `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/calendar/CalendarScreen.kt:3154` | The 0.92 f here is **one factor of a composed transform**, multiplied by the reveal scale before it reaches the screen. The press-scale tokens are the whole scale a finger sees; this is not the same quantity and must not be given the same name |
 | `PREDICTIVE_BACK_MIN_SCALE` (0.90) | `android-compose/app/src/main/java/com/ohmz/tday/compose/TdayApp.kt:146` | How far the screen a predictive-back drag has hold of recedes by the end of that drag. One client, one site, and not the quantity the press scales measure: those grade by surface class and grade it the *other way* — the table's own rule is that smaller surfaces move further — so extending `Row`'s 0.985 to a whole screen would give a recede of nothing at all. A press scale is a surface squashing under the finger on it; this is a screen being carried off the side, and the number's job is to report how far the drag has got. The same distinction the `pressedScale * revealScale` row above draws. A tenth because that is what the platform's own back gesture recedes an outgoing window by, and one edge of one screen should not answer two gestures at two depths. Worth reading twice because no counter can see it: `android.pressScale` greps for `[Ss]cale` beside a `0.9…f` literal and this constant spells it `SCALE`, so the marker comment and this row are the whole of the record |
@@ -563,15 +622,23 @@ change pixels or destroy an argument that is worth more than the tidiness.
 
 ## Open questions this PR does not settle
 
-**The FAB press scale disagrees with itself, and `Bar` rests on one site.**
-The FAB is 0.93 on Android
-(`android-compose/app/src/main/java/com/ohmz/tday/compose/feature/todos/TodoListScreen.kt:1422`) and on iOS
-(`ios-swiftUI/Tday/Core/UI/TaskFloatingActionButton.swift:224`), but 0.95 on web
-(`tday-web/src/components/app/TaskFloatingActionButton.tsx:81`, via
-`active:scale-95`). Meanwhile the `Bar` token is 0.94 and stands on a single
-call site that carries its own written argument. Nine distinct press literals
-span 0.92–0.992 across the three clients. The press-scale PRs settle that
-spread; this one records it.
+**The FAB press scale disagrees with itself.** The FAB is 0.93 on Android and
+on iOS (`ios-swiftUI/Tday/Core/UI/TaskFloatingActionButton.swift:224`), but
+0.95 on web (`tday-web/src/components/app/TaskFloatingActionButton.tsx:103`,
+via `active:scale-95`). Two clients agreeing to the hundredth against a third
+is the whole of what is left: the Android side is now
+`TdayPress.FabScale`
+(`android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayPressable.kt:82`),
+one constant read by both Android FABs rather than two literals with nothing
+tying them together, and its doc argues the extra depth in place — the FAB is
+the one control on screen with nothing beside it to be measured against, so it
+can travel further before the travel reads as a glitch. Promoting 0.93 to a
+fourth `PressScales` entry is the decision this still does not make, and it is
+bigger than it looks: `MotionTokens.kt` generates into three clients, the
+parity test asserts the whole table by value, and web would have to be argued
+onto 0.93 or argued out of the family. The other half of this question —
+"`Bar` rests on one site" — is answered: it carries ten Android sites and the
+iOS toolbar modifier, and the Press scales section has the count.
 
 **Migrating an iOS easing site onto `Standard` or `Enter` is not a zero-pixel
 change.** There are 65 easing sites in `ios-swiftUI/` (46 `.easeInOut`, 14

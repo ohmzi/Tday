@@ -517,6 +517,11 @@ private fun BoxScope.RefreshPill(
     // the descent and the ride back up when the refresh finishes.
     val reveal by animateFloatAsState(
         targetValue = target,
+        // not a token — see docs/motion.md. Neither half is the vocabulary's:
+        // 0.9 is damper than any spring in it, and `Spring.StiffnessLow` is a
+        // Compose library default rather than a frequency anybody chose. Same
+        // family as `TdayPullRefresh`'s 0.72 — the pill is being let go by a
+        // finger, not placed — and naming `Settle` here would retime it.
         animationSpec = spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessLow),
         label = "refreshPillReveal",
     )

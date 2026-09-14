@@ -295,6 +295,11 @@ private fun CarModeSlider(
         val selectorOffset by animateDpAsState(
             targetValue = if (mode == CarTaskMode.TODAY) TdayDimens.SpacingNone else tabWidth,
             animationSpec = spring(
+                // not a token — see docs/motion.md. The damping is Snappy's
+                // 0.86, but the stiffness beside it is `Spring.StiffnessMediumLow`
+                // — a Compose library default at 400 f, not Snappy's 504 — so the
+                // pair as written is not the token. Naming it would move the
+                // selector visibly, on the one surface reviewed from a car seat.
                 dampingRatio = 0.86f,
                 stiffness = Spring.StiffnessMediumLow,
             ),

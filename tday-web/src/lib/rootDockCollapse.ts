@@ -14,14 +14,14 @@
  *
  * The same number on all three clients, spelled in each one's own unit:
  * `RootFeedDockCollapse.CollapseThreshold = 44.dp` at
- * `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/RootFeedDock.kt:122`
+ * `android-compose/app/src/main/java/com/ohmz/tday/compose/ui/component/RootFeedDock.kt:123`
  * — one declaration, read by both Android feeds, where this comment used to cite
- * a copy of the literal in each of them — and `rootDockCollapseThreshold: CGFloat = 44` at
- * `ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift:126` and
- * `.../ScheduledTaskHome/ScheduledTaskHomeScreen.swift:12`. Moving it here
- * moves one client's dock away from the other two, which is worse than
- * whatever the move was for: this is the one control on every root feed, and a
- * user who has the app twice has one expectation of it.
+ * a copy of the literal in each of them — and `RootFeedDockCollapse.collapseThreshold = 44`
+ * at `ios-swiftUI/Tday/Core/UI/RootFeedDock.swift:222`, which is that same repair
+ * made once more a client over. Moving it here moves one client's dock away from
+ * the other two, which is worse than whatever the move was for: this is the one
+ * control on every root feed, and a user who has the app twice has one
+ * expectation of it.
  */
 export const ROOT_DOCK_COLLAPSE_PX = 44;
 

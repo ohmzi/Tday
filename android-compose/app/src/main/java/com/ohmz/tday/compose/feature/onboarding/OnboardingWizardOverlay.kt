@@ -1541,6 +1541,10 @@ private fun WizardLoading(
     val rotation by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
+        // not a token — see docs/motion.md. The same category as
+        // `TdayPullRefresh`'s wave: a spinner that repeats forever has a period
+        // rather than a duration, and the ladder only names lengths of motions
+        // that end.
         animationSpec = infiniteRepeatable(tween(durationMillis = 1300, easing = LinearEasing)),
         label = "wizardRotation",
     )
@@ -1776,7 +1780,11 @@ private fun WizardStepChip(
     val highlighted = active || completed
     val scale by animateFloatAsState(
         targetValue = if (active) 1.02f else 1f,
-        animationSpec = tween(durationMillis = 180),
+        // A chip swelling by a fiftieth when the wizard walks onto its step: a
+        // control changing state under its own steam, which is Enter's own
+        // description of itself. The 180 it ran on named no rung and was shared
+        // with nothing.
+        animationSpec = tween(durationMillis = TdayMotionTokens.Durations.Enter),
         label = "wizardStepChipScale",
     )
     val colorScheme = MaterialTheme.colorScheme
