@@ -53,8 +53,11 @@ describe("TaskRowSkeletonGroup", () => {
 
     // The shape it used to be. A skeleton that grows a fill, a border or a
     // 16 px radius has stopped standing in for the row and started standing in
-    // for a card the feed does not draw.
-    expect(row.className).not.toContain("rounded-2xl");
+    // for a card the feed does not draw. The card's 16 px corner is spelled
+    // `rounded-lg` now that the radius ladder has been renamed onto its rungs,
+    // and the row's own `sm:rounded-lg` above contains that string — so the
+    // class list is read as tokens rather than as text, or this asserts nothing.
+    expect(row.className.split(/\s+/)).not.toContain("rounded-lg");
     expect(row.className).not.toContain("border-border/65");
     expect(row.className).not.toContain("bg-card");
   });

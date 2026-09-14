@@ -424,6 +424,39 @@
       "searchBody": "seret tugasan ke susunan yang anda mahu. senarai anda mengekalkan susunan yang anda berikan. seret tugasan ke atas atau ke bawah untuk mengatur hari anda mengikut cara anda memikirkannya."
     },
     {
+      "id": "swipe-sheet-away",
+      "section": "GESTURES",
+      "sectionOrder": 2,
+      "icon": "grip-vertical",
+      "platforms": [
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.23",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Leret helaian untuk menutupnya",
+      "summary": "Tarik helaian tugas baharu ke bawah untuk menutupnya.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Bar kecil di bahagian atas helaian tugas baharu bermaksud kad itu boleh ditarik ke bawah. Seret dan ia mengikut jari anda; lepaskan selepas kira-kira satu perempat perjalanan dan ia ditutup, sama seperti anda mengetik kawasan gelap di belakangnya. Lambaian pantas juga dikira — yang penting ke mana anda menuju, bukan di mana anda melepaskannya — dan tarikan yang anda ubah fikiran akan melantun kembali ke tempatnya."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Jika kandungan sesebuah helaian boleh ditatal, seret dari bahagian atas kad: bahagian tengahnya milik senarai."
+          ]
+        }
+      ],
+      "searchTitle": "leret helaian untuk menutupnya",
+      "searchKeywords": "leret, seret, tarik, tutup, buang, helaian, kad, pemegang, gerak isyarat, ke bawah",
+      "searchBody": "tarik helaian tugas baharu ke bawah untuk menutupnya. bar kecil di bahagian atas helaian tugas baharu bermaksud kad itu boleh ditarik ke bawah. seret dan ia mengikut jari anda; lepaskan selepas kira-kira satu perempat perjalanan dan ia ditutup, sama seperti anda mengetik kawasan gelap di belakangnya. lambaian pantas juga dikira — yang penting ke mana anda menuju, bukan di mana anda melepaskannya — dan tarikan yang anda ubah fikiran akan melantun kembali ke tempatnya. jika kandungan sesebuah helaian boleh ditatal, seret dari bahagian atas kad: bahagian tengahnya milik senarai."
+    },
+    {
       "id": "floaters-vs-todos",
       "section": "ORGANIZING",
       "sectionOrder": 3,

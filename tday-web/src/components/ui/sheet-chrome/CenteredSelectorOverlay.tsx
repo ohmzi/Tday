@@ -108,7 +108,7 @@ export function SelectorDoneButton({
       <button
         type="button"
         onClick={onClick}
-        className="w-full rounded-2xl bg-muted/70 py-3 text-base font-black text-accent transition-colors hover:bg-muted"
+        className="w-full rounded-lg bg-muted/70 py-3 text-base font-black text-accent transition-colors hover:bg-muted"
       >
         {label}
       </button>

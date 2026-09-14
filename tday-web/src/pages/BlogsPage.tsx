@@ -39,11 +39,21 @@ export default function BlogsPage() {
           </p>
         </header>
 
+        {/* Change, for the four declarations on this page — the three below and
+            the footer link. Nothing here changes position or size, which rules
+            Emphasis out under rule 2, and the 300 they each named was not a rung.
+            Change rather than Enter because these are the slow half of the app on
+            purpose: a hover reveal is the reader's own pointer played back where
+            it already is, and it is meant to be watched finishing rather than
+            merely noticed. Two of the four are that reveal (the excerpt's opacity
+            and the footer link's colour); the other two currently toggle nothing
+            on hover and cover only a theme swap, which is the same "in place" and
+            therefore the same rung. */}
         <div className="space-y-0">
           {posts.map((post) => (
             <article
               key={post.slug}
-              className="group border-b border-opacity-20 py-10 transition-all duration-300"
+              className="group border-b border-opacity-20 py-10 transition-all duration-change"
             >
               <Link
                 to={`/${loc}/blogs/page/${post.slug}`}
@@ -60,12 +70,12 @@ export default function BlogsPage() {
                 </div>
 
                 <h2
-                  className="mb-3 font-serif text-2xl font-bold tracking-tight transition-colors duration-300 md:text-3xl"
+                  className="mb-3 font-serif text-2xl font-bold tracking-tight transition-colors duration-change md:text-3xl"
                 >
                   {post.title}
                 </h2>
 
-                <p className="mb-4 leading-relaxed opacity-70 transition-opacity duration-300 group-hover:opacity-90">
+                <p className="mb-4 leading-relaxed opacity-70 transition-opacity duration-change group-hover:opacity-90">
                   {post.excerpt}
                 </p>
 
@@ -100,7 +110,7 @@ export default function BlogsPage() {
               href="https://github.com/ohmzi/Tday"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm opacity-60 transition-all duration-300 hover:text-[#2d5a3d] hover:opacity-100"
+              className="text-sm opacity-60 transition-all duration-change hover:text-[#2d5a3d] hover:opacity-100"
             >
               GitHub
             </a>

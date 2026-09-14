@@ -127,6 +127,14 @@ interface CssDeclaration {
   selector: string;
   selectorLine: number;
   line: number;
+  /**
+   * The preludes of every block this declaration is nested inside, outermost first — in this
+   * file that is the `@media`/`@supports` wrappers and nothing else. Rule F needs it because the
+   * question it asks is about a declaration's CONTEXT rather than its own rule: a hint and the
+   * `animation: none` that cancels it share a selector and differ only by which `@media` they sit
+   * in, and without this the two are indistinguishable.
+   */
+  media: string[];
 }
 
 /** Blanks comments in place so reported line numbers stay true to the file on disk. */
@@ -156,6 +164,7 @@ function parseCss(css: string): { blocks: CssBlock[]; decls: CssDeclaration[] } 
       selector: owner.prelude,
       selectorLine: owner.line,
       line: bufLine,
+      media: stack.slice(0, -1).map((block) => block.prelude),
     });
   };
 
@@ -627,5 +636,183 @@ describe("motion reachability E — motion in a module nothing imports", () => {
     }
 
     expect(violations).toEqual([]);
+  });
+});
+
+// ─── Rule F — a compositor hint that outlives its animation ─────────
+
+/**
+ * The ratchet against the `will-change` anti-pattern. A hint is a standing instruction to keep an
+ * element on its own compositor layer: on a phone a texture the size of the element, held for as
+ * long as the declaration applies, and a full-screen one is about ten megabytes. It is worth that
+ * only when it reaches the element BEFORE the motion it prepares, and only for as long as that
+ * motion is coming.
+ *
+ * `globals.css` has none, and the compositor-hints block there argues why at length: a class that
+ * carries both the hint and the `animation-name` hands them to the engine in one style
+ * recalculation, so there is no earlier frame for the layer to have been built in. PR 59 wrote
+ * nine of those and took all nine back out. The rules below are therefore a ratchet for the next
+ * attempt rather than a guard over a hint that exists — they read on an empty list today, which is
+ * the honest state and not a broken test. The live assertion is the last pair: the app's one real
+ * hint is set in JavaScript, and this is what keeps it the only one.
+ *
+ * Three shapes, each the one the anti-pattern actually takes in a stylesheet:
+ *
+ *   A hint in a rule that declares no animation at all. Nothing about that rule is transient, so
+ *   nothing ever takes the layer back.
+ *
+ *   A hint in a rule whose animation is `infinite`. That reads as transient and is not: the class
+ *   stays on the element for as long as the element is drawn, which is what `.tday-empty-scene`
+ *   and `.tday-empty-sparkle` do and why neither has one.
+ *
+ *   A hint on a class whose animation is cancelled under `prefers-reduced-motion`. This is the
+ *   shape that got past review in PR 59 and the reason this rule grew a third assertion. The floor
+ *   at the top of `globals.css` reaches `animation-duration` and deliberately not `animation-name`,
+ *   while each block down the file cancels its own motion with `animation: none`, which does reach
+ *   it. Read the base rule alone — which is all the first two assertions do — and the hint looks
+ *   paired with a motion; read it under the preference and it is a layer reserved for a keyframe
+ *   that never runs, for every user who asked for less of exactly this.
+ *
+ * What this still cannot see is how long a class stays on an element, because the answer is in
+ * React and not in the stylesheet. That is the compositor-hints block's paragraph, and it is the
+ * reviewer's job.
+ */
+describe("motion reachability F — every compositor hint is transient", () => {
+  const ruleKey = (decl: CssDeclaration) => `${decl.selectorLine}:${decl.selector}`;
+  const underReducedMotion = (decl: CssDeclaration): boolean =>
+    decl.media.some((prelude) => /prefers-reduced-motion/.test(prelude));
+
+  /** Every `animation*` declaration in globals.css, grouped by the rule that owns it. */
+  const animationDecls = new Map<string, CssDeclaration[]>();
+  for (const decl of GLOBALS.decls) {
+    if (!decl.prop.startsWith("animation")) continue;
+    const key = ruleKey(decl);
+    animationDecls.set(key, [...(animationDecls.get(key) ?? []), decl]);
+  }
+
+  // `will-change: auto` is the initial value and reserves nothing — it is how a rule GIVES a hint
+  // back, which is exactly what the third assertion below asks for, so counting it as a hint would
+  // make that assertion unsatisfiable.
+  const hints = GLOBALS.decls.filter(
+    (decl) => decl.prop === "will-change" && !/^auto$/i.test(decl.value),
+  );
+
+  const namesAnAnimation = (decl: CssDeclaration): boolean =>
+    (animationDecls.get(ruleKey(decl)) ?? []).some(
+      (d) => d.prop === "animation" || d.prop === "animation-name",
+    );
+
+  const runsForever = (decl: CssDeclaration): boolean =>
+    (animationDecls.get(ruleKey(decl)) ?? []).some((d) =>
+      /(?<![\w-])infinite(?![\w-])/.test(d.value),
+    );
+
+  it("every will-change sits in a rule that also declares an animation", () => {
+    const violations = hints.filter((decl) => !namesAnAnimation(decl)).map(
+      (decl) =>
+        `${GLOBALS_REL}:${decl.line} → ${decl.selector} { will-change: ${decl.value} } — the rule ` +
+        "declares no `animation`, so the class is not a motion and the layer it reserves is permanent",
+    );
+
+    expect(violations).toEqual([]);
+  });
+
+  it("no will-change sits in a rule whose animation never ends", () => {
+    const violations = hints.filter(runsForever).map(
+      (decl) =>
+        `${GLOBALS_REL}:${decl.line} → ${decl.selector} { will-change: ${decl.value} } — the rule's ` +
+        "animation is `infinite`, so this is an always-on hint wearing an animation's clothes",
+    );
+
+    expect(violations).toEqual([]);
+  });
+
+  it("a hint is given back wherever reduced motion cancels the animation it was for", () => {
+    // Matched on the selector text, which is what a hint and its own reduced-motion override share
+    // — `.tday-duck-enter { will-change: … }` up the file and `.tday-duck-enter { animation: none }`
+    // inside the `@media`. Anything more clever would be a selector engine, and this file is
+    // explicit that it is not one.
+    const violations: string[] = [];
+
+    for (const off of GLOBALS.decls) {
+      if (!underReducedMotion(off)) continue;
+      if (off.prop !== "animation" && off.prop !== "animation-name") continue;
+      if (!/^none$/i.test(off.value)) continue;
+
+      const hinted = hints.filter(
+        (hint) => hint.selector === off.selector && !underReducedMotion(hint),
+      );
+      if (hinted.length === 0) continue;
+
+      const givenBack = GLOBALS.decls.some(
+        (decl) =>
+          ruleKey(decl) === ruleKey(off) &&
+          decl.prop === "will-change" &&
+          /^auto$/i.test(decl.value),
+      );
+      if (givenBack) continue;
+
+      violations.push(
+        `${GLOBALS_REL}:${off.line} → ${off.selector} { ${off.prop}: none } cancels the animation ` +
+          `hinted at ${GLOBALS_REL}:${hinted[0].line}, but does not add \`will-change: auto\` — under ` +
+          "`prefers-reduced-motion` that class is a compositor layer held for a keyframe that never runs",
+      );
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it("globals.css is the only stylesheet, and the only markup, that names one", () => {
+    // The other door into the same defect: a `will-change` in a feature stylesheet, or Tailwind's
+    // `will-change-*` utility in a class string, where no rule above would ever look at it. Both
+    // are always-on by construction — a utility sits on an element for that element's whole life.
+    const violations: string[] = [];
+
+    for (const file of walkFiles(SRC, [".css"])) {
+      if (file === GLOBALS_CSS) continue;
+      const source = stripCssComments(readSource(file));
+      const match = /will-change/.exec(source);
+      if (!match) continue;
+      violations.push(
+        `${relPath(file)}:${source.slice(0, match.index).split("\n").length} → declares ` +
+          "`will-change` outside globals.css, where rule F cannot see whether it ever ends",
+      );
+    }
+
+    for (const file of TS_FILES) {
+      const source = codeOf(file);
+      const match = /(?<![\w-])will-change-[a-z[]/.exec(source);
+      if (!match) continue;
+      violations.push(
+        `${relPath(file)}:${source.slice(0, match.index).split("\n").length} → renders ` +
+          `\`${match[0]}…\`, a utility that stays on the element for as long as the element does`,
+      );
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it("the one hint set from JavaScript is the header's, and it clears what it sets", () => {
+    // The assertion that is not a vacuum, and the reason the three above are allowed to be one.
+    // A hint written through `element.style` escapes every rule here — no selector, no `@media`,
+    // nothing a stylesheet reader can reach — so the ratchet on it has to be "there is exactly one
+    // file, and it is the one whose argument was reviewed". `RootFeedHeroHeader` earns it by
+    // setting the hint when a scroll pass begins, a frame before the writes it prepares, and
+    // dropping it on a timer; a second file wanting the same has to come here and say why.
+    const HEADER = path.join(SRC, "components/app/RootFeedHeroHeader.tsx");
+
+    const setters = TS_FILES.filter((file) => /(?<![\w-])willChange(?![\w-])/.test(codeOf(file)))
+      .map(relPath)
+      .sort();
+    expect(setters).toEqual([relPath(HEADER)]);
+
+    // Whatever it sets, it also gives back. A setter with no reset is the permanent layer under a
+    // different spelling, and it is the spelling no other assertion in this file can see. The
+    // value assigned is not checked — it is a variable here, and a test that insisted on a literal
+    // would only push the next author into inlining one.
+    const header = codeOf(HEADER);
+    const assignments = [...header.matchAll(/\.willChange = ([^;]+);/g)].map((m) => m[1].trim());
+    expect(assignments.length).toBeGreaterThan(1);
+    expect(assignments).toContain('""');
   });
 });
