@@ -410,6 +410,65 @@ animates.
               whether 105 px is where the catch belongs, or whether 25 ms and 15 ms are still two
               events in a hand.
 
+- [ ] **PR 41d · web · An open swipe row goes away when you touch anything else** — a REAL PHONE,
+      and both of them if you have both: iOS Safari and Android Chrome arbitrate a touch-scroll
+      differently and this row is about the arbitration. Any feed long enough to scroll, one row
+      swiped fully open, plus the same pass on the calendar day list and the Anytime feed, which
+      are two other event buses behind the same hook.
+      Do:     (1) with a row open, tap a DIFFERENT row's checkbox, and watch both the row you shut
+              and the box you ticked; (2) tap the dock, then repeat and tap the FAB; (3) with a row
+              open, tap one of its OWN pills — Edit, then Copy, then Delete — and confirm each pill
+              actually fires; (4) with a row open, start a slow scroll with the finger landing ON
+              the open row, and separately two rows below it; (5) with a row open at the very top
+              of the feed, pull DOWN into the rubber-band overscroll without really scrolling, and
+              on iOS also scroll just far enough to make Safari's URL bar collapse; (6) with a row
+              open, drag it back to the right slowly and stop halfway, hold for a second, then
+              finish the drag — and separately, drag it further LEFT past the limit and hold there.
+      Watch:  (1) the row closes and the checkbox ticks, in one touch. Both, not either. (2) the dock
+              switches tab and the FAB opens its sheet, with the row gone behind whatever happened.
+              (3) every pill does its own thing. This is the subtree guard doing its whole job: the
+              pills are `absolute inset-y-0 right-0` and stand still while the foreground slides
+              over them, so a dismissal fired on the pointer-DOWN would slide the foreground back
+              across the pill before the finger lifted, the up-target would no longer be the button,
+              and the browser would send `click` to the common ancestor instead — a pill that looks
+              pressed and does nothing. (4) the row is closed by the time the list has visibly moved,
+              both times; the one starting on the row is the case the tap listener cannot see and
+              the `scroll` listener exists for. (6) nothing dismisses it: the finger owns the row in
+              both directions, and the release decides.
+      Fails:  (1) a first tap that only closes the row and leaves the box unticked — a consumed
+              touch, which is the outcome this design rules out by construction and the one that
+              turns into a trap with a screen reader on. (3) any pill that needs a second tap, or
+              that does nothing at all. (5) is the real risk and is a fail if the row closes on an
+              overscroll bounce or on the URL bar collapsing: both are `scroll` events that no
+              finger asked for, and neither is a list moving under a Delete pill. (6) the row
+              jumping home mid-drag, or snapping back OPEN on the next move after something
+              dismissed it — the second is the gesture re-seed, which is pinned by a test but has
+              never run on a touchscreen.
+      Known:  closing on scroll START is a deliberate divergence from the search capsule, which
+              ignores scrolls on purpose. The field is chrome and stays put; a row is content and
+              travels, and one left open puts an armed Delete pill under a thumb now aimed at a
+              different task. The question a device can settle is whether it reads as a dismissal
+              the user caused or as the row being snatched.
+      Also:   with VoiceOver or TalkBack on, walk a CLOSED row and count what it offers. Below the
+              `sm` breakpoint the three pills are drawn at `opacity: 0`, and CSS opacity removes
+              nothing from the accessibility tree and disables no hit testing — so "Edit task",
+              "Copy task" and "Delete task" are very probably announced on every closed row in the
+              feed, with no gesture at all. Whether they actually are is the device question. This
+              is NOT a defect to fix here, and `aria-hidden` / `inert` on those pills is the wrong
+              instinct and must be refused in this PR: it is currently the only route an assistive
+              web user has to those three actions, because web has no custom-action fallback the
+              way iOS's rotor actions are. Hiding them without first publishing an equivalent route
+              deletes functionality. It is the web half of `ios-accessibility-actions` and it wants
+              its own PR.
+      Why:    the decision is two pure functions with a truth table
+              (`shouldCloseSwipeRow`, `canDismissMidGesture`, in `swipe-gesture.test.ts`) and the
+              wiring is pinned in jsdom by `swipe-row-outside-dismiss.test.tsx` — which listener
+              exists when, that the `scroll` one is capture-phase because `scroll` does not bubble,
+              that the dismissing event still reaches its own target with `defaultPrevented` false,
+              and that a closed row holds no document listener at all. What jsdom has none of is
+              gesture arbitration: it does not fling, does not rubber-band, does not collapse a URL
+              bar, and fires whatever event the test asks it to at the moment the test asks.
+
 
 ## Android
 

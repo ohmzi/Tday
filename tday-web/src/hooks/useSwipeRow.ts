@@ -1,8 +1,15 @@
-import { useCallback, useRef, useState, type TouchEvent as ReactTouchEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 import { hapticReveal } from "@/lib/haptics";
 import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
 import {
   AXIS_SLOP_PX,
+  canDismissMidGesture,
   createSwipeSampler,
   projectedRest,
   rubberBand,
@@ -184,6 +191,68 @@ function hundredths(value: number): number {
  * switch, read inside `vibrate` at the one chokepoint in `lib/haptics`, which is
  * why there is no gate at this call site and must not be one.
  *
+ * **An open row goes away when the user touches anything else, or scrolls.** The
+ * ask was that the actions stop showing "when the user doesn't want to interact
+ * with them", and the honest reading of that is everything that is not them:
+ * another row's body, another row's checkbox, the gap between rows, the header,
+ * the search capsule, the FAB, the dock, an empty state. That is one interceptor
+ * and not an enumeration of widgets, so it is a capture-phase `pointerdown` on
+ * `document` — the same listener, in the same phase, that
+ * `RootFeedHeroHeader` already uses to close the search field on an outside tap.
+ *
+ * **The owner of "which row is open" stays what it already was: a `window`
+ * event, and no React state at all.** A row never asks whether it is the open
+ * one — it knows, from its own `swipeX` — so the listeners are attached by an
+ * effect keyed on `swipeX !== 0` and AT MOST ONE ROW IN THE TREE HAS A DOCUMENT
+ * LISTENER at any moment, with none at all when nothing is open. A dismissal
+ * re-renders exactly one component. That matters on a feed of several hundred
+ * rows, and it is the reason not to "tidy" this into a context or a store: a
+ * shared `openRowId` would make every row in the list subscribe to a value only
+ * one of them cares about, which is the regression the other two clients had to
+ * work to avoid and this one avoids by not having the state.
+ *
+ * **The dismissing touch is never consumed**, and neither listener calls
+ * `preventDefault` or `stopPropagation`. The tap closes this row AND does its own
+ * job: the other row still takes it, the checkbox still ticks, the dock still
+ * switches tab. Consuming is the usual convention and this repo has declined it
+ * twice already — here and in `Modifier.tdayClosesSearchOnOutsideTap` on Android
+ * — because nothing reachable outside this row's own pills is destructive, and
+ * because with a screen reader on a swallowed first activation is a double-tap
+ * that silently does nothing and announces no reason.
+ *
+ * **Firing on the pointer-down is a web-only choice, and the subtree guard is
+ * what pays for it.** Android and iOS fire on a tap-up, after a slop test. Web
+ * cannot: the pills sit `absolute inset-y-0 right-0` and hold still while the
+ * foreground translates over them, so a dismissal triggered by a pointer-down on
+ * a pill would slide the foreground back across it before the pointer-up, the up
+ * target would no longer be the button, and the browser would fire `click` on the
+ * common ancestor instead — the pill's `onClick` would silently never run. So the
+ * guard is `rowRef.contains(target)`, and with it the down is strictly better
+ * than the up: it also catches the start of a touch-scroll that begins outside
+ * the row, for free.
+ *
+ * **A scroll closes the row, at the moment the list starts moving**, which is a
+ * deliberate divergence from the search capsule and not an oversight. That field
+ * ignores scrolls on purpose, and rightly: it is chrome, pinned to the viewport,
+ * staying put while the page moves under it. An open row is content. It travels
+ * with the list, and one left open puts an armed Delete pill under a thumb that
+ * is now aimed at a different task, while the surface is still moving. The
+ * `scroll` listener is capture-phase because scroll does not bubble but does
+ * capture-propagate, so one document listener sees every scroller — and it is
+ * the only interceptor that can see the likeliest scroll of all, the vertical
+ * drag that starts ON the open row, which is not a pointer-down *outside* it.
+ *
+ * **What no dismissal may do is take the row away from a finger that is holding
+ * it.** Dragging the open row further open, or back toward home, must be
+ * untouchable; that is what [dismissSwipe] is for and why it is not
+ * [closeSwipe]. And none of it buzzes — every new path routes through the close
+ * that was already silent, for the reason given two paragraphs up: a row shut
+ * from under a finger that is nowhere near it has not been closed by anybody.
+ *
+ * Navigating away and back leaves the row closed, and that needs no code: the
+ * offset is per-mount state and a route change unmounts the rows. Android and
+ * iOS both had to be fixed to say the same thing.
+ *
  * No pointer capture here, unlike the pager. Touch events are implicitly captured
  * by the spec — every `touchmove`, `touchend` and `touchcancel` goes to the
  * element the `touchstart` hit, whether or not the finger is still over it — so a
@@ -199,8 +268,9 @@ function hundredths(value: number): number {
  *   commit: one row is claimed by the finger, not by the outcome.
  * @param disabled - Whether the row will take a swipe at all. A row being picked
  *   in a multi-select, or one rendered read-only, has no actions to uncover.
- * @returns The row's offset, the `transition` its style should carry, a way to
- *   shut it, and the handlers.
+ * @returns The row's offset, the `transition` its style should carry, the ref
+ *   the container must put on the element that wraps both the pills and the
+ *   foreground, two ways to shut it, and the handlers.
  */
 export function useSwipeRow({
   actionsWidth,
@@ -214,11 +284,86 @@ export function useSwipeRow({
   const [swipeX, setSwipeX] = useState(0);
   const [swiping, setSwiping] = useState(false);
   const gestureRef = useRef<RowGesture | null>(null);
+  /**
+   * The row, pills included — what an outside tap is measured against.
+   *
+   * `HTMLElement` rather than `HTMLDivElement` because two of the three
+   * containers hand this node to dnd-kit's `setNodeRef` in the same callback,
+   * and that is the type dnd-kit states. Only `contains` is ever called on it.
+   */
+  const rowRef = useRef<HTMLElement | null>(null);
   // Subscribed rather than read once: this decides what the row renders, so it
   // has to follow a preference that flips mid-session.
   const reduceMotion = usePrefersReducedMotion();
 
   const closeSwipe = useCallback(() => setSwipeX(0), []);
+
+  /**
+   * Shut the row because of something that happened somewhere else.
+   *
+   * Two things separate this from [closeSwipe], which is the row acting on its
+   * own behalf — its body tapped, one of its pills fired, selection mode
+   * starting.
+   *
+   * It refuses while a finger owns the row ([canDismissMidGesture]). An outside
+   * tap or a scroll that arrived mid-drag would be the app taking a row out of a
+   * hand that is still dragging it, which is the one thing every client's
+   * interceptor is written not to do.
+   *
+   * And it re-seeds the live gesture rather than only the state. `onTouchMove`
+   * computes `rowFollow(gesture.startX + dx)` — the offset this gesture *began*
+   * at, plus how far the finger has gone since — so a reset that set `swipeX` to
+   * 0 and left `startX` at -210 would snap the row back open on the very next
+   * move. The three fields written here are exactly the three `onTouchStart`
+   * derives from the offset a row is resting at, and 0 is where this one now
+   * rests: including `hasFiredReveal`, because a row at home is a row with a
+   * reveal still to give and the detent has to be armed for it.
+   *
+   * That bug is older than the outside tap — the row-to-row broadcast on the
+   * `window` bus could already land on a row with a live vertical gesture — so
+   * the containers route that listener through here too, and it is fixed in both
+   * places by being fixed in one.
+   */
+  const dismissSwipe = useCallback(() => {
+    const gesture = gestureRef.current;
+    if (gesture && !canDismissMidGesture(gesture.axis)) return;
+    if (gesture) {
+      gesture.startX = 0;
+      gesture.offsetX = 0;
+      gesture.hasFiredReveal = false;
+    }
+    setSwipeX(0);
+  }, []);
+
+  // The interceptor, attached only while this row has something to close — which
+  // is what keeps a 500-row feed at zero listeners and an open one at exactly a
+  // pair. Both observe and neither consumes; the argument for all of it is on
+  // [useSwipeRow], including why the subtree guard is load-bearing and why a
+  // scroll is a dismissal here when it deliberately is not one for the search
+  // capsule this listener is otherwise copied from.
+  //
+  // Keyed on the boolean and not on the offset, which is the difference between
+  // attaching a pair once and tearing the pair down and rebuilding it on every
+  // frame of a drag. Neither handler reads the offset — they call a callback
+  // that reads refs — so the only thing the effect owes the value is *whether*
+  // there is anything to close.
+  const revealed = swipeX !== 0;
+  useEffect(() => {
+    if (!revealed) return;
+    const onOutsidePointerDown = (event: PointerEvent) => {
+      // `contains` answers false for a null target, so an event with no target
+      // is treated as what it is — not a touch on this row.
+      if (rowRef.current?.contains(event.target as Node)) return;
+      dismissSwipe();
+    };
+    const onScrollAnywhere = () => dismissSwipe();
+    document.addEventListener("pointerdown", onOutsidePointerDown, true);
+    document.addEventListener("scroll", onScrollAnywhere, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener("pointerdown", onOutsidePointerDown, true);
+      document.removeEventListener("scroll", onScrollAnywhere, true);
+    };
+  }, [dismissSwipe, revealed]);
 
   const onTouchStart = useCallback(
     (event: ReactTouchEvent) => {
@@ -333,7 +478,9 @@ export function useSwipeRow({
     swipeX,
     swiping,
     transition,
+    rowRef,
     closeSwipe,
+    dismissSwipe,
     swipeHandlers: {
       onTouchStart,
       onTouchMove,

@@ -28,6 +28,7 @@ import { SWIPE_COPY_COLOR, SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/sw
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useSwipeRow } from "@/hooks/useSwipeRow";
+import { shouldCloseSwipeRow } from "@/lib/swipeGesture";
 import { buildTaskShareText } from "@/lib/listShareText";
 
 type FloaterItemContainerProps = {
@@ -81,7 +82,14 @@ export default function FloaterItemContainer({
   const announceSwipeOpen = useCallback(() => {
     window.dispatchEvent(new CustomEvent("tday-floater-swipe-open", { detail: floater.id }));
   }, [floater.id]);
-  const { swipeX, transition: swipeTransition, closeSwipe, swipeHandlers } = useSwipeRow({
+  const {
+    swipeX,
+    transition: swipeTransition,
+    rowRef,
+    closeSwipe,
+    dismissSwipe,
+    swipeHandlers,
+  } = useSwipeRow({
     actionsWidth: ACTIONS_WIDTH,
     onOpen: announceSwipeOpen,
     disabled: readOnly,
@@ -133,19 +141,31 @@ export default function FloaterItemContainer({
     };
   }, []);
 
+  // One row open at a time, claimed at the other row's axis lock. `dismissSwipe`
+  // rather than `closeSwipe` because this close arrives from somewhere else and
+  // must leave a row alone whose own finger is still on it; `shouldCloseSwipeRow`
+  // is the predicate all three clients share. Both are argued in `useSwipeRow`.
   useEffect(() => {
     const onOpen = (event: Event) => {
       const id = (event as CustomEvent<string>).detail;
-      if (id !== floater.id) closeSwipe();
+      if (shouldCloseSwipeRow(id, floater.id, swipeX !== 0)) dismissSwipe();
     };
     window.addEventListener("tday-floater-swipe-open", onOpen as EventListener);
     return () =>
       window.removeEventListener("tday-floater-swipe-open", onOpen as EventListener);
-  }, [closeSwipe, floater.id]);
+  }, [dismissSwipe, floater.id, swipeX]);
 
   return (
     <>
       <div
+        // The node an outside tap is measured against: it wraps both the pill
+        // strip and the translating foreground, which is what "outside the open
+        // row" has to mean. The other two rows assign the same node inside a
+        // combined ref callback because dnd-kit wants it too; this one has no
+        // other claimant. See `useSwipeRow`.
+        ref={(node) => {
+          rowRef.current = node;
+        }}
         style={
           removing
             ? {
