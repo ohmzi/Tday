@@ -36,6 +36,7 @@
 		2C1549AFC2F29218C879306C /* SwipeActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84798381A9E2DF3C9468ED8F /* SwipeActions.swift */; };
 		2D4CE01CFE08086ACC160F8B /* TdayAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78690CB92403D76DCA200972 /* TdayAPIService.swift */; };
 		2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */; };
+		C0FE7715B8C9D0E1F2A30022 /* TodoListCelebration.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7715B8C9D0E1F2A30021 /* TodoListCelebration.swift */; };
 		3172D88F15D3395465E578E3 /* TaskReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7ACBCBA57903A93BEC3BFA /* TaskReminderScheduler.swift */; };
 		384B88FF643D87A6157C76C2 /* Nunito.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D9D2A99D6C098B63352D4FB8 /* Nunito.ttf */; };
 		3E0BE8F327DB1A2EE5B101C4 /* ReminderPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3407352DB3FED037D2A26BF /* ReminderPreferenceStore.swift */; };
@@ -164,6 +165,7 @@
 		F0A57E0100000000000000A2 /* TdayFeedItemMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */; };
 		F0A57E0200000000000000A2 /* TdayTaskRowSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0200000000000000A1 /* TdayTaskRowSkeleton.swift */; };
 		C0FE7715B8C9D0E1F2A30002 /* TdayConfettiKinematicsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7715B8C9D0E1F2A30001 /* TdayConfettiKinematicsTests.swift */; };
+		C0FE7715B8C9D0E1F2A30012 /* ShouldCelebrateEmptyStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0FE7715B8C9D0E1F2A30011 /* ShouldCelebrateEmptyStateTests.swift */; };
 		F0A57E0100000000000000C2 /* TdayFeedItemMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */; };
 		F0A57E0200000000000000C2 /* TdayTaskRowSkeletonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */; };
 		F0A57E0000000000000000A2 /* TdayMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000A1 /* TdayMotion.swift */; };
@@ -306,6 +308,7 @@
 		6049166B683EE082F8C551DD /* ApiModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModels.swift; sourceTree = "<group>"; };
 		629820F1BA29236313992076 /* ApiModelContractTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApiModelContractTests.swift; sourceTree = "<group>"; };
 		62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListScreen.swift; sourceTree = "<group>"; };
+		C0FE7715B8C9D0E1F2A30021 /* TodoListCelebration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListCelebration.swift; sourceTree = "<group>"; };
 		6CF6FD5D2845A10D7052467D /* AppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppContainer.swift; sourceTree = "<group>"; };
 		6D0FD6CA5EE999F99D54CF94 /* SyncAndRefreshUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncAndRefreshUseCase.swift; sourceTree = "<group>"; };
 		70A4E591B572A2A9980EC6B7 /* TdayApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayApp.swift; sourceTree = "<group>"; };
@@ -424,6 +427,7 @@
 		F0A57E0100000000000000A1 /* TdayFeedItemMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayFeedItemMotion.swift; sourceTree = "<group>"; };
 		F0A57E0200000000000000A1 /* TdayTaskRowSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayTaskRowSkeleton.swift; sourceTree = "<group>"; };
 		C0FE7715B8C9D0E1F2A30001 /* TdayConfettiKinematicsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayConfettiKinematicsTests.swift; sourceTree = "<group>"; };
+		C0FE7715B8C9D0E1F2A30011 /* ShouldCelebrateEmptyStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShouldCelebrateEmptyStateTests.swift; sourceTree = "<group>"; };
 		F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayFeedItemMotionTests.swift; sourceTree = "<group>"; };
 		F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayTaskRowSkeletonTests.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000A1 /* TdayMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotion.swift; sourceTree = "<group>"; };
@@ -552,6 +556,7 @@
 				19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */,
 				5E7E7A8C0B534B26A6E2F911 /* TelemetrySanitizerTests.swift */,
 				C0FE7715B8C9D0E1F2A30001 /* TdayConfettiKinematicsTests.swift */,
+				C0FE7715B8C9D0E1F2A30011 /* ShouldCelebrateEmptyStateTests.swift */,
 				F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */,
 				F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */,
 				F0A57E0000000000000000C1 /* TdayMotionTests.swift */,
@@ -570,6 +575,7 @@
 				A1C0FFEE000000000000F001 /* ListShareText.swift */,
 				A1C0FFEE000000000000F003 /* ManageMembersSheet.swift */,
 				62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */,
+				C0FE7715B8C9D0E1F2A30021 /* TodoListCelebration.swift */,
 				AF0DB445B9FEE9B047FBB708 /* TodoListViewModel.swift */,
 			);
 			path = Todos;
@@ -1307,6 +1313,7 @@
 				C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */,
 				5E7E7A8C0B534B26A6E2F910 /* TelemetrySanitizerTests.swift in Sources */,
 				C0FE7715B8C9D0E1F2A30002 /* TdayConfettiKinematicsTests.swift in Sources */,
+				C0FE7715B8C9D0E1F2A30012 /* ShouldCelebrateEmptyStateTests.swift in Sources */,
 				F0A57E0100000000000000C2 /* TdayFeedItemMotionTests.swift in Sources */,
 				F0A57E0200000000000000C2 /* TdayTaskRowSkeletonTests.swift in Sources */,
 				F0A57E0000000000000000C2 /* TdayMotionTests.swift in Sources */,
@@ -1457,6 +1464,7 @@
 				FEEDFACE0000000000000000 /* WatchSessionManager.swift in Sources */,
 				A1C0FFEE000000000000B001 /* ListShareText.swift in Sources */,
 				2E1D50F9EEE6B8D7D9B14AEA /* TodoListScreen.swift in Sources */,
+				C0FE7715B8C9D0E1F2A30022 /* TodoListCelebration.swift in Sources */,
 				51A46F8E627C26BF34E91F7B /* TodoListViewModel.swift in Sources */,
 				C1B29C5E4D5D247E8D0B5C0C /* TodoRepository.swift in Sources */,
 				C7229E3F4839B156CDEFA453 /* UpdateRequiredView.swift in Sources */,
