@@ -747,7 +747,11 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
     }
 
     private var rowContent: some View {
-        HStack(alignment: .center, spacing: TdayTaskRowMetrics.contentSpacing) {
+        // Today's row, stacked the way every other task row in the app is stacked —
+        // off the title's first baseline. This one's title is capped at a single line,
+        // but its subtitle and its notes are not, so a centred toggle sat a full line
+        // below the title on any task that carried both.
+        HStack(alignment: .firstTextBaseline, spacing: TdayTaskRowMetrics.contentSpacing) {
             Button(action: startCompletion) {
                 Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: TdayTaskRowMetrics.checkGlyph, weight: .regular))
@@ -756,6 +760,11 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
             }
             .buttonStyle(TdayPressButtonStyle(shadowColor: .black, pressedShadowOpacity: 0, normalShadowOpacity: 0))
             .disabled(isCompleting)
+            // A button reports no text baseline of its own; the guide hands back its
+            // centre, nudged onto the title's.
+            .alignmentGuide(.firstTextBaseline) { dimension in
+                dimension[VerticalAlignment.center] + TdayTaskRowMetrics.checkBaselineNudge
+            }
 
             VStack(alignment: .leading, spacing: TdayTaskRowMetrics.textSpacing) {
                 ScheduledTaskHomeTodayTaskTitle(
@@ -801,6 +810,10 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
                     }
                 }
                 .padding(.trailing, TdayTaskRowMetrics.metaTrailingPadding)
+                // Keep the trailing indicators on the first line too.
+                .alignmentGuide(.firstTextBaseline) { dimension in
+                    dimension[VerticalAlignment.center] + TdayTaskRowMetrics.checkBaselineNudge
+                }
             }
         }
         .padding(.vertical, TdayTaskRowMetrics.verticalPadding)

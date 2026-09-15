@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -94,6 +95,7 @@ import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeletonGroup
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.feedAnswer
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberTaskRowFirstLineAlignment
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
@@ -852,6 +854,13 @@ private fun CompletedSwipeRow(
     val showPriorityIcon = priorityIcon != null
     val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
     val foregroundColor = colorScheme.background
+    // This row's toggle is 28 dp against a 24 sp title line, so the derivation
+    // answers with a 2 dp text inset rather than the task list's 12 — the same
+    // call, a different row, and no number written down twice.
+    val firstLine = rememberTaskRowFirstLineAlignment(
+        titleStyle = MaterialTheme.typography.titleMedium,
+        controlHeight = CompletedRestoreToggleSize,
+    )
     // The row's whole subscription to the screen's slot, and the only place it
     // reads it -- outside composition, so no row recomposes when another opens
     // or closes. [shouldCloseSwipeRow] deliberately carries no `openId != null`
@@ -1003,11 +1012,20 @@ private fun CompletedSwipeRow(
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
+                            // Stacked from the top, then the whole block put back in
+                            // the middle of the card. `CompletedSwipeRowHeight` is a
+                            // fixed 56 dp, so top-aligning alone would have lifted
+                            // every row's content off its own centre — a 4 dp move on
+                            // the ~97% of rows whose title fits one line, which is the
+                            // whole feed paying for the fix to the few that wrap.
+                            // `wrapContentHeight` measures the content, centres it, and
+                            // leaves `Alignment.Top` to do its work INSIDE that block.
+                            .wrapContentHeight(Alignment.CenterVertically)
                             .padding(
                                 horizontal = TdayDimens.SpacingXs,
                                 vertical = TdayDimens.SpacingXxs,
                             ),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.Top,
                     ) {
                         CompletedCircularToggleIcon(
                             imageVector = if (showCompletedCheckmark) {
@@ -1045,7 +1063,10 @@ private fun CompletedSwipeRow(
                         Column(
                             modifier = Modifier
                                 .weight(1f)
-                                .padding(start = CompletedRowTitleStartPadding),
+                                .padding(
+                                    start = CompletedRowTitleStartPadding,
+                                    top = firstLine.titleTopInset,
+                                ),
                         ) {
                             Text(
                                 text = item.title,
@@ -1100,7 +1121,14 @@ private fun CompletedSwipeRow(
 
                         if (showPriorityIcon) {
                             Row(
-                                modifier = Modifier.padding(end = TdayDimens.Spacing3xl),
+                                modifier = Modifier.padding(
+                                    // The flag is an annotation ON the task, so it
+                                    // reads with the title's first line exactly as
+                                    // the toggle does. Centring it across a wrapped
+                                    // title left it floating in the same gap.
+                                    top = firstLine.topInsetFor(CompletedRowTrailingIconSize),
+                                    end = TdayDimens.Spacing3xl,
+                                ),
                                 horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
@@ -1126,7 +1154,10 @@ private fun CompletedSwipeRow(
                                 contentDescription = stringResource(R.string.label_task_list),
                                 tint = listIndicatorColor,
                                 modifier = Modifier
-                                    .padding(end = TdayDimens.Spacing3xl)
+                                    .padding(
+                                        top = firstLine.topInsetFor(CompletedRowTrailingIconSize),
+                                        end = TdayDimens.Spacing3xl,
+                                    )
                                     .size(CompletedRowTrailingIconSize),
                             )
                         }
