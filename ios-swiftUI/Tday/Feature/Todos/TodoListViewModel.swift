@@ -12,6 +12,23 @@ final class TodoListViewModel {
     private static let recentSuccessfulSyncSkipWindowMs: Int64 = 8_000
 
     var isLoading = false
+    /// This scope's local cache read has landed in state. True from the first
+    /// frame on this client, because `hydrateFromCache()` runs in `init` and
+    /// beats the first body pass — which is the honest statement of the fact
+    /// rather than a flag pretending to a cold open this client does not have.
+    /// Published anyway, and published HERE rather than as view `@State`, for
+    /// the reason `shouldCelebrateEmptyState` was lifted out of the view: a
+    /// computed property on a `View` is reachable from no test, and this is one
+    /// of the two terms `feedAnswer` decides an empty state on.
+    private(set) var hasHydratedFromCache = false
+    /// `isLocalMode || lastSuccessfulSyncEpochMs > 0` — see
+    /// `feedFirstAnswerLanded(in:)` for why the mode half is not optional.
+    ///
+    /// Re-read on every hydrate rather than once in `init`, and that is the
+    /// whole of what keeps a failed first sync from becoming permanent: a pull
+    /// that finally reaches the server ends in `hydrateFromCache()`, so the
+    /// stamp it just wrote is picked up in the same pass the rows are.
+    private(set) var firstAnswerLanded = false
     var title: String
     var mode: TodoListMode
     var listId: String?
@@ -693,6 +710,13 @@ final class TodoListViewModel {
             // whole cache twice doubles the main-actor cost of every sync.
             completedTodayCount = snapshot.completedTodayCount
         }
+        // Both of `feedAnswer`'s non-row terms, settled on the same frame the
+        // rows are. They have to move together: a gate that saw a hydrated feed
+        // whose first answer had not been re-read would draw a skeleton for one
+        // frame over rows that were already there. `lastSuccessfulSyncEpochMsSnapshot`
+        // is an in-memory field, not a second cache fetch — see the note above.
+        firstAnswerLanded = feedFirstAnswerLanded(in: container)
+        hasHydratedFromCache = true
     }
 
     private func shouldUseRecentSuccessfulSync(_ state: OfflineSyncState) -> Bool {
