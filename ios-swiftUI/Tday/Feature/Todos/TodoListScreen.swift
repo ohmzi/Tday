@@ -1055,52 +1055,22 @@ struct TodoListScreen: View {
         hasNoPendingItems && !isEarlierSectionExpanded && !suppressEmptyStateForEarlierHandoff
     }
 
-    /// Whether the empty state about to be shown is the end of a finished list
-    /// rather than a list that was never filled. Deleting the last task, or
-    /// opening an empty list, gets the plain arrival; ticking the last one off
-    /// gets the confetti — whether that tick happened here, on another
-    /// device, or from a collaborator on a shared list.
-    ///
-    /// Two independent triggers, both windowed the same way: `lastCompletionAt`
-    /// is this device's own precise signal (only `complete`/`bulkComplete` set
-    /// it); `remoteEmptiedAt` is the broader one a cache change this device
-    /// did not stage leaves behind (see its doc comment for why it cannot be
-    /// as precise). The remote branch additionally requires the screen to be
-    /// visible and the app foregrounded — a transition nobody was looking at
-    /// does not get to surface a burst retroactively when the user returns.
-    ///
-    /// The window is wider than the burst's own flight, so a redraw mid-flight
-    /// cannot cut the paper off in mid-air.
-    ///
-    /// Gated on `hasNoPendingItems`, not `viewModel.items.isEmpty`: on Today,
-    /// Priority, All, and List, completing the very last pending task while
-    /// Earlier still holds overdue tasks leaves `viewModel.items` non-empty,
-    /// and this is req. 1 and req. 2's shared root cause — a confetti gate
-    /// keyed to "everything gone" is exactly as wrong as an illustration gate
-    /// keyed to it, for the same reason, so both read this one condition.
-    ///
-    /// Known gap, pre-existing on Today and unchanged by extending this to
-    /// Priority/All/List: `remoteEmptiedAt` itself is still armed from a raw
-    /// non-empty→empty transition on `viewModel.items`
-    /// (`hydrateFromExternalCacheChange`), so a remote device's/collaborator's
-    /// completion of the very last pending task, while Earlier still holds
-    /// overdue rows, never flips `items` to empty and so never sets it — this
-    /// device's own completions are unaffected (`lastCompletionAt` is set
-    /// directly by `complete`/`bulkComplete`, not derived from an emptiness
-    /// transition).
+    /// This screen's half of the celebration gate: gather the inputs, and hand
+    /// the decision to `shouldCelebrateEmptyState`, which is where it is argued
+    /// and where it is tested. Nothing is decided here on purpose — a `View`
+    /// property is reachable from no test, and this one is the difference
+    /// between a payoff and paper flying over a row the user just got back.
     private var celebratesEmptyState: Bool {
-        guard hasNoPendingItems else { return false }
-        let window = TodoListScreen.completionCelebrationWindow
-        if let completedAt = viewModel.lastCompletionAt,
-           Date().timeIntervalSince(completedAt) < window {
-            return true
-        }
-        if let emptiedAt = viewModel.remoteEmptiedAt,
-           isScreenVisible, scenePhase == .active,
-           Date().timeIntervalSince(emptiedAt) < window {
-            return true
-        }
-        return false
+        shouldCelebrateEmptyState(
+            hasNoPendingItems: hasNoPendingItems,
+            lastCompletionAt: viewModel.lastCompletionAt,
+            remoteEmptiedAt: viewModel.remoteEmptiedAt,
+            celebrationCancelledAt: viewModel.celebrationCancelledAt,
+            isVisible: isScreenVisible,
+            isActive: scenePhase == .active,
+            now: Date(),
+            window: TodoListScreen.completionCelebrationWindow
+        )
     }
 
     private static let completionCelebrationWindow: TimeInterval = 4

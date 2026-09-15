@@ -17,8 +17,15 @@ final class TodoListViewModel {
     var listId: String?
     var lists: [ListSummary] = []
     var items: [TodoItem] = []
-    // Feeds the Day Done state: completed-today count from the local cache,
-    // bumped optimistically on complete so the payoff shows immediately.
+    // Feeds the Day Done state: completed-today count, read off the local cache
+    // snapshot in `hydrateFromCache` and nowhere else. Not bumped optimistically,
+    // which this comment used to claim — a staged completion is already written
+    // to the cache before `hydrateFromCache()` is called, so the count comes back
+    // raised without anyone adding to it, and an undo of that completion stages
+    // the write back out and lowers it again for free. Worth stating plainly
+    // rather than leaving as a claim: Android's own count IS bumped by hand and
+    // had to be rolled back on undo, and the next reader comparing the two
+    // clients needs to know this one has nothing to roll back.
     var completedTodayCount = 0
     /// When the user last ticked something off. Feeds the confetti: an empty
     /// list that emptied under the user's own hand is a payoff, one that was
@@ -45,7 +52,37 @@ final class TodoListViewModel {
     /// to be visible before honouring this one, so a transition on a screen
     /// nobody is looking at does not surface a stale burst when the user
     /// returns to it later.
+    ///
+    /// Cleared on the same path when a row arrives instead of leaving — see the
+    /// count-rise branch of `hydrateFromExternalCacheChange()`. A collaborator
+    /// emptying the list still celebrates; a collaborator putting something back
+    /// does not, and the arming condition above is untouched by that.
     var remoteEmptiedAt: Date?
+    /// When a pending row last ARRIVED on this screen — and deliberately not
+    /// "when an undo happened", which is only the commonest way it gets written.
+    ///
+    /// The two stamps above open a celebration; nothing closed one except a
+    /// four-second window and a re-read of "is this scope finished". So nothing
+    /// anywhere observed the opposite transition, a task coming BACK, and the
+    /// reported bug is what that costs: undo restores the row through the
+    /// repository and, when the row is overdue, moves `hasNoPendingItems` not at
+    /// all — that predicate excludes Earlier on purpose, so requirement 4 can let
+    /// a finished today celebrate while overdue tasks wait. The paper then flew
+    /// over a visible row until its own flight clock ran out.
+    ///
+    /// The cure has to be an ARRIVAL and never a re-read of that predicate, for
+    /// the same reason: in the overdue case `items` is non-empty on both sides
+    /// and nothing transitions. It is COUNTED, across every bucket including
+    /// Earlier — written directly by the local paths that put a row back or add
+    /// one (the completion undos, `addTask`) and, as a backstop that catches
+    /// everything else including a collaborator's undo, by the count rise in
+    /// `hydrateFromExternalCacheChange()`.
+    ///
+    /// Compared against the two opening stamps rather than clearing them (see
+    /// `shouldCelebrateEmptyState`): a completion landing after an arrival
+    /// re-opens the window simply by being the newer stamp, with no mutation from
+    /// an effect and no ordering left for the next reader to work out.
+    var celebrationCancelledAt: Date?
     var errorMessage: String?
     var aiSummaryEnabled = true
     var summaryText: String?
@@ -144,6 +181,12 @@ final class TodoListViewModel {
             } else {
                 try await container.createTodo(payload)
             }
+            // A row arriving is a row arriving, whoever caused it. A task typed
+            // while the paper is still up costs the user the rest of that burst,
+            // and that is the right trade rather than a regrettable one: the
+            // scope is genuinely no longer finished, and the burst leaves over a
+            // fade rather than a cut.
+            celebrationCancelledAt = Date()
             hydrateFromCache()
         } catch {
             container.snackbarManager.show(
@@ -285,6 +328,16 @@ final class TodoListViewModel {
     /// commit: a completion the user already saw must survive the app dying
     /// inside the undo window, not silently revert with no trace on relaunch.
     /// See `TodoRepository.stageCompleteTodo(_:)` for the full rationale.
+    ///
+    /// The two `restore:` closures here capture `self` weakly, which `delete`'s
+    /// pair below deliberately does not. That comment's concern is the COMMIT
+    /// surviving this view model being deallocated, and it still holds: `commit:`
+    /// captures `container` alone on both paths. What an undo of a COMPLETION
+    /// additionally has to do is tell the screen a row came back, so the
+    /// celebration that completion opened can end (`celebrationCancelledAt`), and
+    /// a deallocated view model has no screen left to be celebrating on — so the
+    /// weak reference costs the restore nothing and the optional chain below is
+    /// the honest way to say that.
     func complete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("task.complete", data: taskTelemetryData(mode: mode))
         let container = container
@@ -295,7 +348,8 @@ final class TodoListViewModel {
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: L("Task completed"),
-                restore: {
+                restore: { [weak self] in
+                    self?.celebrationCancelledAt = Date()
                     container.todoRepository.undoStagedFloaterCompletion(staged)
                 },
                 commit: {
@@ -314,7 +368,8 @@ final class TodoListViewModel {
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: L("Task completed"),
-                restore: {
+                restore: { [weak self] in
+                    self?.celebrationCancelledAt = Date()
                     container.todoRepository.undoStagedCompletion(staged)
                 },
                 commit: {
@@ -409,7 +464,8 @@ final class TodoListViewModel {
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: BulkSelectionCopy.completedToast(count),
-                restore: {
+                restore: { [weak self] in
+                    self?.celebrationCancelledAt = Date()
                     container.todoRepository.undoStagedFloaterCompletion(staged)
                 },
                 commit: {
@@ -425,7 +481,8 @@ final class TodoListViewModel {
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: BulkSelectionCopy.completedToast(count),
-                restore: {
+                restore: { [weak self] in
+                    self?.celebrationCancelledAt = Date()
                     container.todoRepository.undoStagedCompletion(staged)
                 },
                 commit: {
@@ -695,6 +752,12 @@ final class TodoListViewModel {
     /// `remoteEmptiedAt`.
     private func hydrateFromExternalCacheChange() {
         let wasNonEmpty = !items.isEmpty
+        // COUNT, not emptiness, and the distinction is the whole of the reported
+        // bug. See `celebrationCancelledAt`: the tempting mirror of the arming
+        // line below — `if !wasNonEmpty, !items.isEmpty` — misses exactly the
+        // case that was reported, because a restored OVERDUE row leaves `items`
+        // non-empty on both sides and nothing transitions. Only the count moves.
+        let previousCount = items.count
         // The same rung the screen's own `.animation(_:value:)` runs the feed's
         // travel on (`TdayFeedItemMotion.placement`). A remote change moves rows
         // exactly as a local one does, so the transaction that coordinates it has
@@ -717,6 +780,24 @@ final class TodoListViewModel {
         }
         if wasNonEmpty, items.isEmpty {
             remoteEmptiedAt = Date()
+        } else if items.count > previousCount {
+            // The backstop, and the only thing that catches a COLLABORATOR's
+            // undo. This path cannot tell an undo from an add and does not need
+            // to: both are arrivals, and both make "this scope is finished"
+            // false. It also catches any future arrival path whose author
+            // forgets to stamp for itself — only a same-tick optimistic local
+            // update depends on the direct stamps.
+            //
+            // `remoteEmptiedAt` is cleared in the same breath. The comparison in
+            // `shouldCelebrateEmptyState` already blocks a re-celebration inside
+            // the same four seconds; clearing is the belt to that braces, and it
+            // keeps the two stamps honest for whoever reads them next.
+            //
+            // A stale-then-complete refetch can register a rise that was not
+            // really an arrival. Harmless by construction: a cancel can only end
+            // a burst early and can never start one.
+            celebrationCancelledAt = Date()
+            remoteEmptiedAt = nil
         }
     }
 

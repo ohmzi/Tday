@@ -80,6 +80,33 @@ enum TdayMotion {
     // below. A factory for it would give a view two spellings for one intent, and
     // the tween one reads wrong on a finger that has already let go.
 
+    // MARK: - Curves
+
+    /// The easings again, as values that can be SAMPLED rather than played.
+    ///
+    /// Not a second spelling of the factories above, and the paragraph at the top
+    /// of this file draws the distinction it turns on: an `Animation` is a curve
+    /// handed to SwiftUI to run against SwiftUI's clock. Some call sites already
+    /// have a clock of their own and need nothing from that machinery except the
+    /// answer — what is this curve worth at this progress. `TdayConfetti`'s cancel
+    /// envelope is one: the burst is drawn inside a `TimelineView`'s `Canvas`,
+    /// which is handed a date and has no animatable properties at all, so there is
+    /// nothing there for an `Animation` to interpolate and no way to hand it one.
+    ///
+    /// `UnitCurve` — iOS 17, which is this package's own floor — is exactly that
+    /// value, and the file's opening argument is untouched by it: it is not an
+    /// `Animation`, cannot be given to `withAnimation(_:)`, and freezes no
+    /// duration, so the rung is still chosen at the call site. Built here, off the
+    /// same generated control points, so a curve that is sampled and the same
+    /// curve played can never be two different curves.
+    ///
+    /// Only `exit` is surfaced, for the reason `Easings.gesture` is not surfaced
+    /// at all: a vocabulary offers the shapes something actually reaches for, and
+    /// a spelling with no call site is one more thing to keep in step.
+    enum Curves {
+        static let exit: UnitCurve = unitCurve(TdayMotionGenerated.Easings.exit)
+    }
+
     // MARK: - Springs
 
     /// Confirmation dialogs, selector overlays, a control committing to a state.
@@ -123,5 +150,19 @@ enum TdayMotion {
         duration: TimeInterval
     ) -> Animation {
         .timingCurve(bezier.x1, bezier.y1, bezier.x2, bezier.y2, duration: duration)
+    }
+
+    /// The same four points, going positional a second time, for the same reason
+    /// and with the same guarantee: `Bezier` names them, this is the only place
+    /// the names are dropped, and it is written once.
+    ///
+    /// `UnitPoint` takes `CGFloat` where `Bezier` holds `Double`. The conversion
+    /// is spelled out rather than left to Swift's implicit `CGFloat`/`Double`
+    /// bridging, so the one place the token layer crosses a numeric type says so.
+    private static func unitCurve(_ bezier: TdayMotionGenerated.Bezier) -> UnitCurve {
+        .bezier(
+            startControlPoint: UnitPoint(x: CGFloat(bezier.x1), y: CGFloat(bezier.y1)),
+            endControlPoint: UnitPoint(x: CGFloat(bezier.x2), y: CGFloat(bezier.y2))
+        )
     }
 }

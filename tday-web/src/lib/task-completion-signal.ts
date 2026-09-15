@@ -88,14 +88,116 @@ export function useCelebrationWindowExpiry(
 }
 
 /**
- * `taskJustCompleted`, plus the clock that closes it. For the callers whose
- * screen is a different shape while the window is open — the scope and list
- * screens, where a celebration keeps the empty scene on a slot that Earlier's
- * own rows otherwise own.
+ * WHEN this module's window was opened, or 0 while it is shut — plus the clock
+ * that closes it. For the callers whose screen is a different shape while the
+ * window is open — the scope and list screens, where a celebration keeps the
+ * empty scene on a slot that Earlier's own rows otherwise own.
+ *
+ * A stamp rather than the boolean, because `celebrate` is the OR of two windows
+ * and the cancel below has to be compared against whichever of them opened LAST
+ * (see `shouldCelebrateEmptyState`). Zero while shut rather than the raw
+ * `lastCompletionAt`, so a caller cannot accidentally read a long-expired
+ * opening as the one still in play: the "is the window open" question is
+ * answered here, once, where the clock that answers it already lives.
+ */
+export function useCompletionOpenedAt(windowMs = CELEBRATION_WINDOW_MS): number {
+  useCelebrationWindowExpiry(lastCompletionAt, windowMs);
+  return taskJustCompleted(windowMs) ? lastCompletionAt : 0;
+}
+
+/**
+ * `taskJustCompleted`, plus the clock that closes it — the same window as
+ * `useCompletionOpenedAt` above, for the callers that only need to know whether
+ * it is open.
  */
 export function useTaskJustCompleted(windowMs = CELEBRATION_WINDOW_MS): boolean {
-  useCelebrationWindowExpiry(lastCompletionAt, windowMs);
-  return taskJustCompleted(windowMs);
+  return useCompletionOpenedAt(windowMs) !== 0;
+}
+
+/**
+ * When a pending task last ARRIVED on a screen that could be celebrating.
+ *
+ * The third stamp, and the one neither of the other two could ever be. A
+ * celebration is OPENED by a transition — a completion, or a list going empty
+ * under a collaborator's hands — and until this existed it was only ever CLOSED
+ * by re-reading a static predicate ("is this scope finished right now?") plus
+ * the four-second window above. Nothing anywhere observed the opposite
+ * transition, so an undo put the row back through the query cache and the paper
+ * went on flying over it.
+ *
+ * Deliberately "a pending task arrived" and not "an undo happened". Three
+ * different events write it — an undo of a completion, a task the user creates
+ * while the paper is still up, and a task arriving from a collaborator or a
+ * sync — and all three say the same thing about the list: it is not finished
+ * any more. Naming it after the first of them would make the other two look
+ * like abuses of a signal that is in fact doing exactly its job.
+ *
+ * Module state for `lastCompletionAt`'s reason exactly: the mutation that
+ * restores the row and the empty scene that has to stop celebrating are in
+ * different trees, and a prop threaded down every container would be a
+ * subscription bought for a question the render already answers.
+ */
+let celebrationCancelledAt = 0;
+
+/**
+ * Called wherever a pending row lands on a screen — the completion-undo
+ * closures, the create mutations, and `useArrivalCancel`
+ * (`@/hooks/use-celebrate-empty-transition`), which is the backstop for every
+ * arrival that reaches the cache without anybody remembering to call this.
+ *
+ * Nothing clears it, on purpose: see `shouldCelebrateEmptyState` below for why
+ * a later completion re-opens the window without anything being reset.
+ */
+export function markCelebrationCancelled() {
+  celebrationCancelledAt = Date.now();
+}
+
+/** The cancel stamp as it stands, for the gate below. 0 = nothing ever arrived. */
+export function celebrationCancelledAtMs(): number {
+  return celebrationCancelledAt;
+}
+
+/**
+ * The whole celebration decision, as arithmetic on three stamps.
+ *
+ * Pure, and exported for that reason: `celebrate` used to be an OR of two
+ * windows read straight out of two hooks, which meant the one thing worth
+ * proving about it — that an undo ends it and a LATER completion re-opens it —
+ * could only be proven by driving a container. This is the same shape Android's
+ * `shouldCelebrateEmptyState` and iOS's have, for the same reason.
+ *
+ * The two opening stamps collapse into one `max` because they are windows of
+ * the same length: the later opening is the later expiry, so "either window is
+ * open" and "the newer stamp's window is open" are one question. The hooks hand
+ * them in already zeroed once their own clock has shut them
+ * (`useCompletionOpenedAt`, `useEmptyTransitionOpenedAt`), so what is left here
+ * is purely the ordering rule.
+ *
+ * `>=` and not `>`. An undo always follows the completion it undoes, and the
+ * two can land in the same millisecond — the toast's Undo is a click on a row
+ * that was ticked moments ago, but a test, a fake clock or a fast machine will
+ * put both on one tick. A same-tick arrival must lose to nothing.
+ *
+ * Nothing is ever cleared, and that is the design rather than an omission. A
+ * completion that lands AFTER a cancel re-opens the window for free by being
+ * the newer stamp, so there is no reset to forget, no mutation from an effect,
+ * and the ordering is a unit test instead of a claim.
+ */
+export function shouldCelebrateEmptyState({
+  completionOpenedAtMs,
+  remoteEmptiedAtMs,
+  cancelledAtMs,
+}: {
+  /** This tab's own completion window, or 0 if shut — `useCompletionOpenedAt`. */
+  completionOpenedAtMs: number;
+  /** The has-tasks→empty window, or 0 if shut — `useEmptyTransitionOpenedAt`. */
+  remoteEmptiedAtMs: number;
+  /** When a pending row last arrived — `celebrationCancelledAtMs`. */
+  cancelledAtMs: number;
+}): boolean {
+  const openedAt = Math.max(completionOpenedAtMs, remoteEmptiedAtMs);
+  if (openedAt === 0) return false;
+  return cancelledAtMs === 0 || cancelledAtMs < openedAt;
 }
 
 let lastLocalDeleteAt = 0;
