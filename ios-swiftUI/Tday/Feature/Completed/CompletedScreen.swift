@@ -19,6 +19,9 @@ struct CompletedScreen: View {
     @State private var editingItem: CompletedItem?
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var collapsedSectionIDs: Set<String> = []
+    /// The screen's single swipe slot — see `TodoListScreen` for the shape and its one rule:
+    /// every dismissal is a WRITE to this and nothing else. No host `body` may read it, or a
+    /// cheap write becomes a full re-evaluation of the screen.
     @State private var openSwipeTaskID: String?
     @FocusState private var searchFieldFocused: Bool
     @State private var searchExpanded = false
@@ -240,6 +243,11 @@ struct CompletedScreen: View {
             .onChange(of: viewModel.items.map(\.id)) { _, ids in
                 guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
                 self.openSwipeTaskID = nil
+            }
+            .onDisappear {
+                // Returning to a screen must never show an armed Delete pill — see
+                // `TodoListScreen`'s `.onDisappear` for why this is also iOS's answer to back.
+                openSwipeTaskID = nil
             }
             // The field only joins the hierarchy once the bar has swapped its row
             // over, so focusing it in the same turn is dropped on the floor.
@@ -679,9 +687,10 @@ private struct CompletedTimelineRow: View {
         guard restorePhase == .completed else {
             return
         }
-        if openSwipeTaskID == item.id {
-            openSwipeTaskID = nil
-        }
+        // Any restore clears the slot, not only this row's: the toggle is a `Button` inside the
+        // row's content, so it eats the touch and the reveal's own `.onTapGesture` never runs.
+        // See `TodoListScreen.completeTodoWithoutReflow` for the full argument.
+        openSwipeTaskID = nil
 
         HapticManager.toggle(on: false)
         // The check-off's own beats, run backwards. This row kept a third set —

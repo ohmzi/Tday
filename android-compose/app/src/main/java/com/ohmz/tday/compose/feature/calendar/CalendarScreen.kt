@@ -72,6 +72,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -118,6 +119,8 @@ import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
+import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
+import com.ohmz.tday.compose.core.ui.TaskSwipeSlotBackHandler
 import com.ohmz.tday.compose.core.ui.TdayDragLift
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
@@ -132,9 +135,12 @@ import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.scaledDelay
+import com.ohmz.tday.compose.core.ui.shouldCloseSwipeRow
+import com.ohmz.tday.compose.core.ui.swipeSlotAfterRowDisclaim
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
+import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
@@ -471,7 +477,11 @@ fun CalendarScreen(
         remember { mutableStateMapOf<String, CalendarDateDropTargetBounds>() }
     var activeDropDateIso by remember { mutableStateOf<String?>(null) }
     var pendingRescheduleDrop by remember { mutableStateOf<CalendarTaskRescheduleDrop?>(null) }
-    var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
+    // The screen's one swipe slot. `remember`, never `rememberSaveable`: the rows'
+    // own reveal states are plain `remember`, so a restored id named a row that
+    // had rebuilt closed. The full argument, and the reason this is a holder
+    // rather than a hoisted `String?`, is at [TaskSwipeSlot].
+    val swipeSlot = remember { TaskSwipeSlot() }
     LaunchedEffect(selectedViewMode) {
         if (selectedViewMode == CalendarViewMode.DAY) {
             draggedCalendarTodoId = null
@@ -480,10 +490,24 @@ fun CalendarScreen(
             calendarDropTargetBounds.clear()
         }
     }
-    LaunchedEffect(uiState.items, openSwipeTaskId) {
-        val openId = openSwipeTaskId ?: return@LaunchedEffect
-        if (uiState.items.none { it.id == openId }) {
-            openSwipeTaskId = null
+    // The open row's task leaving the feed hands the slot back. Read through
+    // `snapshotFlow` rather than as an effect key so that no read of the slot
+    // happens in this composable's body -- see [TaskSwipeSlot].
+    LaunchedEffect(uiState.items, swipeSlot) {
+        snapshotFlow { swipeSlot.openId }.collect { openId ->
+            if (openId != null && uiState.items.none { it.id == openId }) {
+                swipeSlot.openId = null
+            }
+        }
+    }
+    // A scroll closes the row, at the moment the list starts moving: an open row
+    // is content and travels with the list, so one left open through a scroll
+    // puts an armed Delete pill under a thumb now aimed at a different task. It
+    // is also the only trigger that catches a vertical drag beginning on the
+    // open row itself. Argued in full on `TodoListScreen`'s copy.
+    LaunchedEffect(listState, swipeSlot) {
+        snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
+            if (scrolling && swipeSlot.openId != null) swipeSlot.openId = null
         }
     }
     val editTarget = rememberEditSheetTarget(
@@ -585,8 +609,18 @@ fun CalendarScreen(
     BackHandler(enabled = searchExpanded) {
         closeSearch()
     }
+    // After the search handler, because later registration wins in the back
+    // dispatcher: a revealed row is the innermost state back can be in.
+    TaskSwipeSlotBackHandler(slot = swipeSlot)
 
     Scaffold(
+        // One interceptor per screen, at the outermost composable so the header,
+        // the FAB and the gaps between rows are all inside it. It observes and
+        // never consumes -- see `tdayClosesSwipeRowOnOutsideTap`.
+        modifier = Modifier.tdayClosesSwipeRowOnOutsideTap(
+            slot = swipeSlot,
+            close = { swipeSlot.openId = null },
+        ),
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
             CalendarCreateTaskFab(
@@ -911,8 +945,7 @@ fun CalendarScreen(
                             onInfo = { editTargetId = todo.id },
                             onDelete = { onDelete(todo) },
                             dragging = calendarTaskRescheduleEnabled && draggedCalendarTodo?.id == todo.id,
-                            openSwipeTaskId = openSwipeTaskId,
-                            onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
+                            swipeSlot = swipeSlot,
                             onDragStart = { position ->
                                 activeDropDateIso = null
                                 draggedCalendarTodoId = todo.id
@@ -2540,8 +2573,7 @@ private fun CalendarTodoRow(
     onInfo: () -> Unit,
     onDelete: () -> Unit,
     dragging: Boolean,
-    openSwipeTaskId: String?,
-    onOpenSwipeTaskIdChange: (String?) -> Unit,
+    swipeSlot: TaskSwipeSlot,
     onDragStart: (Offset) -> Unit,
     onDragMove: (Offset) -> Unit,
     onDragEnd: (Offset?) -> Unit,
@@ -2565,22 +2597,28 @@ private fun CalendarTodoRow(
     var completionFading by remember(todo.id) { mutableStateOf(false) }
     var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
     var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
-    val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
     fun claimSwipeSlot() {
-        if (latestOpenSwipeTaskId.value != todo.id) {
-            onOpenSwipeTaskIdChange(todo.id)
+        if (swipeSlot.openId != todo.id) {
+            swipeSlot.openId = todo.id
         }
     }
 
+    // This row handing back the slot it holds, and only that -- see
+    // [swipeSlotAfterRowDisclaim] for why it is guarded and for the revoke
+    // that deliberately is not.
     fun closeSwipeSlot() {
         swipeRevealState.close()
-        if (latestOpenSwipeTaskId.value == todo.id) {
-            onOpenSwipeTaskIdChange(null)
-        }
+        swipeSlot.openId = swipeSlotAfterRowDisclaim(swipeSlot.openId, todo.id)
     }
+    // Hoisted above the reveal's own animation because that is now one of its
+    // callers: with the app's Reduce Motion switch on, a close draws its
+    // finished state instead of springing to it. One read, two uses -- the
+    // switch and the row can never disagree about the same device.
+    val rowMotionScale = rememberTdayMotionScale()
     val animatedOffsetX by animateTaskSwipeOffsetAsState(
         state = swipeRevealState,
         label = "calendarTaskSwipeOffset",
+        scale = rowMotionScale,
     )
     val motionEnabled = rememberTdayMotionEnabled()
     // Gated like the beats in front of it. The last leg of the check-off is timed
@@ -2625,7 +2663,6 @@ private fun CalendarTodoRow(
     // the hint's two holds and the three legs of the check-off are all gaps
     // between beats this row gates on [motionEnabled], which is what makes the
     // app's own scale the right clock for them. See [scaledDelay].
-    val rowMotionScale = rememberTdayMotionScale()
     val toggleTint by animateColorAsState(
         targetValue = if (localChecked) {
             TdayTaskCompleteAccent
@@ -2680,9 +2717,18 @@ private fun CalendarTodoRow(
     val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
     val foregroundColor = colorScheme.background
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
-    LaunchedEffect(openSwipeTaskId, todo.id) {
-        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
-            swipeRevealState.close()
+    // The row's whole subscription to the screen's slot, and the only place it
+    // reads it -- outside composition, so no row recomposes when another opens
+    // or closes. [shouldCloseSwipeRow] deliberately carries no `openId != null`
+    // clause: that guard meant the slot could be handed on but never revoked,
+    // and every dismissal is a write of `null`. The close is the same
+    // `TaskSwipeMotion.Release` rung the open uses, and is silent by the
+    // argument at `TaskSwipeRevealState.settle`.
+    LaunchedEffect(swipeSlot, todo.id) {
+        snapshotFlow { swipeSlot.openId }.collect { openId ->
+            if (shouldCloseSwipeRow(openId, todo.id, swipeRevealState.isOpenOrDragging)) {
+                swipeRevealState.close()
+            }
         }
     }
 
@@ -2771,7 +2817,13 @@ private fun CalendarTodoRow(
                             Modifier.pointerInput(todo.id) {
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = { localOffset ->
-                                        closeSwipeSlot()
+                                        // Unconditional, unlike `closeSwipeSlot` -- the same
+                                        // argument as the timeline feed's drag start: the open row
+                                        // is almost never the row being picked up, and a disclaim
+                                        // guarded on `== todo.id` would leave it armed for the
+                                        // length of the drag.
+                                        swipeRevealState.close()
+                                        swipeSlot.openId = null
                                         val startPosition = rowOriginInRoot + localOffset
                                         dragPointerPosition = startPosition
                                         onDragStart(startPosition)
@@ -2815,8 +2867,8 @@ private fun CalendarTodoRow(
                             // `TaskSwipeRevealState.dragBy`: cross the detent, drag back,
                             // release closed, and you felt a reveal that did not happen.
                             if (swipeRevealState.dragBy(delta)) TdayHaptics.reveal(view)
-                            if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
-                                onOpenSwipeTaskIdChange(null)
+                            if (!swipeRevealState.isOpenOrDragging && swipeSlot.openId == todo.id) {
+                                swipeSlot.openId = null
                             }
                         },
                         onDragStopped = { velocity ->
@@ -2828,8 +2880,8 @@ private fun CalendarTodoRow(
                             if (swipeRevealState.settle(velocity)) TdayHaptics.reveal(view)
                             if (swipeRevealState.isOpenOrDragging) {
                                 claimSwipeSlot()
-                            } else if (latestOpenSwipeTaskId.value == todo.id) {
-                                onOpenSwipeTaskIdChange(null)
+                            } else if (swipeSlot.openId == todo.id) {
+                                swipeSlot.openId = null
                             }
                         },
                     )
@@ -2843,10 +2895,10 @@ private fun CalendarTodoRow(
                             claimSwipeSlot()
                             coroutineScope.launch {
                                 swipeRevealState.playHint(rowMotionScale)
-                                if (latestOpenSwipeTaskId.value == todo.id &&
+                                if (swipeSlot.openId == todo.id &&
                                     !swipeRevealState.isOpenOrDragging
                                 ) {
-                                    onOpenSwipeTaskIdChange(null)
+                                    swipeSlot.openId = null
                                 }
                             }
                         }

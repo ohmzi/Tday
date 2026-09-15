@@ -81,6 +81,7 @@ import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.SnackbarEvent
 import com.ohmz.tday.compose.core.ui.SnackbarKind
+import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdayToastData
 import com.ohmz.tday.compose.core.ui.TdayToastHost
@@ -88,6 +89,7 @@ import com.ohmz.tday.compose.core.ui.TdayToastKind
 import com.ohmz.tday.compose.core.ui.actionToastTimeoutMillis
 import com.ohmz.tday.compose.core.ui.informationalToastTimeoutMillis
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
+import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
@@ -1177,7 +1179,42 @@ private fun RootFeedContent(
     rootControlsVisible: Boolean,
     onRootControlsVisibleChange: (Boolean) -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    // The two root tabs' swipe slot, owned here rather than by either feed, and
+    // this box is the reason. The dock and the create button below are SIBLINGS
+    // of the crossfade that draws the feed, so they sit outside the feed's own
+    // Scaffold — and Compose routes a pointer down into the hit child's path
+    // only, which meant an interceptor installed on that Scaffold could not see
+    // a tap on either. "Tapping the dock or the FAB closes the open row" was the
+    // decision on all three clients and was quietly false on the two Android
+    // screens the user lives in. This box is the smallest composable that
+    // actually contains everything a dismissing tap can land on, so it is the
+    // screen, and the slot belongs at the same altitude as the interceptor.
+    //
+    // Nothing reads `openId` in composition -- see [TaskSwipeSlot]. The holder's
+    // identity never changes, so handing it to the feeds changes no argument
+    // either of them is keyed on, and the pointer coroutine below reads it
+    // outside composition entirely. A feed of hundreds recomposes nothing when a
+    // row opens, which was already true and had to stay true.
+    val rootSwipeSlot = remember { TaskSwipeSlot() }
+    // Changing tab is leaving the screen the row was open on. The dock tap that
+    // usually causes it already closes the row through the interceptor, but the
+    // tab also changes from the widget's deep link and from a feed's own
+    // "Anytime" affordance, and an id left pointing at a disposed row would arm
+    // the interceptor over a feed with nothing open in it.
+    LaunchedEffect(rootFeedTab) { rootSwipeSlot.openId = null }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            // One interceptor for both root tabs, installed where the feeds, the
+            // dock and the create button all sit inside it. Observes and never
+            // consumes -- see `tdayClosesSwipeRowOnOutsideTap`; the dock still
+            // switches tab and the button still opens its sheet in the same
+            // touch that shuts the row.
+            .tdayClosesSwipeRowOnOutsideTap(
+                slot = rootSwipeSlot,
+                close = { rootSwipeSlot.openId = null },
+            )
+    ) {
         val motionEnabled = rememberTdayMotionEnabled()
 
         // The dock's selector springs across to the tab that was tapped, and the feed under
@@ -1222,6 +1259,7 @@ private fun RootFeedContent(
                     appUiState = appUiState,
                     appViewModel = appViewModel,
                     navController = navController,
+                    swipeSlot = rootSwipeSlot,
                     onChangeRootFeedTab = onChangeRootFeedTab,
                     rootCreateTaskRequestKey = createTaskRequestKey,
                     onCreateTaskRequestHandled = onCreateTaskRequestHandled,
@@ -1233,6 +1271,7 @@ private fun RootFeedContent(
                 RootFeedTab.FLOATER_TASK_HOME -> FloaterTaskHomeFeed(
                     appUiState = appUiState,
                     navController = navController,
+                    swipeSlot = rootSwipeSlot,
                     onChangeRootFeedTab = onChangeRootFeedTab,
                     rootCreateTaskRequestKey = createTaskRequestKey,
                     onCreateTaskRequestHandled = onCreateTaskRequestHandled,
@@ -1364,6 +1403,7 @@ private fun ScheduledTaskHomeFeed(
     appUiState: AppUiState,
     appViewModel: AppViewModel,
     navController: NavHostController,
+    swipeSlot: TaskSwipeSlot,
     onChangeRootFeedTab: (RootFeedTab) -> Unit,
     rootCreateTaskRequestKey: Int,
     onCreateTaskRequestHandled: (Int) -> Unit,
@@ -1440,6 +1480,7 @@ private fun ScheduledTaskHomeFeed(
         onSummarize = scheduledTaskHomeViewModel::summarizeToday,
         summaryAvailable = !appUiState.isLocalMode,
         showRootFeedDock = false,
+        hostSwipeSlot = swipeSlot,
         createTaskRequestKey = rootCreateTaskRequestKey,
         onCreateTaskRequestHandled = onCreateTaskRequestHandled,
         scrollToTopRequestKey = scrollToTopRequestKey,
@@ -1453,6 +1494,7 @@ private fun ScheduledTaskHomeFeed(
 private fun FloaterTaskHomeFeed(
     appUiState: AppUiState,
     navController: NavHostController,
+    swipeSlot: TaskSwipeSlot,
     onChangeRootFeedTab: (RootFeedTab) -> Unit,
     rootCreateTaskRequestKey: Int,
     onCreateTaskRequestHandled: (Int) -> Unit,
@@ -1481,6 +1523,7 @@ private fun FloaterTaskHomeFeed(
         },
         showRootFeedDock = false,
         showCreateTaskButton = false,
+        hostSwipeSlot = swipeSlot,
         usesRootFeedHeader = true,
         createTaskRequestKey = rootCreateTaskRequestKey,
         onCreateTaskRequestHandled = onCreateTaskRequestHandled,
@@ -2031,6 +2074,8 @@ private fun TodosRoute(
     onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
+    /** See `TodoListScreen`'s parameter of the same name. */
+    hostSwipeSlot: TaskSwipeSlot? = null,
     openCreateTaskOnStart: Boolean = false,
     exitToLauncherOnBack: Boolean = false,
     exitOnCreateTaskSheetDismiss: Boolean = false,
@@ -2106,6 +2151,7 @@ private fun TodosRoute(
         onRootFeedTabSelected = onRootFeedTabSelected,
         showRootFeedDock = showRootFeedDock,
         showCreateTaskButton = showCreateTaskButton,
+        hostSwipeSlot = hostSwipeSlot,
         openCreateTaskOnStart = openCreateTaskOnStart,
         exitToLauncherOnBack = exitToLauncherOnBack,
         exitOnCreateTaskSheetDismiss = exitOnCreateTaskSheetDismiss,

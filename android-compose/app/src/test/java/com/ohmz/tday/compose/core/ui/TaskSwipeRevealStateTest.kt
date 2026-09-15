@@ -90,6 +90,39 @@ class TaskSwipeRevealStateTest {
         assertEquals(0f, state.offsetX, 0f)
     }
 
+    @Test
+    fun `an open row dragged back to the right closes, and never jumps on the way`() {
+        val state = state()
+        // Open it the way a user does, and let the spring land.
+        state.dragBy(-200f)
+        state.settle(velocityPxPerSecond = 0f)
+        state.land()
+        assertEquals(-revealWidthPx, state.offsetX, 0f)
+
+        // The half of the user's request the tree already answered, said out
+        // loud: "sliding the row back to the right should slide the row back".
+        // `only the elastic limit ever clamps a drag` proves the arithmetic and
+        // `an already-open row dragged further open fires nothing` proves the
+        // seeding one way; nothing yet drove the whole trip. The failure this
+        // would catch is a drag that seeds from zero instead of from where the
+        // row is — which does not read as "does not work", it reads as the row
+        // snapping to the finger, and that is a different bug wearing the same
+        // clothes.
+        state.dragBy(60f)
+        assertEquals(-revealWidthPx + 60f, state.offsetX, 0f)
+        state.dragBy(140f)
+        assertEquals(-revealWidthPx + 200f, state.offsetX, 0f)
+
+        // -56 px, which is short of the 81.92 px detent, so letting go here is a
+        // close and not a re-open.
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        assertEquals(0f, state.restOffsetX, 0f)
+        assertNotNull(state.release)
+        state.land()
+        assertEquals(0f, state.offsetX, 0f)
+        assertFalse(state.isOpenOrDragging)
+    }
+
     // ---- the release, and only the release, is sprung -------------------------------
 
     @Test

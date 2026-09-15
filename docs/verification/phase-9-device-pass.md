@@ -410,6 +410,65 @@ animates.
               whether 105 px is where the catch belongs, or whether 25 ms and 15 ms are still two
               events in a hand.
 
+- [ ] **PR 41d · web · An open swipe row goes away when you touch anything else** — a REAL PHONE,
+      and both of them if you have both: iOS Safari and Android Chrome arbitrate a touch-scroll
+      differently and this row is about the arbitration. Any feed long enough to scroll, one row
+      swiped fully open, plus the same pass on the calendar day list and the Anytime feed, which
+      are two other event buses behind the same hook.
+      Do:     (1) with a row open, tap a DIFFERENT row's checkbox, and watch both the row you shut
+              and the box you ticked; (2) tap the dock, then repeat and tap the FAB; (3) with a row
+              open, tap one of its OWN pills — Edit, then Copy, then Delete — and confirm each pill
+              actually fires; (4) with a row open, start a slow scroll with the finger landing ON
+              the open row, and separately two rows below it; (5) with a row open at the very top
+              of the feed, pull DOWN into the rubber-band overscroll without really scrolling, and
+              on iOS also scroll just far enough to make Safari's URL bar collapse; (6) with a row
+              open, drag it back to the right slowly and stop halfway, hold for a second, then
+              finish the drag — and separately, drag it further LEFT past the limit and hold there.
+      Watch:  (1) the row closes and the checkbox ticks, in one touch. Both, not either. (2) the dock
+              switches tab and the FAB opens its sheet, with the row gone behind whatever happened.
+              (3) every pill does its own thing. This is the subtree guard doing its whole job: the
+              pills are `absolute inset-y-0 right-0` and stand still while the foreground slides
+              over them, so a dismissal fired on the pointer-DOWN would slide the foreground back
+              across the pill before the finger lifted, the up-target would no longer be the button,
+              and the browser would send `click` to the common ancestor instead — a pill that looks
+              pressed and does nothing. (4) the row is closed by the time the list has visibly moved,
+              both times; the one starting on the row is the case the tap listener cannot see and
+              the `scroll` listener exists for. (6) nothing dismisses it: the finger owns the row in
+              both directions, and the release decides.
+      Fails:  (1) a first tap that only closes the row and leaves the box unticked — a consumed
+              touch, which is the outcome this design rules out by construction and the one that
+              turns into a trap with a screen reader on. (3) any pill that needs a second tap, or
+              that does nothing at all. (5) is the real risk and is a fail if the row closes on an
+              overscroll bounce or on the URL bar collapsing: both are `scroll` events that no
+              finger asked for, and neither is a list moving under a Delete pill. (6) the row
+              jumping home mid-drag, or snapping back OPEN on the next move after something
+              dismissed it — the second is the gesture re-seed, which is pinned by a test but has
+              never run on a touchscreen.
+      Known:  closing on scroll START is a deliberate divergence from the search capsule, which
+              ignores scrolls on purpose. The field is chrome and stays put; a row is content and
+              travels, and one left open puts an armed Delete pill under a thumb now aimed at a
+              different task. The question a device can settle is whether it reads as a dismissal
+              the user caused or as the row being snatched.
+      Also:   with VoiceOver or TalkBack on, walk a CLOSED row and count what it offers. Below the
+              `sm` breakpoint the three pills are drawn at `opacity: 0`, and CSS opacity removes
+              nothing from the accessibility tree and disables no hit testing — so "Edit task",
+              "Copy task" and "Delete task" are very probably announced on every closed row in the
+              feed, with no gesture at all. Whether they actually are is the device question. This
+              is NOT a defect to fix here, and `aria-hidden` / `inert` on those pills is the wrong
+              instinct and must be refused in this PR: it is currently the only route an assistive
+              web user has to those three actions, because web has no custom-action fallback the
+              way iOS's rotor actions are. Hiding them without first publishing an equivalent route
+              deletes functionality. It is the web half of `ios-accessibility-actions` and it wants
+              its own PR.
+      Why:    the decision is two pure functions with a truth table
+              (`shouldCloseSwipeRow`, `canDismissMidGesture`, in `swipe-gesture.test.ts`) and the
+              wiring is pinned in jsdom by `swipe-row-outside-dismiss.test.tsx` — which listener
+              exists when, that the `scroll` one is capture-phase because `scroll` does not bubble,
+              that the dismissing event still reaches its own target with `defaultPrevented` false,
+              and that a closed row holds no document listener at all. What jsdom has none of is
+              gesture arbitration: it does not fling, does not rubber-band, does not collapse a URL
+              bar, and fires whatever event the test asks it to at the moment the test asks.
+
 
 ## Android
 
@@ -1022,6 +1081,76 @@ animates.
               point. Also not a fail: iOS buzzes on the tap-then-hint path and Android does not —
               a real cross-platform divergence, named rather than closed by this change.
 
+- [ ] **PR 41b · android · An open swipe row goes away when you touch anything else** — Today,
+      Todos, Calendar or Completed, a list long enough to scroll, and one row swiped fully open.
+      Four questions, and every one of them is about a gesture rather than about a frame.
+      Do:     (1) with a row open, put a thumb on the content 176 dp in from the right edge — which
+              is where the open row's own body now sits — and drag it back to the right in one
+              movement, including starting from the very edge of the screen; (2) from an open row,
+              flick rightward sloppily, at an angle, fast; (3) with a row open and TalkBack ON,
+              double-tap a different row, then the header, then the FAB; (4) with a row open, start
+              a slow scroll with the finger landing ON the open row itself, and separately with it
+              landing on a row two below; (5) on the two ROOT tabs — the scheduled home feed and
+              Anytime — open a row and tap the dock, then re-open and tap the create button;
+              (6) on the timeline feed and on Calendar, open one row and then long-press a
+              DIFFERENT row until it lifts for a drag-to-reschedule.
+      Watch:  (1) the row follows the thumb back and settles closed, and the system's predictive-back
+              affordance does not take the gesture instead. The content being translated ~176 dp left
+              is what makes this worth asking: the natural place to grab an open row is inside the
+              edge zone the system watches. (2) the row still takes the drag rather than the
+              LazyColumn taking it as a scroll — `draggable(Orientation.Horizontal)` and the list
+              are racing for the same slop, and the loser of that race is invisible in code.
+              (3) each double-tap closes the row AND does its own job — the other row plays its
+              42 dp hint, the FAB opens the sheet. The interceptor watches the INITIAL pointer pass
+              and never consumes, and whether it sees anything at all while explore-by-touch owns
+              the touch stream is the one thing no gate here can answer. (4) the row is closed by
+              the time the list has moved a few dp, both times. (5) both close the row AND do their
+              own job in the same touch — the dock switches tab, the button opens the create sheet.
+              These two are drawn OUTSIDE the feed's Scaffold, as siblings of the crossfade that
+              holds it, so they are reached by an interceptor installed one level up in
+              `RootFeedContent` rather than by the screens' own; that is a different code path from
+              everything in (3) and is the reason it is asked separately. (6) the first row's
+              actions are gone the instant the drag picks up, not when it is dropped.
+      Fails:  (1) the screen pops or the back affordance appears instead of the row closing; (2) the
+              list scrolls sideways-ish, or the row jumps to the finger instead of following from
+              where it was; (3) any double-tap that silently does nothing — a consumed first touch
+              is a trap with a screen reader on, and it is the one outcome this design rules out by
+              construction; (4) the row staying open through a scroll, or closing a beat late, at
+              the END of the fling, with an armed Delete pill riding past under the thumb; (5) the
+              row surviving a dock or create-button tap, which is the whole defect, or either
+              control failing to do its own job now that a second observer sits above it; (6) the
+              open row keeping its Delete pill for the length of the drag and only shutting when
+              the task is dropped — right outcome, wrong moment, and for the wrong reason.
+      Known:  (4) asks a design question as much as a correctness one — whether closing on scroll
+              START reads as a dismissal the user caused or as the row being snatched. The
+              alternative is worse and is why it was chosen: the row is content, it travels with the
+              list, and one left open puts Delete under a thumb now aimed at a different task.
+      Why:    `TaskSwipeDismissPolicyTest` pins the decision — the revoke, one-open-at-a-time, the
+              row that never closes itself out from under its own finger, and the narrow disclaim
+              that (6) must NOT be routed through — and `TaskSwipeRevealStateTest`'s drag-back round
+              trip pins the arithmetic of (1). None of it can drive a pointer: there is no
+              Robolectric and no Compose harness on this source set, so every gesture-arbitration
+              question above is only answerable in a hand. (5) is the one that was asserted here
+              before it was true, which is the argument for asking it on the device rather than
+              from the diff: an interceptor on the wrong composable compiles, reads correctly, and
+              silently sees nothing.
+
+- [ ] **PR 41c · android · Reduce Motion takes the close's spring away and nothing else** — any of
+      the four feeds, the app's own Reduce Motion switch ON (Settings, not the system slider).
+      Do:     swipe a row open, then close it four ways: tap its own body, tap a different row, tap
+              the header, and scroll. Then turn the switch off and do it again.
+      Watch:  with the switch on, the row is simply closed on the next frame — no ~340 ms travel and
+              no wait of any kind. The reveal itself still buzzes at the detent on the way open:
+              reduce motion silences animation, not feedback.
+      Fails:  the row still springs home with the switch on; the actions blink or the row flashes
+              through an intermediate position on the way; a close that snaps but leaves the next
+              swipe of that same row unable to buzz (the snap has to re-arm the detent exactly as
+              the spring's last frame did); or the haptic disappearing along with the animation.
+      Why:    Compose's own `MotionDurationScale` covers the SYSTEM animator setting and is blind to
+              the app's switch, which is why this was a ~340 ms spring for a user who had asked for
+              none. Nothing on this source set can run a Compose animation, so the branch is a
+              reading of the code until somebody watches it.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
@@ -1443,3 +1572,52 @@ animates.
               registered in the pbxproj rather than sitting on disk unbuilt. What none of it can
               say is whether 73 pt is where the catch belongs, or whether the two generators are
               still telling two events apart in a hand.
+
+- [ ] **PR 41c · ios · An open swipe row goes away when you touch anything else** — Today, Todos,
+      Calendar or Completed, a list long enough to scroll, one row swiped fully open, and for the
+      last two rows Settings ▸ Accessibility ▸ Voice Control and VoiceOver to hand.
+      Do:     (1) with a row open, tap the dock, then the FAB, then the header's search capsule,
+              then the gap between two rows, then a different row's checkbox — one at a time,
+              re-opening the row between each; (2) with a row open, start a slow scroll with the
+              finger landing ON the open row itself, and separately two rows below it; (3) with a
+              row open, drag it back to the right in one movement, including starting from the
+              very left edge of the screen; (4) open a row, push to another screen and come back;
+              (5) with Voice Control on, say "swipe left" at a row; (6) with VoiceOver on and a
+              row somehow open, do the two-finger scrub.
+      Watch:  (1) every one of them closes the row AND does its own job in the same touch — the
+              dock switches tab, the FAB opens its sheet, the capsule takes focus, the other
+              row's checkbox ticks. A tap that closes the row and nothing else is the fail, and
+              it is the one this design refused on purpose. (2) the row closes as the list starts
+              moving, not when it stops, and the scroll itself is not swallowed or stuttered.
+              (3) the row follows the thumb the whole way and settles closed, and the system's
+              interactive pop does not take the gesture instead — these two travel in the same
+              direction over the same pixels, which is the reason iOS does not intercept back
+              here. (4) the row is closed on return. (5) the reveal actually opens. (6) the row
+              closes.
+      Fails:  any of (1) closing the row while the thing under the finger does nothing; the row
+              surviving a scroll, or closing while the finger is still dragging it in either
+              direction; a sheet, the dock or a swipe-back behaving differently from before, in
+              which case the window recognizer's `cancelsTouchesInView = false` is not doing what
+              it says; the row still open on return in (4); and in (5) nothing happening at all.
+      Known:  (5) is the most important row here and the one with the least behind it.
+              `gestureRecognizerShouldBegin` gates the reveal on `horizontalVelocity > 45`, and
+              whether Voice Control's synthesised pan clears that gate decides whether an
+              assistive user can open the reveal AT ALL. If it does not, (6) is unreachable in
+              practice and the `.escape` action added here is insurance rather than a route —
+              which is worth knowing either way, and is a finding rather than a fail for this PR.
+      Also:   the close now honours Reduce Motion — with it on, the row is drawn home rather than
+              springing there, including on the existing pill closes. Gated in two places and
+              two only: `closeActions`, which every dismissal funnels through, and the pan's own
+              `.ended` settle, which is the close that runs when a thumb drags an open row back
+              and lets go under the detent and which is in a UIKit coordinator with no
+              environment to read. Both are handed the same resolution, so the row cannot shut
+              at two different speeds depending on who shut it. Confirm BOTH: the pill path and
+              the drag-back in (3) must feel the same kind of instant, not one instant and one
+              springing for a third of a second.
+      Why:    there is no Swift toolchain on the machine this was written on.
+              `TaskSwipeDismissPolicyTests` pins the decision and `TaskSwipeRevealDetentTests`
+              pins the drag-back round trip from a nonzero resting offset — the assertion that
+              would catch a `.changed` seeding from zero, which closes the row correctly and
+              jumps a full reveal width doing it. What none of it can say is whether a
+              window-level tap recognizer leaves the rest of the app's hit testing alone, which
+              is what (1) is really asking.
