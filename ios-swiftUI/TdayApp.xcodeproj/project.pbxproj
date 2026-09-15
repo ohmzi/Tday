@@ -21,6 +21,7 @@
 		7D4A9E1200000000000000A2 /* TdaySheetChromeMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4A9E1200000000000000A1 /* TdaySheetChromeMotionTests.swift */; };
 		7D4A9E1300000000000000B2 /* RootFeedDockCollapseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4A9E1300000000000000B1 /* RootFeedDockCollapseTests.swift */; };
 		7D4A9E1400000000000000C2 /* TaskSwipeRevealDetentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4A9E1400000000000000C1 /* TaskSwipeRevealDetentTests.swift */; };
+		7D4A9E1400000000000000C4 /* TaskSwipeDismissPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4A9E1400000000000000C3 /* TaskSwipeDismissPolicyTests.swift */; };
 		E0D3B11DFB20419468405B6E /* DefaultHomeScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BF881C9B39C6DF685E58AA6 /* DefaultHomeScreenTests.swift */; };
 		041712E33446975E528F050E /* RealtimeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */; };
 		04EFD8B7BFDF9261BE3D88BE /* CacheMappers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3CD3233C5F5D5FC1E058708 /* CacheMappers.swift */; };
@@ -395,6 +396,7 @@
 		7D4A9E1200000000000000A1 /* TdaySheetChromeMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdaySheetChromeMotionTests.swift; sourceTree = "<group>"; };
 		7D4A9E1300000000000000B1 /* RootFeedDockCollapseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootFeedDockCollapseTests.swift; sourceTree = "<group>"; };
 		7D4A9E1400000000000000C1 /* TaskSwipeRevealDetentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSwipeRevealDetentTests.swift; sourceTree = "<group>"; };
+		7D4A9E1400000000000000C3 /* TaskSwipeDismissPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSwipeDismissPolicyTests.swift; sourceTree = "<group>"; };
 		7BF881C9B39C6DF685E58AA6 /* DefaultHomeScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultHomeScreenTests.swift; sourceTree = "<group>"; };
 		D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerURLState.swift; sourceTree = "<group>"; };
 		D26B48A87B57A0417CC3F578 /* TdayTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TdayTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -562,6 +564,7 @@
 				7D4A9E1200000000000000A1 /* TdaySheetChromeMotionTests.swift */,
 				7D4A9E1300000000000000B1 /* RootFeedDockCollapseTests.swift */,
 				7D4A9E1400000000000000C1 /* TaskSwipeRevealDetentTests.swift */,
+				7D4A9E1400000000000000C3 /* TaskSwipeDismissPolicyTests.swift */,
 				FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */,
 			);
 			path = TdayCoreTests;
@@ -1318,6 +1321,7 @@
 				7D4A9E1200000000000000A2 /* TdaySheetChromeMotionTests.swift in Sources */,
 				7D4A9E1300000000000000B2 /* RootFeedDockCollapseTests.swift in Sources */,
 				7D4A9E1400000000000000C2 /* TaskSwipeRevealDetentTests.swift in Sources */,
+				7D4A9E1400000000000000C4 /* TaskSwipeDismissPolicyTests.swift in Sources */,
 				494E748270A233BECED5A359 /* TodayTasksWidgetSnapshotStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -641,6 +641,23 @@ struct TodoListScreen: View {
     @State private var openingFloaterTaskHomeSearchResultID: String?
     @State private var listSearchExpanded = false
     @State private var listSearchQuery = ""
+    /// The screen's single swipe slot: the id of the row whose actions are revealed.
+    ///
+    /// Screen level is the right altitude — each of these is its own destination with its own
+    /// chrome, so there is nothing above it worth hoisting to — and a plain `@State` is what
+    /// keeps a dismissal cheap. THE PROPERTY THAT DOES IT IS THAT NO HOST BODY READS THIS VALUE.
+    /// The hosts construct `$openSwipeTaskID` and nothing else, and `@State.projectedValue`
+    /// registers no dependency, so writing it does not re-run this screen's body. The only read
+    /// is `.onChange(of: openRowID)` inside `TodoTrailingSwipeActionsModifier.body`, which makes
+    /// a dismissal cost one modifier-body evaluation per REALIZED row — and `List` realizes
+    /// lazily, on feeds that run to hundreds of rows.
+    ///
+    /// So: every dismissal is a WRITE to this and nothing else. Never add a read of it inside a
+    /// host's `body` — no `.disabled(openSwipeTaskID != nil)`, no computed property, no overlay
+    /// conditioned on it. One such read converts a cheap write into a full re-evaluation of the
+    /// largest body in the app. It is not `@Observable` or an `EnvironmentObject` for the same
+    /// reason: same fan-out, worse locality, and it would strand the
+    /// `onChange(of: items.map(\.id))` cleanup that reads the plain optional.
     @State private var openSwipeTaskID: String?
     // Multi-select. Screen-local on purpose: the view model re-hydrates `items`
     // on every cache-version bump, and a selection held there would fight it.
@@ -1694,6 +1711,19 @@ struct TodoListScreen: View {
         .onDisappear {
             isScreenVisible = false
             onRootControlsVisibleChange(true)
+            // Nobody returns to a screen expecting a Delete pill still armed under their thumb
+            // from a minute ago. Both halves of the reveal are `@State` and both survive a
+            // NavigationStack push, so without this line the row is exactly where it was left.
+            // The write trips `todoTrailingSwipeActions`' own `.onChange(of: openRowID)` and the
+            // row is closed before it is next seen.
+            //
+            // This is also the whole of iOS's answer to "should back close the row", and the
+            // answer is that iOS does not intercept back at all: these are tab roots with no
+            // back button, and the one back-shaped gesture that exists — the left-edge
+            // interactive pop — travels in the SAME direction as the drag-back close, so
+            // intercepting it would mean an app recognizer fighting the system pop over the same
+            // pixels. Android does intercept, because Android has a back to intercept.
+            openSwipeTaskID = nil
         }
     }
 
@@ -3247,9 +3277,13 @@ struct TodoListScreen: View {
         guard completionPhases[todo.id] == nil else {
             return
         }
-        if openSwipeTaskID == todo.id {
-            openSwipeTaskID = nil
-        }
+        // Completing ANY task clears the slot, not only this row's, and the dropped
+        // `== todo.id` guard is the fix rather than a tidy-up. The toggle is a `Button` inside
+        // the row's own content, so it consumes the touch and the reveal modifier's
+        // `.onTapGesture` never runs — which made ticking a *different* task the one ordinary
+        // thing a user could do while an open row stayed open behind it. A tap anywhere outside
+        // the open row closes it now; a checkbox is not an exception to that, it was a hole in it.
+        openSwipeTaskID = nil
         HapticManager.completion()
         SoundManager.taskCompleted()
         withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
