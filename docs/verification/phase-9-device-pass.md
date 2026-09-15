@@ -1496,3 +1496,47 @@ animates.
               registered in the pbxproj rather than sitting on disk unbuilt. What none of it can
               say is whether 73 pt is where the catch belongs, or whether the two generators are
               still telling two events apart in a hand.
+
+- [ ] **PR 41c · ios · An open swipe row goes away when you touch anything else** — Today, Todos,
+      Calendar or Completed, a list long enough to scroll, one row swiped fully open, and for the
+      last two rows Settings ▸ Accessibility ▸ Voice Control and VoiceOver to hand.
+      Do:     (1) with a row open, tap the dock, then the FAB, then the header's search capsule,
+              then the gap between two rows, then a different row's checkbox — one at a time,
+              re-opening the row between each; (2) with a row open, start a slow scroll with the
+              finger landing ON the open row itself, and separately two rows below it; (3) with a
+              row open, drag it back to the right in one movement, including starting from the
+              very left edge of the screen; (4) open a row, push to another screen and come back;
+              (5) with Voice Control on, say "swipe left" at a row; (6) with VoiceOver on and a
+              row somehow open, do the two-finger scrub.
+      Watch:  (1) every one of them closes the row AND does its own job in the same touch — the
+              dock switches tab, the FAB opens its sheet, the capsule takes focus, the other
+              row's checkbox ticks. A tap that closes the row and nothing else is the fail, and
+              it is the one this design refused on purpose. (2) the row closes as the list starts
+              moving, not when it stops, and the scroll itself is not swallowed or stuttered.
+              (3) the row follows the thumb the whole way and settles closed, and the system's
+              interactive pop does not take the gesture instead — these two travel in the same
+              direction over the same pixels, which is the reason iOS does not intercept back
+              here. (4) the row is closed on return. (5) the reveal actually opens. (6) the row
+              closes.
+      Fails:  any of (1) closing the row while the thing under the finger does nothing; the row
+              surviving a scroll, or closing while the finger is still dragging it in either
+              direction; a sheet, the dock or a swipe-back behaving differently from before, in
+              which case the window recognizer's `cancelsTouchesInView = false` is not doing what
+              it says; the row still open on return in (4); and in (5) nothing happening at all.
+      Known:  (5) is the most important row here and the one with the least behind it.
+              `gestureRecognizerShouldBegin` gates the reveal on `horizontalVelocity > 45`, and
+              whether Voice Control's synthesised pan clears that gate decides whether an
+              assistive user can open the reveal AT ALL. If it does not, (6) is unreachable in
+              practice and the `.escape` action added here is insurance rather than a route —
+              which is worth knowing either way, and is a finding rather than a fail for this PR.
+      Also:   the close now honours Reduce Motion — with it on, the row is drawn home rather than
+              springing there, including on the existing pill closes. Gated once in
+              `closeActions`, so the row cannot shut at two different speeds depending on who
+              shut it; confirm the pill path feels instant rather than broken.
+      Why:    there is no Swift toolchain on the machine this was written on.
+              `TaskSwipeDismissPolicyTests` pins the decision and `TaskSwipeRevealDetentTests`
+              pins the drag-back round trip from a nonzero resting offset — the assertion that
+              would catch a `.changed` seeding from zero, which closes the row correctly and
+              jumps a full reveal width doing it. What none of it can say is whether a
+              window-level tap recognizer leaves the rest of the app's hit testing alone, which
+              is what (1) is really asking.

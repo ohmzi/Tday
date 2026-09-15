@@ -91,6 +91,9 @@ struct ScheduledTaskHomeScreen: View {
     @State private var headerScroll = RootFeedHeaderScrollState()
     @State private var rootDockCollapsed = false
     @State private var titleScrollToTopRequestID = 0
+    /// The screen's single swipe slot — see `TodoListScreen` for the shape and its one rule:
+    /// every dismissal is a WRITE to this and nothing else. No host `body` may read it, or a
+    /// cheap write becomes a full re-evaluation of the screen.
     @State private var openSwipeTaskID: String?
 
     init(
@@ -502,6 +505,9 @@ struct ScheduledTaskHomeScreen: View {
         }
         .onDisappear {
             onRootControlsVisibleChange(true)
+            // Returning to a screen must never show an armed Delete pill — see
+            // `TodoListScreen`'s `.onDisappear` for why this is also iOS's answer to back.
+            openSwipeTaskID = nil
         }
         .onChange(of: showingCreateTask) { _, showing in
             if !showing {
@@ -796,9 +802,10 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
 
     private func startCompletion() {
         guard completionPhase == .active else { return }
-        if openSwipeTaskID == todo.id {
-            openSwipeTaskID = nil
-        }
+        // Any completion clears the slot, not only this row's: the toggle is a `Button` inside
+        // the row's content, so it eats the touch and the reveal's own `.onTapGesture` never
+        // runs. See `TodoListScreen.completeTodoWithoutReflow` for the full argument.
+        openSwipeTaskID = nil
 
         HapticManager.completion()
         SoundManager.taskCompleted()
