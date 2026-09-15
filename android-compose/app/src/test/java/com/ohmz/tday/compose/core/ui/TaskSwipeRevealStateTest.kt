@@ -171,8 +171,12 @@ class TaskSwipeRevealStateTest {
     // function of state this class already holds and the buzz is the composable's
     // job: every case below is the whole rule, minus the vibration.
 
-    /** 256 * 0.32. A drag past this is a drag that would open the row if it stopped. */
-    private val detentPx = -81.92f
+    /**
+     * Where the detent sits on this row. Derived, not retyped: every `-90f` and
+     * `-60f` below is chosen relative to it, so a fraction that moved under them
+     * would quietly turn most of this section into assertions about nothing.
+     */
+    private val detentPx = -(revealWidthPx * SWIPE_OPEN_THRESHOLD_FRACTION)
 
     @Test
     fun `crossing the detent fires exactly once`() {
@@ -284,6 +288,64 @@ class TaskSwipeRevealStateTest {
     }
 
     @Test
+    fun `a finger landing during the close spring does not buy a second reveal`() {
+        val state = state()
+        assertTrue(state.dragBy(-100f))
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        state.land()
+
+        // The common close: another row claimed the one open slot. The decision
+        // is instant and the travel is not — `restOffsetX` is 0 from here, and
+        // the row is out at -256 for the ~340 ms the release spring takes.
+        state.close()
+        assertEquals(0f, state.restOffsetX, 0f)
+        state.onReleaseFrame(-210f)
+        state.onReleaseFrame(-160f)
+
+        // A finger arriving now picks the row up at -160, which is past -81.92
+        // with the actions plainly already out. Re-arming at the decision left
+        // this frame with a cleared flag under a row already past the threshold,
+        // and it buzzed with nothing to reveal and no catch under the thumb.
+        assertFalse(state.dragBy(-1f))
+        // Nor does dragging it back out: this is still the same open-cycle, and
+        // the row has not been home since it spent its buzz.
+        assertFalse(state.dragBy(-200f))
+    }
+
+    @Test
+    fun `the re-arm waits for the row to be home, not for the decision`() {
+        val state = state()
+        assertTrue(state.dragBy(-100f))
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        state.land()
+        state.close()
+
+        // Halfway home is not home, even once the row is back under the detent.
+        state.onReleaseFrame(-40f)
+        assertFalse(state.dragBy(-60f)) // -100, past the detent, still spent
+
+        // Landed, and the next swipe is a new reveal.
+        state.close()
+        state.land()
+        assertTrue(state.dragBy(-100f))
+    }
+
+    @Test
+    fun `a row dragged all the way back and released re-arms with no spring to land`() {
+        val state = state()
+        assertTrue(state.dragBy(-100f))
+        assertFalse(state.dragBy(100f)) // back to 0, finger still down
+
+        // Nothing to animate, so there is no release and no landing frame will
+        // ever arrive. A re-arm that waited only on the spring would wait for
+        // ever and this row would never buzz again.
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        assertNull(state.release)
+
+        assertTrue(state.dragBy(-100f))
+    }
+
+    @Test
     fun `an already-open row dragged further open fires nothing`() {
         val state = state()
         assertTrue(state.dragBy(-100f))
@@ -331,11 +393,19 @@ class TaskSwipeRevealStateTest {
         // that lives in the drag path — but the reason a tap-to-hint is silent
         // *and would stay silent under any offset-derived rule* is this
         // inequality, and it holds by coincidence of two independent constants:
-        // `rememberTaskSwipeRevealState` coerces the hint to at most 0.24 of the
-        // reveal width, and the detent sits at 0.32 of it. Raising the hint
-        // offset turns this red instead of making a tap buzz.
-        assertTrue(revealWidthPx * 0.24f < revealWidthPx * 0.32f)
-        assertTrue(hintOffsetPx < revealWidthPx * 0.32f)
+        // `rememberTaskSwipeRevealState` coerces the hint to at most
+        // SWIPE_HINT_MAX_FRACTION of the reveal width, and the detent sits at
+        // SWIPE_OPEN_THRESHOLD_FRACTION of it.
+        //
+        // Both ends are read from production. An earlier version of this test
+        // asserted `revealWidthPx * 0.24f < revealWidthPx * 0.32f` with both
+        // numbers typed in here, which is `0.24 < 0.32` with a common factor on
+        // it: raising the real coercion to 0.90 left the suite green. This turns
+        // red for either constant moving into the other.
+        assertTrue(SWIPE_HINT_MAX_FRACTION < SWIPE_OPEN_THRESHOLD_FRACTION)
+        // And the row this file is written about: 256 px of reveal puts the
+        // detent at 81.92 px, which the shipped 42 dp hint stops well short of.
+        assertEquals(-81.92f, detentPx, 0.001f)
         assertTrue(-hintOffsetPx > detentPx)
     }
 
