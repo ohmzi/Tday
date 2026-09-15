@@ -182,6 +182,77 @@ describe("a limit gives rather than stops dead", () => {
   });
 });
 
+describe("the way back", () => {
+  // The other half of the ask — "or even sliding the row back to right should
+  // stop showing the button and slide the row back" — and the half that already
+  // worked. It is pinned rather than changed, because the way it could quietly
+  // stop working is invisible: if a gesture seeded its `startX` at 0 instead of
+  // at the offset the row is resting at, the row would jump to the finger on the
+  // first move and every one of these numbers would still be plausible.
+  // Android and iOS carry the same round trip for the same reason.
+
+  /** A row dragged out and released open, which is where each of these starts. */
+  function openedRow() {
+    const { row } = renderRow();
+    touchAt(row, "touchStart", 300, 1000);
+    touchAt(row, "touchMove", 200, 1040);
+    touchAt(row, "touchMove", 90, 1080);
+    touchAt(row, "touchEnd", 90, 1120);
+    expect(offsetOf(row)).toBe(-ACTIONS_WIDTH);
+    return row;
+  }
+
+  it("follows a drag back from where the row is, not from home", () => {
+    // The bug wearing the same clothes: a row that jumps 210px to meet the
+    // finger on the first move closes on the release too, so only the first
+    // frame tells them apart.
+    const row = openedRow();
+
+    touchAt(row, "touchStart", 100, 2000);
+    touchAt(row, "touchMove", 130, 2040);
+
+    expect(offsetOf(row)).toBe(-(ACTIONS_WIDTH - 30));
+  });
+
+  it("closes when the drag back passes halfway", () => {
+    const row = openedRow();
+
+    touchAt(row, "touchStart", 100, 2000);
+    touchAt(row, "touchMove", 180, 2040);
+    touchAt(row, "touchMove", 230, 2080);
+    touchAt(row, "touchEnd", 230, 2120);
+
+    expect(offsetOf(row)).toBe(0);
+  });
+
+  it("closes on a rightward flick that never reached halfway", () => {
+    // Same rule as the way out, read the other way round: the release is a
+    // projection, so a row still travelling right when the finger left is a row
+    // going home even from 30px short of its actions.
+    const row = openedRow();
+
+    touchAt(row, "touchStart", 100, 2000);
+    touchAt(row, "touchMove", 130, 2020);
+    touchAt(row, "touchEnd", 130, 2030);
+
+    expect(offsetOf(row)).toBe(0);
+  });
+
+  it("stays open when the drag back was walked most of the way and turned round", () => {
+    // The negative case that keeps the projection honest in this direction: the
+    // finger went right, changed its mind, and was heading back out when it
+    // lifted. The row is past halfway by position and stays open all the same.
+    const row = openedRow();
+
+    touchAt(row, "touchStart", 100, 2000);
+    touchAt(row, "touchMove", 210, 2040);
+    touchAt(row, "touchMove", 190, 2080);
+    touchAt(row, "touchEnd", 190, 2120);
+
+    expect(offsetOf(row)).toBe(-ACTIONS_WIDTH);
+  });
+});
+
 describe("a reader who asked not to be moved", () => {
   it("gets the resting place the release chose, with no trip to it", () => {
     // The fifth idiom rule: reduced motion removes the trip and keeps the

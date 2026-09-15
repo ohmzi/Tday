@@ -51,6 +51,7 @@ final class TaskSwipeRevealDetentTests: XCTestCase {
     private final class RowUnderAFinger {
         private let revealWidth: CGFloat
         private var hasFiredRevealDetent = false
+        private var dragStartOffsetX: CGFloat = 0
 
         private(set) var offsetX: CGFloat
         private(set) var buzzes = 0
@@ -64,6 +65,7 @@ final class TaskSwipeRevealDetentTests: XCTestCase {
         /// keeps a gesture that starts on an open row silent without any close path having to
         /// remember anything.
         func touchDown() {
+            dragStartOffsetX = offsetX
             hasFiredRevealDetent = TaskSwipeRevealDetent.isCommittedOpen(
                 offsetX: offsetX,
                 revealWidth: revealWidth
@@ -86,6 +88,19 @@ final class TaskSwipeRevealDetentTests: XCTestCase {
             }
             hasFiredRevealDetent = true
             buzzes += 1
+        }
+
+        /// `.changed`, driven the way the recognizer drives it: a translation measured from
+        /// where the finger went DOWN, applied to where the row already WAS.
+        ///
+        /// The seam the round trip below is about. `.began` seeds `dragStartOffsetX` from
+        /// `offsetX` for exactly this reason, and a seed of zero passes every endpoint assertion
+        /// about closing while making the first update of every drag on an open row a
+        /// `revealWidth`-sized jump to the right of home. `drag(to:)` above takes the composed
+        /// offset because the haptic cases care about where the row ends up; this one takes the
+        /// finger's own number because the close cares about how it got there.
+        func dragBy(translationX: CGFloat) {
+            drag(to: dragStartOffsetX + translationX)
         }
 
         /// `.ended` — arm B, then the settle. Returns whether the row opened, so a case can
@@ -266,6 +281,48 @@ final class TaskSwipeRevealDetentTests: XCTestCase {
         XCTAssertEqual(row.buzzes, 0)
         XCTAssertTrue(row.lift(velocityX: -1500))
         XCTAssertEqual(row.buzzes, 0)
+    }
+
+    /// The round trip the user actually asked for: a row whose actions are out, slid back to the
+    /// right until it shuts.
+    ///
+    /// Asserted per update rather than at the endpoints, because the endpoints are true of the
+    /// broken version too. A `.changed` that used the translation alone — rather than
+    /// `dragStartOffsetX + translation.x` — would send an open row a full reveal width to the
+    /// right of home on the first frame and snap back; the row would still close, and the only
+    /// thing that would tell you is the jump. So the numbers below are where the row is after
+    /// each movement of the finger, and the first one is the assertion that matters.
+    func testDraggingAnOpenRowBackToTheRightClosesItWithoutJumping() {
+        let row = makeRow(restingAt: -threePillRow)
+        row.touchDown()
+
+        row.dragBy(translationX: 10)
+        XCTAssertEqual(row.offsetX, -218, "the row follows the thumb from where it was, not from home")
+
+        row.dragBy(translationX: 100)
+        XCTAssertEqual(row.offsetX, -128)
+
+        row.dragBy(translationX: 160)
+        XCTAssertEqual(row.offsetX, -68, "inside the 72.96-point detent, so a release here shuts it")
+
+        XCTAssertFalse(row.lift(velocityX: 400))
+        XCTAssertEqual(row.offsetX, 0)
+        XCTAssertEqual(row.buzzes, 0, "a close uncovers nothing, so it announces nothing")
+    }
+
+    /// The other half of the same gesture, and the reason the close is asymmetric: the row has to
+    /// come 68% of the reveal back before position alone will shut it. A finger that gives up
+    /// part-way leaves the actions out rather than half-out.
+    func testDraggingAnOpenRowPartWayBackLeavesItOpen() {
+        let row = makeRow(restingAt: -threePillRow)
+        row.touchDown()
+
+        row.dragBy(translationX: 120)
+        XCTAssertEqual(row.offsetX, -108, "still 35 points past the detent")
+
+        XCTAssertTrue(row.lift(velocityX: 0))
+        XCTAssertEqual(row.offsetX, -threePillRow)
+        XCTAssertEqual(row.buzzes, 0, "the gesture began on an open row, so it began spent")
     }
 
     /// The tap hint travels 28 points and springs back. That is a tease rather than a

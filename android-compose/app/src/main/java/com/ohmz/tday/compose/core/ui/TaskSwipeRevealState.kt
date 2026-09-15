@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.platform.LocalDensity
@@ -405,11 +406,24 @@ fun rememberTaskSwipeRevealState(
  * runs only for a release, and it starts from the offset the finger left rather
  * than from wherever an animation happened to have chased to, so the handover
  * costs no frame and shows no jump.
+ *
+ * @param scale the animator duration scale, from [rememberTdayMotionScale], and
+ *   taken rather than read for the reason [TaskSwipeRevealState.playHint] gives:
+ *   the state class is not a composable and the springs it asks for are run for
+ *   it here. Compose's own `MotionDurationScale` already covers the *system*
+ *   animator setting, but the app's Reduce Motion switch
+ *   (`ReduceMotionPreferenceStore`) is invisible to it, so a user with the app
+ *   switch on still watched a ~340 ms spring on every release. That was
+ *   tolerable while a row only closed when its own pill was tapped; an outside
+ *   tap, a scroll and back make it three more times per minute. Nothing here
+ *   re-reads the preference — it arrives from the row's existing
+ *   `rememberTdayMotionScale()`.
  */
 @Composable
 fun animateTaskSwipeOffsetAsState(
     state: TaskSwipeRevealState,
     label: String,
+    scale: Float,
 ): State<Float> {
     val settle = remember(state) {
         Animatable(
@@ -418,9 +432,28 @@ fun animateTaskSwipeOffsetAsState(
             label = label,
         )
     }
+    // Read through an updated state rather than keyed on: the scale changing is
+    // the setting being toggled, which must not restart or cancel a release that
+    // is already in flight. Each release asks once, when it starts.
+    val latestScale = rememberUpdatedState(scale)
     LaunchedEffect(state, settle) {
         snapshotFlow { state.release }.collectLatest { release ->
             if (release == null) return@collectLatest
+            // Motion off: draw the finished state and let no wait survive. The
+            // row's destination is where it was going anyway, so this is the
+            // same close on the same rung (`TaskSwipeMotion.Release`) with its
+            // duration taken to zero -- not a different close. Written as "not
+            // greater than zero" so that a NaN read off the setting lands here
+            // too, exactly as `playHint` does it.
+            if (!(latestScale.value > 0f)) {
+                settle.snapTo(release.toPx)
+                // The animation block does these two on the caller's behalf in
+                // the branch below; snapping has to do them itself, and the
+                // first of them is what re-arms the reveal detent.
+                state.onReleaseFrame(release.toPx)
+                state.onReleaseSettled(release)
+                return@collectLatest
+            }
             settle.snapTo(release.fromPx)
             settle.animateTo(
                 targetValue = release.toPx,
