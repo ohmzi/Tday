@@ -22,6 +22,7 @@ import { TodoItemType } from "@/types";
 import { useDateRange } from "../hooks/useDateRange";
 import { useCalendarPagerSwipe } from "../lib/useCalendarPagerSwipe";
 import { useSwipeRow } from "@/hooks/useSwipeRow";
+import { shouldCloseSwipeRow } from "@/lib/swipeGesture";
 import { useCalendarTodo } from "../query/get-calendar-todo";
 import {
   lazy,
@@ -677,7 +678,14 @@ export function CalendarTaskRow({
   const announceSwipeOpen = useCallback(() => {
     window.dispatchEvent(new CustomEvent("tday-calendar-swipe-open", { detail: todo.id }));
   }, [todo.id]);
-  const { swipeX, transition: swipeTransition, closeSwipe, swipeHandlers } = useSwipeRow({
+  const {
+    swipeX,
+    transition: swipeTransition,
+    rowRef,
+    closeSwipe,
+    dismissSwipe,
+    swipeHandlers,
+  } = useSwipeRow({
     actionsWidth: ACTIONS_WIDTH,
     onOpen: announceSwipeOpen,
   });
@@ -701,6 +709,10 @@ export function CalendarTaskRow({
   const setCombinedRef = (node: HTMLElement | null) => {
     setItemElement(node);
     setNodeRef(node);
+    // The node an outside tap is measured against: it wraps both the pill strip
+    // and the translating foreground, which is what "outside the open row" has
+    // to mean. See `useSwipeRow`.
+    rowRef.current = node;
   };
 
   useEffect(() => {
@@ -710,16 +722,21 @@ export function CalendarTaskRow({
     };
   }, []);
 
-  // Close this row's swipe actions when another calendar row is swiped open.
+  // Close this row's swipe actions when another calendar row is swiped open —
+  // one row open at a time, claimed at the other row's axis lock rather than at
+  // its commit. `dismissSwipe` because this close comes from somewhere else and
+  // must refuse a row whose own finger is still on it; `shouldCloseSwipeRow` is
+  // the predicate all three clients answer this with. Both are argued in
+  // `useSwipeRow`.
   useEffect(() => {
     const onOpen = (event: Event) => {
       const id = (event as CustomEvent<string>).detail;
-      if (id !== todo.id) closeSwipe();
+      if (shouldCloseSwipeRow(id, todo.id, swipeX !== 0)) dismissSwipe();
     };
     window.addEventListener("tday-calendar-swipe-open", onOpen as EventListener);
     return () =>
       window.removeEventListener("tday-calendar-swipe-open", onOpen as EventListener);
-  }, [closeSwipe, todo.id]);
+  }, [dismissSwipe, swipeX, todo.id]);
 
   useEffect(() => {
     if (!highlighted || !itemElement) return;
