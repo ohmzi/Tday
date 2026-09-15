@@ -1344,3 +1344,48 @@ animates.
       Why:    there is no Swift toolchain on the machine this was written on. The number is pinned
               by `motion-parity.test.ts`, which asserts `Bar` is 0.94 in all three generated
               artifacts, and nothing in the repository can say whether the button wearing it moves.
+
+- [ ] **PR 41b · ios · The swipe row's reveal has a detent in it** — Today, Todos, Calendar or
+      Completed, a list with several tasks, Settings ▸ Sounds & Haptics ▸ System Haptics on, and
+      the phone out of a case thick enough to eat them. Two rows are wanted: an ordinary one with
+      three pills (Edit/Copy/Delete, 228 pt of reveal, detent at 73 pt) and one that carries the
+      mode's fourth pill — Schedule on a floater, Float on an overdue task — at 304 pt of reveal
+      and a detent at 97 pt.
+      Do:     (1) drag the three-pill row left slowly and stop the instant you feel something,
+              then look at how far it has actually gone and whether the pills are visibly on
+              their way; (2) hold still right there for a second or two and jiggle a few points
+              either side of it; (3) let go, then tap a pill and pay attention to the two buzzes
+              back to back; (4) from closed, flick the row left hard and short — 20 pt and the
+              finger is gone — so it opens on speed alone; (5) do (1) again on the four-pill row.
+      Watch:  (1) the buzz arrives around 73 pt of travel and reads as the actions catching under
+              the thumb rather than as a notification landing — the question this row exists to
+              ask is whether 32% is where the hand expects the catch, or whether it comes too
+              early to mean anything. (2) one buzz and then nothing, however long you hold and
+              however much you jiggle. (3) the reveal (`.rigid` at 0.7) and the pill's own tap
+              (`.light` at 0.6) must be two different things in the hand a second apart — the
+              first sharp, the second soft; if they are the same buzz, the pair
+              `HapticManager.reveal` is documented against has collapsed. (4) the flick's buzz
+              lands at lift-off instead of mid-drag, and the two arms should still read as the
+              same event happening at the only moment each of them can. (5) the four-pill row's
+              detent is 24 pt further out, since the fraction is of a wider reveal: the second
+              half of the same question, which is whether one fraction can serve two widths or
+              whether the detent should be a distance.
+      Fails:  a buzz that repeats, ticks or rattles while the finger rests at the detent; two
+              buzzes in one drag from crossing, coming back and crossing again; any buzz on the
+              way closed, or on a row shut from under you by opening a different one; a second
+              buzz as the row springs open after release; a buzz while dragging a row that is
+              already open; and the flick arm feeling heavier or different from the detent arm.
+      Known:  cross the detent, drag back and release closed, and you have felt a reveal that did
+              not happen. That is what a detent on a physical control does, it is pinned by a
+              test that says so, and it is not a fail here — the alternative is silence until the
+              row settles, which costs the feature its point. Also not a fail: a plain tap on the
+              row buzzes as it plays its 28 pt hint. That is the pre-existing tap path, Android
+              has no equivalent, and closing that divergence either way is a felt change to a
+              shipped gesture that was not asked for here.
+      Why:    there is no Swift toolchain on the machine this was written on and no gate in the
+              repository can feel a haptic. `TaskSwipeRevealDetentTests` pins the decision — one
+              buzz per crossing, none while hovering, none on a closed release, one at the flick
+              that never crossed — and `ios-target-membership.test.ts` pins that the test is
+              registered in the pbxproj rather than sitting on disk unbuilt. What none of it can
+              say is whether 73 pt is where the catch belongs, or whether the two generators are
+              still telling two events apart in a hand.
