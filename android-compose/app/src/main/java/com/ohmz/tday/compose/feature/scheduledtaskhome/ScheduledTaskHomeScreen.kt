@@ -141,6 +141,8 @@ import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
+import com.ohmz.tday.compose.core.ui.TaskSwipeSlotBackHandler
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
@@ -151,8 +153,11 @@ import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.scaledDelay
+import com.ohmz.tday.compose.core.ui.shouldCloseSwipeRow
+import com.ohmz.tday.compose.core.ui.swipeSlotAfterRowDisclaim
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
+import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
@@ -301,6 +306,13 @@ fun ScheduledTaskHomeScreen(
     onSummarize: () -> Unit = {},
     summaryAvailable: Boolean = true,
     showRootFeedDock: Boolean = true,
+    /**
+     * The swipe slot to use instead of one of this screen's own, for a host that
+     * draws chrome outside this composable. Non-null exactly where
+     * `showRootFeedDock` is false and for the same reason — see the slot's own
+     * comment below, and `RootFeedContent`.
+     */
+    hostSwipeSlot: TaskSwipeSlot? = null,
     pullRefreshEnabled: Boolean = true,
     createTaskRequestKey: Int = 0,
     onCreateTaskRequestHandled: (Int) -> Unit = {},
@@ -321,7 +333,18 @@ fun ScheduledTaskHomeScreen(
     var rootInRoot by remember { mutableStateOf(Offset.Zero) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
     var showSummarySheet by rememberSaveable { mutableStateOf(false) }
-    var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
+    // The screen's one swipe slot, unless a host owns a bigger screen than this
+    // composable is. As the Scheduled root tab it is drawn inside a `Crossfade`
+    // whose siblings are the dock and the create button, so an interceptor
+    // installed here cannot see a touch on either and `RootFeedContent` owns
+    // both the slot and the one interceptor -- see `TodoListScreen`'s copy of
+    // this comment for the whole argument.
+    //
+    // `remember`, never `rememberSaveable`: the rows' own reveal states are plain
+    // `remember`, so a restored id named a row that had rebuilt closed. The full
+    // argument, and the reason this is a holder rather than a hoisted `String?`,
+    // is at [TaskSwipeSlot].
+    val swipeSlot = hostSwipeSlot ?: remember { TaskSwipeSlot() }
     var lastHandledCreateTaskRequestKey by rememberSaveable { mutableIntStateOf(0) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
     val editTargetTodo = rememberEditSheetTarget(
@@ -374,6 +397,9 @@ fun ScheduledTaskHomeScreen(
     BackHandler(enabled = searchExpanded) {
         closeSearch()
     }
+    // After the search handler, because later registration wins in the back
+    // dispatcher: a revealed row is the innermost state back can be in.
+    TaskSwipeSlotBackHandler(slot = swipeSlot)
     LaunchedEffect(createTaskRequestKey) {
         if (createTaskRequestKey > 0 && createTaskRequestKey != lastHandledCreateTaskRequestKey) {
             lastHandledCreateTaskRequestKey = createTaskRequestKey
@@ -486,10 +512,24 @@ fun ScheduledTaskHomeScreen(
             listState.animateScrollToItem(index = 0, scrollOffset = 0)
         }
     }
-    LaunchedEffect(uiState.todayTodos, openSwipeTaskId) {
-        val openId = openSwipeTaskId ?: return@LaunchedEffect
-        if (uiState.todayTodos.none { it.id == openId }) {
-            openSwipeTaskId = null
+    // The open row's task leaving the feed hands the slot back. Read through
+    // `snapshotFlow` rather than as an effect key so that no read of the slot
+    // happens in this composable's body -- see [TaskSwipeSlot].
+    LaunchedEffect(uiState.todayTodos, swipeSlot) {
+        snapshotFlow { swipeSlot.openId }.collect { openId ->
+            if (openId != null && uiState.todayTodos.none { it.id == openId }) {
+                swipeSlot.openId = null
+            }
+        }
+    }
+    // A scroll closes the row, at the moment the list starts moving: an open row
+    // is content and travels with the list, so one left open through a scroll
+    // puts an armed Delete pill under a thumb now aimed at a different task. It
+    // is also the only trigger that catches a vertical drag beginning on the
+    // open row itself. Argued in full on `TodoListScreen`'s copy.
+    LaunchedEffect(listState, swipeSlot) {
+        snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
+            if (scrolling && swipeSlot.openId != null) swipeSlot.openId = null
         }
     }
     // The shared settle, not this screen's own copy of it — see
@@ -506,7 +546,25 @@ fun ScheduledTaskHomeScreen(
         }
     }
 
-    Scaffold(containerColor = colorScheme.background) { padding ->
+    Scaffold(
+        // One interceptor per screen, at the outermost composable so the header,
+        // the FAB and the gaps between rows are all inside it. It observes and
+        // never consumes -- see `tdayClosesSwipeRowOnOutsideTap`.
+        //
+        // Skipped when a host handed the slot down: as a root tab this Scaffold
+        // is not the outermost composable, and the host installs the interceptor
+        // at the box that also holds the dock and the create button. See
+        // `TodoListScreen` for the full argument.
+        modifier = if (hostSwipeSlot == null) {
+            Modifier.tdayClosesSwipeRowOnOutsideTap(
+                slot = swipeSlot,
+                close = { swipeSlot.openId = null },
+            )
+        } else {
+            Modifier
+        },
+        containerColor = colorScheme.background,
+    ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
             val isDaytime = rememberIsDaytime()
             EmptyTaskWatermark(
@@ -623,8 +681,7 @@ fun ScheduledTaskHomeScreen(
                                 onComplete = { onCompleteTask(todo) },
                                 onDelete = { onDeleteTask(todo) },
                                 onEdit = { editTargetTodoId = todo.id },
-                                openSwipeTaskId = openSwipeTaskId,
-                                onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
+                                swipeSlot = swipeSlot,
                             )
                         }
 
@@ -1562,8 +1619,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
-    openSwipeTaskId: String?,
-    onOpenSwipeTaskIdChange: (String?) -> Unit,
+    swipeSlot: TaskSwipeSlot,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -1582,22 +1638,28 @@ private fun ScheduledTaskHomeTodayTaskRow(
     var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
     var completionFading by remember(todo.id) { mutableStateOf(false) }
     var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
-    val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
     fun claimSwipeSlot() {
-        if (latestOpenSwipeTaskId.value != todo.id) {
-            onOpenSwipeTaskIdChange(todo.id)
+        if (swipeSlot.openId != todo.id) {
+            swipeSlot.openId = todo.id
         }
     }
 
+    // This row handing back the slot it holds, and only that -- see
+    // [swipeSlotAfterRowDisclaim] for why it is guarded and for the revoke
+    // that deliberately is not.
     fun closeSwipeSlot() {
         swipeRevealState.close()
-        if (latestOpenSwipeTaskId.value == todo.id) {
-            onOpenSwipeTaskIdChange(null)
-        }
+        swipeSlot.openId = swipeSlotAfterRowDisclaim(swipeSlot.openId, todo.id)
     }
+    // Hoisted above the reveal's own animation because that is now one of its
+    // callers: with the app's Reduce Motion switch on, a close draws its
+    // finished state instead of springing to it. One read, two uses -- the
+    // switch and the row can never disagree about the same device.
+    val rowMotionScale = rememberTdayMotionScale()
     val animatedOffsetX by animateTaskSwipeOffsetAsState(
         state = swipeRevealState,
         label = "scheduledTaskHomeTodaySwipeOffset",
+        scale = rowMotionScale,
     )
     // The beats this row cut straight to. The tint answers the finger, so it is
     // Quick; the title colour travels with the rule crossing it, so it is Emphasis
@@ -1637,7 +1699,6 @@ private fun ScheduledTaskHomeTodayTaskRow(
     // the hint's two holds and the three legs of the check-off are gaps between
     // beats this row gates on [motionEnabled], which is what makes the app's own
     // scale the right clock for them. See [scaledDelay].
-    val rowMotionScale = rememberTdayMotionScale()
     val toggleTint by animateColorAsState(
         targetValue = if (localChecked) {
             TdayTaskCompleteAccent
@@ -1689,9 +1750,18 @@ private fun ScheduledTaskHomeTodayTaskRow(
             stringResource(R.string.todos_due_text, text)
         }
     }
-    LaunchedEffect(openSwipeTaskId, todo.id) {
-        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
-            swipeRevealState.close()
+    // The row's whole subscription to the screen's slot, and the only place it
+    // reads it -- outside composition, so no row recomposes when another opens
+    // or closes. [shouldCloseSwipeRow] deliberately carries no `openId != null`
+    // clause: that guard meant the slot could be handed on but never revoked,
+    // and every dismissal is a write of `null`. The close is the same
+    // `TaskSwipeMotion.Release` rung the open uses, and is silent by the
+    // argument at `TaskSwipeRevealState.settle`.
+    LaunchedEffect(swipeSlot, todo.id) {
+        snapshotFlow { swipeSlot.openId }.collect { openId ->
+            if (shouldCloseSwipeRow(openId, todo.id, swipeRevealState.isOpenOrDragging)) {
+                swipeRevealState.close()
+            }
         }
     }
 
@@ -1776,17 +1846,31 @@ private fun ScheduledTaskHomeTodayTaskRow(
                             if (delta < 0f || swipeRevealState.isOpenOrDragging) {
                                 claimSwipeSlot()
                             }
-                            swipeRevealState.dragBy(delta)
-                            if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
-                                onOpenSwipeTaskIdChange(null)
+                            // The detent, under the finger: the row has just committed to
+                            // opening and says so. Fired bare — no preference read and no
+                            // motion-scale check. `performHapticFeedback` already answers to
+                            // the system's own touch-feedback switch, which is why the two
+                            // native clients keep no switch of their own and web grows one
+                            // (docs/motion/LEDGER.md:1277), and reduce motion silences
+                            // animation, not feedback. The cost is named in full at
+                            // `TaskSwipeRevealState.dragBy`: cross the detent, drag back,
+                            // release closed, and you felt a reveal that did not happen.
+                            if (swipeRevealState.dragBy(delta)) TdayHaptics.reveal(view)
+                            if (!swipeRevealState.isOpenOrDragging && swipeSlot.openId == todo.id) {
+                                swipeSlot.openId = null
                             }
                         },
                         onDragStopped = { velocity ->
-                            swipeRevealState.settle(velocity)
+                            // The other arm of the same event. A fling opens the row from
+                            // under the distance threshold, so without this the fastest
+                            // swipe in the app would be the only silent one; `settle`
+                            // answers false when the detent already fired, and false on
+                            // every close.
+                            if (swipeRevealState.settle(velocity)) TdayHaptics.reveal(view)
                             if (swipeRevealState.isOpenOrDragging) {
                                 claimSwipeSlot()
-                            } else if (latestOpenSwipeTaskId.value == todo.id) {
-                                onOpenSwipeTaskIdChange(null)
+                            } else if (swipeSlot.openId == todo.id) {
+                                swipeSlot.openId = null
                             }
                         },
                     )
@@ -1800,8 +1884,8 @@ private fun ScheduledTaskHomeTodayTaskRow(
                             claimSwipeSlot()
                             coroutineScope.launch {
                                 swipeRevealState.playHint(rowMotionScale)
-                                if (latestOpenSwipeTaskId.value == todo.id && !swipeRevealState.isOpenOrDragging) {
-                                    onOpenSwipeTaskIdChange(null)
+                                if (swipeSlot.openId == todo.id && !swipeRevealState.isOpenOrDragging) {
+                                    swipeSlot.openId = null
                                 }
                             }
                         }

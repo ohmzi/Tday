@@ -240,3 +240,106 @@ describe("reduced motion D — one module owns the iOS accessibility read", () =
     expect(offenders).toEqual([]);
   });
 });
+
+describe("reduced motion E — the pan coordinator is handed the answer it cannot read", () => {
+  /**
+   * Rule D proves nobody mints a second answer. This proves the one answer
+   * REACHES the row, and it is filed because it did not.
+   *
+   * A task row has two closes. `closeActions` is the one review reads — a
+   * SwiftUI method, gated once, with a long comment saying why gating it per
+   * caller would be indefensible. The other is the pan's own `.ended` settle,
+   * which shuts the row whenever a thumb drags it back toward home and lets go
+   * under the detent: the "slide the row back to the right" half of what this
+   * feature was asked for. That one lives in a `UIGestureRecognizer` callback on
+   * a `UIViewRepresentable.Coordinator`, which is not a view body, has no
+   * `@Environment` to read, and so ran a bare 0.34 s spring for every user
+   * including the ones who had asked for no motion. It could not fall through to
+   * `closeActions` either: `.ended` writes `openRowID = nil` before it touches
+   * `offsetX`, so the `.onChange` that turns a freed slot into a close sees a row
+   * already reading closed and declines.
+   *
+   * So the answer has to be PASSED, and what this rule watches is the passing:
+   * the property exists on both halves of the representable, the view hands it
+   * the environment value, and nothing inside the coordinator animates around it.
+   * Android gates the same drag-back release inside
+   * `animateTaskSwipeOffsetAsState` and web inside `useSwipeRow`'s `settle`; on
+   * those two it is one expression a reader trips over. Here it is a wire, and a
+   * wire is the kind of thing that gets removed by someone simplifying a
+   * signature.
+   *
+   * Scoped to this one coordinator on purpose. "Every UIKit coordinator that
+   * animates must be handed the resolution" is the general rule and it is the
+   * right one, but the general form would have to decide by text scan which of a
+   * mixed file's `withAnimation` calls sit in a view body and which do not, and a
+   * ratchet that guesses is a ratchet that gets exemptions bolted onto it. This
+   * is the coordinator the defect was found in and the only one in the app that
+   * animates; when a second one appears, generalise then.
+   */
+  const SWIPE_ACTIONS = path.join(IOS_SRC, "UI", "Component", "SwipeActions.swift");
+
+  /** The `final class Coordinator { … }` body, brace-matched from its header. */
+  function coordinatorBody(source: string): string {
+    const header = /final\s+class\s+Coordinator\b[^{]*\{/.exec(source);
+    if (!header) return "";
+    let depth = 0;
+    for (let i = header.index + header[0].length - 1; i < source.length; i += 1) {
+      if (source[i] === "{") depth += 1;
+      else if (source[i] === "}") {
+        depth -= 1;
+        if (depth === 0) return source.slice(header.index, i + 1);
+      }
+    }
+    return "";
+  }
+
+  const stripSwiftComments = (source: string): string =>
+    source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, (match) => " ".repeat(match.length));
+
+  it("still sees the file it is about", () => {
+    // The quiet way a ratchet stops being one: the file moves, the scan finds
+    // nothing, and finding nothing reads as passing.
+    expect(existsSync(SWIPE_ACTIONS), "SwipeActions.swift has moved — fix SWIPE_ACTIONS").toBe(
+      true,
+    );
+    expect(
+      coordinatorBody(stripSwiftComments(readFileSync(SWIPE_ACTIONS, "utf-8"))),
+      "no `final class Coordinator` in SwipeActions.swift — this rule is scanning nothing",
+    ).not.toBe("");
+  });
+
+  it("carries the resolution across the SwiftUI/UIKit line", () => {
+    const source = stripSwiftComments(readFileSync(SWIPE_ACTIONS, "utf-8"));
+    expect(
+      /let\s+motion:\s*TdayMotionResolution/.test(source),
+      "HorizontalSwipePanObserver must take the resolution as a property — a coordinator " +
+        "cannot read \\.tdayAnimation for itself",
+    ).toBe(true);
+    expect(
+      /motion:\s*tdayAnimation/.test(source),
+      "the row must hand the observer its own \\.tdayAnimation — the environment value is " +
+        "only live on the SwiftUI side",
+    ).toBe(true);
+    expect(
+      /coordinator\.motion\s*=\s*motion/.test(source),
+      "updateUIView must copy the resolution onto the coordinator, or the flip never " +
+        "reaches the recognizer",
+    ).toBe(true);
+  });
+
+  it("animates nothing inside the coordinator around it", () => {
+    const body = coordinatorBody(stripSwiftComments(readFileSync(SWIPE_ACTIONS, "utf-8")));
+    const bare = [...body.matchAll(/withAnimation\(\s*(?!motion\()/g)];
+    expect(
+      bare.length,
+      "a `withAnimation` in the pan coordinator that does not go through `motion(...)`: the " +
+        "drag-back close would spring for a reader who asked for no motion, while the same " +
+        "row shut by a pill is drawn home in one frame",
+    ).toBe(0);
+    // And the rule is reading something: the settle this was filed for is still here.
+    expect(
+      /withAnimation\(motion\(/.test(body),
+      "the coordinator no longer animates at all — if the settle moved, move this rule",
+    ).toBe(true);
+  });
+});

@@ -196,5 +196,78 @@ fun Modifier.tdayClosesSearchOnOutsideTap(
     }
 }
 
-/** iOS tests its outside tap against 8pt of translation; this is the same number. */
+/**
+ * Closes an open swipe-reveal row when the user touches anything else.
+ *
+ * The same problem as [tdayClosesSearchOnOutsideTap] and deliberately the same
+ * shape, down to the slop: one observer at the root of the screen rather than an
+ * enumeration of the widgets a dismissing tap might land on. The header, the
+ * search capsule, a section header, the FAB, the gap between two rows and any
+ * other row's body are all "outside", and none of them has to know this feature
+ * exists.
+ *
+ * Two differences from its sibling, both deliberate:
+ *
+ * No `barHeightPx`. The search field excluded its own toolbar because tapping a
+ * field is not outside it; there is no equivalent here, and tapping the header
+ * *should* shut the row.
+ *
+ * The slot is read here rather than passed in as a `Boolean`. A caller computing
+ * `slot.openId != null` would have to read it in composition, which is the one
+ * thing [TaskSwipeSlot] exists to prevent — the read happens inside the gesture
+ * coroutine instead, where it costs nothing and invalidates nobody.
+ *
+ * What it keeps is the 8 dp travel test, and that is the guard that makes the
+ * whole feature safe rather than a nicety: it is what makes a drag of the open
+ * row — further open, or back toward home — invisible to this modifier. The
+ * finger owns the row it has hold of, and no interceptor may take it away
+ * mid-gesture.
+ *
+ * Never consumes anything, for the reason its sibling gives and for one more.
+ * The tap that dismisses also does its own job: a row still takes its own tap,
+ * the FAB still opens the sheet, the feed still scrolls, and the row goes away
+ * behind whichever of those happened. That is not a nicety either — with
+ * TalkBack on, a consumed first tap means the first double-tap anywhere on the
+ * screen silently does nothing, with no announcement to explain it.
+ *
+ * The Initial pass is load-bearing: a row's own `clickable` consumes the down on
+ * the Main pass, so a Main- or Final-pass observer would miss every tap that
+ * landed on a row, which is most of them.
+ *
+ * Fires no haptic, and could not: it ends at [TaskSwipeRevealState.close], whose
+ * silence [TaskSwipeRevealState.settle] already argues — "a close is frequently
+ * not even something the user did to this row".
+ */
+fun Modifier.tdayClosesSwipeRowOnOutsideTap(
+    slot: TaskSwipeSlot,
+    close: () -> Unit,
+): Modifier = this.pointerInput(slot) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        // Cheapest possible no-op when nothing is open, which is nearly always:
+        // one snapshot read and then back to waiting for the next down. Leaving
+        // the gesture here cannot swallow the rest of it -- `awaitFirstDown`
+        // waits for a change that went down, and the moves and the up of a
+        // gesture already in flight are not that.
+        if (slot.openId == null) return@awaitEachGesture
+        var travel = 0f
+        var event: PointerEvent
+        do {
+            event = awaitPointerEvent(PointerEventPass.Final)
+            travel += event.changes.fold(0f) { sum, change ->
+                sum + abs(change.positionChange().y) + abs(change.positionChange().x)
+            }
+        } while (event.changes.any { it.pressed })
+        if (travel < TAP_SLOP_DP.toPx()) {
+            close()
+        }
+    }
+}
+
+/**
+ * iOS tests its outside tap against 8pt of translation; this is the same number.
+ * Shared by both outside-tap modifiers above, which is most of the reason they
+ * sit in the same file: two of these would be two numbers, and the second one
+ * would drift.
+ */
 private val TAP_SLOP_DP = 8.dp

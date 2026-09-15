@@ -213,6 +213,9 @@ struct CalendarScreen: View {
     @State private var activeDropDate: Date?
     @State private var dropTargetRegistry = CalendarDropTargetRegistry()
     @State private var pendingRescheduleDrop: CalendarTaskRescheduleDrop?
+    /// The screen's single swipe slot — see `TodoListScreen` for the shape and its one rule:
+    /// every dismissal is a WRITE to this and nothing else. No host `body` may read it, or a
+    /// cheap write becomes a full re-evaluation of the screen.
     @State private var openSwipeTaskID: String?
     @FocusState private var searchFieldFocused: Bool
     @State private var searchExpanded = false
@@ -406,6 +409,11 @@ struct CalendarScreen: View {
         .onChange(of: viewModel.items.map(\.id)) { _, ids in
             guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
             self.openSwipeTaskID = nil
+        }
+        .onDisappear {
+            // Returning to a screen must never show an armed Delete pill — see
+            // `TodoListScreen`'s `.onDisappear` for why this is also iOS's answer to back.
+            openSwipeTaskID = nil
         }
         // The field only joins the hierarchy once the bar has swapped its row
         // over, so focusing it in the same turn is dropped on the floor.
@@ -607,9 +615,11 @@ struct CalendarScreen: View {
                                 viewModel.lists.first(where: { $0.id == listId })
                             },
                             onComplete: {
-                                if openSwipeTaskID == todo.id {
-                                    openSwipeTaskID = nil
-                                }
+                                // Any completion clears the slot, not only this row's: the
+                                // toggle is a `Button` inside the row's content, so it eats the
+                                // touch and the reveal's own `.onTapGesture` never runs. See
+                                // `TodoListScreen.completeTodoWithoutReflow` for the argument.
+                                openSwipeTaskID = nil
                                 Task { await viewModel.complete(todo) }
                             }
                         )
