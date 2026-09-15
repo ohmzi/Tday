@@ -11,7 +11,10 @@ import kotlin.math.abs
  *
  * `CalendarScreen` keeps the effectful half — writing `scrollRequest`, calling
  * `onSelectDate`, dropping a breadcrumb — the same division [quickDeferOptions]
- * and `decideSectionHeaderToggleAction` already draw elsewhere in this module.
+ * and `shouldShowEarlierScene` already draw elsewhere in this module
+ * (`decideSectionHeaderToggleAction` used to be the example named here; it went
+ * out with the Earlier hand-off's exit-before-expand beat, and the division it
+ * illustrated did not).
  * The reason to draw it here specifically is that both of the bugs these
  * functions close are *arithmetic* bugs wearing a motion costume: a jump that
  * moves a page without moving the selection, and a settle that computes a date

@@ -35,11 +35,16 @@ import androidx.compose.ui.unit.IntOffset
  *    the displaced neighbor never catches up before the target has already
  *    stopped: it lags behind the resizing item's real, already-smooth bounds
  *    for the whole transition, long enough to visibly overlap whatever sits on
- *    the far side of it. `TodoListScreen`'s Earlier header is the one caller
- *    that hits this (`earlierHeaderSkipsPlacementSpec`, next to the inline
- *    "today-earlier-empty-scene" item its own doc points at) — it drops
- *    [Placement] entirely rather than re-time it, because nothing else ever
- *    legitimately moves that header while that item exists.
+ *    the far side of it. `TodoListScreen`'s Earlier header was the one caller
+ *    that hit this, and it no longer is — the fix in the end was not a spec but
+ *    an order. The inline "today-earlier-empty-scene" item used to sit directly
+ *    ABOVE that header and resize itself under it; it is emitted below Earlier's
+ *    rows now, so the header has nothing above it that changes height and
+ *    `earlierHeaderSkipsPlacementSpec` went out with the arrangement that
+ *    needed it. The hazard is unchanged and still worth stating: the caller to
+ *    watch is any item placed directly after an `AnimatedVisibility` that runs
+ *    `expandVertically`/`shrinkVertically`, and the cheapest answer is usually
+ *    to put the resizing item where nothing has to follow it.
  * 2. **The celebration waits for the move, it does not race it.** The scene's
  *    host passes [PlacementMillis] as `TdayEmptyState`'s
  *    `celebrationStartDelayMillis`, so the burst begins on the frame the feed
