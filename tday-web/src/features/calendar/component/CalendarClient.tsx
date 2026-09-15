@@ -923,8 +923,16 @@ export function CalendarTaskRow({
             <GripVertical className="h-4 w-4" />
           </div>
 
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="shrink-0">
+          {/* One box for the row's content, stacked from the TOP, with the row itself
+              left centred — the grip handle above is positioned against the row and
+              stays on its centre. Same shape as `TodoItemContainer`. */}
+          <div className="flex w-full min-w-0 items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            {/* The control's slot is the title's line box (`leading-5` = 20 px), the
+                same as in `TodoItemContainer`. This row was the last of the three still
+                centring its toggle across the whole column, so a calendar task with
+                notes under it had its check a full line below its own title. */}
+            <div className="flex h-5 shrink-0 items-center">
               <TodoCheckbox
                 icon={Check}
                 complete={todo.completed}
@@ -965,13 +973,17 @@ export function CalendarTaskRow({
             </div>
           </div>
 
-          <div className="relative flex shrink-0 items-center gap-2 pr-1 sm:pr-0">
+          {/* `self-stretch` so this box still spans the row and the hover toolbar it
+              positions at `top-1/2` stays centred on the ROW. See `TodoItemContainer`. */}
+          <div className="relative flex shrink-0 items-start gap-2 self-stretch pr-1 sm:pr-0">
             {/* Priority flag + list, right-aligned (native layout). Mobile shows
                 just the list dot; desktop shows the full name pill and fades the
                 meta out on hover to reveal edit/delete. */}
             <div
               className={cn(
-                "flex items-center gap-2 transition-opacity",
+                // The title's own line box, the same one the check circle gets at the
+                // other end of the row.
+                "flex h-5 items-center gap-2 transition-opacity",
                 showHandle && "sm:opacity-0",
               )}
             >
@@ -1009,6 +1021,7 @@ export function CalendarTaskRow({
                 deleteLabel={todayDict("menu.delete")}
               />
             </div>
+          </div>
           </div>
         </div>
       </div>

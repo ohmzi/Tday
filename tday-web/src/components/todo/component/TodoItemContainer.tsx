@@ -426,8 +426,21 @@ export const TodoItemCard = ({
               : "inset-ring-transparent",
           )}
         >
+          {/* One box for the whole row's content, stacked from the TOP, so the check
+              circle and the trailing flag can both be put on the title's first line
+              while the row itself stays centred in whatever height it is given. The
+              row above keeps `items-center` deliberately: the floater twin of this row
+              carries a `min-h` on mobile, and top-aligning the outer box there would
+              have lifted every single-line row off its own centre — the common case
+              paying for the fix to the wrapped one. Same shape in both files. */}
+          <div className="flex w-full min-w-0 items-start justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3">
-        <div className="shrink-0">
+        {/* The control's slot is the title's line box (`leading-5` = 20 px) and the
+            control is centred in it, rather than bare `items-start` — which is only
+            right for as long as the toggle is exactly 20 px too. It is not: the
+            recurring variant is 21.6 px, and a top-aligned 21.6 would hang 1.6 px
+            below the line it is meant to sit on. The box tracks the line. */}
+        <div className="flex h-5 shrink-0 items-center">
           {selecting ? (
             // The square selection checkbox replaces the round complete toggle
             // outright, so a tap can never finish a task while picking several.
@@ -490,13 +503,21 @@ export const TodoItemCard = ({
         </div>
       </div>
 
-        <div className="relative flex shrink-0 items-center gap-2 pr-1 sm:pr-0">
+        {/* `self-stretch` so this box still spans the row: the hover toolbar below is
+            absolutely positioned against it at `top-1/2` and stays centred on the ROW,
+            which is what it should answer to — it is a menu for the task, not a mark on
+            its title. Only the meta beside it moves up onto the first line. */}
+        <div className="relative flex shrink-0 items-start gap-2 self-stretch pr-1 sm:pr-0">
           {/* Priority flag + list, right-aligned on the title line (native layout).
               Mobile shows just the list icon; desktop shows the full name pill.
               On desktop the meta fades out on hover to reveal the edit/delete actions. */}
           <div
             className={clsx(
-              "flex items-center gap-2 transition-opacity",
+              // The same `h-5` line box the check circle gets at the other end of the
+              // row. The flag is an annotation ON the title, so it reads with the
+              // title's first line; centred, it floated in the gap between lines one
+              // and two of a wrapped task exactly as the check circle did.
+              "flex h-5 items-center gap-2 transition-opacity",
               showHandle && "sm:opacity-0",
             )}
           >
@@ -554,6 +575,7 @@ export const TodoItemCard = ({
             </div>
           )}
         </div>
+          </div>
         </div>
       </div>
       <TaskFormSheet

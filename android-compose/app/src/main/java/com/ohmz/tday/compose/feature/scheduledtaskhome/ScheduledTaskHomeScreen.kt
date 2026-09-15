@@ -50,6 +50,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
@@ -148,6 +149,7 @@ import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySheetMotion
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.rememberTaskRowFirstLineAlignment
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
@@ -249,6 +251,13 @@ private val TaskRowMinHeight = 58.dp
 private val CompletionToggleRippleRadius = 24.dp
 private val CompletionToggleIconSize = 24.dp
 private val RowTrailingIconSize = 18.dp
+
+/**
+ * This row overrides `titleMedium`'s 24 sp line box down to 22 sp at the call site,
+ * so the first-line derivation has to read the override rather than the theme —
+ * a row aligned to a line box it is not drawn in is aligned to nothing.
+ */
+private val TodayRowTitleLineHeight = 22.sp
 private val TaskCompletionRiseOffsetY = (-10).dp
 
 // The category tiles and the list rows below them.
@@ -1735,6 +1744,15 @@ private fun ScheduledTaskHomeTodayTaskRow(
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     val dueText = todo.due?.let(SCHEDULED_TASK_HOME_TODAY_DUE_FORMATTER::format)
     val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
+    // 48 dp of touch target against this row's overridden 22 sp title line, so the
+    // derivation answers 13 dp here and 12 on the feeds that keep the theme's 24 —
+    // the difference a single hand-written constant across all of them would hide.
+    val firstLine = rememberTaskRowFirstLineAlignment(
+        titleStyle = MaterialTheme.typography.titleMedium.copy(
+            lineHeight = TodayRowTitleLineHeight,
+        ),
+        controlHeight = MinTouchTargetSize,
+    )
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
     val priorityIcon = priorityIconFor(todo.priority)
@@ -1897,12 +1915,22 @@ private fun ScheduledTaskHomeTodayTaskRow(
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
+                        // Stacked from the top, then the block put back in the middle
+                        // of the card. `TaskRowMinHeight` floors this row at 58 dp, so
+                        // top-aligning alone would have lifted every short row off its
+                        // own centre; `wrapContentHeight` centres the measured content
+                        // and lets `Alignment.Top` do its work inside it.
+                        .wrapContentHeight(Alignment.CenterVertically)
                         .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs)
                         .semantics(mergeDescendants = true) {},
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.Top,
                 ) {
                     Box(
                         modifier = Modifier
+                            // The bullet rule, from the control's side: before `sizeIn`, so the
+                            // inset moves the 48 dp target onto the first line's centre instead
+                            // of taking 48 dp of touch down to less.
+                            .padding(top = firstLine.topInsetFor(MinTouchTargetSize))
                             .sizeIn(minWidth = MinTouchTargetSize, minHeight = MinTouchTargetSize)
                             .wrapContentSize(Alignment.Center)
                             .clip(CircleShape)
@@ -1979,7 +2007,10 @@ private fun ScheduledTaskHomeTodayTaskRow(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = TdayDimens.SpacingXs),
+                            .padding(
+                                start = TdayDimens.SpacingXs,
+                                top = firstLine.titleTopInset,
+                            ),
                         verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
                     ) {
                         Text(
@@ -1997,7 +2028,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                             fontFamily = TdayFontFamily,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            lineHeight = 22.sp,
+                            lineHeight = TodayRowTitleLineHeight,
                             color = titleColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -2039,7 +2070,12 @@ private fun ScheduledTaskHomeTodayTaskRow(
 
                     if (listMeta != null || priorityIcon != null) {
                         Row(
-                            modifier = Modifier.padding(end = TdayDimens.SpacingLg),
+                            modifier = Modifier.padding(
+                                // Annotations on the task, so they read with its first
+                                // line rather than with the middle of its text column.
+                                top = firstLine.topInsetFor(RowTrailingIconSize),
+                                end = TdayDimens.SpacingLg,
+                            ),
                             horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
