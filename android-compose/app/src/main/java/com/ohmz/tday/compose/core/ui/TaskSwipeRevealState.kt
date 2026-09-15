@@ -119,6 +119,32 @@ class TaskSwipeRevealState internal constructor(
     private var dragGeneration = 0
 
     /**
+     * Whether this open-cycle has already spent its reveal haptic.
+     *
+     * A plain var for the same reason [dragGeneration] is one: nothing draws it,
+     * and what it holds is the memory of an event rather than a value to be
+     * sampled afterwards. Sampling is exactly the failure — "is the row past the
+     * threshold?" answers yes on every frame a finger rests there, and a detent
+     * that repeats for as long as you hold still is a rattle rather than a
+     * detent.
+     *
+     * One boolean, and deliberately not a second threshold under the first.
+     * A hysteresis band exists to stop a single comparison strobing on its own
+     * boundary; this cannot re-arm inside an open-cycle *at all*, so a finger
+     * parked on the boundary cannot repeat and a drag that crosses, comes back
+     * and crosses again cannot fire twice. The band would be a number nobody can
+     * justify, solving a problem the flag has already solved.
+     *
+     * Its lifetime is this composition's rather than the task's:
+     * [rememberTaskSwipeRevealState] keys on the id *and* on the px widths the
+     * density produces, so rotating the device with a row held open builds a new
+     * state and re-arms the flag. That is a rotation mid-gesture buying one buzz
+     * it does not strictly owe, and it is not worth a longer-lived cache to
+     * prevent.
+     */
+    private var hasFiredRevealDetent = false
+
+    /**
      * Under a finger this asks about the finger; otherwise it asks where the row
      * is headed, not where it currently is — a row settling closed has already
      * given up its swipe slot.
@@ -126,7 +152,35 @@ class TaskSwipeRevealState internal constructor(
     val isOpenOrDragging: Boolean
         get() = if (isDragging) offsetX != 0f else restOffsetX != 0f
 
-    fun dragBy(deltaPx: Float) {
+    /**
+     * Moves the row with the finger, and answers whether this is the update that
+     * committed it to opening — the detent.
+     *
+     * The decision is here and the buzz is not. This class holds no `View` and
+     * its test runs on a bare JVM with no Robolectric and no Compose harness, so
+     * it returns what happened and the composable performs it; `TdayToastHost`'s
+     * `settle` settled that shape two files over. It is also what lets the whole
+     * fire-once rule be proven without a device, which is the only way it can be
+     * proven at all — no gate in this repository can feel a haptic.
+     *
+     * Why the detent and not the settle. The row is asked for by sliding it
+     * left to show the buttons behind, and *that* is this moment: the actions
+     * catching under the thumb, not the app reporting an animation after the
+     * hand has already gone. It is the only moment this file believes in, too —
+     * the finger's clock is the finger, and a buzz that waits for the release is
+     * on the app's clock. The predicate is [settle]'s own `dragOpen` with the
+     * velocity term left out and no threshold of its own invented, so the buzz
+     * cannot lie: feeling it means "let go now and this row opens".
+     *
+     * The one honest cost, said out loud rather than left for a device to find:
+     * cross the detent, drag back, release closed, and you have felt a reveal
+     * that did not happen. That is what a detent on a physical control does. The
+     * alternative — silence until the row settles — costs the feature its point.
+     *
+     * @return `true` on the single update that takes the row from short of the
+     *   threshold to past it, at most once per open-cycle.
+     */
+    fun dragBy(deltaPx: Float): Boolean {
         // A pointer outranks every animation: whatever was in flight — a settle,
         // a close, the tail of a hint — stops here and the row continues from
         // wherever that animation had got to.
@@ -134,15 +188,45 @@ class TaskSwipeRevealState internal constructor(
         dragGeneration++
         release = null
         offsetX = (offsetX + deltaPx).coerceIn(-maxElasticDragPx, 0f)
+        // After the clamp, never before: the overdrag limit is part of where the
+        // finger actually put the row, and the detent is about where the row is.
+        val pastDetent = offsetX < -(revealWidthPx * SWIPE_OPEN_THRESHOLD_FRACTION)
+        if (!pastDetent || hasFiredRevealDetent) return false
+        hasFiredRevealDetent = true
+        return true
     }
 
-    fun settle(velocityPxPerSecond: Float) {
+    /**
+     * The finger has gone. Answers whether the row still owes a reveal haptic.
+     *
+     * The second arm of the same event, and without it the most deliberate swipe
+     * in the app would be the only silent one: a fling opens the row from well
+     * under the distance threshold, so a detent that never came round is still a
+     * reveal. It reports the decision this function was already making rather than
+     * recomputing one, and it answers `false` when [dragBy] has already fired,
+     * which is what keeps one open to one buzz.
+     *
+     * A settle that lands the row *closed* returns `false` and always will:
+     * closing puts back what was there, and every pill the reveal uncovers
+     * already fires its own haptic and then closes the row, so a close buzz
+     * would double each of them. A close is frequently not even something the
+     * user did to this row — one row open at a time means the previous row is
+     * shut from under a finger that is nowhere near it.
+     *
+     * @return `true` only when this release opens the row and the detent did not
+     *   fire during this open-cycle.
+     */
+    fun settle(velocityPxPerSecond: Float): Boolean {
         val flingOpen = velocityPxPerSecond < SWIPE_OPEN_VELOCITY_PX_PER_SECOND
         val dragOpen = offsetX < -(revealWidthPx * SWIPE_OPEN_THRESHOLD_FRACTION)
+        val opens = flingOpen || dragOpen
         isDragging = false
+        val owesReveal = opens && !hasFiredRevealDetent
+        if (owesReveal) hasFiredRevealDetent = true
         // The lift-off velocity is carried into the spring so the fling and the
         // settle are one continuous movement rather than a throw and a restart.
-        settleTo(if (flingOpen || dragOpen) -revealWidthPx else 0f, velocityPxPerSecond)
+        settleTo(if (opens) -revealWidthPx else 0f, velocityPxPerSecond)
+        return owesReveal
     }
 
     fun close() {
@@ -195,7 +279,15 @@ class TaskSwipeRevealState internal constructor(
         return (-offsetX / revealWidthPx).coerceIn(0f, 1f)
     }
 
-    /** Called by the release animation, once per frame. */
+    /**
+     * Called by the release animation, once per frame.
+     *
+     * Deliberately holds no detent test. This drives [offsetX] straight through
+     * the threshold once per frame for the whole settle-open animation, so a
+     * flag derived from the offset in general rather than from the drag path in
+     * particular would phantom-fire here one frame after the real event — and
+     * again on every programmatic open, where no finger was ever involved.
+     */
     internal fun onReleaseFrame(valuePx: Float) {
         if (isDragging) return
         offsetX = valuePx
@@ -207,7 +299,16 @@ class TaskSwipeRevealState internal constructor(
         }
     }
 
+    /**
+     * The single funnel every close already passes through — [settle] landing
+     * shut, [close], the row whose slot another row claimed, the tail of
+     * [playHint] — which is why re-arming the detent lives here and no close
+     * path has to remember it. Cleared at the moment of the decision rather than
+     * when the spring lands, to match [restOffsetX]'s own tense: where the row is
+     * headed is what the rest of this class already reads.
+     */
     private fun settleTo(targetPx: Float, initialVelocityPxPerSecond: Float) {
+        if (targetPx == 0f) hasFiredRevealDetent = false
         restOffsetX = targetPx
         release = if (offsetX == targetPx) {
             null

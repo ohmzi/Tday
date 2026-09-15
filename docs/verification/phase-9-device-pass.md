@@ -939,6 +939,35 @@ animates.
               whether that is twenty milliseconds nobody can see, which is what the migration
               claims.
 
+- [ ] **PR 41a · android · The swipe row's reveal has a detent in it** — Today, Todos, Calendar or
+      Completed, a list with several tasks, system haptics on and the phone not in a case that eats
+      them. Do the same row four ways.
+      Do:     (1) drag a row left slowly and stop the moment you feel something, then look at how
+              far it has actually travelled; (2) hold the finger still right there for a second or
+              two, and jiggle it a few px either side of that point; (3) let go, tap a pill, and pay
+              attention to the two buzzes back to back; (4) from closed, flick the row left hard and
+              short — 20 px and gone — so it opens on speed without ever reaching the detent.
+      Watch:  (1) the buzz should arrive at roughly 56 dp of travel (0.32 of the 176 dp reveal), and
+              it should read as the actions catching rather than as a notification: the question
+              this row exists to ask is whether 56 dp is where the hand expects the catch, or
+              whether it comes too early to mean anything / too late to be a detent at all. (2) one
+              buzz and then nothing, however long you hold or however much you jiggle. (3) the
+              reveal (CONTEXT_CLICK) and the pill's own tap (CLOCK_TICK) must be two different
+              things in the hand, arriving a moment apart — the reveal sharper, the tap lighter.
+              (4) the flick's buzz lands at lift-off instead of mid-drag, and the two arms should
+              still feel like the same event happening at the only moment each of them can.
+      Fails:  a buzz that repeats, ticks or rattles while the finger rests at the detent; two buzzes
+              in one drag from crossing, coming back and crossing again; any buzz on the way closed,
+              or on a row shut from under you by opening a different row; a second buzz one frame
+              after the first as the row springs open; a buzz on a plain tap (the tap plays the
+              42 dp hint, which is under the 56 dp detent by design, and must stay silent); and the
+              fling arm feeling like a different, heavier event than the detent arm.
+      Known:  cross the detent, drag back and release closed, and you have felt a reveal that did
+              not happen. That is what a detent on a physical control does and it is not a fail
+              here; the alternative is silence until the row settles, which costs the feature its
+              point. Also not a fail: iOS buzzes on the tap-then-hint path and Android does not —
+              a real cross-platform divergence, named rather than closed by this change.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
