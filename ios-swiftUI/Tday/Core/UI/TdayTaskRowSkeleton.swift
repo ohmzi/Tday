@@ -45,6 +45,17 @@ enum TdayTaskRowMetrics {
 
     static let verticalPadding: CGFloat = 10
     static let horizontalPadding: CGFloat = 4
+
+    /// How far below its own centre the check button reports its first text
+    /// baseline, so it stays on line one of a text column that runs to several.
+    ///
+    /// The same 5 pt the timeline row has used since it learned to wrap
+    /// (`TodoTimelineMetrics.minimalRowBaselineNudge`), named here as well rather
+    /// than reached for across the feature boundary: this is `Core/UI`, and a core
+    /// metric that imports a screen's constant is a dependency pointing the wrong
+    /// way. The two are pinned equal by `TdayTaskRowSkeletonTests` so they cannot
+    /// drift into two different nudges for one gesture.
+    static let checkBaselineNudge: CGFloat = 5
 }
 
 /// The part of a row's geometry a placeholder can stand in for, as a value rather
@@ -77,11 +88,16 @@ struct TdayTaskRowSkeletonMetrics {
     var verticalPadding: CGFloat
     var horizontalPadding: CGFloat
 
-    /// How the row stacks its check button against its text column. Today and
-    /// Completed centre theirs; a task list aligns on the title's first baseline so
-    /// the toggle stays on line one of a title that wraps. The two produce
-    /// different row heights for identical content, so this is geometry and not
-    /// taste.
+    /// How the row stacks its check button against its text column.
+    ///
+    /// Every feed now aligns on the title's first baseline so the toggle stays on
+    /// line one of a text column that runs to several — it is the task's own mark
+    /// and belongs beside its first word, not in the gap between lines one and two.
+    /// Today and Completed used to centre theirs and this field is what carried the
+    /// difference; it stays a field because the alignment and the nudge below decide
+    /// a row's HEIGHT, so a placeholder that guessed either would be a different
+    /// height from the row it stands in for, and because nothing guarantees the next
+    /// row to arrive is one of these.
     var rowAlignment: VerticalAlignment
 
     /// Where the check button reports its own baseline, for the rows that align on
@@ -89,7 +105,9 @@ struct TdayTaskRowSkeletonMetrics {
     /// the button by its bottom edge and stand it a good half-line low — which is
     /// why the real row nudges it, and why a placeholder that skipped the nudge
     /// would be a different height from the row it stands in for. `nil` where the
-    /// alignment is `.center` and the guide is never consulted.
+    /// alignment is `.center` and the guide is never consulted — which no shipping
+    /// set is today, and the type keeps the case anyway rather than making a row
+    /// that wants centring unrepresentable.
     var checkBaselineNudge: CGFloat?
 
     /// Today's row, from the constants Today's row is drawn with.
@@ -104,8 +122,8 @@ struct TdayTaskRowSkeletonMetrics {
         metaTrailingPadding: TdayTaskRowMetrics.metaTrailingPadding,
         verticalPadding: TdayTaskRowMetrics.verticalPadding,
         horizontalPadding: TdayTaskRowMetrics.horizontalPadding,
-        rowAlignment: .center,
-        checkBaselineNudge: nil
+        rowAlignment: .firstTextBaseline,
+        checkBaselineNudge: TdayTaskRowMetrics.checkBaselineNudge
     )
 }
 

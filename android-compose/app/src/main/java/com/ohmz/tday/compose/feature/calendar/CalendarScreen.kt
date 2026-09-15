@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -132,6 +133,7 @@ import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.feedAnswer
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberTaskRowFirstLineAlignment
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
@@ -2858,6 +2860,13 @@ private fun CalendarTodoRow(
     val showPriorityIcon = priorityIcon != null
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
     val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
+    // Both calendar rows lead with a 48 dp touch target around a 24 dp glyph and
+    // a 24 sp title line, so the derivation answers 12 dp — the same inset the
+    // task list already had hand-written, arrived at from the type instead.
+    val firstLine = rememberTaskRowFirstLineAlignment(
+        titleStyle = MaterialTheme.typography.titleMedium,
+        controlHeight = CalendarCompletionToggleTouchTarget,
+    )
     val foregroundColor = colorScheme.background
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     // The row's whole subscription to the screen's slot, and the only place it
@@ -3053,10 +3062,22 @@ private fun CalendarTodoRow(
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
+                        // Stacked from the top, then the whole block put back in
+                        // the middle of the card: these rows are given a height
+                        // (56 dp here) that is larger than a one-line row's content,
+                        // so `Alignment.Top` on its own would lift the common case
+                        // off its own centre. `wrapContentHeight` hands the block
+                        // back to the middle and leaves Top to work inside it.
+                        .wrapContentHeight(Alignment.CenterVertically)
                         .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.Top,
                 ) {
                     CalendarCompletionToggleIcon(
+                        // The toggle is the title's bullet, so it takes the first line's
+                        // centre the same way the text column does — see `topInsetFor`.
+                        modifier = Modifier.padding(
+                            top = firstLine.topInsetFor(CalendarCompletionToggleTouchTarget),
+                        ),
                         imageVector = if (localChecked) {
                             ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
                         } else {
@@ -3097,7 +3118,10 @@ private fun CalendarTodoRow(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = CalendarTaskRowTitleStartPadding),
+                            .padding(
+                                start = CalendarTaskRowTitleStartPadding,
+                                top = firstLine.titleTopInset,
+                            ),
                     ) {
                         Text(
                             text = todo.title,
@@ -3142,7 +3166,12 @@ private fun CalendarTodoRow(
                     }
                     if (showListIndicator || showPriorityIcon) {
                         Row(
-                            modifier = Modifier.padding(end = TdayDimens.Spacing3xl),
+                            modifier = Modifier.padding(
+                                // Annotations on the task read with its first line,
+                                // the same as the toggle at the other end.
+                                top = firstLine.topInsetFor(CalendarRowTrailingIconSize),
+                                end = TdayDimens.Spacing3xl,
+                            ),
                             horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -3279,6 +3308,11 @@ private fun CalendarCompletedTodoRow(
     val priorityIcon = priorityIconFor(item.priority)
     val showPriorityIcon = priorityIcon != null
     val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
+    // Same row, same derivation — see the pending row above.
+    val firstLine = rememberTaskRowFirstLineAlignment(
+        titleStyle = MaterialTheme.typography.titleMedium,
+        controlHeight = CalendarCompletionToggleTouchTarget,
+    )
 
     Column(
         modifier = Modifier
@@ -3301,10 +3335,16 @@ private fun CalendarCompletedTodoRow(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
+                    // Same stacking as the pending row above, for the same reason.
+                    .wrapContentHeight(Alignment.CenterVertically)
                     .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
                 CalendarCompletionToggleIcon(
+                    // Same bullet rule as the pending row above.
+                    modifier = Modifier.padding(
+                        top = firstLine.topInsetFor(CalendarCompletionToggleTouchTarget),
+                    ),
                     imageVector = if (showCompletedState) {
                         ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
                     } else {
@@ -3343,7 +3383,10 @@ private fun CalendarCompletedTodoRow(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = CalendarTaskRowTitleStartPadding),
+                        .padding(
+                            start = CalendarTaskRowTitleStartPadding,
+                            top = firstLine.titleTopInset,
+                        ),
                 ) {
                     Text(
                         text = item.title,
@@ -3369,7 +3412,15 @@ private fun CalendarCompletedTodoRow(
                 }
                 if (showPriorityIcon) {
                     Row(
-                        modifier = Modifier.padding(end = TdayDimens.Spacing3xl),
+                        modifier = Modifier.padding(
+                            // Annotations on the task, so they read with its first
+                            // line — the same call the pending row's marks take, and
+                            // the same one this row's toggle now takes at the other
+                            // end. Centring them against a top-stacked row would have
+                            // pinned them to its top edge, 15 dp above the line.
+                            top = firstLine.topInsetFor(CalendarRowTrailingIconSize),
+                            end = TdayDimens.Spacing3xl,
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -3395,7 +3446,11 @@ private fun CalendarCompletedTodoRow(
                         contentDescription = stringResource(R.string.label_task_list),
                         tint = listIndicatorColor,
                         modifier = Modifier
-                            .padding(end = TdayDimens.Spacing3xl)
+                            .padding(
+                                // Same first line as the branch above.
+                                top = firstLine.topInsetFor(CalendarRowTrailingIconSize),
+                                end = TdayDimens.Spacing3xl,
+                            )
                             .size(CalendarRowTrailingIconSize),
                     )
                 }
@@ -3490,11 +3545,14 @@ private fun CalendarCompletionToggleIcon(
     contentDescription: String,
     tint: Color,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     Box(
-        modifier = Modifier
+        // Outside `sizeIn`, so the row's first-line inset positions the target
+        // rather than eating into it.
+        modifier = modifier
             .sizeIn(
                 minWidth = CalendarCompletionToggleTouchTarget,
                 minHeight = CalendarCompletionToggleTouchTarget,

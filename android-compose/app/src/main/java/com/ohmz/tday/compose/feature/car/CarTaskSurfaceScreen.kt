@@ -42,6 +42,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import com.ohmz.tday.compose.core.ui.rememberTaskRowFirstLineAlignment
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -431,6 +432,10 @@ private fun CarTaskRow(
         elevation = CardDefaults.cardElevation(defaultElevation = CarTaskRowElevation),
         modifier = Modifier.fillMaxWidth(),
     ) {
+        val firstLine = rememberTaskRowFirstLineAlignment(
+            titleStyle = MaterialTheme.typography.titleMedium,
+            controlHeight = CarTaskPriorityDotSize,
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -438,11 +443,17 @@ private fun CarTaskRow(
                     horizontal = CarTaskRowHorizontalPadding,
                     vertical = CarTaskRowVerticalPadding,
                 ),
-            verticalAlignment = Alignment.CenterVertically,
+            // The row wraps its own content, so its top edge IS the title column's
+            // top edge and the dot can be dropped straight onto line one from here.
+            verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
         ) {
             Box(
                 modifier = Modifier
+                    // The dot is this row's bullet — it names the task's priority, and
+                    // a bullet belongs beside the first word, not beside the gap
+                    // between line one and line two of a title that wrapped.
+                    .padding(top = firstLine.topInsetFor(CarTaskPriorityDotSize))
                     .size(CarTaskPriorityDotSize)
                     .clip(CircleShape)
                     .background(tdayPriorityColor(item.priority)),
@@ -471,7 +482,15 @@ private fun CarTaskRow(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
                 contentDescription = stringResource(R.string.car_complete_dialog_confirm),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.74f),
-                modifier = Modifier.size(CarTaskCompleteIconSize),
+                // Held centred, deliberately, where the leading dot moved. This glyph
+                // is not an annotation on the title — it is what the whole card does
+                // when you press it, drawn at the card's own scale for a driving
+                // surface. An affordance for the ROW answers to the row's box; only
+                // the marks that read as part of the sentence answer to its first
+                // line. Same split as the delete button on `TodayTodoRow`.
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .size(CarTaskCompleteIconSize),
             )
         }
     }
