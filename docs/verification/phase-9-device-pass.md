@@ -1022,6 +1022,59 @@ animates.
               point. Also not a fail: iOS buzzes on the tap-then-hint path and Android does not —
               a real cross-platform divergence, named rather than closed by this change.
 
+- [ ] **PR 41b · android · An open swipe row goes away when you touch anything else** — Today,
+      Todos, Calendar or Completed, a list long enough to scroll, and one row swiped fully open.
+      Four questions, and every one of them is about a gesture rather than about a frame.
+      Do:     (1) with a row open, put a thumb on the content 176 dp in from the right edge — which
+              is where the open row's own body now sits — and drag it back to the right in one
+              movement, including starting from the very edge of the screen; (2) from an open row,
+              flick rightward sloppily, at an angle, fast; (3) with a row open and TalkBack ON,
+              double-tap a different row, then the header, then the FAB; (4) with a row open, start
+              a slow scroll with the finger landing ON the open row itself, and separately with it
+              landing on a row two below.
+      Watch:  (1) the row follows the thumb back and settles closed, and the system's predictive-back
+              affordance does not take the gesture instead. The content being translated ~176 dp left
+              is what makes this worth asking: the natural place to grab an open row is inside the
+              edge zone the system watches. (2) the row still takes the drag rather than the
+              LazyColumn taking it as a scroll — `draggable(Orientation.Horizontal)` and the list
+              are racing for the same slop, and the loser of that race is invisible in code.
+              (3) each double-tap closes the row AND does its own job — the other row plays its
+              42 dp hint, the FAB opens the sheet. The interceptor watches the INITIAL pointer pass
+              and never consumes, and whether it sees anything at all while explore-by-touch owns
+              the touch stream is the one thing no gate here can answer. (4) the row is closed by
+              the time the list has moved a few dp, both times.
+      Fails:  (1) the screen pops or the back affordance appears instead of the row closing; (2) the
+              list scrolls sideways-ish, or the row jumps to the finger instead of following from
+              where it was; (3) any double-tap that silently does nothing — a consumed first touch
+              is a trap with a screen reader on, and it is the one outcome this design rules out by
+              construction; (4) the row staying open through a scroll, or closing a beat late, at
+              the END of the fling, with an armed Delete pill riding past under the thumb.
+      Known:  (4) asks a design question as much as a correctness one — whether closing on scroll
+              START reads as a dismissal the user caused or as the row being snatched. The
+              alternative is worse and is why it was chosen: the row is content, it travels with the
+              list, and one left open puts Delete under a thumb now aimed at a different task.
+      Why:    `TaskSwipeDismissPolicyTest` pins the decision — the revoke, one-open-at-a-time, and
+              the row that never closes itself out from under its own finger — and
+              `TaskSwipeRevealStateTest`'s drag-back round trip pins the arithmetic of (1). None of
+              it can drive a pointer: there is no Robolectric and no Compose harness on this source
+              set, so every gesture-arbitration question above is only answerable in a hand.
+
+- [ ] **PR 41c · android · Reduce Motion takes the close's spring away and nothing else** — any of
+      the four feeds, the app's own Reduce Motion switch ON (Settings, not the system slider).
+      Do:     swipe a row open, then close it four ways: tap its own body, tap a different row, tap
+              the header, and scroll. Then turn the switch off and do it again.
+      Watch:  with the switch on, the row is simply closed on the next frame — no ~340 ms travel and
+              no wait of any kind. The reveal itself still buzzes at the detent on the way open:
+              reduce motion silences animation, not feedback.
+      Fails:  the row still springs home with the switch on; the actions blink or the row flashes
+              through an intermediate position on the way; a close that snaps but leaves the next
+              swipe of that same row unable to buzz (the snap has to re-arm the detent exactly as
+              the spring's last frame did); or the haptic disappearing along with the animation.
+      Why:    Compose's own `MotionDurationScale` covers the SYSTEM animator setting and is blind to
+              the app's switch, which is why this was a ~340 ms spring for a user who had asked for
+              none. Nothing on this source set can run a Compose animation, so the branch is a
+              reading of the code until somebody watches it.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
