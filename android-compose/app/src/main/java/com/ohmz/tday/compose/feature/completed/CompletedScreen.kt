@@ -1028,6 +1028,11 @@ private fun CompletedSwipeRow(
                         verticalAlignment = Alignment.Top,
                     ) {
                         CompletedCircularToggleIcon(
+                            // The toggle is the title's bullet, so it takes the first line's
+                            // centre the same way the text column does — see `topInsetFor`.
+                            modifier = Modifier.padding(
+                                top = firstLine.topInsetFor(CompletedRestoreToggleSize),
+                            ),
                             imageVector = if (showCompletedCheckmark) {
                                 ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
                             } else {
@@ -1181,11 +1186,14 @@ private fun CompletedCircularToggleIcon(
     contentDescription: String,
     tint: Color,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     Box(
-        modifier = Modifier
+        // Outside `size`, so the row's first-line inset moves the 28 dp disc
+        // without making it a smaller one.
+        modifier = modifier
             .size(CompletedRestoreToggleSize)
             .clip(CircleShape)
             .clickable(

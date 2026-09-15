@@ -7179,6 +7179,11 @@ private fun SwipeTaskRow(
                             // list does not visibly change shape — and a tap can
                             // never complete a task by accident.
                             CircularCheckToggleIcon(
+                                // The toggle is the title's bullet, so it takes the first line's
+                                // centre the same way the text column does — see `topInsetFor`.
+                                modifier = Modifier.padding(
+                                    top = firstLine.topInsetFor(TdayTaskRowMetrics.CheckTargetMinSize),
+                                ),
                                 imageVector = if (selectionActive) {
                                     if (selected) {
                                         ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
@@ -7396,6 +7401,10 @@ private fun TodayTodoRow(
                 verticalAlignment = Alignment.Top,
             ) {
                 CircularCheckToggleIcon(
+                    // Same bullet rule as the swipe row above.
+                    modifier = Modifier.padding(
+                        top = firstLine.topInsetFor(TdayTaskRowMetrics.CheckTargetMinSize),
+                    ),
                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
                     contentDescription = stringResource(R.string.action_complete),
                     tint = TASK_CHECKMARK_GREEN,
@@ -7491,6 +7500,10 @@ private fun TodoRow(
                 verticalAlignment = Alignment.Top,
             ) {
                 CircularCheckToggleIcon(
+                    // Same bullet rule as the swipe row above.
+                    modifier = Modifier.padding(
+                        top = firstLine.topInsetFor(TdayTaskRowMetrics.CheckTargetMinSize),
+                    ),
                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
                     contentDescription = stringResource(R.string.action_complete),
                     tint = TASK_CHECKMARK_GREEN,
@@ -7543,11 +7556,14 @@ private fun CircularCheckToggleIcon(
     contentDescription: String,
     tint: Color,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     Box(
-        modifier = Modifier
+        // The caller's modifier goes OUTSIDE `sizeIn`, so a first-line inset moves
+        // the target without shrinking it: 48 dp of touch stays 48 dp of touch.
+        modifier = modifier
             .sizeIn(
                 minWidth = TdayTaskRowMetrics.CheckTargetMinSize,
                 minHeight = TdayTaskRowMetrics.CheckTargetMinSize,

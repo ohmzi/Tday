@@ -123,6 +123,18 @@ object TdayTaskRowMetrics {
  *  - [topInsetFor] drops any element of a known height onto that centre;
  *  - [titleTopInset] is the same call for the text column itself.
  *
+ * ## Both ends of the row ask, including the control
+ *
+ * Every element gets [topInsetFor] — the leading control, the text column, the
+ * trailing marks — and the control asks even though the answer is 0 dp in the common
+ * case. Insetting only the TEXT is the version of this that looks finished and is
+ * not: it assumes the control is the taller of the two, which is a property of the
+ * row *at the reader's font scale* rather than of the row. Completed's 28 dp toggle
+ * is taller than a 24 sp line at 1x and shorter than the same line past about 1.5x,
+ * and an un-inset control there sits 4 dp ABOVE the line it is the bullet for — above
+ * its own trailing flag as well, which did take the call. Asking costs nothing where
+ * the control already wins, and is the whole fix where it does not.
+ *
  * At `fontScale = 1` with the shipped `titleMedium` (24 sp) and a 48 dp toggle this
  * returns exactly the 12 dp `TodoListScreen` had hand-written under the comment
  * "top pad centres the first title line against the (taller) toggle" — which is the
@@ -413,10 +425,23 @@ fun TdayTaskRowSkeleton(
         animated
     }
     val fill = colorScheme.surfaceVariant
-    // The row this stands in for hangs its toggle off the title's FIRST line, so
-    // the placeholder has to be stacked the same way or it is a different height
-    // from the thing that replaces it — which is the one defect a placeholder
-    // exists to remove.
+    // The row this stands in for — `TodayTodoRow`, the one this function's KDoc
+    // names — hangs its toggle off the title's FIRST line, so the placeholder is
+    // stacked the same way and its bars land where that row's lines land.
+    //
+    // That is not free, and the arithmetic belongs here rather than in the reader's
+    // head. Stacking from the top moves the text column's 12 dp inset into the
+    // row's own height — max(48 dp target, 12 + 24 + 18) takes the content from
+    // 48 dp to 54 — so a row of this group draws 69 dp where it drew 63 (4 + 4 of
+    // padding, 6 of row spacing, 1 of hairline). Against `TodayTodoRow` carrying a
+    // subtitle that is still exact, because the row moved by the same 6 dp. Against
+    // a subtitle-less one, and against Completed's card (fixed at
+    // `CompletedSwipeRowHeight` and unable to follow), the placeholder is now 6 dp
+    // taller than the thing that replaces it. The note's non-goals carry the
+    // argument for leaving it: that handoff was already 7 dp out before this
+    // change, because this group draws a hairline and 6 dp of spacing under every
+    // row and a 56 dp card feed draws neither, so there is no inset that makes one
+    // placeholder exact against three different rows.
     val firstLine = rememberTaskRowFirstLineAlignment(
         titleStyle = MaterialTheme.typography.titleMedium,
         controlHeight = TdayTaskRowMetrics.CheckTargetMinSize,
@@ -433,7 +458,12 @@ fun TdayTaskRowSkeleton(
             verticalAlignment = Alignment.Top,
         ) {
             Box(
-                modifier = Modifier.size(TdayTaskRowMetrics.CheckTargetMinSize),
+                // The row this stands in for insets its own toggle the same way, so
+                // the placeholder has to or the two disagree at font scales where the
+                // line box outgrows the 48 dp target.
+                modifier = Modifier
+                    .padding(top = firstLine.topInsetFor(TdayTaskRowMetrics.CheckTargetMinSize))
+                    .size(TdayTaskRowMetrics.CheckTargetMinSize),
                 contentAlignment = Alignment.Center,
             ) {
                 Box(

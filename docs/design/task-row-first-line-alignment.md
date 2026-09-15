@@ -41,7 +41,12 @@ on one device at one setting.
 - **The tap target is untouched.** Nothing shrinks a control's box. Where the control is
   taller than the line (Android's 48 dp target, Completed's 28 dp toggle), the *text*
   takes the offset; where it is shorter (the car surface's 10 dp priority dot, web's
-  20 px circle), the control takes it. Both directions are the same formula.
+  20 px circle), the control takes it. Both directions are the same formula — and on
+  Android every leading control asks for its own `topInsetFor` whether or not it needs
+  one today, because which of the two is taller is not a property of the row. It is a
+  property of the row *at the reader's font scale*: Completed's 28 dp toggle is the
+  taller element at 1× and the shorter one past about 1.5×, where a 24 sp line box has
+  grown past 28 dp. The call returns 0 dp in the common case, so nothing moves there.
 - **Rows with a floor or a fixed height keep their content centred in it.** Several rows
   are given a height larger than a one-line row's content — Android's
   `CompletedSwipeRowHeight` (56 dp fixed), `TaskRowMinHeight` (58 dp), web's floater
@@ -134,7 +139,8 @@ style is neither a rung nor a named constant, and is better than both.
 | Claim | Test |
 |---|---|
 | The arithmetic, swept across seven font scales and six control sizes | `TaskRowFirstLineAlignmentTest` (Android, JVM) |
-| The set of Android files that derive a first line, and that each stacks `Alignment.Top` | `TaskRowFirstLineAlignmentTest` (source walk) |
+| The set of Android files that derive a first line, **how many rows each declares**, and that every one of them stacks `Alignment.Top` | `TaskRowFirstLineAlignmentTest` (source walk) |
+| Each Android row insets the control it derived against, and every trailing mark in it carries a first-line inset | `TaskRowFirstLineAlignmentTest` (per-row, structural) |
 | iOS alignment + guide on every row, and no centred task-row `HStack` left | `tests/guardrails/task-row-first-line-alignment.test.ts` |
 | Web's `h-5` box paired with `leading-5`, `self-stretch` on the trailing box, the hover toolbar still centred | same file |
 | iOS's two spellings of the baseline nudge agree; every skeleton set carries the alignment *and* the guide | `TdayTaskRowSkeletonTests` |
@@ -150,6 +156,16 @@ puts its control in is derived from.
   two-line title still squeezes the completed-at line. That is a pre-existing
   constraint, unrelated to alignment, and changing a row's height is a larger visual
   change than was asked for.
+- **`TdayTaskRowSkeleton` is faithful to one row, not to every feed that draws it.**
+  The placeholder is built against `TodayTodoRow`, and top-stacking grows it from 63 dp
+  to 69 dp per row (the 12 dp title inset joins the row's height: `max(48, 12+24+18)` is
+  54, not 48). A `TodayTodoRow` with a subtitle grows by the same 6 dp and still matches
+  exactly; Completed's rows cannot follow, because `CompletedSwipeRowHeight` fixes them
+  at 56 dp. That handoff was already 7 dp out before this change — the skeleton group
+  draws a hairline and 6 dp of spacing under every row, and the Completed feed draws
+  neither between rows of the same day — so no inset makes one placeholder exact against
+  three different rows, and parameterising it per feed would not close the gap it is
+  blamed for.
 - **Both widgets were already correct** and are untouched: the Android Glance row
   top-aligns with a 1 dp nudge against a 14 dp ring, and the iOS widget already used
   `.firstTextBaseline` with the same 5 pt guide. Glance has no `TextStyle` or `Density`

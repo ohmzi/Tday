@@ -1927,6 +1927,10 @@ private fun ScheduledTaskHomeTodayTaskRow(
                 ) {
                     Box(
                         modifier = Modifier
+                            // The bullet rule, from the control's side: before `sizeIn`, so the
+                            // inset moves the 48 dp target onto the first line's centre instead
+                            // of taking 48 dp of touch down to less.
+                            .padding(top = firstLine.topInsetFor(MinTouchTargetSize))
                             .sizeIn(minWidth = MinTouchTargetSize, minHeight = MinTouchTargetSize)
                             .wrapContentSize(Alignment.Center)
                             .clip(CircleShape)
