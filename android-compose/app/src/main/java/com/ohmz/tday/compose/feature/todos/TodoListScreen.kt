@@ -188,6 +188,7 @@ import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.feedAnswer
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
+import com.ohmz.tday.compose.core.ui.rememberTaskRowFirstLineAlignment
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
@@ -7148,8 +7149,19 @@ private fun SwipeTaskRow(
                                 vertical = SWIPE_ROW_CONTENT_VERTICAL_PADDING
                             )
                             .semantics(mergeDescendants = true) {},
-                        verticalAlignment = Alignment.CenterVertically,
+                        // Stacked from the top so the trailing indicators can be
+                        // dropped onto the title's FIRST line beside the toggle
+                        // that already sits there. Centring them was invisible
+                        // while the row was 56 dp — half of the row's 52 dp of
+                        // content is 26, which is exactly where the first line's
+                        // centre falls — and became the flag floating in the gap
+                        // the moment a title wrapped and the row grew.
+                        verticalAlignment = Alignment.Top,
                     ) {
+                        val firstLine = rememberTaskRowFirstLineAlignment(
+                            titleStyle = MaterialTheme.typography.titleMedium,
+                            controlHeight = TdayTaskRowMetrics.CheckTargetMinSize,
+                        )
                         Row(
                             modifier = Modifier
                                 .weight(1f)
@@ -7239,7 +7251,7 @@ private fun SwipeTaskRow(
                                 modifier = Modifier
                                     .padding(
                                         start = TaskRowTitleStartPadding,
-                                        top = TdayDimens.SpacingLg,
+                                        top = firstLine.titleTopInset,
                                         end = TdayDimens.SpacingMd,
                                     )
                                     .weight(1f),
@@ -7293,7 +7305,16 @@ private fun SwipeTaskRow(
                         }
                         if (showListIndicator || showPriorityIcon) {
                             Row(
-                                modifier = Modifier.padding(start = TdayDimens.SpacingMd, end = TdayDimens.Spacing3xl),
+                                modifier = Modifier.padding(
+                                    start = TdayDimens.SpacingMd,
+                                    // The decorated inner row keeps its own 2 dp of
+                                    // vertical padding above the title, so the drop
+                                    // to the first line is measured from there and
+                                    // not from this row's edge.
+                                    top = firstLine.topInsetFor(RowTrailingIconSize) +
+                                        TdayDimens.SpacingXxs,
+                                    end = TdayDimens.Spacing3xl,
+                                ),
                                 horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
@@ -7349,7 +7370,13 @@ private fun TodayTodoRow(
     // The geometry below is `TdayTaskRowMetrics`, not literals:
     // `TdayTaskRowSkeleton` draws this same shape with the ink taken out, and a
     // placeholder that merely happens to match the row stops matching the first
-    // time the row is re-spaced.
+    // time the row is re-spaced. That now includes how it stacks: the skeleton
+    // reads the same derivation from the same call.
+    val firstLine = rememberTaskRowFirstLineAlignment(
+        titleStyle = MaterialTheme.typography.titleMedium,
+        controlHeight = TdayTaskRowMetrics.CheckTargetMinSize,
+    )
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(TdayTaskRowMetrics.RowSpacing),
@@ -7364,7 +7391,9 @@ private fun TodayTodoRow(
                 modifier = Modifier
                     .weight(1f)
                     .semantics(mergeDescendants = true) {},
-                verticalAlignment = Alignment.CenterVertically,
+                // The toggle is the title's bullet, so it hangs off line one and
+                // not off the middle of a column that may be three lines deep.
+                verticalAlignment = Alignment.Top,
             ) {
                 CircularCheckToggleIcon(
                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
@@ -7376,7 +7405,10 @@ private fun TodayTodoRow(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = TdayTaskRowMetrics.TextColumnStartPadding),
+                        .padding(
+                            start = TdayTaskRowMetrics.TextColumnStartPadding,
+                            top = firstLine.titleTopInset,
+                        ),
                 ) {
                     Text(
                         text = todo.title,
@@ -7430,6 +7462,10 @@ private fun TodoRow(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val due = todo.due?.let(TODO_DUE_DATE_TIME_FORMATTER::format)
+    val firstLine = rememberTaskRowFirstLineAlignment(
+        titleStyle = MaterialTheme.typography.titleSmall,
+        controlHeight = TdayTaskRowMetrics.CheckTargetMinSize,
+    )
 
     Card(
         colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
@@ -7447,7 +7483,12 @@ private fun TodoRow(
                 modifier = Modifier
                     .weight(1f)
                     .semantics(mergeDescendants = true) {},
-                verticalAlignment = Alignment.CenterVertically,
+                // Same bullet rule as every other task row. This one's title is
+                // `titleSmall`, so its first line is an 18 sp box rather than a
+                // 24 sp one and the derivation answers with a different inset —
+                // which is the argument for deriving it per row instead of
+                // naming one number for all of them.
+                verticalAlignment = Alignment.Top,
             ) {
                 CircularCheckToggleIcon(
                     imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big),
@@ -7456,7 +7497,12 @@ private fun TodoRow(
                     onClick = onComplete,
                 )
 
-                Column(modifier = Modifier.padding(start = TdayDimens.SpacingLg)) {
+                Column(
+                    modifier = Modifier.padding(
+                        start = TdayDimens.SpacingLg,
+                        top = firstLine.titleTopInset,
+                    ),
+                ) {
                     Text(
                         text = todo.title,
                         color = colorScheme.onSurface,
