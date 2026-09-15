@@ -939,6 +939,59 @@ animates.
               whether that is twenty milliseconds nobody can see, which is what the migration
               claims.
 
+- [ ] **PR 43 · android · Undo takes the paper with the row it brings back** — THE CLIENT THE BUG
+      WAS REPORTED ON, and the screenshot came from this one. A custom list with exactly one task
+      left, run twice. Once where that task is dated today or later, so undoing it puts a CURRENT
+      row back. Once where the one remaining task is itself **overdue**, so undoing it puts an
+      OVERDUE row back — that second one is the screenshot. The two are different screens rather
+      than two runs of one: `nonEarlierSectionsEmpty` excludes the Overdue/Earlier bucket on
+      purpose (finishing today's work while overdue tasks wait still earns the payoff), so a
+      restored current row moves it and a restored overdue row does not. A list holding one current
+      task and one overdue task is the FIRST case — ticking the current one restores a current row.
+      Then run the plain undo once more on the **Anytime** tab's own feed, whose inline scene had no
+      exit at all until this PR.
+      Do:     tick the last task, and while the paper is still in the air tap **Undo** in the toast.
+              Aim for the first half of the flight — inside about a second — so there is a burst
+              left to interrupt.
+      Watch:  the pieces keep FLYING as they go — still travelling, still spinning, still flipping —
+              and fade out over `Quick` while they do. On the plain setup the full-screen scene
+              fades out on that same rung, so paper and scene leave as one thing rather than the
+              scene cutting from over paper that is still in the air. On the Anytime feed the scene
+              fades AND closes its ~42% gap on the same `Quick`, so the Completed tile and the list
+              rows under it take that space back over the fade instead of jumping up into it.
+      Also:   on the OVERDUE setup, expect to see two "no tasks" scenes for about 150 ms and do not
+              file it. Ticking the only overdue task leaves the scope with no Earlier items at all,
+              so the celebration is drawn by the FULL-SCREEN overlay; undoing it puts the Overdue
+              section back, which fades that overlay out over `Quick` while the INLINE scene expands
+              in under the Overdue header on its own 190 ms. That hand-off is the v0.7.25
+              presentation meeting the new exit, and the restored row is in the Overdue section
+              above both of them. What would be a real failure is the inline scene arriving with
+              confetti of its own — the cancel is what stops that, and the burst must not restart.
+      Also:   a second completion straight after an undo must celebrate normally — tick it off again
+              and the full burst plays, because the newer stamp re-opens the window. Typing a new
+              task while the paper is up must end it the same way. And with a collaborator or a
+              second device: empty the list from the other end (the burst plays here), then undo it
+              there — the paper must go on this device too, without the scene flickering back.
+      Reduce: with the app's own motion preference off (Settings → Motion), repeat the plain undo on
+              both the list screen and the Anytime feed. There was never any paper to take away, so
+              there must be nothing at all: no pause, no held frame, no `Quick` of anything, and the
+              scene gone on the frame the row comes back.
+      Fails:  the burst carrying on over the restored row and expiring on its own a second or two
+              later, which is the report. Also a fail, and the reason this is not a one-line change:
+              the paper vanishing between two frames on the tap, which is the same complaint one
+              layer down; the pieces FREEZING and then dissolving in place, which would mean the
+              envelope is being applied to a stopped clock rather than multiplied into a running
+              one; the burst restarting from the launch fan, which would mean the draw loop was
+              re-armed; and on the Anytime feed the gap snapping shut after the fade rather than
+              closing under it.
+      Why:    there is no device on the machine this was written on. JVM tests pin the decisions —
+              `ShouldCelebrateEmptyStateTest` covers the overdue case a transition-shaped fix
+              misses, `PendingRowArrivedTest` the arrival that writes the cancel,
+              `FloaterEmptySceneTest` that the Anytime item outlives the frame its scene stops being
+              visible, and `TdayConfettiKinematicsTest` the envelope's curve and its `Quick` rung —
+              and not one of them can say whether forty-six pieces look like paper leaving or
+              whether the gap under them closed smoothly. That is the whole of what this row is for.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
@@ -1317,19 +1370,24 @@ animates.
               artifacts, and nothing in the repository can say whether the button wearing it moves.
 
 - [ ] **PR 43 · ios · Undo takes the paper with the row it brings back** — a list with exactly one
-      task left, run twice: once where that task is the only thing on the screen, and once where an
-      **overdue** task is also waiting in a collapsed Overdue/Earlier section above the scene. The
-      second setup is the reported bug and is the one that matters; the first is the half that was
-      already wrong and nobody had noticed.
+      task left, run twice. Once where that task is dated today or later, so undoing it puts a
+      CURRENT row back. Once where the one remaining task is itself **overdue**, so undoing it puts
+      an OVERDUE row back — that is the screenshot, it is the setup that matters, and the two are
+      genuinely different screens rather than two runs of one. Every scope's "is this finished"
+      predicate excludes the Overdue/Earlier bucket on purpose (finishing today's work while
+      overdue tasks wait still earns the payoff), so a restored CURRENT row moves it and the scene
+      leaves, while a restored OVERDUE row moves it not at all and the scene stays. A setup with
+      one current task and one overdue task waiting is the FIRST case, not the second: ticking the
+      current one and undoing it restores a current row.
       Do:     tick the last task, and while the paper is still in the air tap **Undo** in the toast.
               Aim for the first half of the flight — inside about a second — so there is a burst
-              left to interrupt. Then, on the overdue setup, do it again and watch the header.
+              left to interrupt. Then run the overdue setup and watch the Overdue header.
       Watch:  the pieces keep FLYING as they go — still travelling, still spinning, still flipping —
               and fade out over about 150 ms while they do. On the plain setup the scene goes with
               them and lands after: the paper finishes leaving at 0.15 s, the illustration at 0.32 s,
               in that order. On the overdue setup the scene STAYS exactly where it is under the
               Overdue header, which is the designed v0.7.25 presentation and not a bug — only the
-              confetti leaves, and the restored row is back above it.
+              confetti leaves, and the restored row is back in the Overdue section above it.
       Fails:  the burst carrying on over the restored row and expiring on its own a second or two
               later, which is the report. Also a fail, and the reason this is not a one-line change:
               the paper vanishing between two frames on the tap, which is the same complaint one
@@ -1352,10 +1410,13 @@ animates.
               the scene above them waited. That is the whole of what this row is for.
 
 - [ ] **PR 43 · web · Undo takes the paper with the row it brings back** — a custom list with
-      exactly one task left, run twice: once where that task is the only thing on the screen, and
-      once where an **overdue** task is also waiting in a collapsed Overdue section above the
-      scene. The second setup is the reported bug and is the one that matters; the first is the
-      half that was already wrong and nobody had noticed.
+      exactly one task left, run twice. Once where that task is dated today or later, so undoing it
+      puts a CURRENT row back. Once where the one remaining task is itself **overdue**, so undoing
+      it puts an OVERDUE row back — that is the screenshot and the setup that matters. The two are
+      different screens, not two runs of one: `hasNonEarlierListTodos` excludes the Overdue bucket
+      on purpose, so a restored current row makes it false and the scene leaves, while a restored
+      overdue row leaves it exactly where it was. A list holding one current task and one overdue
+      task is the FIRST case — ticking the current one and undoing it restores a current row.
       Do:     tick the last task, and while the paper is still in the air press **Undo** in the
               toast. Aim for the first half of the flight — inside about a second — so there is a
               burst left to interrupt.
@@ -1366,6 +1427,11 @@ animates.
               it. On the overdue setup the scene STAYS exactly where it is under the Overdue
               header, which is the designed v0.7.25 presentation and not a bug — only the confetti
               leaves, and the restored row is back in the section above it.
+      Also do: the same plain undo on the **Anytime** tab's own feed and inside one **Anytime
+              list**. Those two screens reached the celebration by a different road until this PR
+              and had neither half of the fix; an Anytime task has no date, so there is no overdue
+              variant to run there — every undo is the plain case, and the scene leaves over its
+              own track every time.
       Fails:  the burst carrying on over the restored row and expiring on its own a second or two
               later, which is the report. Also a fail, and the reason this is not a one-line
               change: the paper vanishing between two frames on the press, which is the same
