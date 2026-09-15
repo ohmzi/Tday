@@ -78,6 +78,7 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.FeedAnswer
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
 import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
@@ -91,6 +92,7 @@ import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeleton
 import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeletonGroup
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.feedAnswer
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
@@ -261,7 +263,23 @@ fun CompletedScreen(
     val timelineSections = remember(visibleItems) {
         buildCompletedTimelineSections(visibleItems)
     }
-    val showEmptyState = visibleItems.isEmpty() && !uiState.isLoading
+    // Two readings of one rule, because the two lists below are different
+    // questions: the scene answers for what is VISIBLE (a live query narrows it),
+    // the placeholder answers for the store itself (a query is answered locally
+    // and must never flash a placeholder per keystroke). Neither reads
+    // `isLoading` any more -- see [feedAnswer] for why that flag meant the
+    // opposite of what every gate like this was using it for.
+    val completedAnswer = feedAnswer(
+        storeRead = uiState.hasHydratedSnapshot,
+        rowsEmpty = visibleItems.isEmpty(),
+        firstAnswerLanded = uiState.firstAnswerLanded,
+    )
+    val completedStoreAnswer = feedAnswer(
+        storeRead = uiState.hasHydratedSnapshot,
+        rowsEmpty = uiState.items.isEmpty(),
+        firstAnswerLanded = uiState.firstAnswerLanded,
+    )
+    val showEmptyState = completedAnswer == FeedAnswer.Empty
     val heroCollapse = rememberLazyListHeroTitleCollapse(listState = listState)
     val completedTitle = stringResource(R.string.completed_title)
     val completedIcon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
@@ -312,7 +330,7 @@ fun CompletedScreen(
     // — this list happens to space at 0 dp, so the gap a permanent mount leaves
     // costs nothing today, and the next person to give it spacing would inherit
     // the timeline's bug without a line anywhere saying they had.
-    val completedFeedSkeletonVisible = uiState.items.isEmpty() && uiState.isLoading
+    val completedFeedSkeletonVisible = completedStoreAnswer == FeedAnswer.AwaitingFirst
     val completedFeedSkeletonMounted =
         rememberTdayTaskRowSkeletonMounted(completedFeedSkeletonVisible)
 

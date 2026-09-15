@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.cache.FirstAnswerSignal
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.completed.CompletedRepository
 import com.ohmz.tday.compose.core.data.list.FloaterListRepository
@@ -27,6 +28,13 @@ import javax.inject.Inject
 
 data class CompletedUiState(
     val isLoading: Boolean = false,
+    // The first-load/refresh distinction, mirrored from `TodoListUiState`. This
+    // screen has no pull-to-refresh of its own, so the flash is rarer here than
+    // on the Anytime home -- but `showEmptyState` was the same
+    // `items.isEmpty() && !isLoading` gate copy-pasted, and one gate is fixed
+    // everywhere it was copied or nowhere. See [feedAnswer].
+    val hasHydratedSnapshot: Boolean = false,
+    val firstAnswerLanded: Boolean = false,
     // Todos and floaters merged into one browsable timeline; CompletedItem.isFloater
     // tells CompletedScreen which of the two it is rendering/acting on.
     val items: List<CompletedItem> = emptyList(),
@@ -45,6 +53,7 @@ class CompletedViewModel @Inject constructor(
     private val floaterListRepository: FloaterListRepository,
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
+    private val firstAnswerSignal: FirstAnswerSignal,
     private val reminderScheduler: TaskReminderScheduler,
     private val snackbarManager: SnackbarManager,
     @ApplicationContext private val appContext: Context,
@@ -54,6 +63,12 @@ class CompletedViewModel @Inject constructor(
         runCatching {
             CompletedUiState(
                 isLoading = false,
+                // This screen's cache read happens here, in the field
+                // initializer, rather than in a `load()` -- so this is the line
+                // that corresponds to `TodoListViewModel`'s
+                // `hasHydratedSnapshot = true` inside `hydrateFromCache`.
+                hasHydratedSnapshot = true,
+                firstAnswerLanded = firstAnswerSignal.hasLanded(),
                 items = mergedCompletedItems(
                     completedRepository.fetchCompletedItemsSnapshot(),
                     completedRepository.fetchCompletedFloaterItemsSnapshot(),
@@ -69,6 +84,26 @@ class CompletedViewModel @Inject constructor(
 
     init {
         observeCacheChanges()
+        observeFirstAnswer()
+    }
+
+    /**
+     * The one path by which a first answer can land without any cached row
+     * moving: a fresh install signing in to an account with no completed history
+     * at all. `cacheDataVersion` only advances on `hasUiDataChanges`, so that
+     * sync bumps nothing this screen otherwise watches. See
+     * [FirstAnswerSignal.version].
+     */
+    private fun observeFirstAnswer() {
+        viewModelScope.launch {
+            firstAnswerSignal.version.collect {
+                val landed = firstAnswerSignal.hasLanded()
+                _uiState.update { current ->
+                    if (current.firstAnswerLanded == landed) current
+                    else current.copy(firstAnswerLanded = landed)
+                }
+            }
+        }
     }
 
     private fun observeCacheChanges() {
@@ -105,6 +140,8 @@ class CompletedViewModel @Inject constructor(
             _uiState.update { current ->
                 current.copy(
                     isLoading = false,
+                    hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
                     items = if (current.items == items) current.items else items,
                     lists = if (current.lists == lists) current.lists else lists,
                     floaterLists = if (current.floaterLists == floaterLists) current.floaterLists else floaterLists,
