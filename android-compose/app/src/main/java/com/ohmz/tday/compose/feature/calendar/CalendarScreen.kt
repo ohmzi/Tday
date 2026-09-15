@@ -2723,13 +2723,27 @@ private fun CalendarTodoRow(
                             if (delta < 0f || swipeRevealState.isOpenOrDragging) {
                                 claimSwipeSlot()
                             }
-                            swipeRevealState.dragBy(delta)
+                            // The detent, under the finger: the row has just committed to
+                            // opening and says so. Fired bare — no preference read and no
+                            // motion-scale check. `performHapticFeedback` already answers to
+                            // the system's own touch-feedback switch, which is why the two
+                            // native clients keep no switch of their own and web grows one
+                            // (docs/motion/LEDGER.md:1277), and reduce motion silences
+                            // animation, not feedback. The cost is named in full at
+                            // `TaskSwipeRevealState.dragBy`: cross the detent, drag back,
+                            // release closed, and you felt a reveal that did not happen.
+                            if (swipeRevealState.dragBy(delta)) TdayHaptics.reveal(view)
                             if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
                                 onOpenSwipeTaskIdChange(null)
                             }
                         },
                         onDragStopped = { velocity ->
-                            swipeRevealState.settle(velocity)
+                            // The other arm of the same event. A fling opens the row from
+                            // under the distance threshold, so without this the fastest
+                            // swipe in the app would be the only silent one; `settle`
+                            // answers false when the detent already fired, and false on
+                            // every close.
+                            if (swipeRevealState.settle(velocity)) TdayHaptics.reveal(view)
                             if (swipeRevealState.isOpenOrDragging) {
                                 claimSwipeSlot()
                             } else if (latestOpenSwipeTaskId.value == todo.id) {

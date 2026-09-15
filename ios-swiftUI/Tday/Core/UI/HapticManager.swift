@@ -136,7 +136,10 @@ enum HapticManager {
         generator.notificationOccurred(.success)
     }
 
-    /// A hidden surface came out: a row's swipe actions revealed by a tap on the row.
+    /// A hidden surface came out: a row's swipe actions, uncovered by sliding the row left
+    /// far enough that letting go would leave them out, or teased by a tap on the row. One
+    /// event by two input paths, so one name — and the swipe fires it under the finger, at
+    /// the detent, rather than after the row has settled.
     ///
     /// `.rigid` at 0.7 intensity — sharp where ``buttonPress()`` is soft. That is the pair
     /// that matters here: uncovering a row's actions and then tapping one of them are two
