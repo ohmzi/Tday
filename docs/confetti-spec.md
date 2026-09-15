@@ -177,6 +177,46 @@ Overlay timeline:
 reads the same constant, so a flight that grows without it grows a gap where the burst
 is over and the view is still ticking.
 
+## Interruption
+
+A burst says "this list is finished". The moment that stops being true — an undo of the
+completion that started it, a task arriving from a collaborator or a sync, a task the user
+types while the paper is still up — the celebration is over, and **the burst leaves over a
+fade rather than between two frames**. Cutting 46 pieces out of mid-air to cancel them is
+the same complaint as leaving them flying over a restored row, one layer down.
+
+Normative, all three clients:
+
+| | |
+|---|---|
+| envelope | a SECOND alpha term, `1 → 0` over **Quick** (150 ms / 0.15 s) on **Exit**, multiplied into each piece's existing `alpha(tau)` at the single draw site |
+| flight clock | **untouched.** Pieces keep travelling, spinning and flipping while they fade. Freezing the flight and dissolving a still frame is not this |
+| where it lives | the pure kinematics module — Android `envelopedAlpha` in `TdayConfettiKinematics.kt`, and the twins in `TdayConfetti.swift`'s `TdayConfettiKinematics` enum and `confetti-kinematics.ts` — with a case in each kinematics test: envelope 1 ⇒ unchanged alpha, envelope 0 ⇒ 0, monotonic between |
+| unmount | when the envelope reaches zero, which is also what makes the next celebration a fresh run |
+| reduced motion | **instant.** Nothing was ever painted (Android returns before the `Canvas`, iOS draws `Color.clear`, web returns before the rAF loop), so there is no finished state to draw and no wait to survive: the view leaves on the cancel frame, with no animation and no timer. `docs/motion.md`'s fifth idiom rule |
+| the host | where the scene the burst sits in leaves on the same event, it must stay mounted for at least the envelope, or the fade is cut by the unmount above it. Android wraps its full-screen scene in `AnimatedVisibility` with `fadeOut` on the same Quick/Exit rung; web uses `useFadeUnmount(…, DURATION_MS.quick)`; iOS already lingers on its removal transition at Emphasis 0.32, which outlasts the envelope, and needs nothing |
+
+Name the token, never the number: `TdayMotionTokens.Durations.Quick` + `Easings.Exit`,
+`TdayMotion.exit(duration: TdayMotion.Durations.quick)`, `DURATION_MS.quick` + `EASE.exit`.
+A digit at any of these call sites moves a motion-budget counter with no headroom.
+
+The envelope is a new term, **not a retune**: `FlightMillis`/`flightSeconds`/`FLIGHT_MS`,
+`FadeStart` 0.60 and the 320 ms scene lead are pinned above and asserted by three
+kinematics test files. An uncancelled burst multiplies by 1 for its whole flight and is
+byte-for-byte the flight this spec already describes.
+
+**What cancels, and what does not.** Cancellation is an ARRIVAL — a pending row landing on
+the screen, counted across **all** buckets including Earlier/overdue — and never a re-read
+of the "is this scope finished" predicate, which every client deliberately writes to
+exclude Earlier. An undone OVERDUE task leaves that predicate exactly as it was: nothing
+transitions, and only the count moves. A remote DELETE of the last task still
+false-celebrates on all three clients for the reason each client's own doc comment already
+gives — the cache-change signal carries no reason — and cancellation neither fixes that nor
+is meant to.
+
+There is no burst haptic on any client today, so a cancel fires and suppresses nothing. If
+the section below ever lands, a cancelled burst must not fire a second one on the way out.
+
 ## Haptics
 
 **One firm pop, at the throw, exactly once per burst, on every celebrating list, on all
@@ -400,7 +440,10 @@ never via `pow` · radians everywhere, degrees only at Android's draw site · ex
 haptic per burst, fired *before* any motion gate · haptic fires under reduce-motion and
 animator-scale-off · scene haptic yields when `celebrate` (Android `:805`, iOS `:1771`)
 with `SoundManager` still unconditional · scene lead still 320/0.32/320 · all invariants in
-all three test files, with the box bounds derived from the parameter ranges.
+all three test files, with the box bounds derived from the parameter ranges · a cancelled
+burst fades on Quick/Exit as a second alpha term with the flight clock untouched, unmounts
+instantly under reduced motion, and its host keeps the layer alive for at least the
+envelope.
 
 ## What it feels like
 
