@@ -405,10 +405,18 @@ private fun timelineTaskBottomSpacing(
  *
  * [placementSpec] defaults to [TdayFeedItemMotion.Placement] — the shared clock
  * every ordinary displacement (a row added or removed elsewhere) travels on —
- * but is itself nullable, not "not negotiable" the way the fade specs are
- * documented as owned-or-not: see [EARLIER_SECTION_KEY]'s header at its
- * `sectionedTimelineContent` call site for the one caller that passes `null`
- * here, and why.
+ * and stays nullable with no caller currently taking that door. The one that
+ * did was [EARLIER_SECTION_KEY]'s header, which dropped placement while the
+ * empty-state scene resized itself directly above it; the scene is emitted
+ * below Earlier's rows now, so the header has no moving target to chase and
+ * takes the shared clock like every other header. The parameter is kept, rather
+ * than narrowed to non-null, because the hazard that justified it is a property
+ * of the feed and not of that one header: see [TdayFeedItemMotion]'s first rule
+ * for the shape to watch for — an item placed directly after an
+ * `AnimatedVisibility` running `expandVertically`/`shrinkVertically`, whose
+ * bounds move every frame for longer than [TdayFeedItemMotion.PlacementMillis]
+ * takes to chase them. Reorder first; reach for `null` only when the resizing
+ * neighbour genuinely cannot be moved out from above.
  */
 private fun LazyItemScope.feedItemMotion(
     enabled: Boolean,
@@ -435,8 +443,9 @@ private fun LazyItemScope.feedItemMotion(
  * a fade spec fades out and back in on every open and close of the field.
  *
  * [placementSpec] defaults to the shared [TdayFeedItemMotion.Placement] clock,
- * same as [feedItemMotion] — see that default's own doc for the one caller
- * that overrides it to `null`.
+ * same as [feedItemMotion] — and, same as there, nothing overrides it to
+ * `null` any more. See that default's own doc for what would justify doing so
+ * again.
  */
 private fun LazyItemScope.displacedFeedItemMotion(
     enabled: Boolean,
@@ -501,11 +510,19 @@ internal fun shouldCelebrateEmptyState(
  * scene -- but that left completing the very last pending-today task while
  * Earlier already happened to be expanded with nothing on screen at all: not
  * the celebratory scene, not the plain one, no confetti. This is true for
- * exactly [shouldCelebrateEmptyState]'s own window, so once that closes the
- * slot goes back to Earlier's rows the same as if no completion had just
- * happened -- it never contests requirement 3's "expanded Earlier owns this
- * slot" call outside that window, it only fills the gap requirement 3 left
- * inside it.
+ * exactly [shouldCelebrateEmptyState]'s own window -- it never contests
+ * requirement 3's "expanded Earlier owns this slot" call outside that window,
+ * it only fills the gap requirement 3 left inside it.
+ *
+ * What happens when the window closes changed once the scene moved below
+ * Earlier's rows. It used to hand the slot straight back to Earlier, the same
+ * as if no completion had happened. Now [shouldFoldEarlierForCelebration] folds
+ * Earlier shut on the way in -- otherwise the scene this turns on is composed
+ * past the fold and the burst never runs at all -- so what the window's expiry
+ * hands back is the ordinary collapsed presentation: header, then the plain
+ * scene, which is where this screen settles for "scope empty, overdue waiting"
+ * anyway. The slot is still never taken from rows the user is looking at
+ * outside the window.
  *
  * Pulled out as a pure function, like [shouldCelebrateEmptyState] above, so
  * this interaction -- the one the earlier review found neither the overlay
@@ -537,30 +554,64 @@ internal fun shouldShowTodayEarlierExpandedCelebration(
 }
 
 /**
- * The [TodoSection.key] every mode uses for the overdue/"Earlier" bucket.
- * Pulled out once the Today-mode Earlier section (and its exit-before-expand
- * sequencing) started repeating this literal enough in one file to trip
- * DeepSource's duplicate-string-literal check. `internal` rather than
- * `private` so [decideSectionHeaderToggleAction]'s own tests can assert
- * against the real key instead of a second, test-local copy of it.
+ * Whether this frame is the one that folds Earlier shut so a celebration has
+ * somewhere on screen to land.
+ *
+ * [shouldShowTodayEarlierExpandedCelebration] answers "should the scene be
+ * visible"; this answers the question that only became a question once the
+ * scene moved below Earlier's rows -- "will anyone see it". They are not the
+ * same question and collapsing them into one boolean is what produced the bug
+ * this exists for. The scene is emitted after Earlier's own rows (see
+ * [earlierSceneFollowsSection]), so a completion that empties the scope while
+ * Earlier is ALREADY expanded puts it under N overdue rows. Past six or so of
+ * them the scene's box is half below the fold; past eleven its top edge is,
+ * and a `LazyColumn` does not compose an item it has not reached. `TdayConfetti`
+ * is `matchParentSize()` inside `TdayEmptyState`, and its flight is started by
+ * a `LaunchedEffect` -- an effect in an uncomposed item never runs, so the
+ * burst does not merely land off screen, it never happens, and the window has
+ * closed and taken the item away by the time a scroll could reach it. That flag
+ * exists for nothing else.
+ *
+ * The fix keeps the scene's single mount point and moves the ROWS instead:
+ * fold Earlier for the duration, and the scene rises into the slot directly
+ * under a header that has not moved -- which is the collapsed presentation this
+ * screen already settles into for "scope empty, overdue waiting", reached a few
+ * seconds early. The trade, stated because it is a real one: this closes a list
+ * the user opened. It is still the cheaper of the two, because the alternatives
+ * are worse in kind rather than in degree. A second mount point above the header
+ * reintroduces the screen-height header jump this whole change exists to remove.
+ * An `animateScrollToItem` onto the scene drags the viewport past every overdue
+ * row to show a celebration, leaves the feed parked at the bottom, and jumps it
+ * again when the window closes and the scene goes away.
+ *
+ * [celebrationStampMs] is the completion's own timestamp -- the later of the
+ * local tap and `remoteEmptiedAtMs`, both on `SystemClock.uptimeMillis` -- and
+ * [foldedForStampMs] is the last stamp already folded for. Keyed on the stamp
+ * rather than on the flag because the flag goes false the instant the fold takes
+ * effect and true again the instant the user re-expands: keyed on the flag, a
+ * user who taps Earlier open during the celebration gets it folded shut under
+ * their finger, over and over, for four seconds. One fold per completion. After
+ * that the user's tap wins and the scene goes back below the rows, unseen, which
+ * is their own deliberate choice and not ours.
  */
-internal const val EARLIER_SECTION_KEY = "earlier"
+internal fun shouldFoldEarlierForCelebration(
+    showEarlierExpandedCelebration: Boolean,
+    celebrationStampMs: Long,
+    foldedForStampMs: Long,
+): Boolean = showEarlierExpandedCelebration &&
+        celebrationStampMs != 0L &&
+        celebrationStampMs != foldedForStampMs
 
 /**
- * How long `onTimelineSectionHeaderToggle`'s exit-before-expand beat holds
- * Earlier closed before actually expanding it -- see
- * [decideSectionHeaderToggleAction]'s [SectionHeaderToggleAction.DEFER_EARLIER_EXPAND].
- *
- * Deliberately [TdayFeedItemMotion.FadeOutMillis], not a number of its own:
- * that is exactly how long the inline illustration's own exit
- * (`fadeOut` + `shrinkVertically` on the `AnimatedVisibility` around
- * [com.ohmz.tday.compose.core.ui.TdayEmptyState] below) takes to actually
- * finish leaving. Earlier's rows must never start animating in before that
- * exit has genuinely completed -- pinned here as a named value, rather than
- * the two spots re-typing [TdayFeedItemMotion.FadeOutMillis] and trusting
- * them to agree, so a change to one is a change to both.
+ * The [TodoSection.key] every mode uses for the overdue/"Earlier" bucket.
+ * Pulled out once the Today-mode Earlier section started repeating this literal
+ * enough in one file to trip DeepSource's duplicate-string-literal check.
+ * `internal` rather than `private` so [earlierSceneFollowsSection]'s own tests
+ * can assert against the real key instead of a second, test-local copy of it --
+ * which matters more now that the key is what decides where in the feed the
+ * empty-state scene is emitted, not merely which header collapses.
  */
-internal val EarlierExpandDeferMillis: Long = TdayFeedItemMotion.FadeOutMillis.toLong()
+internal const val EARLIER_SECTION_KEY = "earlier"
 
 /**
  * "Zero active/pending items for this screen's own scope" -- generalizes
@@ -615,81 +666,117 @@ internal fun draggedTimelineTodo(
 }
 
 /**
- * Whether [sectionedTimelineContent]'s Earlier header should skip
- * `animateItem`'s `placementSpec` for this frame -- true exactly when [section]
- * is Earlier's own and [earlierIllustrationPresent] says the inline
- * "today-earlier-empty-scene" item (below, in [TodoListScreen]'s own
- * `LazyColumn` content) currently exists above it.
+ * Which section the inline "today-earlier-empty-scene" item is emitted AFTER --
+ * the whole of this screen's new ordering claim, written as a decision rather
+ * than as a line number, because a line number is the one thing a module with no
+ * Compose UI test and no device cannot check.
  *
- * That item's `AnimatedVisibility` gives it a real, continuously-changing
- * height for the ~150-190ms its `fadeOut+shrinkVertically` / `fadeIn+expandVertically`
- * run (see the enter/exit specs at its own `item("today-earlier-empty-scene")`
- * call). `displacedFeedItemMotion`'s `placementSpec` on the header below it
- * reacts to that the way it reacts to anything else moving it: by chasing
- * whatever this frame's real offset is with its own separately-clocked
- * [TdayFeedItemMotion.PlacementMillis]-long tween. Chasing a target that
- * jumps once and then holds still is exactly what that tween is for --
- * chasing one that keeps moving for a shorter span than the tween itself
- * takes to catch up is not: the header lags behind the illustration's real,
- * already-smooth height for the whole transition (and briefly after), which
- * is what let the header visibly overlap the illustration while it was
- * still growing, and overlap Earlier's first row the instant the
- * illustration finished shrinking away and that row appeared already
- * sitting at its correct, un-lagged position.
+ * True for Earlier's own section and for nothing else, which is to say: hero,
+ * then the real Earlier header, then Earlier's rows, then the scene. The scene
+ * used to be emitted above [sectionedTimelineContent] entirely, between the hero
+ * and that header. That order was argued in place and the argument was real --
+ * it kept the header out from under a full-screen overlay -- but it cost the
+ * header its anchor. Expanding Earlier shrank an item ABOVE the header, so the
+ * header the user had just tapped, and the hero-relative position they had
+ * tapped it at, travelled roughly a third of a screen upward every time the
+ * overdue list opened, and back down every time it closed. Header-first removes
+ * that by construction: nothing above the header changes height any more, so the
+ * header does not move at all. The rows grow downward out of it and push the
+ * scene ahead of them while it fades.
  *
- * Safe to drop entirely rather than merely re-time, because nothing else
- * ever legitimately moves this specific header while [earlierIllustrationPresent]
- * holds: [buildTimelineSections] filters every non-Earlier section down to
- * nothing the moment the scope reads as empty (see
- * [TodoTimelineSectionsTest]'s "surfaces just Earlier" cases), so Earlier's
- * header has nothing above it but this one item for as long as this is true.
- * The header's own rows are a different story -- they can still legitimately
- * reorder among themselves while Earlier is expanded and the scope is
- * otherwise empty, which is exactly why this only ever touches the header,
- * never [feedItemMotion] on the rows themselves.
+ * Keyed on the section rather than emitted after the whole of
+ * [sectionedTimelineContent], because "after everything" and "after Earlier" are
+ * only the same place while the scope is empty. A live reschedule drag restores
+ * the empty time-of-day buckets for Today and the empty day buckets for
+ * All/Priority/List (see [buildTimelineSections]), so a scene emitted after the
+ * loop would drop below a week of empty headers the moment a drag started inside
+ * the celebration window -- a screen-height teleport mid-gesture. Emitted from
+ * inside the loop it is directly under Earlier in every mode, drag or no drag,
+ * which is the only form of "directly under Earlier" that is true all the time.
  */
-internal fun earlierHeaderSkipsPlacementSpec(
-    section: String,
-    earlierIllustrationPresent: Boolean,
-): Boolean = section == EARLIER_SECTION_KEY && earlierIllustrationPresent
-
-/** What [TodoListScreen]'s `onTimelineSectionHeaderToggle` does with a tap. */
-internal enum class SectionHeaderToggleAction {
-    /** A tap on Earlier's header while the exit-before-expand beat owns it. */
-    IGNORE,
-
-    /** Requirement 3: hold Earlier closed for one exit beat, then expand it. */
-    DEFER_EARLIER_EXPAND,
-
-    /** Every other header, and Earlier outside the two cases above. */
-    IMMEDIATE_TOGGLE,
-}
+internal fun earlierSceneFollowsSection(sectionKey: String): Boolean =
+    sectionKey == EARLIER_SECTION_KEY
 
 /**
- * The decision half of `onTimelineSectionHeaderToggle`, pulled out so the race
- * a review found -- a second tap landing inside the ~150ms exit beat reading
- * `showTodayEarlierIllustration` as already false and falling through to an
- * immediate expand -- has a unit test. [earlierExpandPending] is the fix:
- * checked directly, ahead of the flag it invalidates, so every tap on Earlier
- * is [IGNORE] for as long as an earlier tap's own beat is still running,
- * regardless of what [showTodayEarlierIllustration] recomputes to meanwhile.
+ * The inline scene's own visibility -- [TodoListScreen]'s
+ * `showEarlierIllustration` -- pulled out for the reason
+ * [shouldCelebrateEmptyState] and [nonEarlierSectionsEmpty] were: on this screen
+ * a decision that is not a function is a decision nothing checks.
  *
- * The mutation itself -- starting the coroutine, writing the two `var`s --
- * stays in the composable, the same division [shouldCelebrateEmptyState] and
- * [TodoListScreen] already draw between pure decision and effectful state.
+ * Read what is NOT a parameter. There is no `earlierExpandPending` and no motion
+ * flag, and both used to be here. `earlierExpandPending` was the
+ * exit-before-expand beat: a tap on Earlier's collapsed header set it, held the
+ * section shut for one [TdayFeedItemMotion.FadeOutMillis] while the scene played
+ * its exit, and only then released the rows. It existed because the scene and
+ * the rows wanted one slot -- the scene shrinking pulled the header UP on the
+ * same frame the rows pushed it DOWN, and something had to go first. With the
+ * scene below the rows (see [earlierSceneFollowsSection]) they contest nothing.
+ * The rows insert between the header and the scene; `displacedFeedItemMotion`
+ * carries the scene down on [TdayFeedItemMotion.Placement] while its own
+ * `fadeOut` takes the paint away. Two motions in the same direction, begun on
+ * the same frame from the same boolean -- which is what was actually asked for:
+ * the image goes down and fades away AS the overdue list expands, not after it.
+ *
+ * So the beat is retired rather than left lying around, and its absence from
+ * this signature is the guarantee that it cannot come back by accident. A
+ * serialised wait in front of motion that no longer needs serialising is the
+ * fifth idiom rule's dead gap exactly, and this one was worse than most: it ran
+ * on `scaledDelay(..., motionScale)` against the DEVICE animator scale, so a
+ * user with the app's own motion preference off and device animations on tapped
+ * a header and got 150 ms of nothing in front of a hand-off that had already
+ * happened.
+ *
+ * [earlierCollapsed] is therefore the whole of the sequencing. The frame that
+ * releases Earlier's rows is the frame that turns this false: the scene's exit
+ * and the rows' entrance are two readings of one boolean rather than two steps
+ * of a schedule, and collapsing runs the same pair backwards for free -- rows
+ * leave, scene comes back up behind them.
+ *
+ * Deliberately narrower than the item's mount guard (`earlierScenePresent` in
+ * [TodoListScreen], which drops [earlierCollapsed] and the celebration term): an
+ * item its guard has already taken out of the list has no exit left to play, so
+ * the mount has to outlive the visibility.
  */
-internal fun decideSectionHeaderToggleAction(
-    key: String,
-    wasCollapsed: Boolean,
-    showTodayEarlierIllustration: Boolean,
-    earlierExpandPending: Boolean,
-): SectionHeaderToggleAction = when {
-    key == EARLIER_SECTION_KEY && earlierExpandPending -> SectionHeaderToggleAction.IGNORE
-    key == EARLIER_SECTION_KEY && wasCollapsed && showTodayEarlierIllustration ->
-        SectionHeaderToggleAction.DEFER_EARLIER_EXPAND
+internal fun shouldShowEarlierScene(
+    scopeHasEarlierItems: Boolean,
+    scopeItemsEmpty: Boolean,
+    isLoading: Boolean,
+    suppressInitialTimeline: Boolean,
+    scopedSearchActive: Boolean,
+    earlierCollapsed: Boolean,
+): Boolean = scopeHasEarlierItems &&
+        scopeItemsEmpty &&
+        !isLoading &&
+        !suppressInitialTimeline &&
+        !scopedSearchActive &&
+        earlierCollapsed
 
-    else -> SectionHeaderToggleAction.IMMEDIATE_TOGGLE
-}
+/**
+ * Whether the scene animates its hand-off at all, or is simply drawn -- and
+ * removed -- in its finished state.
+ *
+ * Two gates, and they are different kinds of thing. [timelineAnimationsEnabled]
+ * is the feed's first-frame guard ("this list has settled enough to animate at
+ * all") and says nothing about what the user asked for. [motionEnabled] is the
+ * preference, read through Phase 8's `rememberTdayMotionEnabled()`. The scene
+ * consulted only the first, which left a user who had turned motion off watching
+ * a third of a screen fade and expand over 190 ms anyway; the task-feed skeleton
+ * directly above it in the same `LazyColumn` already asks the preference itself,
+ * and this is that same call made from the one place in the hand-off that was
+ * still missing it.
+ *
+ * With motion off the answer is the finished state on the first frame and no
+ * wait left anywhere: `EnterTransition.None`/`ExitTransition.None` on the scene,
+ * `displacedFeedItemMotion` already off behind the same flag, and no expand beat
+ * in front of the rows -- not because the beat is skipped at scale 0, but
+ * because there is no longer a beat to skip (see [shouldShowEarlierScene]).
+ * That is the fifth idiom rule satisfied by having nothing to shorten, which is
+ * the only way it is ever satisfied for good.
+ */
+internal fun earlierSceneAnimatesHandoff(
+    timelineAnimationsEnabled: Boolean,
+    motionEnabled: Boolean,
+): Boolean = timelineAnimationsEnabled && motionEnabled
 
 // KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather
 // than fixed further here. Two separate facts, both worth writing down:
@@ -1086,13 +1173,18 @@ fun TodoListScreen( // skipcq: KT-R1006
     // animation the in-app switch does not reach: the floater settle waits out the
     // feed re-laying itself under `animateItem` once the results card is dropped from
     // it (no route changes there — `closeFloaterTaskHomeSearch` is a state flip), the
-    // two holds wait out `SwipeTaskRow`'s ungated highlight pulses, and the Earlier
-    // hand-off waits out `TdayFeedItemMotion.FadeOut`, again through `animateItem`.
-    // The only gate on any of the three is `timelineAnimationsEnabled`, a first-frame
-    // guard rather than a preference. A wait zeroed while the motion it covers plays
-    // on is the fifth idiom rule broken the other way about — see
-    // [effectiveMotionScale]. Each moves to `rememberTdayMotionScale` as its
-    // animation is gated.
+    // and the two holds wait out `SwipeTaskRow`'s ungated highlight pulses. The only
+    // gate on either is `timelineAnimationsEnabled`, a first-frame guard rather than
+    // a preference. A wait zeroed while the motion it covers plays on is the fifth
+    // idiom rule broken the other way about — see [effectiveMotionScale]. Each moves
+    // to `rememberTdayMotionScale` as its animation is gated.
+    //
+    // The Earlier hand-off used to be the third of these, waiting out
+    // `TdayFeedItemMotion.FadeOut` before releasing Earlier's rows. It is not listed
+    // because it no longer exists: with the empty-state scene below those rows
+    // instead of above them the exit and the entrance stopped competing for a slot,
+    // and the wait went out rather than being re-scaled. See
+    // [shouldShowEarlierScene].
     val motionScale = rememberSystemMotionScale()
     val heroCollapse = rememberLazyListHeroTitleCollapse(
         listState = listState,
@@ -1304,15 +1396,6 @@ fun TodoListScreen( // skipcq: KT-R1006
             },
         )
     }
-    // Requirement 3's sequencing flag: true for the brief window between the
-    // user tapping to expand Today's collapsed Earlier section and the
-    // moment `collapsedSectionKeys` actually drops "earlier" — see
-    // `onTimelineSectionHeaderToggle` below. While true, the inline empty
-    // scene is already animating out even though Earlier's rows have not
-    // been told to appear yet, which is what keeps the two from racing.
-    var earlierExpandPending by rememberSaveable(uiState.mode, uiState.listId) {
-        mutableStateOf(false)
-    }
     // Requirement 2 + 3, generalized: this screen's own scope has nothing
     // pending, but Earlier is still holding overdue tasks, collapsed --
     // Today originally, now also Scheduled/Priority/All/List via
@@ -1320,13 +1403,21 @@ fun TodoListScreen( // skipcq: KT-R1006
     // `celebrateEmptyState` — this only decides whether the scene is shown
     // inline (so Earlier's header stays reachable) versus not at all; it
     // never gates the burst.
-    val showEarlierIllustration = scopeHasEarlierItems &&
-            scopeItemsEmpty &&
-            !uiState.isLoading &&
-            !suppressInitialTodayTimeline &&
-            !scopedSearchActive &&
-            collapsedSectionKeys.contains(EARLIER_SECTION_KEY) &&
-            !earlierExpandPending
+    //
+    // A function rather than an expression, and a shorter one than it was:
+    // `earlierExpandPending` used to be the last term here, held true for one
+    // exit beat by `onTimelineSectionHeaderToggle` below. That beat is gone
+    // with the slot contention that produced it — see [shouldShowEarlierScene]
+    // for the whole argument, and for why the term's absence from the
+    // signature is the part that matters.
+    val showEarlierIllustration = shouldShowEarlierScene(
+        scopeHasEarlierItems = scopeHasEarlierItems,
+        scopeItemsEmpty = scopeItemsEmpty,
+        isLoading = uiState.isLoading,
+        suppressInitialTimeline = suppressInitialTodayTimeline,
+        scopedSearchActive = scopedSearchActive,
+        earlierCollapsed = collapsedSectionKeys.contains(EARLIER_SECTION_KEY),
+    )
     // Requirement 1's gap for the case above's mirror: Earlier is already
     // expanded (not collapsed) at the moment the user's own tap -- or a
     // remote completion -- empties this scope. `showEarlierIllustration`
@@ -1337,8 +1428,16 @@ fun TodoListScreen( // skipcq: KT-R1006
     // `scopeHasEarlierItems`) -- no illustration at all, and no confetti.
     // Scoped to `celebrateEmptyState`'s own window rather than shown for as
     // long as Earlier stays expanded and empty: once the celebration times
-    // out this hands the slot straight back to Earlier, the same as it
-    // would have been the whole time had no completion just happened here.
+    // out nothing here contests Earlier's slot again. What the expiry leaves
+    // behind is the ordinary collapsed presentation rather than the open list,
+    // because the fold below had to shut Earlier for the burst to run at all --
+    // argued at [shouldFoldEarlierForCelebration], not hidden here.
+    //
+    // This is the one case the new order charges for. The scene it mounts is
+    // emitted at the FOOT of Earlier's rows, so with Earlier already open the
+    // charge is not a worse position but no burst at all -- see
+    // [shouldFoldEarlierForCelebration] immediately below, which is what pays
+    // it, and the scene's own build site for the cost of each alternative.
     val showEarlierExpandedCelebration = shouldShowTodayEarlierExpandedCelebration(
         todayHasEarlierItems = scopeHasEarlierItems,
         itemsEmpty = scopeItemsEmpty,
@@ -1348,6 +1447,39 @@ fun TodoListScreen( // skipcq: KT-R1006
         earlierCollapsed = collapsedSectionKeys.contains(EARLIER_SECTION_KEY),
         celebrateEmptyState = celebrateEmptyState,
     )
+    // ...and the half of that charge this screen refuses to pay. The scene
+    // being at the foot of the open list is a position; the burst never
+    // running is a missing feature, and the two were the same sentence until
+    // someone counted the rows. A `LazyColumn` composes what it reaches, and
+    // `TdayConfetti` starts its flight from a `LaunchedEffect` inside the
+    // scene -- so an expanded Earlier tall enough to push the scene past the
+    // fold does not delay the burst, it deletes it, and the four-second window
+    // expires and unmounts the item before any scroll could bring it back.
+    // [shouldFoldEarlierForCelebration] carries the whole argument, including
+    // what folding the list costs and why the two alternatives cost more.
+    //
+    // The stamp, not the flag, is the key: the completion this fold belongs to,
+    // taken as the later of the local tap and the remote emptying because
+    // `shouldCelebrateEmptyState` opens its window for either. Folding is a
+    // state write that makes its own trigger false, so one fold per completion
+    // is the only shape that does not fight a user who taps Earlier back open.
+    val celebrationStampMs = maxOf(lastCompletionAtMs, uiState.remoteEmptiedAtMs)
+    var earlierFoldedForCelebrationMs by remember { mutableLongStateOf(0L) }
+    val foldEarlierForCelebration = shouldFoldEarlierForCelebration(
+        showEarlierExpandedCelebration = showEarlierExpandedCelebration,
+        celebrationStampMs = celebrationStampMs,
+        foldedForStampMs = earlierFoldedForCelebrationMs,
+    )
+    // No delay inside, deliberately: this is a state assignment, not a beat.
+    // The rows leave on `feedItemMotion` and the scene arrives on its own enter,
+    // both begun by this one write, and with motion off both are simply drawn
+    // finished on the next frame -- nothing here to skip, and nothing to
+    // survive as a dead wait.
+    LaunchedEffect(foldEarlierForCelebration, celebrationStampMs) {
+        if (!foldEarlierForCelebration) return@LaunchedEffect
+        earlierFoldedForCelebrationMs = celebrationStampMs
+        collapsedSectionKeys = collapsedSectionKeys + EARLIER_SECTION_KEY
+    }
     // The flat feed's placeholder, and how long its lazy item outlives it. Both
     // hoisted because `LazyListScope` is not a composition — by the time the list
     // builds itself its guard has to already be a plain Boolean.
@@ -1355,12 +1487,13 @@ fun TodoListScreen( // skipcq: KT-R1006
             uiState.items.isEmpty() &&
             uiState.isLoading
     val taskFeedSkeletonMounted = rememberTdayTaskRowSkeletonMounted(taskFeedSkeletonVisible)
-    // Exactly the "today-earlier-empty-scene" item's own gate below, pulled
-    // out under its own name because `sectionedTimelineContent` needs it too:
-    // see [earlierHeaderSkipsPlacementSpec] for why Earlier's header cares
-    // whether that item exists, independent of `showEarlierIllustration`'s
-    // narrower "and its content is the visible one right now".
-    val earlierIllustrationPresent = scopeHasEarlierItems &&
+    // The scene item's own mount guard, deliberately wider than either
+    // visibility flag above: it drops Earlier's collapse state and the
+    // celebration term, so the item outlives the moment its content stops
+    // being visible and the `AnimatedVisibility` inside it has somewhere to
+    // play its exit from. An item its guard has already removed has no exit
+    // left.
+    val earlierScenePresent = scopeHasEarlierItems &&
             scopeItemsEmpty &&
             !uiState.isLoading &&
             !suppressInitialTodayTimeline &&
@@ -1368,13 +1501,13 @@ fun TodoListScreen( // skipcq: KT-R1006
     // The scene's own visibility, and the transition that plays it, hoisted out of the
     // `item {}` that draws it.
     //
-    // It has to live up here because `earlierIllustrationPresent` above is implied by
+    // It has to live up here because `earlierScenePresent` above is implied by
     // `showEarlierIllustration`: completing the last task in scope turns both true on the
     // same frame, so the item is created at the exact moment the scene should be appearing.
     // An `AnimatedVisibility(visible = …)` inside it would therefore enter composition with
     // initialState == targetState and skip its enter outright — the 190 ms fade + expand
     // below was never once seen, and 34 % of the screen claimed its slot in one jump,
-    // shoving Earlier's header down with it. A transition state remembered out here
+    // shoving everything under it down with it. A transition state remembered out here
     // outlives the item's mount, so it still holds the "not visible yet" the enter needs
     // to animate from.
     //
@@ -1387,6 +1520,239 @@ fun TodoListScreen( // skipcq: KT-R1006
         MutableTransitionState(earlierSceneVisible)
     }
     earlierSceneTransition.targetState = earlierSceneVisible
+    // The scene itself, built here and handed to [sectionedTimelineContent] to
+    // emit — see [earlierSceneFollowsSection] for where it lands and why:
+    // immediately after Earlier's own rows, from inside that loop, rather than
+    // above the whole call the way it used to be.
+    //
+    // A `LazyListScope` lambda rather than eight more parameters on a function
+    // that already takes thirty. Everything the scene needs — the scope's icon
+    // and copy, the accent, the celebration flag, the hoisted transition state —
+    // is derived here and is nothing `sectionedTimelineContent` otherwise knows
+    // or should learn. What that function gets instead is one question it can
+    // answer on its own: does the scene follow THIS section?
+    //
+    // Nullable, and the `if` is the item's mount guard. Mounted for as long as
+    // the scope reads empty-with-overdue regardless of Earlier's collapse state,
+    // so the scene can still play its exit on the frame the user expands
+    // Earlier; `AnimatedVisibility` inside is what actually shows and hides it.
+    //
+    // WHAT THE NEW ORDER BUYS, because it inverts an order this file argued for.
+    // The comment that stood here said the scene was "placed right above
+    // `sectionedTimelineContent` below so it occupies the slot the scope's own
+    // sections would otherwise fill ... and the (always-present, real) Earlier
+    // header sits right under it — reachable the whole time, never covered by an
+    // overlay the way the plain-empty scene is". Half of that survives and gets
+    // stronger. The header is still never under the full-screen overlay (that
+    // deferral is untouched), and it is now the first thing under the hero
+    // instead of the thing a third of a screen below it — the strongest form of
+    // the reachability claim this file has been able to make. The half that does
+    // not survive is the slot argument: the scene no longer occupies the slot the
+    // scope's sections would have filled, it occupies the slot Earlier's rows
+    // grow INTO, and what earns it that slot is being the thing they push down. A
+    // header someone has just tapped should still be under their finger once the
+    // list it opens has opened, and with the scene above it that was never true.
+    //
+    // WHAT IT COSTS, stated here rather than left to be discovered.
+    // `showEarlierExpandedCelebration` — a completion that empties the scope
+    // while Earlier is ALREADY expanded — wants this scene, and `TdayConfetti`
+    // with it (the burst is `matchParentSize()` inside `TdayEmptyState`, so it
+    // goes wherever the scene goes). Under the new order the scene's one home is
+    // at the foot of Earlier's rows, and with those rows on screen that is a few
+    // hundred dp down: half clipped past six or so of them, past the fold
+    // entirely past eleven. Off screen would have been survivable. It is worse
+    // than off screen — a `LazyColumn` never composes an item it has not
+    // reached, and the burst is started by a `LaunchedEffect` inside the item,
+    // so the celebration does not land late, it does not happen, and the
+    // four-second window closes and unmounts the scene before any scroll could
+    // fix it.
+    //
+    // So the rows move for the celebration, not the scene:
+    // [shouldFoldEarlierForCelebration] above folds Earlier shut for that one
+    // completion and the scene rises into the slot directly under a header that
+    // still has not moved. One home for the scene, always — the celebration
+    // follows the scene, and where the scene cannot be seen it is the feed
+    // around it that gives way. The two ways of chasing the celebration instead
+    // are both rejected, and the reasons are written out at that function: a
+    // second mount point above the header reintroduces the screen-height header
+    // jump this change exists to remove and makes the scene hop across the
+    // header for anyone who expands mid-celebration; an `animateScrollToItem`
+    // onto the scene drags the viewport past every overdue row and leaves it
+    // parked there.
+    val earlierSceneContent: (LazyListScope.() -> Unit)? = if (earlierScenePresent) {
+        {
+            item(
+                key = "today-earlier-empty-scene",
+                contentType = "today-earlier-empty-scene",
+            ) {
+                // `timelineAnimationsEnabled` is the feed's first-frame guard,
+                // not the preference, so the scene asks the preference itself —
+                // the same call the task-feed skeleton above it already makes.
+                // See [earlierSceneAnimatesHandoff] for what motion-off draws.
+                val sceneAnimates = earlierSceneAnimatesHandoff(
+                    timelineAnimationsEnabled = timelineAnimationsEnabled,
+                    motionEnabled = rememberTdayMotionEnabled(),
+                )
+                AnimatedVisibility(
+                    // `earlierSceneTransition`, not a plain `visible =`: this
+                    // item is mounted by a guard that the visibility implies,
+                    // so a boolean here would arrive already true and the
+                    // enter below would never play. See where the state is
+                    // remembered, above the guard, for the whole story.
+                    visibleState = earlierSceneTransition,
+                    // Fade AND expand: the mirror of exit's fade + shrink
+                    // below, so the scene's arrival reads as the same one
+                    // motion running backwards instead of an alpha fade over a
+                    // size that has already snapped to full height. Before
+                    // this, `enter` was fade-only -- the Box's
+                    // `heightIn(min = gapHeight)` claimed its ~34%-of-screen
+                    // slot on the very first frame, shoving everything under it
+                    // down in one jump while only the alpha eased in on top of
+                    // that jump.
+                    //
+                    // `expandFrom` is named rather than left to the default,
+                    // because the default is the wrong one here and it is the
+                    // kind of wrong that only shows up on a device. Both
+                    // `expandVertically` and `shrinkVertically` default to
+                    // `Alignment.Bottom`, which pins the CONTENT to the bottom
+                    // edge of the animating box and offsets it by
+                    // `animatedHeight - fullHeight` -- which over an expand
+                    // runs -H -> 0. The box grows downward while the picture
+                    // inside it starts a full height ABOVE the box's top edge
+                    // and slides down into it, so what the first frames show is
+                    // the bottom of the copy and the illustration at the top of
+                    // the Box is the last thing to arrive. Anchored to `Top`
+                    // that offset is a flat zero for the whole run: the scene is
+                    // painted at the item's top edge from the first frame and
+                    // the box simply reveals more of it downward. See `exit` for
+                    // why the same alignment matters more on the way out.
+                    enter = if (sceneAnimates) {
+                        fadeIn(
+                            animationSpec = tween(
+                                durationMillis = TdayFeedItemMotion.FadeInMillis,
+                                easing = FastOutSlowInEasing,
+                            ),
+                        ) + expandVertically(
+                            animationSpec = tween(
+                                durationMillis = TdayFeedItemMotion.FadeInMillis,
+                                easing = FastOutSlowInEasing,
+                            ),
+                            expandFrom = Alignment.Top,
+                        )
+                    } else {
+                        EnterTransition.None
+                    },
+                    // Fade AND shrink: unlike the floater home's inline scene
+                    // (which is only ever removed outright, never faded), this
+                    // one also has to clear itself out of the way on a user tap
+                    // rather than on a data change, so it needs a real exit
+                    // instead of an instant cut. It is no longer racing
+                    // anything while it does: the rows arriving above it are
+                    // what carry it down, and this fade is the paint half of
+                    // the same one motion.
+                    //
+                    // `shrinkTowards = Alignment.Top` for the reason `enter`
+                    // names `expandFrom`, and on this leg it decides whether
+                    // the change does what was asked for at all. The default
+                    // `Alignment.Bottom` offsets the content by
+                    // `animatedHeight - fullHeight`, which over the shrink runs
+                    // 0 -> -H: the picture slides UP by its own full height
+                    // while the slot it lives in travels down. H here is the
+                    // Box's `gapHeight`, ~34% of the screen -- ~272dp on an
+                    // 800dp device -- and it is spent inside `FadeOutMillis`,
+                    // 150ms, while `Placement` has only eased about 0.73 of the
+                    // rows' total height in the same 150ms of its own 320. Three
+                    // overdue rows is ~190dp inserted against ~272dp of content
+                    // sliding the other way; the upward term wins outright until
+                    // Earlier is holding six or so rows. So the pixels the user
+                    // watches would go UP for the whole time the scene is still
+                    // painted, on a screen whose entire point is that the image
+                    // goes DOWN and fades as the list expands. Anchored to `Top`
+                    // there is no cancelling term left at all: the content sits
+                    // at the item's top edge, the box clips it from the bottom,
+                    // and the only translation on it is the `Placement` below
+                    // carrying it down behind the arriving rows.
+                    exit = if (sceneAnimates) {
+                        fadeOut(
+                            animationSpec = tween(
+                                durationMillis = TdayFeedItemMotion.FadeOutMillis,
+                                easing = FastOutSlowInEasing,
+                            ),
+                        ) + shrinkVertically(
+                            animationSpec = tween(
+                                durationMillis = TdayFeedItemMotion.FadeOutMillis,
+                                easing = FastOutSlowInEasing,
+                            ),
+                            shrinkTowards = Alignment.Top,
+                        )
+                    } else {
+                        ExitTransition.None
+                    },
+                    // The geometry half, and the reason the scene rather than
+                    // the header is the thing that travels now. Earlier's rows
+                    // inserting above this item move it, and a moved item takes
+                    // [TdayFeedItemMotion.Placement] — Emphasis, because this is
+                    // position changing — while the fade above stays on the
+                    // shorter paint rungs. Under the old order this modifier
+                    // only ever carried the scene into the slot the vanishing
+                    // time-of-day sections left; it now also carries it down as
+                    // the overdue list opens, which is the motion that was
+                    // actually asked for.
+                    modifier = displacedFeedItemMotion(sceneAnimates),
+                ) {
+                    val gapHeight =
+                        (LocalConfiguration.current.screenHeightDp * 0.34f).dp
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = gapHeight),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TdayEmptyState(
+                            icon = emptyStateSceneIconRes,
+                            accentColor = titleColor,
+                            title = emptyStateSceneTitle,
+                            description = emptyStateSceneDescription,
+                            celebrate = celebrateEmptyState,
+                            // Mirrors the floater home: hold the burst back for
+                            // exactly as long as this item's own placement spec
+                            // takes, so it lands once the feed has finished
+                            // settling underneath it. What that settling IS
+                            // changed with the order. It used to be the
+                            // now-shorter Morning/Afternoon/Tonight sections
+                            // easing out of the way and the Earlier header BELOW
+                            // finishing its slide up into place. The header does
+                            // not move at all any more; what the hold covers now
+                            // is this item's own travel, on the very
+                            // `TdayFeedItemMotion.Placement` clock the delay is
+                            // measured from. Same number, different journey —
+                            // and it is still the travel that precedes the
+                            // burst, which is the only thing the number was ever
+                            // timed against.
+                            celebrationStartDelayMillis =
+                                TdayFeedItemMotion.CelebrationStartDelayMillis,
+                            // This scene already sits inside the
+                            // `AnimatedVisibility` above, which owns its fade +
+                            // size now. Running `TdayEmptyState`'s own 520ms
+                            // rise on top of that too is a second,
+                            // uncoordinated animation racing the first one --
+                            // the double-animation stutter this hand-off cannot
+                            // have. The celebrating case is the one exception:
+                            // `celebrationStartDelayMillis` (plus
+                            // `TdayEmptyState`'s own lead) holds this rise back
+                            // well past the 190ms the wrapper above takes to
+                            // finish its own fade, so the two never actually
+                            // overlap there and the confetti-leads-the-scene
+                            // choreography is worth keeping.
+                            animateAppearance = celebrateEmptyState,
+                        )
+                    }
+                }
+            }
+        }
+    } else {
+        null
+    }
     var flashTodoId by remember(uiState.mode) { mutableStateOf<String?>(null) }
     var quickAddDueEpochMs by rememberSaveable { mutableStateOf<Long?>(null) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -1787,54 +2153,40 @@ fun TodoListScreen( // skipcq: KT-R1006
     // function's call site instead of the live state.
     val onTimelineSectionHeaderToggle: (key: String, wasCollapsed: Boolean) -> Unit =
         { key, wasCollapsed ->
-            // See [decideSectionHeaderToggleAction] for why IGNORE is checked
-            // ahead of DEFER_EARLIER_EXPAND's own guard rather than folded
-            // into an `else` after it: a tap landing inside an already-running
-            // exit-before-expand beat used to read `showEarlierIllustration`
-            // as already false (setting `earlierExpandPending` flips it on the
-            // very next recomposition, well before the scheduled coroutine
-            // below actually drops "earlier" from `collapsedSectionKeys`) and
-            // fall through to IMMEDIATE_TOGGLE, expanding Earlier on the spot
-            // and racing its rows in underneath the scene's own still-playing
-            // exit.
-            when (
-                decideSectionHeaderToggleAction(
-                    key = key,
-                    wasCollapsed = wasCollapsed,
-                    showTodayEarlierIllustration = showEarlierIllustration,
-                    earlierExpandPending = earlierExpandPending,
-                )
-            ) {
-                SectionHeaderToggleAction.IGNORE -> Unit
-
-                SectionHeaderToggleAction.DEFER_EARLIER_EXPAND -> {
-                    // Requirement 3: the empty-state scene owns this slot
-                    // right now. Flip it into its exit first and hold the
-                    // actual section open until it has genuinely left, so
-                    // Earlier's rows never animate in underneath a scene that
-                    // is still on screen.
-                    earlierExpandPending = true
-                    screenScope.launch {
-                        // Scaled, because what it is holding for is that exit: with
-                        // the device's animations off the scene is gone on the first
-                        // frame and this would be 150 ms of an Earlier header that
-                        // answered a tap by doing nothing. The device's and not the
-                        // app's, because that exit is `animateItem`'s ungated
-                        // fade; see [motionScale]. Web's `useEarlierExpandHandoff`
-                        // takes its immediate branch for the same reason.
-                        scaledDelay(EarlierExpandDeferMillis, motionScale)
-                        collapsedSectionKeys = collapsedSectionKeys - key
-                        earlierExpandPending = false
-                    }
-                }
-
-                SectionHeaderToggleAction.IMMEDIATE_TOGGLE -> {
-                    collapsedSectionKeys = if (wasCollapsed) {
-                        collapsedSectionKeys - key
-                    } else {
-                        collapsedSectionKeys + key
-                    }
-                }
+            // One statement, and that is the change. Earlier used to be routed
+            // through `decideSectionHeaderToggleAction`, which held the expand
+            // back for one `TdayFeedItemMotion.FadeOutMillis` — and ignored any
+            // second tap landing inside that window — so the empty-state scene
+            // could finish leaving before Earlier's rows were released into the
+            // slot it was giving up. Both went out with the slot contention that
+            // produced them. The scene sits BELOW Earlier's rows now (see
+            // [earlierSceneFollowsSection]), so the rows arrive BETWEEN the
+            // header and the scene instead of into the scene's place, and the
+            // two motions run together, in the same direction, off this one
+            // assignment: the rows expand downward out of a header that does not
+            // move while the scene is carried down on `Placement` and fades. The
+            // beat has nothing left to cover, and a beat that covers nothing is
+            // 150 ms of a header answering a tap by doing nothing — the fifth
+            // idiom rule, and worse than usual here because the old
+            // `scaledDelay` read the DEVICE animator scale, so the wait survived
+            // in full for a user who had turned the app's own motion off.
+            // Nothing needs to be skipped at motion-off now; there is nothing
+            // left to skip.
+            //
+            // Web and iOS both still sequence this, deliberately, and the
+            // divergence is written here so the next reader finds it rather than
+            // discovering it: their scene is drawn OVER the list rather than in
+            // it — web's `useEarlierExpandHandoff`, iOS's
+            // `toggleEarlierSectionWithIllustrationHandoff` behind the
+            // `EmptyStateReservedTopHeightPreferenceKey` overlay — so rows
+            // expanding in would arrive underneath a scene still painting over
+            // them. Android's is a lazy item, and once it is below the rows it
+            // shares no pixels with them at all. Same requirement, different
+            // geometry, and only the geometry decided the beat.
+            collapsedSectionKeys = if (wasCollapsed) {
+                collapsedSectionKeys - key
+            } else {
+                collapsedSectionKeys + key
             }
         }
     val onTimelineQuickAdd: (dueEpochMs: Long) -> Unit = { dueEpochMs ->
@@ -2097,140 +2449,6 @@ fun TodoListScreen( // skipcq: KT-R1006
                         }
                     }
 
-                    // Requirement 2 + 3, generalized: this screen's own scope
-                    // has nothing pending but Earlier is still holding
-                    // overdue tasks -- Today originally, now also
-                    // Scheduled/Priority/All/List (Scheduled and every other
-                    // mode without an Earlier bucket keep `scopeHasEarlierItems`
-                    // false, so this never mounts for them, unchanged from
-                    // before). Mounted for as long as that stays true
-                    // regardless of Earlier's own collapse state —
-                    // `AnimatedVisibility` inside is what actually
-                    // shows/hides it, keyed to `showEarlierIllustration` —
-                    // so the scene can play its own exit (fade + shrink) the
-                    // moment the user expands Earlier, ahead of
-                    // `onTimelineSectionHeaderToggle` above releasing
-                    // Earlier's rows to animate in. Placed right above
-                    // `sectionedTimelineContent` below so it occupies the
-                    // slot the scope's own sections would otherwise fill
-                    // (Morning/Afternoon/Tonight for Today, nothing for the
-                    // others since every non-Earlier section is empty by
-                    // definition here) and the (always-present, real)
-                    // Earlier header sits right under it — reachable the
-                    // whole time, never covered by an overlay the way the
-                    // plain-empty scene is.
-                    // Also visible, briefly, when Earlier is expanded rather
-                    // than collapsed — `showEarlierExpandedCelebration` —
-                    // so requirement 1's confetti still lands when the
-                    // completion that emptied the scope happens while the
-                    // user already has Earlier open, not just while it is
-                    // sitting collapsed. That flag is scoped to
-                    // `celebrateEmptyState`'s own window, so once it closes
-                    // this exits the same way and Earlier's rows are left
-                    // owning the slot, same as if no completion had just
-                    // happened.
-                    if (earlierIllustrationPresent) {
-                        item(
-                            key = "today-earlier-empty-scene",
-                            contentType = "today-earlier-empty-scene",
-                        ) {
-                            AnimatedVisibility(
-                                // `earlierSceneTransition`, not a plain `visible =`: this
-                                // item is mounted by a guard that the visibility implies,
-                                // so a boolean here would arrive already true and the
-                                // enter below would never play. See where the state is
-                                // remembered, above the guard, for the whole story.
-                                visibleState = earlierSceneTransition,
-                                // Fade AND expand: the mirror of exit's fade +
-                                // shrink below, so the scene's arrival reads
-                                // as the same one motion running backwards
-                                // instead of an alpha fade over a size that
-                                // has already snapped to full height. Before
-                                // this, `enter` was fade-only -- the Box's
-                                // `heightIn(min = gapHeight)` claimed its
-                                // ~34%-of-screen slot on the very first frame,
-                                // shoving Earlier's header (and everything
-                                // `displacedFeedItemMotion` moves under it)
-                                // down in one jump while only the alpha eased
-                                // in on top of that jump.
-                                enter = fadeIn(
-                                    animationSpec = tween(
-                                        durationMillis = TdayFeedItemMotion.FadeInMillis,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                ) + expandVertically(
-                                    animationSpec = tween(
-                                        durationMillis = TdayFeedItemMotion.FadeInMillis,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                ),
-                                // Fade AND shrink: unlike the floater home's
-                                // inline scene (which is only ever removed
-                                // outright, never faded), this one also has to
-                                // clear itself out of Earlier's way on a user
-                                // tap rather than on a data change, so it needs
-                                // a real exit instead of an instant cut.
-                                exit = fadeOut(
-                                    animationSpec = tween(
-                                        durationMillis = TdayFeedItemMotion.FadeOutMillis,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                ) + shrinkVertically(
-                                    animationSpec = tween(
-                                        durationMillis = TdayFeedItemMotion.FadeOutMillis,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                ),
-                                modifier = displacedFeedItemMotion(timelineAnimationsEnabled),
-                            ) {
-                                val gapHeight =
-                                    (LocalConfiguration.current.screenHeightDp * 0.34f).dp
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = gapHeight),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    TdayEmptyState(
-                                        icon = emptyStateSceneIconRes,
-                                        accentColor = titleColor,
-                                        title = emptyStateSceneTitle,
-                                        description = emptyStateSceneDescription,
-                                        celebrate = celebrateEmptyState,
-                                        // Mirrors the floater home: hold the
-                                        // burst back for exactly as long as
-                                        // this item's own placement spec takes,
-                                        // so it lands once the (now-shorter)
-                                        // Morning/Afternoon/Tonight sections
-                                        // have finished settling out of the
-                                        // way and the Earlier header below has
-                                        // finished sliding up into place.
-                                        celebrationStartDelayMillis =
-                                            TdayFeedItemMotion.CelebrationStartDelayMillis,
-                                        // This scene already sits inside the
-                                        // `AnimatedVisibility` above, which
-                                        // owns its fade + size now. Running
-                                        // `TdayEmptyState`'s own 520ms rise on
-                                        // top of that too is a second,
-                                        // uncoordinated animation racing the
-                                        // first one -- the double-animation
-                                        // stutter this hand-off cannot have.
-                                        // The celebrating case is the one
-                                        // exception: `celebrationStartDelayMillis`
-                                        // (plus `TdayEmptyState`'s own lead)
-                                        // holds this rise back well past the
-                                        // 190ms the wrapper above takes to
-                                        // finish its own fade, so the two
-                                        // never actually overlap there and the
-                                        // confetti-leads-the-scene choreography
-                                        // is worth keeping.
-                                        animateAppearance = celebrateEmptyState,
-                                    )
-                                }
-                            }
-                        }
-                    }
-
                     if (showSectionedTimeline && !suppressInitialTodayTimeline && !scopedSearchHasNoResults) {
                         sectionedTimelineContent(
                             uiState = uiState,
@@ -2238,7 +2456,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                             usesRootFeedChrome = usesRootFeedChrome,
                             usesTodayStyle = usesTodayStyle,
                             timelineAnimationsEnabled = timelineAnimationsEnabled,
-                            earlierIllustrationPresent = earlierIllustrationPresent,
+                            earlierSceneContent = earlierSceneContent,
                             scopedSearchActive = scopedSearchActive,
                             canRescheduleTasks = canRescheduleTasks,
                             isViewerList = isViewerList,
@@ -3227,10 +3445,16 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
  * celebration/drag choreography and are unchanged by this extraction — same
  * calls, same order, same keys as when this loop lived inline.
  *
- * [earlierIllustrationPresent] exists only for [earlierHeaderSkipsPlacementSpec]
- * on the Earlier header below — see that function's own doc for why the
- * header, alone among everything here, needs to know about an item that
- * this function never otherwise touches.
+ * [earlierSceneContent] is the inline empty-state scene, built by
+ * [TodoListScreen] and emitted from inside the loop below, immediately after
+ * Earlier's own rows. It arrives as a `LazyListScope` lambda rather than as the
+ * eight values the scene is composed from because none of those values is
+ * anything this function knows or should learn; what it decides is only WHERE,
+ * and it decides that with [earlierSceneFollowsSection] — one question, one
+ * section at a time. Emitting it here rather than after the whole of this call
+ * is what makes "directly under Earlier" true during a live reschedule drag as
+ * well as at rest, since a drag restores the empty buckets this function would
+ * otherwise put between the two.
  */
 // KT-R1006 (cyclomatic complexity, reported at 33) is suppressed on this
 // declaration rather than split further. Two separate facts, both worth
@@ -3263,7 +3487,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
     usesRootFeedChrome: Boolean,
     usesTodayStyle: Boolean,
     timelineAnimationsEnabled: Boolean,
-    earlierIllustrationPresent: Boolean,
+    earlierSceneContent: (LazyListScope.() -> Unit)?,
     scopedSearchActive: Boolean,
     canRescheduleTasks: Boolean,
     isViewerList: Boolean,
@@ -3325,26 +3549,27 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                 contentType = "timeline-header",
             ) {
                 // A header slides with its section but never
-                // fades: it is a label on content that is
-                // doing its own arriving and leaving. Earlier's
-                // header is the one exception to sliding, too,
-                // for as long as the inline empty-state item
-                // above it is the sole thing that can move it --
-                // see [earlierHeaderSkipsPlacementSpec].
+                // fades: it is a label on content that is doing
+                // its own arriving and leaving. Earlier's header
+                // used to be the one exception here — it dropped
+                // `placementSpec` entirely while the empty-state
+                // scene sat above it, because a tween that chases
+                // a target the scene was still resizing every
+                // frame lags its real, already-smooth bounds for
+                // the whole transition and ends up drawn over
+                // them. The scene is below this header now, so
+                // nothing above it resizes and there is no moving
+                // target to chase. The one displacement Earlier's
+                // header has left is the completion frame, where
+                // the scope's own sections vanish and it
+                // genuinely travels — and that one should slide,
+                // like every other header in this loop.
+                // `earlierHeaderSkipsPlacementSpec` went out with
+                // the order that produced it rather than being
+                // left green over a premise that had stopped
+                // being true.
                 val headerModifier =
-                    displacedFeedItemMotion(
-                        enabled = timelineAnimationsEnabled,
-                        placementSpec = if (
-                            earlierHeaderSkipsPlacementSpec(
-                                section = section.key,
-                                earlierIllustrationPresent = earlierIllustrationPresent,
-                            )
-                        ) {
-                            null
-                        } else {
-                            TdayFeedItemMotion.Placement
-                        },
-                    )
+                    displacedFeedItemMotion(enabled = timelineAnimationsEnabled)
                 TimelineSectionHeader(
                     modifier = headerModifier
                         .fillMaxWidth()
@@ -3511,6 +3736,19 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                     )
                 }
             }
+        }
+
+        // The inline empty-state scene, emitted after THIS section's rows when
+        // this section is Earlier's own — hero, header, rows, scene. This `if`
+        // is the entirety of the screen's ordering claim, and the only part of
+        // it a JVM test can see; [earlierSceneFollowsSection] carries the
+        // argument for why the scene sits here and not above the header it used
+        // to sit above. Inside the loop rather than after it on purpose: a live
+        // reschedule drag restores every empty bucket this function skips, and
+        // an emission after the loop would drop the scene below a week of empty
+        // headers mid-gesture.
+        if (earlierSceneContent != null && earlierSceneFollowsSection(section.key)) {
+            earlierSceneContent.invoke(this)
         }
     }
 }
