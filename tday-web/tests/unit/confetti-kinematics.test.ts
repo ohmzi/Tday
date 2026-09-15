@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   alpha,
+  envelopedAlpha,
   fan,
   frame,
   METRICS,
@@ -247,6 +248,49 @@ describe("I4 — fade schedule", () => {
   it("never brightens", () => {
     const values = grid(200).map(alpha);
     for (const difference of forwardDifferences(values)) expect(difference).toBeLessThanOrEqual(0);
+  });
+});
+
+/**
+ * The cancel envelope — `docs/confetti-spec.md`'s Interruption section, which is
+ * normative for all three clients and asks each of them for exactly this case.
+ *
+ * It is a SECOND alpha term rather than a retune of the schedule above, and these
+ * assertions are what says so: at envelope 1 every number in I4 is unchanged, so an
+ * uncancelled burst is byte-for-byte the flight the spec already describes.
+ */
+describe("the cancel envelope — a second term, not a retune", () => {
+  it("changes nothing at all while the celebration holds", () => {
+    for (const tau of grid(STEPS)) {
+      expect(envelopedAlpha(alpha(tau), 1)).toBe(alpha(tau));
+    }
+  });
+
+  it("is gone when the envelope is", () => {
+    // What makes the view unmount, and what makes the next celebration a fresh
+    // run rather than a replay of the last one's remaining paper.
+    for (const tau of grid(STEPS)) {
+      expect(envelopedAlpha(alpha(tau), 0)).toBe(0);
+    }
+  });
+
+  it("only ever takes paint away, monotonically, in between", () => {
+    // Mid-flight, where the piece's own fade has not started and the envelope is
+    // therefore the whole of what is happening to it.
+    const tau = METRICS.fadeStart / 2;
+    const values = grid(100).map((envelope) => envelopedAlpha(alpha(tau), envelope));
+    for (const difference of forwardDifferences(values)) {
+      expect(difference).toBeGreaterThanOrEqual(0);
+    }
+    expect(values[0]).toBe(0);
+    expect(values[values.length - 1]).toBe(alpha(tau));
+
+    // And inside the fade, where both terms are moving: the envelope can never
+    // brighten a piece its own schedule has already begun taking away.
+    const late = 0.9;
+    for (const envelope of grid(20)) {
+      expect(envelopedAlpha(alpha(late), envelope)).toBeLessThanOrEqual(alpha(late));
+    }
   });
 });
 

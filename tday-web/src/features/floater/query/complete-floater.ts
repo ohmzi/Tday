@@ -3,7 +3,10 @@ import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import type { FloaterItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
-import { markTaskCompleted } from "@/lib/task-completion-signal";
+import {
+  markCelebrationCancelled,
+  markTaskCompleted,
+} from "@/lib/task-completion-signal";
 
 // Delayed-commit complete (see complete-todo.ts): stage the removal from the
 // floater caches, show an undoable toast, and only PATCH /floater/complete once
@@ -52,6 +55,12 @@ export const useCompleteFloater = () => {
     showTodoCompletedToast({
       commit: () => commitComplete(floater),
       undo: () => {
+        // A row is coming BACK, so this list is not finished any more and the
+        // celebration ends now rather than when its own window runs out.
+        // Stamped here rather than left to the refetch below: that is a network
+        // round trip, and `useArrivalCancel`'s count-rise backstop cannot see
+        // the row until it lands.
+        markCelebrationCancelled();
         // The server still has the floater (incomplete) — a refetch restores it.
         void queryClient.invalidateQueries({ queryKey: ["floater"] });
         void queryClient.invalidateQueries({ queryKey: ["floaterList"] });

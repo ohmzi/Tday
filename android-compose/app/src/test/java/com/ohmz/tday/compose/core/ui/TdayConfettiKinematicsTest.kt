@@ -272,6 +272,44 @@ class TdayConfettiKinematicsTest {
         }
     }
 
+    // The interruption envelope. A burst that is never cancelled multiplies by 1
+    // for its whole flight, so the three assertions worth making are that an
+    // uncancelled burst is byte-for-byte the flight above, that a finished cancel
+    // leaves nothing painted, and that the way between the two only ever goes one
+    // way — the envelope is paint leaving, and paint that brightened on its way
+    // out would read as the burst flinching rather than bowing.
+
+    @Test
+    fun `an uncancelled burst draws exactly the fade it always did`() {
+        for (t in grid(50)) {
+            assertEquals(alpha(t), envelopedAlpha(alpha(t), 1f), 0f)
+        }
+    }
+
+    @Test
+    fun `a spent envelope paints nothing, whatever the piece's own fade says`() {
+        // Including at the start of the flight, where `alpha` is a flat 1: this is
+        // what lets the view leave composition when the envelope lands, instead of
+        // being torn out from over pieces that are still fully opaque.
+        assertEquals(0f, envelopedAlpha(alpha(0.1f), 0f), 0f)
+        assertEquals(0f, envelopedAlpha(1f, 0f), 0f)
+    }
+
+    @Test
+    fun `the envelope only ever takes paint away`() {
+        // Monotonic in the envelope at a fixed point in the flight, and never
+        // brighter than the flight's own fade — the envelope is a second term over
+        // the first, not a replacement for it.
+        val pieceAlpha = alpha(0.7f)
+        val painted = grid(50).map { envelope -> envelopedAlpha(pieceAlpha, envelope) }
+        for (difference in forwardDifferences(painted)) {
+            assertTrue(difference >= 0f)
+        }
+        for (value in painted) {
+            assertTrue(value <= pieceAlpha)
+        }
+    }
+
     // I5 — stays in the box, and the fan is choreography.
 
     @Test

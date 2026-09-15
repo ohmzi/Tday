@@ -20,7 +20,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Check } from "lucide-react";
 
-import { hapticSuccess, hapticsSupported } from "@/lib/haptics";
+import { hapticReveal, hapticSuccess, hapticsSupported } from "@/lib/haptics";
 import {
   isHapticsEnabled,
   isSoundEnabled,
@@ -81,6 +81,22 @@ describe("haptic preference", () => {
     expect(hapticsSupported()).toBe(false);
     hapticSuccess();
     expect(vibrate).not.toHaveBeenCalled();
+  });
+
+  it("covers the newest verb too, because the gate is the chokepoint and not a habit", () => {
+    // `hapticReveal` is the ninth name in a file whose gate lives in one private
+    // function, and the point of putting it there was that the next verb added
+    // inherits it without anyone remembering to. This is that claim, asserted of
+    // the verb that arrived after the claim was made — and it is the half
+    // `swipe-row-reveal-haptic.test.tsx` cannot see, because that file mocks this
+    // module away to ask a different question.
+    setHapticsEnabled(false);
+    hapticReveal();
+    expect(vibrate).not.toHaveBeenCalled();
+
+    setHapticsEnabled(true);
+    hapticReveal();
+    expect(vibrate).toHaveBeenCalledTimes(1);
   });
 });
 

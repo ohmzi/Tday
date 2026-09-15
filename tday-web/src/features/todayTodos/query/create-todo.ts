@@ -4,6 +4,7 @@ import { todoSchema } from "@/schema";
 import { api } from "@/lib/api-client";
 import { TodoItemType } from "@/types";
 import parseApiDateTime from "@/lib/date/parseApiDateTime";
+import { markCelebrationCancelled } from "@/lib/task-completion-signal";
 
 const normalizeTodo = (todo: TodoItemType) => {
   const instanceDate = todo.instanceDate
@@ -50,6 +51,13 @@ export const useCreateTodo = () => {
   const { mutate: createMutateFn, status: createStatus } = useMutation({
     mutationFn: (todo: TodoItemType) => postTodo({ todo }),
     onMutate: async (newTodo) => {
+      // A task the user types while the paper is still in the air makes the
+      // list not-finished again, so the celebration ends the same way an undo
+      // ends it. Stamped alongside the optimistic add rather than left to
+      // `useArrivalCancel`'s count-rise backstop, which would catch this one
+      // too — the two halves overlap on purpose, and a second stamp inside the
+      // same window changes no answer.
+      markCelebrationCancelled();
       await queryClient.cancelQueries({ queryKey: ["todo"] });
       await queryClient.cancelQueries({ queryKey: ["todoTimeline"] });
       await queryClient.cancelQueries({ queryKey: ["list"] });

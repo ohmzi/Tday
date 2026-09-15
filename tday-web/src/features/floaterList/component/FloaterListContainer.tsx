@@ -8,8 +8,8 @@ import SummaryButton from "@/features/summary/SummaryButton";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
-import { taskJustCompleted } from "@/lib/task-completion-signal";
-import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
+import EmptyStateSlot from "@/components/app/EmptyStateSlot";
+import { useFloaterEmptyState } from "@/features/floater/lib/useFloaterEmptyState";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { useShareListAsText } from "@/hooks/use-share-list";
 import { useIsLocalMode } from "@/hooks/useAppMode";
@@ -40,9 +40,6 @@ export default function FloaterListContainer({ id }: { id: string }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [editListOpen, setEditListOpen] = useState(false);
   const [membersOpen, setMembersOpen] = useState(false);
-  // Remote sibling of `taskJustCompleted()` below — fires for a completion on
-  // another device or by a collaborator, not just this tab's own tap.
-  const remoteEmptied = useCelebrateEmptyTransition(floaterListTodos.length === 0);
 
   const listMeta = floaterListMetaData[id] ?? floaterList;
   const listName = listMeta?.name?.trim() || "";
@@ -81,6 +78,16 @@ export default function FloaterListContainer({ id }: { id: string }) {
     [filteredFloaters],
   );
   const isSearching = Boolean(searchQuery.trim());
+  // Empty/celebration/cancel, shared with the Anytime tab's own feed rather than
+  // derived twice — see `useFloaterEmptyState`, which is where the undo that
+  // brings a row back ends the burst flying over it.
+  const { showEmpty, celebrate, sceneLeavingOnCancel } = useFloaterEmptyState({
+    isLoading: floaterListLoading,
+    isSearching,
+    // The raw list, search-immune: a query that hides every row is not a
+    // finished list, and a row ARRIVING behind one still ends a celebration.
+    pendingRowCount: floaterListTodos.length,
+  });
   // This page keeps its search bar as the pinned bar, so the header renders only
   // the block that scrolls away and docks its title into that bar instead.
   const barSlots = useNativePageBarSlots();
@@ -193,18 +200,25 @@ export default function FloaterListContainer({ id }: { id: string }) {
         </div>
       ) : null}
 
-      {!floaterListLoading && !isSearching && floaterListTodos.length === 0 ? (
-        <EmptyState
-          icon={ListIcon}
-          accentColor={listAccent}
-          title={appDict("floaterListEmpty")}
-          description={appDict("floaterListEmptyBody")}
-          // Finishing a list is a payoff, not an absence: the confetti is for
-          // the tick that emptied it, not for a list that was already empty.
-          // Whether that tick happened here, on another device, or from a
-          // collaborator on this shared list.
-          celebrate={taskJustCompleted() || remoteEmptied}
-        />
+      {/* Held one `Quick` past the frame the list refilled, because the burst
+          inside is still fading and this element is what it is painted into —
+          an undo that unmounts the scene cuts the fade one layer down, which is
+          the same complaint the fade exists to answer. */}
+      {showEmpty || sceneLeavingOnCancel ? (
+        <EmptyStateSlot leavingOnCancel={sceneLeavingOnCancel}>
+          <EmptyState
+            icon={ListIcon}
+            accentColor={listAccent}
+            title={appDict("floaterListEmpty")}
+            description={appDict("floaterListEmptyBody")}
+            // Finishing a list is a payoff, not an absence: the confetti is for
+            // the tick that emptied it, not for a list that was already empty.
+            // Whether that tick happened here, on another device, or from a
+            // collaborator on this shared list — and it ENDS the moment a row
+            // comes back, however it got here.
+            celebrate={celebrate}
+          />
+        </EmptyStateSlot>
       ) : null}
 
       {!floaterListLoading && isSearching && filteredFloaters.length === 0 ? (

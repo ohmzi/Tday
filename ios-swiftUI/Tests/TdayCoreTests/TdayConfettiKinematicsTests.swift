@@ -252,6 +252,112 @@ final class TdayConfettiKinematicsTests: XCTestCase {
         }
     }
 
+    // MARK: - Interruption
+
+    /// The cancel envelope, which is the one term here that is not physics.
+    ///
+    /// A burst nobody cancels multiplies by 1 for its whole flight, so the three
+    /// claims worth pinning are that an uncancelled burst is byte for byte the
+    /// fade above it, that a spent envelope paints nothing, and that the way
+    /// between the two only ever goes one way — paint that brightened on its way
+    /// out would read as the burst flinching rather than bowing.
+    ///
+    /// The envelope is a NEW term and never a retune: nothing in this test
+    /// touches `flightSeconds`, `fadeStart` or the scene lead, and every
+    /// assertion above this line is unchanged.
+    func testAnUncancelledBurstDrawsExactlyTheFadeItAlwaysDid() {
+        for i in 0...50 {
+            let tau = Double(i) / 50
+            XCTAssertEqual(
+                TdayConfettiKinematics.envelopedAlpha(TdayConfettiKinematics.alpha(tau), envelope: 1),
+                TdayConfettiKinematics.alpha(tau),
+                accuracy: 0
+            )
+        }
+    }
+
+    func testASpentEnvelopePaintsNothingWhateverThePiecesOwnFadeSays() {
+        // Including at the start of the flight, where `alpha` is a flat 1: this
+        // is what lets the view leave the tree when the envelope lands, instead
+        // of being torn out from over pieces that are still fully opaque.
+        XCTAssertEqual(
+            TdayConfettiKinematics.envelopedAlpha(TdayConfettiKinematics.alpha(0.1), envelope: 0),
+            0,
+            accuracy: 0
+        )
+        XCTAssertEqual(TdayConfettiKinematics.envelopedAlpha(1, envelope: 0), 0, accuracy: 0)
+    }
+
+    func testTheEnvelopeOnlyEverTakesPaintAway() {
+        // Monotonic in the envelope at a fixed point in the flight, and never
+        // brighter than the flight's own fade — a second term over the first,
+        // not a replacement for it.
+        let pieceAlpha = TdayConfettiKinematics.alpha(0.7)
+        var previous = -Double.infinity
+        for i in 0...50 {
+            let painted = TdayConfettiKinematics.envelopedAlpha(pieceAlpha, envelope: Double(i) / 50)
+            XCTAssertGreaterThanOrEqual(painted, previous, "the envelope brightened at sample \(i)")
+            XCTAssertLessThanOrEqual(painted, pieceAlpha)
+            previous = painted
+        }
+    }
+
+    /// The envelope's own clock: full at the cancel frame, nothing by `Quick`,
+    /// and only ever falling in between.
+    ///
+    /// It is read off a wall clock rather than animated, because the burst is
+    /// drawn into a `Canvas` with no animatable property for SwiftUI to
+    /// interpolate — so the bounds matter here in a way `alpha`'s do not. A tick
+    /// can land on either side of the window's edge, and both ends are clamped
+    /// for that reason rather than defensively.
+    func testTheCancelEnvelopeRunsOneToZeroOverQuickAndStaysThere() {
+        XCTAssertEqual(TdayConfettiKinematics.cancelEnvelope(elapsed: 0), 1, accuracy: tol)
+        XCTAssertEqual(TdayConfettiKinematics.cancelEnvelope(elapsed: -1), 1, accuracy: tol)
+        XCTAssertEqual(
+            TdayConfettiKinematics.cancelEnvelope(elapsed: TdayMotion.Durations.quick),
+            0,
+            accuracy: tol
+        )
+        // A burst still on screen after the envelope has run is a burst nothing
+        // takes back out, so the far side of the window has to stay at zero
+        // rather than wrapping or going negative.
+        XCTAssertEqual(
+            TdayConfettiKinematics.cancelEnvelope(elapsed: TdayConfettiMetrics.flightSeconds),
+            0,
+            accuracy: tol
+        )
+
+        var previous = Double.infinity
+        for i in 0...100 {
+            let envelope = TdayConfettiKinematics.cancelEnvelope(
+                elapsed: TdayMotion.Durations.quick * Double(i) / 100
+            )
+            XCTAssertLessThanOrEqual(envelope, previous, "the envelope came back up at sample \(i)")
+            XCTAssertGreaterThanOrEqual(envelope, 0)
+            XCTAssertLessThanOrEqual(envelope, 1)
+            previous = envelope
+        }
+    }
+
+    /// The rung is `Quick`, named rather than typed.
+    ///
+    /// `docs/motion.md` calls Quick "something leaving that nobody is meant to
+    /// watch go", which is paint at the shortest rung and exactly what this is.
+    /// Asserted because the alternative — a digit at the call site — is invisible
+    /// to review and visible to `motion-parity.test.ts`'s `ios.easeDuration`
+    /// counter, which has no headroom.
+    func testTheEnvelopeIsOnTheQuickRung() {
+        XCTAssertEqual(TdayMotion.Durations.quick, 0.15, accuracy: tol)
+        // Half the rung is not half the envelope: `Exit` accelerates, so the
+        // paint is still mostly there at the midpoint and leaves in a hurry at
+        // the end. A linear ramp here would read as the burst being switched off
+        // in even steps rather than committing to going.
+        XCTAssertGreaterThan(
+            TdayConfettiKinematics.cancelEnvelope(elapsed: TdayMotion.Durations.quick / 2),
+            0.5
+        )
+    }
+
     // MARK: - I5
 
     /// Every piece stays in the box, and the fan is choreography rather than

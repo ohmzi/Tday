@@ -1,5 +1,7 @@
-import type { CSSProperties, ElementType, ReactNode } from "react";
+import { useRef, type CSSProperties, type ElementType, type ReactNode } from "react";
 import Confetti from "@/components/app/Confetti";
+import { useFadeUnmount } from "@/hooks/useFadeUnmount";
+import { DURATION_MS } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 /**
@@ -26,7 +28,12 @@ import { cn } from "@/lib/utils";
  *   picked the colour.
  * @param celebrate the list emptied because the user finished it, rather than
  *   because there was never anything in it: confetti flies first and the scene
- *   comes up through it a beat later.
+ *   comes up through it a beat later. Going FALSE again while the paper is still
+ *   up — an undo putting the row back, a task arriving — does not cut the burst:
+ *   it keeps flying for one more `Quick` while its own envelope takes it away
+ *   (`Confetti`'s `play`), and the canvas is held in the tree for exactly that
+ *   long. Under reduced motion nothing was painted and `useFadeUnmount` takes it
+ *   away on the same frame, with no wait left standing in front of it.
  * @param celebrationStartDelayMs how long the celebration waits before any of it
  *   plays — the burst and the scene shift together, so the burst still leads.
  *   Zero for the callers that draw this over a page where nothing else is
@@ -57,6 +64,17 @@ export default function EmptyState({
 }) {
   const tint = (percent: number) =>
     `color-mix(in srgb, ${accentColor} ${percent}%, transparent)`;
+  const burstMounted = useFadeUnmount(celebrate, DURATION_MS.quick);
+  // Once this scene came up as a celebration it stays one, for as long as the
+  // node lives. The class is an `animation-delay`, and changing an
+  // animation-delay mid-animation does not stop the animation — it re-dates it,
+  // so the scene's own `Scene`-length rise would jump forward by the length of
+  // the lead in the frame a cancel took the class off. The cancel is the only
+  // thing that can flip this false under a scene that STAYS (the overdue path),
+  // and it must not be visible as a hitch in an arrival still playing.
+  const celebratedRef = useRef(celebrate);
+  if (celebrate) celebratedRef.current = true;
+  const celebrating = celebratedRef.current;
 
   return (
     <div
@@ -70,7 +88,7 @@ export default function EmptyState({
       <div
         className={cn(
           "tday-empty-enter flex w-full flex-col items-center",
-          celebrate && "tday-empty-enter-celebrating",
+          celebrating && "tday-empty-enter-celebrating",
         )}
         style={
           celebrationStartDelayMs > 0
@@ -172,8 +190,12 @@ export default function EmptyState({
         {action ? <div className="mt-6">{action}</div> : null}
       </div>
 
-      {celebrate ? (
-        <Confetti accentColor={accentColor} startDelayMs={celebrationStartDelayMs} />
+      {burstMounted ? (
+        <Confetti
+          accentColor={accentColor}
+          startDelayMs={celebrationStartDelayMs}
+          play={celebrate}
+        />
       ) : null}
     </div>
   );

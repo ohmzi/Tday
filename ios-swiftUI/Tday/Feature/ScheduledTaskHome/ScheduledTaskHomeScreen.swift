@@ -91,6 +91,9 @@ struct ScheduledTaskHomeScreen: View {
     @State private var headerScroll = RootFeedHeaderScrollState()
     @State private var rootDockCollapsed = false
     @State private var titleScrollToTopRequestID = 0
+    /// The screen's single swipe slot — see `TodoListScreen` for the shape and its one rule:
+    /// every dismissal is a WRITE to this and nothing else. No host `body` may read it, or a
+    /// cheap write becomes a full re-evaluation of the screen.
     @State private var openSwipeTaskID: String?
 
     init(
@@ -153,12 +156,20 @@ struct ScheduledTaskHomeScreen: View {
         searchExpanded && !normalizedSearchQuery.isEmpty
     }
 
-    /// The first load, and only the first. A pull-to-refresh with rows already on
-    /// screen has something to show, and swapping those for grey bars would be the
-    /// app forgetting what it already knows — which is why this asks the item list
-    /// as well as the flag, the same pair Android's feed asks.
+    /// The first load, and only the first. Asking the item list as well as the
+    /// flag covered a pull over rows; it did nothing for a pull over a Today
+    /// feed the user had just cleared, which is the mirror image of the reported
+    /// bug and this root's own share of it — the gap under the hero was correctly
+    /// empty, and the pull grew three grey bars in it. `isLoading` is raised by
+    /// nothing but `refresh()`, and `ScheduledTaskHomeViewModel` hydrates from
+    /// the cache synchronously in `init`, so the flag never meant "no answer
+    /// yet". `feedAnswer` does, and has no term a pull can move.
     private var showsTodayFeedSkeleton: Bool {
-        viewModel.isLoading && viewModel.todayTodos.isEmpty
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: viewModel.todayTodos.isEmpty,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        ) == .awaitingFirst
     }
 
     private var shouldCollapseRootDock: Bool {
@@ -502,6 +513,9 @@ struct ScheduledTaskHomeScreen: View {
         }
         .onDisappear {
             onRootControlsVisibleChange(true)
+            // Returning to a screen must never show an armed Delete pill — see
+            // `TodoListScreen`'s `.onDisappear` for why this is also iOS's answer to back.
+            openSwipeTaskID = nil
         }
         .onChange(of: showingCreateTask) { _, showing in
             if !showing {
@@ -796,9 +810,10 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
 
     private func startCompletion() {
         guard completionPhase == .active else { return }
-        if openSwipeTaskID == todo.id {
-            openSwipeTaskID = nil
-        }
+        // Any completion clears the slot, not only this row's: the toggle is a `Button` inside
+        // the row's content, so it eats the touch and the reveal's own `.onTapGesture` never
+        // runs. See `TodoListScreen.completeTodoWithoutReflow` for the full argument.
+        openSwipeTaskID = nil
 
         HapticManager.completion()
         SoundManager.taskCompleted()

@@ -1,6 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { prefersReducedMotion } from "@/lib/prefersReducedMotion";
+import { DURATION_MS, EASE_CURVE, easingSampler } from "@/lib/motion";
 import {
+  envelopedAlpha,
   fan,
   frame,
   FLIGHT_MS,
@@ -42,15 +44,54 @@ import {
  *   Held here rather than by mounting the canvas late: the pieces are rolled and
  *   the canvas is sized while the feed travels, so the first frame of the burst
  *   is a frame of confetti rather than a frame of layout.
+ * @param play whether the celebration is still true. Flipping it to `false`
+ *   mid-flight does NOT cut the burst: the pieces keep travelling on their own
+ *   clock while a second alpha term — the envelope, `Quick` on the `Exit` curve —
+ *   takes the paint away under them, and the loop stops when that reaches zero.
+ *   Cutting forty-six pieces out of mid-air to cancel them is the same complaint
+ *   as leaving them flying over a restored row, one layer down. The host is what
+ *   actually unmounts this, and has to stay in the tree for at least the envelope
+ *   (`EmptyState` holds it there with `useFadeUnmount`); under reduced motion
+ *   nothing was ever painted, so it goes on the cancel frame instead.
  */
 export default function Confetti({
   accentColor,
   startDelayMs = 0,
+  play = true,
 }: {
   accentColor: string;
   startDelayMs?: number;
+  play?: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // WHEN the celebration stopped being true, or null while it holds. A ref and
+  // not state: the draw loop below reads it every frame and must not be
+  // restarted to see it — `play` is deliberately absent from that effect's
+  // dependencies, because re-running it re-rolls `fan()` and re-stamps `start`,
+  // which teleports every piece to the beginning of a flight it is halfway
+  // through. The whole point is that the burst keeps flying while it fades.
+  const cancelledAtRef = useRef<number | null>(null);
+  // Which run the pieces below belong to. Bumped only when a NEW celebration
+  // starts while the last one is still fading — the host keeps this mounted for
+  // the length of the envelope, so an undo immediately followed by another
+  // completion would otherwise adopt a flight that is already half spent and
+  // throw no paper at all. Never keyed on `play` itself, which is the thing the
+  // envelope exists to survive. The same latch Android's `TdayConfetti` keeps.
+  const [runGeneration, setRunGeneration] = useState(0);
+  const playingRef = useRef(play);
+
+  useEffect(() => {
+    const wasPlaying = playingRef.current;
+    playingRef.current = play;
+    if (!play) {
+      // `performance.now()`, the same clock `start` below is stamped from, so
+      // the envelope and the flight are measured against one timeline.
+      cancelledAtRef.current = performance.now();
+      return;
+    }
+    cancelledAtRef.current = null;
+    if (!wasPlaying) setRunGeneration((generation) => generation + 1);
+  }, [play]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -91,7 +132,20 @@ export default function Confetti({
         return;
       }
       context.clearRect(0, 0, box.width, box.height);
-      if (t >= 1) return;
+      // The envelope: 1 while the celebration holds, and once it does not, a
+      // `Quick` slide to nothing on the `Exit` curve — paint leaving, and nobody
+      // is meant to watch it go. It multiplies the piece's own fade rather than
+      // replacing it (`envelopedAlpha`), and touches the flight clock above not
+      // at all.
+      const cancelledAt = cancelledAtRef.current;
+      const envelope =
+        cancelledAt === null
+          ? 1
+          : 1 - exitEase(Math.min(1, (now - cancelledAt) / DURATION_MS.quick));
+      // Flight over, or the envelope spent: either way the canvas has just been
+      // cleared and there is nothing left to ask for a frame for. The host takes
+      // the element away on its own clock, which is the same rung.
+      if (t >= 1 || envelope <= 0) return;
 
       // Everything is thrown in fractions of the box's WIDTH — not of its
       // longest side, which on a narrow screen is the height and throws every
@@ -114,7 +168,7 @@ export default function Confetti({
         const width = state.widthScale * piece.width;
 
         context.save();
-        context.globalAlpha = state.alpha;
+        context.globalAlpha = envelopedAlpha(state.alpha, envelope);
         context.translate(originX + state.dx * span, originY + state.dy * span);
         context.rotate(state.rot);
         context.fillStyle = palette[piece.colorIndex % palette.length];
@@ -135,7 +189,7 @@ export default function Confetti({
       cancelAnimationFrame(rafHandle);
       observer.disconnect();
     };
-  }, [accentColor, startDelayMs]);
+  }, [accentColor, startDelayMs, runGeneration]);
 
   return (
     <canvas
@@ -145,6 +199,15 @@ export default function Confetti({
     />
   );
 }
+
+/**
+ * The cancel envelope's curve, folded once at module scope rather than per frame.
+ *
+ * `EASE_CURVE.exit` and not `EASE.exit`: the string form is for a style property, and
+ * there is no element here — the envelope is multiplied into a `globalAlpha` inside a
+ * canvas draw call. Same token either way, read from the same generated table.
+ */
+const exitEase = easingSampler(EASE_CURVE.exit);
 
 /**
  * How far the canvas reaches above its container, in CSS pixels — the `-top-10` on

@@ -363,6 +363,160 @@ animates.
               exactly that — and can prove nothing about which declaration won in a browser. Every
               wrong version of this still presses.
 
+- [ ] **PR 41c · web · The swipe row's reveal has a detent in it** — an ANDROID PHONE in
+      Chrome, with the app's own Sound & vibration haptics switch left on and the phone off silent.
+      Nothing else can perform this row: `navigator.vibrate` exists in Android Chrome and nowhere
+      else, so an iPhone, a desktop and every other browser will feel nothing and prove nothing.
+      Any list with a few tasks on it; the actions behind a row are 210 px wide and the detent is
+      at 105 px.
+      Do:     (1) drag a row left slowly and stop the moment you feel something, then look at how
+              far it has gone and whether the pills are visibly on their way; (2) hold still there
+              for a second and jiggle either side of it; (3) let go and then tap the checkbox on
+              another row, so the reveal and the tick land a second apart; (4) from closed, flick a
+              row left hard and short — 40 px and the finger is gone — so it opens on speed alone;
+              (5) drag a row that is already open further left, walk it halfway back, and pull it
+              out again.
+      Watch:  (1) the buzz arrives at 105 px, half the row's actions, and reads as the actions
+              catching under the thumb rather than as a notification landing. This is the question
+              the row exists to ask: half the width is much further out than the natives' 32%, and
+              it is that far out because web commits on a projected rest rather than on a position
+              — so the honest question is whether a detent the hand meets halfway is late, and
+              whether the commit itself is what wants moving. (2) one buzz and then nothing,
+              however long you hold and however much you jiggle. (3) the reveal (25 ms) and the
+              checkbox's own tick (15 ms) must be two different things in the hand — the reveal
+              noticeably the fuller of the two; if they read as the same buzz, 25 is too close to
+              the acknowledgement band and the gap wants widening rather than the verb reusing.
+              (4) the flick's buzz lands at lift-off instead of mid-drag, and the two should still
+              read as the same event happening at the only moment each of them can. (5) silence
+              throughout — there is nothing left to uncover.
+      Fails:  a buzz that repeats or rattles while the finger rests at the detent; two buzzes in
+              one drag from crossing, coming back and crossing again; any buzz on the way closed,
+              or on a row shut from under you by opening a different one; a second buzz as the row
+              springs open after release; and a flick arm that feels heavier or lighter than the
+              detent arm.
+      Known:  cross the detent, drag back and release closed, and you have felt a reveal that did
+              not happen. That is what a detent on a physical control does, it is pinned by a test
+              that says so, and it is not a fail here — the alternative is silence until the row
+              settles, which costs the feature its point. Also not a fail: the natives buzz at 32%
+              of their reveal and web at 50% of its own. Each client fires on ITS OWN commit rule
+              so the buzz can never announce an open that does not happen; the three clients agree
+              on the sentence and not on the pixel, and reconciling the pixel means moving a
+              shipped commit threshold, which is its own argument.
+      Why:    no gate in this repository can feel a haptic and no machine here has a vibrator.
+              `swipe-row-reveal-haptic.test.tsx` pins the decision — one buzz per crossing, none
+              while hovering, none on a closed release, one at the flick that never crossed, none
+              on an already-open row — and `feedback-preferences.test.tsx` pins that the new verb
+              inherits the app's haptic switch at the chokepoint. What none of it can say is
+              whether 105 px is where the catch belongs, or whether 25 ms and 15 ms are still two
+              events in a hand.
+
+- [ ] **PR 41d · web · An open swipe row goes away when you touch anything else** — a REAL PHONE,
+      and both of them if you have both: iOS Safari and Android Chrome arbitrate a touch-scroll
+      differently and this row is about the arbitration. Any feed long enough to scroll, one row
+      swiped fully open, plus the same pass on the calendar day list and the Anytime feed, which
+      are two other event buses behind the same hook.
+      Do:     (1) with a row open, tap a DIFFERENT row's checkbox, and watch both the row you shut
+              and the box you ticked; (2) tap the dock, then repeat and tap the FAB; (3) with a row
+              open, tap one of its OWN pills — Edit, then Copy, then Delete — and confirm each pill
+              actually fires; (4) with a row open, start a slow scroll with the finger landing ON
+              the open row, and separately two rows below it; (5) with a row open at the very top
+              of the feed, pull DOWN into the rubber-band overscroll without really scrolling, and
+              on iOS also scroll just far enough to make Safari's URL bar collapse; (6) with a row
+              open, drag it back to the right slowly and stop halfway, hold for a second, then
+              finish the drag — and separately, drag it further LEFT past the limit and hold there.
+      Watch:  (1) the row closes and the checkbox ticks, in one touch. Both, not either. (2) the dock
+              switches tab and the FAB opens its sheet, with the row gone behind whatever happened.
+              (3) every pill does its own thing. This is the subtree guard doing its whole job: the
+              pills are `absolute inset-y-0 right-0` and stand still while the foreground slides
+              over them, so a dismissal fired on the pointer-DOWN would slide the foreground back
+              across the pill before the finger lifted, the up-target would no longer be the button,
+              and the browser would send `click` to the common ancestor instead — a pill that looks
+              pressed and does nothing. (4) the row is closed by the time the list has visibly moved,
+              both times; the one starting on the row is the case the tap listener cannot see and
+              the `scroll` listener exists for. (6) nothing dismisses it: the finger owns the row in
+              both directions, and the release decides.
+      Fails:  (1) a first tap that only closes the row and leaves the box unticked — a consumed
+              touch, which is the outcome this design rules out by construction and the one that
+              turns into a trap with a screen reader on. (3) any pill that needs a second tap, or
+              that does nothing at all. (5) is the real risk and is a fail if the row closes on an
+              overscroll bounce or on the URL bar collapsing: both are `scroll` events that no
+              finger asked for, and neither is a list moving under a Delete pill. (6) the row
+              jumping home mid-drag, or snapping back OPEN on the next move after something
+              dismissed it — the second is the gesture re-seed, which is pinned by a test but has
+              never run on a touchscreen.
+      Known:  closing on scroll START is a deliberate divergence from the search capsule, which
+              ignores scrolls on purpose. The field is chrome and stays put; a row is content and
+              travels, and one left open puts an armed Delete pill under a thumb now aimed at a
+              different task. The question a device can settle is whether it reads as a dismissal
+              the user caused or as the row being snatched.
+      Also:   with VoiceOver or TalkBack on, walk a CLOSED row and count what it offers. Below the
+              `sm` breakpoint the three pills are drawn at `opacity: 0`, and CSS opacity removes
+              nothing from the accessibility tree and disables no hit testing — so "Edit task",
+              "Copy task" and "Delete task" are very probably announced on every closed row in the
+              feed, with no gesture at all. Whether they actually are is the device question. This
+              is NOT a defect to fix here, and `aria-hidden` / `inert` on those pills is the wrong
+              instinct and must be refused in this PR: it is currently the only route an assistive
+              web user has to those three actions, because web has no custom-action fallback the
+              way iOS's rotor actions are. Hiding them without first publishing an equivalent route
+              deletes functionality. It is the web half of `ios-accessibility-actions` and it wants
+              its own PR.
+      Why:    the decision is two pure functions with a truth table
+              (`shouldCloseSwipeRow`, `canDismissMidGesture`, in `swipe-gesture.test.ts`) and the
+              wiring is pinned in jsdom by `swipe-row-outside-dismiss.test.tsx` — which listener
+              exists when, that the `scroll` one is capture-phase because `scroll` does not bubble,
+              that the dismissing event still reaches its own target with `defaultPrevented` false,
+              and that a closed row holds no document listener at all. What jsdom has none of is
+              gesture arbitration: it does not fling, does not rubber-band, does not collapse a URL
+              bar, and fires whatever event the test asks it to at the moment the test asks.
+
+- [ ] **PR 43 · web · Undo takes the paper with the row it brings back** — a custom list with
+      exactly one task left, run twice. Once where that task is dated today or later, so undoing it
+      puts a CURRENT row back. Once where the one remaining task is itself **overdue**, so undoing
+      it puts an OVERDUE row back — that is the screenshot and the setup that matters. The two are
+      different screens, not two runs of one: `hasNonEarlierListTodos` excludes the Overdue bucket
+      on purpose, so a restored current row makes it false and the scene leaves, while a restored
+      overdue row leaves it exactly where it was. A list holding one current task and one overdue
+      task is the FIRST case — ticking the current one and undoing it restores a current row.
+      Do:     tick the last task, and while the paper is still in the air press **Undo** in the
+              toast. Aim for the first half of the flight — inside about a second — so there is a
+              burst left to interrupt.
+      Watch:  the pieces keep FLYING as they go — still travelling, still spinning, still flipping
+              — and fade out over Quick while they do. On the plain setup the scene goes with them
+              on the same rung, its 42vh track closing under the fade rather than dropping in the
+              frame the node leaves, so the restored row arrives without the page jumping under
+              it. On the overdue setup the scene STAYS exactly where it is under the Overdue
+              header, which is the designed v0.7.25 presentation and not a bug — only the confetti
+              leaves, and the restored row is back in the section above it.
+      Also do: the same plain undo on the **Anytime** tab's own feed and inside one **Anytime
+              list**. Those two screens reached the celebration by a different road until this PR
+              and had neither half of the fix; an Anytime task has no date, so there is no overdue
+              variant to run there — every undo is the plain case, and the scene leaves over its
+              own track every time.
+      Fails:  the burst carrying on over the restored row and expiring on its own a second or two
+              later, which is the report. Also a fail, and the reason this is not a one-line
+              change: the paper vanishing between two frames on the press, which is the same
+              complaint one layer down; the pieces FREEZING and then dissolving in place, which
+              would mean the envelope is being applied to a stopped clock rather than multiplied
+              into a running one; the burst restarting from the launch patch, which would mean the
+              draw effect re-ran and re-rolled the fan; and on the overdue setup the scene's own
+              rise visibly jumping, which would mean the celebrating class came off an arrival
+              that was still playing.
+      Also:   a second completion straight after an undo must celebrate normally — tick it off
+              again and the full burst plays, because the newer stamp re-opens the window. And in
+              two tabs or on a second device: empty the list from the other end (the burst plays
+              here), then undo it there. The paper must go on this tab too, without the scene
+              flickering back. Typing a new task into a list while the paper is up must end it the
+              same way — the list is genuinely not finished any more.
+      Reduce: with the OS "reduce motion" preference on, repeat the plain undo. There was never any
+              paper to take away — `Confetti`'s effect returns before its first frame — so there
+              must be nothing at all: no pause, no held frame, no Quick of anything. The row comes
+              back and the scene goes on the same frame.
+      Why:    jsdom computes no layout, applies no stylesheet and paints no canvas. `vitest` pins
+              the decision — `undo-cancels-celebration` covers the overdue case a transition-shaped
+              fix misses, `confetti-cancel-fade` pins that the canvas outlives `play` and that what
+              it paints is fading, and `confetti-kinematics` pins the envelope term — and none of
+              them can say whether forty-six pieces look like paper leaving or whether the 42vh
+              under them came back smoothly. That is the whole of what this row is for.
 
 ## Android
 
@@ -939,6 +1093,165 @@ animates.
               whether that is twenty milliseconds nobody can see, which is what the migration
               claims.
 
+- [ ] **PR 41a · android · The swipe row's reveal has a detent in it** — Today, Todos, Calendar or
+      Completed, a list with several tasks, system haptics on and the phone not in a case that eats
+      them. Do the same row four ways.
+      Do:     (1) drag a row left slowly and stop the moment you feel something, then look at how
+              far it has actually travelled; (2) hold the finger still right there for a second or
+              two, and jiggle it a few px either side of that point; (3) let go, tap a pill, and pay
+              attention to the two buzzes back to back; (4) from closed, flick the row left hard and
+              short — 20 px and gone — so it opens on speed without ever reaching the detent; (5)
+              with one row open, swipe a DIFFERENT row open so the first is shut from under you,
+              and catch that first row with a thumb while it is still travelling home — then drag
+              it back out.
+      Watch:  (1) the buzz should arrive at roughly 56 dp of travel (0.32 of the 176 dp reveal), and
+              it should read as the actions catching rather than as a notification: the question
+              this row exists to ask is whether 56 dp is where the hand expects the catch, or
+              whether it comes too early to mean anything / too late to be a detent at all. (2) one
+              buzz and then nothing, however long you hold or however much you jiggle. (3) the
+              reveal (CONTEXT_CLICK) and the pill's own tap (CLOCK_TICK) must be two different
+              things in the hand, arriving a moment apart — the reveal sharper, the tap lighter.
+              (4) the flick's buzz lands at lift-off instead of mid-drag, and the two arms should
+              still feel like the same event happening at the only moment each of them can.
+      Fails:  a buzz that repeats, ticks or rattles while the finger rests at the detent; two buzzes
+              in one drag from crossing, coming back and crossing again; any buzz on the way closed,
+              or on a row shut from under you by opening a different row; a second buzz one frame
+              after the first as the row springs open; a buzz on a plain tap (the tap plays the
+              42 dp hint, which is under the 56 dp detent by design, and must stay silent); and the
+              fling arm feeling like a different, heavier event than the detent arm. (5) is its own
+              fail: a buzz on the frame the thumb lands on a row that is still open and still
+              closing, or on the way back out from there. Nothing is being revealed — the actions
+              are already out and under the thumb — and the open-cycle does not end until the row
+              is actually home.
+      Known:  cross the detent, drag back and release closed, and you have felt a reveal that did
+              not happen. That is what a detent on a physical control does and it is not a fail
+              here; the alternative is silence until the row settles, which costs the feature its
+              point. Also not a fail: iOS buzzes on the tap-then-hint path and Android does not —
+              a real cross-platform divergence, named rather than closed by this change.
+
+- [ ] **PR 41b · android · An open swipe row goes away when you touch anything else** — Today,
+      Todos, Calendar or Completed, a list long enough to scroll, and one row swiped fully open.
+      Four questions, and every one of them is about a gesture rather than about a frame.
+      Do:     (1) with a row open, put a thumb on the content 176 dp in from the right edge — which
+              is where the open row's own body now sits — and drag it back to the right in one
+              movement, including starting from the very edge of the screen; (2) from an open row,
+              flick rightward sloppily, at an angle, fast; (3) with a row open and TalkBack ON,
+              double-tap a different row, then the header, then the FAB; (4) with a row open, start
+              a slow scroll with the finger landing ON the open row itself, and separately with it
+              landing on a row two below; (5) on the two ROOT tabs — the scheduled home feed and
+              Anytime — open a row and tap the dock, then re-open and tap the create button;
+              (6) on the timeline feed and on Calendar, open one row and then long-press a
+              DIFFERENT row until it lifts for a drag-to-reschedule.
+      Watch:  (1) the row follows the thumb back and settles closed, and the system's predictive-back
+              affordance does not take the gesture instead. The content being translated ~176 dp left
+              is what makes this worth asking: the natural place to grab an open row is inside the
+              edge zone the system watches. (2) the row still takes the drag rather than the
+              LazyColumn taking it as a scroll — `draggable(Orientation.Horizontal)` and the list
+              are racing for the same slop, and the loser of that race is invisible in code.
+              (3) each double-tap closes the row AND does its own job — the other row plays its
+              42 dp hint, the FAB opens the sheet. The interceptor watches the INITIAL pointer pass
+              and never consumes, and whether it sees anything at all while explore-by-touch owns
+              the touch stream is the one thing no gate here can answer. (4) the row is closed by
+              the time the list has moved a few dp, both times. (5) both close the row AND do their
+              own job in the same touch — the dock switches tab, the button opens the create sheet.
+              These two are drawn OUTSIDE the feed's Scaffold, as siblings of the crossfade that
+              holds it, so they are reached by an interceptor installed one level up in
+              `RootFeedContent` rather than by the screens' own; that is a different code path from
+              everything in (3) and is the reason it is asked separately. (6) the first row's
+              actions are gone the instant the drag picks up, not when it is dropped.
+      Fails:  (1) the screen pops or the back affordance appears instead of the row closing; (2) the
+              list scrolls sideways-ish, or the row jumps to the finger instead of following from
+              where it was; (3) any double-tap that silently does nothing — a consumed first touch
+              is a trap with a screen reader on, and it is the one outcome this design rules out by
+              construction; (4) the row staying open through a scroll, or closing a beat late, at
+              the END of the fling, with an armed Delete pill riding past under the thumb; (5) the
+              row surviving a dock or create-button tap, which is the whole defect, or either
+              control failing to do its own job now that a second observer sits above it; (6) the
+              open row keeping its Delete pill for the length of the drag and only shutting when
+              the task is dropped — right outcome, wrong moment, and for the wrong reason.
+      Known:  (4) asks a design question as much as a correctness one — whether closing on scroll
+              START reads as a dismissal the user caused or as the row being snatched. The
+              alternative is worse and is why it was chosen: the row is content, it travels with the
+              list, and one left open puts Delete under a thumb now aimed at a different task.
+      Why:    `TaskSwipeDismissPolicyTest` pins the decision — the revoke, one-open-at-a-time, the
+              row that never closes itself out from under its own finger, and the narrow disclaim
+              that (6) must NOT be routed through — and `TaskSwipeRevealStateTest`'s drag-back round
+              trip pins the arithmetic of (1). None of it can drive a pointer: there is no
+              Robolectric and no Compose harness on this source set, so every gesture-arbitration
+              question above is only answerable in a hand. (5) is the one that was asserted here
+              before it was true, which is the argument for asking it on the device rather than
+              from the diff: an interceptor on the wrong composable compiles, reads correctly, and
+              silently sees nothing.
+
+- [ ] **PR 41c · android · Reduce Motion takes the close's spring away and nothing else** — any of
+      the four feeds, the app's own Reduce Motion switch ON (Settings, not the system slider).
+      Do:     swipe a row open, then close it four ways: tap its own body, tap a different row, tap
+              the header, and scroll. Then turn the switch off and do it again.
+      Watch:  with the switch on, the row is simply closed on the next frame — no ~340 ms travel and
+              no wait of any kind. The reveal itself still buzzes at the detent on the way open:
+              reduce motion silences animation, not feedback.
+      Fails:  the row still springs home with the switch on; the actions blink or the row flashes
+              through an intermediate position on the way; a close that snaps but leaves the next
+              swipe of that same row unable to buzz (the snap has to re-arm the detent exactly as
+              the spring's last frame did); or the haptic disappearing along with the animation.
+      Why:    Compose's own `MotionDurationScale` covers the SYSTEM animator setting and is blind to
+              the app's switch, which is why this was a ~340 ms spring for a user who had asked for
+              none. Nothing on this source set can run a Compose animation, so the branch is a
+              reading of the code until somebody watches it.
+
+- [ ] **PR 43 · android · Undo takes the paper with the row it brings back** — THE CLIENT THE BUG
+      WAS REPORTED ON, and the screenshot came from this one. A custom list with exactly one task
+      left, run twice. Once where that task is dated today or later, so undoing it puts a CURRENT
+      row back. Once where the one remaining task is itself **overdue**, so undoing it puts an
+      OVERDUE row back — that second one is the screenshot. The two are different screens rather
+      than two runs of one: `nonEarlierSectionsEmpty` excludes the Overdue/Earlier bucket on
+      purpose (finishing today's work while overdue tasks wait still earns the payoff), so a
+      restored current row moves it and a restored overdue row does not. A list holding one current
+      task and one overdue task is the FIRST case — ticking the current one restores a current row.
+      Then run the plain undo once more on the **Anytime** tab's own feed, whose inline scene had no
+      exit at all until this PR.
+      Do:     tick the last task, and while the paper is still in the air tap **Undo** in the toast.
+              Aim for the first half of the flight — inside about a second — so there is a burst
+              left to interrupt.
+      Watch:  the pieces keep FLYING as they go — still travelling, still spinning, still flipping —
+              and fade out over `Quick` while they do. On the plain setup the full-screen scene
+              fades out on that same rung, so paper and scene leave as one thing rather than the
+              scene cutting from over paper that is still in the air. On the Anytime feed the scene
+              fades AND closes its ~42% gap on the same `Quick`, so the Completed tile and the list
+              rows under it take that space back over the fade instead of jumping up into it.
+      Also:   on the OVERDUE setup, expect to see two "no tasks" scenes for about 150 ms and do not
+              file it. Ticking the only overdue task leaves the scope with no Earlier items at all,
+              so the celebration is drawn by the FULL-SCREEN overlay; undoing it puts the Overdue
+              section back, which fades that overlay out over `Quick` while the INLINE scene expands
+              in under the Overdue header on its own 190 ms. That hand-off is the v0.7.25
+              presentation meeting the new exit, and the restored row is in the Overdue section
+              above both of them. What would be a real failure is the inline scene arriving with
+              confetti of its own — the cancel is what stops that, and the burst must not restart.
+      Also:   a second completion straight after an undo must celebrate normally — tick it off again
+              and the full burst plays, because the newer stamp re-opens the window. Typing a new
+              task while the paper is up must end it the same way. And with a collaborator or a
+              second device: empty the list from the other end (the burst plays here), then undo it
+              there — the paper must go on this device too, without the scene flickering back.
+      Reduce: with the app's own motion preference off (Settings → Motion), repeat the plain undo on
+              both the list screen and the Anytime feed. There was never any paper to take away, so
+              there must be nothing at all: no pause, no held frame, no `Quick` of anything, and the
+              scene gone on the frame the row comes back.
+      Fails:  the burst carrying on over the restored row and expiring on its own a second or two
+              later, which is the report. Also a fail, and the reason this is not a one-line change:
+              the paper vanishing between two frames on the tap, which is the same complaint one
+              layer down; the pieces FREEZING and then dissolving in place, which would mean the
+              envelope is being applied to a stopped clock rather than multiplied into a running
+              one; the burst restarting from the launch fan, which would mean the draw loop was
+              re-armed; and on the Anytime feed the gap snapping shut after the fade rather than
+              closing under it.
+      Why:    there is no device on the machine this was written on. JVM tests pin the decisions —
+              `ShouldCelebrateEmptyStateTest` covers the overdue case a transition-shaped fix
+              misses, `PendingRowArrivedTest` the arrival that writes the cancel,
+              `FloaterEmptySceneTest` that the Anytime item outlives the frame its scene stops being
+              visible, and `TdayConfettiKinematicsTest` the envelope's curve and its `Quick` rung —
+              and not one of them can say whether forty-six pieces look like paper leaving or
+              whether the gap under them closed smoothly. That is the whole of what this row is for.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
@@ -1315,3 +1628,137 @@ animates.
       Why:    there is no Swift toolchain on the machine this was written on. The number is pinned
               by `motion-parity.test.ts`, which asserts `Bar` is 0.94 in all three generated
               artifacts, and nothing in the repository can say whether the button wearing it moves.
+
+- [ ] **PR 41b · ios · The swipe row's reveal has a detent in it** — Today, Todos, Calendar or
+      Completed, a list with several tasks, Settings ▸ Sounds & Haptics ▸ System Haptics on, and
+      the phone out of a case thick enough to eat them. Two rows are wanted: an ordinary one with
+      three pills (Edit/Copy/Delete, 228 pt of reveal, detent at 73 pt) and one that carries the
+      mode's fourth pill — Schedule on a floater, Float on an overdue task — at 304 pt of reveal
+      and a detent at 97 pt.
+      Do:     (1) drag the three-pill row left slowly and stop the instant you feel something,
+              then look at how far it has actually gone and whether the pills are visibly on
+              their way; (2) hold still right there for a second or two and jiggle a few points
+              either side of it; (3) let go, then tap a pill and pay attention to the two buzzes
+              back to back; (4) from closed, flick the row left hard and short — 20 pt and the
+              finger is gone — so it opens on speed alone; (5) do (1) again on the four-pill row.
+      Watch:  (1) the buzz arrives around 73 pt of travel and reads as the actions catching under
+              the thumb rather than as a notification landing — the question this row exists to
+              ask is whether 32% is where the hand expects the catch, or whether it comes too
+              early to mean anything. (2) one buzz and then nothing, however long you hold and
+              however much you jiggle. (3) the reveal (`.rigid` at 0.7) and the pill's own tap
+              (`.light` at 0.6) must be two different things in the hand a second apart — the
+              first sharp, the second soft; if they are the same buzz, the pair
+              `HapticManager.reveal` is documented against has collapsed. (4) the flick's buzz
+              lands at lift-off instead of mid-drag, and the two arms should still read as the
+              same event happening at the only moment each of them can. (5) the four-pill row's
+              detent is 24 pt further out, since the fraction is of a wider reveal: the second
+              half of the same question, which is whether one fraction can serve two widths or
+              whether the detent should be a distance.
+      Fails:  a buzz that repeats, ticks or rattles while the finger rests at the detent; two
+              buzzes in one drag from crossing, coming back and crossing again; any buzz on the
+              way closed, or on a row shut from under you by opening a different one; a second
+              buzz as the row springs open after release; a buzz while dragging a row that is
+              already open; and the flick arm feeling heavier or different from the detent arm.
+      Known:  cross the detent, drag back and release closed, and you have felt a reveal that did
+              not happen. That is what a detent on a physical control does, it is pinned by a
+              test that says so, and it is not a fail here — the alternative is silence until the
+              row settles, which costs the feature its point. Also not a fail: a plain tap on the
+              row buzzes as it plays its 28 pt hint. That is the pre-existing tap path, Android
+              has no equivalent, and closing that divergence either way is a felt change to a
+              shipped gesture that was not asked for here.
+      Why:    there is no Swift toolchain on the machine this was written on and no gate in the
+              repository can feel a haptic. `TaskSwipeRevealDetentTests` pins the decision — one
+              buzz per crossing, none while hovering, none on a closed release, one at the flick
+              that never crossed — and `ios-target-membership.test.ts` pins that the test is
+              registered in the pbxproj rather than sitting on disk unbuilt. What none of it can
+              say is whether 73 pt is where the catch belongs, or whether the two generators are
+              still telling two events apart in a hand.
+
+- [ ] **PR 41c · ios · An open swipe row goes away when you touch anything else** — Today, Todos,
+      Calendar or Completed, a list long enough to scroll, one row swiped fully open, and for the
+      last two rows Settings ▸ Accessibility ▸ Voice Control and VoiceOver to hand.
+      Do:     (1) with a row open, tap the dock, then the FAB, then the header's search capsule,
+              then the gap between two rows, then a different row's checkbox — one at a time,
+              re-opening the row between each; (2) with a row open, start a slow scroll with the
+              finger landing ON the open row itself, and separately two rows below it; (3) with a
+              row open, drag it back to the right in one movement, including starting from the
+              very left edge of the screen; (4) open a row, push to another screen and come back;
+              (5) with Voice Control on, say "swipe left" at a row; (6) with VoiceOver on and a
+              row somehow open, do the two-finger scrub.
+      Watch:  (1) every one of them closes the row AND does its own job in the same touch — the
+              dock switches tab, the FAB opens its sheet, the capsule takes focus, the other
+              row's checkbox ticks. A tap that closes the row and nothing else is the fail, and
+              it is the one this design refused on purpose. (2) the row closes as the list starts
+              moving, not when it stops, and the scroll itself is not swallowed or stuttered.
+              (3) the row follows the thumb the whole way and settles closed, and the system's
+              interactive pop does not take the gesture instead — these two travel in the same
+              direction over the same pixels, which is the reason iOS does not intercept back
+              here. (4) the row is closed on return. (5) the reveal actually opens. (6) the row
+              closes.
+      Fails:  any of (1) closing the row while the thing under the finger does nothing; the row
+              surviving a scroll, or closing while the finger is still dragging it in either
+              direction; a sheet, the dock or a swipe-back behaving differently from before, in
+              which case the window recognizer's `cancelsTouchesInView = false` is not doing what
+              it says; the row still open on return in (4); and in (5) nothing happening at all.
+      Known:  (5) is the most important row here and the one with the least behind it.
+              `gestureRecognizerShouldBegin` gates the reveal on `horizontalVelocity > 45`, and
+              whether Voice Control's synthesised pan clears that gate decides whether an
+              assistive user can open the reveal AT ALL. If it does not, (6) is unreachable in
+              practice and the `.escape` action added here is insurance rather than a route —
+              which is worth knowing either way, and is a finding rather than a fail for this PR.
+      Also:   the close now honours Reduce Motion — with it on, the row is drawn home rather than
+              springing there, including on the existing pill closes. Gated in two places and
+              two only: `closeActions`, which every dismissal funnels through, and the pan's own
+              `.ended` settle, which is the close that runs when a thumb drags an open row back
+              and lets go under the detent and which is in a UIKit coordinator with no
+              environment to read. Both are handed the same resolution, so the row cannot shut
+              at two different speeds depending on who shut it. Confirm BOTH: the pill path and
+              the drag-back in (3) must feel the same kind of instant, not one instant and one
+              springing for a third of a second.
+      Why:    there is no Swift toolchain on the machine this was written on.
+              `TaskSwipeDismissPolicyTests` pins the decision and `TaskSwipeRevealDetentTests`
+              pins the drag-back round trip from a nonzero resting offset — the assertion that
+              would catch a `.changed` seeding from zero, which closes the row correctly and
+              jumps a full reveal width doing it. What none of it can say is whether a
+              window-level tap recognizer leaves the rest of the app's hit testing alone, which
+              is what (1) is really asking.
+
+- [ ] **PR 43 · ios · Undo takes the paper with the row it brings back** — a list with exactly one
+      task left, run twice. Once where that task is dated today or later, so undoing it puts a
+      CURRENT row back. Once where the one remaining task is itself **overdue**, so undoing it puts
+      an OVERDUE row back — that is the screenshot, it is the setup that matters, and the two are
+      genuinely different screens rather than two runs of one. Every scope's "is this finished"
+      predicate excludes the Overdue/Earlier bucket on purpose (finishing today's work while
+      overdue tasks wait still earns the payoff), so a restored CURRENT row moves it and the scene
+      leaves, while a restored OVERDUE row moves it not at all and the scene stays. A setup with
+      one current task and one overdue task waiting is the FIRST case, not the second: ticking the
+      current one and undoing it restores a current row.
+      Do:     tick the last task, and while the paper is still in the air tap **Undo** in the toast.
+              Aim for the first half of the flight — inside about a second — so there is a burst
+              left to interrupt. Then run the overdue setup and watch the Overdue header.
+      Watch:  the pieces keep FLYING as they go — still travelling, still spinning, still flipping —
+              and fade out over about 150 ms while they do. On the plain setup the scene goes with
+              them and lands after: the paper finishes leaving at 0.15 s, the illustration at 0.32 s,
+              in that order. On the overdue setup the scene STAYS exactly where it is under the
+              Overdue header, which is the designed v0.7.25 presentation and not a bug — only the
+              confetti leaves, and the restored row is back in the Overdue section above it.
+      Fails:  the burst carrying on over the restored row and expiring on its own a second or two
+              later, which is the report. Also a fail, and the reason this is not a one-line change:
+              the paper vanishing between two frames on the tap, which is the same complaint one
+              layer down; the pieces FREEZING and then dissolving in place, which would mean the
+              envelope is being applied to a stopped clock rather than multiplied into a running
+              one; and the scene on the plain setup cutting out from over paper that is still
+              fading, which would mean the host left before its overlay did.
+      Also:   a second completion straight after an undo must celebrate normally — tick it off
+              again and the full burst plays, because the newer stamp re-opens the window. And with
+              a collaborator or a second device: empty the list from the other end (the burst plays
+              here), then undo it there. The paper must go on this device too, without the scene
+              flickering back.
+      Reduce: with **Settings → Accessibility → Motion → Reduce Motion** on, repeat the plain undo.
+              There was never any paper to take away, so there must be nothing at all: no pause, no
+              held frame, no 150 ms of anything. The row comes back on the next frame.
+      Why:    there is no Swift toolchain on the machine this was written on. `xctest` pins the
+              decision — `ShouldCelebrateEmptyStateTests` covers the overdue case the naive fix
+              misses, and `TdayConfettiKinematicsTests` pins the envelope's curve and its Quick rung
+              — and neither can say whether forty-six pieces fade while still in flight or whether
+              the scene above them waited. That is the whole of what this row is for.

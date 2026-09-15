@@ -24,10 +24,35 @@ struct TdayConfetti: View {
     /// belongs to the list it happened on.
     let accentColor: Color
 
+    /// Whether the celebration this burst belongs to is still true.
+    ///
+    /// The twin of Compose's `TdayConfetti(play:)`, and new here for exactly the
+    /// reason that parameter exists over there. `play` used to be spelled by
+    /// MOUNTING this view, so the frame a celebration stopped being true was the
+    /// frame forty-six pieces vanished out of mid-air — and that is the second
+    /// half of the undo bug. Ending a celebration when a task comes back is
+    /// right; cutting the paper between two frames to do it is the same
+    /// complaint one layer down.
+    ///
+    /// So flipping this to `false` mid-flight does NOT cut the burst. The pieces
+    /// keep travelling on their own clock while a `Quick` envelope takes the
+    /// paint away under them (see `cancelStartedAt` and
+    /// `TdayConfettiKinematics.cancelEnvelope`), and the view leaves when that
+    /// envelope reaches zero — which is also what makes the next celebration a
+    /// fresh run. `docs/confetti-spec.md`'s Interruption section is the
+    /// normative half of this.
+    let play: Bool
+
     @Environment(\.tdayAnimation) private var tdayAnimation
-    /// Set on appear rather than at init: a `View` is re-initialised freely, and
-    /// a start date taken in `init` restarts the flight on every one of those.
+    /// Set when `play` goes true rather than at init: a `View` is re-initialised
+    /// freely, and a start date taken in `init` restarts the flight on every one
+    /// of those.
     @State private var startedAt: Date?
+    /// When this celebration stopped being true, if it has. `nil` for a burst
+    /// that is simply flying. Once set, the envelope runs from here and the
+    /// flight clock above goes on exactly as it was — an interrupted flight is
+    /// not a shortened one.
+    @State private var cancelStartedAt: Date?
     /// The burst is over. `TimelineView(.animation)` ticks for as long as it is
     /// on screen, and the empty state it sits on can stand for minutes — so the
     /// view takes itself out rather than redrawing an empty canvas at 60fps.
@@ -35,38 +60,102 @@ struct TdayConfetti: View {
 
     private static let pieces = ConfettiPiece.fan()
 
+    /// Nothing to draw: no run has started, the last one is over, or the user
+    /// has asked not to watch. One property because those are three different
+    /// situations to everything below and the same answer to the canvas.
+    private var isIdle: Bool { startedAt == nil || landed || !tdayAnimation.isEnabled }
+
     var body: some View {
-        // The pop that should land on the frame the first pieces leave is not
-        // here yet, and cannot hang off this shape's `.onAppear`: that modifier
-        // sits inside the animating branch, so with reduce motion on it never
-        // runs at all — and that is the case it matters in most, because a
-        // finished list is still finished and a haptic is not motion. A
-        // persistent `ZStack` around the branch is what makes one mount equal one
-        // pop on either side of it; see the haptic section of
-        // `docs/confetti-spec.md`, which argues the restructure and the
-        // dedupe against Today's scene haptic together.
-        if !tdayAnimation.isEnabled || landed {
-            Color.clear.frame(width: 0, height: 0)
-        } else {
-            TimelineView(.animation) { timeline in
-                Canvas { context, size in
-                    guard let startedAt else { return }
-                    let t = timeline.date.timeIntervalSince(startedAt) / TdayConfettiMetrics.flightSeconds
-                    guard t > 0, t < 1 else { return }
-                    draw(in: &context, size: size, at: t)
+        // The branch decides what is DRAWN; the stack around it decides what
+        // EXISTS, and they were collapsed into one question before this. The
+        // lifecycle below hangs off the persistent stack, so `play` changing is
+        // seen on the frame it changes whichever side of the branch this view is
+        // currently sitting on — which is also the shape the burst's haptic needs
+        // and the reason it could not be written yet. The pop that should land on
+        // the frame the first pieces leave is still not here; what has changed is
+        // that it no longer needs the `.onAppear` it could not have, because a
+        // permanent mount means one `play` TRANSITION equals one pop, on either
+        // side of the branch and with Reduce Motion on — the case it matters in
+        // most, a finished list being finished whether or not anyone watches the
+        // paper. See the haptic section of `docs/confetti-spec.md`, which argues
+        // the dedupe against Today's scene haptic in the same breath.
+        ZStack {
+            if isIdle {
+                Color.clear.frame(width: 0, height: 0)
+            } else {
+                TimelineView(.animation) { timeline in
+                    Canvas { context, size in
+                        guard let startedAt else { return }
+                        let t = timeline.date.timeIntervalSince(startedAt) / TdayConfettiMetrics.flightSeconds
+                        guard t > 0, t < 1 else { return }
+                        draw(in: &context, size: size, at: t, envelope: envelope(at: timeline.date))
+                    }
                 }
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
             }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-            .onAppear { startedAt = .now }
-            .task {
-                try? await Task.sleep(for: .seconds(TdayConfettiMetrics.flightSeconds))
-                landed = true
+        }
+        .onChange(of: play, initial: true) { _, isCelebrating in
+            if isCelebrating {
+                // A fresh run even if one was still fading out: adopting a flight
+                // that is already half spent would throw paper that lands almost
+                // immediately.
+                cancelStartedAt = nil
+                landed = false
+                startedAt = .now
+            } else if startedAt != nil, !landed {
+                // The fifth idiom rule at its strictest. With Reduce Motion on
+                // nothing was ever painted — the `Canvas` above is unreachable —
+                // so there is no finished state left to draw and nothing to wait
+                // for: this leaves on the cancel frame, with no envelope and no
+                // sleep surviving as a dead wait in front of an empty screen.
+                guard tdayAnimation.isEnabled else {
+                    landed = true
+                    return
+                }
+                cancelStartedAt = .now
             }
+        }
+        // The flight's own clock, and the run's ordinary ending: the view goes
+        // when the last piece lands. Not started under Reduce Motion, where the
+        // canvas is unreachable and a two-second sleep would time nothing.
+        .task(id: startedAt) {
+            guard startedAt != nil, tdayAnimation.isEnabled else { return }
+            await land(after: TdayConfettiMetrics.flightSeconds)
+        }
+        // The cancel's clock, and a SECOND one on purpose. It does not shorten
+        // the flight; it only says when the paint has finished leaving and there
+        // is no longer anything for the canvas above to draw.
+        .task(id: cancelStartedAt) {
+            guard cancelStartedAt != nil else { return }
+            await land(after: TdayMotion.Durations.quick)
         }
     }
 
-    private func draw(in context: inout GraphicsContext, size: CGSize, at t: Double) {
+    /// Waits out a clock and then takes the view back out of the tree.
+    ///
+    /// The `catch` is load-bearing rather than tidy. Both callers are
+    /// `.task(id:)`, so starting a new run cancels the wait belonging to the old
+    /// one — and `try? await Task.sleep` would swallow that cancellation and fall
+    /// through to land a run that had just been replaced, killing its successor
+    /// on the successor's first frame.
+    private func land(after seconds: TimeInterval) async {
+        do {
+            try await Task.sleep(for: .seconds(seconds))
+        } catch {
+            return
+        }
+        landed = true
+    }
+
+    /// What multiplies every piece's own fade at this instant: exactly 1 while
+    /// the celebration is still true, and the cancel envelope once it is not.
+    private func envelope(at now: Date) -> Double {
+        guard let cancelStartedAt else { return 1 }
+        return TdayConfettiKinematics.cancelEnvelope(elapsed: now.timeIntervalSince(cancelStartedAt))
+    }
+
+    private func draw(in context: inout GraphicsContext, size: CGSize, at t: Double, envelope: Double) {
         // Everything is thrown in fractions of the box's WIDTH — not of its
         // longest side, which is the screen's height on a phone and throws every
         // piece clean off the sides before it can be seen.
@@ -87,7 +176,10 @@ struct TdayConfetti: View {
             let height = piece.height
 
             var piecePainter = context
-            piecePainter.opacity = frame.alpha
+            // The single draw site, and so the single place the two alpha terms
+            // meet: the piece's own fade, and the envelope taking the whole burst
+            // away if this one was interrupted.
+            piecePainter.opacity = TdayConfettiKinematics.envelopedAlpha(frame.alpha, envelope: envelope)
             piecePainter.translateBy(x: origin.x + frame.dx * span, y: origin.y + frame.dy * span)
             piecePainter.rotate(by: .radians(frame.rot))
             piecePainter.fill(
@@ -327,6 +419,53 @@ enum TdayConfettiKinematics {
         // have to agree to the last bit, and this is the one form all three
         // spell the same way.
         return 1 - u * u * (3 - 2 * u)
+    }
+
+    /// What a piece actually draws at: its own fade, taken away by the cancel
+    /// envelope.
+    ///
+    /// Two independent terms, multiplied, and the independence is the whole
+    /// design. `pieceAlpha` is a function of the piece's own flight clock and
+    /// knows nothing about being interrupted; `envelope` is a function of a clock
+    /// that does not exist at all until somebody undoes a completion (or adds a
+    /// task, or a collaborator does) and the burst has to leave before it was
+    /// finished. A burst nobody cancels multiplies by exactly 1 for its whole
+    /// flight and this reduces to `alpha`, which is why the envelope is a NEW
+    /// term rather than a retune: `flightSeconds`, `fadeStart` and the scene lead
+    /// are untouched, and the three clients' kinematics tests still assert the
+    /// same curve.
+    ///
+    /// It multiplies rather than replaces for the reason the fade is wanted at
+    /// all. The pieces go on FLYING while the envelope runs — same positions,
+    /// same spin, same flip — because freezing the flight and dissolving a still
+    /// frame is a second, quieter version of the complaint this fixes. Only the
+    /// paint leaves.
+    static func envelopedAlpha(_ pieceAlpha: Double, envelope: Double) -> Double {
+        pieceAlpha * envelope
+    }
+
+    /// The cancel envelope itself: `1 → 0` over `Quick`, on the `Exit` curve.
+    ///
+    /// Sampled rather than animated, and that is forced rather than chosen. The
+    /// burst is drawn into a `Canvas` fed by a `TimelineView`, which is handed a
+    /// date and owns no animatable property at all — there is nothing there for
+    /// SwiftUI to interpolate and no way to hand it an `Animation`. So the
+    /// envelope is read off the same wall clock every other number in this file
+    /// is read off, and the curve comes from `TdayMotion.Curves.exit` so that the
+    /// sampled `Exit` and the played one cannot become two different curves.
+    ///
+    /// `Quick` is the ladder's "something leaving that nobody is meant to watch
+    /// go" (`docs/motion.md`), which is paint at the shortest rung and is exactly
+    /// what this is. An exit is never longer than the enter it undoes, and this
+    /// one undoes a two-second flight.
+    ///
+    /// Clamped at both ends, unlike `alpha` above, and the difference is real
+    /// rather than defensive: `alpha` is only ever asked about `[0, 1]` by
+    /// construction, while `elapsed` here is wall time since a stamp and a frame
+    /// can land on either side of the window's edge.
+    static func cancelEnvelope(elapsed: TimeInterval) -> Double {
+        let progress = min(1, max(0, elapsed / TdayMotion.Durations.quick))
+        return 1 - TdayMotion.Curves.exit.value(at: progress)
     }
 }
 

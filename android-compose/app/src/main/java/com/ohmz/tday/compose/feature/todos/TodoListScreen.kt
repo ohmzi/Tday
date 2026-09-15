@@ -164,12 +164,15 @@ import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.FeedAnswer
 import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeaderMetrics
 import com.ohmz.tday.compose.core.ui.RootFeedHeroMark
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
+import com.ohmz.tday.compose.core.ui.TaskSwipeSlotBackHandler
 import com.ohmz.tday.compose.core.ui.TdayDragLift
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
@@ -182,6 +185,7 @@ import com.ohmz.tday.compose.core.ui.TdayTaskRowMetrics
 import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeleton
 import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeletonGroup
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.feedAnswer
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
@@ -191,9 +195,12 @@ import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTdayTaskRowSkeletonMounted
 import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.shareList
+import com.ohmz.tday.compose.core.ui.shouldCloseSwipeRow
+import com.ohmz.tday.compose.core.ui.swipeSlotAfterRowDisclaim
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
+import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
@@ -484,16 +491,38 @@ private const val CompletionCelebrationWindowMs = 4_000L
  * filter) — but Scheduled/Priority/All/List mix overdue straight into
  * `items`, so those callers pass [nonEarlierSectionsEmpty] instead. Either
  * way this function needs no Earlier-aware parameter of its own.
+ *
+ * [cancelledAtMs] is the ending this gate did not have. A celebration is OPENED
+ * by a transition -- a completion -- and was only ever CLOSED by re-reading a
+ * static predicate plus a timer, so nothing in it observed the opposite
+ * transition: a task coming back. Undo restores the row through the repository
+ * and, on the reported path, does not move `itemsEmpty` at all, because the row
+ * that came back was OVERDUE and this predicate excludes Earlier by design. The
+ * paper then flew over a visible row until its own flight clock ran out, which
+ * is the "goes away after a few seconds" in the report -- this window has no
+ * clock of its own on Android, `nowMs` being read during composition.
+ *
+ * So the cancel is an ARRIVAL, counted across every bucket by
+ * [TodoListViewModel]'s `pendingRowArrived`, and never a re-read of the
+ * emptiness above. Compared rather than cleared: a completion landing after a
+ * cancel re-opens the window by being the newer stamp, with no mutation from an
+ * effect to order against a second completion arriving inside the same window.
+ * `>=` and not `>` because an undo always follows its own completion and a
+ * same-tick stamp must lose to nothing.
  */
 internal fun shouldCelebrateEmptyState(
     itemsEmpty: Boolean,
     lastCompletionAtMs: Long,
     remoteEmptiedAtMs: Long,
+    cancelledAtMs: Long,
     screenResumed: Boolean,
     nowMs: Long,
     windowMs: Long = CompletionCelebrationWindowMs,
 ): Boolean {
     if (!itemsEmpty) return false
+    if (cancelledAtMs != 0L && cancelledAtMs >= maxOf(lastCompletionAtMs, remoteEmptiedAtMs)) {
+        return false
+    }
     val ownTapCelebrates = lastCompletionAtMs != 0L && nowMs - lastCompletionAtMs < windowMs
     val remoteCompletionCelebrates = remoteEmptiedAtMs != 0L &&
             screenResumed &&
@@ -529,6 +558,10 @@ internal fun shouldCelebrateEmptyState(
  * nor the inline scene covered -- has a unit test rather than only a
  * device/emulator check.
  *
+ * [answer] in place of the `!isLoading` this used to carry: see
+ * [shouldShowFloaterEmptyScene]. A celebration withdrawn mid-refresh is the same
+ * flash as the illustration's with a worse message on it.
+ *
  * Despite the name, nothing inside is actually Today-specific -- every
  * parameter is a plain boolean the caller derives however its own mode
  * needs to. [TodoListScreen] now also calls this for Scheduled/Priority/All/
@@ -538,7 +571,7 @@ internal fun shouldCelebrateEmptyState(
 internal fun shouldShowTodayEarlierExpandedCelebration(
     todayHasEarlierItems: Boolean,
     itemsEmpty: Boolean,
-    isLoading: Boolean,
+    answer: FeedAnswer,
     suppressInitialTodayTimeline: Boolean,
     scopedSearchActive: Boolean,
     earlierCollapsed: Boolean,
@@ -546,7 +579,7 @@ internal fun shouldShowTodayEarlierExpandedCelebration(
 ): Boolean {
     return todayHasEarlierItems &&
             itemsEmpty &&
-            !isLoading &&
+            answer == FeedAnswer.Empty &&
             !suppressInitialTodayTimeline &&
             !scopedSearchActive &&
             !earlierCollapsed &&
@@ -593,6 +626,23 @@ internal fun shouldShowTodayEarlierExpandedCelebration(
  * their finger, over and over, for four seconds. One fold per completion. After
  * that the user's tap wins and the scene goes back below the rows, unseen, which
  * is their own deliberate choice and not ours.
+ *
+ * WHAT A CANCELLED CELEBRATION DOES TO THE FOLD: nothing, deliberately, and the
+ * decision is written here rather than left to be rediscovered. Undo now ends the
+ * burst the moment the row comes back (see [shouldCelebrateEmptyState]), and the
+ * obvious follow-on is that it should put Earlier back the way the user had it.
+ * It should not, for two reasons that are the same reason twice. The first is
+ * that the fold is a write into `collapsedSectionKeys`, which is ALSO the user's
+ * own control: restoring it means remembering a pre-celebration state and
+ * replaying it over whatever the user has done to that header since, and a
+ * header that re-opens under the finger that just shut it is this function's own
+ * `foldedForStampMs` bug pointing the other way. The second is that the state a
+ * cancel leaves behind -- scope empty, Earlier collapsed over the restored
+ * overdue row, its header and its count directly above it and one tap from open
+ * -- is EXACTLY the state the window expiring four seconds later would have left
+ * anyway. Undo is not owed a better outcome than waiting; it is owed the same
+ * one, sooner, and that is what it gets. What was wrong was never the fold. It
+ * was the paper still flying over a row that had come back.
  */
 internal fun shouldFoldEarlierForCelebration(
     showEarlierExpandedCelebration: Boolean,
@@ -736,17 +786,27 @@ internal fun earlierSceneFollowsSection(sectionKey: String): Boolean =
  * [TodoListScreen], which drops [earlierCollapsed] and the celebration term): an
  * item its guard has already taken out of the list has no exit left to play, so
  * the mount has to outlive the visibility.
+ *
+ * [answer] replaced a `!isLoading` term here for the reason argued in full at
+ * [shouldShowFloaterEmptyScene]: `isLoading` is written by nothing but
+ * `refreshInternal(showLoading = true)`, so it meant "a refresh over an answer
+ * already on screen" and was being read as "no answer yet". Earlier's scene is
+ * rarer to catch mid-pull than the Anytime home's, not different in kind, and
+ * one gate copy-pasted across scopes is fixed in all of them or in none.
+ * [scopeItemsEmpty] stays beside it though [answer] already carries the same
+ * count: it is the term the surrounding predicate is ABOUT, and reading it here
+ * is how this stays a sentence rather than an enum comparison.
  */
 internal fun shouldShowEarlierScene(
     scopeHasEarlierItems: Boolean,
     scopeItemsEmpty: Boolean,
-    isLoading: Boolean,
+    answer: FeedAnswer,
     suppressInitialTimeline: Boolean,
     scopedSearchActive: Boolean,
     earlierCollapsed: Boolean,
 ): Boolean = scopeHasEarlierItems &&
         scopeItemsEmpty &&
-        !isLoading &&
+        answer == FeedAnswer.Empty &&
         !suppressInitialTimeline &&
         !scopedSearchActive &&
         earlierCollapsed
@@ -777,6 +837,65 @@ internal fun earlierSceneAnimatesHandoff(
     timelineAnimationsEnabled: Boolean,
     motionEnabled: Boolean,
 ): Boolean = timelineAnimationsEnabled && motionEnabled
+
+/**
+ * The Anytime home's inline scene -- whether it is VISIBLE.
+ *
+ * The plain `if` this replaces read `isFloaterTaskHomeScreen && items.isEmpty()
+ * && !isLoading` inline in [floaterTaskHomeRootFeedContent], which is the shape
+ * [shouldShowEarlierScene] above was pulled out of and is pulled out for the
+ * same reason: on this screen a decision that is not a function is a decision
+ * nothing checks, and there is no device here to check it on.
+ *
+ * `!isLoading` was the last of that shape to go, and it was the REPORTED BUG:
+ * pulling this feed down withdrew the illustration, the heading and the body,
+ * collapsed the page upward, and then put the whole block back when the refresh
+ * returned with nothing new. An empty state is an answer, not an absence of one,
+ * and a refresh is a request to check that answer rather than a reason to
+ * withdraw it. [FeedAnswer] carries the distinction `isLoading` never could and
+ * has no loading term in it at all, so there is no longer a parameter here for a
+ * refresh flag to be passed to.
+ *
+ * The emptiness term went in with it. It has not been dropped -- it is the
+ * `rowsEmpty` this feed passes to [feedAnswer], and this is still the one place
+ * on this screen where the RAW count is the right one to pass. The scoped
+ * screens subtract Earlier out because an overdue task waiting does not stop
+ * today's work being finished; an Anytime task has no date, so this feed has no
+ * Earlier bucket to subtract and nothing for the distinction to mean.
+ */
+internal fun shouldShowFloaterEmptyScene(
+    isFloaterTaskHomeScreen: Boolean,
+    answer: FeedAnswer,
+): Boolean = isFloaterTaskHomeScreen && answer == FeedAnswer.Empty
+
+/**
+ * ...and whether it is MOUNTED, which is not the same question and is the half
+ * that was wrong.
+ *
+ * The scene's mount guard was [shouldShowFloaterEmptyScene] itself, so an undo
+ * on this feed took `items` 0 -> 1 and the lazy item -- with `TdayEmptyState`
+ * and the `TdayConfetti` inside it -- was dropped on that frame. A cancelled
+ * burst fades its paper out over `Quick` instead of cutting it (`TdayConfetti`'s
+ * mount latch), and a fade cut by the unmount above it is the same complaint one
+ * layer up: the very thing the envelope was added to stop. An item its guard has
+ * already removed has no exit left.
+ *
+ * So the mount outlives the visibility, exactly as [TodoListScreen]'s
+ * `earlierScenePresent` outlives `showEarlierIllustration` one branch over. The
+ * difference is where the extra life comes from. Earlier's scene can drop two
+ * NARROWER terms (the collapse state and the celebration) and still have a true
+ * guard left around them; this scene's guard is the emptiness itself, and
+ * emptiness is the thing the undo moves -- there is no wider standing condition
+ * to fall back on. What holds it instead is the exit's own clock:
+ * [sceneStillDrawn] is the `MutableTransitionState`'s `currentState`, which stays
+ * true until `AnimatedVisibility` has finished playing the exit and then falls on
+ * its own. With motion off there is no exit to play, so it falls in the same
+ * frame and no wait survives in front of the restored row.
+ */
+internal fun shouldMountFloaterEmptyScene(
+    sceneVisible: Boolean,
+    sceneStillDrawn: Boolean,
+): Boolean = sceneVisible || sceneStillDrawn
 
 // KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather
 // than fixed further here. Two separate facts, both worth writing down:
@@ -836,6 +955,13 @@ fun TodoListScreen( // skipcq: KT-R1006
     onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
+    /**
+     * The swipe slot to use instead of one of this screen's own, for a host that
+     * draws chrome outside this composable. Non-null exactly where
+     * `showRootFeedDock`/`showCreateTaskButton` are false and for the same
+     * reason — see the slot's own comment below, and `RootFeedContent`.
+     */
+    hostSwipeSlot: TaskSwipeSlot? = null,
     openCreateTaskOnStart: Boolean = false,
     exitToLauncherOnBack: Boolean = false,
     exitOnCreateTaskSheetDismiss: Boolean = false,
@@ -915,10 +1041,37 @@ fun TodoListScreen( // skipcq: KT-R1006
     // `items.isEmpty()` for it; see [nonEarlierSectionsEmpty] for why the
     // other modes need more than that.
     val scopeItemsEmpty = nonEarlierSectionsEmpty(scopeSections)
+    // THE GATE. Everything below that used to ask `!uiState.isLoading` asks one
+    // of these two instead, and the whole of the fix is that neither of them can
+    // be moved by a refresh -- see [feedAnswer], which has no loading parameter
+    // to be handed one. `isLoading` keeps exactly one job on this screen from
+    // here on: it drives the pull indicator (`isRefreshing` below) and the error
+    // card. It may drive chrome; it may never drive the scene.
+    //
+    // Two values because the two emptiness terms on this screen are genuinely
+    // different questions, and each gate already knows which one it means: the
+    // scoped feeds subtract Earlier out ([nonEarlierSectionsEmpty]), the Anytime
+    // home has no Earlier bucket and uses the raw count. The remaining terms are
+    // shared -- one cache read, one workspace.
+    val scopeAnswer = feedAnswer(
+        storeRead = uiState.hasHydratedSnapshot,
+        rowsEmpty = scopeItemsEmpty,
+        firstAnswerLanded = uiState.firstAnswerLanded,
+    )
+    val feedItemsAnswer = feedAnswer(
+        storeRead = uiState.hasHydratedSnapshot,
+        rowsEmpty = uiState.items.isEmpty(),
+        firstAnswerLanded = uiState.firstAnswerLanded,
+    )
+    // `celebrationCancelledAtMs` is the ViewModel's, and it has to be: undo lives
+    // in `UndoableDeleteCoordinator`, a @Singleton on its own MainScope with no
+    // per-screen identity and no way to reach back into this composition. The
+    // signal comes home through `uiState` or it does not come home at all.
     val celebrateEmptyState = shouldCelebrateEmptyState(
         itemsEmpty = scopeItemsEmpty,
         lastCompletionAtMs = lastCompletionAtMs,
         remoteEmptiedAtMs = uiState.remoteEmptiedAtMs,
+        cancelledAtMs = uiState.celebrationCancelledAtMs,
         screenResumed = screenLifecycleState == Lifecycle.State.RESUMED,
         nowMs = SystemClock.uptimeMillis(),
     )
@@ -1004,9 +1157,16 @@ fun TodoListScreen( // skipcq: KT-R1006
     // (requirement 2/3) -- and both need to agree on the same
     // glyph/title/description and fire the same one-shot haptic exactly
     // once between them, not once each.
+    // `scopeAnswer` and not `!uiState.isLoading`, and this one matters MORE
+    // rather than less: "all done today" withdrawn mid-refresh is the reported
+    // flash with a worse message on it, and it takes the completion haptic below
+    // with it -- `LaunchedEffect(isDayDone)` re-fires when the refresh returns.
+    // For Today `scopeItemsEmpty` IS `items.isEmpty()` (Today's `items` excludes
+    // Earlier by construction), so the two emptiness terms here agree by
+    // definition rather than by coincidence.
     val isDayDone = uiState.mode == TodoListMode.TODAY &&
             uiState.items.isEmpty() &&
-            !uiState.isLoading &&
+            scopeAnswer == FeedAnswer.Empty &&
             !suppressInitialTodayTimeline &&
             !scopedSearchActive &&
             uiState.completedTodayCount > 0
@@ -1206,11 +1366,32 @@ fun TodoListScreen( // skipcq: KT-R1006
     var showCreateTaskSheet by rememberSaveable {
         mutableStateOf(openCreateTaskOnStart)
     }
-    var openSwipeTaskId by rememberSaveable(uiState.mode, uiState.listId) {
-        mutableStateOf<String?>(null)
-    }
+    // The screen's one swipe slot, unless something above it owns a bigger
+    // screen than this composable is. Screen level is the right altitude for
+    // every pushed destination — each is its own NavHost entry with its own
+    // chrome, so there is nothing above it worth hoisting to and nothing beside
+    // it that could be open at the same time.
+    //
+    // The Anytime tab is the exception, and it is a real one rather than a
+    // tidiness argument. There this composable is drawn INSIDE a `Crossfade`,
+    // and the dock and the create button are siblings of that crossfade one
+    // level up — so they are outside this Scaffold entirely, an interceptor here
+    // never sees a touch on either, and "tapping the dock closes the row" was
+    // false on the one screen the user spends the most time on. `RootFeedContent`
+    // therefore owns the slot for both root tabs and installs the one interceptor
+    // at the box that actually contains everything; whoever creates the slot
+    // installs the interceptor, which is the rule that keeps the count at one.
+    //
+    // Keyed on mode + scoped list the way the saveable it replaced was, so
+    // changing what the screen is a list *of* hands the slot back. `remember`
+    // rather than `rememberSaveable` is deliberate and is argued at
+    // [TaskSwipeSlot]: the rows' own reveal states are plain `remember`, so a
+    // restored id named a row that had rebuilt closed. A host slot needs no key:
+    // the two root tabs are one mode each and never change what they are a list
+    // of.
+    val swipeSlot = hostSwipeSlot ?: remember(uiState.mode, uiState.listId) { TaskSwipeSlot() }
     // --- Bulk selection ---------------------------------------------------
-    // Screen-local, hoisted exactly the way `openSwipeTaskId` above is, and
+    // Screen-local, hoisted exactly the way `swipeSlot` above is, and
     // keyed on mode + scoped list so leaving the screen drops it for free. It
     // deliberately does not live in the ViewModel: that re-hydrates `items` on
     // every cache-version bump and a selection held there would fight it.
@@ -1380,10 +1561,46 @@ fun TodoListScreen( // skipcq: KT-R1006
             listState.animateScrollToItem(index = 0, scrollOffset = 0)
         }
     }
-    LaunchedEffect(uiState.items, openSwipeTaskId) {
-        val openId = openSwipeTaskId ?: return@LaunchedEffect
-        if (uiState.items.none { it.id == openId }) {
-            openSwipeTaskId = null
+    // The open row's task leaving the feed hands the slot back -- completed,
+    // deleted, filtered out, search re-scoped.
+    //
+    // Read through `snapshotFlow` rather than as an effect key, and that is the
+    // point of the holder rather than an incidental style: `LaunchedEffect(…,
+    // swipeSlot.openId)` would be a `MutableState` read inside this composable's
+    // body, which invalidates it. This screen is ~6000 lines including the whole
+    // LazyColumn content lambda, so every open and every close used to recompose
+    // all of it. A read inside a coroutine registers no such dependency.
+    LaunchedEffect(uiState.items, swipeSlot) {
+        snapshotFlow { swipeSlot.openId }.collect { openId ->
+            if (openId != null && uiState.items.none { it.id == openId }) {
+                swipeSlot.openId = null
+            }
+        }
+    }
+    // A scroll closes the row, at the moment the list starts moving.
+    //
+    // A deliberate divergence from `tdayClosesSearchOnOutsideTap`, which ignores
+    // scrolls on purpose -- and the difference is what each thing *is*. The
+    // search field is chrome: pinned to the viewport, staying put while the page
+    // moves under it, so a flick that leaves it alone is right. An open row is
+    // content. It travels with the list, so a row that stayed open through a
+    // scroll would put an armed Delete pill under a thumb now aimed at a
+    // different task, while the surface is still moving. That is a mis-tap
+    // generator, and the one case where persisting is worse than going away.
+    //
+    // Scroll *start* rather than scroll end, for the same reason: the decision
+    // belongs to the moment the list begins to move, not to wherever a fling
+    // happens to stop.
+    //
+    // It also covers the case an outside-tap test cannot see at all -- a
+    // vertical drag that begins on the open row itself, which is the likeliest
+    // scroll of the lot because the hand is already there.
+    //
+    // The `!= null` guard is not decoration: without it this writes to the slot
+    // on every scroll of every feed, whether or not anything is open.
+    LaunchedEffect(listState, swipeSlot) {
+        snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
+            if (scrolling && swipeSlot.openId != null) swipeSlot.openId = null
         }
     }
     var lastHandledCreateTaskRequestKey by rememberSaveable { mutableStateOf(0) }
@@ -1413,7 +1630,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     val showEarlierIllustration = shouldShowEarlierScene(
         scopeHasEarlierItems = scopeHasEarlierItems,
         scopeItemsEmpty = scopeItemsEmpty,
-        isLoading = uiState.isLoading,
+        answer = scopeAnswer,
         suppressInitialTimeline = suppressInitialTodayTimeline,
         scopedSearchActive = scopedSearchActive,
         earlierCollapsed = collapsedSectionKeys.contains(EARLIER_SECTION_KEY),
@@ -1441,7 +1658,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     val showEarlierExpandedCelebration = shouldShowTodayEarlierExpandedCelebration(
         todayHasEarlierItems = scopeHasEarlierItems,
         itemsEmpty = scopeItemsEmpty,
-        isLoading = uiState.isLoading,
+        answer = scopeAnswer,
         suppressInitialTodayTimeline = suppressInitialTodayTimeline,
         scopedSearchActive = scopedSearchActive,
         earlierCollapsed = collapsedSectionKeys.contains(EARLIER_SECTION_KEY),
@@ -1480,13 +1697,201 @@ fun TodoListScreen( // skipcq: KT-R1006
         earlierFoldedForCelebrationMs = celebrationStampMs
         collapsedSectionKeys = collapsedSectionKeys + EARLIER_SECTION_KEY
     }
-    // The flat feed's placeholder, and how long its lazy item outlives it. Both
+    // The feed's placeholder, and how long its lazy item outlives it. Both
     // hoisted because `LazyListScope` is not a composition — by the time the list
     // builds itself its guard has to already be a plain Boolean.
-    val taskFeedSkeletonVisible = !showSectionedTimeline &&
-            uiState.items.isEmpty() &&
-            uiState.isLoading
+    // Revived, deliberately. This guard used to read `!showSectionedTimeline &&
+    // items.isEmpty() && isLoading`, and `showSectionedTimeline` above
+    // enumerates all seven `TodoListMode` values -- so it is a constant `true`,
+    // `!showSectionedTimeline` is a constant `false`, and the Phase 9 row
+    // skeleton below has never once been drawn on this screen. The term read
+    // like a mode filter and was a tautology; it is gone rather than corrected,
+    // because the mode it would have excluded does not exist.
+    //
+    // What replaces the `isLoading` half is the state that flag was standing in
+    // for and getting backwards. AWAITING_FIRST is the only case with nothing to
+    // say yet -- the cache read has not landed, or it landed empty on an install
+    // whose first sync has not come home -- and it is exactly the case a
+    // placeholder is for. No spinner is introduced and no vocabulary is invented:
+    // the skeleton was already written, already has its hand-over, and already
+    // asks the motion preference for itself.
+    //
+    // Search is excluded here as it is at every other scene on this screen: a
+    // live query is answered out of `items` locally, so a skeleton per keystroke
+    // would be a placeholder in front of an answer that never left.
+    val taskFeedSkeletonVisible = feedItemsAnswer == FeedAnswer.AwaitingFirst &&
+            !scopedSearchActive
     val taskFeedSkeletonMounted = rememberTdayTaskRowSkeletonMounted(taskFeedSkeletonVisible)
+    // The Anytime home's inline scene, hoisted for the reason the placeholder
+    // above it is: `LazyListScope` is not a composition, so both its visibility
+    // and the transition that plays it have to be settled before the list builds
+    // itself. See [shouldMountFloaterEmptyScene] for why those are two values.
+    val floaterEmptySceneVisible = shouldShowFloaterEmptyScene(
+        isFloaterTaskHomeScreen = isFloaterTaskHomeScreen,
+        answer = feedItemsAnswer,
+    )
+    // Seeded from the live value rather than from `false`, and keyed by scope,
+    // for `earlierSceneTransition`'s reasons exactly: arriving at a feed that is
+    // already empty is a cold entry and not a transition, and a state carried
+    // across a scope change would hold an item alive on a feed it does not
+    // belong to.
+    val floaterEmptySceneTransition = remember(uiState.mode, uiState.listId) {
+        MutableTransitionState(floaterEmptySceneVisible)
+    }
+    floaterEmptySceneTransition.targetState = floaterEmptySceneVisible
+    // `currentState` is read HERE, in the composition that owns the list, and
+    // that is what makes the item's removal a recomposition rather than a thing
+    // nobody observes: the exit finishing flips this, this rebuilds the
+    // `LazyColumn` content lambda, and the item goes.
+    val floaterEmptySceneMounted = shouldMountFloaterEmptyScene(
+        sceneVisible = floaterEmptySceneVisible,
+        sceneStillDrawn = floaterEmptySceneTransition.currentState,
+    )
+    // The scene itself, built here and handed to [floaterTaskHomeRootFeedContent]
+    // to emit — the same shape `earlierSceneContent` below takes, and taken for
+    // the same reason plus one of its own. `LazyListScope` is not a composition,
+    // so the transition state above cannot be remembered down there; and a guard
+    // whose state is remembered inside it is re-seeded on every mount, which is
+    // a transition with nothing to animate from.
+    //
+    // Nullable, and the `if` is the item's mount guard. Deliberately wider than
+    // the scene's own visibility: see [shouldMountFloaterEmptyScene] for what
+    // holds it open and why an item removed by its guard has no exit left.
+    val floaterEmptySceneContent: (LazyListScope.() -> Unit)? = if (floaterEmptySceneMounted) {
+        {
+            // Mirrors the web layout: the scene sits in a gap in
+            // the middle of the screen with the list names below
+            // it, rather than in a full-screen watermark overlay.
+            item(
+                key = "floater-empty-message",
+                contentType = "floater-empty-message",
+            ) {
+                // The preference, not the feed's first-frame guard:
+                // the exit below is paint the user can ask not to
+                // see, and Phase 8's plumbing is where that answer
+                // comes from rather than a second read of the OS.
+                val sceneAnimates = rememberTdayMotionEnabled()
+                AnimatedVisibility(
+                    // `visibleState` and not a plain `visible =`,
+                    // though not for the enter's sake the way
+                    // Earlier's scene needs it. This state is
+                    // remembered ABOVE the item's guard so that the
+                    // guard can read its `currentState` and keep
+                    // the item alive until the exit has finished
+                    // with it; a boolean here would live and die
+                    // with the item it sits inside.
+                    visibleState = floaterEmptySceneTransition,
+                    // No enter, which is the one thing about this
+                    // scene that does not change. The scene inside
+                    // runs its own entrance on the confetti's
+                    // clock, and a host fade layered over it would
+                    // also dim the burst during the frames it is
+                    // meant to lead at full opacity.
+                    enter = EnterTransition.None,
+                    // The exit is new, and it is the reported bug's
+                    // second half. The comment that stood here said
+                    // this scene is only ever removed outright, and
+                    // argued it: a 42%-tall illustration fading out
+                    // over a task row arriving in the same slot
+                    // paints the empty state on top of the thing
+                    // that disproves it. That was right while the
+                    // burst inside cut on the same frame. It is not
+                    // right now the burst FADES — the paper keeps
+                    // flying while its own envelope takes it away
+                    // over `Quick`, and dropping the item drops the
+                    // canvas that envelope is painting into, which
+                    // is the same complaint one layer up. So the
+                    // scene leaves on the envelope's own rung and
+                    // the two go together, exactly as the
+                    // full-screen overlay one branch over now does.
+                    //
+                    // Fade AND shrink, where that overlay fades
+                    // alone, and the difference is layout: the
+                    // overlay is drawn over a page and owes the
+                    // feed nothing, while this holds ~42% of the
+                    // screen that the tile and the list rows below
+                    // are waiting to have back. Fading its ink
+                    // while holding its track and then dropping the
+                    // track in the frame the node goes is the
+                    // larger of the two movements and the jump the
+                    // whole hand-off exists to remove. One duration
+                    // and one curve across both — web's
+                    // `.tday-empty-cancel-exit` closes its grid
+                    // track on the same `Quick`/`Exit` pair, for
+                    // the same reason. `shrinkTowards` is named for
+                    // the reason Earlier's scene names it: the
+                    // default `Bottom` offsets the content by
+                    // `animatedHeight - fullHeight`, so the picture
+                    // would slide UP by its own full height while
+                    // the slot it lives in travels down.
+                    //
+                    // `ExitTransition.None` with motion off, where
+                    // the burst is unmounting on the same frame for
+                    // the same reason and there is nothing left to
+                    // keep alive for — no trip, and no wait left
+                    // standing in front of the restored row.
+                    exit = if (sceneAnimates) {
+                        fadeOut(
+                            animationSpec = tween(
+                                durationMillis = TdayMotionTokens.Durations.Quick,
+                                easing = TdayMotionTokens.Easings.Exit,
+                            ),
+                        ) + shrinkVertically(
+                            animationSpec = tween(
+                                durationMillis = TdayMotionTokens.Durations.Quick,
+                                easing = TdayMotionTokens.Easings.Exit,
+                            ),
+                            shrinkTowards = Alignment.Top,
+                        )
+                    } else {
+                        ExitTransition.None
+                    },
+                    // Moved up off the `Box` along with the
+                    // wrapper: a displaced item takes its placement
+                    // spec on the item's own root, and the root is
+                    // this now.
+                    modifier = displacedFeedItemMotion(timelineAnimationsEnabled),
+                ) {
+                    val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = gapHeight),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TdayEmptyState(
+                            icon = emptySceneIcon,
+                            accentColor = titleColor,
+                            title = emptyStateMessageForMode(
+                                mode = uiState.mode,
+                                isFloaterList = isListDetailScreen,
+                            ),
+                            description = emptyStateDescriptionForMode(
+                                mode = uiState.mode,
+                                isFloaterList = isListDetailScreen,
+                            ),
+                            celebrate = celebrateEmptyState,
+                            // The overlay callers below pass nothing:
+                            // they draw over a page where nothing is
+                            // moving, so the burst can own the frame
+                            // the feed empties on. Here the scene is
+                            // inline, and the tile and list rows under
+                            // it are still gliding down into the space
+                            // it just claimed. Hold the celebration for
+                            // exactly that glide, so the paper flies
+                            // over a settled screen — which is the
+                            // whole of what makes the list screen's
+                            // version read as smooth.
+                            celebrationStartDelayMillis =
+                                TdayFeedItemMotion.CelebrationStartDelayMillis,
+                        )
+                    }
+                }
+            }
+        }
+    } else {
+        null
+    }
     // The scene item's own mount guard, deliberately wider than either
     // visibility flag above: it drops Earlier's collapse state and the
     // celebration term, so the item outlives the moment its content stops
@@ -1495,7 +1900,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     // left.
     val earlierScenePresent = scopeHasEarlierItems &&
             scopeItemsEmpty &&
-            !uiState.isLoading &&
+            scopeAnswer == FeedAnswer.Empty &&
             !suppressInitialTodayTimeline &&
             !scopedSearchActive
     // The scene's own visibility, and the transition that plays it, hoisted out of the
@@ -1642,14 +2047,17 @@ fun TodoListScreen( // skipcq: KT-R1006
                     } else {
                         EnterTransition.None
                     },
-                    // Fade AND shrink: unlike the floater home's inline scene
-                    // (which is only ever removed outright, never faded), this
-                    // one also has to clear itself out of the way on a user tap
-                    // rather than on a data change, so it needs a real exit
-                    // instead of an instant cut. It is no longer racing
-                    // anything while it does: the rows arriving above it are
-                    // what carry it down, and this fade is the paint half of
-                    // the same one motion.
+                    // Fade AND shrink. The floater home's inline scene now
+                    // leaves over the same pair (see
+                    // [shouldMountFloaterEmptyScene]), but for the other of the
+                    // two reasons a scene leaves: that one goes because the
+                    // feed REFILLED under it and the burst it holds is fading,
+                    // this one because a user tap asked for the slot while the
+                    // scope is still empty -- so that one rides `Quick`, the
+                    // envelope's own rung, and this one rides the hand-off it
+                    // leads. It is not racing anything while it does: the rows
+                    // arriving above it are what carry it down, and this fade
+                    // is the paint half of the same one motion.
                     //
                     // `shrinkTowards = Alignment.Top` for the reason `enter`
                     // names `expandFrom`, and on this leg it decides whether
@@ -1796,6 +2204,11 @@ fun TodoListScreen( // skipcq: KT-R1006
     BackHandler(enabled = selectionActive) {
         exitSelection()
     }
+    // Last of the five, and that placement is the behaviour: later registration
+    // wins, so a revealed row is the innermost state back can be in and the
+    // first one it undoes. `!selectionActive` keeps it from outranking the
+    // handler directly above -- see `TaskSwipeSlotBackHandler`.
+    TaskSwipeSlotBackHandler(slot = swipeSlot, enabled = !selectionActive)
     LaunchedEffect(isFloaterTaskHomeScreen, floaterTaskHomeSearchExpanded) {
         if (!isFloaterTaskHomeScreen) {
             closeFloaterTaskHomeSearch()
@@ -1928,7 +2341,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                 contentDescription = stringResource(R.string.bulk_select),
                 onClick = {
                     closeScopedSearch()
-                    openSwipeTaskId = null
+                    swipeSlot.openId = null
                     selectedTodoIds = emptySet()
                     selectionActive = true
                 },
@@ -2202,7 +2615,6 @@ fun TodoListScreen( // skipcq: KT-R1006
     val onTimelineDeferRequested: (todoId: String) -> Unit = { todoId ->
         deferTargetTodoId = todoId
     }
-    val onOpenSwipeTaskIdChange: (String?) -> Unit = { openSwipeTaskId = it }
     val onTimelineDragStart: (todo: TodoItem, position: Offset) -> Unit = { todo, position ->
         activeDropSectionKey = null
         timelineDropTargetBounds.clear()
@@ -2223,6 +2635,28 @@ fun TodoListScreen( // skipcq: KT-R1006
     }
 
     Scaffold(
+        // One interceptor per screen, at the outermost composable rather than on
+        // the feed container, so the header, the search capsule, the FAB and the
+        // gaps between rows are all inside it and none of them has to know this
+        // feature exists. It observes and never consumes -- see
+        // `tdayClosesSwipeRowOnOutsideTap`.
+        //
+        // Skipped when a host handed the slot down, because then this Scaffold is
+        // NOT the outermost composable -- on the Anytime tab the dock and the
+        // create button are drawn above it, outside this subtree, and Compose
+        // routes a pointer down into the hit child's path only. The host installs
+        // one at the box that does contain them. Installing both would be
+        // harmless and still wrong: two observers whose agreement nobody checks,
+        // where the rule is one per screen and the screen is whatever contains
+        // the chrome.
+        modifier = if (hostSwipeSlot == null) {
+            Modifier.tdayClosesSwipeRowOnOutsideTap(
+                slot = swipeSlot,
+                close = { swipeSlot.openId = null },
+            )
+        } else {
+            Modifier
+        },
         containerColor = colorScheme.background,
         floatingActionButton = {
             // The selection action bar takes the bottom of the screen while
@@ -2365,11 +2799,14 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // dismisses the field.
                     if (!showFloaterTaskHomeSearchResults) {
 
-                    // The flat feed's first paint. This was a card with the word
-                    // "Loading" in it, and the rows then appeared underneath in
-                    // one frame; the skeleton draws the rows' own geometry
-                    // instead, so the frame the data lands on changes colour and
-                    // nothing else.
+                    // The feed's first paint — every scope's, now. This was a
+                    // card with the word "Loading" in it, and the rows then
+                    // appeared underneath in one frame; the skeleton draws the
+                    // rows' own geometry instead, so the frame the data lands on
+                    // changes colour and nothing else. Its guard named a "flat
+                    // feed" and excluded the sectioned ones, but the mode list it
+                    // tested against holds all seven modes, so what it actually
+                    // excluded was everything — see [taskFeedSkeletonVisible].
                     //
                     // Mounted for a window rather than removed by its guard: an
                     // item that its guard has already taken out of the list has no
@@ -2463,7 +2900,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                             selectionActive = selectionActive,
                             selectedTodoIds = selectedTodoIds,
                             flashTodoId = flashTodoId,
-                            openSwipeTaskId = openSwipeTaskId,
+                            swipeSlot = swipeSlot,
                             collapsedSectionKeys = collapsedSectionKeys,
                             activeDropSectionKey = activeDropSectionKey,
                             draggedScheduledTodo = draggedScheduledTodo,
@@ -2479,7 +2916,6 @@ fun TodoListScreen( // skipcq: KT-R1006
                             onPromoteRequested = onTimelinePromoteRequested,
                             onDemoteTodo = onDemoteTodo,
                             onDeferRequested = onTimelineDeferRequested,
-                            onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
                             onDragStart = onTimelineDragStart,
                             onDragMove = onTimelineDragMove,
                             onDragEnd = ::finishTimelineDrag,
@@ -2496,12 +2932,8 @@ fun TodoListScreen( // skipcq: KT-R1006
 
                     floaterTaskHomeRootFeedContent(
                         isFloaterTaskHomeScreen = isFloaterTaskHomeScreen,
-                        uiState = uiState,
                         timelineAnimationsEnabled = timelineAnimationsEnabled,
-                        emptySceneIcon = emptySceneIcon,
-                        titleColor = titleColor,
-                        isListDetailScreen = isListDetailScreen,
-                        celebrateEmptyState = celebrateEmptyState,
+                        emptyScene = floaterEmptySceneContent,
                         onOpenCompleted = onOpenCompleted,
                         floaterTaskHomeListRows = floaterTaskHomeListRows,
                         onOpenFloaterList = onOpenFloaterList,
@@ -2584,8 +3016,63 @@ fun TodoListScreen( // skipcq: KT-R1006
             // states were true at once and the screen drew two empty scenes on
             // top of each other. While a query stands the in-list no-results
             // scene owns it — it is the one that can say what was searched.
-            if (scopeItemsEmpty && !uiState.isLoading && !suppressInitialTodayTimeline &&
-                !isFloaterTaskHomeScreen && !scopedSearchActive && !scopeHasEarlierItems
+            // THE ONE PRESENTATION CHANGE IN THIS FIX, and it is here rather than
+            // in the burst because of what the burst now needs from its host. A
+            // cancelled celebration fades its paper out over `Quick` instead of
+            // cutting it (see `TdayConfetti`'s mount latch), and on the plain path
+            // -- no overdue tasks -- the very undo that cancels the burst also
+            // makes this scene's condition false. This branch had no exit at all,
+            // so the scene and the paper on it were removed on the same frame and
+            // the envelope never got to run: a fade cut by the unmount above it is
+            // the same complaint one layer up.
+            //
+            // So: the scene leaves on the envelope's own rung, and scene and paper
+            // go together. `EnterTransition.None` because nothing about the
+            // ARRIVAL is in dispute -- this scene has always appeared on the frame
+            // the scope emptied, the celebration's 320 ms lead is timed against
+            // that, and giving it an enter here would put a fade in front of the
+            // payoff. `ExitTransition.None` with motion off, where the burst is
+            // unmounting on the same frame for the same reason and there is
+            // nothing left to keep alive for.
+            //
+            // What else now leaves on this exit, stated rather than discovered:
+            // every other way this condition goes false. That list used to include
+            // a pull-to-refresh over an already-empty scope -- `isLoading` went
+            // true and cut the scene, and once this exit existed it collapsed the
+            // scene instead of cutting it, which is the flash the user reported.
+            // It is not on the list any more: `scopeAnswer` has no loading term in
+            // it, so a refresh moves nothing here. What remains is an arrival, and
+            // an arrival is what the exit was written for. Same destination, 150 ms
+            // of paint, and the shortest rung on the ladder -- an exit is never
+            // longer than the enter it undoes, and this one has no enter at all.
+            //
+            // `suppressInitialTodayTimeline` is left standing beside `scopeAnswer`
+            // though for Today the two say the same thing -- it is literally
+            // `!hasHydratedSnapshot && items.isEmpty()`, which is the cache-read
+            // half of AWAITING_FIRST. That agreement is evidence the right field
+            // was picked, not a reason to delete the older one; it is the term the
+            // other four modes do NOT have, and it predates this fix.
+            //
+            // The overdue path does NOT come through here (`!scopeHasEarlierItems`
+            // defers it to the inline scene under Earlier's header), and must not:
+            // a restored overdue row leaves that scene exactly where it is, which
+            // is the v0.7.25 presentation and was never the thing that was wrong.
+            // Only the confetti over it was.
+            AnimatedVisibility(
+                visible = scopeItemsEmpty && scopeAnswer == FeedAnswer.Empty &&
+                    !suppressInitialTodayTimeline &&
+                    !isFloaterTaskHomeScreen && !scopedSearchActive && !scopeHasEarlierItems,
+                enter = EnterTransition.None,
+                exit = if (rememberTdayMotionEnabled()) {
+                    fadeOut(
+                        animationSpec = tween(
+                            durationMillis = TdayMotionTokens.Durations.Quick,
+                            easing = TdayMotionTokens.Easings.Exit,
+                        ),
+                    )
+                } else {
+                    ExitTransition.None
+                },
             ) {
                 Box(
                     // The Scaffold's insets, so the scene centres in the content
@@ -3283,79 +3770,31 @@ private fun LazyListScope.flatTodoRowsContent(
  * [flatTodoRowsContent]: every `item`/`items` call below needs the caller's
  * scope to register its key, content type and placement correctly.
  *
- * [timelineAnimationsEnabled], [celebrateEmptyState] and the celebration
- * delay feed [displacedFeedItemMotion]/`TdayEmptyState` exactly as they did
- * inline — this is the celebration choreography from PR #122, so nothing
- * here changes the item order, keys or placement specs those depend on.
+ * [timelineAnimationsEnabled] feeds [displacedFeedItemMotion] exactly as it
+ * did inline — this is the celebration choreography from PR #122, so nothing
+ * here changes the item order, keys or placement specs those depend on. The
+ * empty scene itself arrives as [emptyScene], already built and already
+ * guarded; it used to be an `if` and five more parameters here.
  */
 private fun LazyListScope.floaterTaskHomeRootFeedContent(
     isFloaterTaskHomeScreen: Boolean,
-    uiState: TodoListUiState,
     timelineAnimationsEnabled: Boolean,
-    @DrawableRes emptySceneIcon: Int,
-    titleColor: Color,
-    isListDetailScreen: Boolean,
-    celebrateEmptyState: Boolean,
+    emptyScene: (LazyListScope.() -> Unit)?,
     onOpenCompleted: () -> Unit,
     floaterTaskHomeListRows: List<Pair<ListSummary, Int>>,
     onOpenFloaterList: (listId: String, listName: String) -> Unit,
 ) {
-    // Root floater empty state: mirror the web layout — the
-    // scene sitting in a gap in the middle of the screen, with
-    // the list names below it (instead of a full-screen
-    // watermark overlay).
-    if (isFloaterTaskHomeScreen && uiState.items.isEmpty() && !uiState.isLoading) {
-        item(
-            key = "floater-empty-message",
-            contentType = "floater-empty-message",
-        ) {
-            val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
-            Box(
-                // Neither fade, for the same reason the overlay
-                // version has neither. Arriving: the scene
-                // inside runs its own entrance on the
-                // confetti's clock, and a host fade layered
-                // over it would also dim the burst during the
-                // frames it is meant to lead at full opacity.
-                // Leaving: a 42%-tall illustration fading out
-                // over a task row that is arriving in the same
-                // slot paints the empty state on top of the
-                // thing that disproves it — the overlay simply
-                // stops being composed, and so does this.
-                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                    .fillMaxWidth()
-                    .heightIn(min = gapHeight),
-                contentAlignment = Alignment.Center,
-            ) {
-                TdayEmptyState(
-                    icon = emptySceneIcon,
-                    accentColor = titleColor,
-                    title = emptyStateMessageForMode(
-                        mode = uiState.mode,
-                        isFloaterList = isListDetailScreen,
-                    ),
-                    description = emptyStateDescriptionForMode(
-                        mode = uiState.mode,
-                        isFloaterList = isListDetailScreen,
-                    ),
-                    celebrate = celebrateEmptyState,
-                    // The overlay callers below pass nothing:
-                    // they draw over a page where nothing is
-                    // moving, so the burst can own the frame
-                    // the feed empties on. Here the scene is
-                    // inline, and the tile and list rows under
-                    // it are still gliding down into the space
-                    // it just claimed. Hold the celebration for
-                    // exactly that glide, so the paper flies
-                    // over a settled screen — which is the
-                    // whole of what makes the list screen's
-                    // version read as smooth.
-                    celebrationStartDelayMillis =
-                        TdayFeedItemMotion.CelebrationStartDelayMillis,
-                )
-            }
-        }
-    }
+    // The Anytime home's empty scene, built by [TodoListScreen] and merely
+    // emitted here, so that it stays the FIRST item in this feed.
+    //
+    // Handed over as a lambda rather than as the six values it needs, for the
+    // reason `earlierSceneContent` is handed over the same way and for one
+    // more of its own: the `MutableTransitionState` that plays its exit has to
+    // be remembered ABOVE the guard that mounts it, and `LazyListScope` is not
+    // a composition to remember anything in. Null when the scene is neither
+    // visible nor still leaving — the guard itself, made up there; see
+    // [shouldMountFloaterEmptyScene].
+    emptyScene?.invoke(this)
 
     // Floater tab's nav entry to the browsable Completed screen — the
     // todo side's own root feed reaches it through an identical
@@ -3494,7 +3933,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
     selectionActive: Boolean,
     selectedTodoIds: Set<String>,
     flashTodoId: String?,
-    openSwipeTaskId: String?,
+    swipeSlot: TaskSwipeSlot,
     collapsedSectionKeys: Set<String>,
     activeDropSectionKey: String?,
     draggedScheduledTodo: TodoItem?,
@@ -3510,7 +3949,6 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
     onPromoteRequested: (todoId: String) -> Unit,
     onDemoteTodo: (TodoItem) -> Unit,
     onDeferRequested: (todoId: String) -> Unit,
-    onOpenSwipeTaskIdChange: (String?) -> Unit,
     onDragStart: (todo: TodoItem, position: Offset) -> Unit,
     onDragMove: (todo: TodoItem, position: Offset) -> Unit,
     onDragEnd: (position: Offset?) -> Unit,
@@ -3719,8 +4157,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                         },
                         onDefer = { onDeferRequested(todo.id) },
                         draggedTodo = sectionDraggedTodo,
-                        openSwipeTaskId = openSwipeTaskId,
-                        onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
+                        swipeSlot = swipeSlot,
                         // Long-press drag-to-reschedule stands
                         // down while selecting: a null start
                         // handler is what turns `dragEnabled`
@@ -5130,8 +5567,7 @@ private fun TimelineTaskRow(
     onDemote: (() -> Unit)? = null,
     onDefer: (() -> Unit)? = null,
     draggedTodo: TodoItem? = null,
-    openSwipeTaskId: String?,
-    onOpenSwipeTaskIdChange: (String?) -> Unit,
+    swipeSlot: TaskSwipeSlot,
     onDragTodoStart: ((Offset) -> Unit)? = null,
     onDragTodoMove: (Offset) -> Unit = {},
     onDragTodoEnd: (Offset?) -> Unit = {},
@@ -5160,8 +5596,7 @@ private fun TimelineTaskRow(
                 onDragMove = onDragTodoMove,
                 onDragEnd = onDragTodoEnd,
                 onDragCancel = onDragTodoCancel,
-                openSwipeTaskId = openSwipeTaskId,
-                onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
+                swipeSlot = swipeSlot,
             )
         } else if (
             useMinimalStyle &&
@@ -5198,8 +5633,7 @@ private fun TimelineTaskRow(
                 onDragMove = onDragTodoMove,
                 onDragEnd = onDragTodoEnd,
                 onDragCancel = onDragTodoCancel,
-                openSwipeTaskId = openSwipeTaskId,
-                onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
+                swipeSlot = swipeSlot,
             )
         } else if (useMinimalStyle) {
             TodayTodoRow(
@@ -6079,8 +6513,7 @@ private fun AllTaskSwipeRow(
     onDragMove: (Offset) -> Unit = {},
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
-    openSwipeTaskId: String?,
-    onOpenSwipeTaskIdChange: (String?) -> Unit,
+    swipeSlot: TaskSwipeSlot,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -6105,8 +6538,7 @@ private fun AllTaskSwipeRow(
         onDragMove = onDragMove,
         onDragEnd = onDragEnd,
         onDragCancel = onDragCancel,
-        openSwipeTaskId = openSwipeTaskId,
-        onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
+        swipeSlot = swipeSlot,
     )
 }
 
@@ -6135,8 +6567,7 @@ private fun TodayTaskSwipeRow(
     onDragMove: (Offset) -> Unit = {},
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
-    openSwipeTaskId: String?,
-    onOpenSwipeTaskIdChange: (String?) -> Unit,
+    swipeSlot: TaskSwipeSlot,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -6165,8 +6596,7 @@ private fun TodayTaskSwipeRow(
         onDragMove = onDragMove,
         onDragEnd = onDragEnd,
         onDragCancel = onDragCancel,
-        openSwipeTaskId = openSwipeTaskId,
-        onOpenSwipeTaskIdChange = onOpenSwipeTaskIdChange,
+        swipeSlot = swipeSlot,
     )
 }
 
@@ -6200,8 +6630,7 @@ private fun SwipeTaskRow(
     onDragMove: (Offset) -> Unit = {},
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
-    openSwipeTaskId: String?,
-    onOpenSwipeTaskIdChange: (String?) -> Unit,
+    swipeSlot: TaskSwipeSlot,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -6241,25 +6670,31 @@ private fun SwipeTaskRow(
     var completionFading by remember(todo.id) { mutableStateOf(false) }
     var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
     var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
-    val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
     fun claimSwipeSlot() {
-        if (latestOpenSwipeTaskId.value != todo.id) {
-            onOpenSwipeTaskIdChange(todo.id)
+        if (swipeSlot.openId != todo.id) {
+            swipeSlot.openId = todo.id
         }
     }
 
+    // This row handing back the slot it holds, and only that -- see
+    // [swipeSlotAfterRowDisclaim] for why it is guarded and for the revoke
+    // that deliberately is not.
     fun closeSwipeSlot() {
         swipeRevealState.close()
-        if (latestOpenSwipeTaskId.value == todo.id) {
-            onOpenSwipeTaskIdChange(null)
-        }
+        swipeSlot.openId = swipeSlotAfterRowDisclaim(swipeSlot.openId, todo.id)
     }
     val highlightAnim = remember(todo.id) { Animatable(0f) }
     val visuallyChecked = localChecked || (keepCompletedInline && todo.completed)
     val visuallyStruck = localStruck || (keepCompletedInline && todo.completed)
+    // Hoisted above the reveal's own animation because that is now one of its
+    // callers: with the app's Reduce Motion switch on, a close draws its
+    // finished state instead of springing to it. One read, two uses -- the
+    // switch and the row can never disagree about the same device.
+    val rowMotionScale = rememberTdayMotionScale()
     val animatedOffsetX by animateTaskSwipeOffsetAsState(
         state = swipeRevealState,
         label = "swipeTaskOffset",
+        scale = rowMotionScale,
     )
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     // The beats the row used to cut straight to. Tint and title colour are one
@@ -6303,7 +6738,6 @@ private fun SwipeTaskRow(
     // rather than a spec handed to one, which is the line [scaledDelay] draws — and
     // every one of them sits between beats this row gates on [motionEnabled], which
     // is what makes the app's scale the right clock for them.
-    val rowMotionScale = rememberTdayMotionScale()
     // The flash is the exception, so it gets its own number. Its two pulses are
     // ungated `tween`s below, which means they keep playing at the device's scale
     // with the in-app switch on; a gap between them timed on the app's scale would
@@ -6411,15 +6845,35 @@ private fun SwipeTaskRow(
         animationSpec = TdayDragLift.spec(motionEnabled),
         label = "timelineTaskDragVacated",
     )
-    LaunchedEffect(openSwipeTaskId, todo.id) {
-        if (openSwipeTaskId != null && openSwipeTaskId != todo.id && swipeRevealState.isOpenOrDragging) {
-            swipeRevealState.close()
+    // The row's whole subscription to the screen's slot, and the only place it
+    // reads it. Outside composition, so a row recomposes for nothing when
+    // another row opens or closes -- which is what makes this affordable on a
+    // feed of hundreds.
+    //
+    // The predicate is [shouldCloseSwipeRow] and the clause it no longer carries
+    // is the point: `openSwipeTaskId != null` used to guard this, which meant
+    // the slot could be handed from row to row but never revoked. Every
+    // dismissal added here -- outside tap, scroll, back, bulk select -- is a
+    // write of `null`, so under the old guard every one of them would have been
+    // a silent no-op.
+    //
+    // The close is `TaskSwipeRevealState.close()`, which is the same
+    // `TaskSwipeMotion.Release` rung the open already uses and is deliberately
+    // silent. `settle`'s own doc argues exactly this case: "a close is
+    // frequently not even something the user did to this row -- one row open at
+    // a time means the previous row is shut from under a finger that is nowhere
+    // near it."
+    //
+    // Entering selection mode no longer needs an effect of its own. It writes
+    // `null` to the slot like everything else now, and this closes the row; the
+    // second `LaunchedEffect(selectionActive)` that used to do the closing was
+    // only ever there because the write did not work.
+    LaunchedEffect(swipeSlot, todo.id) {
+        snapshotFlow { swipeSlot.openId }.collect { openId ->
+            if (shouldCloseSwipeRow(openId, todo.id, swipeRevealState.isOpenOrDragging)) {
+                swipeRevealState.close()
+            }
         }
-    }
-    // Entering selection mode closes whatever row was open: the swipe actions
-    // act on one task, and one task is not what the screen is about any more.
-    LaunchedEffect(selectionActive) {
-        if (selectionActive) closeSwipeSlot()
     }
     LaunchedEffect(flashHighlight) {
         if (!flashHighlight) return@LaunchedEffect
@@ -6577,7 +7031,21 @@ private fun SwipeTaskRow(
                                 Modifier.pointerInput(todo.id, dragEnabled) {
                                     detectDragGesturesAfterLongPress(
                                         onDragStart = { localOffset ->
-                                            closeSwipeSlot()
+                                            // Unconditional, unlike `closeSwipeSlot`, and that is
+                                            // the whole of the difference. A long-press drag is a
+                                            // gesture over the FEED, not over this row: the row
+                                            // whose actions are out is almost always some other
+                                            // one, so a disclaim would test `== todo.id`, find
+                                            // false, and leave an armed Delete pill sitting under
+                                            // the task the user is about to drop. Nothing else
+                                            // catches it either -- these feeds have no drag
+                                            // autoscroll, so the `isScrollInProgress` collector
+                                            // never fires, and the outside-tap modifier only gets
+                                            // to act on release, by which time the pill has been
+                                            // armed under a moving thumb for the whole drag. iOS
+                                            // writes the same `nil` at the top of `beginInAppDrag`.
+                                            swipeRevealState.close()
+                                            swipeSlot.openId = null
                                             val startPosition = rowOriginInRoot + localOffset
                                             dragPointerPosition = startPosition
                                             onDragStart?.invoke(startPosition)
@@ -6617,17 +7085,31 @@ private fun SwipeTaskRow(
                                         if (delta < 0f || swipeRevealState.isOpenOrDragging) {
                                             claimSwipeSlot()
                                         }
-                                        swipeRevealState.dragBy(delta)
-                                        if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == todo.id) {
-                                            onOpenSwipeTaskIdChange(null)
+                                        // The detent, under the finger: the row has just committed to
+                                        // opening and says so. Fired bare — no preference read and no
+                                        // motion-scale check. `performHapticFeedback` already answers to
+                                        // the system's own touch-feedback switch, which is why the two
+                                        // native clients keep no switch of their own and web grows one
+                                        // (docs/motion/LEDGER.md:1277), and reduce motion silences
+                                        // animation, not feedback. The cost is named in full at
+                                        // `TaskSwipeRevealState.dragBy`: cross the detent, drag back,
+                                        // release closed, and you felt a reveal that did not happen.
+                                        if (swipeRevealState.dragBy(delta)) TdayHaptics.reveal(view)
+                                        if (!swipeRevealState.isOpenOrDragging && swipeSlot.openId == todo.id) {
+                                            swipeSlot.openId = null
                                         }
                                     },
                                     onDragStopped = { velocity ->
-                                        swipeRevealState.settle(velocity)
+                                        // The other arm of the same event. A fling opens the row from
+                                        // under the distance threshold, so without this the fastest
+                                        // swipe in the app would be the only silent one; `settle`
+                                        // answers false when the detent already fired, and false on
+                                        // every close.
+                                        if (swipeRevealState.settle(velocity)) TdayHaptics.reveal(view)
                                         if (swipeRevealState.isOpenOrDragging) {
                                             claimSwipeSlot()
-                                        } else if (latestOpenSwipeTaskId.value == todo.id) {
-                                            onOpenSwipeTaskIdChange(null)
+                                        } else if (swipeSlot.openId == todo.id) {
+                                            swipeSlot.openId = null
                                         }
                                     },
                                 )
@@ -6648,8 +7130,8 @@ private fun SwipeTaskRow(
                                 claimSwipeSlot()
                                 coroutineScope.launch {
                                     swipeRevealState.playHint(rowMotionScale)
-                                    if (latestOpenSwipeTaskId.value == todo.id && !swipeRevealState.isOpenOrDragging) {
-                                        onOpenSwipeTaskIdChange(null)
+                                    if (swipeSlot.openId == todo.id && !swipeRevealState.isOpenOrDragging) {
+                                        swipeSlot.openId = null
                                     }
                                 }
                             }

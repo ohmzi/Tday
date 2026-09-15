@@ -641,6 +641,23 @@ struct TodoListScreen: View {
     @State private var openingFloaterTaskHomeSearchResultID: String?
     @State private var listSearchExpanded = false
     @State private var listSearchQuery = ""
+    /// The screen's single swipe slot: the id of the row whose actions are revealed.
+    ///
+    /// Screen level is the right altitude — each of these is its own destination with its own
+    /// chrome, so there is nothing above it worth hoisting to — and a plain `@State` is what
+    /// keeps a dismissal cheap. THE PROPERTY THAT DOES IT IS THAT NO HOST BODY READS THIS VALUE.
+    /// The hosts construct `$openSwipeTaskID` and nothing else, and `@State.projectedValue`
+    /// registers no dependency, so writing it does not re-run this screen's body. The only read
+    /// is `.onChange(of: openRowID)` inside `TodoTrailingSwipeActionsModifier.body`, which makes
+    /// a dismissal cost one modifier-body evaluation per REALIZED row — and `List` realizes
+    /// lazily, on feeds that run to hundreds of rows.
+    ///
+    /// So: every dismissal is a WRITE to this and nothing else. Never add a read of it inside a
+    /// host's `body` — no `.disabled(openSwipeTaskID != nil)`, no computed property, no overlay
+    /// conditioned on it. One such read converts a cheap write into a full re-evaluation of the
+    /// largest body in the app. It is not `@Observable` or an `EnvironmentObject` for the same
+    /// reason: same fan-out, worse locality, and it would strand the
+    /// `onChange(of: items.map(\.id))` cleanup that reads the plain optional.
     @State private var openSwipeTaskID: String?
     // Multi-select. Screen-local on purpose: the view model re-hydrates `items`
     // on every cache-version bump, and a selection held there would fight it.
@@ -825,10 +842,54 @@ struct TodoListScreen: View {
         viewModel.mode == .floater && viewModel.listId == nil
     }
 
+    /// The Anytime home's own answer, counted on the raw item list: this screen
+    /// has no Earlier bucket to subtract, unlike the modes `pendingScopeAnswer`
+    /// speaks for.
+    private var floaterTaskHomeAnswer: FeedAnswer {
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: viewModel.items.isEmpty,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        )
+    }
+
+    /// The same question asked of the timeline modes, which count what they
+    /// actually render. Two properties rather than one because `rowsEmpty` is
+    /// genuinely two different counts on this screen, not because the rule
+    /// differs — the rule is `feedAnswer` and there is only one of it.
+    private var timelineAnswer: FeedAnswer {
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: timelineItems.isEmpty,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        )
+    }
+
+    /// And the third count: the illustration's scope, which subtracts a
+    /// collapsed Earlier section out (see `hasNoPendingItems`). This is a
+    /// sibling term for the overlay's `if`, deliberately not folded into
+    /// `showsEmptyStateIllustration` — that predicate is the Earlier/celebration
+    /// gate the last two commits rewrote, and it is extended here, not edited.
+    private var pendingScopeAnswer: FeedAnswer {
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: hasNoPendingItems,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        )
+    }
+
     // Root floater empty state is shown inline (in the list, above the list
     // names) to mirror the web layout, rather than as a full-screen overlay.
+    //
+    // `!viewModel.isLoading` stood where the answer state does now, and it is
+    // the whole of the reported bug: `isLoading` is raised by nothing but
+    // `refresh()`, so pulling this screen down with no tasks in it withdrew the
+    // illustration, the heading and the body, collapsed the page upward, and put
+    // the block back when the refresh returned with nothing new. An empty state
+    // is an answer; a refresh is a request to check that answer, not a reason to
+    // withdraw it. `feedAnswer` has no term a pull can move.
     private var showInlineFloaterTaskHomeEmpty: Bool {
-        isFloaterTaskHomeScreen && viewModel.items.isEmpty && !viewModel.isLoading
+        isFloaterTaskHomeScreen && floaterTaskHomeAnswer == .empty
     }
 
     private var inlineEmptyStateGapHeight: CGFloat {
@@ -918,21 +979,40 @@ struct TodoListScreen: View {
         return name.isEmpty ? L("Search") : L("Search in %@", name)
     }
 
+    /// A live query that matched nothing, and nothing else. The `!isLoading`
+    /// term that used to be here is dropped outright rather than swapped: a
+    /// search is answered locally out of rows this screen already holds, so
+    /// there is no first load to withhold it for and no sync that could make the
+    /// no-match true or false. What the term actually did was leave a refresh
+    /// under a non-matching query showing NEITHER scene — not this one, because
+    /// the flag was up, and not the skeleton below, because the skeleton excludes
+    /// search on purpose.
     private var showsListSearchEmptyState: Bool {
-        isSearchingList && timelineItems.isEmpty && !viewModel.isLoading
+        isSearchingList && timelineItems.isEmpty
     }
 
     /// The first load of this screen's own scope, and only that.
     ///
-    /// `isLoading` had two consumers here and neither of them drew anything: the
-    /// pull-to-refresh pill, which is about a refresh the user asked for, and the
-    /// two empty-state gates, which use it to keep "nothing here" from being said
-    /// about a scope nobody has finished counting yet. So the answer to "still
-    /// loading" was a blank feed. The search cases stay out of it — a live query
-    /// answers for itself, and a placeholder under a query the user is typing
-    /// would flash three grey rows per keystroke.
+    /// The premise this comment used to carry was false about its own client and
+    /// is worth replacing rather than leaving as load-bearing prose: there is no
+    /// cold open here to cover. `TodoListViewModel` hydrates from the local cache
+    /// synchronously in `init`, so the rows beat the first body pass, and the
+    /// only thing that ever raised `isLoading` was `refresh()`. Gated on that
+    /// flag, this skeleton did the exact inverse of its own name — it GREW three
+    /// grey bars during a pull on a feed that had already answered, which is the
+    /// second half of the reported screenshot, and it drew nothing at all on the
+    /// one occasion that really has no answer.
+    ///
+    /// That occasion is what it draws for now: the cache is empty AND no first
+    /// answer has ever landed, which on this client means a fresh install or a
+    /// fresh login whose first sync failed or is still in flight — a case that
+    /// until now wrongly said "No tasks" about a workspace nobody had counted.
+    ///
+    /// The search cases stay out of it, as they always did — a live query answers
+    /// for itself, and a placeholder under a query the user is typing would flash
+    /// three grey rows per keystroke.
     private var showsTimelineSkeleton: Bool {
-        viewModel.isLoading && timelineItems.isEmpty && !isSearchingList && !showFloaterTaskHomeSearchResults
+        timelineAnswer == .awaitingFirst && !isSearchingList && !showFloaterTaskHomeSearchResults
     }
 
     private var isTodayMode: Bool {
@@ -1038,52 +1118,22 @@ struct TodoListScreen: View {
         hasNoPendingItems && !isEarlierSectionExpanded && !suppressEmptyStateForEarlierHandoff
     }
 
-    /// Whether the empty state about to be shown is the end of a finished list
-    /// rather than a list that was never filled. Deleting the last task, or
-    /// opening an empty list, gets the plain arrival; ticking the last one off
-    /// gets the confetti — whether that tick happened here, on another
-    /// device, or from a collaborator on a shared list.
-    ///
-    /// Two independent triggers, both windowed the same way: `lastCompletionAt`
-    /// is this device's own precise signal (only `complete`/`bulkComplete` set
-    /// it); `remoteEmptiedAt` is the broader one a cache change this device
-    /// did not stage leaves behind (see its doc comment for why it cannot be
-    /// as precise). The remote branch additionally requires the screen to be
-    /// visible and the app foregrounded — a transition nobody was looking at
-    /// does not get to surface a burst retroactively when the user returns.
-    ///
-    /// The window is wider than the burst's own flight, so a redraw mid-flight
-    /// cannot cut the paper off in mid-air.
-    ///
-    /// Gated on `hasNoPendingItems`, not `viewModel.items.isEmpty`: on Today,
-    /// Priority, All, and List, completing the very last pending task while
-    /// Earlier still holds overdue tasks leaves `viewModel.items` non-empty,
-    /// and this is req. 1 and req. 2's shared root cause — a confetti gate
-    /// keyed to "everything gone" is exactly as wrong as an illustration gate
-    /// keyed to it, for the same reason, so both read this one condition.
-    ///
-    /// Known gap, pre-existing on Today and unchanged by extending this to
-    /// Priority/All/List: `remoteEmptiedAt` itself is still armed from a raw
-    /// non-empty→empty transition on `viewModel.items`
-    /// (`hydrateFromExternalCacheChange`), so a remote device's/collaborator's
-    /// completion of the very last pending task, while Earlier still holds
-    /// overdue rows, never flips `items` to empty and so never sets it — this
-    /// device's own completions are unaffected (`lastCompletionAt` is set
-    /// directly by `complete`/`bulkComplete`, not derived from an emptiness
-    /// transition).
+    /// This screen's half of the celebration gate: gather the inputs, and hand
+    /// the decision to `shouldCelebrateEmptyState`, which is where it is argued
+    /// and where it is tested. Nothing is decided here on purpose — a `View`
+    /// property is reachable from no test, and this one is the difference
+    /// between a payoff and paper flying over a row the user just got back.
     private var celebratesEmptyState: Bool {
-        guard hasNoPendingItems else { return false }
-        let window = TodoListScreen.completionCelebrationWindow
-        if let completedAt = viewModel.lastCompletionAt,
-           Date().timeIntervalSince(completedAt) < window {
-            return true
-        }
-        if let emptiedAt = viewModel.remoteEmptiedAt,
-           isScreenVisible, scenePhase == .active,
-           Date().timeIntervalSince(emptiedAt) < window {
-            return true
-        }
-        return false
+        shouldCelebrateEmptyState(
+            hasNoPendingItems: hasNoPendingItems,
+            lastCompletionAt: viewModel.lastCompletionAt,
+            remoteEmptiedAt: viewModel.remoteEmptiedAt,
+            celebrationCancelledAt: viewModel.celebrationCancelledAt,
+            isVisible: isScreenVisible,
+            isActive: scenePhase == .active,
+            now: Date(),
+            window: TodoListScreen.completionCelebrationWindow
+        )
     }
 
     private static let completionCelebrationWindow: TimeInterval = 4
@@ -1694,6 +1744,19 @@ struct TodoListScreen: View {
         .onDisappear {
             isScreenVisible = false
             onRootControlsVisibleChange(true)
+            // Nobody returns to a screen expecting a Delete pill still armed under their thumb
+            // from a minute ago. Both halves of the reveal are `@State` and both survive a
+            // NavigationStack push, so without this line the row is exactly where it was left.
+            // The write trips `todoTrailingSwipeActions`' own `.onChange(of: openRowID)` and the
+            // row is closed before it is next seen.
+            //
+            // This is also the whole of iOS's answer to "should back close the row", and the
+            // answer is that iOS does not intercept back at all: these are tab roots with no
+            // back button, and the one back-shaped gesture that exists — the left-edge
+            // interactive pop — travels in the SAME direction as the drag-back close, so
+            // intercepting it would mean an app recognizer fighting the system pop over the same
+            // pixels. Android does intercept, because Android has a back to intercept.
+            openSwipeTaskID = nil
         }
     }
 
@@ -1802,7 +1865,15 @@ struct TodoListScreen: View {
                         // A live query answers for itself in the feed, so the
                         // screen's own "nothing here" line stands down rather
                         // than talking over the no-results state.
-                        if showsEmptyStateIllustration, !viewModel.isLoading, !isFloaterTaskHomeScreen, !isSearchingList {
+                        // `pendingScopeAnswer == .empty` where `!viewModel.isLoading`
+                        // used to be, and a sibling term rather than an edit to
+                        // `showsEmptyStateIllustration`: that predicate is the
+                        // Earlier/celebration gate, and it answers a different
+                        // question (is this scope finished, and is Earlier out of
+                        // the way) than "has this scope answered at all". Both
+                        // still have to be true; only the second one used to be
+                        // spelled as the refresh flag.
+                        if showsEmptyStateIllustration, pendingScopeAnswer == .empty, !isFloaterTaskHomeScreen, !isSearchingList {
                             // Centred in whatever is left BELOW the hero row
                             // and — while it is on screen — the collapsed
                             // Overdue/Earlier header, not in the full frame
@@ -3247,9 +3318,13 @@ struct TodoListScreen: View {
         guard completionPhases[todo.id] == nil else {
             return
         }
-        if openSwipeTaskID == todo.id {
-            openSwipeTaskID = nil
-        }
+        // Completing ANY task clears the slot, not only this row's, and the dropped
+        // `== todo.id` guard is the fix rather than a tidy-up. The toggle is a `Button` inside
+        // the row's own content, so it consumes the touch and the reveal modifier's
+        // `.onTapGesture` never runs — which made ticking a *different* task the one ordinary
+        // thing a user could do while an open row stayed open behind it. A tap anywhere outside
+        // the open row closes it now; a checkbox is not an exception to that, it was a hole in it.
+        openSwipeTaskID = nil
         HapticManager.completion()
         SoundManager.taskCompleted()
         withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {

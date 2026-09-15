@@ -21,14 +21,16 @@ import { useScopedTimelineItems } from "../lib/useScopedTimelineItems";
 import { useTodayBuckets } from "../lib/useTodayBuckets";
 import { useTimelineSections } from "../lib/useTimelineSections";
 import { useTimelineEmptyState } from "../lib/useTimelineEmptyState";
-import { isTimelineScope } from "../lib/timelineScopeHelpers";
+import { isPriorityTask, isTimelineScope } from "../lib/timelineScopeHelpers";
 import {
   earlierIsExpanding,
+  emptySceneLeavesOnCancel,
   OVERDUE_ROWS_FADE_MS,
   TODAY_EARLIER_EXIT_MS,
 } from "../lib/todayEarlierIllustration";
+import { useFadeUnmount } from "@/hooks/useFadeUnmount";
 import { useRowPlacement } from "@/hooks/useRowPlacement";
-import { DELAY_MS } from "@/lib/motion";
+import { DELAY_MS, DURATION_MS } from "@/lib/motion";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
 import TaskSelectionProvider from "@/providers/TaskSelectionProvider";
 import BulkSelectButton from "@/components/todo/bulk/BulkSelectButton";
@@ -192,9 +194,26 @@ const AllTasksTimelineContainer = ({
 
   // Every scope's empty/loading/no-results/celebration derivation — see
   // `useTimelineEmptyState`'s own doc comment.
+  // The cancel's own count, and deliberately none of the reductions below it:
+  // RAW (no search), and every bucket and every day, because the arrival it
+  // watches for is the one the scope's own emptiness predicate is written not to
+  // see — an undone OVERDUE row leaves `showEmpty` exactly as it was. Wider than
+  // the scope on the date axis on purpose; a cancel can only ever END a burst
+  // early, never start one, so erring outward costs a celebration the scope no
+  // longer strictly earns and never invents one. Priority is the one scope whose
+  // membership is not a date, so it keeps its own filter. See `useArrivalCancel`.
+  const pendingRowCount = useMemo(
+    () =>
+      scope === "priority"
+        ? todos.filter((todo) => isPriorityTask(todo.priority)).length
+        : todos.length,
+    [scope, todos],
+  );
+
   const {
     hasScopedTasks,
     showTimeline,
+    showEmpty,
     showNoResults,
     showTodayScope,
     isDayDone,
@@ -212,6 +231,23 @@ const AllTasksTimelineContainer = ({
     earlierHandoff,
     beginSceneExit,
     todayHasEarlierItems,
+    pendingRowCount,
+  });
+  // The burst leaves over a fade rather than between two frames, and on the
+  // plain path — no overdue rows, so the restored task makes this scope
+  // non-empty — the scene it flies over is leaving in that same frame. Held in
+  // the tree for the length of that fade, or the paper is cut by its own parent.
+  // `useFadeUnmount` already returns false outright under reduced motion, where
+  // nothing was painted and no wait may survive.
+  //
+  // Scoped to the refill (`!showEmpty`) and not to every way the scene can
+  // leave: the Earlier hand-off takes it off this slot while the scope is still
+  // empty, and that departure has its own longer beat already.
+  const sceneLingers = useFadeUnmount(showEmptyIllustration, DURATION_MS.quick);
+  const sceneLeavingOnCancel = emptySceneLeavesOnCancel({
+      sceneStillMounted: sceneLingers,
+      showEmptyIllustration,
+      showEmpty,
   });
 
   return (
@@ -312,7 +348,7 @@ const AllTasksTimelineContainer = ({
               `showTimeline`/`showTodayEarlierSection` render anything besides
               a bare collapsed Earlier header, so the two blocks are never both
               "the body" of a populated screen at once. */}
-          {showEmptyIllustration && (
+          {(showEmptyIllustration || sceneLeavingOnCancel) && (
             <TimelineEmptyState
               icon={ScopeIcon}
               accentColor={timelineScopeAccentColors[scope]}
@@ -324,6 +360,7 @@ const AllTasksTimelineContainer = ({
               // is added on top of the wait — travel, then burst, then scene, which is
               // what `TdayFeedItemMotion.CelebrationStartDelayMillis` buys on Android.
               celebrationStartDelayMs={DELAY_MS.placementLead}
+              leavingOnCancel={sceneLeavingOnCancel}
               earlierHandoff={earlierHandoff}
               locale={locale}
               emptyTitle={emptyTitle}
