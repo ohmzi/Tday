@@ -288,8 +288,18 @@ export default function FloaterItemContainer({
               : "inset-ring-transparent",
           )}
         >
+          {/* One box for the row's content, stacked from the TOP, with the row itself
+              left centred. `min-h-[54px]` above floors this row on mobile so the swipe
+              pills are not clipped, and top-aligning the outer box would have spent
+              that floor entirely below the content — every single-line floater rising
+              7 px so that the wrapped ones could be fixed. Same shape as
+              `TodoItemContainer`. */}
+          <div className="flex w-full min-w-0 items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
-            <div className="shrink-0">
+            {/* The control's slot is the title's line box (`leading-5` = 20 px), the
+                same as in `TodoItemContainer` — bare `items-start` is only right while
+                the toggle is exactly 20 px, and the recurring variant is 21.6. */}
+            <div className="flex h-5 shrink-0 items-center">
               <TodoCheckbox
                 icon={Check}
                 complete={completed}
@@ -300,7 +310,8 @@ export default function FloaterItemContainer({
             </div>
 
             {/* Check circle sits on the first line of the title so it stays put
-                no matter how many lines the title wraps to. */}
+                no matter how many lines the title wraps to — and, as of this change,
+                so does the flag at the other end of the row. */}
             <div className="min-w-0">
               <p
                 className={clsx(
@@ -325,10 +336,15 @@ export default function FloaterItemContainer({
             </div>
           </div>
 
-          <div className="relative flex shrink-0 items-center gap-2 pr-1 sm:pr-0">
+          {/* `self-stretch` so this box still spans the row and the hover toolbar it
+              positions at `top-1/2` stays centred on the ROW — it is a menu for the
+              task, not a mark on its title. See `TodoItemContainer`. */}
+          <div className="relative flex shrink-0 items-start gap-2 self-stretch pr-1 sm:pr-0">
             <div
               className={clsx(
-                "flex items-center gap-2 transition-opacity",
+                // The title's own line box, the same one the check circle gets at the
+                // other end of the row.
+                "flex h-5 items-center gap-2 transition-opacity",
                 showHandle && "sm:opacity-0",
               )}
             >
@@ -374,6 +390,7 @@ export default function FloaterItemContainer({
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>

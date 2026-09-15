@@ -3379,7 +3379,11 @@ private struct CalendarPendingTaskRow: View {
         let priorityIcon = priorityIndicatorSymbolName(todo.priority)
 
         VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 12) {
+            // The task list's stacking, in the calendar's day list — see
+            // `TodoListScreen.minimalTimelineRow`. This row's titles wrap and carry a
+            // due line and notes under them, so a centred toggle drifted further from
+            // line one the more the task had to say.
+            HStack(alignment: .firstTextBaseline, spacing: TodoTimelineMetrics.minimalRowContentSpacing) {
                 Button(action: startCompletion) {
                     Image(systemName: showCheckmark ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: TodoTimelineMetrics.minimalRowToggleSize, weight: .regular))
@@ -3393,8 +3397,13 @@ private struct CalendarPendingTaskRow: View {
                         normalShadowOpacity: 0
                     )
                 )
+                // A button carries no text and so reports no text baseline; the guide
+                // hands back its centre, nudged onto the title's.
+                .alignmentGuide(.firstTextBaseline) { dimension in
+                    dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
+                }
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: TodoTimelineMetrics.minimalRowTextSpacing) {
                     TodoTimelineTaskTitle(
                         text: todo.title,
                         isCompleted: showStrikethrough,
@@ -3436,6 +3445,10 @@ private struct CalendarPendingTaskRow: View {
                         }
                     }
                     .padding(.trailing, TodoTimelineMetrics.minimalRowTrailingIndicatorPadding)
+                    // Keep the trailing indicators on the first line too.
+                    .alignmentGuide(.firstTextBaseline) { dimension in
+                        dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
+                    }
                 }
             }
             .padding(.vertical, CalendarTaskListMetrics.rowVerticalPadding)

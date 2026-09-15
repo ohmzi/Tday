@@ -158,7 +158,7 @@ final class TdayTaskRowSkeletonTests: XCTestCase {
         XCTAssertEqual(today.metaTrailingPadding, TdayTaskRowMetrics.metaTrailingPadding)
         XCTAssertEqual(today.verticalPadding, TdayTaskRowMetrics.verticalPadding)
         XCTAssertEqual(today.horizontalPadding, TdayTaskRowMetrics.horizontalPadding)
-        XCTAssertNil(today.checkBaselineNudge)
+        XCTAssertEqual(today.checkBaselineNudge, TdayTaskRowMetrics.checkBaselineNudge)
     }
 
     /// The timeline sets are the timeline row, which is a *different* row.
@@ -205,19 +205,63 @@ final class TdayTaskRowSkeletonTests: XCTestCase {
         )
     }
 
-    /// A task list hangs its toggle off the title's first baseline and nudges the
-    /// guide so it stays on line one of a title that wraps; Today and Completed
-    /// centre theirs. The nudge is part of the row's height — it is what stands the
-    /// button proud of the text column — so a placeholder that took the alignment
-    /// without the guide, or the guide without the alignment, would be a different
-    /// height from the row it stands in for on the one feed that uses it.
-    func testOnlyTheBaselineAlignedSetCarriesTheBaselineNudge() {
+    /// Every row hangs its toggle off the title's first baseline and nudges the
+    /// guide so it stays on line one of a title that wraps. The nudge is part of the
+    /// row's height — it is what stands the button proud of the text column — so a
+    /// set that took the alignment without the guide, or the guide without the
+    /// alignment, would be a different height from the row it stands in for.
+    ///
+    /// Written as "alignment and nudge travel together" rather than as three
+    /// hard-coded pairs: what would actually go wrong is one of them being edited
+    /// alone, and that is a property of every set rather than a fact about any one.
+    func testEveryBaselineAlignedSetCarriesTheBaselineNudge() {
+        let sets: [(String, TdayTaskRowSkeletonMetrics)] = [
+            ("minimalTimeline", .minimalTimeline),
+            ("completedTimeline", .completedTimeline),
+            ("today", .today),
+        ]
+        for (name, metrics) in sets {
+            if metrics.rowAlignment == .firstTextBaseline {
+                XCTAssertNotNil(
+                    metrics.checkBaselineNudge,
+                    "\(name) aligns on a baseline a button does not have, and hands the "
+                        + "guide nothing to move it by"
+                )
+            } else {
+                XCTAssertNil(
+                    metrics.checkBaselineNudge,
+                    "\(name) carries a baseline nudge that its alignment never consults"
+                )
+            }
+        }
+    }
+
+    /// All three feeds stack their rows the same way, and that is now the claim.
+    ///
+    /// The report was "make sure everywhere that checkbox is inline with the first
+    /// line of the task", and Completed — the screen it was reported on — centred
+    /// its toggle across the whole column, so a two-line title left the mark
+    /// floating in the gap between the lines. A per-set assertion would have gone
+    /// green on a fix to one screen; this one only goes green on a fix to all of
+    /// them.
+    func testEveryRowSetHangsItsCheckOffTheTitlesFirstLine() {
+        for metrics in [TdayTaskRowSkeletonMetrics.minimalTimeline, .completedTimeline, .today] {
+            XCTAssertEqual(metrics.rowAlignment, .firstTextBaseline)
+        }
+    }
+
+    /// One nudge, spelled twice, pinned equal.
+    ///
+    /// `Core/UI` may not reach into a feature for a constant, so the core row's
+    /// metrics name their own 5 — and two numbers that mean one thing are exactly
+    /// what drifts. The rows they describe are the same row wearing two sets of
+    /// constants, so the day these disagree is the day one feed's toggle sits half a
+    /// line off the other's with nothing on screen to say why.
+    func testTheTwoSpellingsOfTheBaselineNudgeAgree() {
         XCTAssertEqual(
-            TdayTaskRowSkeletonMetrics.minimalTimeline.checkBaselineNudge,
+            TdayTaskRowMetrics.checkBaselineNudge,
             TodoTimelineMetrics.minimalRowBaselineNudge
         )
-        XCTAssertNil(TdayTaskRowSkeletonMetrics.completedTimeline.checkBaselineNudge)
-        XCTAssertNil(TdayTaskRowSkeletonMetrics.today.checkBaselineNudge)
     }
 
     /// The glyph is drawn inside the slot, not as the slot. The check button's tap
