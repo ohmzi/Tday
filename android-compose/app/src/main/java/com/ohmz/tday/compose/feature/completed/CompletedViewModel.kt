@@ -77,7 +77,26 @@ class CompletedViewModel @Inject constructor(
                 floaterLists = floaterListRepository.fetchListsSnapshot(),
                 errorMessage = null,
             )
-        }.getOrElse { CompletedUiState() },
+        }.getOrElse {
+            // Both terms again, for `TodoListViewModel.hydrateFromCache`'s stated
+            // reason: a cache read that THREW still ended, and the screen may not
+            // wait on it twice. `CompletedUiState()` alone defaults
+            // `hasHydratedSnapshot` to false, and nothing re-hydrates this screen
+            // until a cache version bump -- so the row placeholder that
+            // AWAITING_FIRST draws would have been permanent, on a screen that
+            // used to show its empty state here.
+            //
+            // `firstAnswerLanded` still decides between the scene and the
+            // placeholder, so a device whose Room read is genuinely broken holds
+            // the placeholder rather than claiming an empty history it could not
+            // read. Local Mode is the exception by design: that half of
+            // [FirstAnswerSignal.hasLanded] is a prefs read and is unaffected by
+            // whatever broke above.
+            CompletedUiState(
+                hasHydratedSnapshot = true,
+                firstAnswerLanded = firstAnswerSignal.hasLanded(),
+            )
+        },
     )
     val uiState: StateFlow<CompletedUiState> = _uiState.asStateFlow()
     private var hasLoadedScreen = false
@@ -146,6 +165,19 @@ class CompletedViewModel @Inject constructor(
                     lists = if (current.lists == lists) current.lists else lists,
                     floaterLists = if (current.floaterLists == floaterLists) current.floaterLists else floaterLists,
                     errorMessage = null,
+                )
+            }
+        }.onFailure {
+            // The same rule as the initializer above and as
+            // `TodoListViewModel.hydrateFromCache`: a read that threw still
+            // ANSWERED, so the screen stops waiting on it. Without this leg the
+            // `load()` that follows a failed initializer read is a second chance
+            // that changes nothing, and the placeholder stays up for the life of
+            // the process.
+            _uiState.update { current ->
+                current.copy(
+                    hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
                 )
             }
         }

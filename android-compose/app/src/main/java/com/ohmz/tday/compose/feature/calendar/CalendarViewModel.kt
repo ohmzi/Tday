@@ -93,7 +93,18 @@ class CalendarViewModel @Inject constructor(
                 lists = listRepository.fetchListsSnapshot(),
                 errorMessage = null,
             )
-        }.getOrElse { CalendarUiState() },
+        }.getOrElse {
+            // As in `CompletedViewModel`, and for `TodoListViewModel`'s reason: a
+            // cache read that THREW still ended. `CalendarUiState()` alone leaves
+            // `hasHydratedSnapshot` false forever, and the day list's gate would
+            // then draw neither its rows nor its "nothing scheduled" scene -- a
+            // blank card under the month, where this screen used to say what it
+            // knew.
+            CalendarUiState(
+                hasHydratedSnapshot = true,
+                firstAnswerLanded = firstAnswerSignal.hasLanded(),
+            )
+        },
     )
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
     private var hasLoadedScreen = false
@@ -174,6 +185,15 @@ class CalendarViewModel @Inject constructor(
                     },
                     lists = if (current.lists == lists) current.lists else lists,
                     errorMessage = null,
+                )
+            }
+        }.onFailure {
+            // As in `CompletedViewModel`, and for the same reason: a read that
+            // threw still ended, and the day list may not wait on it twice.
+            _uiState.update { current ->
+                current.copy(
+                    hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
                 )
             }
         }

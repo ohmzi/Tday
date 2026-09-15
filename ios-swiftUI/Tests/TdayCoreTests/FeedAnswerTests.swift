@@ -120,10 +120,52 @@ final class FeedAnswerTests: XCTestCase {
         // FIRST, which makes `firstAnswerLanded` true from the first frame, which
         // is this case.
         //
-        // Stated here as the value that function must produce, since the function
-        // itself reads an `AppContainer` and is not a pure one.
+        // The `feedAnswer` half: given the term, the scene is allowed.
         XCTAssertEqual(
             feedAnswer(storeRead: true, rowsEmpty: true, firstAnswerLanded: true),
+            .empty
+        )
+        // ...and the half this used to leave to a comment. Stating the term by
+        // hand is the same call as `testAnAnswerAlreadyOnScreenIsNotWithdrawn`
+        // makes, under a name that promises Local Mode: delete the local-mode
+        // `guard` and that version of this test still passes. `firstAnswerLanded`
+        // is the decision itself, so this is the assertion that fails when the
+        // escape hatch goes.
+        XCTAssertTrue(
+            firstAnswerLanded(isLocalMode: true, lastSuccessfulSyncEpochMs: 0),
+            "Local Mode holds the stamp at zero forever; that is not 'no answer yet'"
+        )
+    }
+
+    func testAServerWorkspaceHasNoAnswerUntilItsFirstSyncLands() {
+        // The overshoot, and the reason the local-mode term cannot just be
+        // `return true`. On a real account a zero stamp means nobody has counted
+        // this workspace yet, and "No Anytime tasks" is a claim the app has not
+        // earned — the row skeleton is the honest answer.
+        XCTAssertFalse(firstAnswerLanded(isLocalMode: false, lastSuccessfulSyncEpochMs: 0))
+        XCTAssertEqual(
+            feedAnswer(
+                storeRead: true,
+                rowsEmpty: true,
+                firstAnswerLanded: firstAnswerLanded(isLocalMode: false, lastSuccessfulSyncEpochMs: 0)
+            ),
+            .awaitingFirst
+        )
+    }
+
+    func testASyncedWorkspaceHasAnsweredHoweverEmptyItTurnedOutToBe() {
+        XCTAssertTrue(
+            firstAnswerLanded(isLocalMode: false, lastSuccessfulSyncEpochMs: 1_726_000_000_000)
+        )
+        XCTAssertEqual(
+            feedAnswer(
+                storeRead: true,
+                rowsEmpty: true,
+                firstAnswerLanded: firstAnswerLanded(
+                    isLocalMode: false,
+                    lastSuccessfulSyncEpochMs: 1_726_000_000_000
+                )
+            ),
             .empty
         )
     }
