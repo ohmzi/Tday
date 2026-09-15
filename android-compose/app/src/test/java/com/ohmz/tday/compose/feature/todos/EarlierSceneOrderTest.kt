@@ -1,5 +1,7 @@
 package com.ohmz.tday.compose.feature.todos
 
+import com.ohmz.tday.compose.core.ui.FeedAnswer
+import com.ohmz.tday.compose.core.ui.feedAnswer
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -97,8 +99,8 @@ class EarlierSceneOrderTest {
             showEarlierScene(earlierCollapsed = true, scopeItemsEmpty = false),
         )
         assertFalse(
-            "a loading scope has not finished saying what it holds",
-            showEarlierScene(earlierCollapsed = true, isLoading = true),
+            "a scope with no answer yet has not finished saying what it holds",
+            showEarlierScene(earlierCollapsed = true, answer = FeedAnswer.AwaitingFirst),
         )
         assertFalse(
             "Today's first paint suppresses the timeline entirely",
@@ -110,17 +112,64 @@ class EarlierSceneOrderTest {
         )
     }
 
+    @Test
+    fun `a refresh cannot withdraw Earlier's scene either, and a first load still can`() {
+        // The same term swap as on the Anytime home, pinned here because this is
+        // [shouldShowEarlierScene]'s own file. `!isLoading` used to stand where
+        // `answer` does, and `isLoading` is raised by nothing but a pull or a
+        // Retry -- so the gesture asking the app to re-check its answer was the
+        // term that withdrew it.
+        assertTrue(
+            "a settled, answered, empty scope keeps its scene through a refresh",
+            showEarlierScene(
+                earlierCollapsed = true,
+                answer = feedAnswer(
+                    storeRead = true,
+                    rowsEmpty = true,
+                    firstAnswerLanded = true,
+                ),
+            ),
+        )
+        // ...and the overshoot, which is the half that is easy to lose: a fresh
+        // install hydrates instantly and hydrates empty, so the scene must still
+        // be withheld until the first answer actually lands.
+        assertFalse(
+            "a scope whose first answer has not arrived has nothing to illustrate",
+            showEarlierScene(
+                earlierCollapsed = true,
+                answer = feedAnswer(
+                    storeRead = true,
+                    rowsEmpty = true,
+                    firstAnswerLanded = false,
+                ),
+            ),
+        )
+        // Local Mode never records a successful sync, so a stamp-only first-answer
+        // term would have hidden this scene there permanently.
+        assertTrue(
+            "an empty Local Mode workspace is answered from its first frame",
+            showEarlierScene(
+                earlierCollapsed = true,
+                answer = feedAnswer(
+                    storeRead = true,
+                    rowsEmpty = true,
+                    firstAnswerLanded = true,
+                ),
+            ),
+        )
+    }
+
     private fun showEarlierScene(
         earlierCollapsed: Boolean,
         scopeHasEarlierItems: Boolean = true,
         scopeItemsEmpty: Boolean = true,
-        isLoading: Boolean = false,
+        answer: FeedAnswer = FeedAnswer.Empty,
         suppressInitialTimeline: Boolean = false,
         scopedSearchActive: Boolean = false,
     ): Boolean = shouldShowEarlierScene(
         scopeHasEarlierItems = scopeHasEarlierItems,
         scopeItemsEmpty = scopeItemsEmpty,
-        isLoading = isLoading,
+        answer = answer,
         suppressInitialTimeline = suppressInitialTimeline,
         scopedSearchActive = scopedSearchActive,
         earlierCollapsed = earlierCollapsed,

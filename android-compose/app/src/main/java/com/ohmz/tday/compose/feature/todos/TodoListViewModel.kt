@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.cache.FirstAnswerSignal
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.list.FloaterListRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
@@ -46,6 +47,15 @@ data class TodoListUiState(
     val mode: TodoListMode = TodoListMode.TODAY,
     val listId: String? = null,
     val hasHydratedSnapshot: Boolean = false,
+    // "Has this install ever had an answer from its workspace at all", the
+    // half of the first-load/refresh distinction that [hasHydratedSnapshot]
+    // cannot supply on its own. A fresh install's cache read lands
+    // immediately and lands EMPTY, so `hasHydratedSnapshot` alone would let
+    // the screen say "no tasks" while the very first sync is still in
+    // flight -- the worse of the two bugs, and the obvious way to overshoot
+    // the one this was added for. `isLocalMode || lastSuccessfulSync > 0`;
+    // see [FirstAnswerSignal] for why the local-mode half is not optional.
+    val firstAnswerLanded: Boolean = false,
     val lists: List<ListSummary> = emptyList(),
     val items: List<TodoItem> = emptyList(),
     // Today mode only: overdue tasks tucked into the collapsible "Earlier"
@@ -143,6 +153,7 @@ class TodoListViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
+    private val firstAnswerSignal: FirstAnswerSignal,
     private val reminderScheduler: TaskReminderScheduler,
     private val snackbarManager: SnackbarManager,
     private val undoableDeleteCoordinator: UndoableDeleteCoordinator,
@@ -157,6 +168,33 @@ class TodoListViewModel @Inject constructor(
 
     init {
         observeCacheChanges()
+        observeFirstAnswer()
+    }
+
+    /**
+     * The only path by which [TodoListUiState.firstAnswerLanded] can turn true
+     * without anything else on this screen moving, and the case that makes it
+     * necessary is the exact one the flag exists for: a fresh install signing
+     * in to an EMPTY account. That first sync writes a sync stamp and no tasks,
+     * so `cacheDataVersion` -- which only advances on `hasUiDataChanges` --
+     * never bumps, no hydrate is triggered, and without this collector the feed
+     * would sit in its row skeleton for as long as the app stayed open. The
+     * stamp is metadata, so the counter that carries it is the metadata one.
+     *
+     * Unguarded by `hasLoadedMode`, unlike [observeCacheChanges]: this writes a
+     * single boolean rather than re-reading the feed, and a screen that has not
+     * loaded a mode yet has nothing to be disturbed.
+     */
+    private fun observeFirstAnswer() {
+        viewModelScope.launch {
+            firstAnswerSignal.version.collect {
+                val landed = firstAnswerSignal.hasLanded()
+                _uiState.update { current ->
+                    if (current.firstAnswerLanded == landed) current
+                    else current.copy(firstAnswerLanded = landed)
+                }
+            }
+        }
     }
 
     private fun observeCacheChanges() {
@@ -410,6 +448,7 @@ class TodoListViewModel @Inject constructor(
             _uiState.update { current ->
                 current.copy(
                     hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
                     lists = if (current.lists == snapshot.lists) current.lists else snapshot.lists,
                     items = if (current.items == snapshot.todos) current.items else snapshot.todos,
                     earlierItems = if (current.earlierItems == snapshot.earlierTodos) {
@@ -424,8 +463,22 @@ class TodoListViewModel @Inject constructor(
                 )
             }
         }.onFailure {
+            // Both terms on the failure path, beside the `hasHydratedSnapshot`
+            // that has always been written here: a cache read that threw still
+            // ENDED, and the screen may not wait on it twice.
+            //
+            // `firstAnswerLanded` is read from the same store, so on a device
+            // whose Room read is genuinely broken it comes back false (Local Mode
+            // excepted -- that half is a prefs read) and the feed holds its row
+            // placeholder. Stated rather than discovered: that is a placeholder
+            // with nothing coming, and it is still the better of the two wrong
+            // answers available, because the alternative is telling someone they
+            // have no tasks on the strength of a read that failed.
             _uiState.update { current ->
-                current.copy(hasHydratedSnapshot = true)
+                current.copy(
+                    hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
+                )
             }
         }
     }
@@ -468,6 +521,15 @@ class TodoListViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
+                        // Re-read here as well as in `hydrateFromCache`, and this
+                        // is the path that matters for a fresh install signing in
+                        // to an EMPTY account: that sync writes a sync stamp and
+                        // no rows, so `cacheDataVersion` never bumps and no
+                        // hydrate follows it. Same source of truth rather than a
+                        // bare `true` -- a `fetchTodos` that quietly fell back to
+                        // the local cache offline has not heard from a server, and
+                        // must not be allowed to claim it has.
+                        firstAnswerLanded = firstAnswerSignal.hasLanded(),
                         lists = if (current.lists == lists) current.lists else lists,
                         items = if (current.items == todos) current.items else todos,
                         earlierItems = if (current.earlierItems == earlierTodos) {
