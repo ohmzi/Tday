@@ -1350,3 +1350,44 @@ animates.
               misses, and `TdayConfettiKinematicsTests` pins the envelope's curve and its Quick rung
               — and neither can say whether forty-six pieces fade while still in flight or whether
               the scene above them waited. That is the whole of what this row is for.
+
+- [ ] **PR 43 · web · Undo takes the paper with the row it brings back** — a custom list with
+      exactly one task left, run twice: once where that task is the only thing on the screen, and
+      once where an **overdue** task is also waiting in a collapsed Overdue section above the
+      scene. The second setup is the reported bug and is the one that matters; the first is the
+      half that was already wrong and nobody had noticed.
+      Do:     tick the last task, and while the paper is still in the air press **Undo** in the
+              toast. Aim for the first half of the flight — inside about a second — so there is a
+              burst left to interrupt.
+      Watch:  the pieces keep FLYING as they go — still travelling, still spinning, still flipping
+              — and fade out over Quick while they do. On the plain setup the scene goes with them
+              on the same rung, its 42vh track closing under the fade rather than dropping in the
+              frame the node leaves, so the restored row arrives without the page jumping under
+              it. On the overdue setup the scene STAYS exactly where it is under the Overdue
+              header, which is the designed v0.7.25 presentation and not a bug — only the confetti
+              leaves, and the restored row is back in the section above it.
+      Fails:  the burst carrying on over the restored row and expiring on its own a second or two
+              later, which is the report. Also a fail, and the reason this is not a one-line
+              change: the paper vanishing between two frames on the press, which is the same
+              complaint one layer down; the pieces FREEZING and then dissolving in place, which
+              would mean the envelope is being applied to a stopped clock rather than multiplied
+              into a running one; the burst restarting from the launch patch, which would mean the
+              draw effect re-ran and re-rolled the fan; and on the overdue setup the scene's own
+              rise visibly jumping, which would mean the celebrating class came off an arrival
+              that was still playing.
+      Also:   a second completion straight after an undo must celebrate normally — tick it off
+              again and the full burst plays, because the newer stamp re-opens the window. And in
+              two tabs or on a second device: empty the list from the other end (the burst plays
+              here), then undo it there. The paper must go on this tab too, without the scene
+              flickering back. Typing a new task into a list while the paper is up must end it the
+              same way — the list is genuinely not finished any more.
+      Reduce: with the OS "reduce motion" preference on, repeat the plain undo. There was never any
+              paper to take away — `Confetti`'s effect returns before its first frame — so there
+              must be nothing at all: no pause, no held frame, no Quick of anything. The row comes
+              back and the scene goes on the same frame.
+      Why:    jsdom computes no layout, applies no stylesheet and paints no canvas. `vitest` pins
+              the decision — `undo-cancels-celebration` covers the overdue case a transition-shaped
+              fix misses, `confetti-cancel-fade` pins that the canvas outlives `play` and that what
+              it paints is fading, and `confetti-kinematics` pins the envelope term — and none of
+              them can say whether forty-six pieces look like paper leaving or whether the 42vh
+              under them came back smoothly. That is the whole of what this row is for.

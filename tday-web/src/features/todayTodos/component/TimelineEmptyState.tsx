@@ -25,6 +25,7 @@ export default function TimelineEmptyState({
   isDayDone,
   celebrate,
   celebrationStartDelayMs = 0,
+  leavingOnCancel = false,
   earlierHandoff,
   locale,
   emptyTitle,
@@ -47,6 +48,20 @@ export default function TimelineEmptyState({
    * shape; every caller that comes through this component spends the lead.
    */
   celebrationStartDelayMs?: number;
+  /**
+   * The scope refilled under this scene — an undo put the completed row back, or
+   * a task arrived — and the container is holding the node in the tree for the
+   * length of the burst's own cancel fade rather than taking it away in the
+   * frame that ends the celebration. The ink and the track leave together on
+   * `Quick` (`.tday-empty-cancel-exit` in globals.css), which is the same rung
+   * the paper above it is fading on, so scene and confetti go as one thing.
+   *
+   * A wholly separate departure from `earlierHandoff`'s below, and they can
+   * never both be on: that one plays while the scope is still EMPTY and hands
+   * the slot to Earlier's rows, this one plays because the scope stopped being
+   * empty at all.
+   */
+  leavingOnCancel?: boolean;
   /** Which half of the swap is mid-exit, if either (see `useEarlierExpandHandoff`). */
   earlierHandoff: EarlierHandoff;
   locale: string;
@@ -64,6 +79,7 @@ export default function TimelineEmptyState({
         "tday-empty-slot",
         leaving && "tday-empty-exit",
         leaving && "tday-empty-slot-closing",
+        leavingOnCancel && "tday-empty-cancel-exit",
       )}
     >
       {/* The track the grid above closes. It is the one that takes the clip
