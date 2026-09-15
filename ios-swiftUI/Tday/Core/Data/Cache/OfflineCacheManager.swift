@@ -114,6 +114,23 @@ final class OfflineCacheManager {
         lastState.defaultHomeScreen
     }
 
+    /// The same cheap read, for the stamp that answers "has this install ever heard back from its
+    /// workspace at all" — see `feedFirstAnswerLanded(in:)`, which is its only caller and which is
+    /// asked from inside the synchronous hydrates of three feed view models. Those hydrates run on
+    /// every cache write, and `TodoListViewModel.hydrateFromCache` already records what a second
+    /// `loadOfflineState()` would cost there: every write wakes every live feed, so a hydrate that
+    /// re-reads the whole cache doubles the main-actor cost of every sync. This is one `Int64` that
+    /// is already in memory.
+    ///
+    /// `lastState` mirrors it on both write paths, which is what makes the mirror safe to trust for
+    /// this field in particular: the content-changed path assigns the whole normalized state, and
+    /// the path that finds nothing observer-visible changed still copies this stamp across before
+    /// returning — a first sync against an EMPTY account is exactly that second case, and it is the
+    /// one case this accessor exists for.
+    var lastSuccessfulSyncEpochMsSnapshot: Int64 {
+        lastState.lastSuccessfulSyncEpochMs
+    }
+
     func loadOfflineState() -> OfflineSyncState {
         let todos = (try? modelContext.fetch(FetchDescriptor<CachedTodoEntity>())) ?? []
         let floaters = (try? modelContext.fetch(FetchDescriptor<CachedFloaterEntity>())) ?? []

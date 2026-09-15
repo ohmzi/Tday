@@ -25,6 +25,11 @@ const CALENDAR_SCREEN = resolve(MONO, "ios-swiftUI/Tday/Feature/Calendar/Calenda
 const COMPLETED_SCREEN = resolve(MONO, "ios-swiftUI/Tday/Feature/Completed/CompletedScreen.swift");
 const EMPTY_STATE = resolve(MONO, "ios-swiftUI/Tday/Core/UI/TdayEmptyState.swift");
 const APP_ROOT = resolve(MONO, "ios-swiftUI/Tday/Feature/App/AppRootView.swift");
+const TODO_LIST_SCREEN = resolve(MONO, "ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift");
+const SCHEDULED_TASK_HOME_SCREEN = resolve(
+  MONO,
+  "ios-swiftUI/Tday/Feature/ScheduledTaskHome/ScheduledTaskHomeScreen.swift",
+);
 
 /**
  * Reads a source file with its comments removed.
@@ -168,8 +173,137 @@ describe("the iOS completed history's empty scene fades out instead of cutting",
   it("gates the scenes and the animation on one property", () => {
     // Written out twice, the gate and the key drift, and a removal transition goes quietly inert
     // the day someone edits one of them — the exact failure the motion programme keeps finding.
+    //
+    // The count moved one property along when both scenes were put behind `feedAnswer`, and the
+    // assertion follows it rather than being relaxed: `showsCompletedEmptyState` still has to be
+    // the single name the scenes and the `.animation(_:value:)` key share, and `completedAnswer`
+    // still has to be the single place history's emptiness is counted. Two hops, one definition
+    // each, is the same guarantee — what it forbids is a second count written out by hand.
     const gate = blockAfter(code, "private var showsCompletedEmptyState: Bool {");
-    expect(gate).toContain("searchedItems.isEmpty");
+    expect(gate).toContain("completedAnswer");
+    const answer = blockAfter(code, "private var completedAnswer: FeedAnswer {");
+    expect(answer).toContain("searchedItems.isEmpty");
+  });
+});
+
+/**
+ * The refresh flag is chrome. It may drive the pull pill; it may never decide what the scene is.
+ *
+ * An empty state is an ANSWER, not an absence of one, and `isLoading` is raised on these three
+ * screens by exactly one thing — `refresh()`, reachable only from the pull gesture and the error
+ * card's Retry. Every feed view model here hydrates from the local cache synchronously in `init`,
+ * so the flag has never meant "no answer yet"; it has always meant "a refresh over an answer
+ * already on screen", which is the one condition an empty scene must be held THROUGH. Spelled
+ * `!viewModel.isLoading`, it made the gesture that asks the app to re-check its answer the very
+ * term that withdrew it: the user pulls the Anytime home down with nothing in it, the
+ * illustration and its copy vanish, the page collapses upward, three grey placeholder bars grow
+ * in the gap, and the whole block comes back when the refresh returns with nothing new.
+ *
+ * `feedAnswer(storeRead:rowsEmpty:firstAnswerLanded:)` has no loading parameter, so the ban below
+ * is not a style rule — it is the only way the absence stays structural once these gates are
+ * ordinary Swift properties again. The calendar's own day list is the in-tree precedent and is
+ * already pinned this way a few describes above; the rest of the same copy-pasted gate is below.
+ */
+describe("no iOS feed scene is decided by the refresh flag", () => {
+  const todoList = readCode(TODO_LIST_SCREEN);
+  const completed = readCode(COMPLETED_SCREEN);
+  const scheduledHome = readCode(SCHEDULED_TASK_HOME_SCREEN);
+
+  const gates: ReadonlyArray<{ file: string; source: string; anchor: string; counts: string }> = [
+    // The reported screenshot, in one line of Swift.
+    {
+      file: "TodoListScreen.swift",
+      source: todoList,
+      anchor: "private var showInlineFloaterTaskHomeEmpty: Bool {",
+      counts: "floaterTaskHomeAnswer",
+    },
+    // Its other half on the same pull: the skeleton that used to GROW during a refresh over an
+    // already-answered feed, and drew nothing on the one load that really has no answer.
+    {
+      file: "TodoListScreen.swift",
+      source: todoList,
+      anchor: "private var showsTimelineSkeleton: Bool {",
+      counts: "timelineAnswer",
+    },
+    // The term here was dropped rather than swapped, and this is what keeps it dropped. A search
+    // is answered locally out of rows the screen already holds, so there is no first load to
+    // withhold the no-match scene for; the flag only ever left a refresh under a non-matching
+    // query showing neither this scene nor the skeleton, which excludes search on purpose.
+    {
+      file: "TodoListScreen.swift",
+      source: todoList,
+      anchor: "private var showsListSearchEmptyState: Bool {",
+      counts: "timelineItems.isEmpty",
+    },
+    {
+      file: "CompletedScreen.swift",
+      source: completed,
+      anchor: "private var showsCompletedEmptyState: Bool {",
+      counts: "completedAnswer",
+    },
+    {
+      file: "CompletedScreen.swift",
+      source: completed,
+      anchor: "private var completedAnswer: FeedAnswer {",
+      counts: "searchedItems.isEmpty",
+    },
+    {
+      file: "CompletedScreen.swift",
+      source: completed,
+      anchor: "private var showsCompletedFeedSkeleton: Bool {",
+      counts: "completedAnswer",
+    },
+    // The mirror image of the report: this root has a live pull and no empty scene, so a pull on
+    // a Today feed the user had just cleared grew three grey bars in a gap that was correctly
+    // empty.
+    {
+      file: "ScheduledTaskHomeScreen.swift",
+      source: scheduledHome,
+      anchor: "private var showsTodayFeedSkeleton: Bool {",
+      counts: "viewModel.todayTodos.isEmpty",
+    },
+  ];
+
+  for (const gate of gates) {
+    const anchorName = gate.anchor.slice("private var ".length, gate.anchor.indexOf(":"));
+
+    it(`${gate.file} decides ${anchorName} without asking whether a refresh is running`, () => {
+      const rows = blockAfter(gate.source, gate.anchor);
+      expect(rows, `${gate.file} no longer declares ${anchorName}`).not.toBe("");
+      expect(rows).toContain(gate.counts);
+      expect(rows).not.toContain("isLoading");
+    });
+  }
+
+  it("keeps the full-screen illustration's own condition off the flag too", () => {
+    // The one gate in this set that is not a `private var` — it is a bare `if` inside the
+    // watermark overlay, so `blockAfter` has no declaration to anchor on and the condition is
+    // matched as written. The two named terms are asserted together on purpose: this is the
+    // Earlier/celebration predicate that two recent commits rewrote, extended by a sibling term
+    // rather than edited, and a future reader deleting either half is deleting a different fix.
+    expect(todoList).toContain(
+      "if showsEmptyStateIllustration, pendingScopeAnswer == .empty, !isFloaterTaskHomeScreen, !isSearchingList {",
+    );
+  });
+
+  it("keeps the three answer states a decision rather than three hand-written conditions", () => {
+    // The gates above are allowed to name `feedAnswer` indirectly (`floaterTaskHomeAnswer`,
+    // `completedAnswer`) because the row count differs per scope and the properties exist to
+    // carry that difference. What may not come back is a second copy of the RULE, so each screen
+    // has to reach the one function — a screen that stopped calling it entirely would satisfy
+    // every `not.toContain("isLoading")` above by inventing its own flag instead.
+    expect(todoList).toContain("feedAnswer(");
+    expect(completed).toContain("feedAnswer(");
+    expect(scheduledHome).toContain("feedAnswer(");
+  });
+
+  it("leaves the refresh indicator and the error card exactly where they were", () => {
+    // The user asked for the picture to stay, not for the refresh to become invisible. Pinned as
+    // an agreement rather than left implied, because "remove the isLoading term" is one careless
+    // reading away from removing the spinner the gesture needs in order to feel answered at all.
+    expect(todoList).toContain("isRefreshing: viewModel.isLoading");
+    expect(completed).toContain("isRefreshing: viewModel.isLoading");
+    expect(scheduledHome).toContain("isRefreshing: viewModel.isLoading");
   });
 });
 

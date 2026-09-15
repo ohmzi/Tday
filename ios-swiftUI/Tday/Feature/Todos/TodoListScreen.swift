@@ -842,10 +842,54 @@ struct TodoListScreen: View {
         viewModel.mode == .floater && viewModel.listId == nil
     }
 
+    /// The Anytime home's own answer, counted on the raw item list: this screen
+    /// has no Earlier bucket to subtract, unlike the modes `pendingScopeAnswer`
+    /// speaks for.
+    private var floaterTaskHomeAnswer: FeedAnswer {
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: viewModel.items.isEmpty,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        )
+    }
+
+    /// The same question asked of the timeline modes, which count what they
+    /// actually render. Two properties rather than one because `rowsEmpty` is
+    /// genuinely two different counts on this screen, not because the rule
+    /// differs — the rule is `feedAnswer` and there is only one of it.
+    private var timelineAnswer: FeedAnswer {
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: timelineItems.isEmpty,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        )
+    }
+
+    /// And the third count: the illustration's scope, which subtracts a
+    /// collapsed Earlier section out (see `hasNoPendingItems`). This is a
+    /// sibling term for the overlay's `if`, deliberately not folded into
+    /// `showsEmptyStateIllustration` — that predicate is the Earlier/celebration
+    /// gate the last two commits rewrote, and it is extended here, not edited.
+    private var pendingScopeAnswer: FeedAnswer {
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: hasNoPendingItems,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        )
+    }
+
     // Root floater empty state is shown inline (in the list, above the list
     // names) to mirror the web layout, rather than as a full-screen overlay.
+    //
+    // `!viewModel.isLoading` stood where the answer state does now, and it is
+    // the whole of the reported bug: `isLoading` is raised by nothing but
+    // `refresh()`, so pulling this screen down with no tasks in it withdrew the
+    // illustration, the heading and the body, collapsed the page upward, and put
+    // the block back when the refresh returned with nothing new. An empty state
+    // is an answer; a refresh is a request to check that answer, not a reason to
+    // withdraw it. `feedAnswer` has no term a pull can move.
     private var showInlineFloaterTaskHomeEmpty: Bool {
-        isFloaterTaskHomeScreen && viewModel.items.isEmpty && !viewModel.isLoading
+        isFloaterTaskHomeScreen && floaterTaskHomeAnswer == .empty
     }
 
     private var inlineEmptyStateGapHeight: CGFloat {
@@ -935,21 +979,40 @@ struct TodoListScreen: View {
         return name.isEmpty ? L("Search") : L("Search in %@", name)
     }
 
+    /// A live query that matched nothing, and nothing else. The `!isLoading`
+    /// term that used to be here is dropped outright rather than swapped: a
+    /// search is answered locally out of rows this screen already holds, so
+    /// there is no first load to withhold it for and no sync that could make the
+    /// no-match true or false. What the term actually did was leave a refresh
+    /// under a non-matching query showing NEITHER scene — not this one, because
+    /// the flag was up, and not the skeleton below, because the skeleton excludes
+    /// search on purpose.
     private var showsListSearchEmptyState: Bool {
-        isSearchingList && timelineItems.isEmpty && !viewModel.isLoading
+        isSearchingList && timelineItems.isEmpty
     }
 
     /// The first load of this screen's own scope, and only that.
     ///
-    /// `isLoading` had two consumers here and neither of them drew anything: the
-    /// pull-to-refresh pill, which is about a refresh the user asked for, and the
-    /// two empty-state gates, which use it to keep "nothing here" from being said
-    /// about a scope nobody has finished counting yet. So the answer to "still
-    /// loading" was a blank feed. The search cases stay out of it — a live query
-    /// answers for itself, and a placeholder under a query the user is typing
-    /// would flash three grey rows per keystroke.
+    /// The premise this comment used to carry was false about its own client and
+    /// is worth replacing rather than leaving as load-bearing prose: there is no
+    /// cold open here to cover. `TodoListViewModel` hydrates from the local cache
+    /// synchronously in `init`, so the rows beat the first body pass, and the
+    /// only thing that ever raised `isLoading` was `refresh()`. Gated on that
+    /// flag, this skeleton did the exact inverse of its own name — it GREW three
+    /// grey bars during a pull on a feed that had already answered, which is the
+    /// second half of the reported screenshot, and it drew nothing at all on the
+    /// one occasion that really has no answer.
+    ///
+    /// That occasion is what it draws for now: the cache is empty AND no first
+    /// answer has ever landed, which on this client means a fresh install or a
+    /// fresh login whose first sync failed or is still in flight — a case that
+    /// until now wrongly said "No tasks" about a workspace nobody had counted.
+    ///
+    /// The search cases stay out of it, as they always did — a live query answers
+    /// for itself, and a placeholder under a query the user is typing would flash
+    /// three grey rows per keystroke.
     private var showsTimelineSkeleton: Bool {
-        viewModel.isLoading && timelineItems.isEmpty && !isSearchingList && !showFloaterTaskHomeSearchResults
+        timelineAnswer == .awaitingFirst && !isSearchingList && !showFloaterTaskHomeSearchResults
     }
 
     private var isTodayMode: Bool {
@@ -1802,7 +1865,15 @@ struct TodoListScreen: View {
                         // A live query answers for itself in the feed, so the
                         // screen's own "nothing here" line stands down rather
                         // than talking over the no-results state.
-                        if showsEmptyStateIllustration, !viewModel.isLoading, !isFloaterTaskHomeScreen, !isSearchingList {
+                        // `pendingScopeAnswer == .empty` where `!viewModel.isLoading`
+                        // used to be, and a sibling term rather than an edit to
+                        // `showsEmptyStateIllustration`: that predicate is the
+                        // Earlier/celebration gate, and it answers a different
+                        // question (is this scope finished, and is Earlier out of
+                        // the way) than "has this scope answered at all". Both
+                        // still have to be true; only the second one used to be
+                        // spelled as the refresh flag.
+                        if showsEmptyStateIllustration, pendingScopeAnswer == .empty, !isFloaterTaskHomeScreen, !isSearchingList {
                             // Centred in whatever is left BELOW the hero row
                             // and — while it is on screen — the collapsed
                             // Overdue/Earlier header, not in the full frame

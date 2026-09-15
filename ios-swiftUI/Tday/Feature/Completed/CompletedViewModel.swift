@@ -8,6 +8,16 @@ final class CompletedViewModel {
     private let container: AppContainer
 
     var isLoading = false
+    /// History's local cache read has landed in state — true from the first
+    /// frame, because `hydrateFromCache()` runs in `init`. Published here rather
+    /// than derived in the view for the same reason as on the two feed view
+    /// models above it: a computed property on a `View` is reachable from no
+    /// test, and this is one of the terms `feedAnswer` decides both of this
+    /// screen's scenes on.
+    private(set) var hasHydratedFromCache = false
+    /// `isLocalMode || lastSuccessfulSyncEpochMs > 0` — see
+    /// `feedFirstAnswerLanded(in:)`. Re-read on every hydrate.
+    private(set) var firstAnswerLanded = false
     var items: [CompletedItem] = []
     var lists: [ListSummary] = []
     /// For the edit sheet's list picker when the item being edited is a
@@ -109,6 +119,10 @@ final class CompletedViewModel {
         lists = container.listRepository.fetchListsSnapshot()
         floaterLists = container.floaterListRepository.fetchListsSnapshot()
         errorMessage = nil
+        // Settled on the same frame as the items, for the reason given on
+        // `TodoListViewModel.hydrateFromCache`.
+        firstAnswerLanded = feedFirstAnswerLanded(in: container)
+        hasHydratedFromCache = true
     }
 
     // `[weak self]` is load-bearing here, not style — see the identical note

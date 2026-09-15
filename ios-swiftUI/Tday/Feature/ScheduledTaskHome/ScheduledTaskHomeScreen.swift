@@ -156,12 +156,20 @@ struct ScheduledTaskHomeScreen: View {
         searchExpanded && !normalizedSearchQuery.isEmpty
     }
 
-    /// The first load, and only the first. A pull-to-refresh with rows already on
-    /// screen has something to show, and swapping those for grey bars would be the
-    /// app forgetting what it already knows — which is why this asks the item list
-    /// as well as the flag, the same pair Android's feed asks.
+    /// The first load, and only the first. Asking the item list as well as the
+    /// flag covered a pull over rows; it did nothing for a pull over a Today
+    /// feed the user had just cleared, which is the mirror image of the reported
+    /// bug and this root's own share of it — the gap under the hero was correctly
+    /// empty, and the pull grew three grey bars in it. `isLoading` is raised by
+    /// nothing but `refresh()`, and `ScheduledTaskHomeViewModel` hydrates from
+    /// the cache synchronously in `init`, so the flag never meant "no answer
+    /// yet". `feedAnswer` does, and has no term a pull can move.
     private var showsTodayFeedSkeleton: Bool {
-        viewModel.isLoading && viewModel.todayTodos.isEmpty
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: viewModel.todayTodos.isEmpty,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        ) == .awaitingFirst
     }
 
     private var shouldCollapseRootDock: Bool {
