@@ -1,6 +1,5 @@
 package com.ohmz.tday.compose.feature.todos
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -15,12 +14,21 @@ import org.junit.Test
  *    Earlier collapsed) -- no illustration and no confetti at all. See
  *    [shouldShowTodayEarlierExpandedCelebration].
  *  - A second tap on Earlier's collapsed header, landing inside the ~150ms
- *    exit-before-expand beat a first tap scheduled, used to read
- *    `showTodayEarlierIllustration` as already false (it flips the moment
- *    `earlierExpandPending` is set, well before the beat's own coroutine
- *    actually collapses the section) and fall through to an immediate
- *    expand, racing Earlier's rows in underneath the scene's still-playing
- *    exit. See [decideSectionHeaderToggleAction].
+ *    exit-before-expand beat a first tap scheduled, used to fall through to
+ *    an immediate expand and race Earlier's rows in underneath the scene's
+ *    still-playing exit. Those cases have moved to [EarlierSceneOrderTest]
+ *    along with the finding itself: the beat is retired, because the scene
+ *    is emitted BELOW Earlier's rows now and the two no longer contest a
+ *    slot, so there is no window for a second tap to land inside. What is
+ *    left to pin is that one boolean decides both halves, which is
+ *    [shouldShowEarlierScene]'s own file.
+ *  - Moving the scene below Earlier's rows then reopened the first finding
+ *    from the other end: the flag still turned the scene on, but with Earlier
+ *    expanded the item it turns on sits past the fold, a `LazyColumn` does not
+ *    compose what it has not reached, and `TdayConfetti`'s flight starts from
+ *    a `LaunchedEffect` inside it -- no illustration and no confetti again, for
+ *    exactly the backlog the flag was written for. See
+ *    [shouldFoldEarlierForCelebration].
  */
 class TodayEarlierEmptyStateGatingTest {
 
@@ -116,78 +124,85 @@ class TodayEarlierEmptyStateGatingTest {
         )
     }
 
-    // --- decideSectionHeaderToggleAction -------------------------------
+    // --- shouldFoldEarlierForCelebration -----------------------------------
+    //
+    // The second half of the same finding, and the half the flag above cannot
+    // answer on its own. Showing the scene and being able to see it stopped
+    // being the same thing when the scene moved below Earlier's rows: the
+    // `LazyColumn` never composes an item it has not scrolled to, and the burst
+    // is started by a `LaunchedEffect` inside that item, so a tall enough
+    // expanded Earlier does not delay the celebration, it deletes it. These pin
+    // the fold that pays for it -- once per completion, and never against a user
+    // who taps the list back open.
+
+    private val Stamp = 12_345L
 
     @Test
-    fun `a tap while an earlier tap's exit beat is still running is ignored`() {
-        // The exact race: `earlierExpandPending` is true (a first tap's beat
-        // is running), which -- in the real composable -- has already flipped
-        // `showTodayEarlierIllustration` to false on the recomposition that
-        // followed. Passing that already-false value in here is the point:
-        // IGNORE must win on `earlierExpandPending` alone, not by re-deriving
-        // whether the scene is still visible.
-        assertEquals(
-            SectionHeaderToggleAction.IGNORE,
-            decideSectionHeaderToggleAction(
-                key = EARLIER_SECTION_KEY,
-                wasCollapsed = true,
-                showTodayEarlierIllustration = false,
-                earlierExpandPending = true,
+    fun `folds Earlier for a completion that lands while Earlier is open`() {
+        assertTrue(
+            shouldFoldEarlierForCelebration(
+                showEarlierExpandedCelebration = true,
+                celebrationStampMs = Stamp,
+                foldedForStampMs = 0L,
             ),
         )
     }
 
     @Test
-    fun `the first tap on the illustrated collapsed header defers the expand`() {
-        assertEquals(
-            SectionHeaderToggleAction.DEFER_EARLIER_EXPAND,
-            decideSectionHeaderToggleAction(
-                key = EARLIER_SECTION_KEY,
-                wasCollapsed = true,
-                showTodayEarlierIllustration = true,
-                earlierExpandPending = false,
+    fun `folds once per completion, not once per frame the flag is true`() {
+        // The fold makes its own trigger false -- a folded Earlier is a
+        // collapsed one, and `shouldShowTodayEarlierExpandedCelebration`
+        // requires it expanded. The flag therefore flips back to true the
+        // moment the user taps Earlier open again, still inside the window.
+        // Keyed on the flag this would fold the list shut under their finger
+        // for four seconds; keyed on the stamp their tap wins.
+        assertFalse(
+            shouldFoldEarlierForCelebration(
+                showEarlierExpandedCelebration = true,
+                celebrationStampMs = Stamp,
+                foldedForStampMs = Stamp,
             ),
         )
     }
 
     @Test
-    fun `collapsing an already-expanded Earlier is an immediate toggle`() {
-        assertEquals(
-            SectionHeaderToggleAction.IMMEDIATE_TOGGLE,
-            decideSectionHeaderToggleAction(
-                key = EARLIER_SECTION_KEY,
-                wasCollapsed = false,
-                showTodayEarlierIllustration = false,
-                earlierExpandPending = false,
+    fun `the next completion folds again`() {
+        assertTrue(
+            shouldFoldEarlierForCelebration(
+                showEarlierExpandedCelebration = true,
+                celebrationStampMs = Stamp + 1,
+                foldedForStampMs = Stamp,
             ),
         )
     }
 
     @Test
-    fun `expanding a collapsed Earlier with no illustration showing is immediate too`() {
-        // Earlier can be collapsed without the illustration showing -- Today
-        // still has pending tasks, say -- and that ordinary case must not be
-        // swept into the defer branch just because the key matches.
-        assertEquals(
-            SectionHeaderToggleAction.IMMEDIATE_TOGGLE,
-            decideSectionHeaderToggleAction(
-                key = EARLIER_SECTION_KEY,
-                wasCollapsed = true,
-                showTodayEarlierIllustration = false,
-                earlierExpandPending = false,
+    fun `never folds a list nobody is celebrating over`() {
+        // Every path that leaves the flag false -- Earlier already collapsed,
+        // the scope not empty, the window expired, a search open -- is a path
+        // that must not touch the user's own collapse state. The flag is the
+        // only gate this needs, because it already carries all of them.
+        assertFalse(
+            shouldFoldEarlierForCelebration(
+                showEarlierExpandedCelebration = false,
+                celebrationStampMs = Stamp,
+                foldedForStampMs = 0L,
             ),
         )
     }
 
     @Test
-    fun `other sections are never routed through Earlier's special cases`() {
-        assertEquals(
-            SectionHeaderToggleAction.IMMEDIATE_TOGGLE,
-            decideSectionHeaderToggleAction(
-                key = "today-morning",
-                wasCollapsed = true,
-                showTodayEarlierIllustration = true,
-                earlierExpandPending = true,
+    fun `an unset stamp never folds`() {
+        // Belt and braces, and named as such. `celebrateEmptyState` already
+        // requires a non-zero stamp, so the flag should never be true here --
+        // but 0 is both "nothing has completed" and the initial
+        // already-folded value, and a sentinel that means two things is worth
+        // one explicit line rather than an inference across two functions.
+        assertFalse(
+            shouldFoldEarlierForCelebration(
+                showEarlierExpandedCelebration = true,
+                celebrationStampMs = 0L,
+                foldedForStampMs = 0L,
             ),
         )
     }

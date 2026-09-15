@@ -576,8 +576,13 @@ told somebody.
     its two pulses, the settle before a result is scrolled to — and in
     `ScheduledTaskHomeScreen.kt` the wait before the search surface is torn down
     behind a push that is still running.
-  - `EarlierExpandDeferMillis` — Android's twin of `useEarlierExpandHandoff` above —
-    and the hero header's focus hand-off in `RootFeedHeroHeader.kt`.
+  - The hero header's focus hand-off in `RootFeedHeroHeader.kt`. Android's
+    `EarlierExpandDeferMillis` — the twin of `useEarlierExpandHandoff` above — used to
+    be named here as well, and is not any more: `TodoListScreen`'s empty-state scene
+    moved below Earlier's rows, the scene's exit and the rows' entrance stopped
+    contesting one slot, and the wait was retired rather than re-scaled. A wait
+    deleted is the fifth idiom rule met the only way it stays met. Web and iOS keep
+    theirs, because on both the scene is drawn over the list rather than in it.
   - The celebration lead in `TdayEmptyState.kt` and `TdayConfetti.kt`, which is
     already dead at 0x behind a `motionEnabled` guard but was not stretching at 2x
     with the burst it is timed against.
