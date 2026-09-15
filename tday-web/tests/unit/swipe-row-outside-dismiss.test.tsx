@@ -22,6 +22,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, createEvent, fireEvent, render, screen } from "@testing-library/react";
 import { useSwipeRow } from "@/hooks/useSwipeRow";
+import { SWIPE_SETTLE_HOME } from "@/lib/swipeGesture";
 
 /** Mirrors `ACTIONS_WIDTH` in all three row components. */
 const ACTIONS_WIDTH = 210;
@@ -34,7 +35,7 @@ afterEach(cleanup);
  * wrapper — and something else on the page to touch.
  */
 function RowHarness() {
-  const { swipeX, rowRef, swipeHandlers } = useSwipeRow({
+  const { swipeX, transition, rowRef, swipeHandlers } = useSwipeRow({
     actionsWidth: ACTIONS_WIDTH,
     onOpen: () => undefined,
   });
@@ -49,10 +50,16 @@ function RowHarness() {
         <button type="button" data-testid="pill">
           Delete task
         </button>
+        {/*
+          `transition` is rendered, not just `transform`, because half of what a
+          dismissal owes is HOW the row gets home. The three containers all hand
+          both to the same style object, and a harness that drew only the offset
+          scored a teleport as a pass.
+        */}
         <div
           data-testid="row"
           {...swipeHandlers}
-          style={{ transform: `translateX(${swipeX}px)` }}
+          style={{ transform: `translateX(${swipeX}px)`, transition }}
         />
       </div>
       <div data-testid="scroller">
@@ -85,6 +92,11 @@ function touchAt(
 function offsetOf(row: HTMLElement): number {
   const match = /translateX\((-?[\d.]+)px\)/.exec(row.style.transform);
   return match ? Number(match[1]) : 0;
+}
+
+/** What the row is currently willing to animate, and on which rung. */
+function transitionOf(row: HTMLElement): string {
+  return row.style.transition;
 }
 
 /** A row dragged all the way out and released there, which is how one is opened. */
@@ -183,6 +195,26 @@ describe("a scroll under an open row", () => {
 
     expect(offsetOf(row)).toBe(0);
   });
+
+  it("settles home on the rung rather than jumping, with the finger still down", () => {
+    // The half of this the offset cannot say. `swiping` is what strips the row's
+    // `transition` so a drag tracks the thumb one-to-one, and a scroll that
+    // started on the open row is by definition a dismissal arriving with that
+    // finger still down — the commonest case there is. Left set, the row would
+    // teleport home on `none`, which is not `SWIPE_SETTLE_HOME` and is not a
+    // number this feature is allowed to invent.
+    render(<RowHarness />);
+    const row = openRow();
+
+    touchAt(row, "touchStart", 300, 2000);
+    touchAt(row, "touchMove", 300, 2100, 120);
+    expect(transitionOf(row)).toBe("none");
+
+    fireEvent.scroll(screen.getByTestId("scroller"));
+
+    expect(offsetOf(row)).toBe(0);
+    expect(transitionOf(row)).toContain(SWIPE_SETTLE_HOME);
+  });
 });
 
 describe("a finger that owns the row", () => {
@@ -223,6 +255,29 @@ describe("a finger that owns the row", () => {
     touchAt(row, "touchMove", 280, 2100);
 
     expect(offsetOf(row)).toBe(-20);
+  });
+
+  it("gets its transition back for the drag that follows a dismissal it slept through", () => {
+    // The cost of the clear above, paid. A dismissal landing inside the axis
+    // slop puts the row home *and* hands its `transition` back, because at that
+    // instant nothing is being dragged. If the same finger then resolves
+    // horizontal, the row is being dragged again and the settle has to come back
+    // off — otherwise every frame of the drag is chased by a 260 ms tween and
+    // the row visibly trails the thumb. `swiping` means "this row is being
+    // dragged", not "a finger is somewhere on this row", and these two
+    // assertions are the two halves of that sentence.
+    render(<RowHarness />);
+    const row = openRow();
+
+    touchAt(row, "touchStart", 300, 2000);
+    fireEvent.pointerDown(screen.getByTestId("other-row"));
+    expect(offsetOf(row)).toBe(0);
+    expect(transitionOf(row)).toContain(SWIPE_SETTLE_HOME);
+
+    touchAt(row, "touchMove", 280, 2100);
+
+    expect(offsetOf(row)).toBe(-20);
+    expect(transitionOf(row)).toBe("none");
   });
 });
 

@@ -154,6 +154,7 @@ import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.shouldCloseSwipeRow
+import com.ohmz.tday.compose.core.ui.swipeSlotAfterRowDisclaim
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
@@ -305,6 +306,13 @@ fun ScheduledTaskHomeScreen(
     onSummarize: () -> Unit = {},
     summaryAvailable: Boolean = true,
     showRootFeedDock: Boolean = true,
+    /**
+     * The swipe slot to use instead of one of this screen's own, for a host that
+     * draws chrome outside this composable. Non-null exactly where
+     * `showRootFeedDock` is false and for the same reason — see the slot's own
+     * comment below, and `RootFeedContent`.
+     */
+    hostSwipeSlot: TaskSwipeSlot? = null,
     pullRefreshEnabled: Boolean = true,
     createTaskRequestKey: Int = 0,
     onCreateTaskRequestHandled: (Int) -> Unit = {},
@@ -325,11 +333,18 @@ fun ScheduledTaskHomeScreen(
     var rootInRoot by remember { mutableStateOf(Offset.Zero) }
     var showCreateTask by rememberSaveable { mutableStateOf(false) }
     var showSummarySheet by rememberSaveable { mutableStateOf(false) }
-    // The screen's one swipe slot. `remember`, never `rememberSaveable`: the rows'
-    // own reveal states are plain `remember`, so a restored id named a row that
-    // had rebuilt closed. The full argument, and the reason this is a holder
-    // rather than a hoisted `String?`, is at [TaskSwipeSlot].
-    val swipeSlot = remember { TaskSwipeSlot() }
+    // The screen's one swipe slot, unless a host owns a bigger screen than this
+    // composable is. As the Scheduled root tab it is drawn inside a `Crossfade`
+    // whose siblings are the dock and the create button, so an interceptor
+    // installed here cannot see a touch on either and `RootFeedContent` owns
+    // both the slot and the one interceptor -- see `TodoListScreen`'s copy of
+    // this comment for the whole argument.
+    //
+    // `remember`, never `rememberSaveable`: the rows' own reveal states are plain
+    // `remember`, so a restored id named a row that had rebuilt closed. The full
+    // argument, and the reason this is a holder rather than a hoisted `String?`,
+    // is at [TaskSwipeSlot].
+    val swipeSlot = hostSwipeSlot ?: remember { TaskSwipeSlot() }
     var lastHandledCreateTaskRequestKey by rememberSaveable { mutableIntStateOf(0) }
     var editTargetTodoId by rememberSaveable { mutableStateOf<String?>(null) }
     val editTargetTodo = rememberEditSheetTarget(
@@ -535,10 +550,19 @@ fun ScheduledTaskHomeScreen(
         // One interceptor per screen, at the outermost composable so the header,
         // the FAB and the gaps between rows are all inside it. It observes and
         // never consumes -- see `tdayClosesSwipeRowOnOutsideTap`.
-        modifier = Modifier.tdayClosesSwipeRowOnOutsideTap(
-            slot = swipeSlot,
-            close = { swipeSlot.openId = null },
-        ),
+        //
+        // Skipped when a host handed the slot down: as a root tab this Scaffold
+        // is not the outermost composable, and the host installs the interceptor
+        // at the box that also holds the dock and the create button. See
+        // `TodoListScreen` for the full argument.
+        modifier = if (hostSwipeSlot == null) {
+            Modifier.tdayClosesSwipeRowOnOutsideTap(
+                slot = swipeSlot,
+                close = { swipeSlot.openId = null },
+            )
+        } else {
+            Modifier
+        },
         containerColor = colorScheme.background,
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -1620,11 +1644,12 @@ private fun ScheduledTaskHomeTodayTaskRow(
         }
     }
 
+    // This row handing back the slot it holds, and only that -- see
+    // [swipeSlotAfterRowDisclaim] for why it is guarded and for the revoke
+    // that deliberately is not.
     fun closeSwipeSlot() {
         swipeRevealState.close()
-        if (swipeSlot.openId == todo.id) {
-            swipeSlot.openId = null
-        }
+        swipeSlot.openId = swipeSlotAfterRowDisclaim(swipeSlot.openId, todo.id)
     }
     // Hoisted above the reveal's own animation because that is now one of its
     // callers: with the app's Reduce Motion switch on, a close draws its

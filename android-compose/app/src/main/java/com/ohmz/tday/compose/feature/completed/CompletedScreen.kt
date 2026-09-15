@@ -99,6 +99,7 @@ import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTdayTaskRowSkeletonMounted
 import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.shouldCloseSwipeRow
+import com.ohmz.tday.compose.core.ui.swipeSlotAfterRowDisclaim
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
@@ -711,11 +712,12 @@ private fun CompletedSwipeRow(
         }
     }
 
+    // This row handing back the slot it holds, and only that -- see
+    // [swipeSlotAfterRowDisclaim] for why it is guarded and for the revoke
+    // that deliberately is not.
     fun closeSwipeSlot() {
         swipeRevealState.close()
-        if (swipeSlot.openId == item.id) {
-            swipeSlot.openId = null
-        }
+        swipeSlot.openId = swipeSlotAfterRowDisclaim(swipeSlot.openId, item.id)
     }
     // Hoisted above the reveal's own animation because that is now one of its
     // callers: with the app's Reduce Motion switch on, a close draws its

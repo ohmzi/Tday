@@ -194,6 +194,7 @@ import com.ohmz.tday.compose.core.ui.rememberTdayTaskRowSkeletonMounted
 import com.ohmz.tday.compose.core.ui.scaledDelay
 import com.ohmz.tday.compose.core.ui.shareList
 import com.ohmz.tday.compose.core.ui.shouldCloseSwipeRow
+import com.ohmz.tday.compose.core.ui.swipeSlotAfterRowDisclaim
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
@@ -840,6 +841,13 @@ fun TodoListScreen( // skipcq: KT-R1006
     onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
     showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
+    /**
+     * The swipe slot to use instead of one of this screen's own, for a host that
+     * draws chrome outside this composable. Non-null exactly where
+     * `showRootFeedDock`/`showCreateTaskButton` are false and for the same
+     * reason — see the slot's own comment below, and `RootFeedContent`.
+     */
+    hostSwipeSlot: TaskSwipeSlot? = null,
     openCreateTaskOnStart: Boolean = false,
     exitToLauncherOnBack: Boolean = false,
     exitOnCreateTaskSheetDismiss: Boolean = false,
@@ -1210,17 +1218,30 @@ fun TodoListScreen( // skipcq: KT-R1006
     var showCreateTaskSheet by rememberSaveable {
         mutableStateOf(openCreateTaskOnStart)
     }
-    // The screen's one swipe slot. Screen level is the right altitude and not a
-    // compromise: each of these screens is its own NavHost destination with its
-    // own chrome, so there is nothing above it worth hoisting to and nothing
-    // beside it that could be open at the same time.
+    // The screen's one swipe slot, unless something above it owns a bigger
+    // screen than this composable is. Screen level is the right altitude for
+    // every pushed destination — each is its own NavHost entry with its own
+    // chrome, so there is nothing above it worth hoisting to and nothing beside
+    // it that could be open at the same time.
+    //
+    // The Anytime tab is the exception, and it is a real one rather than a
+    // tidiness argument. There this composable is drawn INSIDE a `Crossfade`,
+    // and the dock and the create button are siblings of that crossfade one
+    // level up — so they are outside this Scaffold entirely, an interceptor here
+    // never sees a touch on either, and "tapping the dock closes the row" was
+    // false on the one screen the user spends the most time on. `RootFeedContent`
+    // therefore owns the slot for both root tabs and installs the one interceptor
+    // at the box that actually contains everything; whoever creates the slot
+    // installs the interceptor, which is the rule that keeps the count at one.
     //
     // Keyed on mode + scoped list the way the saveable it replaced was, so
     // changing what the screen is a list *of* hands the slot back. `remember`
     // rather than `rememberSaveable` is deliberate and is argued at
     // [TaskSwipeSlot]: the rows' own reveal states are plain `remember`, so a
-    // restored id named a row that had rebuilt closed.
-    val swipeSlot = remember(uiState.mode, uiState.listId) { TaskSwipeSlot() }
+    // restored id named a row that had rebuilt closed. A host slot needs no key:
+    // the two root tabs are one mode each and never change what they are a list
+    // of.
+    val swipeSlot = hostSwipeSlot ?: remember(uiState.mode, uiState.listId) { TaskSwipeSlot() }
     // --- Bulk selection ---------------------------------------------------
     // Screen-local, hoisted exactly the way `swipeSlot` above is, and
     // keyed on mode + scoped list so leaving the screen drops it for free. It
@@ -2280,10 +2301,23 @@ fun TodoListScreen( // skipcq: KT-R1006
         // gaps between rows are all inside it and none of them has to know this
         // feature exists. It observes and never consumes -- see
         // `tdayClosesSwipeRowOnOutsideTap`.
-        modifier = Modifier.tdayClosesSwipeRowOnOutsideTap(
-            slot = swipeSlot,
-            close = { swipeSlot.openId = null },
-        ),
+        //
+        // Skipped when a host handed the slot down, because then this Scaffold is
+        // NOT the outermost composable -- on the Anytime tab the dock and the
+        // create button are drawn above it, outside this subtree, and Compose
+        // routes a pointer down into the hit child's path only. The host installs
+        // one at the box that does contain them. Installing both would be
+        // harmless and still wrong: two observers whose agreement nobody checks,
+        // where the rule is one per screen and the screen is whatever contains
+        // the chrome.
+        modifier = if (hostSwipeSlot == null) {
+            Modifier.tdayClosesSwipeRowOnOutsideTap(
+                slot = swipeSlot,
+                close = { swipeSlot.openId = null },
+            )
+        } else {
+            Modifier
+        },
         containerColor = colorScheme.background,
         floatingActionButton = {
             // The selection action bar takes the bottom of the screen while
@@ -6297,11 +6331,12 @@ private fun SwipeTaskRow(
         }
     }
 
+    // This row handing back the slot it holds, and only that -- see
+    // [swipeSlotAfterRowDisclaim] for why it is guarded and for the revoke
+    // that deliberately is not.
     fun closeSwipeSlot() {
         swipeRevealState.close()
-        if (swipeSlot.openId == todo.id) {
-            swipeSlot.openId = null
-        }
+        swipeSlot.openId = swipeSlotAfterRowDisclaim(swipeSlot.openId, todo.id)
     }
     val highlightAnim = remember(todo.id) { Animatable(0f) }
     val visuallyChecked = localChecked || (keepCompletedInline && todo.completed)
@@ -6651,7 +6686,21 @@ private fun SwipeTaskRow(
                                 Modifier.pointerInput(todo.id, dragEnabled) {
                                     detectDragGesturesAfterLongPress(
                                         onDragStart = { localOffset ->
-                                            closeSwipeSlot()
+                                            // Unconditional, unlike `closeSwipeSlot`, and that is
+                                            // the whole of the difference. A long-press drag is a
+                                            // gesture over the FEED, not over this row: the row
+                                            // whose actions are out is almost always some other
+                                            // one, so a disclaim would test `== todo.id`, find
+                                            // false, and leave an armed Delete pill sitting under
+                                            // the task the user is about to drop. Nothing else
+                                            // catches it either -- these feeds have no drag
+                                            // autoscroll, so the `isScrollInProgress` collector
+                                            // never fires, and the outside-tap modifier only gets
+                                            // to act on release, by which time the pill has been
+                                            // armed under a moving thumb for the whole drag. iOS
+                                            // writes the same `nil` at the top of `beginInAppDrag`.
+                                            swipeRevealState.close()
+                                            swipeSlot.openId = null
                                             val startPosition = rowOriginInRoot + localOffset
                                             dragPointerPosition = startPosition
                                             onDragStart?.invoke(startPosition)

@@ -323,10 +323,19 @@ export function useSwipeRow({
    * `window` bus could already land on a row with a live vertical gesture — so
    * the containers route that listener through here too, and it is fixed in both
    * places by being fixed in one.
+   *
+   * `swiping` is cleared first, for the reason [cancelSwipe] states two screens
+   * down: `swiping` true is what strips the row's `transition`, so a dismissal
+   * that left it set would teleport the row home instead of settling on
+   * `SWIPE_SETTLE_HOME`. It is not a rare path — the dismissal this hook was
+   * written around is a scroll whose finger started ON the open row, and that
+   * finger is by definition still down. A snap is a number this feature is not
+   * allowed to invent; the row closes the way it closes today.
    */
   const dismissSwipe = useCallback(() => {
     const gesture = gestureRef.current;
     if (gesture && !canDismissMidGesture(gesture.axis)) return;
+    setSwiping(false);
     if (gesture) {
       gesture.startX = 0;
       gesture.offsetX = 0;
@@ -402,7 +411,20 @@ export function useSwipeRow({
       if (gesture.axis === null) {
         if (Math.abs(dx) <= AXIS_SLOP_PX && Math.abs(dy) <= AXIS_SLOP_PX) return;
         gesture.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-        if (gesture.axis === "x") onOpen();
+        if (gesture.axis === "x") {
+          onOpen();
+          // The other half of the clear in [dismissSwipe], and it is only needed
+          // because of it. A dismissal that lands on a finger whose axis is still
+          // unknown — an outside pointer-down, or a momentum scroll, while this
+          // touch sits inside the slop — puts the row home with its transition
+          // back on; if that same finger then resolves horizontal, every frame of
+          // the drag would be chased by a 260 ms settle and the row would lag the
+          // thumb. Re-asserting here rather than at `onTouchStart` is what keeps
+          // the two states honest: `swiping` means *this row is being dragged*,
+          // not *a finger is somewhere on this row*. React bails out of a set to
+          // the value already held, so the ordinary swipe pays nothing for it.
+          setSwiping(true);
+        }
       }
       // A vertical drag belongs to the feed's scroller. The gesture is kept open
       // rather than ended so the lift that follows is still recognisably this

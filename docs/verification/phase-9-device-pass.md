@@ -1090,7 +1090,10 @@ animates.
               flick rightward sloppily, at an angle, fast; (3) with a row open and TalkBack ON,
               double-tap a different row, then the header, then the FAB; (4) with a row open, start
               a slow scroll with the finger landing ON the open row itself, and separately with it
-              landing on a row two below.
+              landing on a row two below; (5) on the two ROOT tabs — the scheduled home feed and
+              Anytime — open a row and tap the dock, then re-open and tap the create button;
+              (6) on the timeline feed and on Calendar, open one row and then long-press a
+              DIFFERENT row until it lifts for a drag-to-reschedule.
       Watch:  (1) the row follows the thumb back and settles closed, and the system's predictive-back
               affordance does not take the gesture instead. The content being translated ~176 dp left
               is what makes this worth asking: the natural place to grab an open row is inside the
@@ -1101,22 +1104,36 @@ animates.
               42 dp hint, the FAB opens the sheet. The interceptor watches the INITIAL pointer pass
               and never consumes, and whether it sees anything at all while explore-by-touch owns
               the touch stream is the one thing no gate here can answer. (4) the row is closed by
-              the time the list has moved a few dp, both times.
+              the time the list has moved a few dp, both times. (5) both close the row AND do their
+              own job in the same touch — the dock switches tab, the button opens the create sheet.
+              These two are drawn OUTSIDE the feed's Scaffold, as siblings of the crossfade that
+              holds it, so they are reached by an interceptor installed one level up in
+              `RootFeedContent` rather than by the screens' own; that is a different code path from
+              everything in (3) and is the reason it is asked separately. (6) the first row's
+              actions are gone the instant the drag picks up, not when it is dropped.
       Fails:  (1) the screen pops or the back affordance appears instead of the row closing; (2) the
               list scrolls sideways-ish, or the row jumps to the finger instead of following from
               where it was; (3) any double-tap that silently does nothing — a consumed first touch
               is a trap with a screen reader on, and it is the one outcome this design rules out by
               construction; (4) the row staying open through a scroll, or closing a beat late, at
-              the END of the fling, with an armed Delete pill riding past under the thumb.
+              the END of the fling, with an armed Delete pill riding past under the thumb; (5) the
+              row surviving a dock or create-button tap, which is the whole defect, or either
+              control failing to do its own job now that a second observer sits above it; (6) the
+              open row keeping its Delete pill for the length of the drag and only shutting when
+              the task is dropped — right outcome, wrong moment, and for the wrong reason.
       Known:  (4) asks a design question as much as a correctness one — whether closing on scroll
               START reads as a dismissal the user caused or as the row being snatched. The
               alternative is worse and is why it was chosen: the row is content, it travels with the
               list, and one left open puts Delete under a thumb now aimed at a different task.
-      Why:    `TaskSwipeDismissPolicyTest` pins the decision — the revoke, one-open-at-a-time, and
-              the row that never closes itself out from under its own finger — and
-              `TaskSwipeRevealStateTest`'s drag-back round trip pins the arithmetic of (1). None of
-              it can drive a pointer: there is no Robolectric and no Compose harness on this source
-              set, so every gesture-arbitration question above is only answerable in a hand.
+      Why:    `TaskSwipeDismissPolicyTest` pins the decision — the revoke, one-open-at-a-time, the
+              row that never closes itself out from under its own finger, and the narrow disclaim
+              that (6) must NOT be routed through — and `TaskSwipeRevealStateTest`'s drag-back round
+              trip pins the arithmetic of (1). None of it can drive a pointer: there is no
+              Robolectric and no Compose harness on this source set, so every gesture-arbitration
+              question above is only answerable in a hand. (5) is the one that was asserted here
+              before it was true, which is the argument for asking it on the device rather than
+              from the diff: an interceptor on the wrong composable compiles, reads correctly, and
+              silently sees nothing.
 
 - [ ] **PR 41c · android · Reduce Motion takes the close's spring away and nothing else** — any of
       the four feeds, the app's own Reduce Motion switch ON (Settings, not the system slider).
@@ -1589,9 +1606,14 @@ animates.
               practice and the `.escape` action added here is insurance rather than a route —
               which is worth knowing either way, and is a finding rather than a fail for this PR.
       Also:   the close now honours Reduce Motion — with it on, the row is drawn home rather than
-              springing there, including on the existing pill closes. Gated once in
-              `closeActions`, so the row cannot shut at two different speeds depending on who
-              shut it; confirm the pill path feels instant rather than broken.
+              springing there, including on the existing pill closes. Gated in two places and
+              two only: `closeActions`, which every dismissal funnels through, and the pan's own
+              `.ended` settle, which is the close that runs when a thumb drags an open row back
+              and lets go under the detent and which is in a UIKit coordinator with no
+              environment to read. Both are handed the same resolution, so the row cannot shut
+              at two different speeds depending on who shut it. Confirm BOTH: the pill path and
+              the drag-back in (3) must feel the same kind of instant, not one instant and one
+              springing for a third of a second.
       Why:    there is no Swift toolchain on the machine this was written on.
               `TaskSwipeDismissPolicyTests` pins the decision and `TaskSwipeRevealDetentTests`
               pins the drag-back round trip from a nonzero resting offset — the assertion that

@@ -66,8 +66,13 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
 
     /// Phase 8's gate, read rather than re-derived. `TdayMotionEnvironment.swift` is the one
     /// place `accessibilityReduceMotion` is looked at in this app and
-    /// `reduced-motion-floor.test.ts` keeps it that way. Only `closeActions` reads it — see the
-    /// note there for why the close is gated once rather than once per caller.
+    /// `reduced-motion-floor.test.ts` keeps it that way.
+    ///
+    /// Two readers, which between them are every path that moves this row. `closeActions` is
+    /// one — see the note there for why the close is gated once rather than once per caller —
+    /// and `HorizontalSwipePanObserver` is the other, because a pan's `.ended` settle is a
+    /// close whenever the release lands under the detent and cannot reach `closeActions` to
+    /// borrow its gate.
     @Environment(\.tdayAnimation) private var tdayAnimation
 
     // Edit + Copy + Delete always show (76pt/pill); the optional mode-specific
@@ -105,6 +110,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                         openRowID: $openRowID,
                         revealWidth: revealWidth,
                         isRevealed: isRevealed,
+                        motion: tdayAnimation,
                         offsetX: $offsetX
                     )
                 )
@@ -292,6 +298,12 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
     /// the trip: the row is drawn home in the frame the state changed, with no wait left behind.
     /// That retimes the existing pill closes too, which is the fix rather than a regression — a
     /// reader with Reduce Motion on has been watching this row travel since it was written.
+    ///
+    /// "Here" is every close but one, and the exception is named so it cannot be mistaken for
+    /// an oversight: a pan released back under the detent shuts the row from its own `.ended`
+    /// branch, in the coordinator, which is not a view body and has no environment to read.
+    /// That branch is handed the same resolution and applies it to the same spring, so the two
+    /// still answer Reduce Motion identically — what they cannot be is one call.
     private func closeActions(clearOpenRow: Bool = true) {
         withAnimation(tdayAnimation(.interactiveSpring(response: 0.26, dampingFraction: 0.86))) {
             offsetX = 0
@@ -413,6 +425,19 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
     let revealWidth: CGFloat
     /// Drives the window tap recognizer's installation — see `Coordinator.setRevealed`.
     let isRevealed: Bool
+    /// Phase 8's gate, handed down rather than read again.
+    ///
+    /// A `UIGestureRecognizer` callback is not a SwiftUI view body, so there is no
+    /// environment to read from in here — which is exactly how the drag-back close came to be
+    /// the one close in this file that Reduce Motion did not reach. It could not fall through
+    /// to `closeActions` either: the `.ended` branch writes `openRowID = nil` before it
+    /// touches `offsetX`, so by the time `.onChange(of: openRowID)` runs, `offsetX != 0` is
+    /// already false and `shouldClose` says no. Passed the same way `isRevealed` is, and for
+    /// the same reason — the SwiftUI side knows, the UIKit side has to be told.
+    ///
+    /// `TdayMotionResolution` is `Equatable` over one `Bool`, so this costs an
+    /// `updateUIView` only when the user actually flips the setting.
+    let motion: TdayMotionResolution
     @Binding var offsetX: CGFloat
 
     func makeCoordinator() -> Coordinator {
@@ -432,6 +457,7 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
         context.coordinator.openRowID = $openRowID
         context.coordinator.revealWidth = revealWidth
         context.coordinator.offsetX = $offsetX
+        context.coordinator.motion = motion
         let revealed = isRevealed
         DispatchQueue.main.async {
             context.coordinator.attach(to: uiView)
@@ -445,6 +471,9 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
         var openRowID: Binding<String?>
         var revealWidth: CGFloat = 152
         var offsetX: Binding<CGFloat>
+        /// See the property of the same name on the representable above. `.full` until the
+        /// first `updateUIView`, which runs before any pan can reach `.ended`.
+        var motion: TdayMotionResolution = .full
 
         private weak var markerView: UIView?
         private weak var observedScrollView: UIScrollView?
@@ -794,7 +823,19 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
                 // settle has to survive a second pan landing on the row before it
                 // finishes — `.interactiveSpring` re-aims at the new target
                 // instead of fighting the one in flight.
-                withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
+                //
+                // Gated, because half of what this line does is a CLOSE. Drag an open
+                // row back to the right and let go under the detent and this is the
+                // close that runs — not `closeActions`, which is where the rest of this
+                // file's Reduce Motion answer lives. Ungated, a row shut by a thumb
+                // sprang for 0.34 s while the same row shut by a pill was drawn home in
+                // one frame: one close at two speeds, chosen by who performed it, which
+                // is the thing `closeActions` gating exists to refuse. The open half
+                // rides the same gate for the same reason it always has — reduce motion
+                // keeps the destination and drops the trip, and the destination is where
+                // the finger put the row. Android gates this same release through
+                // `animateTaskSwipeOffsetAsState`, web through `SWIPE_SETTLE_INSTANT`.
+                withAnimation(motion(.interactiveSpring(response: 0.34, dampingFraction: 0.82))) {
                     offsetX.wrappedValue = shouldOpen ? -revealWidth : 0
                 }
                 dragStartOffsetX = 0
