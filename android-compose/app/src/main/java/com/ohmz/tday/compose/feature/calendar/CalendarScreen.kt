@@ -118,6 +118,7 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.FeedAnswer
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
 import com.ohmz.tday.compose.core.ui.TaskSwipeSlotBackHandler
@@ -129,6 +130,7 @@ import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.feedAnswer
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
@@ -450,7 +452,19 @@ fun CalendarScreen(
     }
     // Whether the day list is showing the illustrated empty scene rather than
     // rows — read by the watermark, which draws the same glyph.
-    val showsEmptyScene = listedTasks.isEmpty() && !uiState.isLoading
+    // `!uiState.isLoading` used to stand where `answer` does. It was the same
+    // gate this app copy-pasted onto every empty state, and the same inversion:
+    // `isLoading` is only ever raised by a refresh OVER an answer already drawn,
+    // so it was withdrawing the "nothing scheduled" scene precisely when the
+    // scene was known to be right. `listedTasks` and not `uiState.items`: this
+    // scene answers for the SELECTED DAY, and an empty day inside a full month is
+    // still an answer. See [feedAnswer].
+    val dayListAnswer = feedAnswer(
+        storeRead = uiState.hasHydratedSnapshot,
+        rowsEmpty = listedTasks.isEmpty(),
+        firstAnswerLanded = uiState.firstAnswerLanded,
+    )
+    val showsEmptyScene = dayListAnswer == FeedAnswer.Empty
     fun canNavigateTo(date: LocalDate): Boolean = YearMonth.from(date) >= minNavigableMonth
     fun selectDate(date: LocalDate) {
         if (!canNavigateTo(date)) return
@@ -967,7 +981,7 @@ fun CalendarScreen(
                         )
                     }
 
-                if (listedTasks.isEmpty() && !uiState.isLoading) {
+                if (showsEmptyScene) {
                     item(key = "calendar-empty", contentType = "calendar-empty") {
                         if (searchActive) {
                             TdayEmptyState(

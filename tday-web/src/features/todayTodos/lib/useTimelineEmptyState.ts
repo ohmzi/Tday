@@ -117,6 +117,19 @@ export function useTimelineEmptyState({
   // Every scope shows the same native-style centered empty message when there
   // are no non-Earlier tasks (Today also keeps its Morning/Afternoon/Tonight
   // headers above).
+  //
+  // `todoLoading` is `useTodoTimeline`'s TanStack v5 `isLoading`
+  // (`get-todo-timeline.ts`): `isPending && isFetching`, and `status` leaves
+  // `pending` for good the moment `data !== undefined`. It therefore says "this
+  // scope has no answer yet" and not "a request is in flight", which is the
+  // distinction the whole gate rests on — an empty state is an ANSWER, and a
+  // revalidation over cached rows must not withdraw one. This one gate governs
+  // Today, All, Priority, Scheduled and Overdue together, so a term that
+  // confused the two here would blank five screens on one refresh — which is
+  // what the copy-pasted Android and iOS versions of it did. `isFetching` is
+  // that term, and `useTodoTimeline` does not even return it. See
+  // `useFloaterEmptyState` for the full argument and
+  // `tests/guardrails/web-empty-state-refresh-immunity.test.ts` for the pin.
   const showEmpty = !todoLoading && !hasNonEarlierScopedTasks && !isSearching;
   // Remote sibling of the completion window below — fires for a completion on
   // another device or by a collaborator, not just this tab's own tap.

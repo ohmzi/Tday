@@ -81,6 +81,17 @@ export function useListEmptyState({
   // Requirement 1, generalized from Today: zero non-Earlier tasks, not
   // loading, not mid-search — a list with only overdue tasks left still
   // earns the "all done" illustration, same as All/Priority/Scheduled.
+  //
+  // "Not loading" is `listTodosLoading`, which is `useList`'s TanStack v5
+  // `isLoading` (`get-list-todos.ts`) — `isPending && isFetching`, false from
+  // the moment `data !== undefined`. So it says "this list has no answer yet",
+  // not "a request is in flight", and a revalidation over the list's cached rows
+  // cannot move it: an empty state is an ANSWER, and a refresh asks the app to
+  // re-check that answer rather than to withdraw it. `isFetching` is the term
+  // that would break exactly that — true for every revalidation, cached or not —
+  // and `useList` returns it to nobody. See `useFloaterEmptyState` for the full
+  // argument and the native bug it comes from, and
+  // `tests/guardrails/web-empty-state-refresh-immunity.test.ts` for the pin.
   const showEmpty = !listTodosLoading && !isSearching && !hasNonEarlierListTodos;
   // Finishing the list is a payoff, not an absence: the confetti is for the
   // tick that emptied it, not for a list that was already empty. Hoisted so

@@ -83,6 +83,40 @@ export function useFloaterEmptyState({
     cancelledAtMs: celebrationCancelledAtMs(),
   });
 
+  // AN EMPTY STATE IS AN ANSWER, NOT AN ABSENCE OF ONE, and `!isLoading` here
+  // means "an answer is in hand" — NOT "no request is in flight". The two read
+  // the same in English and come apart on a pull-to-refresh, which is the whole
+  // of the bug the native clients carried: on Android and iOS `isLoading` is
+  // raised by `refresh()` alone, over a feed the view model had already hydrated
+  // from cache, so the gesture that asks the app to RE-CHECK its answer was the
+  // very term that withdrew it. The illustration and its copy vanished, the page
+  // collapsed upward, and the whole block came back when the refresh returned
+  // with nothing new. Both clients now decide this with a three-state
+  // `feedAnswer` that has no loading parameter at all.
+  //
+  // Web needs no such function, and this comment is where that is said rather
+  // than left for the next reader to re-derive. The boolean above is TanStack
+  // Query v5's `isLoading` — `isPending && isFetching`, where `status` leaves
+  // `pending` the moment `data !== undefined` and never goes back. A
+  // revalidation over cached rows therefore keeps it FALSE for its whole
+  // duration; it is true only while this feed has no answer at all. That is
+  // already the natives' AWAITING_FIRST, and `status === "success"` is already
+  // their `storeRead && firstAnswerLanded`. A `hasLoadedOnce` or an
+  // `isRefreshing` added here would be a second copy of a distinction the query
+  // layer has already made, and the second copy is the one that drifts.
+  //
+  // THE TERM THAT WOULD REINTRODUCE THE NATIVE BUG IS `isFetching`, which is
+  // true for every revalidation, cached data or not. `useFloater` returns it
+  // (`get-floater.ts`) and nothing in `src` renders from it. Keep it that way:
+  // `tests/guardrails/web-empty-state-refresh-immunity.test.ts` pins the absence
+  // so this paragraph is not the only thing holding it, and
+  // `tests/unit/empty-state-survives-refresh.test.tsx` drives both directions —
+  // the scene survives a revalidation, and it is still withheld before the first
+  // answer exists.
+  //
+  // The first load is not left blank either. `NativeFloaterTaskHomeDashboard`
+  // and `FloaterListContainer` hand this same boolean to `useSkeletonCrossfade`,
+  // so AWAITING_FIRST draws the task-row skeleton and never this scene.
   const showEmpty = !isLoading && !isSearching && isEmpty;
   // The burst leaves over a fade rather than between two frames, and the scene
   // it flies inside is leaving in that same frame — the scene's mount guard here
