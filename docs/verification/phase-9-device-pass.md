@@ -993,7 +993,10 @@ animates.
               far it has actually travelled; (2) hold the finger still right there for a second or
               two, and jiggle it a few px either side of that point; (3) let go, tap a pill, and pay
               attention to the two buzzes back to back; (4) from closed, flick the row left hard and
-              short — 20 px and gone — so it opens on speed without ever reaching the detent.
+              short — 20 px and gone — so it opens on speed without ever reaching the detent; (5)
+              with one row open, swipe a DIFFERENT row open so the first is shut from under you,
+              and catch that first row with a thumb while it is still travelling home — then drag
+              it back out.
       Watch:  (1) the buzz should arrive at roughly 56 dp of travel (0.32 of the 176 dp reveal), and
               it should read as the actions catching rather than as a notification: the question
               this row exists to ask is whether 56 dp is where the hand expects the catch, or
@@ -1008,7 +1011,11 @@ animates.
               or on a row shut from under you by opening a different row; a second buzz one frame
               after the first as the row springs open; a buzz on a plain tap (the tap plays the
               42 dp hint, which is under the 56 dp detent by design, and must stay silent); and the
-              fling arm feeling like a different, heavier event than the detent arm.
+              fling arm feeling like a different, heavier event than the detent arm. (5) is its own
+              fail: a buzz on the frame the thumb lands on a row that is still open and still
+              closing, or on the way back out from there. Nothing is being revealed — the actions
+              are already out and under the thumb — and the open-cycle does not end until the row
+              is actually home.
       Known:  cross the detent, drag back and release closed, and you have felt a reveal that did
               not happen. That is what a detent on a physical control does and it is not a fail
               here; the alternative is silence until the row settles, which costs the feature its

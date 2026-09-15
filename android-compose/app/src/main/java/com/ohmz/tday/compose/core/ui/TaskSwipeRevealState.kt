@@ -21,10 +21,25 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.collectLatest
 
 private const val SWIPE_OPEN_VELOCITY_PX_PER_SECOND = -1450f
-private const val SWIPE_OPEN_THRESHOLD_FRACTION = 0.32f
 private const val SWIPE_MAX_ELASTIC_FRACTION = 1.14f
 private const val SWIPE_HINT_MS = 150L
 private const val SWIPE_HINT_SETTLE_MS = 360L
+
+/**
+ * The two fractions of the reveal width that decide what a row's travel means:
+ * past [SWIPE_OPEN_THRESHOLD_FRACTION] a drag is a drag that opens, and
+ * [SWIPE_HINT_MAX_FRACTION] is the ceiling [rememberTaskSwipeRevealState] holds
+ * the tap-hint under.
+ *
+ * `internal` for the same reason [TaskSwipeRevealState.onReleaseFrame] is: the
+ * unit test reads them. The gap between the two is load-bearing and is nobody's
+ * single decision — a hint that reached the detent would make tapping a row to
+ * show there is something under it buzz — so the test that pins the inequality
+ * has to be able to name both ends of it. Retyping `0.24f < 0.32f` into the test
+ * proves a fact about the test.
+ */
+internal const val SWIPE_OPEN_THRESHOLD_FRACTION = 0.32f
+internal const val SWIPE_HINT_MAX_FRACTION = 0.24f
 
 /**
  * The one spring the task row is allowed to use, and the one moment it is
@@ -134,6 +149,10 @@ class TaskSwipeRevealState internal constructor(
      * parked on the boundary cannot repeat and a drag that crosses, comes back
      * and crosses again cannot fire twice. The band would be a number nobody can
      * justify, solving a problem the flag has already solved.
+     *
+     * Set by whichever of the two arms fires and cleared by [armIfHome], which
+     * is to say: an open-cycle starts when the row leaves home and ends when it
+     * is back and staying there, not when a release decides it should be.
      *
      * Its lifetime is this composition's rather than the task's:
      * [rememberTaskSwipeRevealState] keys on the id *and* on the px widths the
@@ -287,10 +306,17 @@ class TaskSwipeRevealState internal constructor(
      * flag derived from the offset in general rather than from the drag path in
      * particular would phantom-fire here one frame after the real event — and
      * again on every programmatic open, where no finger was ever involved.
+     *
+     * It does hold the *re*-arm, and the two are not the same question. Firing
+     * asks what the drag path did, which this function has no knowledge of.
+     * Arming asks only whether the row has finished coming home, which is
+     * precisely what the last frame of a close spring knows and nothing else
+     * does. See [armIfHome].
      */
     internal fun onReleaseFrame(valuePx: Float) {
         if (isDragging) return
         offsetX = valuePx
+        armIfHome()
     }
 
     internal fun onReleaseSettled(finished: TaskSwipeRelease) {
@@ -302,19 +328,50 @@ class TaskSwipeRevealState internal constructor(
     /**
      * The single funnel every close already passes through — [settle] landing
      * shut, [close], the row whose slot another row claimed, the tail of
-     * [playHint] — which is why re-arming the detent lives here and no close
-     * path has to remember it. Cleared at the moment of the decision rather than
-     * when the spring lands, to match [restOffsetX]'s own tense: where the row is
-     * headed is what the rest of this class already reads.
+     * [playHint] — which is why re-arming the detent lives on this path and no
+     * close path has to remember it.
+     *
+     * The re-arm itself is [armIfHome] and it waits for the row to be home, which
+     * is the one thing in this class that reads where the row *is* rather than
+     * where it is headed. Clearing on `targetPx == 0f` alone was wrong by a whole
+     * spring. `close()` on an open row sets [restOffsetX] to zero immediately and
+     * leaves [offsetX] out at `-revealWidthPx` for the ~340 ms the row takes to
+     * travel there — and that is the common close, the row shut from under the
+     * user by another row claiming the one open slot. A finger landing inside
+     * that window found a cleared flag under a row already past the threshold and
+     * bought a reveal buzz on its first frame, with the actions plainly already
+     * out and nothing catching under the thumb.
+     *
+     * It was also the one moment the three clients answered the same gesture
+     * differently: iOS's `.began` and web's `touchstart` both seed their flag from
+     * a released position their model value has *already* snapped to, so neither
+     * can be re-grabbed mid-flight at an offset the animation has not caught up
+     * with. Here the pointer picks the row up wherever the spring had got to, so
+     * the cycle has to end where the row does.
      */
     private fun settleTo(targetPx: Float, initialVelocityPxPerSecond: Float) {
-        if (targetPx == 0f) hasFiredRevealDetent = false
         restOffsetX = targetPx
         release = if (offsetX == targetPx) {
             null
         } else {
             TaskSwipeRelease(offsetX, targetPx, initialVelocityPxPerSecond)
         }
+        armIfHome()
+    }
+
+    /**
+     * Re-arms the reveal detent once the row is both closed and staying closed,
+     * which is the end of an open-cycle.
+     *
+     * Called from the two places the row can arrive there. One is the last frame
+     * of a close spring. The other is a [settleTo] home with no distance to
+     * travel, which starts no spring and so would never produce that frame: a row
+     * dragged all the way back under the finger and released is a cycle that ends
+     * without anything animating, and waiting for a landing that cannot come
+     * would leave that row silent for the rest of its life.
+     */
+    private fun armIfHome() {
+        if (offsetX == 0f && restOffsetX == 0f) hasFiredRevealDetent = false
     }
 }
 
@@ -327,7 +384,7 @@ fun rememberTaskSwipeRevealState(
     val density = LocalDensity.current
     val revealWidthPx = with(density) { revealWidth.toPx() }
     val hintOffsetPx = with(density) {
-        hintOffset.toPx().coerceAtMost(revealWidthPx * 0.24f)
+        hintOffset.toPx().coerceAtMost(revealWidthPx * SWIPE_HINT_MAX_FRACTION)
     }
     val maxElasticDragPx = revealWidthPx * SWIPE_MAX_ELASTIC_FRACTION
 
