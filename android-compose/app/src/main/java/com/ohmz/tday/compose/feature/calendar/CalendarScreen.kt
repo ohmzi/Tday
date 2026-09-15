@@ -163,6 +163,47 @@ import kotlin.math.roundToInt
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 
 private val CalendarAccentPurple = Color(0xFF7D67B6)
+
+/**
+ * The same accent, lightened for dark, and only for the places it is used as
+ * INK on a bar control rather than as a fill that composites.
+ *
+ * Hue and saturation are held exactly — HSL 256.7 deg / 0.351, the accent's own
+ * — and lightness goes 0.559 to 0.70. That is the one axis contrast answers to,
+ * so it is the only one moved. What it is read against is
+ * `lerp(background, onBackground, 0.12f)`, and `androidx.compose.ui.graphics.lerp`
+ * mixes in Oklab rather than per channel — it converts both ends through
+ * `ColorSpaces.Oklab` first — so the static dark fill is #1A1A1D where a
+ * channel-wise mix predicts #222224, and every ratio taken against the wrong
+ * one comes out about 8% flat. On #1A1A1D the accent at 0.559 is 3.71:1; at
+ * 0.70 it is 6.63:1. The same lerp over the Material You neutral-variant space
+ * runs lightest at #323342 (tone-12 background, Lab chroma 10, hue 285), where
+ * 0.559 falls to 2.66:1 and 0.70 still holds 4.75:1 — so the lift clears 4.5:1
+ * on every dark scheme rather than by a rounding.
+ *
+ * `TdayPriorityLowest`/`TdayPriorityLowestDark` is the same move on the same
+ * rule, and `TdayLightPrimary`/`TdayDarkPrimary` lift further than this does.
+ *
+ * It is deliberately NOT swapped into the accent's other call sites on this
+ * screen — but not because they are all fills. Four of them are ink.
+ * `titleColor` on `tdayHeroTitleItem` and on `TdayHeroToolbar` is the hero and
+ * the docked "Calendar" at 32sp ExtraBold: WCAG large text, which owes 3:1 and
+ * has it — 4.33:1 light, 4.35:1 on the static dark background, 3.88:1 at the
+ * worst dynamic dark. The other two are the day-cell task counts, `stateTint`'s
+ * `else ->` branch reaching `Text` in `CalendarWeekDayCell` and
+ * `CalendarDayCell` at 11sp ExtraBold, which is NOT large text: it owes 4.5:1
+ * and misses, at 4.35:1 static dark and 3.48-3.97:1 across dynamic dark. Worse
+ * again is the selected day number, the accent inked on its own 24% accent
+ * wash — 3.23:1 light, 2.78-3.50:1 dark. Those sites are real, pre-existing and
+ * still failing, and they are deliberately out of scope here rather than fixed
+ * in passing: the grid's ink, washes and borders are one colour system and move
+ * together or not at all. The cost of leaving them is that dark carries two
+ * purples as ink on one screen — this one in the bar, the accent in the grid,
+ * 1.79:1 apart in luminance — and that is the follow-up, not a reason to
+ * half-do it here. Only the remaining uses — day-cell fills, the create FAB,
+ * the hero glyph — are the fills this lift genuinely does not apply to.
+ */
+private val CalendarAccentPurpleOnDark = Color(0xFFA798CD)
 private val CalendarTodayBlue = Color(0xFF509AE6)
 private val CalendarCardCornerRadius = 24.dp
 private val CalendarCardAmbientShadowElevation = 10.dp
@@ -1867,14 +1908,15 @@ private fun CalendarTodayButton(
     val isDarkTheme = colorScheme.background.luminance() < 0.5f
     val showLabel = collapseProgress().coerceIn(0f, 1f) < 0.5f
 
-    val containerColor = CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.22f else 0.12f)
-    val buttonBorder = BorderStroke(
-        TdayDimens.BorderWidth,
-        CalendarAccentPurple.copy(alpha = if (isDarkTheme) 0.62f else 0.48f),
-    )
+    val accentColor = if (isDarkTheme) CalendarAccentPurpleOnDark else CalendarAccentPurple
+    // A cap, not a page margin. `SpacingXxl` is `ContentPaddingHorizontal` — the
+    // rung the toolbar itself is inset by — and spending it again INSIDE a 56dp
+    // control made 36 of the pill's 123dp air, so the thing read loose at the
+    // same time as it read wide. `SpacingXl` is the rung below it and takes the
+    // expanded pill to 109dp: 1.95x a circle rather than 2.20x.
     val horizontalPadding by animateDpAsState(
         targetValue = if (showLabel) {
-            TdayDimens.SpacingXxl
+            TdayDimens.SpacingXl
         } else {
             TdayDimens.SpacingNone
         },
@@ -1891,13 +1933,44 @@ private fun CalendarTodayButton(
         },
         interactionSource = interactionSource,
         shape = CircleShape,
-        border = buttonBorder,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        // The bar's own material, and no border. What used to be here — a 12%
+        // purple wash under a 48% purple hairline — was defended as the mark of
+        // an accented pill rather than a plain circle, and that argument was
+        // imported rather than wrong. On iOS it holds, because the search
+        // button beside it is `.outlined` and wears the identical wash and ring
+        // (CalendarScreen.swift:2481-2488, :2748-2758) and `.outlined` there
+        // carries no shadow at all (:2724). Android's neighbour is filled, so
+        // the port landed as the only stroked control in any toolbar in the app
+        // — 1 of 29 `BorderStroke` call sites, every other one a sheet, a card,
+        // a list row, the dock track or a day cell — wearing the lift iOS
+        // suppresses on exactly that material.
+        //
+        // It also measured worse than the bar it sat on. The wash composited to
+        // #E6E5F3 in light, 1.15:1 from the bar, which signifies nothing — and
+        // it cost the label the contrast it was meant to buy: the same accent
+        // reads 4.33:1 on the bare bar and 3.75:1 on the wash. Dark was 3.59:1,
+        // and 2.91:1 once `TdayTheme`'s default dynamic scheme picks the
+        // background, i.e. below the 3:1 a graphical object owes, on the
+        // configuration every Android 12+ device actually runs. The hairline
+        // was 1.86:1 light / 2.29:1 dark against the bar — under the 3:1 WCAG
+        // 1.4.11 asks of a boundary, so it identified nothing, while at 2.75x
+        // density a 1dp stroke that weak rasterises to the smudge the report
+        // called muddy. Beside it the plain circles run 15.65:1 and 16.07:1.
+        //
+        // On the shared fill the ink is 4.67:1 light and — as
+        // `CalendarAccentPurpleOnDark`, which is where the dark numbers stop
+        // being the same purple — 6.63:1 dark, 4.75:1 on the lightest dynamic
+        // dark, clearing 4.5:1 in both themes. Nothing is
+        // lost by it, because the wash was never the signal: this is still the
+        // only coloured content in a bar of `onSurface` glyphs and still the
+        // only control that grows a word, which is what says destination rather
+        // than mode. Web reached the same answer already — `CalendarClient.tsx`
+        // :235 and :1061 are byte-identical material, `text-accent` and the word
+        // the only difference. iOS is internally consistent and owes nothing.
+        colors = CardDefaults.cardColors(containerColor = tdayBarButtonContainerColor()),
         // The lift every other circle in a bar carries. This one sat flat and
         // 2dp short of the back button beside it, which is the same
         // some-have-shadows-some-do-not the rest of the bars were fixed for.
-        // Its purple tint and hairline stay: unlike the plain circles it is an
-        // accented pill that grows a label, and that is deliberate.
         elevation = CardDefaults.cardElevation(
             defaultElevation = TdayDimens.BarButtonElevation,
             pressedElevation = TdayDimens.CardElevationDefault,
@@ -1914,13 +1987,22 @@ private fun CalendarTodayButton(
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_calendar),
                 contentDescription = contentDescription,
-                tint = CalendarAccentPurple,
-                modifier = Modifier.size(TdayDimens.IconLg),
+                tint = accentColor,
+                // The 22 every other glyph in every bar in the app is drawn at,
+                // this screen's `CalendarBarButtonIconSize` included. At
+                // `IconLg` a 24-viewport lucide path put its 2-unit stroke on
+                // screen at 2.33dp against the chevron's and the magnifier's
+                // 1.83dp — 27% heavier, which is the back button's own fix in
+                // `TdayHeroTitleHeader` arriving here a size down, and iOS's
+                // rule for a resized asset rather than an SF symbol
+                // (CalendarScreen.swift:2684-2695). It was the last thing in the
+                // bar drawn at a different weight from everything beside it.
+                modifier = Modifier.size(CalendarBarButtonIconSize),
             )
             if (showLabel) {
                 Text(
                     text = label,
-                    color = CalendarAccentPurple,
+                    color = accentColor,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
