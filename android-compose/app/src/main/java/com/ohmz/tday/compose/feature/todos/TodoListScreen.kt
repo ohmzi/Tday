@@ -817,6 +817,56 @@ internal fun earlierSceneAnimatesHandoff(
     motionEnabled: Boolean,
 ): Boolean = timelineAnimationsEnabled && motionEnabled
 
+/**
+ * The Anytime home's inline scene -- whether it is VISIBLE.
+ *
+ * The plain `if` this replaces read `isFloaterTaskHomeScreen && items.isEmpty()
+ * && !isLoading` inline in [floaterTaskHomeRootFeedContent], which is the shape
+ * [shouldShowEarlierScene] above was pulled out of and is pulled out for the
+ * same reason: on this screen a decision that is not a function is a decision
+ * nothing checks, and there is no device here to check it on.
+ *
+ * Raw [itemsEmpty] rather than `scopeItemsEmpty`, deliberately, and this is the
+ * one place on this screen where the raw count is the right one. The scoped
+ * screens subtract Earlier out because an overdue task waiting does not stop
+ * today's work being finished; an Anytime task has no date, so this feed has no
+ * Earlier bucket to subtract and nothing for the distinction to mean.
+ */
+internal fun shouldShowFloaterEmptyScene(
+    isFloaterTaskHomeScreen: Boolean,
+    itemsEmpty: Boolean,
+    isLoading: Boolean,
+): Boolean = isFloaterTaskHomeScreen && itemsEmpty && !isLoading
+
+/**
+ * ...and whether it is MOUNTED, which is not the same question and is the half
+ * that was wrong.
+ *
+ * The scene's mount guard was [shouldShowFloaterEmptyScene] itself, so an undo
+ * on this feed took `items` 0 -> 1 and the lazy item -- with `TdayEmptyState`
+ * and the `TdayConfetti` inside it -- was dropped on that frame. A cancelled
+ * burst fades its paper out over `Quick` instead of cutting it (`TdayConfetti`'s
+ * mount latch), and a fade cut by the unmount above it is the same complaint one
+ * layer up: the very thing the envelope was added to stop. An item its guard has
+ * already removed has no exit left.
+ *
+ * So the mount outlives the visibility, exactly as [TodoListScreen]'s
+ * `earlierScenePresent` outlives `showEarlierIllustration` one branch over. The
+ * difference is where the extra life comes from. Earlier's scene can drop two
+ * NARROWER terms (the collapse state and the celebration) and still have a true
+ * guard left around them; this scene's guard is the emptiness itself, and
+ * emptiness is the thing the undo moves -- there is no wider standing condition
+ * to fall back on. What holds it instead is the exit's own clock:
+ * [sceneStillDrawn] is the `MutableTransitionState`'s `currentState`, which stays
+ * true until `AnimatedVisibility` has finished playing the exit and then falls on
+ * its own. With motion off there is no exit to play, so it falls in the same
+ * frame and no wait survives in front of the restored row.
+ */
+internal fun shouldMountFloaterEmptyScene(
+    sceneVisible: Boolean,
+    sceneStillDrawn: Boolean,
+): Boolean = sceneVisible || sceneStillDrawn
+
 // KT-R1006 (cyclomatic complexity) is suppressed on this declaration rather
 // than fixed further here. Two separate facts, both worth writing down:
 //
@@ -1531,6 +1581,177 @@ fun TodoListScreen( // skipcq: KT-R1006
             uiState.items.isEmpty() &&
             uiState.isLoading
     val taskFeedSkeletonMounted = rememberTdayTaskRowSkeletonMounted(taskFeedSkeletonVisible)
+    // The Anytime home's inline scene, hoisted for the reason the placeholder
+    // above it is: `LazyListScope` is not a composition, so both its visibility
+    // and the transition that plays it have to be settled before the list builds
+    // itself. See [shouldMountFloaterEmptyScene] for why those are two values.
+    val floaterEmptySceneVisible = shouldShowFloaterEmptyScene(
+        isFloaterTaskHomeScreen = isFloaterTaskHomeScreen,
+        itemsEmpty = uiState.items.isEmpty(),
+        isLoading = uiState.isLoading,
+    )
+    // Seeded from the live value rather than from `false`, and keyed by scope,
+    // for `earlierSceneTransition`'s reasons exactly: arriving at a feed that is
+    // already empty is a cold entry and not a transition, and a state carried
+    // across a scope change would hold an item alive on a feed it does not
+    // belong to.
+    val floaterEmptySceneTransition = remember(uiState.mode, uiState.listId) {
+        MutableTransitionState(floaterEmptySceneVisible)
+    }
+    floaterEmptySceneTransition.targetState = floaterEmptySceneVisible
+    // `currentState` is read HERE, in the composition that owns the list, and
+    // that is what makes the item's removal a recomposition rather than a thing
+    // nobody observes: the exit finishing flips this, this rebuilds the
+    // `LazyColumn` content lambda, and the item goes.
+    val floaterEmptySceneMounted = shouldMountFloaterEmptyScene(
+        sceneVisible = floaterEmptySceneVisible,
+        sceneStillDrawn = floaterEmptySceneTransition.currentState,
+    )
+    // The scene itself, built here and handed to [floaterTaskHomeRootFeedContent]
+    // to emit — the same shape `earlierSceneContent` below takes, and taken for
+    // the same reason plus one of its own. `LazyListScope` is not a composition,
+    // so the transition state above cannot be remembered down there; and a guard
+    // whose state is remembered inside it is re-seeded on every mount, which is
+    // a transition with nothing to animate from.
+    //
+    // Nullable, and the `if` is the item's mount guard. Deliberately wider than
+    // the scene's own visibility: see [shouldMountFloaterEmptyScene] for what
+    // holds it open and why an item removed by its guard has no exit left.
+    val floaterEmptySceneContent: (LazyListScope.() -> Unit)? = if (floaterEmptySceneMounted) {
+        {
+            // Mirrors the web layout: the scene sits in a gap in
+            // the middle of the screen with the list names below
+            // it, rather than in a full-screen watermark overlay.
+            item(
+                key = "floater-empty-message",
+                contentType = "floater-empty-message",
+            ) {
+                // The preference, not the feed's first-frame guard:
+                // the exit below is paint the user can ask not to
+                // see, and Phase 8's plumbing is where that answer
+                // comes from rather than a second read of the OS.
+                val sceneAnimates = rememberTdayMotionEnabled()
+                AnimatedVisibility(
+                    // `visibleState` and not a plain `visible =`,
+                    // though not for the enter's sake the way
+                    // Earlier's scene needs it. This state is
+                    // remembered ABOVE the item's guard so that the
+                    // guard can read its `currentState` and keep
+                    // the item alive until the exit has finished
+                    // with it; a boolean here would live and die
+                    // with the item it sits inside.
+                    visibleState = floaterEmptySceneTransition,
+                    // No enter, which is the one thing about this
+                    // scene that does not change. The scene inside
+                    // runs its own entrance on the confetti's
+                    // clock, and a host fade layered over it would
+                    // also dim the burst during the frames it is
+                    // meant to lead at full opacity.
+                    enter = EnterTransition.None,
+                    // The exit is new, and it is the reported bug's
+                    // second half. The comment that stood here said
+                    // this scene is only ever removed outright, and
+                    // argued it: a 42%-tall illustration fading out
+                    // over a task row arriving in the same slot
+                    // paints the empty state on top of the thing
+                    // that disproves it. That was right while the
+                    // burst inside cut on the same frame. It is not
+                    // right now the burst FADES — the paper keeps
+                    // flying while its own envelope takes it away
+                    // over `Quick`, and dropping the item drops the
+                    // canvas that envelope is painting into, which
+                    // is the same complaint one layer up. So the
+                    // scene leaves on the envelope's own rung and
+                    // the two go together, exactly as the
+                    // full-screen overlay one branch over now does.
+                    //
+                    // Fade AND shrink, where that overlay fades
+                    // alone, and the difference is layout: the
+                    // overlay is drawn over a page and owes the
+                    // feed nothing, while this holds ~42% of the
+                    // screen that the tile and the list rows below
+                    // are waiting to have back. Fading its ink
+                    // while holding its track and then dropping the
+                    // track in the frame the node goes is the
+                    // larger of the two movements and the jump the
+                    // whole hand-off exists to remove. One duration
+                    // and one curve across both — web's
+                    // `.tday-empty-cancel-exit` closes its grid
+                    // track on the same `Quick`/`Exit` pair, for
+                    // the same reason. `shrinkTowards` is named for
+                    // the reason Earlier's scene names it: the
+                    // default `Bottom` offsets the content by
+                    // `animatedHeight - fullHeight`, so the picture
+                    // would slide UP by its own full height while
+                    // the slot it lives in travels down.
+                    //
+                    // `ExitTransition.None` with motion off, where
+                    // the burst is unmounting on the same frame for
+                    // the same reason and there is nothing left to
+                    // keep alive for — no trip, and no wait left
+                    // standing in front of the restored row.
+                    exit = if (sceneAnimates) {
+                        fadeOut(
+                            animationSpec = tween(
+                                durationMillis = TdayMotionTokens.Durations.Quick,
+                                easing = TdayMotionTokens.Easings.Exit,
+                            ),
+                        ) + shrinkVertically(
+                            animationSpec = tween(
+                                durationMillis = TdayMotionTokens.Durations.Quick,
+                                easing = TdayMotionTokens.Easings.Exit,
+                            ),
+                            shrinkTowards = Alignment.Top,
+                        )
+                    } else {
+                        ExitTransition.None
+                    },
+                    // Moved up off the `Box` along with the
+                    // wrapper: a displaced item takes its placement
+                    // spec on the item's own root, and the root is
+                    // this now.
+                    modifier = displacedFeedItemMotion(timelineAnimationsEnabled),
+                ) {
+                    val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = gapHeight),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TdayEmptyState(
+                            icon = emptySceneIcon,
+                            accentColor = titleColor,
+                            title = emptyStateMessageForMode(
+                                mode = uiState.mode,
+                                isFloaterList = isListDetailScreen,
+                            ),
+                            description = emptyStateDescriptionForMode(
+                                mode = uiState.mode,
+                                isFloaterList = isListDetailScreen,
+                            ),
+                            celebrate = celebrateEmptyState,
+                            // The overlay callers below pass nothing:
+                            // they draw over a page where nothing is
+                            // moving, so the burst can own the frame
+                            // the feed empties on. Here the scene is
+                            // inline, and the tile and list rows under
+                            // it are still gliding down into the space
+                            // it just claimed. Hold the celebration for
+                            // exactly that glide, so the paper flies
+                            // over a settled screen — which is the
+                            // whole of what makes the list screen's
+                            // version read as smooth.
+                            celebrationStartDelayMillis =
+                                TdayFeedItemMotion.CelebrationStartDelayMillis,
+                        )
+                    }
+                }
+            }
+        }
+    } else {
+        null
+    }
     // The scene item's own mount guard, deliberately wider than either
     // visibility flag above: it drops Earlier's collapse state and the
     // celebration term, so the item outlives the moment its content stops
@@ -1686,14 +1907,17 @@ fun TodoListScreen( // skipcq: KT-R1006
                     } else {
                         EnterTransition.None
                     },
-                    // Fade AND shrink: unlike the floater home's inline scene
-                    // (which is only ever removed outright, never faded), this
-                    // one also has to clear itself out of the way on a user tap
-                    // rather than on a data change, so it needs a real exit
-                    // instead of an instant cut. It is no longer racing
-                    // anything while it does: the rows arriving above it are
-                    // what carry it down, and this fade is the paint half of
-                    // the same one motion.
+                    // Fade AND shrink. The floater home's inline scene now
+                    // leaves over the same pair (see
+                    // [shouldMountFloaterEmptyScene]), but for the other of the
+                    // two reasons a scene leaves: that one goes because the
+                    // feed REFILLED under it and the burst it holds is fading,
+                    // this one because a user tap asked for the slot while the
+                    // scope is still empty -- so that one rides `Quick`, the
+                    // envelope's own rung, and this one rides the hand-off it
+                    // leads. It is not racing anything while it does: the rows
+                    // arriving above it are what carry it down, and this fade
+                    // is the paint half of the same one motion.
                     //
                     // `shrinkTowards = Alignment.Top` for the reason `enter`
                     // names `expandFrom`, and on this leg it decides whether
@@ -2540,12 +2764,8 @@ fun TodoListScreen( // skipcq: KT-R1006
 
                     floaterTaskHomeRootFeedContent(
                         isFloaterTaskHomeScreen = isFloaterTaskHomeScreen,
-                        uiState = uiState,
                         timelineAnimationsEnabled = timelineAnimationsEnabled,
-                        emptySceneIcon = emptySceneIcon,
-                        titleColor = titleColor,
-                        isListDetailScreen = isListDetailScreen,
-                        celebrateEmptyState = celebrateEmptyState,
+                        emptyScene = floaterEmptySceneContent,
                         onOpenCompleted = onOpenCompleted,
                         floaterTaskHomeListRows = floaterTaskHomeListRows,
                         onOpenFloaterList = onOpenFloaterList,
@@ -3370,79 +3590,31 @@ private fun LazyListScope.flatTodoRowsContent(
  * [flatTodoRowsContent]: every `item`/`items` call below needs the caller's
  * scope to register its key, content type and placement correctly.
  *
- * [timelineAnimationsEnabled], [celebrateEmptyState] and the celebration
- * delay feed [displacedFeedItemMotion]/`TdayEmptyState` exactly as they did
- * inline — this is the celebration choreography from PR #122, so nothing
- * here changes the item order, keys or placement specs those depend on.
+ * [timelineAnimationsEnabled] feeds [displacedFeedItemMotion] exactly as it
+ * did inline — this is the celebration choreography from PR #122, so nothing
+ * here changes the item order, keys or placement specs those depend on. The
+ * empty scene itself arrives as [emptyScene], already built and already
+ * guarded; it used to be an `if` and five more parameters here.
  */
 private fun LazyListScope.floaterTaskHomeRootFeedContent(
     isFloaterTaskHomeScreen: Boolean,
-    uiState: TodoListUiState,
     timelineAnimationsEnabled: Boolean,
-    @DrawableRes emptySceneIcon: Int,
-    titleColor: Color,
-    isListDetailScreen: Boolean,
-    celebrateEmptyState: Boolean,
+    emptyScene: (LazyListScope.() -> Unit)?,
     onOpenCompleted: () -> Unit,
     floaterTaskHomeListRows: List<Pair<ListSummary, Int>>,
     onOpenFloaterList: (listId: String, listName: String) -> Unit,
 ) {
-    // Root floater empty state: mirror the web layout — the
-    // scene sitting in a gap in the middle of the screen, with
-    // the list names below it (instead of a full-screen
-    // watermark overlay).
-    if (isFloaterTaskHomeScreen && uiState.items.isEmpty() && !uiState.isLoading) {
-        item(
-            key = "floater-empty-message",
-            contentType = "floater-empty-message",
-        ) {
-            val gapHeight = (LocalConfiguration.current.screenHeightDp * 0.42f).dp
-            Box(
-                // Neither fade, for the same reason the overlay
-                // version has neither. Arriving: the scene
-                // inside runs its own entrance on the
-                // confetti's clock, and a host fade layered
-                // over it would also dim the burst during the
-                // frames it is meant to lead at full opacity.
-                // Leaving: a 42%-tall illustration fading out
-                // over a task row that is arriving in the same
-                // slot paints the empty state on top of the
-                // thing that disproves it — the overlay simply
-                // stops being composed, and so does this.
-                modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                    .fillMaxWidth()
-                    .heightIn(min = gapHeight),
-                contentAlignment = Alignment.Center,
-            ) {
-                TdayEmptyState(
-                    icon = emptySceneIcon,
-                    accentColor = titleColor,
-                    title = emptyStateMessageForMode(
-                        mode = uiState.mode,
-                        isFloaterList = isListDetailScreen,
-                    ),
-                    description = emptyStateDescriptionForMode(
-                        mode = uiState.mode,
-                        isFloaterList = isListDetailScreen,
-                    ),
-                    celebrate = celebrateEmptyState,
-                    // The overlay callers below pass nothing:
-                    // they draw over a page where nothing is
-                    // moving, so the burst can own the frame
-                    // the feed empties on. Here the scene is
-                    // inline, and the tile and list rows under
-                    // it are still gliding down into the space
-                    // it just claimed. Hold the celebration for
-                    // exactly that glide, so the paper flies
-                    // over a settled screen — which is the
-                    // whole of what makes the list screen's
-                    // version read as smooth.
-                    celebrationStartDelayMillis =
-                        TdayFeedItemMotion.CelebrationStartDelayMillis,
-                )
-            }
-        }
-    }
+    // The Anytime home's empty scene, built by [TodoListScreen] and merely
+    // emitted here, so that it stays the FIRST item in this feed.
+    //
+    // Handed over as a lambda rather than as the six values it needs, for the
+    // reason `earlierSceneContent` is handed over the same way and for one
+    // more of its own: the `MutableTransitionState` that plays its exit has to
+    // be remembered ABOVE the guard that mounts it, and `LazyListScope` is not
+    // a composition to remember anything in. Null when the scene is neither
+    // visible nor still leaving — the guard itself, made up there; see
+    // [shouldMountFloaterEmptyScene].
+    emptyScene?.invoke(this)
 
     // Floater tab's nav entry to the browsable Completed screen — the
     // todo side's own root feed reaches it through an identical

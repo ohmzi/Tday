@@ -6,7 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { patchTodo } from "@/lib/todo/patch-todo";
-import { markTaskCompleted, markTaskDeletedLocally } from "@/lib/task-completion-signal";
+import {
+  markCelebrationCancelled,
+  markTaskCompleted,
+  markTaskDeletedLocally,
+} from "@/lib/task-completion-signal";
 import { addDiagnosticBreadcrumb } from "@/lib/observability/sentry";
 import {
   runBulkFanOut,
@@ -73,8 +77,27 @@ export function useBulkTodoActions({
     [queryClient],
   );
 
-  /** Undo path: nothing was sent, so the server still has every row. */
+  /**
+   * Undo path: nothing was sent, so the server still has every row.
+   *
+   * The cancel is stamped HERE and not left to the screens' own arrival
+   * backstop, for the reason `useArrivalCancel` states: these rows come back
+   * through an invalidate and a refetch, and a celebration must not go on
+   * flying for the length of a network round trip after the user has said they
+   * did not mean it. The backstop still fires when the rows land; this is the
+   * half that does not wait. The same stamp the single-row complete mutations
+   * write from their own undo closures — a bulk complete opens the window with
+   * `markTaskCompleted` exactly as they do (below), so it owes the window an
+   * ending exactly as they do.
+   *
+   * Shared with the bulk DELETE's undo, which is correct rather than incidental:
+   * a delete never opens a celebration (`markTaskDeletedLocally` is what keeps
+   * the emptying quiet), so the stamp changes no answer there — and if some
+   * later path ever let one open, rows arriving back would still be the end of
+   * it.
+   */
   const restoreStagedRows = useCallback(() => {
+    markCelebrationCancelled();
     void queryClient.invalidateQueries({ queryKey: ["todo"] });
     void queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
     void queryClient.invalidateQueries({ queryKey: ["list"] });

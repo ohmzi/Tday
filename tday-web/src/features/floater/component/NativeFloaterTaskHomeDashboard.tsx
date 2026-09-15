@@ -3,8 +3,8 @@ import { CheckCircle, Leaf, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
-import { taskJustCompleted } from "@/lib/task-completion-signal";
-import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
+import EmptyStateSlot from "@/components/app/EmptyStateSlot";
+import { useFloaterEmptyState } from "@/features/floater/lib/useFloaterEmptyState";
 import { useRowPlacement } from "@/hooks/useRowPlacement";
 import { DELAY_MS } from "@/lib/motion";
 import { Link, useRouter } from "@/lib/navigation";
@@ -87,10 +87,24 @@ export default function NativeFloaterTaskHomeDashboard() {
     [filteredFloaters],
   );
   const isSearching = Boolean(searchQuery.trim());
-  const hasFloaters = floaters.some((floater) => !floater.completed);
-  // Remote sibling of `taskJustCompleted()` below — fires for a completion on
-  // another device or by a collaborator, not just this tab's own tap.
-  const remoteEmptied = useCelebrateEmptyTransition(!hasFloaters);
+  // Counted rather than tested for existence, because the cancel needs the
+  // number and not the boolean: a row ARRIVING is what ends a celebration, and
+  // on a feed that is not empty on either side of an undo the boolean does not
+  // move. The tile below reads the same count instead of recomputing it.
+  const pendingFloaterCount = useMemo(
+    () => floaters.filter((floater) => !floater.completed).length,
+    [floaters],
+  );
+  // Empty/celebration/cancel, shared with the Anytime list screen rather than
+  // derived twice — see `useFloaterEmptyState`, which is where the undo that
+  // brings a row back ends the burst flying over it.
+  const { showEmpty, celebrate, sceneLeavingOnCancel } = useFloaterEmptyState({
+    isLoading: floaterLoading,
+    isSearching,
+    // Search-immune: a query that hides every task is not a finished feed, and
+    // a task ARRIVING behind one still ends a celebration.
+    pendingRowCount: pendingFloaterCount,
+  });
 
   return (
     <>
@@ -166,7 +180,7 @@ export default function NativeFloaterTaskHomeDashboard() {
             {appDict("floater")}
           </span>
           <span className="relative text-[2.1rem] font-black leading-none">
-            {floaters.filter((floater) => !floater.completed).length}
+            {pendingFloaterCount}
           </span>
         </section>
 
@@ -193,27 +207,37 @@ export default function NativeFloaterTaskHomeDashboard() {
           </span>
         </Link>
 
-        {!floaterLoading && !hasFloaters && !isSearching ? (
-          <EmptyState
-            icon={Leaf}
-            accentColor={floaterAccent}
-            title={appDict("floaterEmpty")}
-            description={appDict("floaterEmptyBody")}
-            // Finishing the feed is a payoff, not an absence: the confetti is
-            // for the tick that emptied it, not for an empty Anytime feed.
-            // Whether that tick happened here, on another device, or from a
-            // collaborator on a shared list.
-            celebrate={taskJustCompleted() || remoteEmptied}
-            // This scene is drawn INLINE: mounting it is what pushes the tiles
-            // above down, so the travel and the burst would otherwise be the
-            // same beat. `PlacementLead` is the token for exactly that wait —
-            // it is `Emphasis` by construction, so it cannot drift away from
-            // the placement it is here to outlast — and holding the whole
-            // celebration back by it leaves the confetti's own lead intact:
-            // travel, then burst, then scene. The same order Android gets from
-            // `TdayFeedItemMotion.CelebrationStartDelayMillis`.
-            celebrationStartDelayMs={DELAY_MS.placementLead}
-          />
+        {/* Held one `Quick` past the frame the feed refilled, because the burst
+            inside is still fading and this element is what it is painted into —
+            an undo that unmounts the scene cuts the fade one layer down, which
+            is the same complaint the fade exists to answer. The slot closes its
+            42vh track under that fade too, so the tiles above and the lists
+            below take the space back over the beat rather than in the frame the
+            node goes. */}
+        {showEmpty || sceneLeavingOnCancel ? (
+          <EmptyStateSlot leavingOnCancel={sceneLeavingOnCancel}>
+            <EmptyState
+              icon={Leaf}
+              accentColor={floaterAccent}
+              title={appDict("floaterEmpty")}
+              description={appDict("floaterEmptyBody")}
+              // Finishing the feed is a payoff, not an absence: the confetti is
+              // for the tick that emptied it, not for an empty Anytime feed.
+              // Whether that tick happened here, on another device, or from a
+              // collaborator on a shared list — and it ENDS the moment a task
+              // comes back, however it got here.
+              celebrate={celebrate}
+              // This scene is drawn INLINE: mounting it is what pushes the tiles
+              // above down, so the travel and the burst would otherwise be the
+              // same beat. `PlacementLead` is the token for exactly that wait —
+              // it is `Emphasis` by construction, so it cannot drift away from
+              // the placement it is here to outlast — and holding the whole
+              // celebration back by it leaves the confetti's own lead intact:
+              // travel, then burst, then scene. The same order Android gets from
+              // `TdayFeedItemMotion.CelebrationStartDelayMillis`.
+              celebrationStartDelayMs={DELAY_MS.placementLead}
+            />
+          </EmptyStateSlot>
         ) : null}
 
         {!floaterLoading && isSearching && sortedFloaters.length === 0 ? (
