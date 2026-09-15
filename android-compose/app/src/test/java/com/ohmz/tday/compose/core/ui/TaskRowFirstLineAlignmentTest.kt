@@ -198,39 +198,200 @@ class TaskRowFirstLineAlignmentTest {
      *
      * The arithmetic above is worth nothing if a screen quietly goes back to centring, and
      * "everywhere" was the whole of the request: a fix applied to the screen in the report
-     * and to no other leaves the same defect in eight more places. So the set of files that
-     * derive a first line is pinned by name, and each of them is checked to actually stack
-     * from the top — a file that keeps the call and reverts the alignment would otherwise
-     * read as fixed and draw as broken.
+     * and to no other leaves the same defect in eight more places. So the rows are pinned
+     * by file AND BY COUNT, which is the part a membership test cannot do: `CalendarScreen`
+     * draws two of these rows, and a file-level `contains("Alignment.Top")` is satisfied by
+     * the first of them no matter what the second does. That is not hypothetical — it is
+     * how a half-converted completed row shipped past this test once already.
      */
     @Test
     fun `every task row in the app stacks against its title's first line`() {
-        val expected = setOf(
-            "core/ui/TdayTaskRowSkeleton.kt",
-            "feature/todos/TodoListScreen.kt",
-            "feature/completed/CompletedScreen.kt",
-            "feature/calendar/CalendarScreen.kt",
-            "feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt",
-            "feature/car/CarTaskSurfaceScreen.kt",
+        val expected = mapOf(
+            "core/ui/TdayTaskRowSkeleton.kt" to 1,
+            "feature/todos/TodoListScreen.kt" to 3,
+            "feature/completed/CompletedScreen.kt" to 1,
+            "feature/calendar/CalendarScreen.kt" to 2,
+            "feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt" to 1,
+            "feature/car/CarTaskSurfaceScreen.kt" to 1,
         )
-        val callers = composeSources()
-            .filterValues { it.readText().contains("rememberTaskRowFirstLineAlignment(") }
         assertEquals(
-            "a task row either derives its first line or it does not draw one. Add the new " +
-                "screen here, or take the retired one out, in the same commit",
+            "a task row either derives its first line or it does not draw one, and a file " +
+                "that gains or loses one says so here. Add the new row, or take the retired " +
+                "one out, in the same commit",
             expected,
-            callers.keys,
+            rowBlocks().groupingBy { it.label.substringBefore(':') }.eachCount(),
         )
-        callers.forEach { (path, file) ->
+        rowBlocks().forEach { row ->
             assertTrue(
-                "$path derives a first line and then stacks its row centred anyway",
-                file.readText().contains("verticalAlignment = Alignment.Top"),
+                "${row.label} derives a first line and then stacks its row centred anyway",
+                row.text.contains("verticalAlignment = Alignment.Top"),
             )
         }
     }
 
+    /**
+     * The leading control is inset too, and this is the half the first cut left out.
+     *
+     * Only the TEXT was ever given an inset, which is exactly right while the control is
+     * the taller of the two and silently wrong the moment it is not: a 28 dp toggle beside
+     * a line box that an accessibility font scale has grown to 36 dp is the row's SHORTEST
+     * element, and an un-inset one sits 4 dp above the line it is supposed to be the bullet
+     * for — above its own trailing flag, too, which did get the call. `topInsetFor` is 0 dp
+     * in the common case, so asking for it costs nothing and closes the one direction the
+     * row could not otherwise express.
+     *
+     * Asserted against the control the row DERIVED against, by name: a row that aligns to a
+     * 48 dp target and then insets a 24 dp glyph has answered a different question.
+     */
+    @Test
+    fun `every row insets the control it derived its line against`() {
+        rowBlocks().forEach { row ->
+            val control = CONTROL_HEIGHT.find(row.text)?.groupValues?.get(1)
+                ?: error("${row.label} derives a first line without naming a control height")
+            assertTrue(
+                "${row.label} derives its line against $control and then never puts " +
+                    "$control on it — `topInsetFor($control)` is 0 dp at fontScale 1, and " +
+                    "is the whole fix above it",
+                row.text.contains("topInsetFor($control)"),
+            )
+        }
+    }
+
+    /**
+     * Every trailing mark in those rows is on the same line, per MARK and not per file.
+     *
+     * A trailing mark is found structurally rather than by eye: a `padding(` with an `end`
+     * component, on an element whose own call mentions one of the `…TrailingIconSize`
+     * tokens. That picks out the list/priority containers and nothing else — a row's own
+     * `horizontal`/`vertical` padding has no `end`, and the swipe tray's `end` padding
+     * belongs to a call that sizes no mark.
+     *
+     * The count is pinned for the reason the row count is: a scan that silently matched
+     * nothing would pass this test every time.
+     */
+    @Test
+    fun `every trailing mark in those rows is dropped onto the same line`() {
+        var checked = 0
+        rowBlocks().forEach { row ->
+            paddingGroups(row.text).forEach { group ->
+                if (!group.text.contains("end =")) return@forEach
+                val token = TRAILING_TOKEN.find(enclosingCall(row.text, group.start))
+                    ?: return@forEach
+                checked++
+                assertTrue(
+                    "${row.label} stacks from the top and then leaves a ${token.value} mark " +
+                        "at the row's top edge. It is an annotation on the title, so it takes " +
+                        "`top = firstLine.topInsetFor(${token.value})` like the toggle does",
+                    group.text.contains("topInsetFor("),
+                )
+            }
+        }
+        assertEquals(
+            "the trailing-mark scan found a different number of marks than the tree has. " +
+                "Update the count with the row that gained or lost one",
+            7,
+            checked,
+        )
+    }
+
+    /** One row's worth of source: its derivation, and everything up to the next row's. */
+    private data class RowBlock(val label: String, val text: String)
+
+    /** A `padding(...)` argument list, and where it starts inside its row block. */
+    private data class SourceRange(val start: Int, val text: String)
+
+    /**
+     * Every row in the tree, one entry each — NOT one entry per file.
+     *
+     * A row begins where it derives its first line and ends where the next row derives
+     * its own, which is what makes the assertions above per-row properties. Only the
+     * `val … = remember…` call form opens a block, so the declaration of
+     * `rememberTaskRowFirstLineAlignment` itself does not read as a row.
+     */
+    private fun rowBlocks(): List<RowBlock> = composeSources()
+        .filterValues { it.readText().contains("rememberTaskRowFirstLineAlignment(") }
+        .flatMap { (path, file) ->
+            val text = file.readText()
+            val starts = DERIVATION.findAll(text).map { it.range.first }.toList()
+            starts.mapIndexed { index, start ->
+                RowBlock(
+                    label = "$path:${text.take(start).count { it == '\n' } + 1}",
+                    text = text.substring(start, starts.getOrNull(index + 1) ?: text.length),
+                )
+            }
+        }
+
+    /** Every `padding(` argument list in [text], balanced rather than line-matched. */
+    private fun paddingGroups(text: String): List<SourceRange> {
+        val groups = mutableListOf<SourceRange>()
+        var from = 0
+        while (true) {
+            val open = text.indexOf("padding(", from)
+            if (open < 0) return groups
+            val close = matchForward(text, open + "padding(".length - 1)
+            groups += SourceRange(open, text.substring(open, close))
+            from = close
+        }
+    }
+
+    /**
+     * The call that owns the argument list [at] sits in — its arguments and, when it has
+     * one, its trailing lambda. That is what makes "an element that sizes a trailing mark"
+     * a structural question rather than a guess about how far away the mark is written.
+     */
+    private fun enclosingCall(text: String, at: Int): String {
+        var depth = 0
+        var index = at - 1
+        while (index >= 0) {
+            val char = text[index]
+            if (char == ')') {
+                depth++
+            } else if (char == '(') {
+                if (depth == 0) break
+                depth--
+            }
+            index--
+        }
+        if (index < 0) return ""
+        val argsEnd = matchForward(text, index)
+        var body = argsEnd
+        while (body < text.length && text[body].isWhitespace()) body++
+        if (body >= text.length || text[body] != '{') return text.substring(index, argsEnd)
+        var braces = 1
+        var end = body + 1
+        while (braces > 0 && end < text.length) {
+            when (text[end]) {
+                '{' -> braces++
+                '}' -> braces--
+            }
+            end++
+        }
+        return text.substring(index, end)
+    }
+
+    /** The index just past the `)` that closes the `(` at [open]. */
+    private fun matchForward(text: String, open: Int): Int {
+        var depth = 1
+        var index = open + 1
+        while (depth > 0 && index < text.length) {
+            when (text[index]) {
+                '(' -> depth++
+                ')' -> depth--
+            }
+            index++
+        }
+        return index
+    }
+
     private fun assertNear(message: String, expected: Dp, actual: Dp) {
         assertEquals(message, expected.value, actual.value, 0.001f)
+    }
+
+    private companion object {
+        /** Only the call form opens a row block — never the function's own declaration. */
+        val DERIVATION = Regex("""val\s+\w+\s*=\s*rememberTaskRowFirstLineAlignment\(""")
+        val CONTROL_HEIGHT = Regex("""controlHeight\s*=\s*([\w.]+)""")
+        val TRAILING_TOKEN = Regex("""\b\w*TrailingIconSize\b""")
     }
 
     private fun composeSources(): Map<String, File> {

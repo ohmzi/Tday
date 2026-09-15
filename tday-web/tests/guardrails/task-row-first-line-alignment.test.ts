@@ -147,6 +147,13 @@ describe("every task row hangs its control off the title's first line", () => {
    * to the same question is a DERIVATION rather than another hand-written number,
    * which is the only one of the three idioms that survives a font-scale change on
    * its own.
+   *
+   * Deliberately per FILE, and it must not be read as more than that: a file holding
+   * two of these rows satisfies `toContain` on the strength of the first one, which is
+   * how a half-converted `CalendarScreen` row once passed every gate. The per-ROW
+   * claims — one `Alignment.Top` per derivation, the derived control inset onto its own
+   * line, every trailing mark inset too — are counted in `TaskRowFirstLineAlignmentTest`
+   * on the Kotlin side, where the source can be walked per row instead of per path.
    */
   it("Android derives the inset from the title's line height rather than naming it", () => {
     const helper = readRepo(
