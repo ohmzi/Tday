@@ -1069,6 +1069,49 @@
   to { opacity: 0; transform: translateY(-14px) scale(0.94); }
 }
 
+/* The OTHER way the scene leaves this slot, and the one the hand-off above is
+   not: the scope stopped being EMPTY under it. An undo puts the completed row
+   back, a collaborator adds one, the user types one — the celebration is over
+   (`shouldCelebrateEmptyState`) and the scene has nothing left to say.
+
+   It is here because the confetti is. The burst does not cut on the cancel
+   frame any more: it keeps flying while its own envelope takes the paint away
+   over `Quick` (`Confetti`'s `play`, and `docs/confetti-spec.md`'s Interruption
+   section, which holds all three clients to the same rung). A parent that
+   unmounted in that frame would cut the fade it just bought, so the container
+   holds this node in the tree for exactly that long (`useFadeUnmount`) and this
+   is what it draws while it is there.
+
+   `Quick`, not the `Enter` the hand-off exit above rides, and not `Scene` read
+   backwards. This is the shortest rung's own description of itself: something
+   leaving that nobody is meant to watch go. The thing the user asked for is the
+   row coming back, which is already on screen underneath.
+
+   The track closes on the same rung and the same curve, rather than being left
+   to drop in the frame the node goes away. `.tday-empty-slot` is 42vh of the
+   screen; fading its ink while holding its space and then releasing it is the
+   exact jump the slot was invented to remove, and `.tday-empty-slot-closing`
+   above makes the argument at length. Both properties on one transition, one
+   duration, one curve — a scene whose ink leaves without its box reads as two
+   things happening to it rather than as it leaving.
+
+   The child's two declarations are scoped here for the same reason they are
+   scoped there: a grid item that is not a scroll container keeps its own content
+   height as the track's floor, so without them the track has nothing to shrink
+   to — and left on, they would clip the resting scene. */
+.tday-empty-cancel-exit {
+  opacity: 0;
+  grid-template-rows: 0fr;
+  transition-property: opacity, grid-template-rows;
+  transition-duration: var(--tday-duration-quick);
+  transition-timing-function: var(--tday-ease-exit);
+}
+
+.tday-empty-cancel-exit > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
 /* The Overdue/Earlier ROWS' own fade — layered on top of the hand-off above
    rather than replacing it: these rows only ever mount once
    `useEarlierExpandHandoff` has already decided they may (after the
@@ -1202,6 +1245,16 @@
      hand-off and not the destination of this scene. */
   .tday-empty-exit { animation: none; }
   .tday-empty-slot-closing { grid-template-rows: 1fr; }
+  /* The cancel takes the scene away on the cancel frame here — `useFadeUnmount`
+     returns false outright under this preference, so nothing is held in the tree
+     to draw this and nothing waits in front of the restored row. Unreachable
+     except for the single commit between a container rendering the departure and
+     that hook's effect running, which is what this pins flat. */
+  .tday-empty-cancel-exit {
+    opacity: 1;
+    grid-template-rows: 1fr;
+    transition: none;
+  }
   /* `useFadeUnmount` itself skips its own delay under reduced motion (see its
      own doc comment), so these never actually get applied for long — this is
      just the same belt-and-braces as the pair above. */

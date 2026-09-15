@@ -69,10 +69,18 @@ struct TdayEmptyState: View {
                 // Outside the fade below too, so the paper is at full strength
                 // while the illustration is still coming up through it.
                 .overlay {
-                    if celebrate {
-                        TdayConfetti(accentColor: accentColor)
-                            .frame(width: BurstBox.width, height: BurstBox.height)
-                    }
+                    // Mounted whether or not this list is celebrating, with
+                    // `celebrate` handed in instead. The burst is the thing that
+                    // has to outlive the celebration ending — it leaves over a
+                    // `Quick` fade rather than between two frames — so the
+                    // celebration cannot also be what decides whether it exists.
+                    // Byte for byte what the Compose `TdayEmptyState` does with
+                    // the same parameter. A burst that is not playing draws a
+                    // zero-sized `Color.clear`, ticks nothing, and sits inside an
+                    // overlay this scene has already made non-hit-testing and
+                    // accessibility-hidden.
+                    TdayConfetti(accentColor: accentColor, play: celebrate)
+                        .frame(width: BurstBox.width, height: BurstBox.height)
                 }
                 .padding(.bottom, 28)
                 .allowsHitTesting(false)

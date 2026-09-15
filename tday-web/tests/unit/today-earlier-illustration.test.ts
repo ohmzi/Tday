@@ -5,6 +5,7 @@ import {
   earlierIsExpanding,
   earlierSlotChangesHands,
   emptySceneIsLeaving,
+  emptySceneLeavesOnCancel,
   shouldShowTodayEmptyIllustration,
 } from "@/features/todayTodos/lib/todayEarlierIllustration";
 import type { EarlierHandoff } from "@/features/todayTodos/lib/useEarlierExpandHandoff";
@@ -296,6 +297,72 @@ describe("emptySceneIsLeaving", () => {
     expect(emptySceneIsLeaving({ earlierHandoff: "scene-leaving" })).toBe(true);
     for (const earlierHandoff of ["idle", "rows-leaving"] as EarlierHandoff[]) {
       expect(emptySceneIsLeaving({ earlierHandoff })).toBe(false);
+    }
+  });
+});
+
+/**
+ * The OTHER departure, and the point of it being a separate question: the scene
+ * leaving because the scope refilled, not because Earlier is taking the slot.
+ *
+ * The two can never both be true and they answer to different rungs, so the one
+ * thing worth pinning is that this stays deaf to everything the hand-off is
+ * about. It sees a scene the container has stopped asking for, still in the tree
+ * (`useFadeUnmount`), over a scope that has tasks again — and nothing else.
+ */
+describe("emptySceneLeavesOnCancel", () => {
+  it("is true only for a scene still mounted over a scope that refilled", () => {
+    expect(
+      emptySceneLeavesOnCancel({
+        sceneStillMounted: true,
+        showEmptyIllustration: false,
+        showEmpty: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("is false while the scope is still empty — that departure is the hand-off's", () => {
+    // The scene going off this slot with `showEmpty` still true is Earlier
+    // taking it, which has its own longer beat (`TODAY_EARLIER_EXIT_MS`) and its
+    // own two class names. Lingering here as well would stack a second
+    // departure on a departure.
+    expect(
+      emptySceneLeavesOnCancel({
+        sceneStillMounted: true,
+        showEmptyIllustration: false,
+        showEmpty: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("is false for a scene the container is still asking for", () => {
+    // The overdue path: the row came back into Earlier, the scope still reads as
+    // finished, and the scene is not going anywhere. Only the burst's own
+    // envelope runs inside it.
+    for (const showEmpty of [false, true]) {
+      expect(
+        emptySceneLeavesOnCancel({
+          sceneStillMounted: true,
+          showEmptyIllustration: true,
+          showEmpty,
+        }),
+      ).toBe(false);
+    }
+  });
+
+  it("is false once the node is gone, which is also the reduced-motion answer", () => {
+    // `useFadeUnmount` hands back false immediately under that preference —
+    // nothing was painted, so no wait may survive in front of the restored row.
+    for (const showEmptyIllustration of [false, true]) {
+      for (const showEmpty of [false, true]) {
+        expect(
+          emptySceneLeavesOnCancel({
+            sceneStillMounted: false,
+            showEmptyIllustration,
+            showEmpty,
+          }),
+        ).toBe(false);
+      }
     }
   });
 });
