@@ -1,8 +1,15 @@
 import { useMemo } from "react";
 import { isSameDay } from "date-fns";
 import { useCompletedTodo } from "@/features/completed/query/get-completedTodo";
-import { useCelebrateEmptyTransition } from "@/hooks/use-celebrate-empty-transition";
-import { useTaskJustCompleted } from "@/lib/task-completion-signal";
+import {
+  useArrivalCancel,
+  useEmptyTransitionOpenedAt,
+} from "@/hooks/use-celebrate-empty-transition";
+import {
+  celebrationCancelledAtMs,
+  shouldCelebrateEmptyState,
+  useCompletionOpenedAt,
+} from "@/lib/task-completion-signal";
 import {
   earlierSlotChangesHands,
   shouldShowTodayEmptyIllustration,
@@ -50,6 +57,7 @@ export function useTimelineEmptyState({
   earlierHandoff,
   beginSceneExit,
   todayHasEarlierItems,
+  pendingRowCount,
 }: {
   scope: TimelineScope;
   scopeFilteredItems: TimelineItem[];
@@ -62,7 +70,20 @@ export function useTimelineEmptyState({
   beginSceneExit: () => void;
   /** Today's own separately-fetched Earlier signal — see `useTodayEarlierBucket`. Unused for every other scope. */
   todayHasEarlierItems: boolean;
+  /**
+   * The RAW, search-immune count of pending rows this screen can show, EVERY
+   * bucket included — Earlier's overdue rows with the rest. The cancel's input,
+   * and nothing else's: see `useArrivalCancel`, and note that this is
+   * deliberately not any of the Earlier-excluding reductions below, because the
+   * arrival it watches for is exactly the one those are written not to see.
+   */
+  pendingRowCount: number;
 }) {
+  // Before anything is derived: a row landing on this screen ends the
+  // celebration, whether it came back from an undo, from a collaborator or from
+  // the user's own typing. Counted, never inferred from the emptiness below —
+  // an undone OVERDUE row moves none of it.
+  useArrivalCancel(pendingRowCount);
   const hasScopedTasks = useMemo(() => {
     if (scope === "today") {
       return scopeFilteredItems.some((item) => item.dayDiff === 0);
@@ -97,11 +118,12 @@ export function useTimelineEmptyState({
   // are no non-Earlier tasks (Today also keeps its Morning/Afternoon/Tonight
   // headers above).
   const showEmpty = !todoLoading && !hasNonEarlierScopedTasks && !isSearching;
-  // Remote sibling of `taskJustCompleted()` below — fires for a completion on
+  // Remote sibling of the completion window below — fires for a completion on
   // another device or by a collaborator, not just this tab's own tap.
   // Requirement 4: watches the non-Earlier count, so finishing every current
-  // task still celebrates however many overdue tasks Earlier still holds.
-  const remoteEmptied = useCelebrateEmptyTransition(!hasNonEarlierScopedTasks);
+  // task still celebrates however many overdue tasks Earlier still holds. The
+  // CANCEL above deliberately watches a different number; see `useArrivalCancel`.
+  const remoteEmptiedAt = useEmptyTransitionOpenedAt(!hasNonEarlierScopedTasks);
   // A search that turns nothing up is a different state from an empty scope:
   // the scope may be full, this word just is not in it. Deliberately still
   // the full (Earlier-included) count: a query that matches only an overdue
@@ -124,7 +146,19 @@ export function useTimelineEmptyState({
   // list. Hoisted (rather than inlined on `<EmptyState celebrate>`) so
   // Today's own illustration/Earlier hand-off reads the exact same signal —
   // see `shouldShowTodayEmptyIllustration`.
-  const celebrate = useTaskJustCompleted() || remoteEmptied;
+  //
+  // Both windows consult the cancel, because an end that only one of them
+  // observes is not an end (`useCelebrationWindowExpiry`'s own doc comment
+  // makes the same argument about the clock). `shouldCelebrateEmptyState` is
+  // where the two stamps and the cancel meet, and it is pure so the ordering —
+  // undo ends it, a LATER completion re-opens it — is a unit test rather than a
+  // claim about a container.
+  const completionOpenedAt = useCompletionOpenedAt();
+  const celebrate = shouldCelebrateEmptyState({
+    completionOpenedAtMs: completionOpenedAt,
+    remoteEmptiedAtMs: remoteEmptiedAt,
+    cancelledAtMs: celebrationCancelledAtMs(),
+  });
   // The window has an end now, so the scene it holds gets to leave over one.
   // The only screen shape where the end takes anything off the slot is this
   // one: empty scope, Earlier open, the scene sitting above its rows purely on

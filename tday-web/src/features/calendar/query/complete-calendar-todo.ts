@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
+import { markCelebrationCancelled } from "@/lib/task-completion-signal";
 
 // Delayed-commit complete (see complete-todo.ts): stage the removal from the
 // calendar cache, show an undoable toast, and only PATCH /complete once the
@@ -45,6 +46,12 @@ export const useCompleteCalendarTodo = () => {
     showTodoCompletedToast({
       commit: () => commitComplete({ todoItem }),
       undo: () => {
+        // A row is coming BACK, so whatever screen the celebration is playing
+        // on is not finished any more and it ends now rather than when its own
+        // window runs out. Stamped here rather than left to the refetch below:
+        // that is a network round trip, and `useArrivalCancel`'s count-rise
+        // backstop cannot see the row until it lands.
+        markCelebrationCancelled();
         // The server still has the row (incomplete) — a refetch restores it.
         void queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
       },
