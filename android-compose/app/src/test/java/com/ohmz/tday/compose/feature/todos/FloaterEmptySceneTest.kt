@@ -101,20 +101,11 @@ class FloaterEmptySceneTest {
         )
     }
 
-    @Test
-    fun `an empty Local Mode workspace is an answer from its first frame`() {
-        // The regression the naive sync-stamp fix would have caused. Local Mode
-        // has no server and deliberately never records a successful sync, so
-        // `lastSuccessfulSyncEpochMs > 0` alone is false forever there -- an empty
-        // local workspace would sit in a row skeleton that never resolves and
-        // never be allowed to say what it actually knows. [FirstAnswerSignal]
-        // reads `isLocalMode()` first for exactly this, and the term arrives here
-        // already true.
-        assertEquals(
-            FeedAnswer.Empty,
-            feedAnswer(storeRead = true, rowsEmpty = true, firstAnswerLanded = true),
-        )
-    }
+    // The Local Mode case this file used to restate lives in
+    // `FirstAnswerSignalTest`, because that is where the term is produced. Asked
+    // of this predicate it can only be `firstAnswerLanded = true` typed out by
+    // hand -- the same call as the first assertion above, and green with the
+    // `isLocalMode()` escape hatch deleted.
 
     @Test
     fun `scene is not visible once a task is back`() {

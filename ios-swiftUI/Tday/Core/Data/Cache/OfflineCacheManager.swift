@@ -314,10 +314,35 @@ final class OfflineCacheManager {
             // snapshot re-serialization, and the fan-out notification entirely, since nothing
             // observer-visible changed.
             if timestampsChanged {
+                // The one timestamp move that IS observer-visible, and the only one: zero to
+                // non-zero on the successful-sync stamp is a workspace answering for the very
+                // first time. `feedFirstAnswerLanded(in:)` reads exactly this field, and the three
+                // feed view models re-read it only inside their hydrates — which off the refresh
+                // path run on `.offlineCacheDidChange` and nowhere else.
+                //
+                // Without this post, a first successful sync against an EMPTY account is silent:
+                // no row moved, so `contentChanged` is false, so this branch returns false, so
+                // `SyncManager` skips its own `notifyCacheChanged()`. The stamp lands and nothing
+                // asks again. The screens keep drawing the row skeleton `feedAnswer` gives an
+                // unanswered feed — three grey bars over a workspace that has now been counted and
+                // found empty — until a pull or a re-navigation happens to re-hydrate. Reachable
+                // on a fresh install whose bootstrap sync failed (offline launch) and whose later
+                // background sync succeeded. Android hit the same wall and answered it with
+                // `FirstAnswerSignal.version`; this is the same signal on the mechanism this
+                // client already has.
+                let firstAnswerJustLanded = lastState.lastSuccessfulSyncEpochMs == 0 &&
+                    normalizedState.lastSuccessfulSyncEpochMs > 0
                 upsertMetadata(normalizedState)
                 try? modelContext.save()
                 lastState.lastSuccessfulSyncEpochMs = normalizedState.lastSuccessfulSyncEpochMs
                 lastState.lastSyncAttemptEpochMs = normalizedState.lastSyncAttemptEpochMs
+                // Deliberately NOT behind `notify`. That flag is a batching contract — "the
+                // caller will post once after its last save" — and the caller only keeps it when
+                // something changed, which by definition is not this case. A once-per-install
+                // transition is not a fan-out worth batching.
+                if firstAnswerJustLanded {
+                    NotificationCenter.default.post(name: .offlineCacheDidChange, object: nil)
+                }
             }
             return false
         }

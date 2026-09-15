@@ -144,19 +144,10 @@ class EarlierSceneOrderTest {
                 ),
             ),
         )
-        // Local Mode never records a successful sync, so a stamp-only first-answer
-        // term would have hidden this scene there permanently.
-        assertTrue(
-            "an empty Local Mode workspace is answered from its first frame",
-            showEarlierScene(
-                earlierCollapsed = true,
-                answer = feedAnswer(
-                    storeRead = true,
-                    rowsEmpty = true,
-                    firstAnswerLanded = true,
-                ),
-            ),
-        )
+        // Local Mode used to be restated here as a third assertion with
+        // `firstAnswerLanded = true` written in by hand, which is the first
+        // assertion above with a different sentence over it. The claim is about
+        // how that term is PRODUCED, so it is made in `FirstAnswerSignalTest`.
     }
 
     private fun showEarlierScene(

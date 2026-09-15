@@ -73,20 +73,13 @@ class FeedAnswerTest {
         )
     }
 
-    @Test
-    fun `an empty Local Mode workspace is answered from its first frame`() {
-        // The regression a sync-stamp-only first-answer term would have caused,
-        // and the reason `FirstAnswerSignal` reads `isLocalMode()` first. Local
-        // Mode has no server and never records a successful sync, so a stamp used
-        // alone is false there forever: an empty local workspace would show a row
-        // skeleton that never resolves and never show the empty state at all.
-        // `isLocalMode` makes `firstAnswerLanded` true from the first frame, which
-        // is this case.
-        assertEquals(
-            FeedAnswer.Empty,
-            feedAnswer(storeRead = true, rowsEmpty = true, firstAnswerLanded = true),
-        )
-    }
+    // Local Mode is NOT tested here, and the deleted test that was is the reason
+    // the note is worth writing. `firstAnswerLanded` arrives as a Boolean, so a
+    // Local Mode case stated at this level can only hard-code `true` -- which
+    // makes it a byte-identical copy of the first assertion above under a name
+    // that promises something else, and it stayed green with the `isLocalMode()`
+    // line deleted from the signal. The claim belongs where the term is PRODUCED:
+    // `FirstAnswerSignalTest`, one package over.
 
     @Test
     fun `an arrival still takes the empty state away`() {

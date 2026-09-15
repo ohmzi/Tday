@@ -217,6 +217,30 @@ describe("no iOS feed scene is decided by the refresh flag", () => {
       anchor: "private var showInlineFloaterTaskHomeEmpty: Bool {",
       counts: "floaterTaskHomeAnswer",
     },
+    // The three properties that BUILD the arguments, and the reason they are listed separately
+    // from the gates that consume them. `feedAnswer` having no loading parameter protects the
+    // function; it does not protect the three values a screen hands it. Editing one line here —
+    // `storeRead: viewModel.hasHydratedFromCache && !viewModel.isLoading` — restores the reported
+    // screenshot exactly, and every assertion in this file passed while it was in the tree. The
+    // gates above name these properties, so scanning the gates alone stops one hop short.
+    {
+      file: "TodoListScreen.swift",
+      source: todoList,
+      anchor: "private var floaterTaskHomeAnswer: FeedAnswer {",
+      counts: "viewModel.items.isEmpty",
+    },
+    {
+      file: "TodoListScreen.swift",
+      source: todoList,
+      anchor: "private var timelineAnswer: FeedAnswer {",
+      counts: "timelineItems.isEmpty",
+    },
+    {
+      file: "TodoListScreen.swift",
+      source: todoList,
+      anchor: "private var pendingScopeAnswer: FeedAnswer {",
+      counts: "hasNoPendingItems",
+    },
     // Its other half on the same pull: the skeleton that used to GROW during a refresh over an
     // already-answered feed, and drew nothing on the one load that really has no answer.
     {
@@ -336,5 +360,89 @@ describe("CompletedScreen does not claim a pull-to-refresh it has not got", () =
         ? "AppRootView now passes pullRefreshEnabled, so CompletedScreen's prose may describe the gesture again"
         : "AppRootView builds CompletedScreen without pullRefreshEnabled, so no comment in it may justify anything with a pull-to-refresh",
     ).toBe(constructedWithFlag);
+  });
+});
+
+/**
+ * The other half of "the empty state is an answer": the answer has to ARRIVE.
+ *
+ * `feedAnswer` withholds the scene until `firstAnswerLanded`, and on iOS that term is re-read in
+ * exactly one place per feed — the hydrate — which off the refresh path runs only on
+ * `.offlineCacheDidChange`. A first successful sync against an EMPTY account writes the stamp and
+ * no rows, which is the one save `OfflineCacheManager` deliberately does NOT fan out: nothing
+ * observer-visible changed, so `SyncManager`'s `if cacheContentChanged` skips the post too. The
+ * stamp lands and nobody asks again, and three grey placeholder bars sit over a workspace that has
+ * now been counted and found empty until a pull or a re-navigation happens to re-hydrate.
+ *
+ * Reachable without contrivance: launch a fresh install offline so bootstrap's sync fails, then
+ * let the 300-second sync loop succeed against the empty account. Android reached the same wall
+ * and answered it with a second signal (`FirstAnswerSignal.version`, collected by three view
+ * models); this client answers it on the fan-out it already has, which is why the pin is here and
+ * not a mirror of Android's shape.
+ */
+describe("a first answer with no rows in it still reaches the iOS feeds", () => {
+  const cacheManager = readCode(
+    resolve(MONO, "ios-swiftUI/Tday/Core/Data/Cache/OfflineCacheManager.swift"),
+  );
+
+  it("posts the cache-changed fan-out when the sync stamp first moves off zero", () => {
+    // Anchored inside the metadata-only branch on purpose. The content-changed path below it
+    // already posts for every row that moves; this assertion is about the branch that returns
+    // `false`, and a post written anywhere else in the file would not answer the case.
+    const metadataOnly = blockAfter(cacheManager, "guard contentChanged else {");
+    expect(metadataOnly).not.toBe("");
+    expect(metadataOnly).toContain("lastState.lastSuccessfulSyncEpochMs == 0");
+    expect(metadataOnly).toContain("normalizedState.lastSuccessfulSyncEpochMs > 0");
+    expect(metadataOnly).toContain("NotificationCenter.default.post(name: .offlineCacheDidChange");
+  });
+
+  it("keeps the post out of the batching flag that would swallow it", () => {
+    // `notify: false` is a promise that the CALLER posts once after its last save — and the
+    // caller keeps that promise only `if cacheContentChanged`, which is false in exactly the case
+    // this exists for. Behind `if notify` the line would be dead on the only path that needs it.
+    const metadataOnly = blockAfter(cacheManager, "guard contentChanged else {");
+    expect(metadataOnly).not.toContain("if notify");
+  });
+
+  const feeds: ReadonlyArray<{ file: string; path: string }> = [
+    { file: "TodoListViewModel.swift", path: "ios-swiftUI/Tday/Feature/Todos/TodoListViewModel.swift" },
+    {
+      file: "CompletedViewModel.swift",
+      path: "ios-swiftUI/Tday/Feature/Completed/CompletedViewModel.swift",
+    },
+    {
+      file: "ScheduledTaskHomeViewModel.swift",
+      path: "ios-swiftUI/Tday/Feature/ScheduledTaskHome/ScheduledTaskHomeViewModel.swift",
+    },
+  ];
+
+  for (const feed of feeds) {
+    it(`${feed.file} re-reads the first-answer term off that fan-out`, () => {
+      // The post above is only worth anything while these three still listen to it AND still
+      // re-read the term when they do. Both halves, because losing either one is the same
+      // permanent skeleton.
+      const source = readCode(resolve(MONO, feed.path));
+      expect(source).toContain(".offlineCacheDidChange");
+      expect(source).toContain("feedFirstAnswerLanded(in: container)");
+    });
+  }
+
+  it("keeps the local-mode half of the term a decision that can be asserted", () => {
+    // `feedFirstAnswerLanded(in:)` reads an `AppContainer` and cannot be called from
+    // `TdayCoreTests`, so for a while every test naming Local Mode was passing
+    // `firstAnswerLanded: true` by hand — restating the term instead of producing it, and staying
+    // green with the `isLocalMode` line deleted. The pure function is what `FeedAnswerTests` can
+    // actually hold, so this pins that the container-reading version still defers to it rather
+    // than growing a second copy of the rule.
+    const feedAnswerSource = readCode(resolve(MONO, "ios-swiftUI/Tday/Feature/Todos/FeedAnswer.swift"));
+    const container = blockAfter(feedAnswerSource, "func feedFirstAnswerLanded(in container: AppContainer) -> Bool {");
+    expect(container).toContain("firstAnswerLanded(");
+    expect(container).toContain("isLocalMode: container.serverConfigRepository.isLocalMode()");
+    const pure = blockAfter(
+      feedAnswerSource,
+      "func firstAnswerLanded(isLocalMode: Bool, lastSuccessfulSyncEpochMs: Int64) -> Bool {",
+    );
+    expect(pure).toContain("if isLocalMode { return true }");
+    expect(pure).toContain("lastSuccessfulSyncEpochMs > 0");
   });
 });

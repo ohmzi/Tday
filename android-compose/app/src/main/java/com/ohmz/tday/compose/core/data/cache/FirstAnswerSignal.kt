@@ -45,11 +45,23 @@ class FirstAnswerSignal @Inject constructor(
      * that already establish `hasHydratedSnapshot` -- the flag has to be true on
      * the same frame the store read lands, or the gate that reads both sees a
      * hydrated feed with no answer and draws a skeleton for one frame.
+     *
+     * Synchronous on the main thread is why the stamp comes from
+     * [OfflineCacheManager.lastSuccessfulSyncEpochMsBlocking] and not from
+     * `loadOfflineStateBlocking()`. Three ViewModels ask this from inside a
+     * hydrate, and every cache write wakes every live one of them, so on a large
+     * workspace the whole-cache read would have charged seven table scans and
+     * seven record mappings -- all of them discarded -- to every sync, every
+     * mutation and every widget check-off, to produce one `Long`. The single-row
+     * read answers the identical question off the identical table.
+     *
+     * The order of the two terms is the rule, not a style: [isLocalMode] is
+     * asked FIRST and returns without touching Room at all. See the class note.
      */
     fun hasLanded(): Boolean {
         if (secureConfigStore.isLocalMode()) return true
         return runCatching {
-            offlineCacheManager.loadOfflineStateBlocking().lastSuccessfulSyncEpochMs
+            offlineCacheManager.lastSuccessfulSyncEpochMsBlocking()
         }.getOrDefault(0L) > 0L
     }
 }

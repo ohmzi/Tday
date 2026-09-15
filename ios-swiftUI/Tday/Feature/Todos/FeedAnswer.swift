@@ -123,6 +123,38 @@ func feedAnswer(
 /// shows "No Anytime tasks" about a workspace nobody has counted yet.
 @MainActor
 func feedFirstAnswerLanded(in container: AppContainer) -> Bool {
-    guard !container.serverConfigRepository.isLocalMode() else { return true }
-    return container.cacheManager.lastSuccessfulSyncEpochMsSnapshot > 0
+    firstAnswerLanded(
+        isLocalMode: container.serverConfigRepository.isLocalMode(),
+        lastSuccessfulSyncEpochMs: container.cacheManager.lastSuccessfulSyncEpochMsSnapshot
+    )
+}
+
+/// The decision above with the two reads taken out of it, so that the decision
+/// can be asserted.
+///
+/// Split off after a probe deleted the local-mode term from the version that
+/// read the container directly and the whole suite stayed green: every test
+/// naming Local Mode was passing `firstAnswerLanded: true` to ``feedAnswer`` by
+/// hand, which restates the term instead of producing it. A rule that is only
+/// ever hard-coded is a rule with no test, however many tests name it — and this
+/// one is a single `guard` away from leaving every Local Mode install that has
+/// not yet made a task looking at a row skeleton forever.
+///
+/// The order is the rule and not a formatting choice. `isLocalMode` is asked
+/// FIRST because in Local Mode the stamp is not merely unreliable, it is held at
+/// zero on purpose by three separate writers — `saveOfflineState` zeroes it on
+/// every write while the mode is on, `SyncManager` zeroes it on its no-op sync,
+/// and `AppViewModel.enterLocalWorkspace` zeroes it on the way in. There is no
+/// value of the second parameter that makes the first one redundant.
+///
+/// Passing both in rather than short-circuiting costs nothing on this client:
+/// `lastSuccessfulSyncEpochMsSnapshot` is an in-memory mirror, not a fetch.
+/// Android's `FirstAnswerSignal.hasLanded` keeps the early return instead,
+/// because there the same question is a Room query.
+///
+/// What remains untested is one line: which two properties
+/// ``feedFirstAnswerLanded(in:)`` reads these from.
+func firstAnswerLanded(isLocalMode: Bool, lastSuccessfulSyncEpochMs: Int64) -> Bool {
+    if isLocalMode { return true }
+    return lastSuccessfulSyncEpochMs > 0
 }
