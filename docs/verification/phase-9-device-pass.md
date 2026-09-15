@@ -363,6 +363,53 @@ animates.
               exactly that — and can prove nothing about which declaration won in a browser. Every
               wrong version of this still presses.
 
+- [ ] **PR 41c · web · The swipe row's reveal has a detent in it** — an ANDROID PHONE in
+      Chrome, with the app's own Sound & vibration haptics switch left on and the phone off silent.
+      Nothing else can perform this row: `navigator.vibrate` exists in Android Chrome and nowhere
+      else, so an iPhone, a desktop and every other browser will feel nothing and prove nothing.
+      Any list with a few tasks on it; the actions behind a row are 210 px wide and the detent is
+      at 105 px.
+      Do:     (1) drag a row left slowly and stop the moment you feel something, then look at how
+              far it has gone and whether the pills are visibly on their way; (2) hold still there
+              for a second and jiggle either side of it; (3) let go and then tap the checkbox on
+              another row, so the reveal and the tick land a second apart; (4) from closed, flick a
+              row left hard and short — 40 px and the finger is gone — so it opens on speed alone;
+              (5) drag a row that is already open further left, walk it halfway back, and pull it
+              out again.
+      Watch:  (1) the buzz arrives at 105 px, half the row's actions, and reads as the actions
+              catching under the thumb rather than as a notification landing. This is the question
+              the row exists to ask: half the width is much further out than the natives' 32%, and
+              it is that far out because web commits on a projected rest rather than on a position
+              — so the honest question is whether a detent the hand meets halfway is late, and
+              whether the commit itself is what wants moving. (2) one buzz and then nothing,
+              however long you hold and however much you jiggle. (3) the reveal (25 ms) and the
+              checkbox's own tick (15 ms) must be two different things in the hand — the reveal
+              noticeably the fuller of the two; if they read as the same buzz, 25 is too close to
+              the acknowledgement band and the gap wants widening rather than the verb reusing.
+              (4) the flick's buzz lands at lift-off instead of mid-drag, and the two should still
+              read as the same event happening at the only moment each of them can. (5) silence
+              throughout — there is nothing left to uncover.
+      Fails:  a buzz that repeats or rattles while the finger rests at the detent; two buzzes in
+              one drag from crossing, coming back and crossing again; any buzz on the way closed,
+              or on a row shut from under you by opening a different one; a second buzz as the row
+              springs open after release; and a flick arm that feels heavier or lighter than the
+              detent arm.
+      Known:  cross the detent, drag back and release closed, and you have felt a reveal that did
+              not happen. That is what a detent on a physical control does, it is pinned by a test
+              that says so, and it is not a fail here — the alternative is silence until the row
+              settles, which costs the feature its point. Also not a fail: the natives buzz at 32%
+              of their reveal and web at 50% of its own. Each client fires on ITS OWN commit rule
+              so the buzz can never announce an open that does not happen; the three clients agree
+              on the sentence and not on the pixel, and reconciling the pixel means moving a
+              shipped commit threshold, which is its own argument.
+      Why:    no gate in this repository can feel a haptic and no machine here has a vibrator.
+              `swipe-row-reveal-haptic.test.tsx` pins the decision — one buzz per crossing, none
+              while hovering, none on a closed release, one at the flick that never crossed, none
+              on an already-open row — and `feedback-preferences.test.tsx` pins that the new verb
+              inherits the app's haptic switch at the chokepoint. What none of it can say is
+              whether 105 px is where the catch belongs, or whether 25 ms and 15 ms are still two
+              events in a hand.
+
 
 ## Android
 
