@@ -363,6 +363,53 @@ animates.
               exactly that — and can prove nothing about which declaration won in a browser. Every
               wrong version of this still presses.
 
+- [ ] **PR 41c · web · The swipe row's reveal has a detent in it** — an ANDROID PHONE in
+      Chrome, with the app's own Sound & vibration haptics switch left on and the phone off silent.
+      Nothing else can perform this row: `navigator.vibrate` exists in Android Chrome and nowhere
+      else, so an iPhone, a desktop and every other browser will feel nothing and prove nothing.
+      Any list with a few tasks on it; the actions behind a row are 210 px wide and the detent is
+      at 105 px.
+      Do:     (1) drag a row left slowly and stop the moment you feel something, then look at how
+              far it has gone and whether the pills are visibly on their way; (2) hold still there
+              for a second and jiggle either side of it; (3) let go and then tap the checkbox on
+              another row, so the reveal and the tick land a second apart; (4) from closed, flick a
+              row left hard and short — 40 px and the finger is gone — so it opens on speed alone;
+              (5) drag a row that is already open further left, walk it halfway back, and pull it
+              out again.
+      Watch:  (1) the buzz arrives at 105 px, half the row's actions, and reads as the actions
+              catching under the thumb rather than as a notification landing. This is the question
+              the row exists to ask: half the width is much further out than the natives' 32%, and
+              it is that far out because web commits on a projected rest rather than on a position
+              — so the honest question is whether a detent the hand meets halfway is late, and
+              whether the commit itself is what wants moving. (2) one buzz and then nothing,
+              however long you hold and however much you jiggle. (3) the reveal (25 ms) and the
+              checkbox's own tick (15 ms) must be two different things in the hand — the reveal
+              noticeably the fuller of the two; if they read as the same buzz, 25 is too close to
+              the acknowledgement band and the gap wants widening rather than the verb reusing.
+              (4) the flick's buzz lands at lift-off instead of mid-drag, and the two should still
+              read as the same event happening at the only moment each of them can. (5) silence
+              throughout — there is nothing left to uncover.
+      Fails:  a buzz that repeats or rattles while the finger rests at the detent; two buzzes in
+              one drag from crossing, coming back and crossing again; any buzz on the way closed,
+              or on a row shut from under you by opening a different one; a second buzz as the row
+              springs open after release; and a flick arm that feels heavier or lighter than the
+              detent arm.
+      Known:  cross the detent, drag back and release closed, and you have felt a reveal that did
+              not happen. That is what a detent on a physical control does, it is pinned by a test
+              that says so, and it is not a fail here — the alternative is silence until the row
+              settles, which costs the feature its point. Also not a fail: the natives buzz at 32%
+              of their reveal and web at 50% of its own. Each client fires on ITS OWN commit rule
+              so the buzz can never announce an open that does not happen; the three clients agree
+              on the sentence and not on the pixel, and reconciling the pixel means moving a
+              shipped commit threshold, which is its own argument.
+      Why:    no gate in this repository can feel a haptic and no machine here has a vibrator.
+              `swipe-row-reveal-haptic.test.tsx` pins the decision — one buzz per crossing, none
+              while hovering, none on a closed release, one at the flick that never crossed, none
+              on an already-open row — and `feedback-preferences.test.tsx` pins that the new verb
+              inherits the app's haptic switch at the chokepoint. What none of it can say is
+              whether 105 px is where the catch belongs, or whether 25 ms and 15 ms are still two
+              events in a hand.
+
 
 ## Android
 
@@ -939,6 +986,42 @@ animates.
               whether that is twenty milliseconds nobody can see, which is what the migration
               claims.
 
+- [ ] **PR 41a · android · The swipe row's reveal has a detent in it** — Today, Todos, Calendar or
+      Completed, a list with several tasks, system haptics on and the phone not in a case that eats
+      them. Do the same row four ways.
+      Do:     (1) drag a row left slowly and stop the moment you feel something, then look at how
+              far it has actually travelled; (2) hold the finger still right there for a second or
+              two, and jiggle it a few px either side of that point; (3) let go, tap a pill, and pay
+              attention to the two buzzes back to back; (4) from closed, flick the row left hard and
+              short — 20 px and gone — so it opens on speed without ever reaching the detent; (5)
+              with one row open, swipe a DIFFERENT row open so the first is shut from under you,
+              and catch that first row with a thumb while it is still travelling home — then drag
+              it back out.
+      Watch:  (1) the buzz should arrive at roughly 56 dp of travel (0.32 of the 176 dp reveal), and
+              it should read as the actions catching rather than as a notification: the question
+              this row exists to ask is whether 56 dp is where the hand expects the catch, or
+              whether it comes too early to mean anything / too late to be a detent at all. (2) one
+              buzz and then nothing, however long you hold or however much you jiggle. (3) the
+              reveal (CONTEXT_CLICK) and the pill's own tap (CLOCK_TICK) must be two different
+              things in the hand, arriving a moment apart — the reveal sharper, the tap lighter.
+              (4) the flick's buzz lands at lift-off instead of mid-drag, and the two arms should
+              still feel like the same event happening at the only moment each of them can.
+      Fails:  a buzz that repeats, ticks or rattles while the finger rests at the detent; two buzzes
+              in one drag from crossing, coming back and crossing again; any buzz on the way closed,
+              or on a row shut from under you by opening a different row; a second buzz one frame
+              after the first as the row springs open; a buzz on a plain tap (the tap plays the
+              42 dp hint, which is under the 56 dp detent by design, and must stay silent); and the
+              fling arm feeling like a different, heavier event than the detent arm. (5) is its own
+              fail: a buzz on the frame the thumb lands on a row that is still open and still
+              closing, or on the way back out from there. Nothing is being revealed — the actions
+              are already out and under the thumb — and the open-cycle does not end until the row
+              is actually home.
+      Known:  cross the detent, drag back and release closed, and you have felt a reveal that did
+              not happen. That is what a detent on a physical control does and it is not a fail
+              here; the alternative is silence until the row settles, which costs the feature its
+              point. Also not a fail: iOS buzzes on the tap-then-hint path and Android does not —
+              a real cross-platform divergence, named rather than closed by this change.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
@@ -1315,3 +1398,48 @@ animates.
       Why:    there is no Swift toolchain on the machine this was written on. The number is pinned
               by `motion-parity.test.ts`, which asserts `Bar` is 0.94 in all three generated
               artifacts, and nothing in the repository can say whether the button wearing it moves.
+
+- [ ] **PR 41b · ios · The swipe row's reveal has a detent in it** — Today, Todos, Calendar or
+      Completed, a list with several tasks, Settings ▸ Sounds & Haptics ▸ System Haptics on, and
+      the phone out of a case thick enough to eat them. Two rows are wanted: an ordinary one with
+      three pills (Edit/Copy/Delete, 228 pt of reveal, detent at 73 pt) and one that carries the
+      mode's fourth pill — Schedule on a floater, Float on an overdue task — at 304 pt of reveal
+      and a detent at 97 pt.
+      Do:     (1) drag the three-pill row left slowly and stop the instant you feel something,
+              then look at how far it has actually gone and whether the pills are visibly on
+              their way; (2) hold still right there for a second or two and jiggle a few points
+              either side of it; (3) let go, then tap a pill and pay attention to the two buzzes
+              back to back; (4) from closed, flick the row left hard and short — 20 pt and the
+              finger is gone — so it opens on speed alone; (5) do (1) again on the four-pill row.
+      Watch:  (1) the buzz arrives around 73 pt of travel and reads as the actions catching under
+              the thumb rather than as a notification landing — the question this row exists to
+              ask is whether 32% is where the hand expects the catch, or whether it comes too
+              early to mean anything. (2) one buzz and then nothing, however long you hold and
+              however much you jiggle. (3) the reveal (`.rigid` at 0.7) and the pill's own tap
+              (`.light` at 0.6) must be two different things in the hand a second apart — the
+              first sharp, the second soft; if they are the same buzz, the pair
+              `HapticManager.reveal` is documented against has collapsed. (4) the flick's buzz
+              lands at lift-off instead of mid-drag, and the two arms should still read as the
+              same event happening at the only moment each of them can. (5) the four-pill row's
+              detent is 24 pt further out, since the fraction is of a wider reveal: the second
+              half of the same question, which is whether one fraction can serve two widths or
+              whether the detent should be a distance.
+      Fails:  a buzz that repeats, ticks or rattles while the finger rests at the detent; two
+              buzzes in one drag from crossing, coming back and crossing again; any buzz on the
+              way closed, or on a row shut from under you by opening a different one; a second
+              buzz as the row springs open after release; a buzz while dragging a row that is
+              already open; and the flick arm feeling heavier or different from the detent arm.
+      Known:  cross the detent, drag back and release closed, and you have felt a reveal that did
+              not happen. That is what a detent on a physical control does, it is pinned by a
+              test that says so, and it is not a fail here — the alternative is silence until the
+              row settles, which costs the feature its point. Also not a fail: a plain tap on the
+              row buzzes as it plays its 28 pt hint. That is the pre-existing tap path, Android
+              has no equivalent, and closing that divergence either way is a felt change to a
+              shipped gesture that was not asked for here.
+      Why:    there is no Swift toolchain on the machine this was written on and no gate in the
+              repository can feel a haptic. `TaskSwipeRevealDetentTests` pins the decision — one
+              buzz per crossing, none while hovering, none on a closed release, one at the flick
+              that never crossed — and `ios-target-membership.test.ts` pins that the test is
+              registered in the pbxproj rather than sitting on disk unbuilt. What none of it can
+              say is whether 73 pt is where the catch belongs, or whether the two generators are
+              still telling two events apart in a hand.

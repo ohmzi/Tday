@@ -71,7 +71,6 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
     private static let pillWidth: CGFloat = 76
     private var buttonCount: Int { extraAction == nil ? 3 : 4 }
     private var revealWidth: CGFloat { Self.pillWidth * CGFloat(buttonCount) }
-    private let openVelocityThreshold: CGFloat = -180
 
     private var revealProgress: CGFloat {
         min(1, max(0, -offsetX / revealWidth))
@@ -88,7 +87,6 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                         rowID: rowID,
                         openRowID: $openRowID,
                         revealWidth: revealWidth,
-                        openVelocityThreshold: openVelocityThreshold,
                         offsetX: $offsetX
                     )
                 )
@@ -257,12 +255,65 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
     }
 }
 
+/// When a task row is committed to opening, and the one place the two numbers that decide
+/// it are written.
+///
+/// Lifted out of `handlePan` for the reason `RootFeedDockCollapse` was lifted out of the two
+/// root feeds: a pan decision living in an `@objc` method, on a coordinator nested inside a
+/// `private struct`, is unreachable from `xctest` — and there is no Swift toolchain on the
+/// machine this app is written on, so the suite that reads this file is the only one that
+/// ever will. It matters more here than there, because the thing this decision now drives is
+/// a haptic, and no gate in this repository can feel a haptic. The decision is what gets
+/// proven instead: `Tests/TdayCoreTests/TaskSwipeRevealDetentTests.swift` drives the two
+/// functions below the way a finger drives them.
+///
+/// Both numbers were already in the file and neither is new. `openThresholdFraction` was a
+/// bare `0.32` inside the release branch — the number Android has named at
+/// `TaskSwipeRevealState.SWIPE_OPEN_THRESHOLD_FRACTION` since that file was written, and the
+/// one thing of the pair iOS had never named. `openVelocityThreshold` was written three
+/// times for one value: a stored property on the modifier, a `let` threaded through the
+/// representable, and a default on the coordinator that the threading overwrote with the
+/// same `-180`. Three copies of a number is one number on paper and three the first time
+/// anybody tunes one of them.
+///
+/// Deliberately no spring and no `response:` / `dampingFraction:` / `duration:` of its own.
+/// The settle these two decide the target of is argued where it stands at the end of
+/// `handlePan`, and `tday-web/tests/guardrails/motion-parity.test.ts` holds this client's
+/// two spring counters full to the line.
+enum TaskSwipeRevealDetent {
+
+    /// How far across the reveal the row has to have travelled for a release to open it.
+    static let openThresholdFraction: CGFloat = 0.32
+
+    /// How fast leftwards a release has to be to open the row from wherever it has got to.
+    static let openVelocityThreshold: CGFloat = -180
+
+    /// "If the finger lifted right now, this row would open."
+    ///
+    /// ``shouldOpen(offsetX:velocityX:revealWidth:)``'s own first disjunct with the velocity
+    /// term left out, and not a threshold invented for the haptic that fires on it. That is
+    /// what keeps the buzz honest: feeling it means let go now and the actions stay out.
+    static func isCommittedOpen(offsetX: CGFloat, revealWidth: CGFloat) -> Bool {
+        offsetX < -(revealWidth * openThresholdFraction)
+    }
+
+    /// Where the row goes when the finger leaves: open, or home.
+    ///
+    /// An OR, and that is the whole reason the reveal haptic needs an arm at release as well
+    /// as one under the finger. A short hard flick — 20 points and gone — opens a row that
+    /// never came near the detent, so a detent-only haptic would leave the fastest, most
+    /// deliberate swipe in the app as the only silent one.
+    static func shouldOpen(offsetX: CGFloat, velocityX: CGFloat, revealWidth: CGFloat) -> Bool {
+        isCommittedOpen(offsetX: offsetX, revealWidth: revealWidth)
+            || velocityX < openVelocityThreshold
+    }
+}
+
 private struct HorizontalSwipePanObserver: UIViewRepresentable {
     let enabled: Bool
     let rowID: String
     @Binding var openRowID: String?
     let revealWidth: CGFloat
-    let openVelocityThreshold: CGFloat
     @Binding var offsetX: CGFloat
 
     func makeCoordinator() -> Coordinator {
@@ -281,7 +332,6 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
         context.coordinator.rowID = rowID
         context.coordinator.openRowID = $openRowID
         context.coordinator.revealWidth = revealWidth
-        context.coordinator.openVelocityThreshold = openVelocityThreshold
         context.coordinator.offsetX = $offsetX
         DispatchQueue.main.async {
             context.coordinator.attach(to: uiView)
@@ -293,12 +343,31 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
         var rowID: String
         var openRowID: Binding<String?>
         var revealWidth: CGFloat = 152
-        var openVelocityThreshold: CGFloat = -180
         var offsetX: Binding<CGFloat>
 
         private weak var markerView: UIView?
         private weak var observedScrollView: UIScrollView?
         private var dragStartOffsetX: CGFloat = 0
+
+        /// Whether this open-cycle has already spent its reveal haptic.
+        ///
+        /// Seeded at `.began`, set by whichever of the two arms fires, and read nowhere
+        /// else. Sampling is the failure it exists to prevent: "is the row past the detent?"
+        /// answers yes on every update a finger spends resting there, and a detent that
+        /// repeats for as long as you hold still is a rattle rather than a detent.
+        ///
+        /// One boolean, and deliberately not a second threshold under the first.
+        /// `RootFeedDockCollapse` carries a dead band because a single comparison flips on
+        /// its own boundary and that dock has no per-gesture memory to lean on; a pan does.
+        /// A flag that cannot re-arm inside a gesture *at all* is strictly stronger than a
+        /// band: a finger parked exactly on the boundary cannot repeat, and crossing,
+        /// coming back and crossing again cannot fire twice. A band here would be a number
+        /// nobody could justify, solving a problem the flag has already solved.
+        ///
+        /// Its lifetime is the row's: the coordinator is made once per row and survives the
+        /// body updates that re-assign the bindings, so nothing about a redraw re-arms it.
+        private var hasFiredRevealDetent = false
+
         private lazy var panRecognizer: UIPanGestureRecognizer = {
             let recognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
             recognizer.cancelsTouchesInView = false
@@ -373,6 +442,19 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
             switch recognizer.state {
             case .began:
                 dragStartOffsetX = offsetX.wrappedValue
+                // A gesture that starts on a row already past the detent starts with its
+                // buzz spent: the actions are out, and dragging an open row further open —
+                // or partway back and out again — uncovers nothing. Seeding the flag here
+                // rather than clearing it on the way closed is what lets this change touch
+                // none of the four close paths, since a closed row's next gesture begins at
+                // 0 and is therefore armed. Those four are `closeActions` from a tap or a
+                // pill, the row whose single open slot another row claimed, the `enabled`
+                // sweep, and the tail of the tap hint — and three of them close a row the
+                // finger is nowhere near.
+                hasFiredRevealDetent = TaskSwipeRevealDetent.isCommittedOpen(
+                    offsetX: dragStartOffsetX,
+                    revealWidth: revealWidth
+                )
                 // Freeze vertical scrolling for the duration of the horizontal reveal. The pan
                 // recognizer lives on the scroll view and recognizes simultaneously, so without
                 // this the drag's small vertical component keeps nudging the list and it stutters.
@@ -386,21 +468,70 @@ private struct HorizontalSwipePanObserver: UIViewRepresentable {
                 if proposed < 0 {
                     openRowID.wrappedValue = rowID
                     offsetX.wrappedValue = max(-revealWidth * 1.12, min(0, proposed))
+                    // Arm A, the detent: the first update on which letting go would leave
+                    // the actions out. Asked after the clamp and not before, because the
+                    // overdrag limit is part of where the finger has actually put the row.
+                    //
+                    // This moment and not the settle. What was asked for is a row *slid*
+                    // left to show the buttons behind it, and that is here — the actions
+                    // catching under the thumb — rather than the app reporting an animation
+                    // after the hand has already gone.
+                    //
+                    // The one honest cost, said out loud rather than left for a device to
+                    // find: cross the detent, drag back, release closed, and you have felt
+                    // a reveal that did not happen. That is what a detent on a physical
+                    // control does. The alternative is silence until the row settles, which
+                    // costs the feature the point of it.
+                    if !hasFiredRevealDetent,
+                       TaskSwipeRevealDetent.isCommittedOpen(
+                           offsetX: offsetX.wrappedValue,
+                           revealWidth: revealWidth
+                       ) {
+                        hasFiredRevealDetent = true
+                        HapticManager.reveal()
+                    }
                 } else {
                     offsetX.wrappedValue = 0
                     if openRowID.wrappedValue == rowID {
                         openRowID.wrappedValue = nil
                     }
+                    // The flag stays set on purpose. The row is at 0 but it is not at rest:
+                    // a finger that crosses the detent, drags back past the row's own edge
+                    // and goes out again has made one reveal, not two. Only a new gesture
+                    // re-arms it, and only from a row that is actually shut.
                 }
             case .ended, .cancelled, .failed:
                 scrollView.isScrollEnabled = true
                 let velocityX = recognizer.velocity(in: scrollView).x
-                let shouldOpen = offsetX.wrappedValue < -(revealWidth * 0.32) ||
-                    velocityX < openVelocityThreshold
+                let shouldOpen = TaskSwipeRevealDetent.shouldOpen(
+                    offsetX: offsetX.wrappedValue,
+                    velocityX: velocityX,
+                    revealWidth: revealWidth
+                )
                 if shouldOpen {
                     openRowID.wrappedValue = rowID
                 } else if openRowID.wrappedValue == rowID {
                     openRowID.wrappedValue = nil
+                }
+                // Arm B, the velocity commit: the flick that opens the row from short of
+                // the detent, which the detent therefore never got to announce. Same event,
+                // at the only moment it can be announced, and `hasFiredRevealDetent` is
+                // what keeps the ordinary swipe — which crossed the detent on the way here
+                // — to one buzz rather than two.
+                //
+                // `.cancelled` and `.failed` share this branch, so a gesture the system
+                // took away still buzzes when it still opens the row. That is right: what
+                // the haptic reports is the row opening, and the row below does open.
+                //
+                // Nothing fires on the way closed, here or anywhere else. Closing puts back
+                // what was already there, every pill uncovered by the reveal fires its own
+                // haptic and then closes the row — so a close buzz would double each of
+                // them a moment later — and most closes are not something the user did to
+                // this row at all, since one row open at a time means the last one is shut
+                // from under a finger that is nowhere near it.
+                if shouldOpen && !hasFiredRevealDetent {
+                    hasFiredRevealDetent = true
+                    HapticManager.reveal()
                 }
                 // not a token — see docs/motion.md. The pair IS `Gesture`, and
                 // this is the site `TaskSwipeRevealState.kt` converts to Compose

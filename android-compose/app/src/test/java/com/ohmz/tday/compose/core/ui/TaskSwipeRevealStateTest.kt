@@ -164,6 +164,251 @@ class TaskSwipeRevealStateTest {
         assertEquals(-110f, state.offsetX, 0f)
     }
 
+    // ---- the reveal detent fires once per open --------------------------------------
+    //
+    // No gate in this repository can feel a haptic, and there is no device here.
+    // What can be proven is the decision, which is why the decision is a pure
+    // function of state this class already holds and the buzz is the composable's
+    // job: every case below is the whole rule, minus the vibration.
+
+    /**
+     * Where the detent sits on this row. Derived, not retyped: every `-90f` and
+     * `-60f` below is chosen relative to it, so a fraction that moved under them
+     * would quietly turn most of this section into assertions about nothing.
+     */
+    private val detentPx = -(revealWidthPx * SWIPE_OPEN_THRESHOLD_FRACTION)
+
+    @Test
+    fun `crossing the detent fires exactly once`() {
+        val state = state()
+
+        assertFalse(state.dragBy(-40f))
+        assertFalse(state.dragBy(-30f)) // -70, still short of -81.92
+        assertTrue(state.dragBy(-20f)) // -90, past it
+
+        // The row is committed from here on, and the hand has already been told.
+        assertFalse(state.dragBy(-20f))
+        assertFalse(state.dragBy(-100f))
+    }
+
+    @Test
+    fun `a finger parked on the detent does not rattle`() {
+        val state = state()
+        assertTrue(state.dragBy(-90f))
+
+        // Ten frames of a finger holding almost still either side of -81.92.
+        // Sampling "is the row past the threshold?" per frame answers yes to
+        // most of these; remembering the event answers no to all of them.
+        repeat(5) {
+            assertFalse(state.dragBy(-0.5f))
+            assertFalse(state.dragBy(0.5f))
+        }
+    }
+
+    @Test
+    fun `past, back under and past again inside one gesture fires only the first time`() {
+        val state = state()
+
+        assertTrue(state.dragBy(-100f))
+        assertFalse(state.dragBy(50f)) // -50, back short of the detent
+        // Without a finger lift there has been no close, so the row has not
+        // re-armed: this is one continuous gesture and it is worth one buzz.
+        assertFalse(state.dragBy(-80f)) // -130, past again
+    }
+
+    @Test
+    fun `a release that opens after the detent already fired fires nothing`() {
+        val state = state()
+        assertTrue(state.dragBy(-100f))
+
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        assertEquals(-revealWidthPx, state.restOffsetX, 0f)
+    }
+
+    @Test
+    fun `a release that lands closed fires nothing`() {
+        val state = state()
+        assertFalse(state.dragBy(-60f)) // short of the detent
+
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        assertEquals(0f, state.restOffsetX, 0f)
+    }
+
+    @Test
+    fun `a fling that never crossed the detent fires at the release`() {
+        val state = state()
+        assertFalse(state.dragBy(-20f)) // nowhere near the distance threshold
+
+        // Mirrors `a fling opens from under the threshold...` above: the most
+        // deliberate swipe in the app opens the row without ever crossing -81.92,
+        // and would be the only silent one if the detent were the only arm.
+        assertTrue(state.settle(velocityPxPerSecond = -1500f))
+        assertEquals(-revealWidthPx, state.restOffsetX, 0f)
+        // And it has spent this open-cycle's buzz like any other arm would.
+        assertFalse(state.dragBy(-200f))
+    }
+
+    /** Runs the release spring's frames to their target, the way the row draws it. */
+    private fun TaskSwipeRevealState.land() {
+        onReleaseFrame(restOffsetX)
+    }
+
+    @Test
+    fun `a row that has come to rest closed fires again on the next swipe`() {
+        val state = state()
+        assertTrue(state.dragBy(-100f))
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        state.land()
+
+        // Closing itself answers nothing to fire — `close()` returns Unit and
+        // always will. What it does is re-arm: opening uncovers something that
+        // was not there, closing puts back what was.
+        state.close()
+        state.land()
+
+        assertFalse(state.dragBy(-60f)) // short of -81.92 again
+        assertTrue(state.dragBy(-40f)) // -100, past
+    }
+
+    @Test
+    fun `a row closed from under the user re-arms on the same funnel`() {
+        val state = state()
+        assertTrue(state.dragBy(-100f))
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        state.land()
+
+        // One row is open at a time, so most closes are another row claiming the
+        // slot rather than anything this finger did. They all reach the state
+        // through `close()`, which is the point of re-arming in the one funnel
+        // rather than at each of the four screens' close call sites.
+        state.close()
+        state.land()
+
+        assertTrue(state.dragBy(-100f))
+    }
+
+    @Test
+    fun `a finger landing during the close spring does not buy a second reveal`() {
+        val state = state()
+        assertTrue(state.dragBy(-100f))
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        state.land()
+
+        // The common close: another row claimed the one open slot. The decision
+        // is instant and the travel is not — `restOffsetX` is 0 from here, and
+        // the row is out at -256 for the ~340 ms the release spring takes.
+        state.close()
+        assertEquals(0f, state.restOffsetX, 0f)
+        state.onReleaseFrame(-210f)
+        state.onReleaseFrame(-160f)
+
+        // A finger arriving now picks the row up at -160, which is past -81.92
+        // with the actions plainly already out. Re-arming at the decision left
+        // this frame with a cleared flag under a row already past the threshold,
+        // and it buzzed with nothing to reveal and no catch under the thumb.
+        assertFalse(state.dragBy(-1f))
+        // Nor does dragging it back out: this is still the same open-cycle, and
+        // the row has not been home since it spent its buzz.
+        assertFalse(state.dragBy(-200f))
+    }
+
+    @Test
+    fun `the re-arm waits for the row to be home, not for the decision`() {
+        val state = state()
+        assertTrue(state.dragBy(-100f))
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        state.land()
+        state.close()
+
+        // Halfway home is not home, even once the row is back under the detent.
+        state.onReleaseFrame(-40f)
+        assertFalse(state.dragBy(-60f)) // -100, past the detent, still spent
+
+        // Landed, and the next swipe is a new reveal.
+        state.close()
+        state.land()
+        assertTrue(state.dragBy(-100f))
+    }
+
+    @Test
+    fun `a row dragged all the way back and released re-arms with no spring to land`() {
+        val state = state()
+        assertTrue(state.dragBy(-100f))
+        assertFalse(state.dragBy(100f)) // back to 0, finger still down
+
+        // Nothing to animate, so there is no release and no landing frame will
+        // ever arrive. A re-arm that waited only on the spring would wait for
+        // ever and this row would never buzz again.
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        assertNull(state.release)
+
+        assertTrue(state.dragBy(-100f))
+    }
+
+    @Test
+    fun `an already-open row dragged further open fires nothing`() {
+        val state = state()
+        assertTrue(state.dragBy(-100f))
+        assertFalse(state.settle(velocityPxPerSecond = 0f))
+        state.land()
+        assertEquals(-revealWidthPx, state.offsetX, 0f)
+
+        // A finger landing on an open row and pulling it further out is not a
+        // reveal; there is nothing left to reveal.
+        assertFalse(state.dragBy(-50f))
+        // Nor is coming part of the way back and going out again without the row
+        // ever coming to rest closed in between.
+        assertFalse(state.dragBy(150f))
+        assertFalse(state.dragBy(-150f))
+    }
+
+    @Test
+    fun `the settle animation cannot fire the detent on its own frames`() {
+        val state = state()
+        // Opened on velocity alone, so the row is still at -20 px when the
+        // spring takes over and every frame of the settle crosses -81.92.
+        assertFalse(state.dragBy(-20f))
+        assertTrue(state.settle(velocityPxPerSecond = -1500f))
+
+        // `onReleaseFrame` is the app's clock, not the finger's. A detent test
+        // derived from `offsetX` in general rather than from the drag path in
+        // particular would phantom-fire here one frame after the real event, and
+        // again on every programmatic open. It returns Unit precisely so that it
+        // cannot; what this pins is that driving the row through the threshold
+        // this way leaves the state's own arming untouched.
+        for (px in -20 downTo -256 step 8) {
+            state.onReleaseFrame(px.toFloat())
+        }
+        state.onReleaseFrame(-revealWidthPx)
+        assertEquals(-revealWidthPx, state.offsetX, 0f)
+
+        // Still spent from the fling, not re-armed and not double-fired by the
+        // 30 frames just pushed through the threshold.
+        assertFalse(state.dragBy(-10f))
+    }
+
+    @Test
+    fun `the hint never reaches the detent`() {
+        // `playHint` moves the row through `settleTo`, so it cannot trip a test
+        // that lives in the drag path — but the reason a tap-to-hint is silent
+        // *and would stay silent under any offset-derived rule* is this
+        // inequality, and it holds by coincidence of two independent constants:
+        // `rememberTaskSwipeRevealState` coerces the hint to at most
+        // SWIPE_HINT_MAX_FRACTION of the reveal width, and the detent sits at
+        // SWIPE_OPEN_THRESHOLD_FRACTION of it.
+        //
+        // Both ends are read from production. An earlier version of this test
+        // asserted `revealWidthPx * 0.24f < revealWidthPx * 0.32f` with both
+        // numbers typed in here, which is `0.24 < 0.32` with a common factor on
+        // it: raising the real coercion to 0.90 left the suite green. This turns
+        // red for either constant moving into the other.
+        assertTrue(SWIPE_HINT_MAX_FRACTION < SWIPE_OPEN_THRESHOLD_FRACTION)
+        // And the row this file is written about: 256 px of reveal puts the
+        // detent at 81.92 px, which the shipped 42 dp hint stops well short of.
+        assertEquals(-81.92f, detentPx, 0.001f)
+        assertTrue(-hintOffsetPx > detentPx)
+    }
+
     // ---- the release spring is iOS's, converted ------------------------------------
 
     @Test

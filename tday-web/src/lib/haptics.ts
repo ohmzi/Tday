@@ -69,3 +69,31 @@ export function hapticConfirm(): void {
 export function hapticDismiss(): void {
   vibrate(8);
 }
+
+/**
+ * A hidden surface came out — a task row slid aside far enough to uncover the
+ * actions behind it.
+ *
+ * The event both natives already spell: Android's `TdayHaptics.reveal`
+ * (CONTEXT_CLICK) and iOS's `HapticManager.reveal` (`.rigid` at 0.7), each
+ * documented in those files as exactly this sentence. Web has neither a style nor
+ * an intensity to say it with, only a length, so "sharper" has to become
+ * "distinct", and the length is chosen against the ones already in this file
+ * rather than against a device.
+ *
+ * 25 ms sits in the gap between the two bands the file already has. Above the
+ * 8–15 acknowledgement band — [hapticDismiss] at 8, [hapticTick] at 10,
+ * [hapticButtonTap] and [hapticDragOver] at 15 — because those are the cost of
+ * using the app answering a touch that was already deliberate, and this is an
+ * event: something appeared that was not there a moment ago. Below
+ * [hapticDragStart]'s 50, because picking a row up and carrying it is a heavier
+ * commitment than uncovering what is behind it. 25 is the round value in that gap
+ * and is confusable with neither neighbour.
+ *
+ * A single pulse and not a pattern, which is the other half of the vocabulary:
+ * the patterns here ([hapticSuccess], [hapticDrop], [hapticConfirm]) are compound
+ * outcomes, a thing done and its result. A reveal is one event.
+ */
+export function hapticReveal(): void {
+  vibrate(25);
+}
