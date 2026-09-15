@@ -3856,6 +3856,14 @@ struct TimelineTopBar: View {
                         // left, action cluster right) instead of the larger side twice:
                         // with three actions a symmetric reserve exceeds the screen
                         // width and stretches the whole layout edge-to-edge.
+                        //
+                        // Android's twin of this bar reaches the same conclusion by
+                        // measuring (`tdayBarTitleReserve`), and then does one thing
+                        // more that this one does not: below the per-side reserve it
+                        // scales the title down to 0.72 before letting it clip, the
+                        // way `CalendarElasticTopBar` already does. Three actions on
+                        // a narrow phone is exactly where that matters — and this
+                        // `titleContent` carries only `lineLimit(1)`. Owed here.
                         .padding(.leading, TodoTimelineMetrics.topBarButtonFrame + 12)
                         .padding(.trailing, trailingActionReservedWidth + 12)
                         .frame(maxWidth: .infinity)

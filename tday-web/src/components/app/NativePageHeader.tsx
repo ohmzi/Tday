@@ -66,12 +66,19 @@ export const nativePageHeaderMetrics = {
 
   /**
    * Least width worth docking a title into — one initial and the ellipsis, which
-   * at the docked size is nearly all ellipsis: Nunito Black at 2.1rem draws that
-   * alone 28.7px wide, against 21.4px for a "C". It is not raised past this
-   * because there is nothing to raise it into: the busiest bar in the app, the
-   * floater list's five controls, leaves the title exactly 64px at 390 and 70px
-   * is all the sibling custom list has at 360. Below this the bar keeps no title
-   * at all; see the reserve below.
+   * at the docked size is nearly all ellipsis: Nunito at 2.1rem/900 draws that
+   * alone 27.4px wide, against 23.1px for a "C". (Those two numbers were 28.7
+   * and 21.4 here; re-measured against the `Nunito.ttf` this repo actually
+   * ships, instantiated at wght 900 — advances plus GPOS kerning. The conclusion
+   * survives, since "C…" is 50.9px and still under this floor.) It is not raised
+   * past this because there is nothing to raise it into: the busiest bar in the
+   * app, the floater list's five controls, leaves the title exactly 64px at 390
+   * and 70px is all the sibling custom list has at 360. Below this the bar keeps
+   * no title at all; see the reserve below.
+   *
+   * This gates whether a title is shown AT ALL, and it must not be made to gate
+   * whether one FITS — Android raised exactly that confusion into a reported
+   * bug. See the note on the reserve below for what this bar still owes.
    */
   dockedTitleMinWidth: 56,
 
@@ -378,6 +385,29 @@ export default function NativePageHeader({
         // is what iOS's `TimelineTopBar` does unconditionally — and if even
         // that leaves nothing, the bar simply carries no title. The block's own
         // copy is the page's real heading either way.
+        //
+        // OWED, and knowingly not paid here: the first step asks whether a STUMP
+        // would fit (`dockedTitleMinWidth`), not whether the TITLE would, and
+        // those are different questions. Android ran the identical rule and it
+        // produced a real device bug — the Calendar bar mirroring a 120px
+        // trailing cluster and handing "Calendar" 120px for a word that wants
+        // 136.7 at 32sp, rendering "Cale…" — while the per-side fallback on the
+        // very same bar would have given it 184px. Android's
+        // `tdayBarTitleReserve` now takes the title's measured width and mirrors
+        // only while the mirrored reserve actually fits it, falling through to
+        // per-side before it gives up, plus a bounded shrink after that. This
+        // bar has the same defect and worse: its "Today" control is a text pill
+        // rather than a collapsing circle, so at a 412px viewport the Calendar
+        // title here gets about 68px against the 146.6px "Calendar" wants at
+        // 2.1rem/900 — more than half the word clipped.
+        //
+        // It is not fixed in this pass because it is not the same edit. The four
+        // lines below are pure arithmetic over widths already read this frame;
+        // making them title-aware needs the title MEASURED, which here is a
+        // canvas `measureText` against the computed font or a forced reflow, not
+        // a fifth line. Whoever picks that up should port the Android rule
+        // rather than invent a second one, and should keep the mirrored branch
+        // first — the centring is load-bearing for the crossfade, not decoration.
         const gap = m.dockedTitleSideGap;
         const barWidth = barRect?.width ?? 0;
         const symmetric = Math.max(leadingWidth, trailingWidth) + gap;
