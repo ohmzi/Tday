@@ -111,3 +111,31 @@ internal fun shouldCloseSwipeRow(
     thisRowId: String,
     isOpenOrDragging: Boolean,
 ): Boolean = openRowId != thisRowId && isOpenOrDragging
+
+/**
+ * Who holds the slot after a row hands back the one it was holding.
+ *
+ * The narrower of the two revokes, and it is written down because the two look
+ * identical at a call site and are not. This one is a row DISCLAIMING: its own
+ * pill fired, its own body was tapped, its own reveal settled shut. Guarded on
+ * `== thisRowId` because a row that does not hold the slot has nothing to give
+ * back, and writing `null` anyway would shut some other row that the user is
+ * actively working.
+ *
+ * The other revoke is a gesture that owns the whole feed rather than one row —
+ * the long-press drag that picks a task up to reschedule it. That one writes
+ * `null` unconditionally at the call site, and the contrast is the point: the
+ * row being dragged is almost never the row whose actions are out, so routing it
+ * through here would test `== thisRowId`, find false, and leave an armed Delete
+ * pill under a task the user is about to drop somewhere. iOS spells the same
+ * distinction as `openSwipeTaskID = nil` at the top of `beginInAppDrag`.
+ *
+ * Not a third answer to [shouldCloseSwipeRow] — that decides whether a row
+ * *reacts* to the slot, this decides what the slot becomes — and the two are
+ * deliberately not each other's inverse.
+ *
+ * @param openRowId the id currently in the screen's [TaskSwipeSlot].
+ * @param thisRowId the row handing it back.
+ */
+internal fun swipeSlotAfterRowDisclaim(openRowId: String?, thisRowId: String): String? =
+    if (openRowId == thisRowId) null else openRowId

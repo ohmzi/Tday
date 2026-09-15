@@ -1,6 +1,8 @@
 package com.ohmz.tday.compose.core.ui
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -96,6 +98,45 @@ class TaskSwipeDismissPolicyTest {
                 openRowId = "a",
                 thisRowId = "a",
                 isOpenOrDragging = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `a disclaim from a row that does not hold the slot leaves it alone`() {
+        // The narrow revoke, and the reason it is a named function rather than
+        // four inline `if`s. A row handing its OWN slot back must not shut a
+        // different row: that other row is the one the user is working.
+        assertEquals(
+            "b",
+            swipeSlotAfterRowDisclaim(openRowId = "b", thisRowId = "a"),
+        )
+        assertNull(swipeSlotAfterRowDisclaim(openRowId = "a", thisRowId = "a"))
+        assertNull(swipeSlotAfterRowDisclaim(openRowId = null, thisRowId = "a"))
+    }
+
+    @Test
+    fun `the long-press drag is the revoke this one must not be used for`() {
+        // The bug this pins, stated as the assertion that would have caught it.
+        // Starting a drag-to-reschedule on row "a" while row "b" is open is the
+        // ordinary case — the open row is almost never the row being picked up —
+        // and routing that through the disclaim above returns "b": the slot
+        // survives, and an armed Delete pill rides under the user's thumb for
+        // the length of the drag. The drag start therefore writes `null` at the
+        // call site, unconditionally, the way iOS's `beginInAppDrag` does. If
+        // someone ever "tidies" that into `closeSwipeSlot()`, this row says what
+        // they have just done.
+        assertEquals(
+            "b",
+            swipeSlotAfterRowDisclaim(openRowId = "b", thisRowId = "a"),
+        )
+        // And what the drag start actually writes, which closes "b" through
+        // `shouldCloseSwipeRow` on "b"'s own collector.
+        assertTrue(
+            shouldCloseSwipeRow(
+                openRowId = null,
+                thisRowId = "b",
+                isOpenOrDragging = true,
             ),
         )
     }
