@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.cache.FirstAnswerSignal
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.completed.CompletedRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
@@ -37,6 +38,12 @@ import javax.inject.Inject
 
 data class CalendarUiState(
     val isLoading: Boolean = false,
+    // The first-load/refresh distinction, mirrored from `TodoListUiState`. The
+    // day list's "nothing scheduled" scene was gated on `!isLoading` like every
+    // other empty state in this app, and it is the same gate copy-pasted rather
+    // than a calendar rule. See [feedAnswer].
+    val hasHydratedSnapshot: Boolean = false,
+    val firstAnswerLanded: Boolean = false,
     val items: List<TodoItem> = emptyList(),
     val completedItems: List<CompletedItem> = emptyList(),
     val lists: List<ListSummary> = emptyList(),
@@ -50,6 +57,7 @@ class CalendarViewModel @Inject constructor(
     private val listRepository: ListRepository,
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
+    private val firstAnswerSignal: FirstAnswerSignal,
     private val reminderScheduler: TaskReminderScheduler,
     private val snackbarManager: SnackbarManager,
     private val undoableDeleteCoordinator: UndoableDeleteCoordinator,
@@ -75,19 +83,53 @@ class CalendarViewModel @Inject constructor(
         runCatching {
             CalendarUiState(
                 isLoading = false,
+                // This screen's cache read happens here, in the field
+                // initializer, rather than in a `load()`.
+                hasHydratedSnapshot = true,
+                firstAnswerLanded = firstAnswerSignal.hasLanded(),
                 items = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
                     .filter { it.due != null },
                 completedItems = completedRepository.fetchCompletedItemsSnapshot(),
                 lists = listRepository.fetchListsSnapshot(),
                 errorMessage = null,
             )
-        }.getOrElse { CalendarUiState() },
+        }.getOrElse {
+            // As in `CompletedViewModel`, and for `TodoListViewModel`'s reason: a
+            // cache read that THREW still ended. `CalendarUiState()` alone leaves
+            // `hasHydratedSnapshot` false forever, and the day list's gate would
+            // then draw neither its rows nor its "nothing scheduled" scene -- a
+            // blank card under the month, where this screen used to say what it
+            // knew.
+            CalendarUiState(
+                hasHydratedSnapshot = true,
+                firstAnswerLanded = firstAnswerSignal.hasLanded(),
+            )
+        },
     )
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
     private var hasLoadedScreen = false
 
     init {
         observeCacheChanges()
+        observeFirstAnswer()
+    }
+
+    /**
+     * The one path by which a first answer can land without any cached row
+     * moving: a fresh install signing in to an account with nothing scheduled in
+     * it. `cacheDataVersion` only advances on `hasUiDataChanges`, so that sync
+     * bumps nothing this screen otherwise watches. See [FirstAnswerSignal.version].
+     */
+    private fun observeFirstAnswer() {
+        viewModelScope.launch {
+            firstAnswerSignal.version.collect {
+                val landed = firstAnswerSignal.hasLanded()
+                _uiState.update { current ->
+                    if (current.firstAnswerLanded == landed) current
+                    else current.copy(firstAnswerLanded = landed)
+                }
+            }
+        }
     }
 
     private fun observeCacheChanges() {
@@ -133,6 +175,8 @@ class CalendarViewModel @Inject constructor(
             _uiState.update { current ->
                 current.copy(
                     isLoading = false,
+                    hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
                     items = if (current.items == todos) current.items else todos,
                     completedItems = if (current.completedItems == completedItems) {
                         current.completedItems
@@ -141,6 +185,15 @@ class CalendarViewModel @Inject constructor(
                     },
                     lists = if (current.lists == lists) current.lists else lists,
                     errorMessage = null,
+                )
+            }
+        }.onFailure {
+            // As in `CompletedViewModel`, and for the same reason: a read that
+            // threw still ended, and the day list may not wait on it twice.
+            _uiState.update { current ->
+                current.copy(
+                    hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
                 )
             }
         }

@@ -237,6 +237,41 @@ export function emptySceneIsLeaving({
 }
 
 /**
+ * Whether the scene is leaving because the scope REFILLED under it — the other
+ * way off this slot, and the one `emptySceneIsLeaving` above is not.
+ *
+ * Two departures, and telling them apart is the whole of this function. The
+ * hand-off above plays while the scope is still EMPTY and gives the slot to
+ * Earlier's rows; this one plays because there is no longer an empty scope to
+ * draw. They want different rungs (that one answers to the arrival it leads,
+ * this one to the paper fading inside it), they can never both be true, and a
+ * linger written for one of them and applied to both is a second departure
+ * stacked on a departure.
+ *
+ * `sceneStillMounted` comes from `useFadeUnmount`, which is what actually keeps
+ * the node in the tree past the frame the container stopped asking for it — and
+ * which already returns false outright under reduced motion, so this is false
+ * there too and the scene goes on the cancel frame with no wait in front of the
+ * restored row. The other two are read live, not remembered: the moment the
+ * scope is empty again (a re-complete landing inside the same beat) this is no
+ * longer a departure and the class has to come off the node it is on.
+ */
+export function emptySceneLeavesOnCancel({
+  sceneStillMounted,
+  showEmptyIllustration,
+  showEmpty,
+}: {
+  /** `useFadeUnmount(showEmptyIllustration, DURATION_MS.quick)`. */
+  sceneStillMounted: boolean;
+  /** Who owns the slot right now — `shouldShowTodayEmptyIllustration`. */
+  showEmptyIllustration: boolean;
+  /** Zero current (non-Earlier) tasks for this scope, not loading, not mid-search. */
+  showEmpty: boolean;
+}): boolean {
+  return sceneStillMounted && !showEmptyIllustration && !showEmpty;
+}
+
+/**
  * Whether Earlier is ON ITS WAY OPEN — the beat its own `expanded` flag is
  * deliberately false for.
  *

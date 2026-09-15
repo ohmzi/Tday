@@ -32,6 +32,7 @@ import { hapticTick } from "@/lib/haptics";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { useSwipeRow } from "@/hooks/useSwipeRow";
+import { shouldCloseSwipeRow } from "@/lib/swipeGesture";
 import { buildTaskShareText } from "@/lib/listShareText";
 
 
@@ -115,7 +116,14 @@ export const TodoItemCard = ({
     // Claim the row: tell any other open row to close so only one is open.
     window.dispatchEvent(new CustomEvent("tday-swipe-open", { detail: todoItem.id }));
   }, [todoItem.id]);
-  const { swipeX, transition: swipeTransition, closeSwipe, swipeHandlers } = useSwipeRow({
+  const {
+    swipeX,
+    transition: swipeTransition,
+    rowRef,
+    closeSwipe,
+    dismissSwipe,
+    swipeHandlers,
+  } = useSwipeRow({
     actionsWidth: ACTIONS_WIDTH,
     onOpen: announceSwipeOpen,
     // While selecting, the row's only gesture is the tap that picks it — the
@@ -127,6 +135,10 @@ export const TodoItemCard = ({
   const setCombinedRef = (node: HTMLDivElement | null) => {
     setItemElement(node);
     setDragNodeRef?.(node);
+    // The same node the swipe measures an outside tap against — it is the one
+    // that wraps both the pill strip and the translating foreground, which is
+    // exactly what "outside the open row" has to mean. See `useSwipeRow`.
+    rowRef.current = node;
   };
 
   const handleToggleComplete = () => {
@@ -166,15 +178,22 @@ export const TodoItemCard = ({
     }
   }, [closeSwipe, selecting]);
 
-  // Close this row's swipe actions when another row is swiped open.
+  // Close this row's swipe actions when another row is swiped open — the bus is
+  // the whole of "one row open at a time", and it fires at the other row's axis
+  // lock rather than at its commit, because a row is claimed by the finger and
+  // not by the outcome. `dismissSwipe` rather than `closeSwipe`: this is a close
+  // arriving from somewhere else, so it has to refuse a row whose own finger is
+  // still on it and re-seed a live gesture that is not. `shouldCloseSwipeRow` is
+  // the same predicate, under the same name, that Android and iOS answer this
+  // with.
   useEffect(() => {
     const onOpen = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;
-      if (id !== todoItem.id) closeSwipe();
+      if (shouldCloseSwipeRow(id, todoItem.id, swipeX !== 0)) dismissSwipe();
     };
     window.addEventListener("tday-swipe-open", onOpen as EventListener);
     return () => window.removeEventListener("tday-swipe-open", onOpen as EventListener);
-  }, [closeSwipe, todoItem.id]);
+  }, [dismissSwipe, swipeX, todoItem.id]);
 
   useEffect(() => {
     if (!displayForm) {

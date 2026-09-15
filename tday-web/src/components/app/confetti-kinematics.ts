@@ -310,6 +310,36 @@ export function alpha(tau: number): number {
   return 1 - u * u * (3 - 2 * u);
 }
 
+/**
+ * What a piece actually draws at: its own fade, taken away by the cancel envelope.
+ *
+ * Two independent terms, multiplied, and the independence is the whole design.
+ * [alpha] is a function of the piece's own flight clock and knows nothing about being
+ * interrupted; the envelope is a function of a clock that does not exist until
+ * somebody undoes a completion (or adds a task, or a collaborator does) and the burst
+ * has to leave before it was finished. An uncancelled burst multiplies by exactly 1
+ * for its whole flight, so this reduces to [alpha] and the spec-pinned numbers above —
+ * `FLIGHT_MS`, `FADE_START`, the scene lead the caller holds — are untouched. The
+ * envelope is a new term, never a retune of the fade.
+ *
+ * It multiplies rather than replaces for the reason the fade is wanted at all: the
+ * pieces keep FLYING while the envelope runs — same positions, same spin, same flip —
+ * because freezing the flight and dissolving a still frame is a second, quieter
+ * version of the complaint this fixes. Only the paint leaves.
+ *
+ * No clamp, on the same terms as the model above: [alpha] is a smoothstep on `[0, 1]`
+ * by construction, and the envelope is `1 - EASE.exit(progress)` on a cubic Bezier
+ * with both control points inside the unit square, which cannot overshoot the way a
+ * spring could. A caller who ever reaches for a spring here owes this line a clamp.
+ *
+ * `docs/confetti-spec.md`'s Interruption section is normative; Android's
+ * `envelopedAlpha` in `TdayConfettiKinematics.kt` and iOS's twin in `TdayConfetti.swift`
+ * are the same one line for the same reason.
+ */
+export function envelopedAlpha(pieceAlpha: number, envelope: number): number {
+  return pieceAlpha * envelope;
+}
+
 /** Mulberry32: three lines, and the same fan on every machine. */
 function seeded(seed: number) {
   let state = seed >>> 0;

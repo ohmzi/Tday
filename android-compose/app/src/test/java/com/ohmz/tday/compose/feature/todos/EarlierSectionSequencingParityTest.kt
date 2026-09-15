@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.todos
 
+import com.ohmz.tday.compose.core.ui.FeedAnswer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -82,7 +83,7 @@ class EarlierSectionSequencingParityTest {
             shouldShowTodayEarlierExpandedCelebration(
                 todayHasEarlierItems = true,
                 itemsEmpty = true,
-                isLoading = false,
+                answer = FeedAnswer.Empty,
                 suppressInitialTodayTimeline = false,
                 scopedSearchActive = false,
                 earlierCollapsed = false,
@@ -104,7 +105,7 @@ class EarlierSectionSequencingParityTest {
             shouldShowTodayEarlierExpandedCelebration(
                 todayHasEarlierItems = false,
                 itemsEmpty = true,
-                isLoading = false,
+                answer = FeedAnswer.Empty,
                 suppressInitialTodayTimeline = false,
                 scopedSearchActive = false,
                 earlierCollapsed = false,
@@ -119,7 +120,7 @@ class EarlierSectionSequencingParityTest {
     ): Boolean = shouldShowEarlierScene(
         scopeHasEarlierItems = scopeHasEarlierItems,
         scopeItemsEmpty = true,
-        isLoading = false,
+        answer = FeedAnswer.Empty,
         suppressInitialTimeline = false,
         scopedSearchActive = false,
         earlierCollapsed = collapsed,

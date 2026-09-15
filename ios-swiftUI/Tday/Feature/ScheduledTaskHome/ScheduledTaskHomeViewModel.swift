@@ -9,6 +9,16 @@ final class ScheduledTaskHomeViewModel {
     private static let recentSuccessfulSyncSkipWindowMs: Int64 = 8_000
 
     var isLoading = true
+    /// This screen's local cache read has landed in state — true from the first
+    /// frame, because `refreshFromCache()` runs in `init`. Published here rather
+    /// than derived in the view for the same reason as on `TodoListViewModel`:
+    /// a computed property on a `View` is reachable from no test, and this is
+    /// one of the terms `feedAnswer` decides the Today skeleton on.
+    private(set) var hasHydratedFromCache = false
+    /// `isLocalMode || lastSuccessfulSyncEpochMs > 0` — see
+    /// `feedFirstAnswerLanded(in:)`. Re-read on every hydrate, so a first sync
+    /// that failed and was retried is picked up in the pass that retried it.
+    private(set) var firstAnswerLanded = false
     var summary = DashboardSummary(todayCount: 0, scheduledCount: 0, allCount: 0, priorityCount: 0, floaterCount: 0, completedCount: 0, lists: [])
     var searchableTodos: [TodoItem] = []
     var todayTodos: [TodoItem] = []
@@ -75,6 +85,11 @@ final class ScheduledTaskHomeViewModel {
         aiSummaryEnabled = snapshot.aiSummaryEnabled
         isLoading = activeLoadingRefreshes > 0
         errorMessage = nil
+        // Settled on the same frame as the rows, for the reason given on
+        // `TodoListViewModel.hydrateFromCache`: the two terms `feedAnswer` reads
+        // besides the row count must never disagree with what was just loaded.
+        firstAnswerLanded = feedFirstAnswerLanded(in: container)
+        hasHydratedFromCache = true
     }
 
     private func shouldUseRecentSuccessfulSync(_ state: OfflineSyncState) -> Bool {

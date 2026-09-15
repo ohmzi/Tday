@@ -328,3 +328,31 @@ internal fun alpha(tau: Float): Float {
     val u = (tau - FadeStart) / (1f - FadeStart)
     return 1f - u * u * (3f - 2f * u)
 }
+
+/**
+ * What a piece actually draws at: its own fade, taken away by the cancel
+ * envelope.
+ *
+ * Two independent terms, multiplied, and the independence is the whole design.
+ * [pieceAlpha] is a function of the piece's own flight clock and knows nothing
+ * about being interrupted; [envelope] is a function of a clock that does not
+ * exist until somebody undoes a completion (or adds a task, or a collaborator
+ * does) and the burst has to leave before it was finished. A burst that is not
+ * cancelled multiplies by exactly 1 for its whole flight and this reduces to
+ * [alpha], which is why the envelope is a new term rather than a retune: every
+ * spec-pinned number above -- [FlightMillis], [FadeStart], the scene lead the
+ * caller holds -- is untouched, and the three clients' kinematics tests still
+ * assert the same curve.
+ *
+ * It multiplies rather than replaces for the reason the fade is wanted at all.
+ * The pieces keep FLYING while the envelope runs: same positions, same spin,
+ * same flip, because freezing the flight and dissolving a still frame is a
+ * second, quieter version of the complaint this fixes. Only the paint leaves.
+ *
+ * No clamp, on the same terms as [alpha] above: [pieceAlpha] is a smoothstep on
+ * `[0, 1]` by construction and the envelope is driven by a token tween on the
+ * `Exit` curve, which is a cubic Bezier with both control points inside the unit
+ * square and therefore cannot overshoot the way a spring could. A caller who
+ * ever reaches for a spring here owes this line a clamp.
+ */
+internal fun envelopedAlpha(pieceAlpha: Float, envelope: Float): Float = pieceAlpha * envelope

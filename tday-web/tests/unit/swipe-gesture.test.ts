@@ -12,9 +12,11 @@
 import { describe, expect, it } from "vitest";
 import { DURATION_MS } from "@/lib/motion";
 import {
+  canDismissMidGesture,
   createSwipeSampler,
   projectedRest,
   rubberBand,
+  shouldCloseSwipeRow,
   SWIPE_SETTLE_HOME,
   SWIPE_SETTLE_OPEN,
 } from "@/lib/swipeGesture";
@@ -126,5 +128,63 @@ describe("the two settles", () => {
     expect(SWIPE_SETTLE_HOME).toContain("var(--tday-duration-quick)");
     expect(SWIPE_SETTLE_OPEN).toContain("var(--tday-duration-emphasis)");
     expect(DURATION_MS.quick).toBeLessThan(DURATION_MS.emphasis);
+  });
+});
+
+describe("whether a row should shut", () => {
+  // The same four rows Android's `TaskSwipeDismissPolicyTest` and iOS's
+  // `TaskSwipeDismissPolicyTests` carry, in the same order. Three clients, one
+  // truth table: the point of writing the decision as a function on each of them
+  // is that it can be argued about here rather than inferred from a device.
+
+  it("closes every open row when nobody holds the slot", () => {
+    // The revoke, and the row that matters most. Every dismissal this feature
+    // adds is "no row is open now" — an outside tap, a scroll, back — so a
+    // predicate that answered `false` to a free slot would make all of them
+    // silent no-ops. Android's rows carried exactly that clause until this
+    // change and it is why nothing could be revoked there.
+    expect(shouldCloseSwipeRow(null, "a", true)).toBe(true);
+  });
+
+  it("closes a row when a different one holds the slot", () => {
+    expect(shouldCloseSwipeRow("b", "a", true)).toBe(true);
+  });
+
+  it("leaves the row that holds the slot alone", () => {
+    // A row never closes itself out from under its own finger: the row holding
+    // the slot is the row the user is working.
+    expect(shouldCloseSwipeRow("a", "a", true)).toBe(false);
+  });
+
+  it("says nothing to a row that is already home", () => {
+    // Without this term a dismissal would be a settle to where the row already
+    // is, once per row, on every tap anywhere on the screen.
+    expect(shouldCloseSwipeRow(null, "a", false)).toBe(false);
+    expect(shouldCloseSwipeRow("b", "a", false)).toBe(false);
+    expect(shouldCloseSwipeRow("a", "a", false)).toBe(false);
+  });
+});
+
+describe("whether a dismissal may move a row right now", () => {
+  it("refuses while the row is being dragged", () => {
+    // The single most important negative case in the whole feature: a finger on
+    // the row owns the row, whichever way it is going — further open, or back
+    // toward home. An interceptor that fired here would take the row out of a
+    // hand that is still dragging it.
+    expect(canDismissMidGesture("x")).toBe(false);
+  });
+
+  it("allows one through a gesture that turned into a scroll", () => {
+    // The case this exists to let through, and the likeliest scroll of all: the
+    // finger started on the open row, because that is where the hand already
+    // was.
+    expect(canDismissMidGesture("y")).toBe(true);
+  });
+
+  it("allows one while no gesture has said what it means yet", () => {
+    // A touch inside the axis slop has claimed nothing. It may still become a
+    // drag of this row, which is why `dismissSwipe` re-seeds the gesture to the
+    // offset it leaves the row at rather than only resetting the state.
+    expect(canDismissMidGesture(null)).toBe(true);
   });
 });

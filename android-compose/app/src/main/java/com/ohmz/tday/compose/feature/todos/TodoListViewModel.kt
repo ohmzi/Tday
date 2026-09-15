@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.data.cache.FirstAnswerSignal
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.list.FloaterListRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
@@ -46,6 +47,15 @@ data class TodoListUiState(
     val mode: TodoListMode = TodoListMode.TODAY,
     val listId: String? = null,
     val hasHydratedSnapshot: Boolean = false,
+    // "Has this install ever had an answer from its workspace at all", the
+    // half of the first-load/refresh distinction that [hasHydratedSnapshot]
+    // cannot supply on its own. A fresh install's cache read lands
+    // immediately and lands EMPTY, so `hasHydratedSnapshot` alone would let
+    // the screen say "no tasks" while the very first sync is still in
+    // flight -- the worse of the two bugs, and the obvious way to overshoot
+    // the one this was added for. `isLocalMode || lastSuccessfulSync > 0`;
+    // see [FirstAnswerSignal] for why the local-mode half is not optional.
+    val firstAnswerLanded: Boolean = false,
     val lists: List<ListSummary> = emptyList(),
     val items: List<TodoItem> = emptyList(),
     // Today mode only: overdue tasks tucked into the collapsible "Earlier"
@@ -62,6 +72,25 @@ data class TodoListUiState(
     // cache-version bump this ViewModel did not itself cause last emptied the
     // viewed list. See `hydrateFromExternalCacheChange` for how it is set.
     val remoteEmptiedAtMs: Long = 0L,
+    // "A pending row arrived on this screen" -- NOT "an undo happened". An undo
+    // of a completion is only the commonest writer of it; a task created while
+    // the paper is still in the air, and a collaborator's task landing through
+    // [OfflineCacheManager], write it too, because all three make the same
+    // sentence false. A celebration says "this scope is finished", and it has
+    // to end the moment that stops being true rather than only when the
+    // four-second window runs out.
+    //
+    // Monotonic (`SystemClock.uptimeMillis`), never cleared, and compared
+    // against the two OPENING stamps rather than mutating them -- see
+    // `TodoListScreen.shouldCelebrateEmptyState`. A completion landing after a
+    // cancel re-opens the window for free by simply being the newer stamp,
+    // which is an ordering a unit test can state.
+    //
+    // Counted across ALL buckets, Earlier included, and that is the whole
+    // point: the bug this exists for is an undone OVERDUE task, which arrives
+    // back into a scope whose own emptiness predicate deliberately excludes
+    // Earlier and therefore does not move at all. Count, not emptiness.
+    val celebrationCancelledAtMs: Long = 0L,
     val errorMessage: String? = null,
     val aiSummaryEnabled: Boolean = true,
     val aiSummaryConfigured: Boolean = false,
@@ -72,6 +101,40 @@ data class TodoListUiState(
     val summaryConnectivityError: Boolean = false,
     val isSummarizing: Boolean = false,
 )
+
+/**
+ * "Did a pending row land on this screen", answered by counting rather than by
+ * looking at whether the screen is empty.
+ *
+ * The one decision behind [TodoListUiState.celebrationCancelledAtMs], pulled out
+ * as a pure function for the same reason `TodoListScreen.shouldCelebrateEmptyState`
+ * is one: it is a rule about a transition, nothing here can be proven by running
+ * the app on this machine, and the shape it must NOT have is easier to write by
+ * accident than the shape it must.
+ *
+ * That shape is the emptiness mirror -- "this screen was non-empty and is empty
+ * now" read backwards. It is the obvious implementation, it passes a hand test on
+ * the plain path, and it misses the bug this exists for outright. An undone
+ * overdue task comes back into the Earlier bucket, which every client's
+ * "is this scope finished" predicate excludes on purpose (finishing today's work
+ * while overdue tasks wait still earns the payoff), so on that path the screen is
+ * non-empty on BOTH sides of the arrival by the count this function uses and
+ * empty on both sides by the predicate the celebration uses. Nothing transitions.
+ * Only the count moves, and only because [previousEarlierItems] is in it.
+ *
+ * Deliberately not interested in WHICH row arrived or why. An undo, a
+ * collaborator, a sync and the user's own new task are one event here, because
+ * all four make "this scope is finished" false; a cancel can only ever end a
+ * burst early and never start one, so a count rise that turns out to be a stale
+ * refetch settling costs a celebration a second or two of its four and nothing
+ * else.
+ */
+internal fun pendingRowArrived(
+    previousItems: Int,
+    previousEarlierItems: Int,
+    nextItems: Int,
+    nextEarlierItems: Int,
+): Boolean = nextItems + nextEarlierItems > previousItems + previousEarlierItems
 
 private data class HydrateSnapshot(
     val todos: List<TodoItem>,
@@ -90,6 +153,7 @@ class TodoListViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
+    private val firstAnswerSignal: FirstAnswerSignal,
     private val reminderScheduler: TaskReminderScheduler,
     private val snackbarManager: SnackbarManager,
     private val undoableDeleteCoordinator: UndoableDeleteCoordinator,
@@ -104,6 +168,33 @@ class TodoListViewModel @Inject constructor(
 
     init {
         observeCacheChanges()
+        observeFirstAnswer()
+    }
+
+    /**
+     * The only path by which [TodoListUiState.firstAnswerLanded] can turn true
+     * without anything else on this screen moving, and the case that makes it
+     * necessary is the exact one the flag exists for: a fresh install signing
+     * in to an EMPTY account. That first sync writes a sync stamp and no tasks,
+     * so `cacheDataVersion` -- which only advances on `hasUiDataChanges` --
+     * never bumps, no hydrate is triggered, and without this collector the feed
+     * would sit in its row skeleton for as long as the app stayed open. The
+     * stamp is metadata, so the counter that carries it is the metadata one.
+     *
+     * Unguarded by `hasLoadedMode`, unlike [observeCacheChanges]: this writes a
+     * single boolean rather than re-reading the feed, and a screen that has not
+     * loaded a mode yet has nothing to be disturbed.
+     */
+    private fun observeFirstAnswer() {
+        viewModelScope.launch {
+            firstAnswerSignal.version.collect {
+                val landed = firstAnswerSignal.hasLanded()
+                _uiState.update { current ->
+                    if (current.firstAnswerLanded == landed) current
+                    else current.copy(firstAnswerLanded = landed)
+                }
+            }
+        }
     }
 
     private fun observeCacheChanges() {
@@ -138,10 +229,48 @@ class TodoListViewModel @Inject constructor(
      * last task still gets the plain arrival, exactly as today.
      */
     private fun hydrateFromExternalCacheChange(mode: TodoListMode, listId: String?) {
-        val wasNonEmpty = _uiState.value.items.isNotEmpty()
+        val before = _uiState.value
+        val wasNonEmpty = before.items.isNotEmpty()
         hydrateFromCache(mode = mode, listId = listId)
-        if (wasNonEmpty && _uiState.value.items.isEmpty()) {
+        val after = _uiState.value
+        if (wasNonEmpty && after.items.isEmpty()) {
             _uiState.update { it.copy(remoteEmptiedAtMs = SystemClock.uptimeMillis()) }
+        }
+        // The backstop half of the cancel signal, and the only half a REMOTE
+        // arrival has: this path cannot tell an undo from an add from a sync,
+        // and under the rule above it does not need to -- both are arrivals and
+        // both end a celebration. Every local mutation that puts a row back
+        // stamps for itself (see `toggleComplete`/`completeSelected`'s `onUndo`)
+        // so the cancel is instant rather than waiting on a refetch; this
+        // catches everything else, including any future arrival path whose
+        // author forgets to.
+        //
+        // A COUNT and not an emptiness test, and not the obvious-looking
+        // "was empty, is not any more" mirror of the arming line above it. An
+        // undone overdue task arrives into `earlierItems` (Today) or into the
+        // Earlier bucket carved out of `items` (the other modes), and the
+        // screen's "is this scope finished" predicate excludes Earlier by
+        // design -- so on the exact case this was reported for, emptiness does
+        // not change on either side and a transition test sees nothing happen.
+        // Both buckets, counted.
+        if (pendingRowArrived(
+                previousItems = before.items.size,
+                previousEarlierItems = before.earlierItems.size,
+                nextItems = after.items.size,
+                nextEarlierItems = after.earlierItems.size,
+            )
+        ) {
+            _uiState.update {
+                it.copy(
+                    celebrationCancelledAtMs = SystemClock.uptimeMillis(),
+                    // Belt to the gate's braces. The `>=` comparison there
+                    // already loses the remote branch to a same-tick cancel, but
+                    // an armed `remoteEmptiedAtMs` left standing inside its own
+                    // four seconds is a loaded gun for the next reader, and the
+                    // two stamps should not disagree about what the list is.
+                    remoteEmptiedAtMs = 0L,
+                )
+            }
         }
     }
 
@@ -319,6 +448,7 @@ class TodoListViewModel @Inject constructor(
             _uiState.update { current ->
                 current.copy(
                     hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
                     lists = if (current.lists == snapshot.lists) current.lists else snapshot.lists,
                     items = if (current.items == snapshot.todos) current.items else snapshot.todos,
                     earlierItems = if (current.earlierItems == snapshot.earlierTodos) {
@@ -333,8 +463,22 @@ class TodoListViewModel @Inject constructor(
                 )
             }
         }.onFailure {
+            // Both terms on the failure path, beside the `hasHydratedSnapshot`
+            // that has always been written here: a cache read that threw still
+            // ENDED, and the screen may not wait on it twice.
+            //
+            // `firstAnswerLanded` is read from the same store, so on a device
+            // whose Room read is genuinely broken it comes back false (Local Mode
+            // excepted -- that half is a prefs read) and the feed holds its row
+            // placeholder. Stated rather than discovered: that is a placeholder
+            // with nothing coming, and it is still the better of the two wrong
+            // answers available, because the alternative is telling someone they
+            // have no tasks on the strength of a read that failed.
             _uiState.update { current ->
-                current.copy(hasHydratedSnapshot = true)
+                current.copy(
+                    hasHydratedSnapshot = true,
+                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
+                )
             }
         }
     }
@@ -377,6 +521,15 @@ class TodoListViewModel @Inject constructor(
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
+                        // Re-read here as well as in `hydrateFromCache`, and this
+                        // is the path that matters for a fresh install signing in
+                        // to an EMPTY account: that sync writes a sync stamp and
+                        // no rows, so `cacheDataVersion` never bumps and no
+                        // hydrate follows it. Same source of truth rather than a
+                        // bare `true` -- a `fetchTodos` that quietly fell back to
+                        // the local cache offline has not heard from a server, and
+                        // must not be allowed to claim it has.
+                        firstAnswerLanded = firstAnswerSignal.hasLanded(),
                         lists = if (current.lists == lists) current.lists else lists,
                         items = if (current.items == todos) current.items else todos,
                         earlierItems = if (current.earlierItems == earlierTodos) {
@@ -443,6 +596,28 @@ class TodoListViewModel @Inject constructor(
                             lists = if (current.lists == lists) current.lists else lists,
                             items = if (current.items == todos) current.items else todos,
                             completedTodayCount = completedTodayCountFor(mode),
+                            // The third arrival path, and the one nobody thinks
+                            // of: a task typed in while the paper from the last
+                            // one is still in the air. The scope is genuinely no
+                            // longer finished, so the burst leaves -- over the
+                            // envelope, not cut. Guarded on the count rather
+                            // than stamped unconditionally because a create can
+                            // land somewhere this screen does not show it (a
+                            // task dated tomorrow, filed from Today), and a
+                            // celebration should not be cancelled by a row that
+                            // never arrived.
+                            celebrationCancelledAtMs = if (
+                                pendingRowArrived(
+                                    previousItems = current.items.size,
+                                    previousEarlierItems = current.earlierItems.size,
+                                    nextItems = todos.size,
+                                    nextEarlierItems = current.earlierItems.size,
+                                )
+                            ) {
+                                SystemClock.uptimeMillis()
+                            } else {
+                                current.celebrationCancelledAtMs
+                            },
                             errorMessage = null,
                         )
                     }
@@ -656,7 +831,29 @@ class TodoListViewModel @Inject constructor(
                 }
             },
             onUndo = {
-                _uiState.update { it.copy(items = previousItems, errorMessage = null) }
+                _uiState.update {
+                    it.copy(
+                        items = previousItems,
+                        // The optimistic bump at the top of this method, taken
+                        // back. Without this a complete-then-undo leaves TODAY's
+                        // Day Done gate armed for the rest of the day, and the
+                        // next emptying of the list fires the completion haptic
+                        // for a day nobody actually finished. Floored at zero
+                        // because a refetch can land between the bump and this
+                        // undo and replace the count outright: being one behind
+                        // the cache for a moment is recoverable, a negative
+                        // count is not.
+                        completedTodayCount = if (mode == TodoListMode.TODAY) {
+                            (it.completedTodayCount - 1).coerceAtLeast(0)
+                        } else {
+                            it.completedTodayCount
+                        },
+                        // A row is back on this screen: whatever celebration the
+                        // completion opened is over, four-second window or not.
+                        celebrationCancelledAtMs = SystemClock.uptimeMillis(),
+                        errorMessage = null,
+                    )
+                }
             },
         )
     }
@@ -784,7 +981,21 @@ class TodoListViewModel @Inject constructor(
                 }.onFailure { error -> bulkFailureToast(error, todos.size, deleting = false) }
             },
             onUndo = {
-                _uiState.update { it.copy(items = previousItems, errorMessage = null) }
+                _uiState.update {
+                    it.copy(
+                        items = previousItems,
+                        // Same two writes as the single-task undo above, for the
+                        // same two reasons -- the bulk bar is every bit as able
+                        // to empty a list and raise a burst as one tick is.
+                        completedTodayCount = if (mode == TodoListMode.TODAY) {
+                            (it.completedTodayCount - todos.size).coerceAtLeast(0)
+                        } else {
+                            it.completedTodayCount
+                        },
+                        celebrationCancelledAtMs = SystemClock.uptimeMillis(),
+                        errorMessage = null,
+                    )
+                }
             },
         )
     }

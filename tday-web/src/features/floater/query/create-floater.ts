@@ -3,6 +3,7 @@ import { api } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { floaterSchema } from "@/schema";
 import type { FloaterItemType } from "@/types";
+import { markCelebrationCancelled } from "@/lib/task-completion-signal";
 import { floaterListQueryKey, normalizeFloater } from "./floater-utils";
 
 async function postFloater(floater: FloaterItemType) {
@@ -36,6 +37,13 @@ export const useCreateFloater = () => {
   const { mutate: createMutateFn, status: createStatus } = useMutation({
     mutationFn: postFloater,
     onMutate: async (newFloater) => {
+      // A task the user types while the paper is still in the air makes the
+      // list not-finished again, so the celebration ends the same way an undo
+      // ends it. Stamped alongside the optimistic add rather than left to
+      // `useArrivalCancel`'s count-rise backstop, which would catch this one
+      // too — the two halves overlap on purpose, and a second stamp inside the
+      // same window changes no answer.
+      markCelebrationCancelled();
       await queryClient.cancelQueries({ queryKey: ["floater"] });
       const oldFloaters = queryClient.getQueryData<FloaterItemType[]>(["floater"]);
       queryClient.setQueryData(["floater"], (old: FloaterItemType[] = []) => [

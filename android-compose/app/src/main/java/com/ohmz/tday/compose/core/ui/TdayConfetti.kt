@@ -6,7 +6,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -44,7 +48,11 @@ import kotlin.random.Random
  * keeps it out of the layout pass entirely.
  *
  * @param play flipping this to `true` starts one run; it never repeats on its
- *   own, and a caller that wants a second burst passes a new [runKey].
+ *   own, and a caller that wants a second burst passes a new [runKey]. Flipping
+ *   it back to `false` mid-flight does NOT cut the burst: the pieces keep
+ *   travelling on their own clock while a `Quick` envelope takes the paint away
+ *   under them, and this leaves composition when that envelope reaches zero --
+ *   see the mount latch below.
  * @param runKey any value that identifies the run — changing it while [play] is
  *   `true` restarts the burst.
  * @param accentColor the screen's own accent, mixed into the palette so the
@@ -63,25 +71,76 @@ fun TdayConfetti(
     runKey: Any? = Unit,
     startDelayMillis: Long = 0L,
 ) {
-    if (!play) return
-
     val motionEnabled = rememberTdayMotionEnabled()
     val motionScale = rememberTdayMotionScale()
 
+    // THE MOUNT LATCH, and the reason this is not `if (!play) return` any more.
+    //
+    // `play` used to be the burst's existence, so the frame a celebration stopped
+    // being true was the frame forty-six pieces vanished out of mid-air. That is
+    // the second half of the undo bug: ending the celebration when a task comes
+    // back is right, cutting the paper between two frames to do it is not. So the
+    // burst outlives `play` by exactly one envelope -- the same shape
+    // `rememberTdayTaskRowSkeletonMounted` uses to let a skeleton finish leaving.
+    //
+    // The envelope is a SECOND alpha term, multiplied into each piece's own fade
+    // at the single draw site below (see [envelopedAlpha]). It does not touch the
+    // flight clock, and must not: the pieces go on flying, spinning and flipping
+    // while they fade, because a frozen burst dissolving in place reads as a
+    // dropped frame rather than as a celebration bowing out.
+    var mounted by remember { mutableStateOf(false) }
+    val envelope = remember { Animatable(1f) }
+    // Which run the pieces below belong to. Bumped only when a NEW burst starts
+    // while the last one is still fading, so it throws fresh paper instead of
+    // adopting a flight that is already half spent. Never keyed on `play` itself,
+    // which is the thing this latch exists to survive.
+    var runGeneration by remember { mutableIntStateOf(0) }
+    LaunchedEffect(play, motionEnabled) {
+        if (play) {
+            if (mounted) runGeneration++
+            envelope.snapTo(1f)
+            mounted = true
+        } else if (mounted) {
+            // The fifth idiom rule, at its strictest. With motion off nothing was
+            // ever painted -- the `Canvas` below is unreachable -- so there is no
+            // finished state to draw and nothing to wait for: this leaves on the
+            // same frame, with no `animateTo` and no `scaledDelay` left to survive
+            // as a dead wait in front of an empty screen.
+            if (!motionEnabled) {
+                mounted = false
+                return@LaunchedEffect
+            }
+            // Quick on Exit: paint leaving, and nobody is meant to watch it go.
+            envelope.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(
+                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    easing = TdayMotionTokens.Easings.Exit,
+                ),
+            )
+            mounted = false
+        }
+    }
+    // Neither playing nor leaving: everything below is dropped, which is what
+    // makes the next celebration a fresh composition and a fresh run rather than
+    // a replay of the last one's remembered state.
+    if (!play && !mounted) return
+
     // Fixed per run, so a recomposition mid-flight does not re-roll the pieces
     // and teleport all of them at once.
-    val pieces = remember(runKey) { confettiFan(Random(PieceCount * 31L)) }
-    val progress = remember(runKey) { Animatable(0f) }
+    val pieces = remember(runKey, runGeneration) { confettiFan(Random(PieceCount * 31L)) }
+    val progress = remember(runKey, runGeneration) { Animatable(0f) }
     val palette = remember(accentColor) { ConfettiPalette + accentColor }
 
-    // `play` is the only thing that decides whether this composable exists; the
-    // preference decides whether the Canvas below it draws. The two are not the
-    // same question, and collapsing them into one early return — which is what
-    // this used to do — puts the whole run out of reach at 0x, effect included.
+    // `play` — now by way of the latch above — is the only thing that decides
+    // whether this composable exists; the preference decides whether the Canvas
+    // below it draws. The two are not the same question, and collapsing them into
+    // one early return — which is what this used to do — puts the whole run out
+    // of reach at 0x, effect included.
     // `docs/confetti-spec.md`'s haptic section is written against the shape this
     // leaves behind: a burst is an event as well as an animation, and the event
     // still happens for someone who has asked not to watch it.
-    LaunchedEffect(runKey) {
+    LaunchedEffect(runKey, runGeneration) {
         progress.snapTo(0f)
         // Held at 0, where the canvas below draws nothing at all, so the wait
         // costs a composition and not a frame of half-drawn paper. And held on the
@@ -123,7 +182,8 @@ fun TdayConfetti(
 
             rotate(degrees = f.rot * DegreesPerRadian, pivot = Offset(x, y)) {
                 drawRoundRect(
-                    color = palette[piece.colorIndex % palette.size].copy(alpha = f.alpha),
+                    color = palette[piece.colorIndex % palette.size]
+                        .copy(alpha = envelopedAlpha(f.alpha, envelope.value)),
                     topLeft = Offset(x - width / 2f, y - height / 2f),
                     size = Size(width, height),
                     // Of the DRAWN width, so a piece turning edge-on keeps its

@@ -3,7 +3,10 @@ import { useTranslation } from "react-i18next";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
 import TimelineEmptyState from "@/features/todayTodos/component/TimelineEmptyState";
-import { earlierIsExpanding } from "@/features/todayTodos/lib/todayEarlierIllustration";
+import {
+    earlierIsExpanding,
+    emptySceneLeavesOnCancel,
+} from "@/features/todayTodos/lib/todayEarlierIllustration";
 import { useListSearch } from "../lib/useListSearch";
 import { useListEarlierSection } from "../lib/useListEarlierSection";
 import { useListEmptyState } from "../lib/useListEmptyState";
@@ -29,8 +32,9 @@ import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
 import SummaryButton from "@/features/summary/SummaryButton";
 import { useShareListAsText } from "@/hooks/use-share-list";
 import { useIsLocalMode } from "@/hooks/useAppMode";
+import { useFadeUnmount } from "@/hooks/useFadeUnmount";
 import { useRowPlacement } from "@/hooks/useRowPlacement";
-import { DELAY_MS } from "@/lib/motion";
+import { DELAY_MS, DURATION_MS } from "@/lib/motion";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/navigation";
 import { useUserTimezone } from "@/features/user/query/get-timezone";
@@ -74,14 +78,34 @@ const ListContainer = ({ id }: { id: string }) => {
     // Today/All/Priority/Scheduled use — see `useListEmptyState`'s own doc
     // comment for why the two Earlier/current readings above must stay fed to
     // exactly the parameters they are here.
-    const { earlierExpanded, earlierHandoff, earlierSlotChangesHands, toggleEarlierExpanded, celebrate, showEmptyIllustration } =
+    const { showEmpty, earlierExpanded, earlierHandoff, earlierSlotChangesHands, toggleEarlierExpanded, celebrate, showEmptyIllustration } =
         useListEmptyState({
             listTodosLoading,
             isSearching,
             hasEarlierItems,
             hasNonEarlierListTodos,
             hasNonEarlierRawListTodos,
+            // The RAW list, every bucket: Earlier's overdue rows are what an undo
+            // most often puts back, and they are exactly what the two booleans
+            // above are written to subtract out. See `useArrivalCancel`.
+            pendingRowCount: listTodos.length,
         });
+    // The burst leaves over a fade rather than between two frames, and on the
+    // plain path — no overdue rows, so the restored task makes this list
+    // non-empty — the scene it flies over is leaving in that same frame. Held in
+    // the tree for the length of that fade, or the paper is cut by its own
+    // parent. `useFadeUnmount` already returns false outright under reduced
+    // motion, where nothing was painted and no wait may survive.
+    //
+    // Scoped to the refill (`!showEmpty`) and not to every way the scene can
+    // leave: the Earlier hand-off takes it off this slot while the list is still
+    // empty, and that departure has its own longer beat already.
+    const sceneLingers = useFadeUnmount(showEmptyIllustration, DURATION_MS.quick);
+    const sceneLeavingOnCancel = emptySceneLeavesOnCancel({
+        sceneStillMounted: sceneLingers,
+        showEmptyIllustration,
+        showEmpty,
+    });
     // This page keeps its search field as the pinned bar, so the header below
     // renders only the block that scrolls away and docks its title into it —
     // the same split the floater list uses.
@@ -219,7 +243,7 @@ const ListContainer = ({ id }: { id: string }) => {
                         see `showEmptyIllustration`'s derivation above and
                         `AllTasksTimelineContainer`'s matching JSX-ordering
                         comment for why this renders BEFORE that block). */}
-                    {showEmptyIllustration && (
+                    {(showEmptyIllustration || sceneLeavingOnCancel) && (
                         <TimelineEmptyState
                             icon={getListIcon(listMetaData[id]?.iconKey)}
                             accentColor={listAccent}
@@ -234,6 +258,7 @@ const ListContainer = ({ id }: { id: string }) => {
                             // list happens to hold, and timing the celebration off that
                             // would make the same tick celebrate at two different speeds.
                             celebrationStartDelayMs={DELAY_MS.placementLead}
+                            leavingOnCancel={sceneLeavingOnCancel}
                             earlierHandoff={earlierHandoff}
                             locale={locale}
                             emptyTitle="listEmpty"

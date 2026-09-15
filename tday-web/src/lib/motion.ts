@@ -59,6 +59,69 @@ export const EASE: Record<EaseName, string> = {
 };
 
 /**
+ * The same five curves as their raw control points.
+ *
+ * The shape [easingSampler] below takes, and the only reason the generated table is
+ * re-exported at all: a sampler cannot parse `cubic-bezier(0.4, 0, 1, 1)` back into
+ * the four numbers it was just formatted from. Typed against `EaseName` for the same
+ * reason [EASE] is spelled out key by key — a sixth curve arriving upstream should be
+ * a compile error here, not a curve the web silently never offers.
+ */
+export const EASE_CURVE: Record<EaseName, EasingCurve> = EASINGS;
+
+/**
+ * One of those curves as a FUNCTION, for the few motions JavaScript has to drive
+ * itself frame by frame.
+ *
+ * Almost nothing should want this. A transition or a keyframe hands the browser a
+ * `cubic-bezier(…)` string and the compositor does the arithmetic; the exception is a
+ * value that never becomes a style at all — the confetti's cancel envelope, which is
+ * multiplied into a piece's own alpha inside a canvas draw call, where there is no
+ * element to transition and no property to name. That is the same category
+ * [DURATION_MS] describes for itself: only a timer wants the integer, and only a
+ * hand-driven frame loop wants the curve as a number.
+ *
+ * Bisection rather than Newton-Raphson, which is the usual implementation and is
+ * faster and longer. `x(t)` is monotonic for control points in `[0, 1]` — which every
+ * curve in the vocabulary has, by construction — so halving the interval cannot get
+ * stuck, needs no derivative, no seed and no fallback branch, and twenty-four halvings
+ * pin `t` to within a ten-millionth. A caller sampling this once per frame for the
+ * length of one rung is asking for it roughly ten times in total.
+ *
+ * Returns a closure rather than taking `(curve, progress)` so the polynomial
+ * coefficients are folded once at the call site's setup rather than on every frame.
+ */
+export function easingSampler(curve: EasingCurve): (progress: number) => number {
+  const [x1, y1, x2, y2] = curve;
+  // The Bezier's two endpoints are (0,0) and (1,1) by definition of a CSS easing, so
+  // one axis is fully described by its two control values.
+  const axis = (p1: number, p2: number) => {
+    const c = 3 * p1;
+    const b = 3 * (p2 - p1) - c;
+    const a = 1 - c - b;
+    return (t: number) => ((a * t + b) * t + c) * t;
+  };
+  const x = axis(x1, x2);
+  const y = axis(y1, y2);
+
+  return (progress: number) => {
+    if (progress <= 0) return 0;
+    if (progress >= 1) return 1;
+    let low = 0;
+    let high = 1;
+    for (let i = 0; i < EASING_BISECTIONS; i++) {
+      const mid = (low + high) / 2;
+      if (x(mid) < progress) low = mid;
+      else high = mid;
+    }
+    return y((low + high) / 2);
+  };
+}
+
+/** Halvings of `[0, 1]`: the last one is worth under a ten-millionth of the curve. */
+const EASING_BISECTIONS = 24;
+
+/**
  * How long a motion runs, in milliseconds. The names are rungs rather than
  * adjectives — `change` is the user's own edit replayed in place, `emphasis` is
  * something changing where or how big it is — and `MotionTokens.kt` argues each one.
