@@ -484,16 +484,38 @@ private const val CompletionCelebrationWindowMs = 4_000L
  * filter) — but Scheduled/Priority/All/List mix overdue straight into
  * `items`, so those callers pass [nonEarlierSectionsEmpty] instead. Either
  * way this function needs no Earlier-aware parameter of its own.
+ *
+ * [cancelledAtMs] is the ending this gate did not have. A celebration is OPENED
+ * by a transition -- a completion -- and was only ever CLOSED by re-reading a
+ * static predicate plus a timer, so nothing in it observed the opposite
+ * transition: a task coming back. Undo restores the row through the repository
+ * and, on the reported path, does not move `itemsEmpty` at all, because the row
+ * that came back was OVERDUE and this predicate excludes Earlier by design. The
+ * paper then flew over a visible row until its own flight clock ran out, which
+ * is the "goes away after a few seconds" in the report -- this window has no
+ * clock of its own on Android, `nowMs` being read during composition.
+ *
+ * So the cancel is an ARRIVAL, counted across every bucket by
+ * [TodoListViewModel]'s `pendingRowArrived`, and never a re-read of the
+ * emptiness above. Compared rather than cleared: a completion landing after a
+ * cancel re-opens the window by being the newer stamp, with no mutation from an
+ * effect to order against a second completion arriving inside the same window.
+ * `>=` and not `>` because an undo always follows its own completion and a
+ * same-tick stamp must lose to nothing.
  */
 internal fun shouldCelebrateEmptyState(
     itemsEmpty: Boolean,
     lastCompletionAtMs: Long,
     remoteEmptiedAtMs: Long,
+    cancelledAtMs: Long,
     screenResumed: Boolean,
     nowMs: Long,
     windowMs: Long = CompletionCelebrationWindowMs,
 ): Boolean {
     if (!itemsEmpty) return false
+    if (cancelledAtMs != 0L && cancelledAtMs >= maxOf(lastCompletionAtMs, remoteEmptiedAtMs)) {
+        return false
+    }
     val ownTapCelebrates = lastCompletionAtMs != 0L && nowMs - lastCompletionAtMs < windowMs
     val remoteCompletionCelebrates = remoteEmptiedAtMs != 0L &&
             screenResumed &&
@@ -593,6 +615,23 @@ internal fun shouldShowTodayEarlierExpandedCelebration(
  * their finger, over and over, for four seconds. One fold per completion. After
  * that the user's tap wins and the scene goes back below the rows, unseen, which
  * is their own deliberate choice and not ours.
+ *
+ * WHAT A CANCELLED CELEBRATION DOES TO THE FOLD: nothing, deliberately, and the
+ * decision is written here rather than left to be rediscovered. Undo now ends the
+ * burst the moment the row comes back (see [shouldCelebrateEmptyState]), and the
+ * obvious follow-on is that it should put Earlier back the way the user had it.
+ * It should not, for two reasons that are the same reason twice. The first is
+ * that the fold is a write into `collapsedSectionKeys`, which is ALSO the user's
+ * own control: restoring it means remembering a pre-celebration state and
+ * replaying it over whatever the user has done to that header since, and a
+ * header that re-opens under the finger that just shut it is this function's own
+ * `foldedForStampMs` bug pointing the other way. The second is that the state a
+ * cancel leaves behind -- scope empty, Earlier collapsed over the restored
+ * overdue row, its header and its count directly above it and one tap from open
+ * -- is EXACTLY the state the window expiring four seconds later would have left
+ * anyway. Undo is not owed a better outcome than waiting; it is owed the same
+ * one, sooner, and that is what it gets. What was wrong was never the fold. It
+ * was the paper still flying over a row that had come back.
  */
 internal fun shouldFoldEarlierForCelebration(
     showEarlierExpandedCelebration: Boolean,
@@ -915,10 +954,15 @@ fun TodoListScreen( // skipcq: KT-R1006
     // `items.isEmpty()` for it; see [nonEarlierSectionsEmpty] for why the
     // other modes need more than that.
     val scopeItemsEmpty = nonEarlierSectionsEmpty(scopeSections)
+    // `celebrationCancelledAtMs` is the ViewModel's, and it has to be: undo lives
+    // in `UndoableDeleteCoordinator`, a @Singleton on its own MainScope with no
+    // per-screen identity and no way to reach back into this composition. The
+    // signal comes home through `uiState` or it does not come home at all.
     val celebrateEmptyState = shouldCelebrateEmptyState(
         itemsEmpty = scopeItemsEmpty,
         lastCompletionAtMs = lastCompletionAtMs,
         remoteEmptiedAtMs = uiState.remoteEmptiedAtMs,
+        cancelledAtMs = uiState.celebrationCancelledAtMs,
         screenResumed = screenLifecycleState == Lifecycle.State.RESUMED,
         nowMs = SystemClock.uptimeMillis(),
     )
@@ -2584,8 +2628,51 @@ fun TodoListScreen( // skipcq: KT-R1006
             // states were true at once and the screen drew two empty scenes on
             // top of each other. While a query stands the in-list no-results
             // scene owns it — it is the one that can say what was searched.
-            if (scopeItemsEmpty && !uiState.isLoading && !suppressInitialTodayTimeline &&
-                !isFloaterTaskHomeScreen && !scopedSearchActive && !scopeHasEarlierItems
+            // THE ONE PRESENTATION CHANGE IN THIS FIX, and it is here rather than
+            // in the burst because of what the burst now needs from its host. A
+            // cancelled celebration fades its paper out over `Quick` instead of
+            // cutting it (see `TdayConfetti`'s mount latch), and on the plain path
+            // -- no overdue tasks -- the very undo that cancels the burst also
+            // makes this scene's condition false. This branch had no exit at all,
+            // so the scene and the paper on it were removed on the same frame and
+            // the envelope never got to run: a fade cut by the unmount above it is
+            // the same complaint one layer up.
+            //
+            // So: the scene leaves on the envelope's own rung, and scene and paper
+            // go together. `EnterTransition.None` because nothing about the
+            // ARRIVAL is in dispute -- this scene has always appeared on the frame
+            // the scope emptied, the celebration's 320 ms lead is timed against
+            // that, and giving it an enter here would put a fade in front of the
+            // payoff. `ExitTransition.None` with motion off, where the burst is
+            // unmounting on the same frame for the same reason and there is
+            // nothing left to keep alive for.
+            //
+            // What else now leaves on this exit, stated rather than discovered:
+            // every other way this condition goes false. A pull-to-refresh over an
+            // already-empty scope sets `isLoading` and used to cut the scene; it
+            // fades it now. Same destination, 150 ms of paint, and the shortest
+            // rung on the ladder -- an exit is never longer than the enter it
+            // undoes, and this one has no enter at all.
+            //
+            // The overdue path does NOT come through here (`!scopeHasEarlierItems`
+            // defers it to the inline scene under Earlier's header), and must not:
+            // a restored overdue row leaves that scene exactly where it is, which
+            // is the v0.7.25 presentation and was never the thing that was wrong.
+            // Only the confetti over it was.
+            AnimatedVisibility(
+                visible = scopeItemsEmpty && !uiState.isLoading && !suppressInitialTodayTimeline &&
+                    !isFloaterTaskHomeScreen && !scopedSearchActive && !scopeHasEarlierItems,
+                enter = EnterTransition.None,
+                exit = if (rememberTdayMotionEnabled()) {
+                    fadeOut(
+                        animationSpec = tween(
+                            durationMillis = TdayMotionTokens.Durations.Quick,
+                            easing = TdayMotionTokens.Easings.Exit,
+                        ),
+                    )
+                } else {
+                    ExitTransition.None
+                },
             ) {
                 Box(
                     // The Scaffold's insets, so the scene centres in the content
