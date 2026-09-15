@@ -2525,8 +2525,22 @@ private struct CalendarElasticTopBar: View {
                         // reserving 68 left against 132 right slid the name 32pt
                         // sideways over the handoff while both were on screen.
                         // Mirroring keeps both halves of the crossfade on the same
-                        // centre line. It is what the web bar does, and what
-                        // `tdayBarTitleReserve` does on Android.
+                        // centre line. It is what the web bar does.
+                        //
+                        // Android used to mirror unconditionally too, and it cost
+                        // them the bug this `.minimumScaleFactor` was added for:
+                        // with two trailing buttons the mirrored reserve handed
+                        // "Calendar" less than the word needs and it rendered
+                        // "Cale…" — no scale factor there to catch it.
+                        // `tdayBarTitleReserve` now measures the title and mirrors
+                        // only while the mirrored reserve actually fits it, falling
+                        // through to per-side before it shrinks. This bar does not
+                        // need that arithmetic BECAUSE of the modifier three lines
+                        // up: the same 0.72 is what stands in for it here, so the
+                        // word survives a reserve that is too generous to the
+                        // buttons. Keep both, and do not port the Android branch
+                        // here without also asking what it does to the crossfade
+                        // the mirroring exists for.
                         .padding(.horizontal, max(
                             TodoTimelineMetrics.topBarButtonFrame,
                             trailingActionReservedWidth
