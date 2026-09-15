@@ -52,6 +52,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,6 +80,8 @@ import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TaskSwipeActionButton
+import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
+import com.ohmz.tday.compose.core.ui.TaskSwipeSlotBackHandler
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
@@ -95,9 +98,11 @@ import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTdayTaskRowSkeletonMounted
 import com.ohmz.tday.compose.core.ui.scaledDelay
+import com.ohmz.tday.compose.core.ui.shouldCloseSwipeRow
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
+import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
@@ -263,22 +268,43 @@ fun CompletedScreen(
         mutableStateOf(emptySet<String>())
     }
     var editTargetId by rememberSaveable { mutableStateOf<String?>(null) }
-    var openSwipeTaskId by rememberSaveable { mutableStateOf<String?>(null) }
+    // The screen's one swipe slot. `remember`, never `rememberSaveable`: the rows'
+    // own reveal states are plain `remember`, so a restored id named a row that
+    // had rebuilt closed. The full argument, and the reason this is a holder
+    // rather than a hoisted `String?`, is at [TaskSwipeSlot].
+    val swipeSlot = remember { TaskSwipeSlot() }
     val editTarget = rememberEditSheetTarget(
         id = editTargetId,
         current = remember(editTargetId, uiState.items) {
             editTargetId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
         },
     )
-    LaunchedEffect(uiState.items, openSwipeTaskId) {
-        val openId = openSwipeTaskId ?: return@LaunchedEffect
-        if (uiState.items.none { it.id == openId }) {
-            openSwipeTaskId = null
+    // The open row's task leaving the feed hands the slot back. Read through
+    // `snapshotFlow` rather than as an effect key so that no read of the slot
+    // happens in this composable's body -- see [TaskSwipeSlot].
+    LaunchedEffect(uiState.items, swipeSlot) {
+        snapshotFlow { swipeSlot.openId }.collect { openId ->
+            if (openId != null && uiState.items.none { it.id == openId }) {
+                swipeSlot.openId = null
+            }
+        }
+    }
+    // A scroll closes the row, at the moment the list starts moving: an open row
+    // is content and travels with the list, so one left open through a scroll
+    // puts an armed Delete pill under a thumb now aimed at a different task. It
+    // is also the only trigger that catches a vertical drag beginning on the
+    // open row itself. Argued in full on `TodoListScreen`'s copy.
+    LaunchedEffect(listState, swipeSlot) {
+        snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
+            if (scrolling && swipeSlot.openId != null) swipeSlot.openId = null
         }
     }
     BackHandler(enabled = searchExpanded) {
         closeSearch()
     }
+    // After the search handler, because later registration wins in the back
+    // dispatcher: a revealed row is the innermost state back can be in.
+    TaskSwipeSlotBackHandler(slot = swipeSlot)
     // The placeholder, and how long its lazy item outlives it. Hoisted because
     // `LazyListScope` is not a composition; same window as the timeline's copy,
     // and deliberately the same call rather than an "it does not matter here"
@@ -289,7 +315,16 @@ fun CompletedScreen(
     val completedFeedSkeletonMounted =
         rememberTdayTaskRowSkeletonMounted(completedFeedSkeletonVisible)
 
-    Scaffold(containerColor = colorScheme.background) { padding ->
+    Scaffold(
+        // One interceptor per screen, at the outermost composable so the header,
+        // the FAB and the gaps between rows are all inside it. It observes and
+        // never consumes -- see `tdayClosesSwipeRowOnOutsideTap`.
+        modifier = Modifier.tdayClosesSwipeRowOnOutsideTap(
+            slot = swipeSlot,
+            close = { swipeSlot.openId = null },
+        ),
+        containerColor = colorScheme.background,
+    ) { padding ->
         Box(
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -402,8 +437,7 @@ fun CompletedScreen(
                                         onInfo = { editTargetId = completed.id },
                                         onDelete = { onDelete(completed) },
                                         onUncomplete = { onUncomplete(completed) },
-                                        openSwipeTaskId = openSwipeTaskId,
-                                        onOpenSwipeTaskIdChange = { openSwipeTaskId = it },
+                                        swipeSlot = swipeSlot,
                                     )
                                 }
                             }
@@ -656,8 +690,7 @@ private fun CompletedSwipeRow(
     onInfo: () -> Unit,
     onDelete: () -> Unit,
     onUncomplete: () -> Unit,
-    openSwipeTaskId: String?,
-    onOpenSwipeTaskIdChange: (String?) -> Unit,
+    swipeSlot: TaskSwipeSlot,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -672,22 +705,27 @@ private fun CompletedSwipeRow(
     val copiedMessage = stringResource(R.string.task_copied_toast)
     val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
     var restorePhase by remember(item.id) { mutableStateOf(CompletedRestorePhase.Completed) }
-    val latestOpenSwipeTaskId = rememberUpdatedState(openSwipeTaskId)
     fun claimSwipeSlot() {
-        if (latestOpenSwipeTaskId.value != item.id) {
-            onOpenSwipeTaskIdChange(item.id)
+        if (swipeSlot.openId != item.id) {
+            swipeSlot.openId = item.id
         }
     }
 
     fun closeSwipeSlot() {
         swipeRevealState.close()
-        if (latestOpenSwipeTaskId.value == item.id) {
-            onOpenSwipeTaskIdChange(null)
+        if (swipeSlot.openId == item.id) {
+            swipeSlot.openId = null
         }
     }
+    // Hoisted above the reveal's own animation because that is now one of its
+    // callers: with the app's Reduce Motion switch on, a close draws its
+    // finished state instead of springing to it. One read, two uses -- the
+    // switch and the row can never disagree about the same device.
+    val restoreMotionScale = rememberTdayMotionScale()
     val animatedOffsetX by animateTaskSwipeOffsetAsState(
         state = swipeRevealState,
         label = "completedSwipeOffset",
+        scale = restoreMotionScale,
     )
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     val showCompletedCheckmark = restorePhase == CompletedRestorePhase.Completed
@@ -746,7 +784,6 @@ private fun CompletedSwipeRow(
     // the hint's two holds and the three legs of the restore are gaps between
     // beats this row gates on [restoreMotionEnabled], which is what makes the
     // app's own scale the right clock for them. See [scaledDelay].
-    val restoreMotionScale = rememberTdayMotionScale()
     // The two beats this row cut straight to. The tint answers the finger, so it is
     // Quick; the title colour travels with the rule crossing it, so Emphasis — and
     // Emphasis is also what the rule itself runs on, which is the point: a colour
@@ -795,9 +832,18 @@ private fun CompletedSwipeRow(
     val showPriorityIcon = priorityIcon != null
     val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
     val foregroundColor = colorScheme.background
-    LaunchedEffect(openSwipeTaskId, item.id) {
-        if (openSwipeTaskId != null && openSwipeTaskId != item.id && swipeRevealState.isOpenOrDragging) {
-            swipeRevealState.close()
+    // The row's whole subscription to the screen's slot, and the only place it
+    // reads it -- outside composition, so no row recomposes when another opens
+    // or closes. [shouldCloseSwipeRow] deliberately carries no `openId != null`
+    // clause: that guard meant the slot could be handed on but never revoked,
+    // and every dismissal is a write of `null`. The close is the same
+    // `TaskSwipeMotion.Release` rung the open uses, and is silent by the
+    // argument at `TaskSwipeRevealState.settle`.
+    LaunchedEffect(swipeSlot, item.id) {
+        snapshotFlow { swipeSlot.openId }.collect { openId ->
+            if (shouldCloseSwipeRow(openId, item.id, swipeRevealState.isOpenOrDragging)) {
+                swipeRevealState.close()
+            }
         }
     }
 
@@ -894,8 +940,8 @@ private fun CompletedSwipeRow(
                                 // `TaskSwipeRevealState.dragBy`: cross the detent, drag back,
                                 // release closed, and you felt a reveal that did not happen.
                                 if (swipeRevealState.dragBy(delta)) TdayHaptics.reveal(view)
-                                if (!swipeRevealState.isOpenOrDragging && latestOpenSwipeTaskId.value == item.id) {
-                                    onOpenSwipeTaskIdChange(null)
+                                if (!swipeRevealState.isOpenOrDragging && swipeSlot.openId == item.id) {
+                                    swipeSlot.openId = null
                                 }
                             },
                             onDragStopped = { velocity ->
@@ -907,8 +953,8 @@ private fun CompletedSwipeRow(
                                 if (swipeRevealState.settle(velocity)) TdayHaptics.reveal(view)
                                 if (swipeRevealState.isOpenOrDragging) {
                                     claimSwipeSlot()
-                                } else if (latestOpenSwipeTaskId.value == item.id) {
-                                    onOpenSwipeTaskIdChange(null)
+                                } else if (swipeSlot.openId == item.id) {
+                                    swipeSlot.openId = null
                                 }
                             },
                         )
@@ -922,8 +968,8 @@ private fun CompletedSwipeRow(
                                 claimSwipeSlot()
                                 coroutineScope.launch {
                                     swipeRevealState.playHint(restoreMotionScale)
-                                    if (latestOpenSwipeTaskId.value == item.id && !swipeRevealState.isOpenOrDragging) {
-                                        onOpenSwipeTaskIdChange(null)
+                                    if (swipeSlot.openId == item.id && !swipeRevealState.isOpenOrDragging) {
+                                        swipeSlot.openId = null
                                     }
                                 }
                             }
