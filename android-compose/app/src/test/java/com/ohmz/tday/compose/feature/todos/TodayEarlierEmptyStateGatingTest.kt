@@ -1,5 +1,8 @@
 package com.ohmz.tday.compose.feature.todos
 
+import com.ohmz.tday.compose.core.ui.FeedAnswer
+import com.ohmz.tday.compose.core.ui.feedAnswer
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -40,7 +43,7 @@ class TodayEarlierEmptyStateGatingTest {
             shouldShowTodayEarlierExpandedCelebration(
                 todayHasEarlierItems = true,
                 itemsEmpty = true,
-                isLoading = false,
+                answer = FeedAnswer.Empty,
                 suppressInitialTodayTimeline = false,
                 scopedSearchActive = false,
                 earlierCollapsed = false,
@@ -59,7 +62,7 @@ class TodayEarlierEmptyStateGatingTest {
             shouldShowTodayEarlierExpandedCelebration(
                 todayHasEarlierItems = true,
                 itemsEmpty = true,
-                isLoading = false,
+                answer = FeedAnswer.Empty,
                 suppressInitialTodayTimeline = false,
                 scopedSearchActive = false,
                 earlierCollapsed = false,
@@ -76,7 +79,7 @@ class TodayEarlierEmptyStateGatingTest {
             shouldShowTodayEarlierExpandedCelebration(
                 todayHasEarlierItems = true,
                 itemsEmpty = true,
-                isLoading = false,
+                answer = FeedAnswer.Empty,
                 suppressInitialTodayTimeline = false,
                 scopedSearchActive = false,
                 earlierCollapsed = true,
@@ -86,20 +89,24 @@ class TodayEarlierEmptyStateGatingTest {
     }
 
     @Test
-    fun `never fires while Today still has pending tasks, loading, or a live search`() {
-        val base = mapOf(
-            "itemsEmpty" to false,
-            "isLoading" to true,
-            "suppressInitialTodayTimeline" to true,
-            "scopedSearchActive" to true,
+    fun `never fires while Today still has pending tasks, no answer yet, or a live search`() {
+        val base = listOf(
+            "itemsEmpty",
+            "awaitingFirstAnswer",
+            "suppressInitialTodayTimeline",
+            "scopedSearchActive",
         )
-        for (flag in base.keys) {
+        for (flag in base) {
             assertFalse(
                 "unexpected true with $flag forcing the gate closed",
                 shouldShowTodayEarlierExpandedCelebration(
                     todayHasEarlierItems = true,
                     itemsEmpty = flag != "itemsEmpty",
-                    isLoading = flag == "isLoading",
+                    answer = if (flag == "awaitingFirstAnswer") {
+                        FeedAnswer.AwaitingFirst
+                    } else {
+                        FeedAnswer.Empty
+                    },
                     suppressInitialTodayTimeline = flag == "suppressInitialTodayTimeline",
                     scopedSearchActive = flag == "scopedSearchActive",
                     earlierCollapsed = false,
@@ -115,7 +122,85 @@ class TodayEarlierEmptyStateGatingTest {
             shouldShowTodayEarlierExpandedCelebration(
                 todayHasEarlierItems = false,
                 itemsEmpty = true,
-                isLoading = false,
+                answer = FeedAnswer.Empty,
+                suppressInitialTodayTimeline = false,
+                scopedSearchActive = false,
+                earlierCollapsed = false,
+                celebrateEmptyState = true,
+            ),
+        )
+    }
+
+    // --- the refresh that used to withdraw all of it ------------------------
+    //
+    // `!isLoading` stood where `answer` does now, in this gate and in five
+    // siblings. `isLoading` is raised by nothing but
+    // `refreshInternal(showLoading = true)`, reached only from `refresh()`,
+    // called only by the pull lambda and the error card's Retry -- so it has
+    // always meant "a refresh over an answer already on screen", which is the one
+    // condition these scenes must be held THROUGH. Both directions are pinned,
+    // because the second is how this fix is overshot rather than missed.
+
+    @Test
+    fun `a refresh over an already-celebrating scope changes nothing here`() {
+        // THE REPORTED BUG at this gate. "All done" withdrawn mid-pull is the same
+        // flash the user photographed on the Anytime home, with a worse message on
+        // it. There is no refresh term left to vary -- what is asserted is that
+        // the answer a settled empty scope produces is the answer this gate wants,
+        // and that a pull cannot produce a different one (see [FeedAnswerTest]).
+        assertEquals(
+            FeedAnswer.Empty,
+            feedAnswer(storeRead = true, rowsEmpty = true, firstAnswerLanded = true),
+        )
+        assertTrue(
+            shouldShowTodayEarlierExpandedCelebration(
+                todayHasEarlierItems = true,
+                itemsEmpty = true,
+                answer = feedAnswer(
+                    storeRead = true,
+                    rowsEmpty = true,
+                    firstAnswerLanded = true,
+                ),
+                suppressInitialTodayTimeline = false,
+                scopedSearchActive = false,
+                earlierCollapsed = false,
+                celebrateEmptyState = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `nothing is celebrated over a scope that has never had an answer`() {
+        // The overshoot. A fresh install hydrates instantly and hydrates empty;
+        // congratulating someone on finishing a day whose tasks have not arrived
+        // is worse than the flash this replaced.
+        assertFalse(
+            shouldShowTodayEarlierExpandedCelebration(
+                todayHasEarlierItems = true,
+                itemsEmpty = true,
+                answer = FeedAnswer.AwaitingFirst,
+                suppressInitialTodayTimeline = false,
+                scopedSearchActive = false,
+                earlierCollapsed = false,
+                celebrateEmptyState = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `an empty Local Mode workspace still celebrates`() {
+        // Local Mode never records a successful sync, so a first-answer term built
+        // on the sync stamp alone would have silenced this gate there forever.
+        assertTrue(
+            shouldShowTodayEarlierExpandedCelebration(
+                todayHasEarlierItems = true,
+                itemsEmpty = true,
+                answer = feedAnswer(
+                    storeRead = true,
+                    rowsEmpty = true,
+                    // `isLocalMode()` is the whole of this term in Local Mode.
+                    firstAnswerLanded = true,
+                ),
                 suppressInitialTodayTimeline = false,
                 scopedSearchActive = false,
                 earlierCollapsed = false,

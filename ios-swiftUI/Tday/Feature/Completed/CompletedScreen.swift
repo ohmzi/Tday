@@ -105,16 +105,34 @@ struct CompletedScreen: View {
     /// the thing that supplies the transaction to take it off screen drifting
     /// apart is exactly how a removal transition goes quietly inert.
     private var showsCompletedEmptyState: Bool {
-        searchedItems.isEmpty && !viewModel.isLoading
+        completedAnswer == .empty
+    }
+
+    /// History's answer about itself, and the one place either scene's emptiness
+    /// is counted. The `!viewModel.isLoading` / `viewModel.isLoading` pair this
+    /// replaced were the same copy-pasted gate the Anytime home had, with the
+    /// same defect: `isLoading` is raised by nothing but `refresh()`, so it
+    /// always meant "a refresh over an answer already on screen" — the one
+    /// condition an empty scene must be held THROUGH — and the two gates tripped
+    /// on the same pull, swapping the scene for three grey bars and back again.
+    /// `feedAnswer` has no term a pull can move.
+    private var completedAnswer: FeedAnswer {
+        feedAnswer(
+            storeRead: viewModel.hasHydratedFromCache,
+            rowsEmpty: searchedItems.isEmpty,
+            firstAnswerLanded: viewModel.firstAnswerLanded
+        )
     }
 
     /// The opposite half of [showsCompletedEmptyState], and deliberately its
-    /// mirror: history that is still arriving is neither empty nor a list, and
+    /// mirror: history that has not answered yet is neither empty nor a list, and
     /// before this the screen answered that third case with the empty frame it
-    /// also uses for "there is nothing". A refresh over rows that are already on
-    /// screen keeps the rows — the item list is asked as well as the flag.
+    /// also uses for "there is nothing".
+    ///
+    /// The third state is the same one `completedAnswer` names, so the two are
+    /// exhaustive by construction rather than by two conditions agreeing.
     private var showsCompletedFeedSkeleton: Bool {
-        searchedItems.isEmpty && viewModel.isLoading
+        completedAnswer == .awaitingFirst
     }
 
     /// The empty scene's insertion and removal. The same shape, for the same
@@ -298,10 +316,19 @@ struct CompletedScreen: View {
                     }
                 }
 
-                // Until this branch a cold open drew the title and then a blank
-                // page: `isLoading` was consumed only to suppress the empty scene,
-                // so the screen's answer to "still loading" was to show nothing at
-                // all and let the rows appear out of it.
+                // The cold open this comment used to describe cannot happen on
+                // this client, and saying so was costing the screen its own fix:
+                // `CompletedViewModel` hydrates from the local cache
+                // synchronously in `init`, so history beats the first body pass
+                // and `isLoading` only ever meant a refresh over rows already
+                // drawn. Gated on the flag, this placeholder grew three grey bars
+                // during a pull on a history that had already answered.
+                //
+                // What it draws for now is the state it was written for: the
+                // cache is empty AND no first answer has ever landed — a fresh
+                // install or a fresh login whose first sync failed or is still in
+                // flight, which is the one case where "nothing completed yet" is
+                // a claim this screen has no business making.
                 if showsCompletedFeedSkeleton {
                     // Today stacks its placeholder over its rows so the two share one
                     // slot; a `List` has no such move — its sections are siblings by

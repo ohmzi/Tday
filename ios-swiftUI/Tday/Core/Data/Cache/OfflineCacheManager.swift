@@ -114,6 +114,23 @@ final class OfflineCacheManager {
         lastState.defaultHomeScreen
     }
 
+    /// The same cheap read, for the stamp that answers "has this install ever heard back from its
+    /// workspace at all" — see `feedFirstAnswerLanded(in:)`, which is its only caller and which is
+    /// asked from inside the synchronous hydrates of three feed view models. Those hydrates run on
+    /// every cache write, and `TodoListViewModel.hydrateFromCache` already records what a second
+    /// `loadOfflineState()` would cost there: every write wakes every live feed, so a hydrate that
+    /// re-reads the whole cache doubles the main-actor cost of every sync. This is one `Int64` that
+    /// is already in memory.
+    ///
+    /// `lastState` mirrors it on both write paths, which is what makes the mirror safe to trust for
+    /// this field in particular: the content-changed path assigns the whole normalized state, and
+    /// the path that finds nothing observer-visible changed still copies this stamp across before
+    /// returning — a first sync against an EMPTY account is exactly that second case, and it is the
+    /// one case this accessor exists for.
+    var lastSuccessfulSyncEpochMsSnapshot: Int64 {
+        lastState.lastSuccessfulSyncEpochMs
+    }
+
     func loadOfflineState() -> OfflineSyncState {
         let todos = (try? modelContext.fetch(FetchDescriptor<CachedTodoEntity>())) ?? []
         let floaters = (try? modelContext.fetch(FetchDescriptor<CachedFloaterEntity>())) ?? []
@@ -297,10 +314,35 @@ final class OfflineCacheManager {
             // snapshot re-serialization, and the fan-out notification entirely, since nothing
             // observer-visible changed.
             if timestampsChanged {
+                // The one timestamp move that IS observer-visible, and the only one: zero to
+                // non-zero on the successful-sync stamp is a workspace answering for the very
+                // first time. `feedFirstAnswerLanded(in:)` reads exactly this field, and the three
+                // feed view models re-read it only inside their hydrates — which off the refresh
+                // path run on `.offlineCacheDidChange` and nowhere else.
+                //
+                // Without this post, a first successful sync against an EMPTY account is silent:
+                // no row moved, so `contentChanged` is false, so this branch returns false, so
+                // `SyncManager` skips its own `notifyCacheChanged()`. The stamp lands and nothing
+                // asks again. The screens keep drawing the row skeleton `feedAnswer` gives an
+                // unanswered feed — three grey bars over a workspace that has now been counted and
+                // found empty — until a pull or a re-navigation happens to re-hydrate. Reachable
+                // on a fresh install whose bootstrap sync failed (offline launch) and whose later
+                // background sync succeeded. Android hit the same wall and answered it with
+                // `FirstAnswerSignal.version`; this is the same signal on the mechanism this
+                // client already has.
+                let firstAnswerJustLanded = lastState.lastSuccessfulSyncEpochMs == 0 &&
+                    normalizedState.lastSuccessfulSyncEpochMs > 0
                 upsertMetadata(normalizedState)
                 try? modelContext.save()
                 lastState.lastSuccessfulSyncEpochMs = normalizedState.lastSuccessfulSyncEpochMs
                 lastState.lastSyncAttemptEpochMs = normalizedState.lastSyncAttemptEpochMs
+                // Deliberately NOT behind `notify`. That flag is a batching contract — "the
+                // caller will post once after its last save" — and the caller only keeps it when
+                // something changed, which by definition is not this case. A once-per-install
+                // transition is not a fan-out worth batching.
+                if firstAnswerJustLanded {
+                    NotificationCenter.default.post(name: .offlineCacheDidChange, object: nil)
+                }
             }
             return false
         }

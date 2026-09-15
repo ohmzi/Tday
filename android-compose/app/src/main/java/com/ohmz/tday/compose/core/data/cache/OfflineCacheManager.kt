@@ -142,6 +142,27 @@ class OfflineCacheManager @Inject constructor(
         return syncMetadataDao.get()?.defaultHomeScreen ?: "scheduled"
     }
 
+    /**
+     * The same lightweight read for the one metadata field that answers "has this install ever
+     * heard from its workspace at all" — see [FirstAnswerSignal], its only caller.
+     *
+     * It is a sibling of [defaultHomeScreenSnapshotBlocking] rather than a call to
+     * [loadOfflineStateBlocking] for a reason its caller makes sharper than "the full read is
+     * bigger": the question is asked from inside the synchronous hydrates of three feed
+     * ViewModels, on the main thread, and those hydrates run on EVERY cache write — every sync,
+     * every mutation, every widget check-off. Answering one `Long` with seven table scans and
+     * seven record mappings, discarding all of them, is the kind of cost that only shows up as a
+     * dropped frame on a big workspace on a slow device, which is where it would matter most.
+     * One single-row `sync_metadata` query says exactly as much.
+     *
+     * Unlike [loadOfflineStateBlocking] this deliberately does NOT refresh `lastPersistedState`:
+     * a partial state is not one, and no caller of this needs the mirror moved.
+     */
+    fun lastSuccessfulSyncEpochMsBlocking(): Long {
+        ensureMigrated()
+        return syncMetadataDao.get()?.lastSuccessfulSyncEpochMs ?: 0L
+    }
+
     suspend fun saveOfflineState(
         state: OfflineSyncState,
         consumedMutationIds: Set<String>? = null,

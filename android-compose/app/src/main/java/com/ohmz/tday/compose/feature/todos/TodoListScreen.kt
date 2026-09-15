@@ -164,6 +164,7 @@ import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
+import com.ohmz.tday.compose.core.ui.FeedAnswer
 import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.RootFeedHeroHeader
@@ -184,6 +185,7 @@ import com.ohmz.tday.compose.core.ui.TdayTaskRowMetrics
 import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeleton
 import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeletonGroup
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.feedAnswer
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
 import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
@@ -556,6 +558,10 @@ internal fun shouldCelebrateEmptyState(
  * nor the inline scene covered -- has a unit test rather than only a
  * device/emulator check.
  *
+ * [answer] in place of the `!isLoading` this used to carry: see
+ * [shouldShowFloaterEmptyScene]. A celebration withdrawn mid-refresh is the same
+ * flash as the illustration's with a worse message on it.
+ *
  * Despite the name, nothing inside is actually Today-specific -- every
  * parameter is a plain boolean the caller derives however its own mode
  * needs to. [TodoListScreen] now also calls this for Scheduled/Priority/All/
@@ -565,7 +571,7 @@ internal fun shouldCelebrateEmptyState(
 internal fun shouldShowTodayEarlierExpandedCelebration(
     todayHasEarlierItems: Boolean,
     itemsEmpty: Boolean,
-    isLoading: Boolean,
+    answer: FeedAnswer,
     suppressInitialTodayTimeline: Boolean,
     scopedSearchActive: Boolean,
     earlierCollapsed: Boolean,
@@ -573,7 +579,7 @@ internal fun shouldShowTodayEarlierExpandedCelebration(
 ): Boolean {
     return todayHasEarlierItems &&
             itemsEmpty &&
-            !isLoading &&
+            answer == FeedAnswer.Empty &&
             !suppressInitialTodayTimeline &&
             !scopedSearchActive &&
             !earlierCollapsed &&
@@ -780,17 +786,27 @@ internal fun earlierSceneFollowsSection(sectionKey: String): Boolean =
  * [TodoListScreen], which drops [earlierCollapsed] and the celebration term): an
  * item its guard has already taken out of the list has no exit left to play, so
  * the mount has to outlive the visibility.
+ *
+ * [answer] replaced a `!isLoading` term here for the reason argued in full at
+ * [shouldShowFloaterEmptyScene]: `isLoading` is written by nothing but
+ * `refreshInternal(showLoading = true)`, so it meant "a refresh over an answer
+ * already on screen" and was being read as "no answer yet". Earlier's scene is
+ * rarer to catch mid-pull than the Anytime home's, not different in kind, and
+ * one gate copy-pasted across scopes is fixed in all of them or in none.
+ * [scopeItemsEmpty] stays beside it though [answer] already carries the same
+ * count: it is the term the surrounding predicate is ABOUT, and reading it here
+ * is how this stays a sentence rather than an enum comparison.
  */
 internal fun shouldShowEarlierScene(
     scopeHasEarlierItems: Boolean,
     scopeItemsEmpty: Boolean,
-    isLoading: Boolean,
+    answer: FeedAnswer,
     suppressInitialTimeline: Boolean,
     scopedSearchActive: Boolean,
     earlierCollapsed: Boolean,
 ): Boolean = scopeHasEarlierItems &&
         scopeItemsEmpty &&
-        !isLoading &&
+        answer == FeedAnswer.Empty &&
         !suppressInitialTimeline &&
         !scopedSearchActive &&
         earlierCollapsed
@@ -831,17 +847,26 @@ internal fun earlierSceneAnimatesHandoff(
  * same reason: on this screen a decision that is not a function is a decision
  * nothing checks, and there is no device here to check it on.
  *
- * Raw [itemsEmpty] rather than `scopeItemsEmpty`, deliberately, and this is the
- * one place on this screen where the raw count is the right one. The scoped
+ * `!isLoading` was the last of that shape to go, and it was the REPORTED BUG:
+ * pulling this feed down withdrew the illustration, the heading and the body,
+ * collapsed the page upward, and then put the whole block back when the refresh
+ * returned with nothing new. An empty state is an answer, not an absence of one,
+ * and a refresh is a request to check that answer rather than a reason to
+ * withdraw it. [FeedAnswer] carries the distinction `isLoading` never could and
+ * has no loading term in it at all, so there is no longer a parameter here for a
+ * refresh flag to be passed to.
+ *
+ * The emptiness term went in with it. It has not been dropped -- it is the
+ * `rowsEmpty` this feed passes to [feedAnswer], and this is still the one place
+ * on this screen where the RAW count is the right one to pass. The scoped
  * screens subtract Earlier out because an overdue task waiting does not stop
  * today's work being finished; an Anytime task has no date, so this feed has no
  * Earlier bucket to subtract and nothing for the distinction to mean.
  */
 internal fun shouldShowFloaterEmptyScene(
     isFloaterTaskHomeScreen: Boolean,
-    itemsEmpty: Boolean,
-    isLoading: Boolean,
-): Boolean = isFloaterTaskHomeScreen && itemsEmpty && !isLoading
+    answer: FeedAnswer,
+): Boolean = isFloaterTaskHomeScreen && answer == FeedAnswer.Empty
 
 /**
  * ...and whether it is MOUNTED, which is not the same question and is the half
@@ -1016,6 +1041,28 @@ fun TodoListScreen( // skipcq: KT-R1006
     // `items.isEmpty()` for it; see [nonEarlierSectionsEmpty] for why the
     // other modes need more than that.
     val scopeItemsEmpty = nonEarlierSectionsEmpty(scopeSections)
+    // THE GATE. Everything below that used to ask `!uiState.isLoading` asks one
+    // of these two instead, and the whole of the fix is that neither of them can
+    // be moved by a refresh -- see [feedAnswer], which has no loading parameter
+    // to be handed one. `isLoading` keeps exactly one job on this screen from
+    // here on: it drives the pull indicator (`isRefreshing` below) and the error
+    // card. It may drive chrome; it may never drive the scene.
+    //
+    // Two values because the two emptiness terms on this screen are genuinely
+    // different questions, and each gate already knows which one it means: the
+    // scoped feeds subtract Earlier out ([nonEarlierSectionsEmpty]), the Anytime
+    // home has no Earlier bucket and uses the raw count. The remaining terms are
+    // shared -- one cache read, one workspace.
+    val scopeAnswer = feedAnswer(
+        storeRead = uiState.hasHydratedSnapshot,
+        rowsEmpty = scopeItemsEmpty,
+        firstAnswerLanded = uiState.firstAnswerLanded,
+    )
+    val feedItemsAnswer = feedAnswer(
+        storeRead = uiState.hasHydratedSnapshot,
+        rowsEmpty = uiState.items.isEmpty(),
+        firstAnswerLanded = uiState.firstAnswerLanded,
+    )
     // `celebrationCancelledAtMs` is the ViewModel's, and it has to be: undo lives
     // in `UndoableDeleteCoordinator`, a @Singleton on its own MainScope with no
     // per-screen identity and no way to reach back into this composition. The
@@ -1110,9 +1157,16 @@ fun TodoListScreen( // skipcq: KT-R1006
     // (requirement 2/3) -- and both need to agree on the same
     // glyph/title/description and fire the same one-shot haptic exactly
     // once between them, not once each.
+    // `scopeAnswer` and not `!uiState.isLoading`, and this one matters MORE
+    // rather than less: "all done today" withdrawn mid-refresh is the reported
+    // flash with a worse message on it, and it takes the completion haptic below
+    // with it -- `LaunchedEffect(isDayDone)` re-fires when the refresh returns.
+    // For Today `scopeItemsEmpty` IS `items.isEmpty()` (Today's `items` excludes
+    // Earlier by construction), so the two emptiness terms here agree by
+    // definition rather than by coincidence.
     val isDayDone = uiState.mode == TodoListMode.TODAY &&
             uiState.items.isEmpty() &&
-            !uiState.isLoading &&
+            scopeAnswer == FeedAnswer.Empty &&
             !suppressInitialTodayTimeline &&
             !scopedSearchActive &&
             uiState.completedTodayCount > 0
@@ -1576,7 +1630,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     val showEarlierIllustration = shouldShowEarlierScene(
         scopeHasEarlierItems = scopeHasEarlierItems,
         scopeItemsEmpty = scopeItemsEmpty,
-        isLoading = uiState.isLoading,
+        answer = scopeAnswer,
         suppressInitialTimeline = suppressInitialTodayTimeline,
         scopedSearchActive = scopedSearchActive,
         earlierCollapsed = collapsedSectionKeys.contains(EARLIER_SECTION_KEY),
@@ -1604,7 +1658,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     val showEarlierExpandedCelebration = shouldShowTodayEarlierExpandedCelebration(
         todayHasEarlierItems = scopeHasEarlierItems,
         itemsEmpty = scopeItemsEmpty,
-        isLoading = uiState.isLoading,
+        answer = scopeAnswer,
         suppressInitialTodayTimeline = suppressInitialTodayTimeline,
         scopedSearchActive = scopedSearchActive,
         earlierCollapsed = collapsedSectionKeys.contains(EARLIER_SECTION_KEY),
@@ -1643,12 +1697,30 @@ fun TodoListScreen( // skipcq: KT-R1006
         earlierFoldedForCelebrationMs = celebrationStampMs
         collapsedSectionKeys = collapsedSectionKeys + EARLIER_SECTION_KEY
     }
-    // The flat feed's placeholder, and how long its lazy item outlives it. Both
+    // The feed's placeholder, and how long its lazy item outlives it. Both
     // hoisted because `LazyListScope` is not a composition — by the time the list
     // builds itself its guard has to already be a plain Boolean.
-    val taskFeedSkeletonVisible = !showSectionedTimeline &&
-            uiState.items.isEmpty() &&
-            uiState.isLoading
+    // Revived, deliberately. This guard used to read `!showSectionedTimeline &&
+    // items.isEmpty() && isLoading`, and `showSectionedTimeline` above
+    // enumerates all seven `TodoListMode` values -- so it is a constant `true`,
+    // `!showSectionedTimeline` is a constant `false`, and the Phase 9 row
+    // skeleton below has never once been drawn on this screen. The term read
+    // like a mode filter and was a tautology; it is gone rather than corrected,
+    // because the mode it would have excluded does not exist.
+    //
+    // What replaces the `isLoading` half is the state that flag was standing in
+    // for and getting backwards. AWAITING_FIRST is the only case with nothing to
+    // say yet -- the cache read has not landed, or it landed empty on an install
+    // whose first sync has not come home -- and it is exactly the case a
+    // placeholder is for. No spinner is introduced and no vocabulary is invented:
+    // the skeleton was already written, already has its hand-over, and already
+    // asks the motion preference for itself.
+    //
+    // Search is excluded here as it is at every other scene on this screen: a
+    // live query is answered out of `items` locally, so a skeleton per keystroke
+    // would be a placeholder in front of an answer that never left.
+    val taskFeedSkeletonVisible = feedItemsAnswer == FeedAnswer.AwaitingFirst &&
+            !scopedSearchActive
     val taskFeedSkeletonMounted = rememberTdayTaskRowSkeletonMounted(taskFeedSkeletonVisible)
     // The Anytime home's inline scene, hoisted for the reason the placeholder
     // above it is: `LazyListScope` is not a composition, so both its visibility
@@ -1656,8 +1728,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     // itself. See [shouldMountFloaterEmptyScene] for why those are two values.
     val floaterEmptySceneVisible = shouldShowFloaterEmptyScene(
         isFloaterTaskHomeScreen = isFloaterTaskHomeScreen,
-        itemsEmpty = uiState.items.isEmpty(),
-        isLoading = uiState.isLoading,
+        answer = feedItemsAnswer,
     )
     // Seeded from the live value rather than from `false`, and keyed by scope,
     // for `earlierSceneTransition`'s reasons exactly: arriving at a feed that is
@@ -1829,7 +1900,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     // left.
     val earlierScenePresent = scopeHasEarlierItems &&
             scopeItemsEmpty &&
-            !uiState.isLoading &&
+            scopeAnswer == FeedAnswer.Empty &&
             !suppressInitialTodayTimeline &&
             !scopedSearchActive
     // The scene's own visibility, and the transition that plays it, hoisted out of the
@@ -2728,11 +2799,14 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // dismisses the field.
                     if (!showFloaterTaskHomeSearchResults) {
 
-                    // The flat feed's first paint. This was a card with the word
-                    // "Loading" in it, and the rows then appeared underneath in
-                    // one frame; the skeleton draws the rows' own geometry
-                    // instead, so the frame the data lands on changes colour and
-                    // nothing else.
+                    // The feed's first paint — every scope's, now. This was a
+                    // card with the word "Loading" in it, and the rows then
+                    // appeared underneath in one frame; the skeleton draws the
+                    // rows' own geometry instead, so the frame the data lands on
+                    // changes colour and nothing else. Its guard named a "flat
+                    // feed" and excluded the sectioned ones, but the mode list it
+                    // tested against holds all seven modes, so what it actually
+                    // excluded was everything — see [taskFeedSkeletonVisible].
                     //
                     // Mounted for a window rather than removed by its guard: an
                     // item that its guard has already taken out of the list has no
@@ -2962,11 +3036,22 @@ fun TodoListScreen( // skipcq: KT-R1006
             // nothing left to keep alive for.
             //
             // What else now leaves on this exit, stated rather than discovered:
-            // every other way this condition goes false. A pull-to-refresh over an
-            // already-empty scope sets `isLoading` and used to cut the scene; it
-            // fades it now. Same destination, 150 ms of paint, and the shortest
-            // rung on the ladder -- an exit is never longer than the enter it
-            // undoes, and this one has no enter at all.
+            // every other way this condition goes false. That list used to include
+            // a pull-to-refresh over an already-empty scope -- `isLoading` went
+            // true and cut the scene, and once this exit existed it collapsed the
+            // scene instead of cutting it, which is the flash the user reported.
+            // It is not on the list any more: `scopeAnswer` has no loading term in
+            // it, so a refresh moves nothing here. What remains is an arrival, and
+            // an arrival is what the exit was written for. Same destination, 150 ms
+            // of paint, and the shortest rung on the ladder -- an exit is never
+            // longer than the enter it undoes, and this one has no enter at all.
+            //
+            // `suppressInitialTodayTimeline` is left standing beside `scopeAnswer`
+            // though for Today the two say the same thing -- it is literally
+            // `!hasHydratedSnapshot && items.isEmpty()`, which is the cache-read
+            // half of AWAITING_FIRST. That agreement is evidence the right field
+            // was picked, not a reason to delete the older one; it is the term the
+            // other four modes do NOT have, and it predates this fix.
             //
             // The overdue path does NOT come through here (`!scopeHasEarlierItems`
             // defers it to the inline scene under Earlier's header), and must not:
@@ -2974,7 +3059,8 @@ fun TodoListScreen( // skipcq: KT-R1006
             // is the v0.7.25 presentation and was never the thing that was wrong.
             // Only the confetti over it was.
             AnimatedVisibility(
-                visible = scopeItemsEmpty && !uiState.isLoading && !suppressInitialTodayTimeline &&
+                visible = scopeItemsEmpty && scopeAnswer == FeedAnswer.Empty &&
+                    !suppressInitialTodayTimeline &&
                     !isFloaterTaskHomeScreen && !scopedSearchActive && !scopeHasEarlierItems,
                 enter = EnterTransition.None,
                 exit = if (rememberTdayMotionEnabled()) {
