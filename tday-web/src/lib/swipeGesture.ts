@@ -179,3 +179,56 @@ export const SWIPE_SETTLE_OPEN = "transform var(--tday-duration-emphasis) var(--
  * fading either way.
  */
 export const SWIPE_SETTLE_INSTANT = "transform 0s";
+
+/**
+ * Whether this row should shut, given who holds the list's single swipe slot.
+ *
+ * The dismissal decision as one expression, lifted out of the three row
+ * containers that each spelled it `id !== todoItem.id` inline. Android carries
+ * the same function under the same name
+ * (`core/ui/TaskSwipeDismissPolicy.kt`) and iOS carries it as
+ * `TaskSwipeDismissPolicy.shouldClose`, with the same four rows in each of the
+ * three test files: three clients answering one question the same way, checkable
+ * on a machine with no device attached.
+ *
+ * The clause deliberately *absent* is `openId != null`. Android's rows used to
+ * carry it and it meant the slot could be handed from row to row but never
+ * revoked — writing `null` closed nothing, which is every dismissal this change
+ * adds. Web never had that bug, because web's bus only ever carries the id of a
+ * row that just claimed the slot; the term is left out here all the same, so
+ * that the three truth tables are one truth table and a future `null` broadcast
+ * on the bus means what it says.
+ *
+ * @param openId - who holds the slot. `null` is *everybody closes*, not *nobody
+ *   moves*.
+ * @param rowId - the row asking. A row never closes itself out from under its
+ *   own finger: the row holding the slot is the row the user is working.
+ * @param isOpen - whether this row has anything to close. Web reads it off its
+ *   own offset (`swipeX !== 0`) rather than from any shared state, which is the
+ *   whole of web's answer to "how does a row know?" — it does not ask.
+ */
+export function shouldCloseSwipeRow(openId: string | null, rowId: string, isOpen: boolean): boolean {
+  return openId !== rowId && isOpen;
+}
+
+/**
+ * Whether a dismissal arriving from outside a row may move it right now.
+ *
+ * The single most important negative case in this feature: a finger that is on
+ * the row owns the row. Once a gesture has locked horizontal the user is
+ * dragging these actions — further open, or back toward home — and an outside
+ * tap or a scroll landing in the middle of that would take the row away
+ * mid-drag, which no interceptor is allowed to do. Android buys the same refusal
+ * with its tap-slop test and iOS with a guard on its own pan's state; web states
+ * it as a predicate because web's interceptor fires on the pointer-*down* rather
+ * than on a tap-up and therefore has nothing else standing between it and a live
+ * drag.
+ *
+ * A gesture that has not locked yet (`null`) or has locked vertical (`"y"`) is
+ * not driving this row, so both of those may be dismissed through. The `"y"`
+ * case is the one that actually happens: it is the finger that started on the
+ * open row and turned into a scroll.
+ */
+export function canDismissMidGesture(axis: "x" | "y" | null): boolean {
+  return axis !== "x";
+}
