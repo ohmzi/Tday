@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -149,8 +150,42 @@ object TdayHeroTitleMetrics {
      * docked title is one character and a "…" — which reads as a bug rather
      * than as a truncation. The web bar's twin constant carries the same
      * number and the same reasoning.
+     *
+     * It gates whether a title is shown AT ALL. It deliberately does not gate
+     * whether one fits — see [tdayBarTitleReserve], where confusing the two is
+     * the bug this constant was once blamed for.
      */
     val DockedTitleMinWidth = 56.dp
+
+    /**
+     * How far the docked title may shrink to stay whole, before it gives up and
+     * ellipsizes instead.
+     *
+     * iOS's number, from the same bar: `.minimumScaleFactor(0.72)` on
+     * `CalendarElasticTopBar` (`Feature/Calendar/CalendarScreen.swift`), under a
+     * comment saying the two trailing buttons leave the docked title narrower
+     * than "Calendario" or "Calendrier" and that it should be scaled rather than
+     * clipped. Android had no equivalent and hard-ellipsized; this is that
+     * mitigation carried across rather than a second one invented beside it.
+     *
+     * A floor rather than no floor, because the handoff this title belongs to is
+     * built on the two copies being the same size — see [DockedTitleRevealStart]
+     * and the note above it. Every step down from 1 is a step away from that, so
+     * the shrink buys a whole word only while the difference stays a difference
+     * in size; past roughly a quarter the docked copy reads as a different piece
+     * of text arriving, and an honest ellipsis is better than that.
+     *
+     * What it costs the screens this change was reported from is small. The
+     * English titles there need almost nothing: "Calendar" on a 360dp phone
+     * wants about 0.97, deep inside the floor. Where it is spent in full is
+     * TodoListScreen, whose three- and four-action scopes leave 68dp and 4dp at
+     * 360 — there the floor is reached and the ellipsis takes over, which is the
+     * floor doing its job rather than failing at it: a name at 0.4 of the size it
+     * is handing off from is not the same title arriving, it is a different one.
+     * The long localized names iOS named ("Calendario", "Calendrier") sit between
+     * the two.
+     */
+    const val DockedTitleMinScale = 0.72f
 
     /** Band below the toolbar that dissolves content as it passes under it. */
     val ContentFadeHeight = 24.dp
@@ -436,6 +471,55 @@ fun TdayHeroToolbar(
     var actionsWidth by remember { mutableStateOf(0.dp) }
     var barWidth by remember { mutableStateOf(0.dp) }
 
+    // The docked title's style, in one place because it is used twice and the
+    // two uses have to agree exactly: it is what the title is DRAWN with below,
+    // and it is what the title is MEASURED with here. Written as two expressions
+    // they would drift, and a measurement taken against a style the text is not
+    // drawn in is worse than no measurement — it would hand the reserve a
+    // confident wrong number.
+    //
+    // The line box is trimmed to the glyphs and centred inside it, so what gets
+    // centred against the back button is the text you can see rather than the
+    // font's ascent and descent — a 32sp face carries enough of both to sit
+    // visibly high otherwise.
+    //
+    // No `fontFamily` here, which is not an omission this change is free to
+    // correct on its own — see the face note on [tdayBarTitleReserve]. It is why
+    // the width below is MEASURED rather than looked up: the face this resolves
+    // to is the device's, so the repo does not know it and must not assume it.
+    val dockedTitleStyle = LocalTextStyle.current.merge(
+        TextStyle(
+            fontSize = m.TitleSize,
+            lineHeight = m.TitleSize,
+            fontWeight = FontWeight.ExtraBold,
+            lineHeightStyle = LineHeightStyle(
+                alignment = LineHeightStyle.Alignment.Center,
+                trim = LineHeightStyle.Trim.Both,
+            ),
+            platformStyle = PlatformTextStyle(includeFontPadding = false),
+        ),
+    )
+    val textMeasurer = rememberTextMeasurer()
+    // What the name WANTS, at the full docked size and with no width imposed on
+    // it, so the reserve can choose a branch by asking whether the title fits
+    // rather than by guessing from a constant. `softWrap = false` is what makes
+    // it the natural width rather than a wrapped one.
+    //
+    // Measured here and not in the reserve because only a composition can reach
+    // the font resolver and the density — and keeping the reserve a pure
+    // function of Dp is what makes it testable. `fontScale` is a key because the
+    // system font size changes this number without changing the style object.
+    val titleWidth = remember(title, dockedTitleStyle, density.density, density.fontScale) {
+        with(density) {
+            textMeasurer.measure(
+                text = title,
+                style = dockedTitleStyle,
+                maxLines = 1,
+                softWrap = false,
+            ).size.width.toDp()
+        }
+    }
+
     Box(modifier = modifier.fillMaxWidth()) {
         // Drawn FIRST, and offset below the bar rather than stacked after it:
         // as a Column sibling it painted over the back button's shadow and cut
@@ -482,7 +566,63 @@ fun TdayHeroToolbar(
                 barWidth = barWidth,
                 leading = if (onBack != null) TdayDimens.FabSize else 0.dp,
                 trailing = actionsWidth,
+                titleWidth = titleWidth,
             )
+
+            // Last resort, after the reserve has already given up centring to
+            // buy width: shrink the name rather than cut letters off it.
+            //
+            // This is the one place the docked copy is allowed to stop being the
+            // same size as the block's copy, and it is deliberate that it is
+            // conditional. A docked title with its OWN smaller size — a toolbar
+            // title in the ordinary sense — was the obvious alternative and it
+            // is the wrong fix here, for a reason that is visible in the
+            // measurements: the two screens with the LONGEST titles ("Morning
+            // Sweep" at 237.4dp, "How-To & Tips" at 226.9dp) fit this bar at
+            // 412dp, and the one that broke is among the SHORTEST. Size was
+            // never the variable — the trailing cluster is. Calendar was the
+            // only one of the six single-purpose screens paying for two
+            // controls, so it was the only one the mirrored reserve overcharged
+            // into a truncation. Shrinking every title on every screen to buy
+            // width that six of the seven did not need would have spent the
+            // handoff — the crossfade works because the name does not change
+            // shape — to work around arithmetic, and left the overcharge in
+            // place to break the next screen that grows a second action.
+            //
+            // So the size stays 32 wherever the name fits: all six of those
+            // screens at 360 and up, and Calendar's bar at 412. It yields only
+            // where the bar is genuinely too narrow — which at that point is a
+            // choice between a shrunken word and a cut one.
+            //
+            // The seventh caller is the exception, and it is named here rather
+            // than left to be rediscovered. TodoListScreen puts up to four
+            // circles in this row — search, sweep, summarize, select, 248dp with
+            // the gaps — and three on every ordinary scope while the AI summary
+            // setting is on, which is its default. Those bars are past
+            // what any reserve can buy back: mirrored is negative there, so they
+            // were already on the per-side branch before this change and nothing
+            // here made them worse, but per-side leaves 120dp at 412 and 68dp at
+            // 360, and the shrink is the whole of what they get. Below 412 the
+            // longer scope names ("Scheduled", "All Tasks") reach the floor and
+            // ellipsize; the four-action bars ellipsize at 412 and carry no title
+            // at all at 393 and 360. The lever there is the cluster — an overflow
+            // menu — which is a product decision, not this arithmetic.
+            //
+            // Ellipsis is still the backstop below [DockedTitleMinScale], and
+            // still the backstop if this arithmetic is off: the Text keeps its
+            // `maxLines = 1` and `TextOverflow.Ellipsis`. Nothing here can push
+            // glyphs outside the reserve, because the reserve is padding and the
+            // text is clipped to it either way.
+            val titleRoom = barWidth - titleReserve.start - titleReserve.end
+            val titleScale = tdayBarTitleScale(titleWidth = titleWidth, titleRoom = titleRoom)
+            val dockedTitleStyleFitted = if (titleScale == 1f) {
+                dockedTitleStyle
+            } else {
+                dockedTitleStyle.copy(
+                    fontSize = dockedTitleStyle.fontSize * titleScale,
+                    lineHeight = dockedTitleStyle.lineHeight * titleScale,
+                )
+            }
             if (onBack != null) {
                 Box(modifier = Modifier.align(Alignment.CenterStart)) {
                     TdayHeroBackButton(
@@ -494,25 +634,11 @@ fun TdayHeroToolbar(
 
             // The bar's copy of the title. Only ever visible once the block's
             // own copy has gone, so the two never read as two titles at once.
-            //
-            // The line box is trimmed to the glyphs and centred inside it, so
-            // what gets centred against the back button is the text you can see
-            // rather than the font's ascent and descent — a 32sp face carries
-            // enough of both to sit visibly high otherwise.
+            // Size, weight and line box all come from [dockedTitleStyle] above —
+            // the same object the measurement was taken against.
             Text(
                 text = title,
-                fontSize = m.TitleSize,
-                lineHeight = m.TitleSize,
-                style = LocalTextStyle.current.merge(
-                    TextStyle(
-                        lineHeightStyle = LineHeightStyle(
-                            alignment = LineHeightStyle.Alignment.Center,
-                            trim = LineHeightStyle.Trim.Both,
-                        ),
-                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                    ),
-                ),
-                fontWeight = FontWeight.ExtraBold,
+                style = dockedTitleStyleFitted,
                 color = resolvedTitleColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -721,26 +847,176 @@ internal fun tdayBarButtonContainerColor(): Color {
  *
  * The title is `Alignment.Center` in a full-width Box, so with no reserve a long
  * name simply ellipsized at the bar's own edges and painted straight under the
- * back button and the actions. The rule is the web bar's, so the two agree:
- * reserve the WIDER side twice while that still leaves [DockedTitleMinWidth] —
- * which keeps the title centred on the BAR rather than on the leftovers — then
- * fall back to reserving each side for what actually sits there, and give up the
- * title entirely when even that leaves nothing. The block's own copy above is
- * the screen's real heading in every case.
+ * back button and the actions. The rule degrades in three steps: reserve the
+ * WIDER side twice while that still fits the title — which keeps the title
+ * centred on the BAR rather than on the leftovers — then fall back to reserving
+ * each side for what actually sits there, and give up the title entirely when
+ * even that leaves less than [DockedTitleMinWidth]. The block's own copy above
+ * is the screen's real heading in every case.
+ *
+ * ## What the middle step used to ask, and why it was wrong
+ *
+ * It used to choose the mirrored reserve while it left [DockedTitleMinWidth] —
+ * asking whether a STUMP would fit, not whether the TITLE would. Those are
+ * different questions and 56dp is only an answer to the first one. The result
+ * was the Calendar bar reported from a device: on a 412dp phone it is 376dp
+ * wide, the back button is 56, the two trailing controls are 120, so the
+ * mirrored reserve is 128 a side and the title gets 120dp — while "Calendar" at
+ * 32sp ExtraBold wants 136.7dp. It rendered "Cale…". The per-side reserve on the
+ * very same bar would have given it 184dp and it would have fitted with room to
+ * spare; the old gate never released it, because 120 clears 56 comfortably.
+ *
+ * ## What those numbers are, and what they are not
+ *
+ * They are arithmetic, not guesses: `res/font/nunito_wght.ttf` instantiated at
+ * wght 800 — what `FontWeight.ExtraBold` maps to in `ui/theme/Type.kt` — summing
+ * `hmtx` advances plus the GPOS pair kerning at 32/1000. That is where 136.74
+ * for "Calendar" comes from, and every other width quoted in this file and in
+ * `TdayBarTitleReserveTest`. No `letterSpacing` is set anywhere on this path, so
+ * there is no tracking to add.
+ *
+ * They are not, however, what this `Text` will draw. Nothing on this path names
+ * a `fontFamily`: the style is `LocalTextStyle.current` merged with a size, a
+ * weight and a line box; `MaterialTheme` provides `LocalTypography`, not
+ * `LocalTextStyle`; and material3's default for that local is `TextStyle.Default`
+ * with a null family. Nunito reaches text in this app only through
+ * `MaterialTheme.typography.*` or an explicit `fontFamily =`, and this call site
+ * uses neither — so the docked title, the block's copy above it and
+ * `RootFeedHeroHeader`'s title all resolve `FontFamily.Default`, which is
+ * whatever the handset ships as its system face.
+ *
+ * So read the figures as a worked example of the GEOMETRY. They are why 120dp
+ * was never going to hold this word at this size, and the ratios they
+ * demonstrate hold in any face of comparable width — but they are not a
+ * prediction of what a given device measures, and no number committed to this
+ * repo could be. Which is the argument for the shape of the fix rather than
+ * against it: the reserve branches on a [titleWidth] taken at runtime by a
+ * `TextMeasurer` against the very style object the `Text` is drawn with, so the
+ * arithmetic stays right whatever the device resolves and however the face
+ * changes underneath it.
+ *
+ * ## The face itself is a separate, real divergence
+ *
+ * iOS draws this same title in `Nunito-ExtraBold` (`.tdayRounded(size: 32,
+ * weight: .heavy)` → `TdayFont.postScriptName(for:)`) and web in Nunito 900,
+ * and the XML theme here asks for `@font/nunito_app` — which Compose does not
+ * read. Android's hero titles are therefore the one place in the product where
+ * the name is not in the product's typeface. That is owed, and it is written
+ * down here so it is found rather than rediscovered; it is deliberately not paid
+ * in this change. It belongs to all three hero-title sites at once, it is a
+ * visible restyle rather than a layout fix, and folding a restyle into a
+ * truncation repair makes one commit that cannot be reverted in halves.
+ *
+ * ## Why the mirrored reserve stays the first choice
+ *
+ * Because when it fits, it is right. This title crossfades with the block's own
+ * copy, which is centred on the BAR, so an asymmetric reserve slides the name
+ * sideways while both are on screen — iOS measured that at 32pt of travel and
+ * wrote it down (`CalendarElasticTopBar`, `Feature/Calendar/CalendarScreen.swift`).
+ * Centring is not decoration here, it is what makes the handoff read as one
+ * title moving. So it is given up only where keeping it is what breaks the word,
+ * which is the trade the whole change turns on: a title the reader can read
+ * beats a title that is perfectly centred. Where neither reserve fits, the wider
+ * one still wins — the centre line is already lost at that point, and all that
+ * is left to choose is how much of the name survives.
+ *
+ * ## The three clients
+ *
+ * Web's bar is the twin of this one and still runs the OLD rule, constant for
+ * constant (`symmetric = Math.max(leading, trailing) + gap`, gated on
+ * `dockedTitleMinWidth: 56`, in `src/components/app/NativePageHeader.tsx`). It
+ * has the same defect and worse — its "Today" control is a text pill rather than
+ * a collapsing circle, so the Calendar title there gets about 68px against the
+ * 146.6px "Calendar" wants at its 2.1rem/900 — and it owes this change. It is
+ * not made here because it is not the same edit: this one needs the title
+ * measured, which on web is a canvas or a reflow rather than four lines in a
+ * frame callback.
+ *
+ * iOS is split and must not be "reconciled" by someone who only reads one half.
+ * `CalendarElasticTopBar` mirrors, for the crossfade reason quoted above.
+ * `TimelineTopBar` (`Feature/Todos/TodoListScreen.swift`) reserves per side
+ * UNCONDITIONALLY and argues against mirroring, because with three actions a
+ * mirrored reserve there exceeds the screen width. Both are right about their
+ * own bar, and the rule below is what the two of them are separately reaching
+ * for: mirror while it fits, per-side when it does not.
+ *
+ * Both iOS comments were corrected alongside this change rather than left to
+ * contradict it: `CalendarElasticTopBar` used to state as fact that Android
+ * mirrors unconditionally, which stopped being true here. It survives its own
+ * generous reserve because of `.minimumScaleFactor(0.72)`, which is where
+ * [TdayHeroTitleMetrics.DockedTitleMinScale] came from. `TimelineTopBar` has no
+ * such modifier, so the bar with the MOST actions on iOS is the one with no
+ * shrink at all — the mirror image of what was wrong here, and noted there as
+ * owed.
+ *
+ * `internal` rather than private, and taking [titleWidth] rather than reading it
+ * from a composition, so the arithmetic above can be pinned by
+ * `TdayBarTitleReserveTest`. There is no emulator and no Compose UI test in this
+ * module, so a JVM test over a pure function is the only way a layout claim here
+ * gets proven rather than asserted.
+ *
+ * @param titleWidth what the title wants at the full docked size. Zero when it
+ *   has not been measured yet — and zero fits everything, so the first frame
+ *   takes the mirrored branch exactly as it always did, then settles onto the
+ *   real answer when the measurement lands.
  */
-private data class TdayBarTitleReserve(val start: Dp, val end: Dp, val hasRoom: Boolean)
+internal data class TdayBarTitleReserve(val start: Dp, val end: Dp, val hasRoom: Boolean)
 
-private fun tdayBarTitleReserve(barWidth: Dp, leading: Dp, trailing: Dp): TdayBarTitleReserve {
+internal fun tdayBarTitleReserve(
+    barWidth: Dp,
+    leading: Dp,
+    trailing: Dp,
+    titleWidth: Dp = 0.dp,
+): TdayBarTitleReserve {
     val m = TdayHeroTitleMetrics
     // Before the first measure, reserve what is actually there: never centred,
     // but never overlapping either, and it is replaced on the very next frame.
     if (barWidth <= 0.dp) return TdayBarTitleReserve(leading, trailing, true)
 
     val symmetric = maxOf(leading, trailing) + m.DockedTitleSideGap
-    val centred = barWidth - symmetric * 2 >= m.DockedTitleMinWidth
+    // Both terms are load-bearing and neither subsumes the other. The title term
+    // is the fix. The [DockedTitleMinWidth] term is the OLD gate, kept: without
+    // it a title narrower than the floor — or one not yet measured — would hold
+    // the mirrored branch on a bar that has no room for any title at all, and
+    // the give-up below would then fire against a reserve chosen for the wrong
+    // reason. Keeping it means this step can only ever widen what the title
+    // gets, never narrow it, which is what makes the change safe for the six
+    // screens that were already fitting.
+    val centred = barWidth - symmetric * 2 >= maxOf(titleWidth, m.DockedTitleMinWidth)
     val start = if (centred) symmetric else leading + m.DockedTitleSideGap
     val end = if (centred) symmetric else trailing + m.DockedTitleSideGap
     return TdayBarTitleReserve(start, end, barWidth - start - end >= m.DockedTitleMinWidth)
+}
+
+/**
+ * How much the docked title has to give up to stay whole, once
+ * [tdayBarTitleReserve] has already spent the bar's centring buying it width.
+ *
+ * 1 wherever the name fits, which after the reserve fix is all six of the
+ * single-purpose screens that share this bar and Calendar's on a 412dp phone.
+ * Below 1 only where the bar is genuinely out of room — TodoListScreen's three-
+ * and four-action scopes, which the reserve cannot rescue because mirrored is
+ * already negative there — and bounded by
+ * [TdayHeroTitleMetrics.DockedTitleMinScale], past which an ellipsis is the more
+ * honest answer than a title that no longer looks like the one it is handing off
+ * from.
+ *
+ * Linear in the ratio because glyph advances are linear in font size: there is
+ * no hinting on this path and no `letterSpacing` to stay fixed while the glyphs
+ * shrink, so `room / wanted` is the exact factor rather than an approximation of
+ * one. It errs narrow in any case — [titleWidth] comes from a `TextMeasurer`,
+ * which rounds a layout's width UP to whole pixels, so the scale computed
+ * against it is a hair small and the text fits rather than grazing the edge.
+ *
+ * `internal` for the same reason as the reserve: this is the boundary the change
+ * introduces, and there is no emulator here to prove it on.
+ */
+internal fun tdayBarTitleScale(titleWidth: Dp, titleRoom: Dp): Float {
+    // `titleRoom` can go to zero or below on a bar whose actions have eaten it
+    // whole. Nothing is drawn there — `hasRoom` is already false — but this must
+    // not hand back 0 or a negative scale on the way to finding that out.
+    if (titleRoom <= 0.dp || titleWidth <= titleRoom) return 1f
+    return (titleRoom / titleWidth).coerceAtLeast(TdayHeroTitleMetrics.DockedTitleMinScale)
 }
 
 /** The back affordance these headers lead with. */
