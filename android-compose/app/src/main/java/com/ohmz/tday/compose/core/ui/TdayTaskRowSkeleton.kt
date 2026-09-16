@@ -334,14 +334,20 @@ object TdayTaskRowSkeleton {
  *
  * An item kept mounted past its own visibility is the only way an exit gets a node
  * to play on — the guard that removes it removes the transition with it. Kept
- * mounted FOREVER is a different bug, and a `LazyColumn` is where it bites:
- * `Arrangement.spacedBy` is applied per item rather than per drawn pixel, so an
- * item that composes to nothing still costs the feed its gap. The flat modes run
- * at `TimelineDateGroupSpacing`, which means a permanently-mounted placeholder
- * goes on charging 6 dp under the header for the whole of the loaded state the
- * user actually lives in — long after the thing that earned it has gone.
+ * mounted FOREVER is a different bug.
  *
- * So the mount is a window: open while [visible], held open one
+ * The cost this paragraph used to name is gone, and saying so is worth more than
+ * quietly deleting it. It argued that `Arrangement.spacedBy` is charged per item
+ * rather than per drawn pixel, so a permanently-mounted placeholder goes on
+ * charging `TimelineDateGroupSpacing`'s 6 dp under the header "on the flat modes".
+ * There are no flat modes: that arm of `TodoListScreen`'s arrangement was
+ * unreachable, and the feed the skeleton is actually drawn on runs at
+ * `SpacingNone`. So a node held open forever costs no gap — it costs a composed
+ * subtree and a key in the list for the whole of the loaded state instead, which
+ * is a smaller bill for the same wrong shape.
+ *
+ * The window's LENGTH never depended on that number, which is why closing it is
+ * still right: open while [visible], held open one
  * [TdayTaskRowSkeleton.HandoffMillis] past the frame it drops, closed after. The
  * wait is [scaledDelay] on [rememberTdayMotionScale] and not `delay`, because the
  * exit it is holding the node open for is gated on that same preference at the
@@ -398,8 +404,38 @@ fun TdayTaskRowSkeletonGroup(
 }
 
 /**
- * One skeleton row, built against `TodayTodoRow` — the flat row the loading state
- * actually guards, not the carded variant the non-Today modes use.
+ * One skeleton row.
+ *
+ * Its geometry was derived against `TodayTodoRow`, on the claim that that was "the
+ * flat row the loading state actually guards". That claim is retired here rather
+ * than quietly reworded, because half of it was never true and the other half has
+ * stopped being true. The loading state it named was `!showSectionedTimeline &&
+ * items.isEmpty() && isLoading`, which could not fire; and the state that replaced
+ * it stands on `TodoListScreen`'s SECTIONED feed, whose rows are
+ * `TodayTaskSwipeRow` and `AllTaskSwipeRow`. The flat body has since been deleted
+ * outright. So this placeholder now stands in for swipe-card rows on one screen
+ * and Completed's card on the other, and for no hairline row anywhere.
+ *
+ * What transfers exactly and what does not, because the difference decides what is
+ * safe to leave alone:
+ *
+ *  * The FIRST-LINE STACKING transfers by construction. This function and the
+ *    swipe rows make the same [rememberTaskRowFirstLineAlignment] call with the
+ *    same two arguments — `titleMedium` and [TdayTaskRowMetrics.CheckTargetMinSize]
+ *    — and apply the same `topInsetFor`, so the toggle and the first bar land on
+ *    the same line box at every font scale. That is what naming the metrics
+ *    instead of the row bought, and it is the half the recent alignment work
+ *    re-derived.
+ *  * The ROW BOX does not. This draws the hairline group — [TdayTaskRowMetrics.RowVerticalPadding]
+ *    above and below, [TdayTaskRowMetrics.RowSpacing] and a [TdayTaskRowMetrics.DividerThickness] under — while both
+ *    live consumers draw a card with a minimum height. The placeholder is the
+ *    taller of the two, as it already was against the rows the non-goals below
+ *    name; what changed is which rows those are, not that the mismatch exists.
+ *
+ * Re-deriving the box against a card is a geometry change, wants a device to
+ * check, and is not folded into the dead-code removal that surfaced it.
+ * `TdayTaskRowSkeletonTest` pins the shape as it stands, so a re-derivation has to
+ * move that file and say so.
  */
 @Composable
 fun TdayTaskRowSkeleton(
@@ -425,23 +461,25 @@ fun TdayTaskRowSkeleton(
         animated
     }
     val fill = colorScheme.surfaceVariant
-    // The row this stands in for — `TodayTodoRow`, the one this function's KDoc
-    // names — hangs its toggle off the title's FIRST line, so the placeholder is
-    // stacked the same way and its bars land where that row's lines land.
+    // The rows this stands in for — see the KDoc for which they now are — hang
+    // their toggle off the title's FIRST line, so the placeholder is stacked the
+    // same way and its bars land where those rows' lines land.
     //
     // That is not free, and the arithmetic belongs here rather than in the reader's
     // head. Stacking from the top moves the text column's 12 dp inset into the
     // row's own height — max(48 dp target, 12 + 24 + 18) takes the content from
     // 48 dp to 54 — so a row of this group draws 69 dp where it drew 63 (4 + 4 of
-    // padding, 6 of row spacing, 1 of hairline). Against `TodayTodoRow` carrying a
-    // subtitle that is still exact, because the row moved by the same 6 dp. Against
-    // a subtitle-less one, and against Completed's card (fixed at
-    // `CompletedSwipeRowHeight` and unable to follow), the placeholder is now 6 dp
-    // taller than the thing that replaces it. The note's non-goals carry the
-    // argument for leaving it: that handoff was already 7 dp out before this
-    // change, because this group draws a hairline and 6 dp of spacing under every
-    // row and a 56 dp card feed draws neither, so there is no inset that makes one
-    // placeholder exact against three different rows.
+    // padding, 6 of row spacing, 1 of hairline). Against the hairline row this was
+    // sized from that stayed exact, because the row moved by the same 6 dp — but
+    // that row is no longer drawn on either screen this placeholder serves, so
+    // exactness is not what is left. What is left is the card: both live consumers
+    // draw one with a minimum height, `TodoListScreen`'s at 56 dp and Completed's
+    // fixed at `CompletedSwipeRowHeight`, and neither can follow. The note's
+    // non-goals carry the argument for leaving it: this group draws a hairline and
+    // 6 dp of spacing under every row and a card feed draws neither, so there is no
+    // inset that makes one placeholder exact against rows built to different
+    // vertical rules. The hand-off is a fade and a shrink, which is what makes a
+    // too-tall placeholder a closing gap rather than a jump.
     val firstLine = rememberTaskRowFirstLineAlignment(
         titleStyle = MaterialTheme.typography.titleMedium,
         controlHeight = TdayTaskRowMetrics.CheckTargetMinSize,
