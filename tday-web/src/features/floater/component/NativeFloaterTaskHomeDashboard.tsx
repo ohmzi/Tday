@@ -10,7 +10,7 @@ import { DELAY_MS } from "@/lib/motion";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { sortFloatersByPriority } from "@/lib/floater/buildFloaterSections";
-import { getListIcon } from "@/lib/listIcons";
+import { getListIconForList } from "@/lib/listIcons";
 import {
   listColorAccentColors,
   nativeScreenAccentColors,
@@ -296,7 +296,7 @@ export default function NativeFloaterTaskHomeDashboard() {
                 const color = list.color
                   ? listColorAccentColors[list.color]
                   : floaterAccent;
-                const ListIcon = getListIcon(list.iconKey);
+                const ListIcon = getListIconForList(list);
                 return (
                   <Link
                     key={list.id}

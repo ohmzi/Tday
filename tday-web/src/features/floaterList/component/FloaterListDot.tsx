@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { getListIcon } from "@/lib/listIcons";
+import { getListIconForList } from "@/lib/listIcons";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 
 // Map every list color to its accent token. Normalized to uppercase so the icon
@@ -31,7 +31,8 @@ export default function FloaterListDot({
   className?: string;
 }) {
   const { floaterListMetaData } = useFloaterListMetaData();
-  const Icon = getListIcon(floaterListMetaData[id]?.iconKey);
+  // The whole meta, not just its key — see `ListDot`.
+  const Icon = getListIconForList(floaterListMetaData[id]);
 
   const colorKey = String(floaterListMetaData[id]?.color ?? "")
     .trim()

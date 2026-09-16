@@ -728,6 +728,7 @@
       "sectionOrder": 3,
       "icon": "wand-sparkles",
       "platforms": [
+        "WEB",
         "ANDROID",
         "IOS"
       ],

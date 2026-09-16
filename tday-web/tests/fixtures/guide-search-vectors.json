@@ -57,6 +57,7 @@
       "morning-sweep",
       "overdue-view",
       "scheduled-lists",
+      "list-icons",
       "completed-history",
       "calendar-feed",
       "api-key-homarr"
@@ -76,6 +77,7 @@
       "create-task",
       "copy-task-text",
       "promote-and-float",
+      "list-icons",
       "webhooks",
       "keyboard-shortcuts"
     ],
