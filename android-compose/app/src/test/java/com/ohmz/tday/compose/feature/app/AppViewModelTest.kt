@@ -26,12 +26,15 @@ import com.ohmz.tday.compose.core.notification.DayAheadPreferenceStore
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.push.UnifiedPushAutoRegistrar
+import com.ohmz.tday.compose.core.push.UnifiedPushSession
 import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.feature.auth.MainDispatcherRule
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -69,6 +72,13 @@ class AppViewModelTest {
     private val connectivityObserver = mockk<ConnectivityObserver>()
     private val appVersionManager = mockk<AppVersionManager>()
     private val systemCredentialService = mockk<SystemCredentialServicing>()
+    // Relaxed because the decision it makes is not this file's subject — the table is pinned
+    // branch by branch in UnifiedPushRegistrationTest. What IS this file's subject is that the
+    // ViewModel still CALLS it, from both triggers and in the right order at sign-out: the
+    // wiring is the part that, if it were quietly dropped, would take server push away from
+    // everyone while every other test in this class stayed green. Hence the coVerify blocks
+    // below rather than a mock nobody looks at.
+    private val unifiedPushAutoRegistrar = mockk<UnifiedPushAutoRegistrar>(relaxed = true)
     private val appContext = mockk<Context>(relaxed = true)
     private val snackbarManager = SnackbarManager(appContext)
 
@@ -297,6 +307,79 @@ class AppViewModelTest {
         assertTrue(viewModel.uiState.value.authenticated)
         assertFalse(viewModel.uiState.value.isOffline)
         assertEquals(restoredUser, viewModel.uiState.value.user)
+
+        viewModel.logout()
+        runCurrent()
+    }
+
+    /**
+     * The registration table is pure and walked branch by branch in `UnifiedPushRegistrationTest`,
+     * but none of it runs unless the ViewModel calls it, and losing either trigger is silent:
+     * the app builds, every other test here passes, and server push just stops — task-due
+     * reminders, "a list was shared with you", admin alerts, and the `data-changed` ping that is
+     * the widget's only realtime path.
+     *
+     * The second `reconnectAfterForeground` is the load-bearing half. It returns early at the
+     * in-flight sync guard, so the push call has to sit ABOVE that guard: a distributor is
+     * installed in another app with T'Day in the background, and a foreground that happens to
+     * land on a sync already running is not a foreground the app may skip looking at.
+     */
+    @Test
+    fun `registers server push on bootstrap and on every foreground`() = runTest {
+        val restoredSession = AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery { authRepository.restoreSessionForBootstrap() } returns restoredSession
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        // Slow on purpose: the second foreground below has to find a sync still in flight.
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
+            )
+        } coAnswers {
+            delay(100)
+            Result.success(Unit)
+        }
+        coEvery { authRepository.logout() } returns Unit
+        coEvery { systemCredentialService.clearCredentialState() } returns Unit
+
+        val signedIn = UnifiedPushSession(
+            authenticated = true,
+            isLocalMode = false,
+            userId = restoredUser.id,
+        )
+
+        val viewModel = makeViewModel()
+        runCurrent()
+        // Trigger one: the state collector. Watching the state is what makes every route into a
+        // session — bootstrap, a fresh sign-in, leaving Local Mode — register without its own
+        // call site, so this asserts the collector exists at all.
+        coVerify(exactly = 1) { unifiedPushAutoRegistrar.ensureRegistered(signedIn) }
+
+        // Trigger two, and not a duplicate of one: `distinctUntilChanged` means the collector has
+        // nothing to say about a foreground that did not change who is signed in, so the count
+        // only moves if `reconnectAfterForeground` asks for itself.
+        viewModel.reconnectAfterForeground()
+        runCurrent()
+        coVerify(exactly = 2) { unifiedPushAutoRegistrar.ensureRegistered(signedIn) }
+
+        viewModel.reconnectAfterForeground()
+        runCurrent()
+        coVerify(exactly = 3) { unifiedPushAutoRegistrar.ensureRegistered(signedIn) }
+
+        advanceTimeBy(100)
+        runCurrent()
 
         viewModel.logout()
         runCurrent()
@@ -566,6 +649,16 @@ class AppViewModelTest {
         assertFalse(state.authenticated)
         assertEquals(SessionResolution.RESOLVED, state.sessionResolution)
         assertEquals(RootDestination.ONBOARDING, state.rootDestination)
+
+        // The order is the assertion, not an incidental. Unsubscribing this device's endpoint
+        // needs the session cookie `authRepository.logout()` is about to drop; swap the two lines
+        // in the ViewModel and the endpoint stays filed against the account that left — its task
+        // titles keep arriving on this device while the next account to sign in gets no push at
+        // all, because the connector is still acknowledged and so nothing re-registers.
+        coVerifyOrder {
+            unifiedPushAutoRegistrar.onSignedOut()
+            authRepository.logout()
+        }
     }
 
     @Test
@@ -607,6 +700,7 @@ class AppViewModelTest {
             connectivityObserver = connectivityObserver,
             appVersionManager = appVersionManager,
             systemCredentialService = systemCredentialService,
+            unifiedPushAutoRegistrar = unifiedPushAutoRegistrar,
             appContext = appContext,
             // Background work has to share the test scheduler. On Dispatchers.Default it runs on
             // a real thread the scheduler cannot see, so runCurrent()/advanceUntilIdle() return

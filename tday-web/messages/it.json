@@ -876,6 +876,18 @@
     "nextUp": "Poi, {{tasks}}.",
     "overdueCatchUp": "Hai anche {{count}} attività in ritardo da recuperare.",
     "clearForNow": "Per ora sei a posto. Nessuna attività richiede attenzione in questa vista.",
+    "floaterClear": "Qui non aspetta ancora niente.",
+    "floaterPileOne": "Qui aspetta una cosa sola, senza data.",
+    "floaterPileFew": "Qui aspettano poche cose senza data.",
+    "floaterPileSome": "Qui si sono radunate parecchie cose senza data.",
+    "floaterPileMany": "Qui si è accumulato un lungo elenco di cose senza data.",
+    "floaterPinnedOne": "Hai fissato {{title}} e nient'altro.",
+    "floaterPinnedMany": "Hai fissato {{title}}, e non è l'unica.",
+    "floaterPriorityOne": "Solo {{title}} ha priorità alta.",
+    "floaterPriorityMany": "{{title}} ha priorità alta, e non è l'unica.",
+    "floaterRestingOne": "Una di queste è intatta da mesi.",
+    "floaterRestingMany": "Alcune sono intatte da mesi.",
+    "floaterRestingAll": "Qui non si tocca niente da mesi.",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -1298,10 +1310,10 @@
         "title": "UnifiedPush (Android)",
         "summary": "Push dal server senza Google, col tuo distributore.",
         "keywords": "unifiedpush, ntfy, push, notifiche, self-host, distributore, fcm",
-        "body": "In Modalità Server, T'Day può inviare le notifiche del server tramite UnifiedPush invece dell'FCM di Google, tenendo i dati sul tuo server e sul tuo distributore. Installa un'app distributore (come ntfy) e attiva UnifiedPush nelle Impostazioni. I promemoria locali continuano a funzionare.",
+        "body": "In Modalità Server, T'Day invia le notifiche del server tramite UnifiedPush invece dell'FCM di Google, tenendo i dati sul tuo server e sul tuo distributore. Non c'è nulla da attivare: installa un'app distributore (come ntfy) e T'Day si registra da solo. I promemoria locali continuano a funzionare.",
         "step0": "Installa un distributore UnifiedPush come ntfy dal tuo store.",
-        "step1": "In Impostazioni → Promemoria, attiva UnifiedPush e scegli il distributore.",
-        "step2": "Il server invia le modifiche a quell'endpoint; disattivalo quando vuoi."
+        "step1": "Apri T'Day: trova il distributore e si registra da solo. Se ne hai due o più, Impostazioni → Promemoria chiede quale usare.",
+        "step2": "Per fermare il push dal server, disinstalla il distributore o esci dall'account; i promemoria locali non cambiano."
       },
       "repeat-suggestions": {
         "title": "Suggerimenti di ripetizione",
@@ -1385,6 +1397,13 @@
         "step1": "Tocca le attività per sceglierle oppure usa Seleziona tutto per quelle a schermo.",
         "step2": "Scegli Completa, Priorità, Sposta o Elimina dalla barra in basso.",
         "tip": "L'eliminazione ti chiede prima di confermare il numero esatto e lascia comunque un avviso per annullare. Le attività ricorrenti restano del tutto fuori dalle azioni in blocco, così un'intera serie non cambia mai per sbaglio: aprine una singola per completarla, spostarla o eliminarla."
+      },
+      "list-icons": {
+        "title": "Icone elenco automatiche",
+        "summary": "Un elenco senza un'icona scelta prende un'icona che corrisponde al suo nome.",
+        "keywords": "icona elenco, automatica, suggerita, glifo, nome, spesa, palestra, lavoro",
+        "body": "Chiama un elenco Groceries e avrà un carrello; Gym riceve un manubrio, Work una valigetta. T'Day indovina solo quando non hai scelto tu un'icona, e lascia l'icona predefinita ogni volta che il nome non è abbastanza chiaro. Per ora i nomi vengono riconosciuti in inglese.",
+        "tip": "Scegli un'icona nelle impostazioni dell'elenco quando vuoi: una volta scelta viene mantenuta e mai sostituita da un'ipotesi."
       }
     }
   },

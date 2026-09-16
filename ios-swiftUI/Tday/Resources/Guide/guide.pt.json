@@ -723,6 +723,41 @@
       "searchBody": "organize as tarefas com data em listas com nome e cor. atribua uma lista as tarefas agendadas para manter o trabalho relacionado junto. as listas tem nome e cor e podem ser filtradas."
     },
     {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Ícones de lista automáticos",
+      "summary": "Uma lista sem ícone próprio ganha um que combina com o seu nome.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Chame uma lista de Groceries e ela usa um carrinho de compras; Gym recebe um haltere e Work uma pasta. O T'Day só adivinha quando você não escolheu um ícone, e mantém o ícone padrão sempre que o nome não é claro o bastante. Por enquanto os nomes são reconhecidos em inglês."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Escolha um ícone nas definições da lista quando quiser: depois de escolhido ele é mantido e nunca é substituído por um palpite."
+          ]
+        }
+      ],
+      "searchTitle": "icones de lista automaticos",
+      "searchKeywords": "icone de lista, automatico, sugerido, glifo, nome, compras, ginasio, trabalho",
+      "searchBody": "uma lista sem icone proprio ganha um que combina com o seu nome. chame uma lista de groceries e ela usa um carrinho de compras; gym recebe um haltere e work uma pasta. o t'day so adivinha quando voce nao escolheu um icone, e mantem o icone padrao sempre que o nome nao e claro o bastante. por enquanto os nomes sao reconhecidos em ingles. escolha um icone nas definicoes da lista quando quiser: depois de escolhido ele e mantido e nunca e substituido por um palpite."
+    },
+    {
       "id": "completed-history",
       "section": "ORGANIZING",
       "sectionOrder": 3,

@@ -582,7 +582,16 @@ told somebody.
     moved below Earlier's rows, the scene's exit and the rows' entrance stopped
     contesting one slot, and the wait was retired rather than re-scaled. A wait
     deleted is the fifth idiom rule met the only way it stays met. Web and iOS keep
-    theirs, because on both the scene is drawn over the list rather than in it.
+    theirs — but not for the reason recorded here when this was written, which said
+    their scene is drawn over the list rather than in it. That is true of iOS (an
+    `.overlay` with a reserved-top-height preference key) and false of web, whose
+    scene is an inline sibling in the flow and now renders BELOW Earlier's block
+    exactly as Android's does. Web keeps both its defers on a mechanism argument of
+    its own: `.tday-empty-slot` is a grid track with a transition and no start value
+    on mount, so the scene's 42vh lands in a single frame however the blocks are
+    ordered, and neither direction of the hand-off can be given to the layout the way
+    Compose's `animateItem` gives Android's. `useEarlierExpandHandoff`'s own doc
+    carries the full argument, including what retiring the expand half would cost.
   - The celebration lead in `TdayEmptyState.kt` and `TdayConfetti.kt`, which is
     already dead at 0x behind a `motionEnabled` guard but was not stretching at 2x
     with the burst it is timed against.

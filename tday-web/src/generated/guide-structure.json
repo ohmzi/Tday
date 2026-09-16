@@ -650,6 +650,38 @@
       "sinceVersion": null
     },
     {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.list-icons.title",
+      "summaryKey": "guide.topics.list-icons.summary",
+      "keywordsKey": "guide.topics.list-icons.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.list-icons.body"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.list-icons.tip"
+          ]
+        }
+      ],
+      "badge": "HIDDEN_GEM",
+      "deepLink": null,
+      "helpAnchors": [],
+      "serverOnly": false,
+      "sinceVersion": "0.7.28"
+    },
+    {
       "id": "completed-history",
       "section": "ORGANIZING",
       "icon": "check-check",

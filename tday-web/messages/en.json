@@ -876,6 +876,18 @@
     "nextUp": "Next up, {{tasks}}.",
     "overdueCatchUp": "You also have {{count}} overdue task(s) to catch up on.",
     "clearForNow": "You're clear for now. No tasks need attention in this view.",
+    "floaterClear": "Nothing is waiting here yet.",
+    "floaterPileOne": "One thing is waiting here, with no date on it.",
+    "floaterPileFew": "A handful of undated things are waiting here.",
+    "floaterPileSome": "Quite a few undated things have gathered here.",
+    "floaterPileMany": "A long backlog of undated things has built up here.",
+    "floaterPinnedOne": "You pinned {{title}} and nothing else.",
+    "floaterPinnedMany": "You pinned {{title}}, and it isn't the only one.",
+    "floaterPriorityOne": "Only {{title}} is at high priority.",
+    "floaterPriorityMany": "{{title}} is at high priority, and it isn't the only one.",
+    "floaterRestingOne": "One of them hasn't been touched in months.",
+    "floaterRestingMany": "Some of them haven't been touched in months.",
+    "floaterRestingAll": "Nothing here has been touched in months.",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -1298,10 +1310,10 @@
         "title": "UnifiedPush (Android)",
         "summary": "Server push without Google, via your own distributor.",
         "keywords": "unifiedpush, ntfy, push, notifications, self-host, distributor, fcm, google-free",
-        "body": "In Server Mode, T'Day can deliver server notifications through UnifiedPush instead of Google's FCM — keeping your data on your own server and your own push distributor. Install a distributor app (like ntfy), then turn on UnifiedPush in Settings. Local reminders keep working either way.",
+        "body": "In Server Mode, T'Day delivers server notifications through UnifiedPush instead of Google's FCM — keeping your data on your own server and your own push distributor. There is nothing to switch on: install a distributor app (like ntfy) and T'Day registers with it by itself. Local reminders keep working either way.",
         "step0": "Install a UnifiedPush distributor such as ntfy from your app store.",
-        "step1": "In Settings → Reminders, turn on UnifiedPush and pick the distributor.",
-        "step2": "Your server now pushes changes to that endpoint; turn it off anytime."
+        "step1": "Open T'Day — it finds the distributor and registers on its own. If two or more are installed, Settings → Reminders asks which one to use.",
+        "step2": "To stop server push, uninstall the distributor or sign out — local reminders are unaffected."
       },
       "repeat-suggestions": {
         "title": "Repeat suggestions",
@@ -1385,6 +1397,13 @@
         "step1": "Tap tasks to pick them, or use Select all for everything on screen.",
         "step2": "Choose Complete, Priority, Move or Delete from the bar at the bottom.",
         "tip": "Deleting asks you to confirm the exact number first, and still leaves an undo toast. Repeating tasks sit out bulk actions altogether, so a whole series is never changed by accident — open one on its own to complete, reschedule or delete it."
+      },
+      "list-icons": {
+        "title": "Automatic list icons",
+        "summary": "A list with no icon of its own picks one that matches its name.",
+        "keywords": "list icon, automatic, suggested, glyph, name, groceries, gym, work",
+        "body": "Name a list Groceries and it wears a shopping cart; Gym gets a dumbbell, Work a briefcase. T'Day only guesses when you have not chosen an icon yourself, and it leaves the plain default in place whenever the name is not clear enough to be sure. Names are matched in English for now.",
+        "tip": "Pick an icon in the list's settings whenever you like — once you choose one it is kept, and never guessed over."
       }
     }
   },

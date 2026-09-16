@@ -193,7 +193,9 @@ import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
 import com.ohmz.tday.compose.ui.theme.TdayTitleIconNightAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
+import com.ohmz.tday.compose.ui.theme.tdayListIconForList
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
+import com.ohmz.tday.shared.listicon.ListIconInference
 import com.ohmz.tday.shared.sort.TaskSortEngine
 import com.ohmz.tday.shared.sort.TaskSortKey
 import kotlinx.coroutines.delay
@@ -365,6 +367,14 @@ fun ScheduledTaskHomeScreen(
     var listName by rememberSaveable { mutableStateOf("") }
     var listColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var listIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
+    // The picker always has to PREVIEW something. Whether the user ever touched it is a
+    // different fact, and until now nobody recorded it: the seeded default was posted
+    // verbatim, so every list ever created on any client persisted `iconKey = "inbox"`
+    // and the nullable column never saw a null. That made "the user chose the inbox" and
+    // "the user never chose" the same stored value, and an inference cannot honour a
+    // choice it cannot see. The edit sheet has modelled this distinction for a while
+    // (`listSettingsIconTouched`); the create sheets had not.
+    var listIconTouched by rememberSaveable { mutableStateOf(false) }
     var showCreateList by rememberSaveable { mutableStateOf(false) }
     var listCreated by rememberSaveable { mutableStateOf(false) }
     var searchResultOpening by rememberSaveable { mutableStateOf(false) }
@@ -848,7 +858,7 @@ fun ScheduledTaskHomeScreen(
                                     ) { index, todo ->
                                         val listMeta = todo.listId?.let { listById[it] }
                                         val listTint = tdayListAccentColor(listMeta?.color)
-                                        val listIcon = tdayListIconForKey(listMeta?.iconKey)
+                                        val listIcon = tdayListIconForList(listMeta?.iconKey, listMeta?.name)
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -1021,11 +1031,23 @@ fun ScheduledTaskHomeScreen(
     if (showCreateList) {
         CreateListBottomSheet(
             listName = listName,
-            onListNameChange = { listName = capitalizeFirstListLetter(it) },
+            onListNameChange = {
+                listName = capitalizeFirstListLetter(it)
+                // See the twin in TodoListScreen's create sheet: the preview follows the
+                // name so the guess is visible and overrulable, while an untouched icon
+                // still saves as null.
+                if (!listIconTouched) {
+                    listIconKey = ListIconInference.inferIconKey(listName)
+                        ?: TDAY_DEFAULT_LIST_ICON_KEY
+                }
+            },
             listColor = listColor,
             onListColorChange = { listColor = it },
             listIconKey = listIconKey,
-            onListIconChange = { listIconKey = it },
+            onListIconChange = {
+                listIconKey = it
+                listIconTouched = true
+            },
             // The draft is cleared here and not in `onCreate`, and only when a list was
             // actually made. The sheet is still on screen for the length of its exit now,
             // so blanking the name at the moment of the tap would be watched: the field
@@ -1038,13 +1060,14 @@ fun ScheduledTaskHomeScreen(
                     listName = ""
                     listColor = TDAY_DEFAULT_LIST_COLOR_KEY
                     listIconKey = TDAY_DEFAULT_LIST_ICON_KEY
+                    listIconTouched = false
                     listCreated = false
                 }
             },
             onCreate = {
                 val normalizedName = capitalizeFirstListLetter(listName).trim()
                 if (normalizedName.isNotBlank()) {
-                    onCreateList(normalizedName, listColor, listIconKey)
+                    onCreateList(normalizedName, listColor, listIconKey.takeIf { listIconTouched })
                     listCreated = true
                 }
             },
@@ -2081,7 +2104,7 @@ private fun ScheduledTaskHomeTodayTaskRow(
                         ) {
                             if (listMeta != null) {
                                 Icon(
-                                    imageVector = tdayListIconForKey(listMeta.iconKey),
+                                    imageVector = tdayListIconForList(listMeta.iconKey, listMeta.name),
                                     contentDescription = null,
                                     tint = listIndicatorColor,
                                     modifier = Modifier.size(RowTrailingIconSize),
@@ -2211,7 +2234,7 @@ private fun ListRow(
         label = "listRowCount",
     )
     val accent = tdayListAccentColor(colorKey)
-    val icon = tdayListIconForKey(iconKey)
+    val icon = tdayListIconForList(iconKey, name)
     val containerColor = lerp(colorScheme.surfaceVariant, accent, SCHEDULED_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT)
     val displayName = capitalizeFirstListLetter(name)
 

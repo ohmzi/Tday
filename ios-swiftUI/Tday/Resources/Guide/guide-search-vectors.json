@@ -67,6 +67,7 @@
       "overdue-view",
       "swipe-sheet-away",
       "scheduled-lists",
+      "list-icons",
       "completed-history",
       "reminder-snooze",
       "day-ahead"
@@ -86,6 +87,7 @@
       "create-task",
       "copy-task-text",
       "promote-and-float",
+      "list-icons",
       "home-widget"
     ],
     "keyboard": [],

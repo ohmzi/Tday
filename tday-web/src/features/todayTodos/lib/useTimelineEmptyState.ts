@@ -93,9 +93,12 @@ export function useTimelineEmptyState({
 
   // Render the date buckets only when this scope actually has tasks (its own
   // Earlier bucket included, since that is what `TimelineSections` renders
-  // when nothing else in the scope does — see `AllTasksTimelineContainer`'s
-  // JSX ordering comment); an empty scope shows the native-style centered
-  // empty message instead.
+  // when nothing else in the scope does — which is also why the sections come
+  // FIRST in the JSX and the empty scene after them: the bucket carries the
+  // Earlier header, and a header that moves when it is tapped is the bug that
+  // ordering exists to avoid. See `AllTasksTimelineContainer`'s JSX ordering
+  // comment, rewritten alongside this one); an empty scope shows the
+  // native-style centered empty message instead.
   const showTimeline = timeline && hasScopedTasks;
   // `splitEarlierItems` (`timelineScopeHelpers.ts`) is the same `dayDiff < 0`
   // reduction `buildTimelineSections` buckets by — reused here, not
@@ -174,8 +177,10 @@ export function useTimelineEmptyState({
   });
   // The window has an end now, so the scene it holds gets to leave over one.
   // The only screen shape where the end takes anything off the slot is this
-  // one: empty scope, Earlier open, the scene sitting above its rows purely on
-  // the strength of the celebration.
+  // one: empty scope, Earlier open, the scene sharing the slot with those rows
+  // purely on the strength of the celebration. (It sits below them now rather
+  // than above; what matters here is that it is there at all, and that the
+  // window ending is what takes it away.)
   const sceneHeldForExit = useCelebrationSceneExit({
     celebrate,
     sceneLeavesWithTheWindow: showEmpty && hasEarlierItems && earlierExpanded,

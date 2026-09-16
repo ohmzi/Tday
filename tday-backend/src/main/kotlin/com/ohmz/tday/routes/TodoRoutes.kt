@@ -30,6 +30,8 @@ import com.ohmz.tday.shared.model.CreateTodoResponse
 import com.ohmz.tday.shared.model.DemoteTodoResponse
 import com.ohmz.tday.shared.model.Priority
 import com.ohmz.tday.shared.model.TodoSummaryResponse
+import com.ohmz.tday.shared.summary.AiSummaryGuard
+import com.ohmz.tday.shared.summary.AiSummaryPrompt
 import com.ohmz.tday.shared.summary.SummaryEngine
 import com.ohmz.tday.shared.summary.SummaryTaskInput
 import com.ohmz.tday.shared.summary.SummaryScope as SharedSummaryScope
@@ -42,11 +44,10 @@ private const val SOURCE_AI = "ai"
 private const val SOURCE_LOGIC = "logic"
 private const val REASON_EMPTY = "empty"
 private const val REASON_AI_UNAVAILABLE = "ai_unavailable"
+private const val REASON_AI_REJECTED = "ai_rejected"
 private const val ERR_INVALID_DUE = "due must be a valid ISO-8601 datetime"
 private const val ERR_DUE_REQUIRED = "due is required"
 private const val ERR_INVALID_INSTANCE_DATE = "instanceDate must be a valid ISO-8601 datetime"
-private const val MAX_SUMMARY_TASKS = 40
-private const val MAX_SUMMARY_TITLE_LENGTH = 96
 
 fun Route.todoRoutes() {
     val todoService by inject<TodoService>()
@@ -347,8 +348,19 @@ private fun Route.todoUtilityRoutes(
                 )
                 if (tasks.isEmpty()) {
                     return@withAuth TodoSummaryResponse(
-                        // Empty list -> the shared engine returns the localized "clear for now" line.
-                        summary = SummaryEngine.summarize(emptyList(), SharedSummaryScope.ALL, nowMs, timeZone, locale),
+                        // Empty list -> the shared engine returns the localized "nothing here" line,
+                        // which differs for an Anytime view (nothing is WAITING) from a dated one
+                        // (nothing needs ATTENTION). Passing ALL here used to erase that distinction
+                        // for every server-rendered client, so the real scope goes across and
+                        // `preFiltered` carries the "already scoped, do not filter again" part.
+                        summary = SummaryEngine.summarize(
+                            tasks = emptyList(),
+                            scope = scope.toShared(),
+                            nowEpochMs = nowMs,
+                            timeZoneId = timeZone,
+                            locale = locale,
+                            preFiltered = true,
+                        ),
                         source = SOURCE_LOGIC,
                         mode = scope.responseMode,
                         taskCount = 0,
@@ -358,19 +370,34 @@ private fun Route.todoUtilityRoutes(
                     ).right()
                 }
 
-                val prompt = buildSummaryPrompt(scope, tasks, zoneId)
-                val summaryText = todoSummaryService.generateSummary(prompt)
-                val usedAi = !summaryText.isNullOrBlank()
-                // Deterministic fallback comes from the single shared engine. `tasks` is already
-                // scoped, so pass SummaryScope.ALL to let the engine rank+render without re-filtering.
+                // One mapped list feeds all three of prompt, guard and fallback, so the model is
+                // never briefed on a different set from the one its answer is checked against.
+                val inputs = tasks.map { it.toSummaryInput(zoneId) }
+                val prompt = AiSummaryPrompt.build(inputs, scope.toShared(), nowMs, timeZone, locale)
+                val raw = todoSummaryService.generateSummary(prompt)
+                // A prompt asks; the guard decides. An answer that states a count the set cannot
+                // justify, or arrives as a markdown list, is dropped for the deterministic copy.
+                val summaryText = AiSummaryGuard.vet(raw, inputs, nowMs)
+                val usedAi = summaryText != null
+                // Deterministic fallback comes from the single shared engine, with the same
+                // (scope, preFiltered) pair the empty branch above uses.
                 val logicSummary = {
                     SummaryEngine.summarize(
-                        tasks.map { it.toSummaryInput(zoneId) },
-                        SharedSummaryScope.ALL,
-                        nowMs,
-                        timeZone,
-                        locale,
+                        tasks = inputs,
+                        scope = scope.toShared(),
+                        nowEpochMs = nowMs,
+                        timeZoneId = timeZone,
+                        locale = locale,
+                        preFiltered = true,
                     )
+                }
+                // Distinguishing a model that never answered from one whose answer was refused
+                // keeps the rejection visible in the response without logging a word of it: the
+                // summary text is user content and never reaches a log line.
+                val fallback = when {
+                    usedAi -> null
+                    raw.isNullOrBlank() -> REASON_AI_UNAVAILABLE
+                    else -> REASON_AI_REJECTED
                 }
                 TodoSummaryResponse(
                     summary = summaryText ?: logicSummary(),
@@ -378,8 +405,8 @@ private fun Route.todoUtilityRoutes(
                     mode = scope.responseMode,
                     taskCount = tasks.size,
                     generatedAt = Instant.now().toString(),
-                    fallbackReason = if (usedAi) null else REASON_AI_UNAVAILABLE,
-                    reason = if (usedAi) null else REASON_AI_UNAVAILABLE,
+                    fallbackReason = fallback,
+                    reason = fallback,
                 ).right()
             }
         }
@@ -447,6 +474,22 @@ private enum class SummaryScope(
     }
 }
 
+/**
+ * The route's own scope enum predates the shared one and still owns the wire names; this is the
+ * bridge to the engine's copy. It exists so the engine is always told which view it is rendering
+ * — `preFiltered` is what tells it not to re-filter rows this file already scoped.
+ */
+private fun SummaryScope.toShared(): SharedSummaryScope = when (this) {
+    SummaryScope.TODAY -> SharedSummaryScope.TODAY
+    SummaryScope.OVERDUE -> SharedSummaryScope.OVERDUE
+    SummaryScope.SCHEDULED -> SharedSummaryScope.SCHEDULED
+    SummaryScope.ALL -> SharedSummaryScope.ALL
+    SummaryScope.PRIORITY -> SharedSummaryScope.PRIORITY
+    SummaryScope.LIST -> SharedSummaryScope.LIST
+    SummaryScope.FLOATER -> SharedSummaryScope.FLOATER
+    SummaryScope.WEEK -> SharedSummaryScope.WEEK
+}
+
 private data class SummaryTask(
     val title: String,
     val priority: String,
@@ -455,6 +498,12 @@ private data class SummaryTask(
     val recurring: Boolean,
     val listId: String?,
     val kind: String,
+    /**
+     * Last write to the floater, for the Anytime summary's dormancy note. Absent for dated tasks:
+     * the engine only reads it on the undated path, where "has sat untouched for months" is the
+     * one thing about a task with no deadline that changes over time.
+     */
+    val updatedAtEpochMs: Long? = null,
 )
 
 private fun buildSummaryTasks(
@@ -482,6 +531,12 @@ private fun buildSummaryTasks(
                     recurring = false,
                     listId = it.listID,
                     kind = "anytime",
+                    // FloaterResponse.updatedAt is a UTC wall-clock string, the same last-write
+                    // stamp the clients already fade resting floaters by. Without it the engine
+                    // sees null, FloaterResting.tierFor answers ACTIVE for everything, and the
+                    // dormancy note can never fire on any server-rendered client.
+                    updatedAtEpochMs = parseTodoDateTime(it.updatedAt)
+                        ?.toInstant(ZoneOffset.UTC)?.toEpochMilli(),
                 )
             }
             .toList()
@@ -527,39 +582,6 @@ private fun buildSummaryTasks(
     }
 }
 
-private fun buildSummaryPrompt(
-    scope: SummaryScope,
-    tasks: List<SummaryTask>,
-    zoneId: ZoneId,
-): String {
-    val now = LocalDateTime.now(zoneId)
-    val taskLines = tasks.take(MAX_SUMMARY_TASKS).joinToString("\n") { task ->
-        val dueText = task.due?.let { due ->
-            when {
-                due.isBefore(now) -> "overdue"
-                due.toLocalDate() == now.toLocalDate() -> "due today"
-                else -> "due ${due.toLocalDate()}"
-            }
-        } ?: "anytime"
-        val markers = listOfNotNull(
-            task.priority.takeIf { it.isNotBlank() },
-            dueText,
-            "pinned".takeIf { task.pinned },
-            "recurring".takeIf { task.recurring },
-        ).joinToString(", ")
-        "- ${task.kind}; $markers; ${boundedSummaryTitle(task.title)}"
-    }
-
-    return """
-        Summarize this ${scope.responseMode} task view for a personal task planner.
-        Return 1-2 short, useful sentences. Mention urgency, priority, and where to start when helpful.
-        Do not use markdown. Do not invent tasks.
-        Task count: ${tasks.size}
-        Tasks:
-        $taskLines
-    """.trimIndent()
-}
-
 /**
  * Maps an already-scoped backend [SummaryTask] into the shared engine's input. The
  * backend stores `due` as a zoned LocalDateTime; convert it back to an absolute
@@ -574,6 +596,7 @@ private fun SummaryTask.toSummaryInput(zoneId: ZoneId): SummaryTaskInput = Summa
     listId = listId,
     completed = false,
     kind = kind,
+    updatedAtEpochMs = updatedAtEpochMs,
 )
 
 private fun isPrioritySummaryTask(priority: String?): Boolean {
@@ -587,15 +610,6 @@ private fun priorityWeight(priority: String?): Int {
         "low" -> 2
         "lowest" -> 1
         else -> 0
-    }
-}
-
-private fun boundedSummaryTitle(title: String): String {
-    val normalized = title.trim().replace(Regex("\\s+"), " ")
-    return if (normalized.length <= MAX_SUMMARY_TITLE_LENGTH) {
-        normalized
-    } else {
-        normalized.take(MAX_SUMMARY_TITLE_LENGTH - 3).trimEnd() + "..."
     }
 }
 

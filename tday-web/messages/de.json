@@ -876,6 +876,18 @@
     "nextUp": "Als Nächstes: {{tasks}}.",
     "overdueCatchUp": "Sie haben außerdem {{count}} überfällige Aufgabe(n) aufzuholen.",
     "clearForNow": "Im Moment haben Sie alles im Griff. In dieser Ansicht gibt es keine Aufgaben, die Aufmerksamkeit erfordern.",
+    "floaterClear": "Hier wartet noch nichts.",
+    "floaterPileOne": "Hier wartet eine einzige Sache, ganz ohne Datum.",
+    "floaterPileFew": "Hier warten ein paar Dinge ohne Datum.",
+    "floaterPileSome": "Hier haben sich einige Dinge ohne Datum angesammelt.",
+    "floaterPileMany": "Hier hat sich eine lange Liste von Dingen ohne Datum angesammelt.",
+    "floaterPinnedOne": "Du hast {{title}} angeheftet, sonst nichts.",
+    "floaterPinnedMany": "Du hast {{title}} angeheftet, und nicht nur das.",
+    "floaterPriorityOne": "Nur {{title}} hat hohe Priorität.",
+    "floaterPriorityMany": "{{title}} hat hohe Priorität, und nicht nur das.",
+    "floaterRestingOne": "Eines davon ist seit Monaten unberührt.",
+    "floaterRestingMany": "Einiges davon ist seit Monaten unberührt.",
+    "floaterRestingAll": "Hier ist seit Monaten nichts angerührt worden.",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -1298,10 +1310,10 @@
         "title": "UnifiedPush (Android)",
         "summary": "Server-Push ohne Google, über deinen eigenen Distributor.",
         "keywords": "unifiedpush, ntfy, push, benachrichtigungen, selfhost, distributor, fcm",
-        "body": "Im Server-Modus kann T'Day Server-Benachrichtigungen über UnifiedPush statt über Googles FCM zustellen — deine Daten bleiben auf deinem Server und deinem Distributor. Installiere eine Distributor-App (z. B. ntfy) und aktiviere UnifiedPush in den Einstellungen. Lokale Erinnerungen funktionieren weiterhin.",
+        "body": "Im Server-Modus stellt T'Day Server-Benachrichtigungen über UnifiedPush statt über Googles FCM zu — deine Daten bleiben auf deinem Server und deinem Distributor. Es gibt nichts zu aktivieren: Installiere eine Distributor-App (z. B. ntfy), und T'Day meldet sich von selbst dort an. Lokale Erinnerungen funktionieren weiterhin.",
         "step0": "Installiere einen UnifiedPush-Distributor wie ntfy aus deinem App-Store.",
-        "step1": "Aktiviere in Einstellungen → Erinnerungen UnifiedPush und wähle den Distributor.",
-        "step2": "Dein Server pusht nun Änderungen an diesen Endpunkt; jederzeit abschaltbar."
+        "step1": "Öffne T'Day — es findet den Distributor und registriert sich von selbst. Sind mehrere installiert, fragt Einstellungen → Erinnerungen, welcher es sein soll.",
+        "step2": "Zum Abschalten: Distributor deinstallieren oder abmelden — lokale Erinnerungen bleiben davon unberührt."
       },
       "repeat-suggestions": {
         "title": "Wiederholungs-Vorschläge",
@@ -1385,6 +1397,13 @@
         "step1": "Tippe Aufgaben an, um sie zu wählen, oder nutze Alle auswählen für alles auf dem Bildschirm.",
         "step2": "Wähle unten in der Leiste Erledigen, Priorität, Verschieben oder Löschen.",
         "tip": "Beim Löschen musst du zuerst die genaue Anzahl bestätigen — und danach bleibt trotzdem ein Hinweis zum Rückgängigmachen. Wiederkehrende Aufgaben bleiben bei Sammelaktionen komplett außen vor, damit nie versehentlich eine ganze Serie geändert wird — öffne sie einzeln, um sie zu erledigen, zu verschieben oder zu löschen."
+      },
+      "list-icons": {
+        "title": "Automatische Listensymbole",
+        "summary": "Eine Liste ohne eigenes Symbol erhält eines, das zu ihrem Namen passt.",
+        "keywords": "listensymbol, automatisch, vorgeschlagen, glyphe, name, einkauf, fitness, arbeit",
+        "body": "Nenne eine Liste Groceries und sie trägt einen Einkaufswagen; Gym bekommt eine Hantel, Work einen Aktenkoffer. T'Day rät nur, wenn du selbst kein Symbol gewählt hast, und behält das Standardsymbol, sobald der Name nicht eindeutig genug ist. Namen werden vorerst auf Englisch erkannt.",
+        "tip": "Wähle jederzeit ein Symbol in den Listeneinstellungen – einmal gewählt, bleibt es erhalten und wird nie überraten."
       }
     }
   },

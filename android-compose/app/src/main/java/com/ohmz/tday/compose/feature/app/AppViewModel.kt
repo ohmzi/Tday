@@ -36,6 +36,8 @@ import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.core.push.UnifiedPushAutoRegistrar
+import com.ohmz.tday.compose.core.push.UnifiedPushSession
 import com.ohmz.tday.compose.core.ui.SnackbarEvent
 import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.SnackbarManager
@@ -57,6 +59,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -197,6 +201,7 @@ class AppViewModel @Inject constructor(
     private val connectivityObserver: ConnectivityObserver,
     private val appVersionManager: AppVersionManager,
     private val systemCredentialService: SystemCredentialServicing,
+    private val unifiedPushAutoRegistrar: UnifiedPushAutoRegistrar,
     @ApplicationContext private val appContext: Context,
     @BackgroundDispatcher private val backgroundDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
@@ -237,6 +242,7 @@ class AppViewModel @Inject constructor(
         observeUserInitiatedSyncFailures()
         observeOfflineSyncSuccesses()
         observeSyncMetadataChanges()
+        observeUnifiedPushRegistration()
         bootstrap()
     }
 
@@ -904,6 +910,10 @@ class AppViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
+            // Before the session goes: unsubscribing this device's endpoint needs the cookie that
+            // authRepository.logout() is about to drop, and leaving it subscribed would keep the
+            // departing account's task titles arriving on a device it no longer owns.
+            unifiedPushAutoRegistrar.onSignedOut()
             runCatching { authRepository.logout() }
             // Hard-clear the pending-approval marker + holding state so an explicit
             // logout can never be undone by the silent re-login on the next launch.
@@ -1040,6 +1050,16 @@ class AppViewModel @Inject constructor(
 
     fun reconnectAfterForeground() {
         if (!_uiState.value.authenticated || _uiState.value.isLocalMode) return
+        // Above the in-flight guard below, which is about a sync that is already running and has
+        // nothing to say about push. A distributor is installed in ANOTHER app with T'Day in the
+        // background, so coming back is the only moment the app can notice one appeared — or that
+        // the one it was using is gone, which is what gets the dead endpoint off the server.
+        viewModelScope.launch {
+            val state = _uiState.value
+            unifiedPushAutoRegistrar.ensureRegistered(
+                UnifiedPushSession(state.authenticated, state.isLocalMode, state.user?.id),
+            )
+        }
         if (foregroundReconnectJob?.isActive == true) return
 
         foregroundReconnectJob = viewModelScope.launch {
@@ -1409,6 +1429,26 @@ class AppViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Server push registers itself, and this is the trigger that matters: the endpoint is only
+     * worth anything once there is a session to file it against, and every route into one —
+     * bootstrap restoring a session, a fresh sign-in, leaving Local Mode, switching accounts —
+     * lands on this state. Watching the state rather than patching each of those call sites is
+     * what stops the next one from being written without it.
+     *
+     * `distinctUntilChanged` over the three fields that matter, not over the whole state: this
+     * flow carries a sync timestamp and an offline flag that move constantly, and reacting to
+     * those would turn a free no-op into a package query per emission.
+     */
+    private fun observeUnifiedPushRegistration() {
+        viewModelScope.launch {
+            _uiState
+                .map { UnifiedPushSession(it.authenticated, it.isLocalMode, it.user?.id) }
+                .distinctUntilChanged()
+                .collect { unifiedPushAutoRegistrar.ensureRegistered(it) }
         }
     }
 

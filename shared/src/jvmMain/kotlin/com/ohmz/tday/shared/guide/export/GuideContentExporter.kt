@@ -295,6 +295,11 @@ object GuideContentExporter {
         "thenSeparator", "untitledTask", "windowAfternoon", "windowMorning", "windowNight",
         "window_afternoon", "window_morning",
         "weekNone", "weekCleared", "weekBusiest", "weekOldest",
+        // Undated ("Anytime") vocabulary — deliberately shares nothing with the due/day keys
+        // above, so a floater summary cannot reach a sentence that says "due".
+        "floaterClear", "floaterPileOne", "floaterPileFew", "floaterPileSome", "floaterPileMany",
+        "floaterPinnedOne", "floaterPinnedMany", "floaterPriorityOne", "floaterPriorityMany",
+        "floaterRestingOne", "floaterRestingMany", "floaterRestingAll",
     )
 
     private data class SummaryBundleData(

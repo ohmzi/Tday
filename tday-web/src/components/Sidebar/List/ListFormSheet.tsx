@@ -18,7 +18,9 @@ import {
   getListIcon,
   listIconOptions,
   normalizeListIconKey,
+  resolveListIconKey,
 } from "@/lib/listIcons";
+import { inferListIconKey } from "@/lib/listIconInference";
 import { useToast } from "@/hooks/use-toast";
 import { useUndoableListDelete } from "@/hooks/use-undoable-list-delete";
 import { useCreateList } from "@/components/Sidebar/List/query/create-list";
@@ -57,7 +59,13 @@ async function patchList({
   id: string;
   name: string;
   color: ListColor;
-  iconKey: string;
+  /**
+   * Omitted while the picker is only PREVIEWING an icon. `JSON.stringify` drops an
+   * undefined field, and `ListService.update` writes the column only when one arrives
+   * (`iconKey?.let { … }`), so an untouched picker cannot overwrite an unset icon from
+   * a sheet the user opened to rename the list.
+   */
+  iconKey?: string;
 }) {
   await api.PATCH({
     url: "/api/list",
@@ -83,11 +91,27 @@ export default function ListFormSheet({
   const stageListDelete = useUndoableListDelete();
   const { createMutateAsync, createLoading } = useCreateList();
   const isEditing = Boolean(list?.id);
+
+  /**
+   * What the picker shows before anyone touches it: the chosen icon if there is one,
+   * otherwise the one the name evidences, otherwise the caller's default. Seeding the
+   * editor with the INFERRED glyph matters — a list wearing a name-derived cart whose
+   * settings sheet opened on an inbox would be offering to save a change to something
+   * the user never altered.
+   */
+  const previewIconKeyFor = (listName: string) =>
+    normalizeListIconKey(inferListIconKey(listName) ?? initialIconKey);
+  const seedIconKey = () =>
+    list ? resolveListIconKey(list) : previewIconKeyFor(initialName);
+
   const [name, setName] = useState(initialName);
   const [color, setColor] = useState<ListColor>(list?.color ?? initialColor);
-  const [iconKey, setIconKey] = useState(() =>
-    normalizeListIconKey(list?.iconKey ?? initialIconKey),
-  );
+  // The picker always shows SOMETHING, so its value alone cannot say whether the user
+  // chose that glyph or is being shown a guess. This flag is the difference, and the
+  // difference is the whole feature: `iconKey === null` in the database is the only
+  // thing that means "never chosen", and it stays null until this goes true.
+  const [iconTouched, setIconTouched] = useState(false);
+  const [iconKey, setIconKey] = useState(() => seedIconKey());
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -95,10 +119,24 @@ export default function ListFormSheet({
     if (!open) return;
     setName(list?.name ?? initialName);
     setColor(list?.color ?? initialColor);
-    setIconKey(normalizeListIconKey(list?.iconKey ?? initialIconKey));
+    setIconKey(seedIconKey());
+    setIconTouched(false);
     setError(null);
     setConfirmingDelete(false);
+    // `seedIconKey` closes over exactly these, and is re-made every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialColor, initialIconKey, initialName, list, open]);
+
+  // The detective, made visible: while the picker is a preview, it follows the name
+  // being typed. Editing is deliberately excluded — a list being renamed may have had
+  // its icon chosen long ago, and re-guessing under the user's hands would look like
+  // the app undoing a decision it is in fact preserving (the seed above already shows
+  // the inference for a list that never had one).
+  useEffect(() => {
+    if (isEditing || iconTouched) return;
+    setIconKey(previewIconKeyFor(name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [iconTouched, isEditing, name]);
 
   const selectedColor = useMemo(
     () => listColorMap.find((option) => option.value === color) ?? listColorMap[4],
@@ -151,26 +189,45 @@ export default function ListFormSheet({
 
     setError(null);
     if (isEditing && list) {
-      const currentIconKey = normalizeListIconKey(list.iconKey);
+      // Compared against the STORED value, not the normalised one. A list with no icon
+      // stores null while `normalizeListIconKey` answers "inbox" for it, so collapsing
+      // the two here would read a deliberate tap on Inbox as "nothing changed" and
+      // throw away the one choice the inference must never be allowed to override.
+      const storedIconKey = list.iconKey?.trim() ? normalizeListIconKey(list.iconKey) : null;
+      const iconChanged = iconTouched && iconKey !== storedIconKey;
       if (
         normalizedName === normalizeListName(list.name) &&
         color === (list.color ?? "BLUE") &&
-        iconKey === currentIconKey
+        !iconChanged
       ) {
         onOpenChange(false);
         return;
       }
-      updateListMutation.mutate({ id: list.id, name: normalizedName, color, iconKey });
+      updateListMutation.mutate({
+        id: list.id,
+        name: normalizedName,
+        color,
+        iconKey: iconTouched ? iconKey : undefined,
+      });
       return;
     }
 
     try {
-      const created = await createMutateAsync({ name: normalizedName, color, iconKey });
+      const created = await createMutateAsync({
+        name: normalizedName,
+        color,
+        // An untouched picker posts nothing, so the row is created with a null icon and
+        // the list is free to take one from its name. Posting the preview — which every
+        // client used to do — is what made `iconKey` "inbox" on every list ever made and
+        // left nothing in the model able to say "the user has not chosen".
+        iconKey: iconTouched ? iconKey : undefined,
+      });
       onSaved?.(created);
       onOpenChange(false);
       setName("");
       setColor(initialColor);
-      setIconKey(normalizeListIconKey(initialIconKey));
+      setIconKey(previewIconKeyFor(""));
+      setIconTouched(false);
     } catch (createError) {
       const message =
         createError instanceof Error ? createError.message : "Failed to create list";
@@ -256,7 +313,11 @@ export default function ListFormSheet({
                 <button
                   key={option.key}
                   type="button"
-                  onClick={() => { hapticTick(); setIconKey(option.key); }}
+                  onClick={() => {
+                    hapticTick();
+                    setIconKey(option.key);
+                    setIconTouched(true);
+                  }}
                   className={cn(
                     "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
                     selected

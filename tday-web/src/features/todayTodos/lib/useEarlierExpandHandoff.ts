@@ -39,6 +39,48 @@ export type EarlierHandoff = "idle" | "scene-leaving" | "rows-leaving";
  * frame, while the rows it landed on held their own height behind it for the
  * whole of their fade. Sequencing it spends the same beat the rows were
  * already fading for, and gets a swap instead of a pile-up.
+
+ * Both directions survive the empty scene moving BELOW Earlier's rows, and
+ * neither survives by inheritance: Android retired its `EarlierExpandDeferMillis`
+ * on exactly that move, so the question was reopened here rather than answered
+ * by copying. The two directions came out differently, on this implementation's
+ * own mechanism.
+ *
+ * COLLAPSE — kept, on an argument Android's does not reach. `.tday-empty-slot`
+ * is declared at `grid-template-rows: 1fr` with a transition, and a transition
+ * has no start value on mount: the scene's 42vh appears in ONE frame whenever
+ * the node mounts, with no track to open through. Reordering the blocks does
+ * not touch that. So without the wait the scene would still hard-mount its full
+ * height under rows that are holding their own height for the whole of
+ * `.tday-rows-exit` — the pile-up above, unchanged. Android gets "the rows
+ * leave and the scene rises behind them" for free because its scene is a list
+ * item with placement animation; web's is a hard mount into an already-open
+ * track.
+ *
+ * EXPAND — the one the reorder genuinely reopens, and kept. What the 200 ms
+ * buys is no longer a dead gap: the scene is visibly sinking and its track
+ * closing for the whole of it, and the rows that follow are a played entrance
+ * rather than a jump. Rule 5 of `docs/motion.md` asks that removing the motion
+ * remove the wait, and the reduced-motion branch below does precisely that —
+ * it is the branch that would be wrong to keep, not this one. iOS is the direct
+ * precedent and the interesting one: its scene has been anchored below the
+ * Earlier header since before any of this, drawn as an overlay with a reserved
+ * top height, and it still runs `EarlierIllustrationHandoff.exitDuration`.
+ * Anchoring the header does not by itself compel retiring the beat.
+ *
+ * Retiring it is coherent all the same, so the door is left open with nobody
+ * through it — it is not the deletion it looks like.
+ * `shouldShowTodayEmptyIllustration` answers false on the frame `earlierExpanded`
+ * goes true, so `"scene-leaving"` is the ONLY thing holding the node through the
+ * beat: drop the timer and the scene is removed outright with no exit played, a
+ * blank cut rather than a faster hand-off. It would need the
+ * mount-outlives-visibility split Android has, which here means a SECOND
+ * `useFadeUnmount` linger on the node that already carries the cancel one, on a
+ * different rung and a different class, with the two never allowed to apply at
+ * once — `emptySceneLeavesOnCancel` argues at length why a linger written for
+ * one departure must not be spent on both. And it would strand
+ * `earlierIsExpanding`, whose only readers are the two chevrons, leaving exactly
+ * the unreachable branch this repo keeps having to come back for.
  *
  * The two durations are the two exits, and each is the SAME number the thing
  * it waits on is drawn with — `TODAY_EARLIER_EXIT_MS` for `.tday-empty-exit`,

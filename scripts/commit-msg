@@ -14,6 +14,20 @@ fi
 #   Made-with: <tool>
 #   Co-authored-by: <AI tool name or email containing cursor/codex/copilot/chatgpt/claude/openai/anthropic>
 #   Generated-by: / Written-by: <AI tool>
+#   <Anything>-containing-an-AI-tool-name: <value>   e.g. Claude-Session:
+#
+# That last rule is keyed on the trailer NAME, and it exists because the four
+# fixed names above are a blocklist: they catch the trailers we had seen, and a
+# tool that invents a fifth walks straight past them. One did -- a
+# "Claude-Session: https://claude.ai/code/session_..." trailer reached this
+# branch and was found in review rather than by this hook, because it is not
+# Made-with, Co-authored-by, Generated-by or Written-by. Matching the token in
+# the KEY generalises to the next invented name while staying narrow enough to
+# be safe: the token has to appear before the colon, so an ordinary subject or
+# body line that happens to mention one of these products ("Fix: openai client
+# retry") is untouched. A trailer whose key is clean but whose VALUE names a
+# tool is still the Co-authored-by rule's job, which is why that one stays.
+#
 # Implemented in perl because BSD (macOS) and GNU sed disagree on -i, the
 # /I address flag, and \b word boundaries; perl behaves the same everywhere.
 perl -0777 -i -pe '
@@ -21,5 +35,6 @@ perl -0777 -i -pe '
   s/^Co-authored-by:.*\b(?:cursor|codex|copilot|chatgpt|claude|openai|anthropic)\b.*\n?//gim;
   s/^Generated-by:.*\n?//gim;
   s/^Written-by:.*\n?//gim;
+  s/^[A-Za-z0-9-]*(?:cursor|codex|copilot|chatgpt|claude|openai|anthropic)[A-Za-z0-9-]*:.*\n?//gim;
   s/\s+\z/\n/;
 ' "$COMMIT_MSG_FILE"

@@ -5,6 +5,7 @@ import { useRouter } from "@/lib/navigation";
 import { rootFeedHeaderButtonClass } from "./RootFeedHeroHeader";
 import { nativeAppScrollAttribute } from "./nativeAppLayout";
 import { clamp01, smootherstep } from "./nativeHeaderEasing";
+import { nativePageBarTitleReserve } from "./nativePageBarTitleReserve";
 import { cn } from "@/lib/utils";
 
 /**
@@ -42,9 +43,6 @@ export const nativePageHeaderMetrics = {
   markWashBottomAlpha: 0.07,
   markEchoAlpha: 0.17,
 
-  /** Breathing room each side of the title once it has docked in the bar. */
-  dockedTitleSideGap: 8,
-
   /**
    * The handoff, in iOS's numbers (`expandedTitleFadeStart` … 
    * `collapsedTitleRevealEnd` in `Feature/Todos/TodoListScreen.swift`). The
@@ -64,24 +62,9 @@ export const nativePageHeaderMetrics = {
   /** Gradient below the bar that dissolves content as it passes under it. */
   contentFadeHeight: 30,
 
-  /**
-   * Least width worth docking a title into — one initial and the ellipsis, which
-   * at the docked size is nearly all ellipsis: Nunito at 2.1rem/900 draws that
-   * alone 27.4px wide, against 23.1px for a "C". (Those two numbers were 28.7
-   * and 21.4 here; re-measured against the `Nunito.ttf` this repo actually
-   * ships, instantiated at wght 900 — advances plus GPOS kerning. The conclusion
-   * survives, since "C…" is 50.9px and still under this floor.) It is not raised
-   * past this because there is nothing to raise it into: the busiest bar in the
-   * app, the floater list's five controls, leaves the title exactly 64px at 390
-   * and 70px is all the sibling custom list has at 360. Below this the bar keeps
-   * no title at all; see the reserve below.
-   *
-   * This gates whether a title is shown AT ALL, and it must not be made to gate
-   * whether one FITS — Android raised exactly that confusion into a reported
-   * bug. See the note on the reserve below for what this bar still owes.
-   */
-  dockedTitleMinWidth: 56,
-
+  // The docked title's side gap and its least-worth-drawing floor used to live
+  // here. They are `nativePageBarTitleMetrics` now, next to the only rule that
+  // spends them — see [nativePageBarTitleReserve].
 } as const;
 
 /**
@@ -128,6 +111,18 @@ export const nativePageBarTitleLayerClassName = cn(
 );
 
 /**
+ * The title's type, at the one size it is drawn at anywhere on these pages.
+ *
+ * Named because three nodes have to agree on it exactly and two of them are not
+ * next to each other: the block's own `h1`, the copy docked in the bar — they
+ * are the two halves of a crossfade, so a divergence would make the name change
+ * shape as it hands off — and the hidden span the collapse measures the title's
+ * natural width against, where a divergence would silently answer the wrong
+ * question. They matched by hand-maintained coincidence until this constant.
+ */
+const nativePageTitleTypeClassName = "text-[2.1rem] font-black leading-tight tracking-normal";
+
+/**
  * The docked title itself, inside that layer. Full-width so the symmetric
  * reserve the collapse writes as horizontal padding still centres it on the bar
  * rather than on what is left over, and `truncate` so a long name ellipsizes
@@ -143,7 +138,7 @@ export const nativePageBarTitleLayerClassName = cn(
  */
 export const nativePageBarDockedTitleClassName = cn(
   "w-full min-w-0 truncate text-center",
-  "text-[2.1rem] font-black leading-tight tracking-normal",
+  nativePageTitleTypeClassName,
 );
 
 /**
@@ -280,6 +275,8 @@ export default function NativePageHeader({
   const markRef = useRef<HTMLDivElement | null>(null);
   /** The block's own copy of the title — the one that scrolls away. */
   const heroTitleRef = useRef<HTMLHeadingElement | null>(null);
+  /** Never shown; exists only to be measured. See the span at the foot of the block. */
+  const titleMeasureRef = useRef<HTMLSpanElement | null>(null);
   const ownSlots = useNativePageBarSlots();
   const slots = barSlots ?? ownSlots;
   const { barRef, dockedTitleRef, fadeRef, leadingRef, trailingRef } = slots;
@@ -318,6 +315,15 @@ export default function NativePageHeader({
       const markRect = markBoxEl.getBoundingClientRect();
       const leadingWidth = leadingRef.current?.offsetWidth ?? 0;
       const trailingWidth = trailingRef.current?.offsetWidth ?? 0;
+      // What the name wants at the docked size, read off the hidden copy for the
+      // same reason the sibling `RootFeedHeroHeader` reads one: the visible node
+      // is the thing being sized here — this very callback writes its horizontal
+      // padding below — so its own width is the answer, not the question.
+      // Fractional, because an integer `offsetWidth` rounds a title that fits
+      // down into one that ellipsizes. Zero until the span has a box, and zero
+      // fits everything, so an unmeasured frame behaves exactly as this bar
+      // always did.
+      const titleWidth = titleMeasureRef.current?.getBoundingClientRect().width ?? 0;
       // The bar is pinned at every width, so there is always something to dock
       // into and nothing here is conditioned on the breakpoint.
       const barBottom = barRect?.bottom ?? null;
@@ -368,53 +374,19 @@ export default function NativePageHeader({
         ),
       );
       if (titleEl) {
-        // Kept clear of both the back button and the actions. Reserving the
-        // WIDER of the two twice over is deliberate: it keeps the title centred
-        // on the BAR rather than on the leftovers, and it is what makes a long
-        // title ellipsize once docked — "Completion history" does, on a narrow
-        // phone.
-        //
-        // That only holds while there is still something left to read. A busy
-        // bar — the floater list carries four trailing controls — can ask for
-        // more reserve than the bar is wide, and `truncate` clips to the PADDING
-        // box, not the content box, so the title then painted straight across
-        // those controls and off the end of the screen. The reserve degrades in
-        // two steps instead: symmetric while the title still gets
-        // `dockedTitleMinWidth`, then each side reserving only what actually
-        // sits there — off-centre, but legible and clear of the buttons, which
-        // is what iOS's `TimelineTopBar` does unconditionally — and if even
-        // that leaves nothing, the bar simply carries no title. The block's own
-        // copy is the page's real heading either way.
-        //
-        // OWED, and knowingly not paid here: the first step asks whether a STUMP
-        // would fit (`dockedTitleMinWidth`), not whether the TITLE would, and
-        // those are different questions. Android ran the identical rule and it
-        // produced a real device bug — the Calendar bar mirroring a 120px
-        // trailing cluster and handing "Calendar" 120px for a word that wants
-        // 136.7 at 32sp, rendering "Cale…" — while the per-side fallback on the
-        // very same bar would have given it 184px. Android's
-        // `tdayBarTitleReserve` now takes the title's measured width and mirrors
-        // only while the mirrored reserve actually fits it, falling through to
-        // per-side before it gives up, plus a bounded shrink after that. This
-        // bar has the same defect and worse: its "Today" control is a text pill
-        // rather than a collapsing circle, so at a 412px viewport the Calendar
-        // title here gets about 68px against the 146.6px "Calendar" wants at
-        // 2.1rem/900 — more than half the word clipped.
-        //
-        // It is not fixed in this pass because it is not the same edit. The four
-        // lines below are pure arithmetic over widths already read this frame;
-        // making them title-aware needs the title MEASURED, which here is a
-        // canvas `measureText` against the computed font or a forced reflow, not
-        // a fifth line. Whoever picks that up should port the Android rule
-        // rather than invent a second one, and should keep the mirrored branch
-        // first — the centring is load-bearing for the crossfade, not decoration.
-        const gap = m.dockedTitleSideGap;
-        const barWidth = barRect?.width ?? 0;
-        const symmetric = Math.max(leadingWidth, trailingWidth) + gap;
-        const centred = barWidth - symmetric * 2 >= m.dockedTitleMinWidth;
-        const leadingReserve = centred ? symmetric : leadingWidth + gap;
-        const trailingReserve = centred ? symmetric : trailingWidth + gap;
-        const titleRoom = barWidth - leadingReserve - trailingReserve;
+        // Kept clear of both the back button and the actions, and centred on the
+        // BAR rather than on the leftovers while the name actually fits there.
+        // All four decisions — mirror, fall back to per-side, ellipsize, or
+        // carry no title at all — are [nativePageBarTitleReserve]'s, which is a
+        // pure function in its own module so the arithmetic can be tested
+        // without a device. Everything this frame contributes is the four
+        // numbers.
+        const { leadingReserve, trailingReserve, hasRoom } = nativePageBarTitleReserve({
+          barWidth: barRect?.width ?? 0,
+          leadingWidth,
+          trailingWidth,
+          titleWidth,
+        });
 
         // Set by a bar that has given its row to something else — the search
         // field, on the two list pages. Read off the DOM rather than passed in
@@ -422,7 +394,7 @@ export default function NativePageHeader({
         // could never win against the opacity written here every frame, which is
         // exactly why the `opacity-0` that used to sit on the title did nothing.
         const suppressed = titleEl.dataset.barTitleSuppressed === "true";
-        const shown = !suppressed && titleRoom >= m.dockedTitleMinWidth ? dockFade : 0;
+        const shown = !suppressed && hasRoom ? dockFade : 0;
         titleEl.style.opacity = String(shown);
         // Invisible text must not be read out, nor eat taps meant for the bar.
         titleEl.style.visibility = shown < 0.01 ? "hidden" : "visible";
@@ -487,6 +459,14 @@ export default function NativePageHeader({
 
     track();
     apply();
+    // A webfont swapping in changes what the title wants AND what the trailing
+    // cluster occupies — Calendar's "Today" control is a text pill — and a font
+    // swap fires neither scroll nor resize, so nothing else here would hear
+    // about it. Unmeasured, the reserve would sit on the fallback face's numbers
+    // until the next scroll: mis-centred, or ellipsized when it fits. The bar
+    // has needed this since the pill landed; the measured title is what made it
+    // unignorable. Same hook, same reason, as `RootFeedHeroHeader`'s.
+    void document.fonts?.ready.then(schedule);
     scroller.addEventListener("scroll", schedule, { passive: true });
     scroller.addEventListener(nativePageBarResyncEvent, resync);
     window.addEventListener("resize", schedule);
@@ -551,7 +531,10 @@ export default function NativePageHeader({
       </header>
       )}
 
-      <div ref={heroRef} className={cn("mt-4 text-center sm:mt-5", className)}>
+      {/* `relative` so the measure span at the foot of this block resolves
+          against it rather than against whatever positioned ancestor the page
+          happens to have. */}
+      <div ref={heroRef} className={cn("relative mt-4 text-center sm:mt-5", className)}>
         {/* A flat glyph on a flat disc reads as a utility icon. The wash is a
             gradient with an oversized echo of the same glyph bleeding out of the
             bottom-right — the motif the category tiles already use.
@@ -603,7 +586,7 @@ export default function NativePageHeader({
 
         <h1
           ref={heroTitleRef}
-          className="mt-[18px] truncate text-[2.1rem] font-black leading-tight tracking-normal"
+          className={cn("mt-[18px] truncate", nativePageTitleTypeClassName)}
           style={{ color: accentColor }}
         >
           {title}
@@ -612,6 +595,40 @@ export default function NativePageHeader({
           <p className="mt-1.5 text-sm font-extrabold text-muted-foreground">{subtitle}</p>
         ) : null}
         {beneathTitle}
+
+        {/* Never shown. Gives the collapse the title's natural width at the
+            docked size, which neither drawn copy can be asked for: the docked
+            one is bounded by the padding this same callback writes, and the
+            `h1` above is `truncate`d to the page's column. Out of flow and
+            `invisible`, so it contributes nothing to the block whose height is
+            the collapse's denominator, and `whitespace-nowrap` so a long name
+            reports what it wants on one line instead of what it would wrap to.
+            A name wider than the column therefore overhangs, which costs
+            nothing: the page's scroller is `overflow-x-hidden`
+            (`nativeAppLayout`) so it cannot scroll the screen sideways, and a
+            clipped box still reports its full width to
+            `getBoundingClientRect`.
+
+            Here rather than in the bar because this block renders for BOTH
+            kinds of page — the ones this component draws a bar for and the two
+            list screens that hand their own bar in through `barSlots` — so one
+            span serves both without a sixth ref on `NativePageBarSlots` or an
+            edit to `MobileSearchHeader` and its five consumers.
+
+            A canvas `measureText` would need no node, and is worse: it means
+            rebuilding the CSS font shorthand from computed style and trusting
+            it to match what the browser actually shapes. The sibling
+            `RootFeedHeroHeader` reached the same conclusion twice. */}
+        <span
+          ref={titleMeasureRef}
+          aria-hidden
+          className={cn(
+            "pointer-events-none invisible absolute left-0 top-0 whitespace-nowrap",
+            nativePageTitleTypeClassName,
+          )}
+        >
+          {title}
+        </span>
       </div>
     </>
   );
