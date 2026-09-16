@@ -259,6 +259,8 @@ object SummaryEngine {
             FloaterNote.RESTING_ALL -> "floaterRestingAll"
             FloaterNote.PRIORITY_ONE -> "floaterPriorityOne"
             FloaterNote.PRIORITY_MANY -> "floaterPriorityMany"
+            FloaterNote.MEDIUM_ONE -> "floaterMediumOne"
+            FloaterNote.MEDIUM_MANY -> "floaterMediumMany"
         }
         val note = noteKey?.let { key ->
             s.t(key, mapOf("title" to compactTitle(plan.noteTitle, s)))

@@ -30,6 +30,10 @@ internal enum class FloaterNote {
     RESTING_ALL,
     PRIORITY_ONE,
     PRIORITY_MANY,
+
+    /** Weaker than [PRIORITY_ONE]/[PRIORITY_MANY]: named only when nothing High is present. */
+    MEDIUM_ONE,
+    MEDIUM_MANY,
 }
 
 /**
@@ -82,6 +86,7 @@ internal object FloaterSummaryPlanner {
             FloaterResting.tierFor(it.updatedAtEpochMs, nowEpochMs) == FloaterRestingTier.RESTING
         }
         val high = tasks.count { priorityRankOf(it.priority) == HIGH_PRIORITY_RANK }
+        val medium = tasks.count { priorityRankOf(it.priority) == MEDIUM_PRIORITY_RANK }
 
         val note = when {
             // A wholly dormant pile outranks a pin: when nothing has been touched in months,
@@ -94,6 +99,10 @@ internal object FloaterSummaryPlanner {
             resting > 1 -> FloaterNote.RESTING_MANY
             high == 1 -> FloaterNote.PRIORITY_ONE
             high > 1 -> FloaterNote.PRIORITY_MANY
+            // Below High: Medium is still worth naming over saying nothing about priority at
+            // all, but it never outranks High — a pile with both gets the High note only.
+            medium == 1 -> FloaterNote.MEDIUM_ONE
+            medium > 1 -> FloaterNote.MEDIUM_MANY
             else -> FloaterNote.NONE
         }
 
@@ -107,6 +116,9 @@ internal object FloaterSummaryPlanner {
 
             FloaterNote.PRIORITY_ONE, FloaterNote.PRIORITY_MANY ->
                 ranked.first { priorityRankOf(it.priority) == HIGH_PRIORITY_RANK }.title
+
+            FloaterNote.MEDIUM_ONE, FloaterNote.MEDIUM_MANY ->
+                ranked.first { priorityRankOf(it.priority) == MEDIUM_PRIORITY_RANK }.title
 
             // The resting notes deliberately name nobody: `updatedAtEpochMs` is a last-write
             // clock, so "this one has waited longest" would be a claim about creation time that

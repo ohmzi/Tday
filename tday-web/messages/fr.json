@@ -885,6 +885,8 @@
     "floaterPinnedMany": "Vous avez épinglé {{title}}, et ce n'est pas le seul.",
     "floaterPriorityOne": "Seul {{title}} est en priorité haute.",
     "floaterPriorityMany": "{{title}} est en priorité haute, et ce n'est pas le seul.",
+    "floaterMediumOne": "Seul {{title}} est en priorité moyenne.",
+    "floaterMediumMany": "{{title}} est en priorité moyenne, et ce n'est pas le seul.",
     "floaterRestingOne": "L'un d'eux n'a pas été touché depuis des mois.",
     "floaterRestingMany": "Certains n'ont pas été touchés depuis des mois.",
     "floaterRestingAll": "Rien ici n'a été touché depuis des mois.",
