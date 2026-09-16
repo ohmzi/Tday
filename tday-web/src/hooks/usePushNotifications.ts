@@ -41,7 +41,8 @@ export function usePushNotifications() {
   const [state, setState] = useState<PushState>({
     // Web push is delivered by the backend from a stored subscription, so it is
     // a Server Mode feature — Local Mode reports it as unsupported and the
-    // Settings toggle disappears, matching Android's UnifiedPush row.
+    // Settings toggle disappears. Android draws the same Local Mode line without
+    // a toggle at all: it registers with a UnifiedPush distributor by itself.
     isSupported: isPushSupported() && !isLocalMode(),
     permission: typeof Notification !== "undefined" ? Notification.permission : "default",
     isSubscribed: false,

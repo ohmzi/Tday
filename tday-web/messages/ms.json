@@ -1310,10 +1310,10 @@
         "title": "UnifiedPush (Android)",
         "summary": "Tolakan pelayan tanpa Google, melalui pengedar anda.",
         "keywords": "unifiedpush, ntfy, tolak, pemberitahuan, hos sendiri, pengedar, fcm",
-        "body": "Dalam Mod Pelayan, T'Day boleh menghantar pemberitahuan pelayan melalui UnifiedPush dan bukan FCM Google — data anda kekal pada pelayan dan pengedar anda sendiri. Pasang apl pengedar (seperti ntfy), kemudian hidupkan UnifiedPush dalam Tetapan. Peringatan tempatan tetap berfungsi.",
+        "body": "Dalam Mod Pelayan, T'Day menghantar pemberitahuan pelayan melalui UnifiedPush dan bukan FCM Google — data anda kekal pada pelayan dan pengedar anda sendiri. Tiada apa-apa untuk dihidupkan: pasang apl pengedar (seperti ntfy) dan T'Day mendaftar dengannya secara automatik. Peringatan tempatan tetap berfungsi.",
         "step0": "Pasang pengedar UnifiedPush seperti ntfy dari gedung apl anda.",
-        "step1": "Dalam Tetapan → Peringatan, hidupkan UnifiedPush dan pilih pengedar.",
-        "step2": "Pelayan anda kini menolak perubahan ke endpoint itu; matikan bila-bila masa."
+        "step1": "Buka T'Day — ia menemui pengedar itu dan mendaftar sendiri. Jika dua atau lebih dipasang, Tetapan → Peringatan akan bertanya yang mana satu.",
+        "step2": "Untuk menghentikan tolakan pelayan, nyahpasang pengedar atau log keluar — peringatan tempatan tidak terjejas."
       },
       "repeat-suggestions": {
         "title": "Cadangan ulangan",

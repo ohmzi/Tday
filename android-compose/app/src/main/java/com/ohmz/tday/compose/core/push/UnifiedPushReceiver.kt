@@ -37,10 +37,15 @@ class UnifiedPushReceiver : MessagingReceiver() {
         // Only Server-Mode users have a backend to receive from.
         if (entry.serverConfigRepository().isLocalMode()) return
         entry.unifiedPushStore().setEndpoint(endpoint)
+        // Sent from here as well as from UnifiedPushAutoRegistrar because this receiver may be
+        // the only thing awake when a distributor rotates an endpoint. It cannot record WHICH
+        // account the endpoint was accepted for — a broadcast receiver has no session in hand —
+        // so the failure below is left as a warning: setEndpoint has already dropped the
+        // confirmation marker, and the next foreground re-sends it under the signed-in user.
         scope.launch {
             runCatching {
                 entry.apiService().subscribePush(
-                    PushSubscribeRequest(endpoint = endpoint, transport = "unifiedpush"),
+                    PushSubscribeRequest(endpoint = endpoint, transport = UNIFIEDPUSH_TRANSPORT),
                 )
             }.onFailure { Log.w(TAG, "Failed to register UnifiedPush endpoint: ${it.message}") }
         }

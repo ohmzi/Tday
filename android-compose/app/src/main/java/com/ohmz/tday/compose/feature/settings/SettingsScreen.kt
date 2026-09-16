@@ -65,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +76,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -115,6 +117,8 @@ import com.ohmz.tday.compose.core.notification.canPromptForNotificationPermissio
 import com.ohmz.tday.compose.core.notification.isNotificationOsAuthorized
 import com.ohmz.tday.compose.core.notification.notificationToggleAction
 import com.ohmz.tday.compose.core.notification.notificationToggleChecked
+import com.ohmz.tday.compose.core.push.needsDistributorChoice
+import com.ohmz.tday.compose.core.push.readUnifiedPushDistributorState
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.TdayDisclosureMotion
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
@@ -150,6 +154,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.unifiedpush.android.connector.UnifiedPush
@@ -307,6 +312,37 @@ fun SettingsScreen(
         notificationsLifecycleOwner.lifecycle.addObserver(observer)
         onDispose { notificationsLifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    // Server push registers itself now (UnifiedPushAutoRegistrar), so there is no push row to
+    // show — except in the one state the automation refuses to resolve: several distributors
+    // installed and none chosen. Read through the same predicate the registrar uses, so the row
+    // appears exactly when the registrar is waiting on it.
+    var distributorChoiceNeeded by remember(notificationContext, isLocalMode) {
+        mutableStateOf(
+            !isLocalMode && needsDistributorChoice(
+                readUnifiedPushDistributorState(notificationContext),
+            ),
+        )
+    }
+    val distributorWindowInfo = LocalWindowInfo.current
+    LaunchedEffect(distributorWindowInfo, notificationContext, isLocalMode) {
+        // Window focus, not ON_RESUME. Both things that can change this answer take the window's
+        // focus away and give it back, but only one of them is a lifecycle event: installing or
+        // uninstalling a distributor happens in another app (resume, and focus), while this row's
+        // own Choose pill opens the connector's plain AlertDialog, which never moves the host
+        // Activity out of RESUMED. Keyed on resume alone, the row stayed on screen still asking a
+        // question the user had just answered — the "I tapped it and nothing happened" shape that
+        // got the old row deleted. `drop(1)` because the composition above already read the state
+        // once; this effect exists for the RETURN of focus, and a package query is too expensive
+        // to repeat for an answer that cannot change while nothing else holds the window.
+        snapshotFlow { distributorWindowInfo.isWindowFocused }
+            .drop(1)
+            .collect { focused ->
+                if (!focused) return@collect
+                distributorChoiceNeeded = !isLocalMode && needsDistributorChoice(
+                    readUnifiedPushDistributorState(notificationContext),
+                )
+            }
+    }
     val languageTitle = stringResource(R.string.settings_language)
     val featureToggleTitle = stringResource(R.string.settings_feature_toggle)
     val privacyTitle = stringResource(R.string.settings_privacy)
@@ -414,22 +450,23 @@ fun SettingsScreen(
             }
         },
         SettingsEntry(
-            key = "unified-push",
-            // Server pushes via UnifiedPush are only meaningful in Server Mode.
-            visible = !isLocalMode && search.matches(
+            key = "push-distributor",
+            // Conditional on the choice being open, not just on Server Mode: with one
+            // distributor installed there is nothing to decide and the app has already
+            // registered, and with none installed this row would be the dead end that got
+            // the old one deleted.
+            visible = distributorChoiceNeeded && search.matches(
                 remindersTitle,
-                stringResource(R.string.settings_unifiedpush_title),
+                stringResource(R.string.settings_push_distributor_title),
             ),
             section = remindersTitle,
             sectionHelpTopicId = GuideTopicIds.REMINDERS,
         ) {
-            // In the silenced group too: the in-app switch gates a UnifiedPush
-            // delivery the same way it gates a local reminder (see
-            // `UnifiedPushEntryPoint`), so leaving this one live would promise a
-            // push that the switch above quietly drops.
-            SettingsSilencedWhen(!notificationsDeliver) {
-                UnifiedPushRow()
-            }
+            // NOT in the silenced group, unlike the row it replaces. That wrapper claimed the
+            // in-app switch gates a server push the way it gates a local reminder; the receiver
+            // says otherwise — it lets the silent `data-changed` ping through ABOVE the switch,
+            // so a user with notifications off still needs this registration for their widget.
+            PushDistributorRow()
         },
         SettingsEntry(
             key = "language",
@@ -2627,16 +2664,25 @@ private fun QuietHoursTimeRow(label: String, value: String, onClick: () -> Unit)
 }
 
 /**
- * Server Mode only: enable/disable UnifiedPush so a self-hoster's distributor (e.g.
- * ntfy) delivers server pushes. Registration completes asynchronously — the endpoint
- * is sent to the backend by [com.ohmz.tday.compose.core.push.UnifiedPushReceiver].
+ * The tie-breaker, and the only push control left. Server push is automatic — the app registers
+ * itself with the distributor it finds — but "which of these two apps gets to see my push
+ * traffic" is not a question an app may answer for its user by taking the first entry of a
+ * package-manager query. This row exists only while that question is open (see
+ * [needsDistributorChoice]) and its own composition is gated on that, so it is never the "go
+ * install ntfy" dead end the old UnifiedPush row was.
+ *
+ * The pill hands straight to the connector's chooser, which is a plain `AlertDialog` with no
+ * result callback — so nothing here learns the answer directly. The caller watches window focus
+ * instead: the dialog takes focus on open and hands it back on dismiss, and the re-read on its
+ * return is what takes this row away the moment the question is answered. That matters more than
+ * it looks: `registerAppWithDialog` only short-circuits once the distributor has ACKed, and the
+ * dialog's own handler saves the distributor without setting that bit, so a second tap in a row
+ * left on screen would re-open the picker over a choice already made.
  */
 @Composable
-private fun UnifiedPushRow() {
+private fun PushDistributorRow() {
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
-    val snackbarManager = LocalSnackbarManager.current
-    var registered by remember { mutableStateOf(UnifiedPush.getAckDistributor(context) != null) }
 
     Row(
         modifier = Modifier
@@ -2645,35 +2691,29 @@ private fun UnifiedPushRow() {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SettingsRowIcon(R.drawable.ic_lucide_cloud)
-        Text(
-            text = stringResource(R.string.settings_unifiedpush_title),
+        Column(
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = colorScheme.onSurface,
-        )
+            verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXxs),
+        ) {
+            Text(
+                text = stringResource(R.string.settings_push_distributor_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = colorScheme.onSurface,
+            )
+            // A row that appears out of nowhere has to say why it is there; without this it
+            // reads as a setting the user forgot to finish rather than a question only they
+            // can answer.
+            Text(
+                text = stringResource(R.string.settings_push_distributor_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurfaceVariant,
+            )
+        }
         SettingsPillButton(
-            text = stringResource(
-                if (registered) R.string.settings_unifiedpush_enabled
-                else R.string.settings_unifiedpush_disabled,
-            ),
+            text = stringResource(R.string.settings_push_distributor_choose),
             icon = R.drawable.ic_lucide_cloud,
-            onClick = {
-                if (registered) {
-                    UnifiedPush.unregisterApp(context)
-                    registered = false
-                } else {
-                    val distributors = UnifiedPush.getDistributors(context)
-                    if (distributors.isEmpty()) {
-                        snackbarManager?.showInfo(
-                            context.getString(R.string.settings_unifiedpush_none),
-                        )
-                    } else {
-                        UnifiedPush.registerAppWithDialog(context)
-                        registered = true
-                    }
-                }
-            },
+            onClick = { UnifiedPush.registerAppWithDialog(context) },
         )
     }
 }
