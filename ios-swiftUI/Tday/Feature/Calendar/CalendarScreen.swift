@@ -3435,7 +3435,7 @@ private struct CalendarPendingTaskRow: View {
                 if list != nil || priorityIcon != nil {
                     HStack(spacing: 8) {
                         if let list {
-                            TdayListIcon(iconKey: list.iconKey, size: TodoTimelineMetrics.minimalRowIndicatorSize)
+                            TdayListIcon(iconKey: list.iconKey, listName: list.name, size: TodoTimelineMetrics.minimalRowIndicatorSize)
                                 .foregroundStyle(calendarListAccentColor(for: list.color))
                         }
                         if let priorityIcon {

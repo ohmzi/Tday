@@ -723,6 +723,40 @@
       "searchBody": "classez les taches datees dans des listes nommees et colorees. attribuez une liste aux taches planifiees pour que le travail connexe reste ensemble. les listes portent un nom et une couleur et peuvent etre filtrees."
     },
     {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Icônes de liste automatiques",
+      "summary": "Une nouvelle liste adopte une icône correspondant à son nom.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Nommez une liste Groceries et elle porte un caddie ; Gym reçoit un haltère, Work une mallette. T'Day ne devine que si vous n'avez pas choisi d'icône vous-même, et conserve l'icône par défaut dès que le nom n'est pas assez clair. Les noms sont reconnus en anglais pour l'instant."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Choisissez une icône dans les réglages de la liste quand vous voulez : votre choix est conservé et jamais remplacé par une supposition."
+          ]
+        }
+      ],
+      "searchTitle": "icones de liste automatiques",
+      "searchKeywords": "icone de liste, automatique, suggeree, glyphe, nom, courses, sport, travail",
+      "searchBody": "une nouvelle liste adopte une icone correspondant a son nom. nommez une liste groceries et elle porte un caddie ; gym recoit un haltere, work une mallette. t'day ne devine que si vous n'avez pas choisi d'icone vous-meme, et conserve l'icone par defaut des que le nom n'est pas assez clair. les noms sont reconnus en anglais pour l'instant. choisissez une icone dans les reglages de la liste quand vous voulez : votre choix est conserve et jamais remplace par une supposition."
+    },
+    {
       "id": "completed-history",
       "section": "ORGANIZING",
       "sectionOrder": 3,

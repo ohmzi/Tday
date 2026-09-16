@@ -723,6 +723,40 @@
       "searchBody": "sortiere datierte aufgaben in benannte, farbige listen. gib geplanten aufgaben eine liste, damit zusammengehoriges beisammen bleibt. listen tragen einen namen und eine farbe und lassen sich filtern."
     },
     {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Automatische Listensymbole",
+      "summary": "Eine neue Liste erhält ein Symbol, das zu ihrem Namen passt.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Nenne eine Liste Groceries und sie trägt einen Einkaufswagen; Gym bekommt eine Hantel, Work einen Aktenkoffer. T'Day rät nur, wenn du selbst kein Symbol gewählt hast, und behält das Standardsymbol, sobald der Name nicht eindeutig genug ist. Namen werden vorerst auf Englisch erkannt."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Wähle jederzeit ein Symbol in den Listeneinstellungen – einmal gewählt, bleibt es erhalten und wird nie überraten."
+          ]
+        }
+      ],
+      "searchTitle": "automatische listensymbole",
+      "searchKeywords": "listensymbol, automatisch, vorgeschlagen, glyphe, name, einkauf, fitness, arbeit",
+      "searchBody": "eine neue liste erhalt ein symbol, das zu ihrem namen passt. nenne eine liste groceries und sie tragt einen einkaufswagen; gym bekommt eine hantel, work einen aktenkoffer. t'day rat nur, wenn du selbst kein symbol gewahlt hast, und behalt das standardsymbol, sobald der name nicht eindeutig genug ist. namen werden vorerst auf englisch erkannt. wahle jederzeit ein symbol in den listeneinstellungen – einmal gewahlt, bleibt es erhalten und wird nie uberraten."
+    },
+    {
       "id": "completed-history",
       "section": "ORGANIZING",
       "sectionOrder": 3,

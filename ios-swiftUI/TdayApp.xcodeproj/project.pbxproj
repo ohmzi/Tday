@@ -174,6 +174,11 @@
 		F0A57E0200000000000000C2 /* TdayTaskRowSkeletonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */; };
 		F0A57E0000000000000000A2 /* TdayMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000A1 /* TdayMotion.swift */; };
 		F0A57E0000000000000000B2 /* TdayMotionGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */; };
+		F0A57E0300000000000000A2 /* TaskRowListMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000A1 /* TaskRowListMark.swift */; };
+		F0A57E0300000000000000B2 /* TdayListIconInference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000B1 /* TdayListIconInference.swift */; };
+		F0A57E0300000000000000C2 /* TdayListIconInferenceGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000C1 /* TdayListIconInferenceGenerated.swift */; };
+		F0A57E0300000000000000D2 /* TaskRowListMarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000D1 /* TaskRowListMarkTests.swift */; };
+		F0A57E0300000000000000E2 /* ListIconInferenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000E1 /* ListIconInferenceTests.swift */; };
 		F0A57E0000000000000000C2 /* TdayMotionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000C1 /* TdayMotionTests.swift */; };
 		F0A57E0000000000000000D2 /* TdayMotionEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000D1 /* TdayMotionEnvironment.swift */; };
 		F0A57E0000000000000000E2 /* TdayMotionEnvironmentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000E1 /* TdayMotionEnvironmentTests.swift */; };
@@ -440,6 +445,11 @@
 		F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayTaskRowSkeletonTests.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000A1 /* TdayMotion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotion.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionGenerated.swift; sourceTree = "<group>"; };
+		F0A57E0300000000000000A1 /* TaskRowListMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowListMark.swift; sourceTree = "<group>"; };
+		F0A57E0300000000000000B1 /* TdayListIconInference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayListIconInference.swift; sourceTree = "<group>"; };
+		F0A57E0300000000000000C1 /* TdayListIconInferenceGenerated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayListIconInferenceGenerated.swift; sourceTree = "<group>"; };
+		F0A57E0300000000000000D1 /* TaskRowListMarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowListMarkTests.swift; sourceTree = "<group>"; };
+		F0A57E0300000000000000E1 /* ListIconInferenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListIconInferenceTests.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000C1 /* TdayMotionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionTests.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000D1 /* TdayMotionEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionEnvironment.swift; sourceTree = "<group>"; };
 		F0A57E0000000000000000E1 /* TdayMotionEnvironmentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdayMotionEnvironmentTests.swift; sourceTree = "<group>"; };
@@ -565,6 +575,8 @@
 				5E7E7A8C0B534B26A6E2F911 /* TelemetrySanitizerTests.swift */,
 				C0FE7715B8C9D0E1F2A30001 /* TdayConfettiKinematicsTests.swift */,
 				C0FE7715B8C9D0E1F2A30011 /* ShouldCelebrateEmptyStateTests.swift */,
+				F0A57E0300000000000000D1 /* TaskRowListMarkTests.swift */,
+				F0A57E0300000000000000E1 /* ListIconInferenceTests.swift */,
 				C0FE7715B8C9D0E1F2A30041 /* FeedAnswerTests.swift */,
 				F0A57E0100000000000000C1 /* TdayFeedItemMotionTests.swift */,
 				F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */,
@@ -583,6 +595,7 @@
 		0D57A85AA8A54CBA3AB77925 /* Todos */ = {
 			isa = PBXGroup;
 			children = (
+				F0A57E0300000000000000A1 /* TaskRowListMark.swift */,
 				A1C0FFEE000000000000F001 /* ListShareText.swift */,
 				A1C0FFEE000000000000F003 /* ManageMembersSheet.swift */,
 				62AD2C2DD2233FCBB4611E95 /* TodoListScreen.swift */,
@@ -878,6 +891,8 @@
 				F0A57E0000000000000000A1 /* TdayMotion.swift */,
 				F0A57E0000000000000000D1 /* TdayMotionEnvironment.swift */,
 				F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */,
+				F0A57E0300000000000000B1 /* TdayListIconInference.swift */,
+				F0A57E0300000000000000C1 /* TdayListIconInferenceGenerated.swift */,
 				39ADD9E07BF8B32C3FC7B170 /* TdayTheme.swift */,
 			);
 			path = Theme;
@@ -1326,6 +1341,8 @@
 				5E7E7A8C0B534B26A6E2F910 /* TelemetrySanitizerTests.swift in Sources */,
 				C0FE7715B8C9D0E1F2A30002 /* TdayConfettiKinematicsTests.swift in Sources */,
 				C0FE7715B8C9D0E1F2A30012 /* ShouldCelebrateEmptyStateTests.swift in Sources */,
+				F0A57E0300000000000000D2 /* TaskRowListMarkTests.swift in Sources */,
+				F0A57E0300000000000000E2 /* ListIconInferenceTests.swift in Sources */,
 				C0FE7715B8C9D0E1F2A30042 /* FeedAnswerTests.swift in Sources */,
 				F0A57E0100000000000000C2 /* TdayFeedItemMotionTests.swift in Sources */,
 				F0A57E0200000000000000C2 /* TdayTaskRowSkeletonTests.swift in Sources */,
@@ -1467,6 +1484,9 @@
 				F0A57E0000000000000000D2 /* TdayMotionEnvironment.swift in Sources */,
 				F0A57E0000000000000000F2 /* ZoomNavigation.swift in Sources */,
 				F0A57E0000000000000000B2 /* TdayMotionGenerated.swift in Sources */,
+				F0A57E0300000000000000A2 /* TaskRowListMark.swift in Sources */,
+				F0A57E0300000000000000B2 /* TdayListIconInference.swift in Sources */,
+				F0A57E0300000000000000C2 /* TdayListIconInferenceGenerated.swift in Sources */,
 				BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */,
 				0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */,
 				9F8E7D6C5B4A00000000B101 /* LanguageStore.swift in Sources */,
