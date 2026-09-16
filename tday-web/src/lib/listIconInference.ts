@@ -46,14 +46,29 @@ export const inferableListIconKeys: ReadonlySet<string> = new Set(
  * Turkish locale, which would make one list infer differently in two browsers. The
  * Kotlin twin passes over `lowercase()` for exactly the same reason.
  *
- * The split is on anything that is not an ASCII letter or digit. Wider than it looks:
- * a title is cut at spaces, punctuation, emoji and accented characters alike, so
- * "Groceries 🛒" and "Work/Home" both still yield the words they obviously contain.
- * An accented word is simply cut where the accent is and matches nothing, which is
- * the correct answer from an English table.
+ * The split is on anything that is not a LETTER or a NUMBER in the Unicode sense, and
+ * the `u` flag is what makes `\p{L}`/`\p{N}` mean that rather than two literal `p`s.
+ * This is not decoration: the Kotlin twin splits on `Char.isLetterOrDigit` and the Swift
+ * one on `isLetter || isNumber`, both Unicode, and an ASCII class here would not be a
+ * narrower version of the same rule — it would be a DIFFERENT rule, because it also cuts
+ * *inside* a run the other two keep whole. A list named "仕事Work" is one word to Kotlin
+ * and Swift, which recognise none of it and correctly say nothing; under `[^a-z0-9]+` it
+ * became the single word "work" and the browser drew a confident briefcase the phones
+ * did not. The same for "Gymé" → `gym` → a dumbbell. That divergence lands hardest on
+ * ja and zh, where an unspaced CJK+English list name is the ordinary shape, and it is
+ * one-directional: only web could be confidently wrong. The parity gate now compares the
+ * three case tables, and `"仕事Work"` is in all three so this cannot come back.
+ *
+ * What the split still does is everything it did before: a title is cut at spaces,
+ * punctuation and emoji, so "Groceries 🛒" and "Work/Home" yield the words they
+ * obviously contain, and "Работа Work" still finds `work` because a space is a boundary
+ * in any script.
  */
 function wordsOf(title: string): string[] {
-  return title.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  return title
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
 }
 
 /**

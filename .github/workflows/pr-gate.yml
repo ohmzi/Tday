@@ -35,16 +35,38 @@ jobs:
 
       - name: Verify commit-msg hook strips AI trailers on macOS
         run: |
+          # The sample carries one of every form the hook strips, INCLUDING a trailer
+          # whose key is an invented AI-tool name (Claude-Session). That one is here
+          # because it is the form that actually got through: it is not Made-with,
+          # Co-authored-by, Generated-by or Written-by, so the fixed-name rules never
+          # saw it, and neither did this check.
           printf '%s\n' \
             'fix(test): sample commit' \
             '' \
+            'Body mentioning the openai client retry, which must survive.' \
+            '' \
             'Co-Authored-By: Claude <noreply@anthropic.com>' \
-            'Made-with: Cursor' > "$RUNNER_TEMP/msg.txt"
+            'Made-with: Cursor' \
+            'Claude-Session: https://claude.ai/code/session_0000' \
+            'Anthropic-Trace: abc123' \
+            'Signed-off-by: ohmzi <ohmzi@users.noreply.github.com>' > "$RUNNER_TEMP/msg.txt"
           bash scripts/commit-msg "$RUNNER_TEMP/msg.txt"
-          if grep -iE '^(made-with|generated-by|written-by):|^co-authored-by:.*(cursor|codex|copilot|chatgpt|claude|openai|anthropic)' "$RUNNER_TEMP/msg.txt"; then
+          if grep -iE '^(made-with|generated-by|written-by):|^co-authored-by:.*(cursor|codex|copilot|chatgpt|claude|openai|anthropic)|^[a-z0-9-]*(cursor|codex|copilot|chatgpt|claude|openai|anthropic)[a-z0-9-]*:' "$RUNNER_TEMP/msg.txt"; then
             echo "::error::commit-msg hook failed to strip AI trailers on macOS."
             exit 1
           fi
+          # The other half of the claim: stripping must not eat ordinary content. A body
+          # line that merely mentions a tool, and a trailer that is not an AI trailer,
+          # both have to still be there -- a hook that deleted them would pass the grep
+          # above while quietly destroying commit messages.
+          grep -q 'openai client retry' "$RUNNER_TEMP/msg.txt" || {
+            echo "::error::commit-msg hook stripped a body line that merely mentions a tool."
+            exit 1
+          }
+          grep -q '^Signed-off-by:' "$RUNNER_TEMP/msg.txt" || {
+            echo "::error::commit-msg hook stripped a non-AI trailer."
+            exit 1
+          }
           echo "commit-msg hook stripped AI trailers correctly."
 
   lint-and-test:

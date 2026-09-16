@@ -1388,7 +1388,7 @@
       },
       "list-icons": {
         "title": "Automatische Listensymbole",
-        "summary": "Eine neue Liste erhält ein Symbol, das zu ihrem Namen passt.",
+        "summary": "Eine Liste ohne eigenes Symbol erhält eines, das zu ihrem Namen passt.",
         "keywords": "listensymbol, automatisch, vorgeschlagen, glyphe, name, einkauf, fitness, arbeit",
         "body": "Nenne eine Liste Groceries und sie trägt einen Einkaufswagen; Gym bekommt eine Hantel, Work einen Aktenkoffer. T'Day rät nur, wenn du selbst kein Symbol gewählt hast, und behält das Standardsymbol, sobald der Name nicht eindeutig genug ist. Namen werden vorerst auf Englisch erkannt.",
         "tip": "Wähle jederzeit ein Symbol in den Listeneinstellungen – einmal gewählt, bleibt es erhalten und wird nie überraten."

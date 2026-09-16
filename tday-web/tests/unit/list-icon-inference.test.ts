@@ -95,6 +95,23 @@ describe("inferListIconKey", () => {
     }
   });
 
+  it("cuts a word on Unicode letters, not ASCII ones", () => {
+    // THE case this file was missing, and the divergence it let through. The splitter
+    // cuts on `\p{L}`/`\p{N}`, matching `Char.isLetterOrDigit` in Kotlin and
+    // `isLetter || isNumber` in Swift. Under the ASCII class this file shipped with,
+    // "仕事Work" was cut where the script changes and answered "work" — a confident
+    // briefcase in the browser for a list that wore an inbox on both phones — and
+    // "Gymé" answered "fitness" the same way. An ASCII class is not a narrower version
+    // of the Unicode rule; it cuts INSIDE runs the other two keep whole, which is why
+    // this is the one direction only web could be wrong in, and why it landed on ja and
+    // zh, where an unspaced CJK+English list name is the ordinary shape.
+    expect(inferListIconKey("仕事Work")).toBeNull();
+    expect(inferListIconKey("Gymé")).toBeNull();
+    // The control: a SPACE is a boundary in every script, so an English word standing
+    // beside a Cyrillic one is still found.
+    expect(inferListIconKey("Работа Work")).toBe("work");
+  });
+
   it("still answers when two words point at the same glyph", () => {
     expect(inferListIconKey("Shopping Errands")).toBe("cart");
     expect(inferListIconKey("Gym Workout")).toBe("fitness");

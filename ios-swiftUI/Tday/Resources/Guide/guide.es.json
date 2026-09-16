@@ -738,7 +738,7 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Iconos de lista automáticos",
-      "summary": "Una lista nueva adopta un icono que coincide con su nombre.",
+      "summary": "Una lista sin icono propio adopta uno que coincide con su nombre.",
       "body": [
         {
           "type": "PARAGRAPH",
@@ -755,7 +755,7 @@
       ],
       "searchTitle": "iconos de lista automaticos",
       "searchKeywords": "icono de lista, automatico, sugerido, glifo, nombre, compra, gimnasio, trabajo",
-      "searchBody": "una lista nueva adopta un icono que coincide con su nombre. llama a una lista compra y llevara un carrito; gimnasio recibe una mancuerna y trabajo un maletin. t'day solo lo deduce cuando tu no has elegido icono, y deja el icono predeterminado siempre que el nombre no sea lo bastante claro. por ahora los nombres se reconocen en ingles. elige un icono en los ajustes de la lista cuando quieras: una vez elegido se conserva y nunca se sobrescribe."
+      "searchBody": "una lista sin icono propio adopta uno que coincide con su nombre. llama a una lista compra y llevara un carrito; gimnasio recibe una mancuerna y trabajo un maletin. t'day solo lo deduce cuando tu no has elegido icono, y deja el icono predeterminado siempre que el nombre no sea lo bastante claro. por ahora los nombres se reconocen en ingles. elige un icono en los ajustes de la lista cuando quieras: una vez elegido se conserva y nunca se sobrescribe."
     },
     {
       "id": "completed-history",

@@ -36,8 +36,11 @@ import { describe, expect, it } from "vitest";
  * The rule itself (lowercase, split on non-alphanumerics, refuse on disagreement) stays a
  * hand-written twin in `TdayListIconInference.swift`, the way `floaterRestingTier` is the
  * hand-written twin of `FloaterResting.tierFor`. Its cases are pinned in
- * `ListIconInferenceTests.swift`, copied from the shared `ListIconInferenceTest.kt`; xctest
- * in CI is that half's only gate, and this file does not pretend to stand in for it.
+ * `ListIconInferenceTests.swift`, copied from the shared `ListIconInferenceTest.kt`. Whether
+ * those cases still produce the right ANSWERS on iOS is a question only xctest in CI can ask,
+ * and this file does not pretend to stand in for it; whether the three tables still ask the
+ * same QUESTIONS is a question no single-language file can ask at all, and the third describe
+ * below is where that one is answered.
  *
  * ## Web
  *
@@ -267,3 +270,132 @@ function webSourceFiles(): string[] {
       });
   return walk(WEB_SRC);
 }
+
+/**
+ * THE THREE RULE TWINS ARE ASKED THE SAME QUESTIONS
+ *
+ * The words are generated, so they cannot fork. The RULE — lowercase, split, refuse on
+ * disagreement — is hand-written three times, once per platform, because fifteen lines of
+ * string handling want each platform's own. That is a deliberate trade, and the price of
+ * it is that the three rules CAN fork, silently, with every other gate green: the drift
+ * gate compares each generated table to its Kotlin source and is satisfied, and each case
+ * table only ever asks its own rule.
+ *
+ * That is not hypothetical. It happened on this branch. Web's splitter cut on
+ * `[^a-z0-9]+` while Kotlin cut on `Char.isLetterOrDigit` and Swift on
+ * `isLetter || isNumber`, so a list named "仕事Work" — an ordinary shape in ja and zh —
+ * inferred `work` in the browser and nothing on either phone. Every gate passed. The
+ * three case tables had no non-ASCII row between them, so nothing was even ASKED the
+ * question that would have exposed it.
+ *
+ * So: the three case tables must test the same TITLES. Not the same expectations — each
+ * file already pins its own answers, in its own language, against the real implementation,
+ * which is the assertion that has teeth. What no single-language file can check is whether
+ * a case exists in the other two at all, and that is exactly the hole the divergence came
+ * through. A title added to one table and not the others fails here, which makes "three
+ * twins, one set of questions" a gate rather than a promise — the claim
+ * `TdayListIconInference.swift` makes in its header, which until now was not true of any
+ * file in this repo.
+ *
+ * Scoped to the MATCHER's cases. The resolver (chosen-beats-inferred) is a different
+ * function with a different shape on each client — Android folds in a device-local icon
+ * shadow that iOS and web do not have — so its cases are deliberately not compared.
+ */
+describe("the three list-icon rule twins are asked the same questions", () => {
+  const KOTLIN_CASES = "shared/src/commonTest/kotlin/com/ohmz/tday/shared/listicon/ListIconInferenceTest.kt";
+  const SWIFT_CASES = "ios-swiftUI/Tests/TdayCoreTests/ListIconInferenceTests.swift";
+  const WEB_CASES = "tday-web/tests/unit/list-icon-inference.test.ts";
+
+  /**
+   * Source with comments removed.
+   *
+   * All three files argue in prose, and all three quote the very titles they test while
+   * doing it — "Carpentry" holds `car`, "Firewood" holds `fire`. Scanning the raw text
+   * would read those as cases and make the comparison depend on which file happened to
+   * mention which word, which is the opposite of a gate. Safe here because no title in
+   * any of the three tables contains `//` or `/*`.
+   */
+  const code = (path: string) =>
+    readRepo(path).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+
+  /** The body of a literal opened by `opener`, up to `closer` at the start of a line. */
+  function block(source: string, opener: string, closer: RegExp): string {
+    const start = source.indexOf(opener);
+    expect(start, `${opener} — the case table's shape changed`).toBeGreaterThan(-1);
+    const rest = source.slice(start + opener.length);
+    const end = rest.search(closer);
+    expect(end, `${opener} — no closing bracket`).toBeGreaterThan(-1);
+    return rest.slice(0, end);
+  }
+
+  const quoted = (text: string) => [...text.matchAll(/"([^"]*)"/g)].map((m) => m[1]);
+
+  /** Titles fed to `ListIconInference.inferIconKey`, directly or through a `listOf`. */
+  function kotlinTitles(): Set<string> {
+    const source = code(KOTLIN_CASES);
+    const titles = [
+      // `"Groceries" to "cart",` — the left-hand side only; the right is the answer.
+      ...[...block(source, "val expected = mapOf(", /\n\s*\)/).matchAll(/"([^"]*)" to "/g)].map((m) => m[1]),
+      ...[...source.matchAll(/listOf\(([\s\S]*?)\)\s*\n?\s*\.forEach/g)].flatMap((m) => quoted(m[1])),
+      ...[...source.matchAll(/inferIconKey\("([^"]*)"\)/g)].map((m) => m[1]),
+    ];
+    return new Set(titles);
+  }
+
+  function swiftTitles(): Set<string> {
+    const source = code(SWIFT_CASES);
+    const titles = [
+      // `"Groceries": "cart",` — again the key only.
+      ...[...block(source, "let expected: [String: String] = [", /\n\s*\]/).matchAll(/"([^"]*)":\s*"/g)].map((m) => m[1]),
+      ...[...source.matchAll(/for title in \[([\s\S]*?)\]/g)].flatMap((m) => quoted(m[1])),
+      ...[...source.matchAll(/forListName: "([^"]*)"/g)].map((m) => m[1]),
+    ];
+    return new Set(titles);
+  }
+
+  function webTitles(): Set<string> {
+    const source = code(WEB_CASES);
+    // Web's expected map is a JS object literal, so an identifier-safe title is written
+    // bare (`Groceries: "cart"`) and only the rest are quoted. Both spellings, key side
+    // only. Scoped to the literal because `resolveListIconKey({ name, iconKey })` in the
+    // block below has the same `key: "value"` shape and is not a case table.
+    const expected = block(source, "const expected: Record<string, string> = {", /\n\s*\};/);
+    const titles = [
+      ...[...expected.matchAll(/(?:"([^"]+)"|([A-Za-z_$][\w$]*))\s*:\s*"/g)].map((m) => m[1] ?? m[2]),
+      ...[...source.matchAll(/of \[([\s\S]*?)\]\) \{/g)].flatMap((m) => quoted(m[1])),
+      ...[...source.matchAll(/inferListIconKey\("([^"]*)"\)/g)].map((m) => m[1]),
+    ];
+    return new Set(titles);
+  }
+
+  it("pins the same titles in Kotlin, Swift and TypeScript", () => {
+    const kotlin = kotlinTitles();
+    const swift = swiftTitles();
+    const web = webTitles();
+
+    // A scan that silently found nothing would make every comparison below trivially
+    // true, which is the one way this gate could rot into decoration.
+    expect(kotlin.size, "the Kotlin case scan found nothing — its shape changed").toBeGreaterThan(30);
+    expect(swift.size, "the Swift case scan found nothing — its shape changed").toBeGreaterThan(30);
+    expect(web.size, "the web case scan found nothing — its shape changed").toBeGreaterThan(30);
+
+    // Sorted arrays rather than sets: vitest prints the missing strings on failure,
+    // which is the whole point — the reader needs to know WHICH case is missing where.
+    const sorted = (titles: Set<string>) => [...titles].sort();
+    expect(sorted(swift), "iOS and the shared Kotlin test disagree on which titles to pin").toEqual(sorted(kotlin));
+    expect(sorted(web), "web and the shared Kotlin test disagree on which titles to pin").toEqual(sorted(kotlin));
+  });
+
+  it("asks every rule a title no ASCII-only splitter can answer the same way", () => {
+    // The specific regression, named. These three separate a Unicode splitter from an
+    // ASCII one: the first two are single words to `\p{L}`/`isLetterOrDigit`/`isLetter`
+    // and two words to `[^a-z0-9]+`; the third is the control that must keep matching,
+    // because a space is a boundary in every script. Without a row like these the
+    // comparison above is satisfied by three tables that agree only on ASCII.
+    for (const titles of [kotlinTitles(), swiftTitles(), webTitles()]) {
+      expect(titles.has("仕事Work")).toBe(true);
+      expect(titles.has("Gymé")).toBe(true);
+      expect(titles.has("Работа Work")).toBe(true);
+    }
+  });
+});

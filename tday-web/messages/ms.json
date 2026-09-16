@@ -1388,7 +1388,7 @@
       },
       "list-icons": {
         "title": "Ikon senarai automatik",
-        "summary": "Senarai baharu mendapat ikon yang sepadan dengan namanya.",
+        "summary": "Senarai tanpa ikon pilihannya sendiri mendapat ikon yang sepadan dengan namanya.",
         "keywords": "ikon senarai, automatik, cadangan, glif, nama, barangan runcit, gim, kerja",
         "body": "Namakan senarai sebagai Groceries dan ia akan memakai troli beli-belah; Gym mendapat dumbel, Work mendapat beg bimbit. T'Day hanya meneka apabila anda sendiri belum memilih ikon, dan mengekalkan ikon lalai apabila nama itu tidak cukup jelas. Buat masa ini nama dipadankan dalam bahasa Inggeris.",
         "tip": "Pilih ikon dalam tetapan senarai bila-bila masa — setelah dipilih, ia dikekalkan dan tidak sekali-kali diteka semula."

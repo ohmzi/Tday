@@ -1388,7 +1388,7 @@
       },
       "list-icons": {
         "title": "Icone elenco automatiche",
-        "summary": "Un nuovo elenco prende un'icona che corrisponde al suo nome.",
+        "summary": "Un elenco senza un'icona scelta prende un'icona che corrisponde al suo nome.",
         "keywords": "icona elenco, automatica, suggerita, glifo, nome, spesa, palestra, lavoro",
         "body": "Chiama un elenco Groceries e avrà un carrello; Gym riceve un manubrio, Work una valigetta. T'Day indovina solo quando non hai scelto tu un'icona, e lascia l'icona predefinita ogni volta che il nome non è abbastanza chiaro. Per ora i nomi vengono riconosciuti in inglese.",
         "tip": "Scegli un'icona nelle impostazioni dell'elenco quando vuoi: una volta scelta viene mantenuta e mai sostituita da un'ipotesi."
