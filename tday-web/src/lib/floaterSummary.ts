@@ -35,7 +35,9 @@ export type FloaterNote =
   | "restingMany"
   | "restingAll"
   | "priorityOne"
-  | "priorityMany";
+  | "priorityMany"
+  | "mediumOne"
+  | "mediumMany";
 
 export type FloaterSummaryPlan = {
   band: FloaterPileBand;
@@ -56,6 +58,11 @@ export function isHighPriorityFloater(priority: string): boolean {
   return normalized === "high" || normalized === "urgent" || normalized === "important";
 }
 
+/** Mirrors the shared `priorityRankOf`: exactly the Medium tier, not High. */
+export function isMediumPriorityFloater(priority: string): boolean {
+  return priority.trim().toLowerCase() === "medium";
+}
+
 export function floaterPileBand(count: number): FloaterPileBand {
   if (count <= 1) return "one";
   if (count <= FLOATER_FEW_MAX) return "few";
@@ -73,7 +80,8 @@ export function planFloaterSummary(
 
   // Mirrors TaskSortEngine.compareFloaters (pinned, then priority, then most recently modified)
   // so the task the summary names is the task sitting at the top of the list beneath it.
-  const rankOf = (task: FloaterSummaryTask) => (isHighPriorityFloater(task.priority) ? 3 : 0);
+  const rankOf = (task: FloaterSummaryTask) =>
+    isHighPriorityFloater(task.priority) ? 3 : isMediumPriorityFloater(task.priority) ? 2 : 1;
   const ranked = [...tasks].sort((a, b) => {
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     if (rankOf(a) !== rankOf(b)) return rankOf(b) - rankOf(a);
@@ -85,6 +93,7 @@ export function planFloaterSummary(
     (task) => floaterRestingTier(task.updatedAtEpochMs, nowEpochMs) === "resting",
   ).length;
   const high = tasks.filter((task) => isHighPriorityFloater(task.priority)).length;
+  const medium = tasks.filter((task) => isMediumPriorityFloater(task.priority)).length;
 
   // A wholly dormant pile outranks a pin: when nothing has been touched in months, "you pinned
   // one of these" is not the story. Below that the pin wins — it is the one mark the person made.
@@ -96,6 +105,10 @@ export function planFloaterSummary(
   else if (resting > 1) note = "restingMany";
   else if (high === 1) note = "priorityOne";
   else if (high > 1) note = "priorityMany";
+  // Below High: Medium is still worth naming over saying nothing about priority at all, but
+  // it never outranks High — a pile with both gets the High note only.
+  else if (medium === 1) note = "mediumOne";
+  else if (medium > 1) note = "mediumMany";
 
   // The resting notes name nobody: updatedAt is a last-write clock, so "this one has waited
   // longest" is a claim about creation time that a rename silently falsifies.
@@ -104,6 +117,8 @@ export function planFloaterSummary(
     noteTitle = ranked.find((task) => task.pinned)?.title ?? null;
   } else if (note === "priorityOne" || note === "priorityMany") {
     noteTitle = ranked.find((task) => isHighPriorityFloater(task.priority))?.title ?? null;
+  } else if (note === "mediumOne" || note === "mediumMany") {
+    noteTitle = ranked.find((task) => isMediumPriorityFloater(task.priority))?.title ?? null;
   }
 
   // Naming the only row on screen is an echo, not a summary. A single-task pile keeps the notes
@@ -132,6 +147,8 @@ const NOTE_KEYS: Record<Exclude<FloaterNote, "none">, string> = {
   restingAll: "floaterRestingAll",
   priorityOne: "floaterPriorityOne",
   priorityMany: "floaterPriorityMany",
+  mediumOne: "floaterMediumOne",
+  mediumMany: "floaterMediumMany",
 };
 
 export type SummaryTranslate = (key: string, params?: Record<string, unknown>) => string;

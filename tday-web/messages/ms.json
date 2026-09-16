@@ -885,6 +885,8 @@
     "floaterPinnedMany": "Anda menyemat {{title}}, dan bukan itu sahaja.",
     "floaterPriorityOne": "Hanya {{title}} berkeutamaan tinggi.",
     "floaterPriorityMany": "{{title}} berkeutamaan tinggi, dan bukan itu sahaja.",
+    "floaterMediumOne": "Hanya {{title}} berkeutamaan sederhana.",
+    "floaterMediumMany": "{{title}} berkeutamaan sederhana, dan bukan itu sahaja.",
     "floaterRestingOne": "Satu daripadanya tidak disentuh berbulan-bulan.",
     "floaterRestingMany": "Sebahagiannya tidak disentuh berbulan-bulan.",
     "floaterRestingAll": "Tiada apa-apa di sini disentuh berbulan-bulan.",

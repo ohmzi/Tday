@@ -885,6 +885,8 @@
     "floaterPinnedMany": "Hai fissato {{title}}, e non è l'unica.",
     "floaterPriorityOne": "Solo {{title}} ha priorità alta.",
     "floaterPriorityMany": "{{title}} ha priorità alta, e non è l'unica.",
+    "floaterMediumOne": "Solo {{title}} ha priorità media.",
+    "floaterMediumMany": "{{title}} ha priorità media, e non è l'unica.",
     "floaterRestingOne": "Una di queste è intatta da mesi.",
     "floaterRestingMany": "Alcune sono intatte da mesi.",
     "floaterRestingAll": "Qui non si tocca niente da mesi.",

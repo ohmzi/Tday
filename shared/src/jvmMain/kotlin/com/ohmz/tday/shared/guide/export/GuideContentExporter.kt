@@ -299,6 +299,7 @@ object GuideContentExporter {
         // above, so a floater summary cannot reach a sentence that says "due".
         "floaterClear", "floaterPileOne", "floaterPileFew", "floaterPileSome", "floaterPileMany",
         "floaterPinnedOne", "floaterPinnedMany", "floaterPriorityOne", "floaterPriorityMany",
+        "floaterMediumOne", "floaterMediumMany",
         "floaterRestingOne", "floaterRestingMany", "floaterRestingAll",
     )
 

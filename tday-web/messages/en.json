@@ -885,6 +885,8 @@
     "floaterPinnedMany": "You pinned {{title}}, and it isn't the only one.",
     "floaterPriorityOne": "Only {{title}} is at high priority.",
     "floaterPriorityMany": "{{title}} is at high priority, and it isn't the only one.",
+    "floaterMediumOne": "Only {{title}} is at medium priority.",
+    "floaterMediumMany": "{{title}} is at medium priority, and it isn't the only one.",
     "floaterRestingOne": "One of them hasn't been touched in months.",
     "floaterRestingMany": "Some of them haven't been touched in months.",
     "floaterRestingAll": "Nothing here has been touched in months.",

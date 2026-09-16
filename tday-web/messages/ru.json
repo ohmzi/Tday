@@ -885,6 +885,8 @@
     "floaterPinnedMany": "Вы закрепили {{title}} — и не только.",
     "floaterPriorityOne": "Высокий приоритет только у {{title}}.",
     "floaterPriorityMany": "У {{title}} высокий приоритет — и не только.",
+    "floaterMediumOne": "Средний приоритет только у {{title}}.",
+    "floaterMediumMany": "У {{title}} средний приоритет — и не только.",
     "floaterRestingOne": "Одно из них не трогали месяцами.",
     "floaterRestingMany": "Некоторые не трогали месяцами.",
     "floaterRestingAll": "Здесь месяцами ничего не трогали.",
