@@ -1,11 +1,11 @@
 {
-  "version": "0.7.27",
-  "publishedAt": "2026-09-15T20:33:32-04:00",
+  "version": "0.7.28",
+  "publishedAt": "2026-09-16T03:59:43-04:00",
   "notes": [
-    "Put every task row's controls on the title's first line",
-    "Inset the control too, and count the rows rather than the files",
-    "Tighten the calendar Today pill to the shape chosen on device"
+    "Scope the per-row list mark, infer list icons from names",
+    "Reach the lists that already exist, and hold the three matchers to one rule",
+    "Retire the UnifiedPush toggle and register with a distributor automatically"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.27",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.26..v0.7.27"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.28",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.27..v0.7.28"
 }
