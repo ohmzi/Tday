@@ -2,6 +2,7 @@ package com.ohmz.tday.shared.summary
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class SummaryEngineTest {
@@ -93,11 +94,27 @@ class SummaryEngineTest {
     }
 
     @Test
-    fun undatedTaskUsesAnytimeLabel() {
+    fun undatedTasksLeaveTheDatedVocabularyBehind() {
+        // An all-undated set is rendered by FloaterSummaryPlanner instead of the day-grouping
+        // path; its quality properties are pinned in FloaterSummaryTest across all ten locales.
+        // What belongs HERE is the seam: none of the dated phrasing may reach an Anytime view.
         val out = SummaryEngine.summarize(
             listOf(task("Someday idea", dueOffsetMs = null, kind = "anytime")),
             SummaryScope.FLOATER, nowMs, utc, "en",
         )
-        assertEquals("Start with Someday idea, which is anytime.", out)
+        assertFalse(out.contains("anytime"), "was: $out")
+        assertFalse(out.contains("Start with"), "was: $out")
+    }
+
+    @Test
+    fun mixedSetStillLabelsItsUndatedTaskAnytime() {
+        // The undated branch is for sets that are ENTIRELY undated. A set that also holds dated
+        // work still needs a day-grouped summary, and "anytime" remains the right label there.
+        val out = SummaryEngine.summarize(
+            listOf(task("Buy milk", dueOffsetMs = 0), task("Someday idea", dueOffsetMs = null)),
+            SummaryScope.ALL, nowMs, utc, "en",
+        )
+        assertTrue(out.startsWith("Start with Buy milk"), "was: $out")
+        assertTrue(out.contains("anytime"), "was: $out")
     }
 }

@@ -325,50 +325,6 @@ const AllTasksTimelineContainer = ({
             />
           )}
 
-          {/* Native-style centered empty message — for Today, `showEmpty` only
-              fires when the day has zero tasks, the same condition that leaves
-              `todayBuckets` empty, so this never renders below headerless
-              Morning/Afternoon/Tonight sections; for other scopes it's the only
-              body. Day Done: "finished everything" earns a calm payoff state
-              instead of the generic no-tasks message.
-
-              `showEmptyIllustration` (not `showEmpty` directly): identical to
-              `showEmpty` everywhere except a scope with a non-empty, expanded
-              Earlier bucket — see `shouldShowTodayEmptyIllustration`. The
-              wrapper div only ever carries the exit animation while the scene
-              is the half of the swap that is leaving, so it is inert outside
-              an Earlier hand-off.
-
-              Rendered BEFORE the Earlier-holding blocks below (Today's own
-              `TodayEarlierSection`, and All/Priority/Scheduled's Earlier
-              bucket inside `TimelineSections`) so the illustration always sits
-              above Earlier — never simultaneously replaced by it — matching
-              requirement 3's hand-off order. Harmless when both are showing
-              current tasks too: `showEmptyIllustration` is false whenever
-              `showTimeline`/`showTodayEarlierSection` render anything besides
-              a bare collapsed Earlier header, so the two blocks are never both
-              "the body" of a populated screen at once. */}
-          {(showEmptyIllustration || sceneLeavingOnCancel) && (
-            <TimelineEmptyState
-              icon={ScopeIcon}
-              accentColor={timelineScopeAccentColors[scope]}
-              isDayDone={isDayDone}
-              celebrate={celebrate}
-              // The scene is drawn inline, so mounting it is what moves everything
-              // below into a new slot (the travel the wrapper above owns). The burst
-              // waits that out rather than firing across it, and the scene's own lead
-              // is added on top of the wait — travel, then burst, then scene, which is
-              // what `TdayFeedItemMotion.CelebrationStartDelayMillis` buys on Android.
-              celebrationStartDelayMs={DELAY_MS.placementLead}
-              leavingOnCancel={sceneLeavingOnCancel}
-              earlierHandoff={earlierHandoff}
-              locale={locale}
-              emptyTitle={emptyTitle}
-              emptyBody={emptyBody}
-              appDict={appDict}
-            />
-          )}
-
           {showTimeline && (
             <TimelineSections
               sections={timelineSections}
@@ -379,8 +335,8 @@ const AllTasksTimelineContainer = ({
               // Earlier closed, and a task the search turns up in there must not
               // stay hidden behind its header. Native makes the same call.
               // `earlierExpanded` alone is the whole sequencing signal: the
-              // hand-off holds it false until the illustration above has
-              // finished exiting, and on the way back it goes false first and
+              // hand-off holds it false until the scene below has finished
+              // exiting, and on the way back it goes false first and
               // the rows linger on their own fade (`useFadeUnmount`) — so
               // there is no second flag to read here.
               earlierExpanded={earlierExpanded || isSearching}
@@ -420,6 +376,80 @@ const AllTasksTimelineContainer = ({
               expanding={earlierIsExpanding({ earlierHandoff })}
               onToggle={() => toggleEarlierExpanded(earlierSlotChangesHands)}
               highlightedTodoId={focusedTaskId}
+            />
+          )}
+
+          {/* Native-style centered empty message — for Today, `showEmpty` only
+              fires when the day has zero tasks, the same condition that leaves
+              `todayBuckets` empty, so this never renders below headerless
+              Morning/Afternoon/Tonight sections; for other scopes it's the only
+              body. Day Done: "finished everything" earns a calm payoff state
+              instead of the generic no-tasks message.
+
+              `showEmptyIllustration` (not `showEmpty` directly): identical to
+              `showEmpty` everywhere except a scope with a non-empty, expanded
+              Earlier bucket — see `shouldShowTodayEmptyIllustration`. The
+              wrapper div only ever carries the exit animation while the scene
+              is the half of the swap that is leaving, so it is inert outside
+              an Earlier hand-off.
+
+              Rendered AFTER the Earlier-holding blocks above, and the old
+              comment here said the opposite — that the scene "always sits
+              above Earlier", citing the hand-off order as though parity were
+              the reason for it. It was the divergence. Keeping the scene out
+              from under the header was a real argument, but it cost the header
+              its anchor: Earlier's header sat BELOW a 42vh box, so expanding
+              the bucket shrank something above the header and the header
+              itself jumped to the top of the screen — the one thing on the
+              page the finger had just touched moved out from under it, and the
+              rows it was supposed to be revealing arrived somewhere else. With
+              the header above, expanding grows the rows downward from the
+              header while the scene sinks and its track closes underneath
+              them, and the header does not move at all. Android took this
+              order in v0.7.25 (`earlierSceneFollowsSection`, `TodoListScreen.kt`);
+              iOS reaches it by drawing the scene as an overlay with a reserved
+              top height. Web is the last client to it.
+
+              `Earlier` is the FIRST section for All/Priority/List
+              (`placesEarlierBeforeToday`, `buildTimelineSections.ts`), so
+              below `TimelineSections` is directly below the Earlier header in
+              every scope where the two can be on screen together — the header
+              is not a separable node on web, so "header above scene" is only
+              reachable as "the whole Earlier block above the scene", which is
+              what Android did too.
+
+              The one cost, named rather than discovered later: a drag restores
+              the empty day buckets as drop targets (`includeEmptyDropTargets`),
+              so a drag begun inside the celebration window with Earlier
+              expanded can strand the scene under a run of empty day headers
+              for the length of the gesture. Android closed that by emitting
+              the scene from inside its section loop; web cannot without
+              rendering `TimelineEmptyState` from inside `TimelineSections`,
+              which `ListContainer` also owns and which already takes ten
+              props. The state needs a drag, in the window, with Earlier open —
+              and the alternative is the header jumping on every expand. */}
+          {(showEmptyIllustration || sceneLeavingOnCancel) && (
+            <TimelineEmptyState
+              icon={ScopeIcon}
+              accentColor={timelineScopeAccentColors[scope]}
+              isDayDone={isDayDone}
+              celebrate={celebrate}
+              // The scene is drawn inline — a sibling in the flow, not an overlay,
+              // whatever the Android side's note about web says — so mounting it
+              // still moves whatever follows it into a new slot (the travel the
+              // wrapper above owns). Now that it renders below Earlier, the block
+              // it no longer moves is the one that mattered: Earlier's header. The
+              // burst waits the travel out rather than firing across it, and the
+              // scene's own lead is added on top — travel, then burst, then scene,
+              // which is what `TdayFeedItemMotion.CelebrationStartDelayMillis` buys
+              // on Android.
+              celebrationStartDelayMs={DELAY_MS.placementLead}
+              leavingOnCancel={sceneLeavingOnCancel}
+              earlierHandoff={earlierHandoff}
+              locale={locale}
+              emptyTitle={emptyTitle}
+              emptyBody={emptyBody}
+              appDict={appDict}
             />
           )}
 

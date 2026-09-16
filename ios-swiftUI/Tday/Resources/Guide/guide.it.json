@@ -723,6 +723,41 @@
       "searchBody": "ordina le attivita con data in elenchi con nome e colore. assegna un elenco alle attivita pianificate cosi il lavoro correlato resta insieme. gli elenchi hanno un nome e un colore e possono essere filtrati."
     },
     {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Icone elenco automatiche",
+      "summary": "Un elenco senza un'icona scelta prende un'icona che corrisponde al suo nome.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Chiama un elenco Groceries e avrà un carrello; Gym riceve un manubrio, Work una valigetta. T'Day indovina solo quando non hai scelto tu un'icona, e lascia l'icona predefinita ogni volta che il nome non è abbastanza chiaro. Per ora i nomi vengono riconosciuti in inglese."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Scegli un'icona nelle impostazioni dell'elenco quando vuoi: una volta scelta viene mantenuta e mai sostituita da un'ipotesi."
+          ]
+        }
+      ],
+      "searchTitle": "icone elenco automatiche",
+      "searchKeywords": "icona elenco, automatica, suggerita, glifo, nome, spesa, palestra, lavoro",
+      "searchBody": "un elenco senza un'icona scelta prende un'icona che corrisponde al suo nome. chiama un elenco groceries e avra un carrello; gym riceve un manubrio, work una valigetta. t'day indovina solo quando non hai scelto tu un'icona, e lascia l'icona predefinita ogni volta che il nome non e abbastanza chiaro. per ora i nomi vengono riconosciuti in inglese. scegli un'icona nelle impostazioni dell'elenco quando vuoi: una volta scelta viene mantenuta e mai sostituita da un'ipotesi."
+    },
+    {
       "id": "completed-history",
       "section": "ORGANIZING",
       "sectionOrder": 3,

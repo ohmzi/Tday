@@ -219,6 +219,16 @@ object GuideCatalog {
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.SCHEDULED_LISTS)),
         ),
         topic(
+            // All three now. Neither native client links the Kotlin — the pbxproj names
+            // none and web runs none — so iOS and web each read the same table through a
+            // committed artifact written by `:shared:exportListIconTable`, and Android
+            // calls it directly. One behaviour, one word list, three callers; listing
+            // fewer platforms here would understate what a reader will actually find.
+            GuideTopicIds.LIST_ICONS, GuideSectionId.ORGANIZING, "wand-sparkles",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.28",
+            body = listOf(para(GuideTopicIds.LIST_ICONS), tip(GuideTopicIds.LIST_ICONS)),
+        ),
+        topic(
             GuideTopicIds.COMPLETED_HISTORY, GuideSectionId.ORGANIZING, "check-check",
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.COMPLETED_HISTORY)),
         ),
@@ -309,8 +319,13 @@ object GuideCatalog {
             helpAnchors = listOf("settings-feature-toggle"),
         ),
         topic(
+            // Bumped off 0.5.0 deliberately, for a topic that is not new. What "What's New"
+            // has to carry this time is a control that DISAPPEARED: the Settings row that used
+            // to turn UnifiedPush on is gone and registration happens by itself, and a user who
+            // goes looking for the switch they remember has no other place to be told why it
+            // isn't there. A body rewrite alone reaches only the readers who already came here.
             GuideTopicIds.UNIFIEDPUSH, GuideSectionId.RECURRENCE_AND_REMINDERS, "bell-ring",
-            setOf(ANDROID), serverOnly = true, sinceVersion = "0.5.0",
+            setOf(ANDROID), serverOnly = true, sinceVersion = "0.7.28",
             body = listOf(para(GuideTopicIds.UNIFIEDPUSH), steps(GuideTopicIds.UNIFIEDPUSH, 3)),
             helpAnchors = listOf("settings-notifications"),
         ),

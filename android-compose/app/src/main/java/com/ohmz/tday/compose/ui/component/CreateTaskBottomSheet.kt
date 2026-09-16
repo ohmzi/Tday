@@ -103,7 +103,7 @@ import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
-import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
+import com.ohmz.tday.compose.ui.theme.tdayListIconForList
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import com.ohmz.tday.compose.core.data.RepeatSuggestionDismissalStore
 import com.ohmz.tday.shared.guide.GuideTopicIds
@@ -874,7 +874,7 @@ fun CreateTaskBottomSheet(
                                                 lists.firstOrNull { it.id == selectedListId }
                                             if (selected != null) {
                                                 Icon(
-                                                    imageVector = tdayListIconForKey(selected.iconKey),
+                                                    imageVector = tdayListIconForList(selected.iconKey, selected.name),
                                                     contentDescription = null,
                                                     tint = listColorSwatchForSelector(
                                                         raw = selected.color,

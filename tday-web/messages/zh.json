@@ -876,6 +876,18 @@
     "nextUp": "接下来，{{tasks}}。",
     "overdueCatchUp": "您还有 {{count}} 项逾期任务需要处理。",
     "clearForNow": "目前一切就绪。此视图中没有需要处理的任务。",
+    "floaterClear": "这里暂时没有等着的事情。",
+    "floaterPileOne": "这里只等着一件事，没有日期。",
+    "floaterPileFew": "这里等着几件没有日期的事。",
+    "floaterPileSome": "这里攒下了不少没有日期的事。",
+    "floaterPileMany": "这里已经攒成一长串没有日期的事。",
+    "floaterPinnedOne": "你只置顶了 {{title}}。",
+    "floaterPinnedMany": "你置顶了 {{title}}，而且不止这一件。",
+    "floaterPriorityOne": "只有 {{title}} 是高优先级。",
+    "floaterPriorityMany": "{{title}} 是高优先级，而且不止这一件。",
+    "floaterRestingOne": "其中一件已经好几个月没动过。",
+    "floaterRestingMany": "其中有几件已经好几个月没动过。",
+    "floaterRestingAll": "这里已经好几个月没动过了。",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -1298,10 +1310,10 @@
         "title": "UnifiedPush（Android）",
         "summary": "无需 Google，通过你自己的分发器接收服务器推送。",
         "keywords": "unifiedpush, ntfy, 推送, 通知, 自托管, 分发器, fcm",
-        "body": "在服务器模式下，T'Day 可通过 UnifiedPush 而非 Google 的 FCM 发送服务器通知——数据留在你自己的服务器和分发器上。安装一个分发器应用（如 ntfy），然后在设置中开启 UnifiedPush。本地提醒不受影响，照常工作。",
+        "body": "在服务器模式下，T'Day 通过 UnifiedPush 而非 Google 的 FCM 发送服务器通知——数据留在你自己的服务器和分发器上。无需手动开启：安装一个分发器应用（如 ntfy），T'Day 会自动向它注册。本地提醒不受影响，照常工作。",
         "step0": "从应用商店安装 UnifiedPush 分发器，例如 ntfy。",
-        "step1": "在设置 → 提醒中开启 UnifiedPush 并选择分发器。",
-        "step2": "服务器随后会将变更推送到该端点；可随时关闭。"
+        "step1": "打开 T'Day，它会找到分发器并自动注册。若安装了两个或更多，设置 → 提醒会询问使用哪一个。",
+        "step2": "要停止服务器推送，卸载分发器或退出登录——本地提醒不受影响。"
       },
       "repeat-suggestions": {
         "title": "重复建议",
@@ -1385,6 +1397,13 @@
         "step1": "点按任务将其选中，或用「全选」选中屏幕上的全部任务。",
         "step2": "在底部操作栏中选择「完成」「优先级」「移动」或「删除」。",
         "tip": "删除会先让你确认具体数量，之后仍会留下可撤销的提示。重复任务完全不参与批量操作，以免整个系列被误改——请单独打开来完成、移动或删除。"
+      },
+      "list-icons": {
+        "title": "自动列表图标",
+        "summary": "尚未选择图标的列表会自动获得与名称相符的图标。",
+        "keywords": "列表图标, 自动, 建议, 字形, 名称, 购物, 健身, 工作",
+        "body": "把列表命名为 Groceries，它就会显示购物车；Gym 会得到哑铃，Work 会得到公文包。只有在你没有自己选择图标时，T'Day 才会推测；名称不够明确时，它会保留默认图标。目前仅按英文名称匹配。",
+        "tip": "你随时可以在列表设置中选择图标：一旦选定就会保留，绝不会被推测覆盖。"
       }
     }
   },

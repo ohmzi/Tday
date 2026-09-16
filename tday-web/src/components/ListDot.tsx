@@ -1,6 +1,6 @@
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import clsx from "clsx";
-import { getListIcon } from "@/lib/listIcons";
+import { getListIconForList } from "@/lib/listIcons";
 
 // Map every list color to its accent token. Normalized to uppercase so the icon
 // is tinted regardless of how the API casts the color value.
@@ -30,7 +30,9 @@ export default function ListDot({
   className?: string;
 }) {
   const { listMetaData } = useListMetaData();
-  const Icon = getListIcon(listMetaData[id]?.iconKey);
+  // The whole meta, not just its key: a list whose owner never picked an icon
+  // takes one from its name, and the name is half of that question.
+  const Icon = getListIconForList(listMetaData[id]);
 
   const colorKey = String(listMetaData[id]?.color ?? "")
     .trim()

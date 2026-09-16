@@ -694,11 +694,9 @@
     <string name="settings_data_confirm_body">Cela ajoute %1$d éléments à votre compte. Rien de ce que vous avez déjà n\'est modifié ni supprimé.</string>
     <string name="settings_data_confirm_import">Importer</string>
     <string name="settings_data_confirm_cancel">Annuler</string>
-    <string name="settings_unifiedpush_title">UnifiedPush</string>
-    <string name="settings_unifiedpush_subtitle">Recevez les push du serveur via ton propre distributeur</string>
-    <string name="settings_unifiedpush_enabled">Activé</string>
-    <string name="settings_unifiedpush_disabled">Désactivé</string>
-    <string name="settings_unifiedpush_none">Aucun distributeur UnifiedPush trouvé. Installes-en un (ex. ntfy) et réessaie.</string>
+    <string name="settings_push_distributor_title">App de distribution push</string>
+    <string name="settings_push_distributor_subtitle">Plusieurs apps push sont installées. Choisis laquelle distribue les notifications de T\'Day.</string>
+    <string name="settings_push_distributor_choose">Choisir</string>
     <string name="create_task_repeat_suggestion">Répéter %1$s ?</string>
     <string name="create_task_repeat_suggestion_dismiss">Ignorer</string>
     <string name="settings_quiet_hours">Heures silencieuses</string>

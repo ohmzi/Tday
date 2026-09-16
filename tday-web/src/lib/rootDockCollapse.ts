@@ -55,9 +55,11 @@ export const ROOT_DOCK_EXPAND_PX = 24;
  * a negative offset and `NaN` alike lose whichever comparison they are put to.
  * A `Math.max(offsetPx, 0)` in front of them cannot change an answer this
  * function returns — it was here, and it never could have. iOS does need its
- * own at `ios-swiftUI/Tday/Core/UI/RootFeedHeroHeader.swift:754`, but that one
- * publishes the offset itself rather than a side of a threshold, and a bounce
- * published as a negative number moves a header.
+ * own, in `RootFeedHeaderScrollObserver.Coordinator`'s `contentOffset`
+ * observer (named rather than cited by line: the line was 754 when this was
+ * written and has since been 709 and 718 without the code moving at all), but
+ * that one publishes the offset itself rather than a side of a threshold, and
+ * a bounce published as a negative number moves a header.
  */
 export function nextRootDockCollapsed(previous: boolean, offsetPx: number): boolean {
   return previous ? offsetPx > ROOT_DOCK_EXPAND_PX : offsetPx > ROOT_DOCK_COLLAPSE_PX;

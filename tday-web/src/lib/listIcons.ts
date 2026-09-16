@@ -62,6 +62,7 @@ import {
   WalletCards,
   Wine,
 } from "lucide-react";
+import { inferListIconKey } from "@/lib/listIconInference";
 
 export const DEFAULT_LIST_ICON_KEY = "inbox";
 
@@ -162,4 +163,39 @@ export function normalizeListIconKey(iconKey?: string | null) {
 
 export function getListIcon(iconKey?: string | null) {
   return listIconMap.get(normalizeListIconKey(iconKey)) ?? Inbox;
+}
+
+/** The two fields every display site has, whatever shape of list meta it holds. */
+type ListIconSource = { iconKey?: string | null; name?: string | null } | null | undefined;
+
+/**
+ * The key a list should actually be DRAWN with: the one its owner chose, or — only
+ * when they never chose — one inferred from its name.
+ *
+ * The precedence is the whole feature, so it is worth spelling out why it is an `??`
+ * and not a merge. A stored `iconKey` always wins, INCLUDING when it is `"inbox"`:
+ * since the create sheets stopped posting the picker's preview, that value means "the
+ * user chose the plain one", and inferring over it would be the app arguing with a
+ * decision it can see. `null` is the only value that means "never chosen", which is
+ * why the sheets had to be fixed before any of this could be honest.
+ *
+ * DISPLAY-ONLY, and that is load-bearing rather than tidy. Nothing here writes back
+ * through a list mutation or into the local workspace: a guess that persists stops
+ * being a guess, the user's "unset" is gone, and the next rename inherits an icon
+ * chosen for the old name by nobody.
+ *
+ * `normalizeListIconKey` still has the last word, so an inferred key the registry has
+ * somehow lost falls back to the default exactly like a corrupt stored one. That is a
+ * silent fallback — which is why `list-icon-inference-parity.test.ts` asserts every
+ * emittable key is in `listIconOptions`, rather than trusting this line to complain.
+ */
+export function resolveListIconKey(list: ListIconSource) {
+  const chosen = list?.iconKey?.trim();
+  if (chosen) return normalizeListIconKey(chosen);
+  return normalizeListIconKey(inferListIconKey(list?.name));
+}
+
+/** `getListIcon` for a whole list, so the inference reaches every display site. */
+export function getListIconForList(list: ListIconSource) {
+  return getListIcon(resolveListIconKey(list));
 }

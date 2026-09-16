@@ -16,7 +16,9 @@ import {
   getListIcon,
   listIconOptions,
   normalizeListIconKey,
+  resolveListIconKey,
 } from "@/lib/listIcons";
+import { inferListIconKey } from "@/lib/listIconInference";
 import { useToast } from "@/hooks/use-toast";
 import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 import { useCreateFloaterList } from "@/features/floaterList/query/create-floater-list";
@@ -61,7 +63,11 @@ async function patchFloaterList({
   id: string;
   name: string;
   color: ListColor;
-  iconKey: string;
+  /**
+   * Omitted while the picker is only PREVIEWING an icon — see `ListFormSheet`, and
+   * `FloaterListService.update`, which writes the column only when one arrives.
+   */
+  iconKey?: string;
   reusable: boolean;
 }) {
   await api.PATCH({
@@ -98,11 +104,19 @@ export default function FloaterListFormSheet({
   const pathname = usePathname();
   const { createMutateAsync, createLoading } = useCreateFloaterList();
   const isEditing = Boolean(list?.id);
+
+  /** The scheduled sheet's argument, unchanged — see `ListFormSheet`. */
+  const previewIconKeyFor = (listName: string) =>
+    normalizeListIconKey(inferListIconKey(listName) ?? initialIconKey);
+  const seedIconKey = () =>
+    list ? resolveListIconKey(list) : previewIconKeyFor(initialName);
+
   const [name, setName] = useState(initialName);
   const [color, setColor] = useState<ListColor>(list?.color ?? initialColor);
-  const [iconKey, setIconKey] = useState(() =>
-    normalizeListIconKey(list?.iconKey ?? initialIconKey),
-  );
+  // Whether the picker holds a choice or a preview; the value alone cannot say. See
+  // `ListFormSheet` for why that distinction is the feature rather than a detail.
+  const [iconTouched, setIconTouched] = useState(false);
+  const [iconKey, setIconKey] = useState(() => seedIconKey());
   const [reusable, setReusable] = useState(list?.reusable ?? false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -111,11 +125,22 @@ export default function FloaterListFormSheet({
     if (!open) return;
     setName(list?.name ?? initialName);
     setColor(list?.color ?? initialColor);
-    setIconKey(normalizeListIconKey(list?.iconKey ?? initialIconKey));
+    setIconKey(seedIconKey());
+    setIconTouched(false);
     setReusable(list?.reusable ?? false);
     setError(null);
     setConfirmingDelete(false);
+    // `seedIconKey` closes over exactly these, and is re-made every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialColor, initialIconKey, initialName, list, open]);
+
+  // While the picker is a preview it follows the name being typed; editing is excluded
+  // for the reason given in `ListFormSheet`.
+  useEffect(() => {
+    if (isEditing || iconTouched) return;
+    setIconKey(previewIconKeyFor(name));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [iconTouched, isEditing, name]);
 
   const selectedColor = useMemo(
     () => listColorMap.find((option) => option.value === color) ?? listColorMap[7],
@@ -206,27 +231,44 @@ export default function FloaterListFormSheet({
 
     setError(null);
     if (isEditing && list) {
-      const currentIconKey = normalizeListIconKey(list.iconKey);
+      // Against the STORED value, not the normalised one: a null icon normalises to
+      // "inbox", so collapsing them would read a deliberate tap on Inbox as no change.
+      const storedIconKey = list.iconKey?.trim() ? normalizeListIconKey(list.iconKey) : null;
+      const iconChanged = iconTouched && iconKey !== storedIconKey;
       if (
         normalizedName === normalizeListName(list.name) &&
         color === (list.color ?? "TEAL") &&
-        iconKey === currentIconKey &&
+        !iconChanged &&
         reusable === (list.reusable ?? false)
       ) {
         onOpenChange(false);
         return;
       }
-      updateListMutation.mutate({ id: list.id, name: normalizedName, color, iconKey, reusable });
+      updateListMutation.mutate({
+        id: list.id,
+        name: normalizedName,
+        color,
+        iconKey: iconTouched ? iconKey : undefined,
+        reusable,
+      });
       return;
     }
 
     try {
-      const created = await createMutateAsync({ name: normalizedName, color, iconKey, reusable });
+      const created = await createMutateAsync({
+        name: normalizedName,
+        color,
+        // An untouched picker posts nothing, so the list is created with a null icon and
+        // is free to take one from its name. See `ListFormSheet`.
+        iconKey: iconTouched ? iconKey : undefined,
+        reusable,
+      });
       onSaved?.(created);
       onOpenChange(false);
       setName("");
       setColor(initialColor);
-      setIconKey(normalizeListIconKey(initialIconKey));
+      setIconKey(previewIconKeyFor(""));
+      setIconTouched(false);
     } catch (createError) {
       const message =
         createError instanceof Error ? createError.message : "Failed to create floater list";
@@ -309,7 +351,11 @@ export default function FloaterListFormSheet({
                 <button
                   key={option.key}
                   type="button"
-                  onClick={() => { hapticTick(); setIconKey(option.key); }}
+                  onClick={() => {
+                    hapticTick();
+                    setIconKey(option.key);
+                    setIconTouched(true);
+                  }}
                   className={cn(
                     "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
                     selected

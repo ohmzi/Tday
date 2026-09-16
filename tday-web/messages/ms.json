@@ -876,6 +876,18 @@
     "nextUp": "Seterusnya, {{tasks}}.",
     "overdueCatchUp": "Anda juga mempunyai {{count}} tugasan tertunggak untuk diselesaikan.",
     "clearForNow": "Anda sudah selesai buat masa ini. Tiada tugasan memerlukan perhatian dalam paparan ini.",
+    "floaterClear": "Belum ada apa-apa menunggu di sini.",
+    "floaterPileOne": "Satu perkara sahaja menunggu di sini, tanpa tarikh.",
+    "floaterPileFew": "Beberapa perkara tanpa tarikh sedang menunggu di sini.",
+    "floaterPileSome": "Agak banyak perkara tanpa tarikh sudah terkumpul di sini.",
+    "floaterPileMany": "Senarai panjang perkara tanpa tarikh sudah terkumpul di sini.",
+    "floaterPinnedOne": "Anda menyemat {{title}} sahaja.",
+    "floaterPinnedMany": "Anda menyemat {{title}}, dan bukan itu sahaja.",
+    "floaterPriorityOne": "Hanya {{title}} berkeutamaan tinggi.",
+    "floaterPriorityMany": "{{title}} berkeutamaan tinggi, dan bukan itu sahaja.",
+    "floaterRestingOne": "Satu daripadanya tidak disentuh berbulan-bulan.",
+    "floaterRestingMany": "Sebahagiannya tidak disentuh berbulan-bulan.",
+    "floaterRestingAll": "Tiada apa-apa di sini disentuh berbulan-bulan.",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -1298,10 +1310,10 @@
         "title": "UnifiedPush (Android)",
         "summary": "Tolakan pelayan tanpa Google, melalui pengedar anda.",
         "keywords": "unifiedpush, ntfy, tolak, pemberitahuan, hos sendiri, pengedar, fcm",
-        "body": "Dalam Mod Pelayan, T'Day boleh menghantar pemberitahuan pelayan melalui UnifiedPush dan bukan FCM Google — data anda kekal pada pelayan dan pengedar anda sendiri. Pasang apl pengedar (seperti ntfy), kemudian hidupkan UnifiedPush dalam Tetapan. Peringatan tempatan tetap berfungsi.",
+        "body": "Dalam Mod Pelayan, T'Day menghantar pemberitahuan pelayan melalui UnifiedPush dan bukan FCM Google — data anda kekal pada pelayan dan pengedar anda sendiri. Tiada apa-apa untuk dihidupkan: pasang apl pengedar (seperti ntfy) dan T'Day mendaftar dengannya secara automatik. Peringatan tempatan tetap berfungsi.",
         "step0": "Pasang pengedar UnifiedPush seperti ntfy dari gedung apl anda.",
-        "step1": "Dalam Tetapan → Peringatan, hidupkan UnifiedPush dan pilih pengedar.",
-        "step2": "Pelayan anda kini menolak perubahan ke endpoint itu; matikan bila-bila masa."
+        "step1": "Buka T'Day — ia menemui pengedar itu dan mendaftar sendiri. Jika dua atau lebih dipasang, Tetapan → Peringatan akan bertanya yang mana satu.",
+        "step2": "Untuk menghentikan tolakan pelayan, nyahpasang pengedar atau log keluar — peringatan tempatan tidak terjejas."
       },
       "repeat-suggestions": {
         "title": "Cadangan ulangan",
@@ -1385,6 +1397,13 @@
         "step1": "Ketik tugasan untuk memilihnya, atau guna Pilih semua untuk semua yang ada di skrin.",
         "step2": "Pilih Selesai, Keutamaan, Pindah atau Padam pada bar di bawah.",
         "tip": "Pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. Tugasan berulang dikecualikan sepenuhnya daripada tindakan pukal supaya keseluruhan siri tidak pernah berubah secara tidak sengaja — buka satu persatu untuk menyelesaikan, memindah atau memadamnya."
+      },
+      "list-icons": {
+        "title": "Ikon senarai automatik",
+        "summary": "Senarai tanpa ikon pilihannya sendiri mendapat ikon yang sepadan dengan namanya.",
+        "keywords": "ikon senarai, automatik, cadangan, glif, nama, barangan runcit, gim, kerja",
+        "body": "Namakan senarai sebagai Groceries dan ia akan memakai troli beli-belah; Gym mendapat dumbel, Work mendapat beg bimbit. T'Day hanya meneka apabila anda sendiri belum memilih ikon, dan mengekalkan ikon lalai apabila nama itu tidak cukup jelas. Buat masa ini nama dipadankan dalam bahasa Inggeris.",
+        "tip": "Pilih ikon dalam tetapan senarai bila-bila masa — setelah dipilih, ia dikekalkan dan tidak sekali-kali diteka semula."
       }
     }
   },

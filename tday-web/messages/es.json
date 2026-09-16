@@ -876,6 +876,18 @@
     "nextUp": "A continuación, {{tasks}}.",
     "overdueCatchUp": "También tienes {{count}} tarea(s) atrasada(s) por completar.",
     "clearForNow": "Por ahora estás al día. No hay tareas que requieran atención en esta vista.",
+    "floaterClear": "Aquí no espera nada todavía.",
+    "floaterPileOne": "Aquí espera una sola cosa, sin fecha.",
+    "floaterPileFew": "Aquí esperan unas pocas cosas sin fecha.",
+    "floaterPileSome": "Aquí se han juntado bastantes cosas sin fecha.",
+    "floaterPileMany": "Aquí se ha acumulado una larga lista de cosas sin fecha.",
+    "floaterPinnedOne": "Fijaste {{title}} y nada más.",
+    "floaterPinnedMany": "Fijaste {{title}}, y no es lo único.",
+    "floaterPriorityOne": "Solo {{title}} tiene prioridad alta.",
+    "floaterPriorityMany": "{{title}} tiene prioridad alta, y no es lo único.",
+    "floaterRestingOne": "Una de ellas lleva meses sin tocarse.",
+    "floaterRestingMany": "Algunas llevan meses sin tocarse.",
+    "floaterRestingAll": "Aquí nada se ha tocado en meses.",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -1298,10 +1310,10 @@
         "title": "UnifiedPush (Android)",
         "summary": "Notificaciones del servidor sin Google, con tu distribuidor.",
         "keywords": "unifiedpush, ntfy, push, notificaciones, autoalojado, distribuidor, fcm",
-        "body": "En Modo Servidor, T'Day puede entregar notificaciones del servidor mediante UnifiedPush en lugar de FCM de Google, manteniendo tus datos en tu propio servidor y tu propio distribuidor. Instala una app distribuidora (como ntfy) y activa UnifiedPush en Ajustes. Los recordatorios locales siguen funcionando igual.",
+        "body": "En Modo Servidor, T'Day entrega las notificaciones del servidor mediante UnifiedPush en lugar de FCM de Google, manteniendo tus datos en tu propio servidor y tu propio distribuidor. No hay nada que activar: instala una app distribuidora (como ntfy) y T'Day se registra sola. Los recordatorios locales siguen funcionando igual.",
         "step0": "Instala un distribuidor UnifiedPush como ntfy desde tu tienda de apps.",
-        "step1": "En Ajustes → Recordatorios, activa UnifiedPush y elige el distribuidor.",
-        "step2": "Tu servidor enviará los cambios a ese endpoint; puedes desactivarlo cuando quieras."
+        "step1": "Abre T'Day: encuentra el distribuidor y se registra solo. Si tienes dos o más instalados, Ajustes → Recordatorios te pregunta cuál usar.",
+        "step2": "Para detener el push del servidor, desinstala el distribuidor o cierra sesión; los recordatorios locales no se ven afectados."
       },
       "repeat-suggestions": {
         "title": "Sugerencias de repetición",
@@ -1385,6 +1397,13 @@
         "step1": "Toca las tareas para elegirlas o usa Seleccionar todo para las que están en pantalla.",
         "step2": "Elige Completar, Prioridad, Mover o Eliminar en la barra inferior.",
         "tip": "Eliminar te pide confirmar el número exacto y aun así deja un aviso para deshacer. Las tareas repetidas quedan fuera de las acciones en lote por completo, para que nunca se cambie una serie entera sin querer: ábrelas de una en una para completarlas, moverlas o eliminarlas."
+      },
+      "list-icons": {
+        "title": "Iconos de lista automáticos",
+        "summary": "Una lista sin icono propio adopta uno que coincide con su nombre.",
+        "keywords": "icono de lista, automático, sugerido, glifo, nombre, compra, gimnasio, trabajo",
+        "body": "Llama a una lista Compra y llevará un carrito; Gimnasio recibe una mancuerna y Trabajo un maletín. T'Day solo lo deduce cuando tú no has elegido icono, y deja el icono predeterminado siempre que el nombre no sea lo bastante claro. Por ahora los nombres se reconocen en inglés.",
+        "tip": "Elige un icono en los ajustes de la lista cuando quieras: una vez elegido se conserva y nunca se sobrescribe."
       }
     }
   },

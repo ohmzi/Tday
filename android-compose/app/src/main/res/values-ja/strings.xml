@@ -693,11 +693,9 @@
     <string name="settings_data_confirm_body">アカウントに %1$d 件を追加します。既存のデータは変更も削除もされません。</string>
     <string name="settings_data_confirm_import">インポート</string>
     <string name="settings_data_confirm_cancel">キャンセル</string>
-    <string name="settings_unifiedpush_title">UnifiedPush</string>
-    <string name="settings_unifiedpush_subtitle">自分のディストリビューター経由でサーバープッシュを受信</string>
-    <string name="settings_unifiedpush_enabled">オン</string>
-    <string name="settings_unifiedpush_disabled">オフ</string>
-    <string name="settings_unifiedpush_none">UnifiedPush ディストリビューターが見つかりません。インストール（例: ntfy）して再試行してください。</string>
+    <string name="settings_push_distributor_title">プッシュ配信アプリ</string>
+    <string name="settings_push_distributor_subtitle">プッシュ配信アプリが複数インストールされています。T\'Day の通知を配信するアプリを選んでください。</string>
+    <string name="settings_push_distributor_choose">選択</string>
     <string name="create_task_repeat_suggestion">%1$sで繰り返す？</string>
     <string name="create_task_repeat_suggestion_dismiss">閉じる</string>
     <string name="settings_quiet_hours">サイレント時間</string>

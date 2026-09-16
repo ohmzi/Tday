@@ -2005,6 +2005,25 @@ Rows are grouped by root cause, so one heading is one PR. Numbering continues fr
 ### PR 131 — calendar cell and chrome state animation
 
 - [ ] `android:calendar#today-pill-label-pops-two-width-animators` — today pill label pops two width animators · and · Sev 2 · S · Gate D
+  - **Not ticked, and moved by a branch that was not this row's.** `fix/today-pill-shape` squared
+    the control and its shadow (the corner now animates with the width instead of `CircleShape`
+    drawing a stadium on a 90.6 x 56 box). Doing that required moving `animateContentSize()` off
+    the Card and onto the `Row` inside it, because on the Card its rectangular `clipToBounds()` sat
+    OUTSIDE the shadow layer and cropped the shadow away. That move also crosses Material3's paint
+    chain — `SurfaceKt.surface` is `userModifier.then(graphicsLayer(shadow, shape)).then(border)
+    .background(shape).clip(shape)`, user modifier outermost — so the fill is now painted at the
+    ANIMATED width rather than at the content's measured width placed at `TopStart`. Both steady
+    states are unchanged; the ~300 ms between them is not. Expanding is strictly better (the fill
+    used to be drawn at the full 90.6 and square-cut by that clip). Collapsing trades one artefact
+    for another: the fill used to detach as a finished 56dp circle 34.6dp clear of the bar's right
+    inset and slide back, and now shrinks with its right edge pinned while the glyph inside it runs
+    up to 17.3dp off the fill's centre, decaying on the same spring. Two width animators is still
+    what this row says, and it is still two. **What the row needs is unchanged and is still a
+    device:** watch the collapse, and decide whether a pill shrinking onto its icon reads better
+    than a circle detaching from the bar. If it does, this row is smaller than it was; if the glyph
+    drift is visible, the fix is a hoisted width the fill and the content share, NOT
+    `animateContentSize(alignment = Alignment.Center)`, which would clip the icon's left edge on
+    expand. Argued at `CalendarScreen.kt`'s `CalendarTodayButton`.
 - [ ] `android:calendar#week-cell-selection-snaps-month-cell-animates` — week cell selection snaps month cell animates · and · Sev 2 · S · Gate G
 - [ ] `android:calendar#chevrons-blink-dim-on-every-page` — chevrons blink dim on every page · and · Sev 1 · XS · Gate D
 
