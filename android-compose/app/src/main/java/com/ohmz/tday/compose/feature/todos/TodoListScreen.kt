@@ -250,12 +250,14 @@ import com.ohmz.tday.compose.ui.theme.isTdayListIconKeySupported
 import com.ohmz.tday.compose.ui.theme.normalizeTdayListColorKey
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
+import com.ohmz.tday.compose.ui.theme.tdayListIconForList
 import com.ohmz.tday.compose.ui.theme.tdayListIconResForKey
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import com.ohmz.tday.shared.bulk.BulkAction
 import com.ohmz.tday.shared.bulk.BulkSelectionPolicy
 import com.ohmz.tday.shared.floater.FloaterResting
 import com.ohmz.tday.shared.floater.FloaterRestingTier
+import com.ohmz.tday.shared.listicon.ListIconInference
 import com.ohmz.tday.shared.sort.TaskSortEngine
 import com.ohmz.tday.shared.sort.TaskSortKey
 import kotlinx.coroutines.delay
@@ -2232,6 +2234,12 @@ fun TodoListScreen( // skipcq: KT-R1006
     var createListName by rememberSaveable { mutableStateOf("") }
     var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var createListIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
+    // Mirrors `listSettingsIconTouched` above, for the sheet that never had it. The
+    // picker still shows a glyph the whole time; what changes is that an untouched
+    // PREVIEW is no longer posted as a CHOICE. Without this the stored `iconKey` is
+    // "inbox" on every list anyone ever made, and no value is left that means "not
+    // chosen" for a name-derived default to fill.
+    var createListIconTouched by rememberSaveable { mutableStateOf(false) }
     val fabInteractionSource = remember { MutableInteractionSource() }
     val editTargetTodo = rememberEditSheetTarget(
         id = editTargetTodoId,
@@ -2363,8 +2371,14 @@ fun TodoListScreen( // skipcq: KT-R1006
                         listSettingsTargetId = selectedList.id
                         listSettingsName = selectedList.name
                         listSettingsColor = normalizeTdayListColorKey(selectedList.color)
+                        // Seeded from the same three sources the row resolves in, and in
+                        // the same order, so the sheet opens showing the glyph that is
+                        // already on screen. Seeding from the inference does not persist
+                        // it: `listSettingsIconTouched` is false below, and the save at
+                        // the bottom of this file still sends null while it stays false.
                         listSettingsIconKey = selectedList.iconKey
                             ?.takeIf { isTdayListIconKeySupported(it) }
+                            ?: ListIconInference.inferIconKey(selectedList.name)
                             ?: TDAY_DEFAULT_LIST_ICON_KEY
                         listSettingsColorTouched = false
                         listSettingsIconTouched = false
@@ -3313,7 +3327,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                         .zIndex(20f),
                     todo = drag.todo,
                     lists = uiState.lists,
-                    mode = uiState.mode,
+                    scopedListId = uiState.listId,
                 )
             }
         }
@@ -3493,20 +3507,39 @@ fun TodoListScreen( // skipcq: KT-R1006
         ListSettingsBottomSheet(
             title = stringResource(R.string.scheduled_task_home_new_list),
             listName = createListName,
-            onListNameChange = { createListName = capitalizeFirstListLetter(it) },
+            onListNameChange = {
+                createListName = capitalizeFirstListLetter(it)
+                // The preview follows the name until the user overrules it. Showing the
+                // guess in the picker is what makes it a suggestion rather than a thing
+                // that happens to the list after they leave: they can see it, and the
+                // next tap replaces it. Untouched still SAVES as null — this moves the
+                // preview, never the stored choice.
+                if (!createListIconTouched) {
+                    createListIconKey = ListIconInference.inferIconKey(createListName)
+                        ?: TDAY_DEFAULT_LIST_ICON_KEY
+                }
+            },
             listColor = createListColor,
             onListColorChange = { createListColor = it },
             listIconKey = createListIconKey,
-            onListIconChange = { createListIconKey = it },
+            onListIconChange = {
+                createListIconKey = it
+                createListIconTouched = true
+            },
             showDelete = false,
             onDismiss = { showCreateListSheet = false },
             onSave = {
                 val normalizedName = capitalizeFirstListLetter(createListName).trim()
                 if (normalizedName.isNotBlank()) {
-                    onCreateList(normalizedName, createListColor, createListIconKey)
+                    onCreateList(
+                        normalizedName,
+                        createListColor,
+                        createListIconKey.takeIf { createListIconTouched },
+                    )
                     createListName = ""
                     createListColor = TDAY_DEFAULT_LIST_COLOR_KEY
                     createListIconKey = TDAY_DEFAULT_LIST_ICON_KEY
+                    createListIconTouched = false
                     showCreateListSheet = false
                 }
             },
@@ -4131,6 +4164,10 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                         todo = todo,
                         mode = uiState.mode,
                         lists = uiState.lists,
+                        // The screen's own scope, which `mode` alone cannot express:
+                        // FLOATER is both the Anytime home feed (blank) and one
+                        // Anytime list's detail (a list id).
+                        scopedListId = uiState.listId,
                         useMinimalStyle = usesTodayStyle,
                         flashHighlight = flashTodoId == todo.id || flashTodoId == todo.canonicalId,
                         showEarlierDateTimeSubtitle = showEarlierDateTimeSubtitle,
@@ -4503,7 +4540,7 @@ private fun FloaterTaskHomeSearchResultsCard(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            imageVector = tdayListIconForKey(listMeta?.iconKey),
+                            imageVector = tdayListIconForList(listMeta?.iconKey, listMeta?.name),
                             contentDescription = null,
                             tint = tdayListAccentColor(listMeta?.color).copy(alpha = 0.92f),
                             modifier = Modifier.size(SearchResultIconSize),
@@ -4559,7 +4596,7 @@ private fun FloaterTaskHomeListRow(
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val accent = tdayListAccentColor(colorKey)
-    val icon = tdayListIconForKey(iconKey)
+    val icon = tdayListIconForList(iconKey, name)
     val containerColor =
         lerpColor(colorScheme.surfaceVariant, accent, FLOATER_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT)
     val displayName = capitalizeFirstListLetter(name)
@@ -5467,11 +5504,14 @@ private fun TimelineTaskDragPreview(
     modifier: Modifier = Modifier,
     todo: TodoItem,
     lists: List<ListSummary>,
-    mode: TodoListMode,
+    scopedListId: String?,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
-    val showListIndicator = listMeta != null && mode != TodoListMode.LIST
+    // The card under the finger is the row it was lifted off. It took `mode` and so
+    // carried the same blind spot; a preview that grows a mark the row beneath it
+    // does not have is the bug wearing a different hat.
+    val showListIndicator = listMeta != null && shouldShowListMark(listMeta.id, scopedListId)
     val previewShape = RoundedCornerShape(TdayDimens.RadiusLg)
     // The pick-up itself. This card used to be composed straight into its final
     // size and elevation, so the one frame that says "the app has your task"
@@ -5529,7 +5569,7 @@ private fun TimelineTaskDragPreview(
             }
             if (showListIndicator) {
                 Icon(
-                    imageVector = tdayListIconForKey(listMeta?.iconKey),
+                    imageVector = tdayListIconForList(listMeta?.iconKey, listMeta?.name),
                     contentDescription = null,
                     tint = tdayListAccentColor(listMeta?.color),
                     modifier = Modifier.size(RowTrailingIconSize),
@@ -5553,6 +5593,7 @@ private fun TimelineTaskRow(
     todo: TodoItem,
     mode: TodoListMode,
     lists: List<ListSummary>,
+    scopedListId: String?,
     useMinimalStyle: Boolean,
     flashHighlight: Boolean,
     showEarlierDateTimeSubtitle: Boolean,
@@ -5581,6 +5622,7 @@ private fun TimelineTaskRow(
             AllTaskSwipeRow(
                 todo = todo,
                 lists = lists,
+                scopedListId = scopedListId,
                 flashHighlight = flashHighlight,
                 selectionActive = selectionActive,
                 selected = selected,
@@ -5614,6 +5656,7 @@ private fun TimelineTaskRow(
                 todo = todo,
                 mode = mode,
                 lists = lists,
+                scopedListId = scopedListId,
                 flashHighlight = flashHighlight,
                 readOnly = readOnly,
                 selectionActive = selectionActive,
@@ -6498,6 +6541,7 @@ private val TODO_DUE_DATE_TIME_FORMATTER: DateTimeFormatter =
 private fun AllTaskSwipeRow(
     todo: TodoItem,
     lists: List<ListSummary>,
+    scopedListId: String?,
     flashHighlight: Boolean,
     selectionActive: Boolean = false,
     selected: Boolean = false,
@@ -6524,6 +6568,7 @@ private fun AllTaskSwipeRow(
         keepCompletedInline = false,
         mode = TodoListMode.ALL,
         lists = lists,
+        scopedListId = scopedListId,
         flashHighlight = flashHighlight,
         selectionActive = selectionActive,
         selected = selected,
@@ -6548,6 +6593,7 @@ private fun TodayTaskSwipeRow(
     todo: TodoItem,
     mode: TodoListMode,
     lists: List<ListSummary>,
+    scopedListId: String?,
     flashHighlight: Boolean = false,
     readOnly: Boolean = false,
     selectionActive: Boolean = false,
@@ -6581,6 +6627,7 @@ private fun TodayTaskSwipeRow(
         keepCompletedInline = false,
         mode = mode,
         lists = lists,
+        scopedListId = scopedListId,
         flashHighlight = flashHighlight,
         readOnly = readOnly,
         selectionActive = selectionActive,
@@ -6614,6 +6661,11 @@ private fun SwipeTaskRow(
     onDefer: (() -> Unit)? = null,
     mode: TodoListMode = TodoListMode.ALL,
     lists: List<ListSummary> = emptyList(),
+    // No default. This row is the one behind Today, Overdue, Scheduled, Priority,
+    // All, the Anytime home feed, an Anytime list and a scheduled list — eight
+    // screens — so a defaulted scope would be seven silent wrong answers waiting
+    // for the next call site that forgets it.
+    scopedListId: String?,
     flashHighlight: Boolean = false,
     readOnly: Boolean = false,
     selectionActive: Boolean = false,
@@ -6822,18 +6874,10 @@ private fun SwipeTaskRow(
         ),
     )
     val listMeta = todo.listId?.let { listId -> lists.firstOrNull { it.id == listId } }
-    val showListIndicator = when (mode) {
-        TodoListMode.TODAY,
-        TodoListMode.OVERDUE,
-        TodoListMode.SCHEDULED,
-        TodoListMode.PRIORITY,
-        TodoListMode.FLOATER,
-        TodoListMode.ALL,
-            -> listMeta != null
-
-        TodoListMode.LIST,
-            -> false
-    }
+    // Was a `when (mode)`, which could not see the difference between the Anytime
+    // HOME feed and one Anytime list's detail — both arrive as FLOATER. See
+    // [shouldShowListMark] for why the rule is the screen's scope and not its mode.
+    val showListIndicator = listMeta != null && shouldShowListMark(listMeta.id, scopedListId)
     val priorityIcon = priorityIconFor(todo.priority)
     val showPriorityIcon = priorityIcon != null
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
@@ -7325,7 +7369,7 @@ private fun SwipeTaskRow(
                             ) {
                                 if (showListIndicator) {
                                     Icon(
-                                        imageVector = tdayListIconForKey(listMeta?.iconKey),
+                                        imageVector = tdayListIconForList(listMeta?.iconKey, listMeta?.name),
                                         contentDescription = stringResource(R.string.label_task_list),
                                         tint = listIndicatorColor,
                                         modifier = Modifier.size(RowTrailingIconSize),

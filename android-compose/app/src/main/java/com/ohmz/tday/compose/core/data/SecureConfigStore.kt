@@ -31,6 +31,39 @@ class SecureConfigStore @Inject constructor(
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
     )
 
+    init {
+        pruneSeededListIconShadowOnce()
+    }
+
+    /**
+     * Clears the pre-v0.7.28 seeded `"inbox"` entries out of the icon shadow, exactly once.
+     *
+     * The argument for doing it at all is [prunedSeededListIconShadow]'s; the argument for
+     * doing it HERE is ordering. `SyncManager` reads this shadow as `iconFallback` on every
+     * list fetch, and a `@Singleton` constructed by Hilt is built before anything can hold a
+     * reference to ask it for one — so running in `init` means no fetch can ever observe the
+     * un-pruned map. A prune hung off the first sync instead would race the first paint and
+     * show the old glyph for however long that took, once, on exactly the update where the
+     * user was told the icons would change.
+     *
+     * The flag is what makes it one-shot rather than a policy. After this runs, `"inbox"` in
+     * the shadow means a deliberate tap on Inbox — the sheets stopped submitting the default
+     * in v0.7.28 — and a prune that kept firing would delete those choices on every launch,
+     * which is the one thing the whole feature promises not to do.
+     */
+    private fun pruneSeededListIconShadowOnce() {
+        if (prefs.getBoolean(KEY_LIST_ICON_SHADOW_PRUNED, false)) return
+
+        val pruned = prunedSeededListIconShadow(prefs.getString(KEY_LIST_ICON_MAP, null))
+        prefs.edit()
+            .apply { if (pruned != null) putString(KEY_LIST_ICON_MAP, pruned) }
+            // Set even when nothing was pruned: the flag records that this install has been
+            // through the cutover, not that it had work to do. Leaving it unset on a device
+            // with an empty shadow would re-arm the prune for icons chosen after the update.
+            .putBoolean(KEY_LIST_ICON_SHADOW_PRUNED, true)
+            .apply()
+    }
+
     fun hasServerUrl(): Boolean = !getServerUrl().isNullOrBlank()
 
     fun getAppDataMode(): AppDataMode {
@@ -346,5 +379,6 @@ class SecureConfigStore @Inject constructor(
         const val KEY_RETAINED_LOCAL_WORKSPACE = "retained_local_workspace_v1"
         const val KEY_AI_SUMMARY_CONFIGURED = "ai_summary_configured_v1"
         const val KEY_AI_SUMMARY_HEALTHY = "ai_summary_healthy_v1"
+        const val KEY_LIST_ICON_SHADOW_PRUNED = "list_icon_shadow_pruned_v1"
     }
 }

@@ -1397,6 +1397,13 @@
         "step1": "Tap tasks to pick them, or use Select all for everything on screen.",
         "step2": "Choose Complete, Priority, Move or Delete from the bar at the bottom.",
         "tip": "Deleting asks you to confirm the exact number first, and still leaves an undo toast. Repeating tasks sit out bulk actions altogether, so a whole series is never changed by accident — open one on its own to complete, reschedule or delete it."
+      },
+      "list-icons": {
+        "title": "Automatic list icons",
+        "summary": "A list with no icon of its own picks one that matches its name.",
+        "keywords": "list icon, automatic, suggested, glyph, name, groceries, gym, work",
+        "body": "Name a list Groceries and it wears a shopping cart; Gym gets a dumbbell, Work a briefcase. T'Day only guesses when you have not chosen an icon yourself, and it leaves the plain default in place whenever the name is not clear enough to be sure. Names are matched in English for now.",
+        "tip": "Pick an icon in the list's settings whenever you like — once you choose one it is kept, and never guessed over."
       }
     }
   },

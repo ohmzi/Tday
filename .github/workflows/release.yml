@@ -68,6 +68,9 @@ jobs:
       - name: Verify motion tokens are not stale
         run: ./gradlew :shared:verifyMotionTokens --no-daemon
 
+      - name: Verify the list icon table is not stale
+        run: ./gradlew :shared:verifyListIconTable --no-daemon
+
       # `build-and-release` hangs off this job, so an Android regression caught here stops the
       # APK from being published rather than shipping inside it. PRs are gated earlier and
       # separately by `android.yml`; this is the last line, for whatever a merge commit
@@ -164,6 +167,12 @@ jobs:
       # being the one nobody remembered to add.
       - name: Regenerate motion tokens
         run: ./gradlew :shared:exportMotionTokens --no-daemon
+
+      # Same reasoning as the motion step above, and the same no-op in the normal case:
+      # the list icon table takes no input from version.json either. It runs so that the
+      # three codegens are operated identically rather than two of them being remembered.
+      - name: Regenerate the list icon table
+        run: ./gradlew :shared:exportListIconTable --no-daemon
 
       # The repo still carries legacy v1.8.x-v1.44.0 tags from an earlier
       # versioning era, so ask GitHub for the previous release rather than

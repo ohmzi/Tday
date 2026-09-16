@@ -1397,6 +1397,13 @@
         "step1": "Toque nas tarefas para escolhê-las ou use Selecionar tudo para as que estão na tela.",
         "step2": "Escolha Concluir, Prioridade, Mover ou Excluir na barra inferior.",
         "tip": "Excluir pede que você confirme o número exato e ainda deixa um aviso para desfazer. Tarefas repetidas ficam totalmente de fora das ações em massa, para que uma série inteira nunca mude sem querer — abra uma de cada vez para concluir, mover ou excluir."
+      },
+      "list-icons": {
+        "title": "Ícones de lista automáticos",
+        "summary": "Uma lista sem ícone próprio ganha um que combina com o seu nome.",
+        "keywords": "ícone de lista, automático, sugerido, glifo, nome, compras, ginásio, trabalho",
+        "body": "Chame uma lista de Groceries e ela usa um carrinho de compras; Gym recebe um haltere e Work uma pasta. O T'Day só adivinha quando você não escolheu um ícone, e mantém o ícone padrão sempre que o nome não é claro o bastante. Por enquanto os nomes são reconhecidos em inglês.",
+        "tip": "Escolha um ícone nas definições da lista quando quiser: depois de escolhido ele é mantido e nunca é substituído por um palpite."
       }
     }
   },

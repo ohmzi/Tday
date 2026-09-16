@@ -1397,6 +1397,13 @@
         "step1": "Toca las tareas para elegirlas o usa Seleccionar todo para las que están en pantalla.",
         "step2": "Elige Completar, Prioridad, Mover o Eliminar en la barra inferior.",
         "tip": "Eliminar te pide confirmar el número exacto y aun así deja un aviso para deshacer. Las tareas repetidas quedan fuera de las acciones en lote por completo, para que nunca se cambie una serie entera sin querer: ábrelas de una en una para completarlas, moverlas o eliminarlas."
+      },
+      "list-icons": {
+        "title": "Iconos de lista automáticos",
+        "summary": "Una lista sin icono propio adopta uno que coincide con su nombre.",
+        "keywords": "icono de lista, automático, sugerido, glifo, nombre, compra, gimnasio, trabajo",
+        "body": "Llama a una lista Compra y llevará un carrito; Gimnasio recibe una mancuerna y Trabajo un maletín. T'Day solo lo deduce cuando tú no has elegido icono, y deja el icono predeterminado siempre que el nombre no sea lo bastante claro. Por ahora los nombres se reconocen en inglés.",
+        "tip": "Elige un icono en los ajustes de la lista cuando quieras: una vez elegido se conserva y nunca se sobrescribe."
       }
     }
   },

@@ -412,7 +412,7 @@ private struct FloaterTaskHomeSearchResultsCard: View {
                         ForEach(todos) { todo in
                             let list = todo.listId.flatMap { listsByID[$0] }
                             HStack(spacing: 10) {
-                                TdayListIcon(iconKey: list?.iconKey, size: 17)
+                                TdayListIcon(iconKey: list?.iconKey, listName: list?.name, size: 17)
                                     .foregroundStyle(todoListAccentColor(for: list?.color).opacity(0.92))
                                     .frame(width: 18)
 
@@ -496,7 +496,7 @@ private struct FloaterTaskHomeListCard: View {
                     )
                 )
 
-                TdayListIcon(iconKey: list.iconKey, size: 60)
+                TdayListIcon(iconKey: list.iconKey, listName: list.name, size: 60)
                     .foregroundStyle(todoBlendColor(containerColor, .white, amount: 0.34).opacity(0.42))
                     .offset(x: 18, y: 8)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
@@ -504,7 +504,7 @@ private struct FloaterTaskHomeListCard: View {
 
                 HStack {
                     HStack(spacing: 10) {
-                        TdayListIcon(iconKey: list.iconKey, size: 22)
+                        TdayListIcon(iconKey: list.iconKey, listName: list.name, size: 22)
                             .foregroundStyle(.white)
                             .frame(width: 32, height: 32)
 
@@ -3284,7 +3284,10 @@ struct TodoListScreen: View {
         let listMeta = todo.listId.flatMap { listId in
             viewModel.lists.first(where: { $0.id == listId })
         }
-        let showListIndicator = listMeta != nil && viewModel.mode != .list
+        // The screen's own scope, which `mode` alone cannot express: `.floater` is both the
+        // Anytime home feed (no list id) and one Anytime list's detail (a list id). See
+        // `shouldShowListMark`.
+        let showListIndicator = shouldShowListMark(rowListId: listMeta?.id, scopedListId: viewModel.listId)
         let priorityIcon = priorityIndicatorSymbolName(todo.priority)
         let subtitleText = minimalTimelineSubtitle(for: todo, in: section)
         let isOverdueTask = !todo.completed && (todo.due ?? .distantFuture) < Date()
@@ -3352,7 +3355,7 @@ struct TodoListScreen: View {
                 if showListIndicator || priorityIcon != nil {
                     HStack(spacing: 8) {
                         if let listMeta, showListIndicator {
-                            TdayListIcon(iconKey: listMeta.iconKey, size: TodoTimelineMetrics.minimalRowIndicatorSize)
+                            TdayListIcon(iconKey: listMeta.iconKey, listName: listMeta.name, size: TodoTimelineMetrics.minimalRowIndicatorSize)
                                 .foregroundStyle(todoListAccentColor(for: listMeta.color))
                         }
                         if let priorityIcon {
@@ -5153,6 +5156,15 @@ private struct ListSettingsSheet: View {
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
+    /// Whether the picker below holds a CHOICE or only a PREVIEW.
+    ///
+    /// Without it this sheet cannot help destroying an unset icon: it seeds `iconKey` from
+    /// the list (falling back to the default), and submitting sent that seed back whatever
+    /// the user came here to do. Renaming a list would therefore have written "inbox" over
+    /// its never-chosen state and retired the name-derived glyph forever, from a screen that
+    /// says nothing about icons. Android models the same distinction as
+    /// `listSettingsIconTouched`.
+    @State private var iconTouched = false
 
     private var trimmedName: String {
         name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -5278,6 +5290,7 @@ private struct ListSettingsSheet: View {
                                     let isSelected = optionKey == iconKey
                                     Button {
                                         iconKey = optionKey
+                                        iconTouched = true
                                     } label: {
                                         Circle()
                                             .fill(isSelected ? accentColor.opacity(0.2) : tdayColors.bottomSheetControlSurface)
@@ -5375,7 +5388,14 @@ private struct ListSettingsSheet: View {
         .task {
             name = list?.name ?? ""
             color = normalizedTodoListColorKey(list?.color)
-            iconKey = normalizedTodoListIconKey(list?.iconKey)
+            // Seeded from the same two sources the row resolves in, and in the same order,
+            // so the sheet opens showing the glyph that is already on screen. Seeding from
+            // the inference does not persist it: `iconTouched` stays false, and `submit()`
+            // sends nil while it does.
+            iconKey = normalizedTodoListIconKey(
+                tdayResolvedListIconKey(list?.iconKey, listName: list?.name)
+            )
+            iconTouched = false
         }
     }
 
@@ -5385,7 +5405,10 @@ private struct ListSettingsSheet: View {
         // button gives, and the save that goes through earns the success pulse —
         // the same order `CreateTaskSheet.submit` uses.
         HapticManager.completion()
-        onSubmit(trimmedName, color, iconKey)
+        // An untouched picker submits nil, which every repository reads as "leave the icon
+        // alone" (`iconKey ?? list.iconKey`). Sending the seeded preview instead would turn
+        // a rename into an icon choice the user never made.
+        onSubmit(trimmedName, color, iconTouched ? iconKey : nil)
         dismiss()
     }
 
@@ -6128,6 +6151,14 @@ private func emptyTimelineBadgeAssetName(for mode: TodoListMode, listIconKey: St
 
 /// Lucide template-asset watermark for the scheduled task home category modes, mirroring web.
 /// Returns nil for modes that keep their SF Symbol watermark (today/floater/list).
+///
+/// Takes the RAW `iconKey`, never the inferred one, and that is deliberate. The `.floater`
+/// branch below reads blankness as a signal rather than as a missing value: an Anytime list
+/// with no chosen glyph shows the leaf that is the Anytime feed's own identity. Resolving the
+/// name-inferred key in here would swap that leaf for a shopping cart the first time someone
+/// emptied a list called Groceries — a screen nobody was thinking about, changed by a feature
+/// about task rows. The inference belongs at `TdayListIcon`, where the subject really is
+/// "which list is this".
 private func emptyTimelineAssetName(for mode: TodoListMode, listIconKey: String?) -> String? {
     switch mode {
     case .overdue:

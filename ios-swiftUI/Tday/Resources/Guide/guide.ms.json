@@ -723,6 +723,41 @@
       "searchBody": "isih tugasan bertarikh ke dalam senarai bernama dan berwarna. beri tugasan berjadual satu senarai supaya kerja berkaitan kekal bersama. senarai membawa nama dan warna serta boleh ditapis."
     },
     {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Ikon senarai automatik",
+      "summary": "Senarai tanpa ikon pilihannya sendiri mendapat ikon yang sepadan dengan namanya.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Namakan senarai sebagai Groceries dan ia akan memakai troli beli-belah; Gym mendapat dumbel, Work mendapat beg bimbit. T'Day hanya meneka apabila anda sendiri belum memilih ikon, dan mengekalkan ikon lalai apabila nama itu tidak cukup jelas. Buat masa ini nama dipadankan dalam bahasa Inggeris."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Pilih ikon dalam tetapan senarai bila-bila masa — setelah dipilih, ia dikekalkan dan tidak sekali-kali diteka semula."
+          ]
+        }
+      ],
+      "searchTitle": "ikon senarai automatik",
+      "searchKeywords": "ikon senarai, automatik, cadangan, glif, nama, barangan runcit, gim, kerja",
+      "searchBody": "senarai tanpa ikon pilihannya sendiri mendapat ikon yang sepadan dengan namanya. namakan senarai sebagai groceries dan ia akan memakai troli beli-belah; gym mendapat dumbel, work mendapat beg bimbit. t'day hanya meneka apabila anda sendiri belum memilih ikon, dan mengekalkan ikon lalai apabila nama itu tidak cukup jelas. buat masa ini nama dipadankan dalam bahasa inggeris. pilih ikon dalam tetapan senarai bila-bila masa — setelah dipilih, ia dikekalkan dan tidak sekali-kali diteka semula."
+    },
+    {
       "id": "completed-history",
       "section": "ORGANIZING",
       "sectionOrder": 3,

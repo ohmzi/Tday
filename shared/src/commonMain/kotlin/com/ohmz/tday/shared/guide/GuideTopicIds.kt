@@ -31,6 +31,7 @@ object GuideTopicIds {
     const val RESTING_FLOATERS = "resting-floaters"
     const val REUSABLE_LISTS = "reusable-lists"
     const val SCHEDULED_LISTS = "scheduled-lists"
+    const val LIST_ICONS = "list-icons"
     const val COMPLETED_HISTORY = "completed-history"
     const val OVERDUE_VIEW = "overdue-view"
     const val MORNING_SWEEP = "morning-sweep"

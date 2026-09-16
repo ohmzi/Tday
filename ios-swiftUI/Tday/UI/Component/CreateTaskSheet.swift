@@ -258,7 +258,7 @@ struct CreateTaskSheet: View {
                     value: selectedListName,
                     valueLeading: lists.first(where: { $0.id == selectedListID }).map { list in
                         AnyView(
-                            TdayListIcon(iconKey: list.iconKey, size: 16)
+                            TdayListIcon(iconKey: list.iconKey, listName: list.name, size: 16)
                                 .foregroundStyle(createTaskSheetListSwatchColor(list.color))
                         )
                     },

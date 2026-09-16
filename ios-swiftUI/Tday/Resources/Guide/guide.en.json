@@ -723,6 +723,41 @@
       "searchBody": "sort dated tasks into named, colored lists. give scheduled tasks a list so related work stays together. lists carry a name and color and can be filtered."
     },
     {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Automatic list icons",
+      "summary": "A list with no icon of its own picks one that matches its name.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Name a list Groceries and it wears a shopping cart; Gym gets a dumbbell, Work a briefcase. T'Day only guesses when you have not chosen an icon yourself, and it leaves the plain default in place whenever the name is not clear enough to be sure. Names are matched in English for now."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Pick an icon in the list's settings whenever you like — once you choose one it is kept, and never guessed over."
+          ]
+        }
+      ],
+      "searchTitle": "automatic list icons",
+      "searchKeywords": "list icon, automatic, suggested, glyph, name, groceries, gym, work",
+      "searchBody": "a list with no icon of its own picks one that matches its name. name a list groceries and it wears a shopping cart; gym gets a dumbbell, work a briefcase. t'day only guesses when you have not chosen an icon yourself, and it leaves the plain default in place whenever the name is not clear enough to be sure. names are matched in english for now. pick an icon in the list's settings whenever you like — once you choose one it is kept, and never guessed over."
+    },
+    {
       "id": "completed-history",
       "section": "ORGANIZING",
       "sectionOrder": 3,

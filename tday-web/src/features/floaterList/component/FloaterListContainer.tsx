@@ -14,9 +14,10 @@ import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import { useShareListAsText } from "@/hooks/use-share-list";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 import { Button } from "@/components/ui/button";
-import { getListIcon } from "@/lib/listIcons";
+import { getListIconForList } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import FloaterGroup from "@/features/floater/component/FloaterGroup";
+import ListScopeProvider from "@/providers/ListScopeProvider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
 import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
@@ -47,7 +48,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
   const listAccent = listColor
     ? listColorAccentColors[listColor]
     : nativeScreenAccentColors.floater;
-  const ListIcon = getListIcon(listMeta?.iconKey);
+  const ListIcon = getListIconForList(listMeta);
   const editableList = listMeta
     ? {
         id,
@@ -248,7 +249,13 @@ export default function FloaterListContainer({ id }: { id: string }) {
               <h2 className="px-1 text-[1.75rem] font-black leading-8 text-foreground">
                 {appDict(section.labelKey)}
               </h2>
-              <FloaterGroup floaters={section.items} readOnly={isViewer} />
+              {/* Scoped for the same reason as the scheduled list: every row here was
+                  filtered to this list, so a per-row list mark would repeat the
+                  heading. These rows carry no list id today, so the rule is currently
+                  a no-op — see `FloaterItemContainer` for why it is stated anyway. */}
+              <ListScopeProvider listId={id}>
+                <FloaterGroup floaters={section.items} readOnly={isViewer} />
+              </ListScopeProvider>
             </section>
           ))}
         </div>
