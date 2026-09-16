@@ -430,7 +430,16 @@ struct RootFeedHeroHeader: View {
             // that describes the glyph rather than the outcome — the thing
             // VoiceOver reads is the only thing a non-sighted user gets, and
             // it should say where the tap lands.
-            .accessibilityLabel("Settings")
+            //
+            // Through `L`, unlike the bare literals on the three controls
+            // around it, and the asymmetry is deliberate: this label replaces
+            // a menu row that read `Button(L("Settings"))`, so a bare literal
+            // here would be the one place in this change where a German
+            // VoiceOver user loses "Einstellungen" and gets "Settings" back.
+            // The key is already in all nine locales — nothing new is owed.
+            // The other three were never localised and are not this change's
+            // to fix.
+            .accessibilityLabel(L("Settings"))
         }
         .frame(width: rowWidth, height: Metrics.barButtonSize)
         .position(

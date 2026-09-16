@@ -3131,10 +3131,17 @@ struct TodoListScreen: View {
                     }
 
                     // Between the empty scene and "My Lists", which is exactly
-                    // where Android emits its own Completed tile and where web's
-                    // dashboard puts its. Not gated on anything having been
-                    // completed: an archive you can only reach once it is
-                    // non-empty is an archive you cannot learn exists.
+                    // where Android emits its own Completed tile. Web is not a
+                    // third vote for this slot and should not be read as one:
+                    // its dashboard puts the tile *above* the empty scene,
+                    // because that scene is a sibling in the same flex column
+                    // there and the tiles are the column's header. Android is
+                    // the reference for this screen, so this follows Android,
+                    // and the guardrail pins those two orders only.
+                    //
+                    // Not gated on anything having been completed: an archive
+                    // you can only reach once it is non-empty is an archive you
+                    // cannot learn exists.
                     if isFloaterTaskHomeScreen {
                         Section {
                             FloaterTaskHomeCompletedCard(onTap: onOpenCompleted)
