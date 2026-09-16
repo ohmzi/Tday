@@ -18,8 +18,9 @@ import kotlinx.datetime.toLocalDateTime
  * sentence that asserts a deadline the task does not have, and that several locales
  * render as "expiring at any moment". All-undated sets are handed to
  * [FloaterSummaryPlanner] and rendered from a separate, floater-only vocabulary
- * instead; the TypeScript twin (`tday-web/src/lib/localSummary.ts`) has to mirror
- * that branch to keep local-mode web in step with offline Android.
+ * instead; the TypeScript twin (`tday-web/src/lib/floaterSummary.ts`, reached from
+ * `lib/local/localSummary.ts`) mirrors that branch so local-mode web stays in step
+ * with offline Android.
  *
  * Given the same inputs (tasks, scope, now, timezone, locale) every platform
  * produces a byte-identical summary.
@@ -29,7 +30,15 @@ object SummaryEngine {
     private const val DUE_WINDOW_DAY_RANGE = 3
     private val PRIORITY_ALIASES = setOf("medium", "high", "important", "urgent")
 
-    /** Public entry point. Returns the localized summary sentence(s). */
+    /**
+     * Public entry point. Returns the localized summary sentence(s).
+     *
+     * [scope] says WHICH VIEW this is and nothing else; [preFiltered] says whether the caller has
+     * already applied that view's filter. They used to be one knob, and the backend turned it: it
+     * passed `ALL` to mean "these rows are already scoped, do not filter them again", which threw
+     * away the only fact the empty branch below has to work from. Splitting them lets the backend
+     * keep its pre-filtered rows AND still tell the engine it is rendering an Anytime view.
+     */
     fun summarize(
         tasks: List<SummaryTaskInput>,
         scope: SummaryScope,
@@ -37,6 +46,7 @@ object SummaryEngine {
         timeZoneId: String,
         locale: String? = null,
         listId: String? = null,
+        preFiltered: Boolean = false,
     ): String {
         val strings = SummaryStringBundles.forLocale(locale)
         val zone = runCatching { TimeZone.of(timeZoneId) }.getOrDefault(TimeZone.UTC)
@@ -52,12 +62,18 @@ object SummaryEngine {
         val scoped = tasks
             .asSequence()
             .filterNot { it.completed }
-            .filter { matchesScope(it, scope, normalizedListId, now, zone) }
+            .filter { preFiltered || matchesScope(it, scope, normalizedListId, now, zone) }
             .toList()
 
         if (scoped.isEmpty()) {
             // "No tasks need attention" is a sentence about deadlines. An empty Anytime view has
             // no deadlines to be clear of — it is simply empty — so it gets its own line.
+            //
+            // This is the one branch that MUST read the scope: an empty list carries no data to
+            // key off, so the view is the only thing left to ask. That is exactly why `scope` had
+            // to stop doubling as the filter switch — while the backend passed ALL to skip
+            // filtering, every server-rendered empty Anytime view fell through to the deadline
+            // line, on web, iOS and online Android alike.
             return strings.t(if (scope == SummaryScope.FLOATER) "floaterClear" else "clearForNow")
         }
 

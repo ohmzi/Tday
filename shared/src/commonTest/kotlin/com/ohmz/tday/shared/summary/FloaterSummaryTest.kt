@@ -45,7 +45,8 @@ class FloaterSummaryTest {
         locale: String = "en",
         listId: String? = null,
         scope: SummaryScope = SummaryScope.FLOATER,
-    ) = SummaryEngine.summarize(tasks, scope, nowMs, utc, locale, listId)
+        preFiltered: Boolean = false,
+    ) = SummaryEngine.summarize(tasks, scope, nowMs, utc, locale, listId, preFiltered)
 
     private fun plain(count: Int) = (1..count).map { floater("Floater number $it") }
 
@@ -302,6 +303,44 @@ class FloaterSummaryTest {
             assertEquals(bundle.t("floaterClear"), out)
             assertNotEquals(bundle.t("clearForNow"), out, "[$locale] Anytime reused the deadline-flavoured empty line")
         }
+    }
+
+    @Test
+    fun emptyAnytimeViewKeepsItsOwnLineOnTheServerRenderedPath() {
+        // The version of this test that only summarized with scope = FLOATER could not see the
+        // real bug: the backend passed SummaryScope.ALL to mean "already filtered", so every
+        // empty Anytime view on web, iOS and online Android still read "No tasks need attention
+        // in this view" — a sentence about deadlines, on the one screen that has none. The
+        // filtering decision now travels in `preFiltered`, leaving `scope` to mean the view.
+        for (locale in locales) {
+            val bundle = SummaryStringBundles.forLocale(locale)
+            val out = summarize(emptyList(), locale, scope = SummaryScope.FLOATER, preFiltered = true)
+            assertEquals(bundle.t("floaterClear"), out, "[$locale] the server-rendered empty Anytime line regressed")
+        }
+        // …and a dated view still gets the dated line through the same call shape.
+        assertEquals(
+            SummaryStringBundles.en.t("clearForNow"),
+            summarize(emptyList(), scope = SummaryScope.TODAY, preFiltered = true),
+        )
+    }
+
+    @Test
+    fun preFilteredRowsAreRenderedWithoutBeingScopedAgain() {
+        // What `preFiltered` buys the backend: its rows reach the renderer untouched even when the
+        // scope's own filter would have thrown them away.
+        val tasks = listOf(floater("In list A", listId = "listA"), floater("In list B", listId = "listB"))
+        assertEquals(
+            summarize(tasks, scope = SummaryScope.FLOATER),
+            summarize(tasks, scope = SummaryScope.LIST, preFiltered = true),
+        )
+        // Completed rows are still dropped: that filter is about the row, not the view.
+        assertEquals(
+            summarize(listOf(floater("Waiting"))),
+            summarize(
+                listOf(floater("Waiting"), floater("Done").copy(completed = true)),
+                preFiltered = true,
+            ),
+        )
     }
 
     @Test
