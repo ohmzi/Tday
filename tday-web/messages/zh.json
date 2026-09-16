@@ -885,6 +885,8 @@
     "floaterPinnedMany": "你置顶了 {{title}}，而且不止这一件。",
     "floaterPriorityOne": "只有 {{title}} 是高优先级。",
     "floaterPriorityMany": "{{title}} 是高优先级，而且不止这一件。",
+    "floaterMediumOne": "只有 {{title}} 是中优先级。",
+    "floaterMediumMany": "{{title}} 是中优先级，而且不止这一件。",
     "floaterRestingOne": "其中一件已经好几个月没动过。",
     "floaterRestingMany": "其中有几件已经好几个月没动过。",
     "floaterRestingAll": "这里已经好几个月没动过了。",

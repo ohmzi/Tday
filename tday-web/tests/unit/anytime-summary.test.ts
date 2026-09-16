@@ -280,8 +280,15 @@ describe("anytime summary copy", () => {
     expect(note(plain(3).map((t, i) => ({ ...t, priority: i === 0 ? "High" : "Low" })))).toBe(
       "priorityOne",
     );
-    // Medium is not "high priority": claiming it would be the summary inventing importance.
-    expect(note(plain(3).map((t) => ({ ...t, priority: "Medium" })))).toBe("none");
+    // Medium is worth naming too, but ranks below High: a set with only Medium tasks gets the
+    // medium note, and a set with both gets the High note, not this one.
+    expect(
+      note(plain(3).map((t, i) => ({ ...t, priority: i === 0 ? "Medium" : "Low" }))),
+    ).toBe("mediumOne");
+    expect(note(plain(3).map((t) => ({ ...t, priority: "Medium" })))).toBe("mediumMany");
+    expect(
+      note(plain(3).map((t, i) => ({ ...t, priority: i === 0 ? "High" : "Medium" }))),
+    ).toBe("priorityOne");
   });
 
   it("names the task at the top of the list", () => {

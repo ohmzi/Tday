@@ -885,6 +885,8 @@
     "floaterPinnedMany": "{{title}} をピン留めしていますが、それだけではありません。",
     "floaterPriorityOne": "高優先度は {{title}} だけです。",
     "floaterPriorityMany": "{{title}} は高優先度で、ほかにもあります。",
+    "floaterMediumOne": "中優先度は {{title}} だけです。",
+    "floaterMediumMany": "{{title}} は中優先度で、ほかにもあります。",
     "floaterRestingOne": "そのうち 1 件は何か月も手つかずです。",
     "floaterRestingMany": "いくつかは何か月も手つかずです。",
     "floaterRestingAll": "ここは何か月も手つかずのままです。",
