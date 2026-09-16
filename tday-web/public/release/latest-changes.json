@@ -1,11 +1,10 @@
 {
-  "version": "0.7.28",
-  "publishedAt": "2026-09-16T03:59:43-04:00",
+  "version": "0.7.29",
+  "publishedAt": "2026-09-16T13:35:26-04:00",
   "notes": [
-    "Scope the per-row list mark, infer list icons from names",
-    "Reach the lists that already exist, and hold the three matchers to one rule",
-    "Retire the UnifiedPush toggle and register with a distributor automatically"
+    "Give Anytime's deterministic summary a Medium-priority note",
+    "Give the list detail screen the same name-inferred icon as its row"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.28",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.27..v0.7.28"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.29",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.28..v0.7.29"
 }
