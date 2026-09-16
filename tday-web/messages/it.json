@@ -1310,10 +1310,10 @@
         "title": "UnifiedPush (Android)",
         "summary": "Push dal server senza Google, col tuo distributore.",
         "keywords": "unifiedpush, ntfy, push, notifiche, self-host, distributore, fcm",
-        "body": "In Modalità Server, T'Day può inviare le notifiche del server tramite UnifiedPush invece dell'FCM di Google, tenendo i dati sul tuo server e sul tuo distributore. Installa un'app distributore (come ntfy) e attiva UnifiedPush nelle Impostazioni. I promemoria locali continuano a funzionare.",
+        "body": "In Modalità Server, T'Day invia le notifiche del server tramite UnifiedPush invece dell'FCM di Google, tenendo i dati sul tuo server e sul tuo distributore. Non c'è nulla da attivare: installa un'app distributore (come ntfy) e T'Day si registra da solo. I promemoria locali continuano a funzionare.",
         "step0": "Installa un distributore UnifiedPush come ntfy dal tuo store.",
-        "step1": "In Impostazioni → Promemoria, attiva UnifiedPush e scegli il distributore.",
-        "step2": "Il server invia le modifiche a quell'endpoint; disattivalo quando vuoi."
+        "step1": "Apri T'Day: trova il distributore e si registra da solo. Se ne hai due o più, Impostazioni → Promemoria chiede quale usare.",
+        "step2": "Per fermare il push dal server, disinstalla il distributore o esci dall'account; i promemoria locali non cambiano."
       },
       "repeat-suggestions": {
         "title": "Suggerimenti di ripetizione",

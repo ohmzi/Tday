@@ -119,7 +119,7 @@ Every tappable Settings row leads with a glyph in a 22px slot (20px glyph, 14px 
 | Default reminder | `bell` | — | `ic_lucide_bell` | `LucideBell` |
 | Day Ahead digest | `bell-ring` | — | `ic_lucide_bell_ring` | `LucideBellRing` |
 | Quiet hours | `moon` | — | `ic_lucide_moon` | `LucideMoon` |
-| UnifiedPush | `cloud` | — | `ic_lucide_cloud` | — |
+| Push delivery app | `cloud` | — | `ic_lucide_cloud` | — |
 | App language | `languages` | `Languages` | `ic_lucide_languages` | `LucideLanguages` |
 | AI task summary | `sparkles` | `Sparkles` | `ic_lucide_sparkles` | `LucideSparkles` |
 | Resting floaters | `waves` | `Waves` | `ic_lucide_waves` | `LucideWaves` |

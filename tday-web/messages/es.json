@@ -1310,10 +1310,10 @@
         "title": "UnifiedPush (Android)",
         "summary": "Notificaciones del servidor sin Google, con tu distribuidor.",
         "keywords": "unifiedpush, ntfy, push, notificaciones, autoalojado, distribuidor, fcm",
-        "body": "En Modo Servidor, T'Day puede entregar notificaciones del servidor mediante UnifiedPush en lugar de FCM de Google, manteniendo tus datos en tu propio servidor y tu propio distribuidor. Instala una app distribuidora (como ntfy) y activa UnifiedPush en Ajustes. Los recordatorios locales siguen funcionando igual.",
+        "body": "En Modo Servidor, T'Day entrega las notificaciones del servidor mediante UnifiedPush en lugar de FCM de Google, manteniendo tus datos en tu propio servidor y tu propio distribuidor. No hay nada que activar: instala una app distribuidora (como ntfy) y T'Day se registra sola. Los recordatorios locales siguen funcionando igual.",
         "step0": "Instala un distribuidor UnifiedPush como ntfy desde tu tienda de apps.",
-        "step1": "En Ajustes → Recordatorios, activa UnifiedPush y elige el distribuidor.",
-        "step2": "Tu servidor enviará los cambios a ese endpoint; puedes desactivarlo cuando quieras."
+        "step1": "Abre T'Day: encuentra el distribuidor y se registra solo. Si tienes dos o más instalados, Ajustes → Recordatorios te pregunta cuál usar.",
+        "step2": "Para detener el push del servidor, desinstala el distribuidor o cierra sesión; los recordatorios locales no se ven afectados."
       },
       "repeat-suggestions": {
         "title": "Sugerencias de repetición",

@@ -1310,10 +1310,10 @@
         "title": "UnifiedPush (Android)",
         "summary": "Server push without Google, via your own distributor.",
         "keywords": "unifiedpush, ntfy, push, notifications, self-host, distributor, fcm, google-free",
-        "body": "In Server Mode, T'Day can deliver server notifications through UnifiedPush instead of Google's FCM — keeping your data on your own server and your own push distributor. Install a distributor app (like ntfy), then turn on UnifiedPush in Settings. Local reminders keep working either way.",
+        "body": "In Server Mode, T'Day delivers server notifications through UnifiedPush instead of Google's FCM — keeping your data on your own server and your own push distributor. There is nothing to switch on: install a distributor app (like ntfy) and T'Day registers with it by itself. Local reminders keep working either way.",
         "step0": "Install a UnifiedPush distributor such as ntfy from your app store.",
-        "step1": "In Settings → Reminders, turn on UnifiedPush and pick the distributor.",
-        "step2": "Your server now pushes changes to that endpoint; turn it off anytime."
+        "step1": "Open T'Day — it finds the distributor and registers on its own. If two or more are installed, Settings → Reminders asks which one to use.",
+        "step2": "To stop server push, uninstall the distributor or sign out — local reminders are unaffected."
       },
       "repeat-suggestions": {
         "title": "Repeat suggestions",

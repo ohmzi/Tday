@@ -26,6 +26,7 @@ import com.ohmz.tday.compose.core.notification.DayAheadPreferenceStore
 import com.ohmz.tday.compose.core.notification.ReminderOption
 import com.ohmz.tday.compose.core.notification.ReminderPreferenceStore
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
+import com.ohmz.tday.compose.core.push.UnifiedPushAutoRegistrar
 import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.feature.auth.MainDispatcherRule
@@ -69,6 +70,10 @@ class AppViewModelTest {
     private val connectivityObserver = mockk<ConnectivityObserver>()
     private val appVersionManager = mockk<AppVersionManager>()
     private val systemCredentialService = mockk<SystemCredentialServicing>()
+    // Relaxed: every one of its entry points is a no-op decision for these tests — the
+    // registration table itself is pinned in UnifiedPushRegistrationTest, and what matters here
+    // is only that the ViewModel keeps working when it answers nothing.
+    private val unifiedPushAutoRegistrar = mockk<UnifiedPushAutoRegistrar>(relaxed = true)
     private val appContext = mockk<Context>(relaxed = true)
     private val snackbarManager = SnackbarManager(appContext)
 
@@ -607,6 +612,7 @@ class AppViewModelTest {
             connectivityObserver = connectivityObserver,
             appVersionManager = appVersionManager,
             systemCredentialService = systemCredentialService,
+            unifiedPushAutoRegistrar = unifiedPushAutoRegistrar,
             appContext = appContext,
             // Background work has to share the test scheduler. On Dispatchers.Default it runs on
             // a real thread the scheduler cannot see, so runCurrent()/advanceUntilIdle() return
