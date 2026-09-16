@@ -289,6 +289,53 @@ private val CalendarBarButtonIconSize = 22.dp
 private val CalendarTodayPillCapPadding = 10.dp
 
 /**
+ * The collapsed Today control's corner, and it is half the box rather than 28
+ * because a circle is a relationship, not a number: the collapsed control is
+ * `FabSize` square (the `height` and the `sizeIn` floor in [CalendarTodayButton],
+ * with the caps animated to `SpacingNone`), so the corner that makes it a circle
+ * is whatever half of `FabSize` is. Typed as 28 it would stop being a circle the
+ * moment anyone moved `FabSize`, silently and next to two controls that had
+ * moved with it — `CalendarBarButton` and `TdayHeroTitleHeader`'s back chevron
+ * both take their roundness from `CircleShape`, which is that same derivation
+ * spelled by the framework.
+ *
+ * `internal` rather than `private` — the only pair on this screen that is —
+ * because `CalendarTodayButtonShapeTest` asserts the arithmetic this KDoc
+ * claims, and there is no emulator to look at the pixels with.
+ */
+internal val CalendarTodayCollapsedCornerRadius = TdayDimens.FabSize / 2
+
+/**
+ * The expanded Today control's corner.
+ *
+ * The report was "make button and shadow rectangular rather than oval", and the
+ * rung has to answer two questions: is it a rectangle, and is it a rectangle the
+ * screen already contains.
+ *
+ * Rectangle first, which is arithmetic. At 22 on a 56dp-tall box each end keeps
+ * 56 - 2x22 = 12dp of straight vertical edge, so the ends are corners rather
+ * than a turn; at [CalendarTodayCollapsedCornerRadius] (28) that number is 0 and
+ * the control is a stadium, which is what `CircleShape` on a 90.6 x 56 box was
+ * drawing and what the report called oval. `RadiusCard` (26) leaves 4dp and
+ * still reads as the blob; `RadiusSheet` (34) cannot be used at all, a radius
+ * over half the height being clamped back to the stadium.
+ *
+ * Which rectangle, second, and that is a question about the screenshot. The
+ * Month/Week/Day track sits directly under this control in the same frame,
+ * 58dp tall with a 22dp container corner (`TdaySegmentedSlider.kt`) — the one
+ * other wide rounded rectangle in the shot, one dp taller than this control and
+ * carrying the identical corner. `TdayDimens` names that value `RadiusField`
+ * and defines it as "what a finger aims at in a form: text fields, filled
+ * buttons, chips, segmented tracks", which is this control exactly. The two
+ * alternatives are both already on screen and both belong to something else:
+ * `CalendarCardCornerRadius` (24) is the calendar card BEHIND the bar, a
+ * surface rather than a control, and `RadiusRow` (16) is the day cells and the
+ * task rows, which are list items. Matching the segmented track means the bar
+ * and the control under it agree, rather than a fourth radius joining three.
+ */
+internal val CalendarTodayExpandedCornerRadius = TdayDimens.RadiusField
+
+/**
  * The expanded pill's label. `titleMedium` is 18sp and that is the size the
  * control was measured at when it was called ugly a second time; 15 is the size
  * chosen in its place. Not a `titleSmall` (14sp) swap, because the weight,
@@ -1998,6 +2045,25 @@ private fun CalendarBarButton(
  * state that is exactly a 56dp circle and does not move, and — because 15sp Bold
  * is no longer large text by WCAG's points — 4.5:1 for the word rather than the
  * 3:1 an 18sp one could have leaned on.
+ *
+ * ## The corner, which is a third pass and not a size
+ *
+ * A third report off a device, two screenshots, one sentence: weird shadow, make
+ * it look like the search button's, rectangular rather than oval. None of the
+ * sizes move for it. Two things do, and they are the same bug seen from either
+ * end — `CircleShape` on a 90.6 x 56 box is not a circle but a stadium, so the
+ * outline was oval AND the shadow that traces it was; and `animateContentSize()`
+ * on the Card clipped what was left of that shadow to a rectangle. The shape
+ * animates between [CalendarTodayCollapsedCornerRadius] and
+ * [CalendarTodayExpandedCornerRadius] now, and the clip has moved inside the
+ * Card. Both are argued at the line that makes them.
+ *
+ * One thing that is not a size and not a shape moves with them, and it is worth
+ * saying at the top rather than burying it: moving `animateContentSize()` moves
+ * where the FILL is measured, so the two steady states are untouched and the
+ * ~300ms between them is not. It is argued at the `Row`, and it is booked as an
+ * eye check against `android:calendar#today-pill-label-pops-two-width-animators`
+ * in `docs/motion/LEDGER.md`, the open Sev 2 row about this exact transition.
  */
 @Composable
 private fun CalendarTodayButton(
@@ -2051,12 +2117,24 @@ private fun CalendarTodayButton(
     // The collapsed end of this is untouched, deliberately: `SpacingNone` and
     // the `sizeIn` floor below still make it exactly a 56dp circle, and the
     // travel between the two states is 4dp shorter per side than it was, which
-    // makes the one real seam here — `animateContentSize()`'s spring resolving
-    // the width while this spring resolves the padding, two animations over one
-    // box — smaller rather than larger. It was not made smaller by removing one
-    // of them: the width has to animate because the word appears at
-    // `collapseProgress` 0.5 rather than growing, and the padding has to animate
-    // because a step from 10 to 0 inside a settling box is the jump.
+    // makes the seam here — `animateContentSize()`'s spring resolving the width
+    // while these springs resolve the padding and the corner, THREE animations
+    // over one box — smaller rather than larger. It was not made smaller by
+    // removing one of them: the width has to animate because the word appears at
+    // `collapseProgress` 0.5 rather than growing, the padding has to animate
+    // because a step from 10 to 0 inside a settling box is the jump, and the
+    // corner has to animate because the collapsed control is a circle and the
+    // expanded one is not (see [CalendarTodayCollapsedCornerRadius]), so a fixed
+    // radius would have to be one or the other — a rounded square sitting beside
+    // two circles, or the stadium the report asked to be rid of.
+    //
+    // What keeps three springs from disagreeing is that two of them are the same
+    // spring: the corner below takes `showLabel` as its driver and `animateDp-
+    // AsState`'s default spec, byte for byte what the padding takes, so the cap
+    // opening and the corner squaring are one motion with two outputs. Neither
+    // names a duration or a spring constant, which is also why neither shows up
+    // in `tests/guardrails/motion-parity.test.ts`'s android counters — those
+    // count written literals, and Compose's own default is not one.
     val horizontalPadding by animateDpAsState(
         targetValue = if (showLabel) {
             CalendarTodayPillCapPadding
@@ -2065,17 +2143,51 @@ private fun CalendarTodayButton(
         },
         label = "calendarTodayButtonPadding",
     )
+    val cornerRadius by animateDpAsState(
+        targetValue = if (showLabel) {
+            CalendarTodayExpandedCornerRadius
+        } else {
+            CalendarTodayCollapsedCornerRadius
+        },
+        label = "calendarTodayButtonCornerRadius",
+    )
 
     Card(
+        // `animateContentSize()` is NOT here, and that is the other half of the
+        // shadow report. It expands to `clipToBounds().then(SizeAnimation…)` —
+        // a RECTANGULAR `graphicsLayer(clip = true)` — and on the Card's own
+        // modifier that clip sits OUTSIDE the shadow layer Material3 builds
+        // from `shape` (`SurfaceKt.surface` is `graphicsLayer(shadowElevation,
+        // shape)` then `background(shape)` then `clip(shape)`, one shape for all
+        // three). A shadow is the only thing a control draws outside its own
+        // bounds, so an outer rectangle clipped all of it away except the part
+        // that falls inside the box — and the part inside a box is hidden under
+        // the fill everywhere the fill reaches, which on a stadium is everywhere
+        // but the four corners of the bounding rectangle. Four hard-edged wedges
+        // of shadow at the corners of an invisible rectangle, and nothing
+        // around the control at all: that is the "weird shadow", and the search
+        // circle does not have it only because `CalendarBarButton` has nothing
+        // to animate and so carries no clip.
+        //
+        // Moved onto the `Row` below it is inside the shadow layer instead of
+        // outside it. The Card still resizes — it wraps the Row, and the Row is
+        // what animates — and the clip now only ever crops the Row's own
+        // content, which is the icon and the word, both of which already live
+        // inside the Card's `clip(shape)`.
+        //
+        // That move crosses the Card's draw nodes, not just its clip, so it also
+        // changes where the fill is measured during the transition. That is the
+        // one consequence of this change that is not shape, and it is argued in
+        // full at the `Row` rather than here, because the `Row` is where the
+        // modifier now is.
         modifier = Modifier
-            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar)
-            .animateContentSize(),
+            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
         onClick = {
             TdayHaptics.buttonPress(view)
             onClick()
         },
         interactionSource = interactionSource,
-        shape = CircleShape,
+        shape = RoundedCornerShape(cornerRadius),
         // The bar's own material, and no border. What used to be here — a 12%
         // purple wash under a 48% purple hairline — was defended as the mark of
         // an accented pill rather than a plain circle, and that argument was
@@ -2120,7 +2232,60 @@ private fun CalendarTodayButton(
         ),
     ) {
         Row(
+            // The width animation, one layer in from where it used to be. It has
+            // to wrap the height, the floor and the caps rather than sit under
+            // them, or it animates the content and the box steps.
+            //
+            // One layer in is also across the Card's paint chain, and that is
+            // the one thing this change alters that is not shape. Material3
+            // builds the Card as `userModifier.then(graphicsLayer(shadow,
+            // shape)).then(border).background(shape).clip(shape)` — the user
+            // modifier OUTERMOST (`SurfaceKt.surface-XO-JAsU`, material3 1.3.1).
+            // On the Card, `animateContentSize()` was therefore a layout node
+            // ABOVE `background`, and a layout node above a draw node does not
+            // change the size that draw node paints at: the fill was painted at
+            // the content's MEASURED width and the whole of it placed at
+            // `TopStart` of the animating box, `TopStart` being hard-wired by
+            // the no-alignment overload. Here the modifier sits BELOW those draw
+            // nodes, so the Card measures the animated width and the fill is
+            // painted at it.
+            //
+            // Both steady states are identical either way — 56 and 90.6 are the
+            // same number whichever side of the chain resolves them, which is
+            // what the shape tests pin. The spring between them is not:
+            //
+            //  - Expanding, the fill used to be painted at the full 90.6 from
+            //    the first frame and square-cut on the right by the rectangular
+            //    `clipToBounds()`. That is the shadow report seen from the
+            //    inside, and it now grows with both ends properly rounded.
+            //  - Collapsing, the fill used to snap to a true 56dp circle at once
+            //    and sit at `TopStart` of a box still 90.6 wide — 34.6dp adrift
+            //    of the bar's right inset, because the actions row that holds it
+            //    is `Alignment.CenterEnd` (`TdayHeroTitleHeader.kt`) — and slide
+            //    right as the box settled. It now shrinks with its right edge
+            //    pinned, and what drifts instead is the glyph: the Row's own
+            //    content measures 56 immediately and sits at `TopStart`, so the
+            //    icon's centre is 28dp from the fill's left edge while the
+            //    fill's centre is W(t)/2, off by 45.3 - 28 = 17.3dp at the worst
+            //    frame and decaying on the same spring.
+            //
+            // A pill shrinking onto its icon is the likelier reading of the two,
+            // but that is a claim about pixels and there is no emulator here, so
+            // it is not asserted: it is booked as an eye check against
+            // `android:calendar#today-pill-label-pops-two-width-animators` in
+            // `docs/motion/LEDGER.md`, the open Sev 2 row about this exact
+            // transition, which this change plausibly improves and which no gate
+            // on this machine can tick.
+            //
+            // `animateContentSize(alignment = Alignment.Center)` is NOT the
+            // drop-in for that drift. The overload exists in 1.7.6 and it would
+            // centre the glyph on collapse, but expanding it would centre 90.6dp
+            // of content in a box starting at 56: the content overhangs 17.3dp
+            // each side, the icon spans -7.3 to 14.7, and the `clipToBounds()`
+            // cuts the ICON's left edge off. Trading a decaying 17.3dp offset
+            // for a sliced glyph is not a trade.
             modifier = Modifier
+                .animateContentSize()
                 .height(TdayDimens.FabSize)
                 .sizeIn(minWidth = TdayDimens.FabSize)
                 .padding(horizontal = horizontalPadding),
