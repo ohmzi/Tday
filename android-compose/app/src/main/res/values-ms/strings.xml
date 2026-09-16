@@ -693,11 +693,9 @@
     <string name="settings_data_confirm_body">Ini menambah %1$d item ke akaun anda. Apa yang sedia ada tidak diubah atau dibuang.</string>
     <string name="settings_data_confirm_import">Import</string>
     <string name="settings_data_confirm_cancel">Batal</string>
-    <string name="settings_unifiedpush_title">UnifiedPush</string>
-    <string name="settings_unifiedpush_subtitle">Terima tolakan pelayan melalui pengedar anda sendiri</string>
-    <string name="settings_unifiedpush_enabled">Hidup</string>
-    <string name="settings_unifiedpush_disabled">Mati</string>
-    <string name="settings_unifiedpush_none">Tiada pengedar UnifiedPush ditemui. Pasang satu (cth. ntfy) dan cuba lagi.</string>
+    <string name="settings_push_distributor_title">Apl penghantar push</string>
+    <string name="settings_push_distributor_subtitle">Lebih daripada satu apl push dipasang. Pilih yang mana menghantar pemberitahuan T\'Day.</string>
+    <string name="settings_push_distributor_choose">Pilih</string>
     <string name="create_task_repeat_suggestion">Ulang %1$s?</string>
     <string name="create_task_repeat_suggestion_dismiss">Tolak</string>
     <string name="settings_quiet_hours">Waktu senyap</string>
