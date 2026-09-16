@@ -10,11 +10,15 @@ import Foundation
 /// `FloaterResting.tierFor` — fifteen lines that need this platform's own string handling,
 /// against two hundred words that need none.
 ///
-/// The two rules are held to one set of questions by
-/// `tday-web/tests/guardrails/list-icon-inference-parity.test.ts`, which compares the case
-/// tables in `ListIconInferenceTest.kt` and `ListIconInferenceTests.swift` and fails when
-/// one of them learns a case the other has not. Without it "shared table, twin rules" would
-/// be a claim rather than a gate.
+/// The THREE rules — this one, `ListIconInference.kt` and `listIconInference.ts` — are held
+/// to one set of questions by `tday-web/tests/guardrails/list-icon-inference-parity.test.ts`,
+/// which extracts the titles pinned in `ListIconInferenceTest.kt`, `ListIconInferenceTests.swift`
+/// and `list-icon-inference.test.ts` and fails when one of them learns a case the others have
+/// not. It compares the QUESTIONS, not the answers: each case table already asserts its own
+/// answers against its own real implementation, and that is the assertion with teeth. What no
+/// single-language file can see is whether a case exists in the other two at all — and that
+/// was the hole a real divergence came through on this branch, web splitting words on an ASCII
+/// class while these two split on Unicode, with no non-ASCII row anywhere to catch it.
 ///
 /// ENGLISH ONLY, as the shared KDoc says at length: the i18n parity guardrail compares key
 /// SETS, so it would pass nine locales of untranslated English without a murmur, and the

@@ -65,6 +65,27 @@ final class ListIconInferenceTests: XCTestCase {
         }
     }
 
+    /// A script the table does not speak does not stop being part of the word.
+    ///
+    /// `Character.isLetter`/`isNumber` are Unicode, so "仕事Work" is ONE word here, matches
+    /// nothing, and correctly says nothing; an ASCII class would cut it where the script
+    /// changes, find "work", and draw a confident briefcase for a list this table cannot
+    /// read. "Gymé" is the same failure with one accent instead of two kanji. "Работа Work"
+    /// is the control: a SPACE is a boundary in every script, so the English word beside a
+    /// Cyrillic one is still found.
+    ///
+    /// Pinned in all three rule twins because web's splitter really was ASCII-only and
+    /// really did answer `work`, `fitness` and `work` here while this one answered nil, nil
+    /// and `work`. Every drift gate stayed green through it — the generated TABLE was
+    /// identical on both sides; only the hand-written rules differed. The cross-language
+    /// case comparison in `list-icon-inference-parity.test.ts` catches that now, and it can
+    /// only compare cases that exist in every table.
+    func testAWordIsCutOnUnicodeLettersNotASCIIOnes() {
+        XCTAssertNil(tdayInferredListIconKey(forListName: "仕事Work"))
+        XCTAssertNil(tdayInferredListIconKey(forListName: "Gymé"))
+        XCTAssertEqual(tdayInferredListIconKey(forListName: "Работа Work"), "work")
+    }
+
     func testTwoWordsPointingAtTheSameGlyphStillAgree() {
         XCTAssertEqual(tdayInferredListIconKey(forListName: "Shopping Errands"), "cart")
         XCTAssertEqual(tdayInferredListIconKey(forListName: "Gym Workout"), "fitness")

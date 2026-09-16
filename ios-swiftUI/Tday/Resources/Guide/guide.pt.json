@@ -738,7 +738,7 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Ícones de lista automáticos",
-      "summary": "Uma lista nova ganha um ícone que combina com o seu nome.",
+      "summary": "Uma lista sem ícone próprio ganha um que combina com o seu nome.",
       "body": [
         {
           "type": "PARAGRAPH",
@@ -755,7 +755,7 @@
       ],
       "searchTitle": "icones de lista automaticos",
       "searchKeywords": "icone de lista, automatico, sugerido, glifo, nome, compras, ginasio, trabalho",
-      "searchBody": "uma lista nova ganha um icone que combina com o seu nome. chame uma lista de groceries e ela usa um carrinho de compras; gym recebe um haltere e work uma pasta. o t'day so adivinha quando voce nao escolheu um icone, e mantem o icone padrao sempre que o nome nao e claro o bastante. por enquanto os nomes sao reconhecidos em ingles. escolha um icone nas definicoes da lista quando quiser: depois de escolhido ele e mantido e nunca e substituido por um palpite."
+      "searchBody": "uma lista sem icone proprio ganha um que combina com o seu nome. chame uma lista de groceries e ela usa um carrinho de compras; gym recebe um haltere e work uma pasta. o t'day so adivinha quando voce nao escolheu um icone, e mantem o icone padrao sempre que o nome nao e claro o bastante. por enquanto os nomes sao reconhecidos em ingles. escolha um icone nas definicoes da lista quando quiser: depois de escolhido ele e mantido e nunca e substituido por um palpite."
     },
     {
       "id": "completed-history",

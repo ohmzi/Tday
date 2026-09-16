@@ -1388,7 +1388,7 @@
       },
       "list-icons": {
         "title": "Icônes de liste automatiques",
-        "summary": "Une nouvelle liste adopte une icône correspondant à son nom.",
+        "summary": "Une liste sans icône choisie adopte une icône correspondant à son nom.",
         "keywords": "icône de liste, automatique, suggérée, glyphe, nom, courses, sport, travail",
         "body": "Nommez une liste Groceries et elle porte un caddie ; Gym reçoit un haltère, Work une mallette. T'Day ne devine que si vous n'avez pas choisi d'icône vous-même, et conserve l'icône par défaut dès que le nom n'est pas assez clair. Les noms sont reconnus en anglais pour l'instant.",
         "tip": "Choisissez une icône dans les réglages de la liste quand vous voulez : votre choix est conservé et jamais remplacé par une supposition."

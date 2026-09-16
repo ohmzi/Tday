@@ -738,7 +738,7 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Icônes de liste automatiques",
-      "summary": "Une nouvelle liste adopte une icône correspondant à son nom.",
+      "summary": "Une liste sans icône choisie adopte une icône correspondant à son nom.",
       "body": [
         {
           "type": "PARAGRAPH",
@@ -755,7 +755,7 @@
       ],
       "searchTitle": "icones de liste automatiques",
       "searchKeywords": "icone de liste, automatique, suggeree, glyphe, nom, courses, sport, travail",
-      "searchBody": "une nouvelle liste adopte une icone correspondant a son nom. nommez une liste groceries et elle porte un caddie ; gym recoit un haltere, work une mallette. t'day ne devine que si vous n'avez pas choisi d'icone vous-meme, et conserve l'icone par defaut des que le nom n'est pas assez clair. les noms sont reconnus en anglais pour l'instant. choisissez une icone dans les reglages de la liste quand vous voulez : votre choix est conserve et jamais remplace par une supposition."
+      "searchBody": "une liste sans icone choisie adopte une icone correspondant a son nom. nommez une liste groceries et elle porte un caddie ; gym recoit un haltere, work une mallette. t'day ne devine que si vous n'avez pas choisi d'icone vous-meme, et conserve l'icone par defaut des que le nom n'est pas assez clair. les noms sont reconnus en anglais pour l'instant. choisissez une icone dans les reglages de la liste quand vous voulez : votre choix est conserve et jamais remplace par une supposition."
     },
     {
       "id": "completed-history",

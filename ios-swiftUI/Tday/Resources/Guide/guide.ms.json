@@ -738,7 +738,7 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Ikon senarai automatik",
-      "summary": "Senarai baharu mendapat ikon yang sepadan dengan namanya.",
+      "summary": "Senarai tanpa ikon pilihannya sendiri mendapat ikon yang sepadan dengan namanya.",
       "body": [
         {
           "type": "PARAGRAPH",
@@ -755,7 +755,7 @@
       ],
       "searchTitle": "ikon senarai automatik",
       "searchKeywords": "ikon senarai, automatik, cadangan, glif, nama, barangan runcit, gim, kerja",
-      "searchBody": "senarai baharu mendapat ikon yang sepadan dengan namanya. namakan senarai sebagai groceries dan ia akan memakai troli beli-belah; gym mendapat dumbel, work mendapat beg bimbit. t'day hanya meneka apabila anda sendiri belum memilih ikon, dan mengekalkan ikon lalai apabila nama itu tidak cukup jelas. buat masa ini nama dipadankan dalam bahasa inggeris. pilih ikon dalam tetapan senarai bila-bila masa — setelah dipilih, ia dikekalkan dan tidak sekali-kali diteka semula."
+      "searchBody": "senarai tanpa ikon pilihannya sendiri mendapat ikon yang sepadan dengan namanya. namakan senarai sebagai groceries dan ia akan memakai troli beli-belah; gym mendapat dumbel, work mendapat beg bimbit. t'day hanya meneka apabila anda sendiri belum memilih ikon, dan mengekalkan ikon lalai apabila nama itu tidak cukup jelas. buat masa ini nama dipadankan dalam bahasa inggeris. pilih ikon dalam tetapan senarai bila-bila masa — setelah dipilih, ia dikekalkan dan tidak sekali-kali diteka semula."
     },
     {
       "id": "completed-history",

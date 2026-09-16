@@ -86,6 +86,33 @@ class ListIconInferenceTest {
             }
     }
 
+    /**
+     * A script the table does not speak does not stop being part of the word.
+     *
+     * The splitter cuts on Unicode letters and digits, not on ASCII ones, and these are
+     * the cases where the difference is visible rather than academic. "仕事Work" is ONE word
+     * to a Unicode splitter, matches nothing, and correctly says nothing; an ASCII class
+     * would cut it at the boundary between scripts, find "work" and draw a confident
+     * briefcase for a list this table cannot read. "Gymé" is the same failure with one
+     * accent instead of two kanji. "Работа Work" is the control: a SPACE is a boundary
+     * in every script, so the English word beside a Cyrillic one is still found.
+     *
+     * These three are pinned in all three rule twins — here, `ListIconInferenceTests.swift`
+     * and `list-icon-inference.test.ts` — because web's splitter really was ASCII-only and
+     * really did answer `work`, `fitness` and `work` to this block while these two answered
+     * null, null and `work`. Nothing caught it: the generated table was identical on both
+     * sides, so every drift gate stayed green. The cross-language case comparison in
+     * `list-icon-inference-parity.test.ts` is what catches it now, and it can only compare
+     * cases that exist, which is why a non-ASCII row belongs in every table rather than in
+     * the one that was wrong.
+     */
+    @Test
+    fun `a word is cut on Unicode letters, not ASCII ones`() {
+        assertNull(ListIconInference.inferIconKey("仕事Work"))
+        assertNull(ListIconInference.inferIconKey("Gymé"))
+        assertEquals("work", ListIconInference.inferIconKey("Работа Work"))
+    }
+
     @Test
     fun `two words pointing at the same glyph still agree`() {
         assertEquals("cart", ListIconInference.inferIconKey("Shopping Errands"))
