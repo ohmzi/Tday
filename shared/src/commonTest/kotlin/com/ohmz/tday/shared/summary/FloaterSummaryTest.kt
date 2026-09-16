@@ -421,8 +421,14 @@ class FloaterSummaryTest {
             note(plain(3).mapIndexed { i, t -> t.copy(priority = if (i == 0) "High" else "Low") }),
         )
         assertEquals(FloaterNote.PRIORITY_MANY, note(plain(3).map { it.copy(priority = "Urgent") }))
-        // Medium is not "high priority": claiming it would be the summary inventing importance.
-        assertEquals(FloaterNote.NONE, note(plain(3).map { it.copy(priority = "Medium") }))
+        // Medium is worth naming too, but ranks below High — a set with only Medium tasks
+        // gets the medium note, and a set with both gets the High note, not this one.
+        assertEquals(FloaterNote.MEDIUM_ONE, note(plain(3).mapIndexed { i, t -> t.copy(priority = if (i == 0) "Medium" else "Low") }))
+        assertEquals(FloaterNote.MEDIUM_MANY, note(plain(3).map { it.copy(priority = "Medium") }))
+        assertEquals(
+            FloaterNote.PRIORITY_ONE,
+            note(plain(3).mapIndexed { i, t -> t.copy(priority = if (i == 0) "High" else "Medium") }),
+        )
     }
 
     @Test

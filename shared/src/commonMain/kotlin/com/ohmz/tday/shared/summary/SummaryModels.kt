@@ -66,6 +66,7 @@ data class SummaryTaskInput(
 
 /** Rank used to order tasks by priority: High/Urgent/Important > Medium > everything else. */
 internal const val HIGH_PRIORITY_RANK = 3
+internal const val MEDIUM_PRIORITY_RANK = 2
 
 /**
  * Shared by the engine's ranking and [FloaterSummaryPlanner], so "high priority" means one
@@ -75,6 +76,6 @@ internal const val HIGH_PRIORITY_RANK = 3
 internal fun priorityRankOf(priority: String?): Int =
     when ((priority ?: "Low").trim().lowercase()) {
         "high", "urgent", "important" -> HIGH_PRIORITY_RANK
-        "medium" -> 2
+        "medium" -> MEDIUM_PRIORITY_RANK
         else -> 1
     }

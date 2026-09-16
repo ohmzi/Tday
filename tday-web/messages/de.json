@@ -885,6 +885,8 @@
     "floaterPinnedMany": "Du hast {{title}} angeheftet, und nicht nur das.",
     "floaterPriorityOne": "Nur {{title}} hat hohe Priorität.",
     "floaterPriorityMany": "{{title}} hat hohe Priorität, und nicht nur das.",
+    "floaterMediumOne": "Nur {{title}} hat mittlere Priorität.",
+    "floaterMediumMany": "{{title}} hat mittlere Priorität, und nicht nur das.",
     "floaterRestingOne": "Eines davon ist seit Monaten unberührt.",
     "floaterRestingMany": "Einiges davon ist seit Monaten unberührt.",
     "floaterRestingAll": "Hier ist seit Monaten nichts angerührt worden.",
