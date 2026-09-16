@@ -210,7 +210,7 @@ tday-web/src/
 ├── App.tsx               # Provider tree: Theme → Query → Auth → Tooltip → ErrorBoundary → Router + Toaster
 ├── router.tsx            # Route definitions (public, protected, calendar layouts)
 ├── globals.css           # Tailwind @theme tokens, CSS variables
-├── i18n.ts               # i18next configuration (11 locales, path-based detection)
+├── i18n.ts               # i18next configuration (10 locales, all bundled; path-based detection)
 ├── components/           # Shared UI (ui/* primitives, native app shell, auth, todo pieces)
 ├── features/             # Feature modules (calendar, completed, scheduledTaskHome, list, release, todayTodos, user)
 ├── hooks/                # Shared React hooks
@@ -466,9 +466,9 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 
 ## Internationalization
 
-- 11 locales: `en`, `zh`, `de`, `ja`, `ar`, `ru`, `es`, `fr`, `ms`, `it`, `pt`.
+- 10 locales: `en`, `es`, `fr`, `de`, `it`, `pt`, `ru`, `zh`, `ja`, `ms` (`SUPPORTED_LOCALES` in `tday-web/src/i18n.ts`).
 - Managed via **i18next** + **react-i18next** with path-based locale detection.
-- English is bundled from `tday-web/messages/en.json` for first paint; other locale bundles are lazy-loaded from `tday-web/public/locales/<lng>/translation.json`.
+- All ten bundles are imported statically from `tday-web/messages/<lng>.json` and handed to i18next as `resources`, so every locale is translated offline with no locale HTTP fetch. English is the `fallbackLng`; `i18next-http-backend` is present in `package.json` but is deliberately not wired up.
 - Routes are prefixed with `/:locale/` via React Router.
 
 ## AI Integration

@@ -17,7 +17,8 @@ a single product expressed across web, Android, and iOS:
 - Local-first mobile data backed by Room on Android and SwiftData on iOS.
 - Completion history, list metadata preservation, task search, widgets, car task surfaces, in-app
   update/version compatibility, and backend summaries with optional local AI via Ollama.
-- 11 web locales via i18next, with mobile strings handled through platform-local patterns.
+- 10 web locales via i18next, all bundled into the JS build for offline use, with mobile strings
+  handled through platform-local patterns.
 
 ## Tech Stack
 
@@ -159,7 +160,7 @@ Tday/
 │   │   ├── providers/         # React context providers
 │   │   └── types/             # Web-only TypeScript domain/UI types
 │   ├── messages/              # Bundled default locale fallback (`en.json`)
-│   ├── public/                # Static assets and lazy-loaded locale bundles
+│   ├── public/                # Static assets, PWA manifest, and release metadata
 │   └── tests/                 # Vitest guardrail and unit suites
 ├── tday-backend/              # Ktor backend (Kotlin)
 │   └── src/main/kotlin/

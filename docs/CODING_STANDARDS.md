@@ -228,7 +228,7 @@ See `docs/ICONS.md` for the full mechanics, the add-an-icon checklist, and the c
 
 All user-facing strings must live in a single centralized source — never inline in component code, screen layouts, or route handlers. This applies to labels, button text, error messages shown to users, placeholders, tooltips, and any other text the user sees.
 
-- **Web**: Use **i18next** translation keys backed by `tday-web/public/locales/<lng>/translation.json`, with `tday-web/messages/en.json` kept as the bundled English fallback. Components access strings via `useTranslation()`.
+- **Web**: Use **i18next** translation keys backed by `tday-web/messages/<lng>.json`, which `tday-web/src/i18n.ts` imports statically (English is the `fallbackLng`). Components access strings via `useTranslation()`.
 - **Android**: Use Android string resources (`res/values/strings.xml`, including string arrays for repeated copy such as splash taglines). Screens access strings via `stringResource(R.string.*)` or `stringArrayResource(R.array.*)`.
 - **iOS**: Follow the current local SwiftUI string patterns until a broader localization layer exists. Avoid scattering repeated labels; extract repeated app language into narrow constants or shared helpers when it appears in multiple places.
 - Internal log messages and developer-facing error strings (not shown to users) are exempt.
@@ -345,11 +345,11 @@ All visual tokens are defined as CSS custom properties in `src/globals.css` and 
 
 ### String Management (Web)
 
-All user-facing strings live in the i18n locale bundles (`tday-web/public/locales/<lng>/translation.json`, with bundled English fallback in `tday-web/messages/en.json`) and are accessed via **i18next**. Never hardcode display text in components or pages.
+All user-facing strings live in the i18n locale bundles (`tday-web/messages/<lng>.json`, imported statically by `tday-web/src/i18n.ts`) and are accessed via **i18next**. Never hardcode display text in components or pages.
 
 - Use `useTranslation(namespace)` in components to get a `t` function.
 - Organize keys by feature namespace (e.g., `"landingPage"`, `"todoList"`, `"settings"`).
-- When adding a new feature, add keys to the bundled English source first and keep all 11 locale bundles in parity (`tests/guardrails/i18n-parity.test.ts` enforces matching keys).
+- When adding a new feature, add keys to the bundled English source first and keep all 10 locale bundles in parity (`tests/guardrails/i18n-parity.test.ts` enforces matching keys).
 
 ```typescript
 // Good: string from translation file

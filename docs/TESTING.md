@@ -111,7 +111,7 @@ npm run observability:smoke                 # no-dependency Sentry/privacy smoke
 | Required project directories exist | `src/`, `src/lib/`, `src/components/`, `src/features/`, `docs/`, etc. |
 | `src/lib/` is organized by domain with subdirectories | No unbounded catch-all `utils.ts` files |
 | `src/features/` directories contain source files | Feature modules are not empty placeholders |
-| All 11 locale JSON files exist and share top-level keys | Internationalization completeness across all languages |
+| All 10 locale JSON files exist and share top-level keys | Internationalization completeness across all languages |
 | Android `core/`, `feature/`, `ui/theme/` packages exist | Package structure follows the documented architecture |
 | Android theme files exist (`Color.kt`, `Theme.kt`, `Type.kt`, `Dimens.kt`) | Design tokens are centralized |
 | Android `build.gradle.kts` derives version from root `version.json` | Single source of version truth |
