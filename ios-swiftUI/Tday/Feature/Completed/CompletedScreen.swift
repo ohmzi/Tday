@@ -632,7 +632,14 @@ private struct CompletedTimelineRow: View {
         let priorityIcon = priorityIndicatorSymbolName(item.priority)
 
         VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: TodoTimelineMetrics.minimalRowContentSpacing) {
+            // Hung off the title's FIRST baseline, not centred across the column.
+            // Completed is the screen the defect was reported on: its titles wrap to
+            // two lines and the restore toggle settled in the gap between them,
+            // reading as decoration floating beside the task rather than as the
+            // task's own mark. The idiom is the task list's, verbatim — see
+            // `TodoListScreen.minimalTimelineRow`, which has shipped it since the
+            // timeline learned to wrap.
+            HStack(alignment: .firstTextBaseline, spacing: TodoTimelineMetrics.minimalRowContentSpacing) {
                 Button {
                     startRestore()
                 } label: {
@@ -653,6 +660,13 @@ private struct CompletedTimelineRow: View {
                 )
                 .disabled(isRestoring)
                 .accessibilityLabel("Undo complete")
+                // A button holds no text, so it reports no text baseline and SwiftUI
+                // would align it by its bottom edge — a good half-line low. The guide
+                // hands back its centre instead, nudged by the distance from a line's
+                // centre to that line's baseline.
+                .alignmentGuide(.firstTextBaseline) { dimension in
+                    dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
+                }
 
                 VStack(alignment: .leading, spacing: TodoTimelineMetrics.minimalRowTextSpacing) {
                     TodoTimelineTaskTitle(
@@ -687,6 +701,13 @@ private struct CompletedTimelineRow: View {
                         }
                     }
                     .padding(.trailing, TodoTimelineMetrics.minimalRowTrailingIndicatorPadding)
+                    // Keep the trailing indicators on the first line too. The flag is
+                    // an annotation on the task, so it reads with the title's first
+                    // line; leaving it centred while the toggle moved would have been
+                    // half a fix, and would have looked like one.
+                    .alignmentGuide(.firstTextBaseline) { dimension in
+                        dimension[VerticalAlignment.center] + TodoTimelineMetrics.minimalRowBaselineNudge
+                    }
                 }
             }
             .padding(.vertical, TodoTimelineMetrics.minimalRowVerticalPadding)

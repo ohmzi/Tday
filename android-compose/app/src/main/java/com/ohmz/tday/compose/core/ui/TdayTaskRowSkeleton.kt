@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -88,6 +89,116 @@ object TdayTaskRowMetrics {
 
     /** How far down `outlineVariant` the hairline is drawn. */
     const val DividerAlpha: Float = 0.58f
+}
+
+/**
+ * Where the parts of a task row have to sit for its controls to read as the
+ * BULLET of the title's first line.
+ *
+ * Every task feed in the app draws the same shape: a round toggle, a title that
+ * may wrap, and — on most of them — a list/priority indicator at the far end. All
+ * three were stacked with `Alignment.CenterVertically`, which is right for as long
+ * as the title is one line and silently wrong the moment it is two: the toggle
+ * settles on the text column's MIDDLE, which on a wrapped title is the gap between
+ * line one and line two. The mark that is supposed to be the line's bullet floats
+ * between the lines instead, and the trailing flag floats with it.
+ *
+ * ## Why not `Alignment.Top`
+ *
+ * Because the toggle is not the same height as a line of text. `CheckTargetMinSize`
+ * is 48 dp of tap target around a 24 dp glyph and the title's line box is 24 sp;
+ * top-aligning the two puts the glyph's centre a full 12 dp below the line's, which
+ * reads LOW rather than aligned, and the error is not even constant — the box is in
+ * dp and the line is in sp, so it grows with the user's font scale. The fix has to
+ * be derived from the type it is aligning to, or it is a number that is correct on
+ * one device.
+ *
+ * ## What it derives
+ *
+ * The row is stacked from its top edge and every element is then dropped by
+ * whatever it takes to centre it on the first line box:
+ *
+ *  - [firstLineCenter] is `max(control, line) / 2` — the taller of the two decides
+ *    where the line can sit at all, because neither may be given a negative inset;
+ *  - [topInsetFor] drops any element of a known height onto that centre;
+ *  - [titleTopInset] is the same call for the text column itself.
+ *
+ * ## Both ends of the row ask, including the control
+ *
+ * Every element gets [topInsetFor] — the leading control, the text column, the
+ * trailing marks — and the control asks even though the answer is 0 dp in the common
+ * case. Insetting only the TEXT is the version of this that looks finished and is
+ * not: it assumes the control is the taller of the two, which is a property of the
+ * row *at the reader's font scale* rather than of the row. Completed's 28 dp toggle
+ * is taller than a 24 sp line at 1x and shorter than the same line past about 1.5x,
+ * and an un-inset control there sits 4 dp ABOVE the line it is the bullet for — above
+ * its own trailing flag as well, which did take the call. Asking costs nothing where
+ * the control already wins, and is the whole fix where it does not.
+ *
+ * At `fontScale = 1` with the shipped `titleMedium` (24 sp) and a 48 dp toggle this
+ * returns exactly the 12 dp `TodoListScreen` had hand-written under the comment
+ * "top pad centres the first title line against the (taller) toggle" — which is the
+ * evidence that the derivation is the right one rather than a new opinion. That
+ * literal is now this call, so the one row that was already right stays pixel-for-
+ * pixel where it was and becomes right at every other font scale as well.
+ *
+ * A single-line row is unmoved by construction: with one line, the column's centre
+ * and its first line's centre are the same point, so centring on one is centring on
+ * the other.
+ */
+@Immutable
+data class TaskRowFirstLineAlignment(
+    /** The title style's own line box, in Dp at the caller's font scale. */
+    val titleLineHeight: Dp,
+    /** How far below the row's top edge the first line's centre falls. */
+    val firstLineCenter: Dp,
+) {
+
+    /**
+     * The top inset that lands an element of [height] on the first line's centre.
+     *
+     * Coerced at zero because a row cannot hang anything above its own top edge:
+     * an element taller than [firstLineCenter] * 2 is already the thing setting
+     * where the line is, and asking it to move up would be asking the line to move
+     * down away from it.
+     */
+    fun topInsetFor(height: Dp): Dp = (firstLineCenter - height / 2).coerceAtLeast(0.dp)
+
+    /** [topInsetFor] the text column, whose first element is the title line. */
+    val titleTopInset: Dp get() = topInsetFor(titleLineHeight)
+}
+
+/**
+ * [TaskRowFirstLineAlignment] for a row whose title is drawn in [titleStyle] and
+ * whose leading control occupies [controlHeight].
+ *
+ * Pure, and takes its [density] rather than reading `LocalDensity`, so the
+ * arithmetic above can be asserted at several font scales in a unit test — which is
+ * the only place it CAN be asserted, there being no layout in a JVM test and no
+ * emulator in the gate.
+ */
+fun taskRowFirstLineAlignment(
+    density: Density,
+    titleStyle: TextStyle,
+    controlHeight: Dp,
+): TaskRowFirstLineAlignment {
+    val lineHeight = spDimension(density, titleStyle.lineHeight, FallbackLineHeight)
+    return TaskRowFirstLineAlignment(
+        titleLineHeight = lineHeight,
+        firstLineCenter = maxOf(controlHeight, lineHeight) / 2,
+    )
+}
+
+/** [taskRowFirstLineAlignment] against the composition's own density. */
+@Composable
+fun rememberTaskRowFirstLineAlignment(
+    titleStyle: TextStyle,
+    controlHeight: Dp,
+): TaskRowFirstLineAlignment {
+    val density = LocalDensity.current
+    return remember(density.density, density.fontScale, titleStyle.lineHeight, controlHeight) {
+        taskRowFirstLineAlignment(density, titleStyle, controlHeight)
+    }
 }
 
 /**
@@ -314,6 +425,27 @@ fun TdayTaskRowSkeleton(
         animated
     }
     val fill = colorScheme.surfaceVariant
+    // The row this stands in for — `TodayTodoRow`, the one this function's KDoc
+    // names — hangs its toggle off the title's FIRST line, so the placeholder is
+    // stacked the same way and its bars land where that row's lines land.
+    //
+    // That is not free, and the arithmetic belongs here rather than in the reader's
+    // head. Stacking from the top moves the text column's 12 dp inset into the
+    // row's own height — max(48 dp target, 12 + 24 + 18) takes the content from
+    // 48 dp to 54 — so a row of this group draws 69 dp where it drew 63 (4 + 4 of
+    // padding, 6 of row spacing, 1 of hairline). Against `TodayTodoRow` carrying a
+    // subtitle that is still exact, because the row moved by the same 6 dp. Against
+    // a subtitle-less one, and against Completed's card (fixed at
+    // `CompletedSwipeRowHeight` and unable to follow), the placeholder is now 6 dp
+    // taller than the thing that replaces it. The note's non-goals carry the
+    // argument for leaving it: that handoff was already 7 dp out before this
+    // change, because this group draws a hairline and 6 dp of spacing under every
+    // row and a 56 dp card feed draws neither, so there is no inset that makes one
+    // placeholder exact against three different rows.
+    val firstLine = rememberTaskRowFirstLineAlignment(
+        titleStyle = MaterialTheme.typography.titleMedium,
+        controlHeight = TdayTaskRowMetrics.CheckTargetMinSize,
+    )
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -323,10 +455,15 @@ fun TdayTaskRowSkeleton(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = TdayTaskRowMetrics.RowVerticalPadding),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
         ) {
             Box(
-                modifier = Modifier.size(TdayTaskRowMetrics.CheckTargetMinSize),
+                // The row this stands in for insets its own toggle the same way, so
+                // the placeholder has to or the two disagree at font scales where the
+                // line box outgrows the 48 dp target.
+                modifier = Modifier
+                    .padding(top = firstLine.topInsetFor(TdayTaskRowMetrics.CheckTargetMinSize))
+                    .size(TdayTaskRowMetrics.CheckTargetMinSize),
                 contentAlignment = Alignment.Center,
             ) {
                 Box(
@@ -340,7 +477,10 @@ fun TdayTaskRowSkeleton(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = TdayTaskRowMetrics.TextColumnStartPadding),
+                    .padding(
+                        start = TdayTaskRowMetrics.TextColumnStartPadding,
+                        top = firstLine.titleTopInset,
+                    ),
             ) {
                 SkeletonTextBar(
                     style = MaterialTheme.typography.titleMedium,

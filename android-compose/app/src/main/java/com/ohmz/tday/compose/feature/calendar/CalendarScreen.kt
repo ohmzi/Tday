@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -132,6 +133,7 @@ import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.feedAnswer
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
+import com.ohmz.tday.compose.core.ui.rememberTaskRowFirstLineAlignment
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
@@ -263,6 +265,38 @@ private val CalendarCompletionToggleTouchTarget = 48.dp
 private val CalendarCompletionToggleRippleRadius = 24.dp
 private val CalendarCompletionToggleIconSize = 24.dp
 private val CalendarBarButtonIconSize = 22.dp
+
+/**
+ * The cap on each end of the expanded Today pill, and the one number on this
+ * control that is not on the spacing scale.
+ *
+ * `SpacingLg` (12) is the rung, and it was tried first. It puts the English
+ * pill at 94.6dp — 1.69x a 56dp circle, against the 1.95x the pill was reported
+ * ugly at — which is nearer to where it came from than to where it was asked to
+ * go. 10 lands it at 90.6dp, 1.62x, which is the shape that was chosen off a
+ * device. The rung below, `SpacingMd` (8), gets to 86.6dp but takes the cap to
+ * within 2dp of the 6dp gap INSIDE the pill, so the word would sit as close to
+ * the pill's edge as it does to the glyph beside it and the thing reads clipped
+ * rather than tight. A cap has to be the largest gap in the control or it stops
+ * reading as a cap.
+ *
+ * Named rather than written inline because `docs/CODING_STANDARDS.md` permits
+ * exactly that for local layout geometry, and `FeatureDimensBudgetTest` counts
+ * the anonymous literal rather than the named constant for the same reason —
+ * [CalendarBarButtonIconSize] above is the same situation, a value the scale
+ * does not carry and every bar in the app agrees on.
+ */
+private val CalendarTodayPillCapPadding = 10.dp
+
+/**
+ * The expanded pill's label. `titleMedium` is 18sp and that is the size the
+ * control was measured at when it was called ugly a second time; 15 is the size
+ * chosen in its place. Not a `titleSmall` (14sp) swap, because the weight,
+ * family and line box are still `titleMedium`'s — only the glyph size moves, as
+ * it does for [CalendarPeriodHeaderTitleSize] and [CalendarDaySummaryTitleSize]
+ * on this screen.
+ */
+private val CalendarTodayLabelSize = 15.sp
 
 // The drag preview rides under the finger, not beside it: the pointer is offset
 // into the card so the task being carried is the thing the hand is over.
@@ -1939,6 +1973,31 @@ private fun CalendarBarButton(
  * Accent "Today" action shown in the calendar top bar. While the title is down
  * (expanded) it shows the word "Today"; once the title is pulled up (collapsed)
  * it shrinks to an icon-only circle, matching the native iOS behavior.
+ *
+ * ## The shape, and where each number came from
+ *
+ * 22dp glyph, 6dp gap, [CalendarTodayLabelSize] (15sp) word, [CalendarTodayPillCapPadding]
+ * (10dp) at each end: 90.6dp expanded in English, 1.62x the 56dp circle it
+ * collapses into, 130.8dp at the widest of the ten locales. It got there in two
+ * passes off the same one-word report, and the two passes fixed different
+ * things:
+ *
+ *  - the first took the tint and the hairline off and put the control on the
+ *    bar's own material, which is the block on `colors` below. That was a
+ *    measured accessibility failure as much as a taste one — 2.910:1 on the
+ *    configuration every Android 12+ device runs — and none of it is revisited
+ *    here;
+ *  - the second is this one: the sizes. With the colour settled, the version
+ *    that shipped was looked at on a device and was still too much air, so the
+ *    label, the caps and the gap each came down a step. That shape was chosen by
+ *    the person looking at the device rather than picked here, which is why the
+ *    arithmetic below checks it rather than argues for it.
+ *
+ * What it must keep, whatever the sizes do: 48dp of touch target in both
+ * dimensions (the `height` and the `sizeIn` floor, both `FabSize`), a collapsed
+ * state that is exactly a 56dp circle and does not move, and — because 15sp Bold
+ * is no longer large text by WCAG's points — 4.5:1 for the word rather than the
+ * 3:1 an 18sp one could have leaned on.
  */
 @Composable
 private fun CalendarTodayButton(
@@ -1959,11 +2018,48 @@ private fun CalendarTodayButton(
     // A cap, not a page margin. `SpacingXxl` is `ContentPaddingHorizontal` — the
     // rung the toolbar itself is inset by — and spending it again INSIDE a 56dp
     // control made 36 of the pill's 123dp air, so the thing read loose at the
-    // same time as it read wide. `SpacingXl` is the rung below it and takes the
+    // same time as it read wide. `SpacingXl` was the rung below it and took the
     // expanded pill to 109dp: 1.95x a circle rather than 2.20x.
+    //
+    // 1.95x was still too wide. That version was looked at on a device and the
+    // report came back the same word — so this is the second pass, and the
+    // shape it lands on was chosen off that device rather than derived here:
+    // label 18 -> 15sp, cap 14 -> 10dp, the gap beside the glyph 8 -> 6dp. What
+    // is NOT changed is the part that had already been argued — the material,
+    // the missing border, the 22dp glyph — because the complaint was never the
+    // colour after the first pass, it was the air.
+    //
+    // 22 (glyph) + 6 (gap) + 2x10 (caps) + the word, measured over
+    // `res/font/nunito_wght.ttf` at the wght-800 instance `FontWeight.Bold`
+    // resolves to (`ui/theme/Type.kt`), with the font's own kerning:
+    //
+    //   en "Today"       42.6dp ->  90.6dp pill, 1.62x a circle (was 109.1, 1.95x)
+    //   de "Heute"       43.0dp ->  91.0dp
+    //   ms "Hari ini"    51.4dp ->  99.4dp
+    //   ru "Сегодня"     62.1dp -> 110.1dp
+    //   fr "Aujourd'hui" 82.8dp -> 130.8dp  <- the widest of the ten
+    //   ja/zh            two full-width glyphs, ~30dp -> ~78dp; neither is in
+    //                    this font, so both fall back to the system CJK face
+    //                    and neither can be the widest at two characters.
+    //
+    // The bar has 204dp for this control at 360dp — 360 less 2x18 of bar inset,
+    // less the 56dp back chevron, less the 56dp search circle and the 8dp
+    // `Arrangement.spacedBy` between them (`TdayHeroTitleHeader.kt`). French
+    // clears it by 73.2dp, where before it cleared by 46.7dp. Nothing is near
+    // the edge in any locale.
+    //
+    // The collapsed end of this is untouched, deliberately: `SpacingNone` and
+    // the `sizeIn` floor below still make it exactly a 56dp circle, and the
+    // travel between the two states is 4dp shorter per side than it was, which
+    // makes the one real seam here — `animateContentSize()`'s spring resolving
+    // the width while this spring resolves the padding, two animations over one
+    // box — smaller rather than larger. It was not made smaller by removing one
+    // of them: the width has to animate because the word appears at
+    // `collapseProgress` 0.5 rather than growing, and the padding has to animate
+    // because a step from 10 to 0 inside a settling box is the jump.
     val horizontalPadding by animateDpAsState(
         targetValue = if (showLabel) {
-            TdayDimens.SpacingXl
+            CalendarTodayPillCapPadding
         } else {
             TdayDimens.SpacingNone
         },
@@ -2047,13 +2143,48 @@ private fun CalendarTodayButton(
                 modifier = Modifier.size(CalendarBarButtonIconSize),
             )
             if (showLabel) {
+                // 15sp, and the size does NOT move the bar this has to clear.
+                // It reads as though it should: 15sp Bold is 11.25pt, under
+                // WCAG's 14pt-bold large-text cutoff, so the word owes 4.5:1
+                // rather than the 3:1 large text gets. But 18sp Bold was under
+                // that cutoff too — the same 0.75 sp-to-pt factor that gives
+                // 11.25 gives 13.5, and 13.5 < 14. Both sizes are large to
+                // Android, whose rule is 14sp bold; neither is large to WCAG.
+                // Taken the other way, with 1sp read as 1pt, both are large and
+                // both owe 3:1. There is no reading under which the threshold
+                // moved, so 4.5:1 was already the floor at 18sp — which is what
+                // the block above targets when it picks this material for
+                // "clearing 4.5:1 in both themes" — and 15sp stays under the
+                // same bar rather than raising it.
+                //
+                // It clears it on the same fill the first pass moved it to,
+                // because none of these ratios is a function of size. Accent on
+                // `tdayBarButtonContainerColor()`: 4.67:1 light — white at 0.96
+                // over #F4F6FB composites to #FFFFFF, and every Material You
+                // light background is a tone-98 neutral that composites there
+                // too, 4.67:1 across the range. Dark is 6.63:1 on the static
+                // #1A1A1D and 4.75:1 on the lightest dynamic dark this scheme
+                // reaches (#323342), which is 5.5% of headroom over 4.5 rather
+                // than a rounding. The glyph beside it is a graphical object at
+                // 3:1 (WCAG 1.4.11) on those same ratios, so its margin is
+                // wider still, and its 22dp is unchanged anyway.
+                //
+                // Under font scaling the label collides with the back chevron
+                // at fontScale 1.88 in French — the pill reaches the bar's
+                // 204dp at 48 + 82.8f — where the 18sp version collided at 1.47
+                // and the original 18dp/28dp/18sp one at 1.33. Only the word
+                // scales; the caps, the glyph and the 56dp box are dp.
                 Text(
                     text = label,
                     color = accentColor,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = CalendarTodayLabelSize,
+                    ),
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    modifier = Modifier.padding(start = TdayDimens.SpacingMd),
+                    // One rung down with the rest of it. The gap has to stay
+                    // smaller than the cap or the caps stop reading as caps.
+                    modifier = Modifier.padding(start = TdayDimens.SpacingSm),
                 )
             }
         }
@@ -2729,6 +2860,13 @@ private fun CalendarTodoRow(
     val showPriorityIcon = priorityIcon != null
     val listIndicatorColor = tdayListAccentColor(listMeta?.color)
     val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
+    // Both calendar rows lead with a 48 dp touch target around a 24 dp glyph and
+    // a 24 sp title line, so the derivation answers 12 dp — the same inset the
+    // task list already had hand-written, arrived at from the type instead.
+    val firstLine = rememberTaskRowFirstLineAlignment(
+        titleStyle = MaterialTheme.typography.titleMedium,
+        controlHeight = CalendarCompletionToggleTouchTarget,
+    )
     val foregroundColor = colorScheme.background
     val actionRevealProgress = swipeRevealState.revealProgress(animatedOffsetX)
     // The row's whole subscription to the screen's slot, and the only place it
@@ -2924,10 +3062,22 @@ private fun CalendarTodoRow(
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
+                        // Stacked from the top, then the whole block put back in
+                        // the middle of the card: these rows are given a height
+                        // (56 dp here) that is larger than a one-line row's content,
+                        // so `Alignment.Top` on its own would lift the common case
+                        // off its own centre. `wrapContentHeight` hands the block
+                        // back to the middle and leaves Top to work inside it.
+                        .wrapContentHeight(Alignment.CenterVertically)
                         .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.Top,
                 ) {
                     CalendarCompletionToggleIcon(
+                        // The toggle is the title's bullet, so it takes the first line's
+                        // centre the same way the text column does — see `topInsetFor`.
+                        modifier = Modifier.padding(
+                            top = firstLine.topInsetFor(CalendarCompletionToggleTouchTarget),
+                        ),
                         imageVector = if (localChecked) {
                             ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
                         } else {
@@ -2968,7 +3118,10 @@ private fun CalendarTodoRow(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = CalendarTaskRowTitleStartPadding),
+                            .padding(
+                                start = CalendarTaskRowTitleStartPadding,
+                                top = firstLine.titleTopInset,
+                            ),
                     ) {
                         Text(
                             text = todo.title,
@@ -3013,7 +3166,12 @@ private fun CalendarTodoRow(
                     }
                     if (showListIndicator || showPriorityIcon) {
                         Row(
-                            modifier = Modifier.padding(end = TdayDimens.Spacing3xl),
+                            modifier = Modifier.padding(
+                                // Annotations on the task read with its first line,
+                                // the same as the toggle at the other end.
+                                top = firstLine.topInsetFor(CalendarRowTrailingIconSize),
+                                end = TdayDimens.Spacing3xl,
+                            ),
                             horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -3150,6 +3308,11 @@ private fun CalendarCompletedTodoRow(
     val priorityIcon = priorityIconFor(item.priority)
     val showPriorityIcon = priorityIcon != null
     val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
+    // Same row, same derivation — see the pending row above.
+    val firstLine = rememberTaskRowFirstLineAlignment(
+        titleStyle = MaterialTheme.typography.titleMedium,
+        controlHeight = CalendarCompletionToggleTouchTarget,
+    )
 
     Column(
         modifier = Modifier
@@ -3172,10 +3335,16 @@ private fun CalendarCompletedTodoRow(
             Row(
                 modifier = Modifier
                     .fillMaxSize()
+                    // Same stacking as the pending row above, for the same reason.
+                    .wrapContentHeight(Alignment.CenterVertically)
                     .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
                 CalendarCompletionToggleIcon(
+                    // Same bullet rule as the pending row above.
+                    modifier = Modifier.padding(
+                        top = firstLine.topInsetFor(CalendarCompletionToggleTouchTarget),
+                    ),
                     imageVector = if (showCompletedState) {
                         ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
                     } else {
@@ -3214,7 +3383,10 @@ private fun CalendarCompletedTodoRow(
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(start = CalendarTaskRowTitleStartPadding),
+                        .padding(
+                            start = CalendarTaskRowTitleStartPadding,
+                            top = firstLine.titleTopInset,
+                        ),
                 ) {
                     Text(
                         text = item.title,
@@ -3240,7 +3412,15 @@ private fun CalendarCompletedTodoRow(
                 }
                 if (showPriorityIcon) {
                     Row(
-                        modifier = Modifier.padding(end = TdayDimens.Spacing3xl),
+                        modifier = Modifier.padding(
+                            // Annotations on the task, so they read with its first
+                            // line — the same call the pending row's marks take, and
+                            // the same one this row's toggle now takes at the other
+                            // end. Centring them against a top-stacked row would have
+                            // pinned them to its top edge, 15 dp above the line.
+                            top = firstLine.topInsetFor(CalendarRowTrailingIconSize),
+                            end = TdayDimens.Spacing3xl,
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -3266,7 +3446,11 @@ private fun CalendarCompletedTodoRow(
                         contentDescription = stringResource(R.string.label_task_list),
                         tint = listIndicatorColor,
                         modifier = Modifier
-                            .padding(end = TdayDimens.Spacing3xl)
+                            .padding(
+                                // Same first line as the branch above.
+                                top = firstLine.topInsetFor(CalendarRowTrailingIconSize),
+                                end = TdayDimens.Spacing3xl,
+                            )
                             .size(CalendarRowTrailingIconSize),
                     )
                 }
@@ -3361,11 +3545,14 @@ private fun CalendarCompletionToggleIcon(
     contentDescription: String,
     tint: Color,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     Box(
-        modifier = Modifier
+        // Outside `sizeIn`, so the row's first-line inset positions the target
+        // rather than eating into it.
+        modifier = modifier
             .sizeIn(
                 minWidth = CalendarCompletionToggleTouchTarget,
                 minHeight = CalendarCompletionToggleTouchTarget,
