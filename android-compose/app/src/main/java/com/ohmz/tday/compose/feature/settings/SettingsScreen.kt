@@ -65,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +76,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -152,6 +154,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.unifiedpush.android.connector.UnifiedPush
@@ -320,19 +323,25 @@ fun SettingsScreen(
             ),
         )
     }
-    DisposableEffect(notificationsLifecycleOwner, notificationContext, isLocalMode) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                // Installing or uninstalling a distributor happens in another app, with this
-                // screen suspended — and a package query is too expensive to repeat per
-                // recomposition for an answer that cannot change while the screen is on top.
+    val distributorWindowInfo = LocalWindowInfo.current
+    LaunchedEffect(distributorWindowInfo, notificationContext, isLocalMode) {
+        // Window focus, not ON_RESUME. Both things that can change this answer take the window's
+        // focus away and give it back, but only one of them is a lifecycle event: installing or
+        // uninstalling a distributor happens in another app (resume, and focus), while this row's
+        // own Choose pill opens the connector's plain AlertDialog, which never moves the host
+        // Activity out of RESUMED. Keyed on resume alone, the row stayed on screen still asking a
+        // question the user had just answered — the "I tapped it and nothing happened" shape that
+        // got the old row deleted. `drop(1)` because the composition above already read the state
+        // once; this effect exists for the RETURN of focus, and a package query is too expensive
+        // to repeat for an answer that cannot change while nothing else holds the window.
+        snapshotFlow { distributorWindowInfo.isWindowFocused }
+            .drop(1)
+            .collect { focused ->
+                if (!focused) return@collect
                 distributorChoiceNeeded = !isLocalMode && needsDistributorChoice(
                     readUnifiedPushDistributorState(notificationContext),
                 )
             }
-        }
-        notificationsLifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { notificationsLifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val languageTitle = stringResource(R.string.settings_language)
     val featureToggleTitle = stringResource(R.string.settings_feature_toggle)
@@ -2663,9 +2672,12 @@ private fun QuietHoursTimeRow(label: String, value: String, onClick: () -> Unit)
  * install ntfy" dead end the old UnifiedPush row was.
  *
  * The pill hands straight to the connector's chooser, which is a plain `AlertDialog` with no
- * result callback — so the row is still on screen when the dialog closes and re-reads itself on
- * the next resume. A second tap in that window is harmless: the connector now has its answer and
- * re-entering the dialog flow just re-registers with it.
+ * result callback — so nothing here learns the answer directly. The caller watches window focus
+ * instead: the dialog takes focus on open and hands it back on dismiss, and the re-read on its
+ * return is what takes this row away the moment the question is answered. That matters more than
+ * it looks: `registerAppWithDialog` only short-circuits once the distributor has ACKed, and the
+ * dialog's own handler saves the distributor without setting that bit, so a second tap in a row
+ * left on screen would re-open the picker over a choice already made.
  */
 @Composable
 private fun PushDistributorRow() {

@@ -21,8 +21,11 @@ internal const val UNIFIEDPUSH_TRANSPORT = "unifiedpush"
 
 private const val TAG = "UnifiedPushRegistrar"
 
-/** Long enough for a reachable server to answer, short enough that a dead one cannot stall leaving. */
-private const val SIGN_OUT_UNSUBSCRIBE_TIMEOUT_MS = 3_000L
+/**
+ * Long enough for a reachable server to answer, short enough that a dead one cannot stall leaving.
+ * It bounds the whole of [UnifiedPushAutoRegistrar.onSignedOut], lock acquisition included.
+ */
+internal const val SIGN_OUT_UNSUBSCRIBE_TIMEOUT_MS = 3_000L
 
 /**
  * The connector's three answers, read together so the decision sees one consistent snapshot.
@@ -95,20 +98,33 @@ class UnifiedPushAutoRegistrar @Inject constructor(
      */
     suspend fun onSignedOut() {
         withContext(backgroundDispatcher) {
-            mutex.withLock {
-                val endpoint = store.getEndpoint()
-                store.clearSubscribedUserId()
-                if (endpoint.isNullOrBlank()) return@withLock
-                // Bounded, because sign-out is already waiting on one request and a user leaving
-                // an unreachable server must not be held on the screen they are trying to leave.
-                // Losing the race costs a stale row the server will fail to deliver to; the local
-                // marker is already gone, so nothing here pretends the subscription survived.
-                val sent = withTimeoutOrNull(SIGN_OUT_UNSUBSCRIBE_TIMEOUT_MS) {
+            // The budget covers ACQUIRING the lock, not just the request under it. The other
+            // holder of this mutex is `subscribe()`, whose POST has no timeout of its own — the
+            // shared OkHttp client configures none, so only OkHttp's per-phase defaults bound it
+            // — and the table hands out SubscribeStoredEndpoint on every foreground until that
+            // POST succeeds. So on exactly the server that motivates this bound, an unreachable
+            // one, there is usually a subscribe in flight holding the lock; a budget that started
+            // after acquisition would have started after the stall it was written to prevent.
+            val completed = withTimeoutOrNull(SIGN_OUT_UNSUBSCRIBE_TIMEOUT_MS) {
+                mutex.withLock {
+                    val endpoint = store.getEndpoint()
+                    // Cleared beside the unsubscribe, inside the same critical section, so no
+                    // concurrent subscribe can write the marker back over a row we just deleted.
+                    store.clearSubscribedUserId()
+                    if (endpoint.isNullOrBlank()) return@withLock
                     runCatching {
                         apiService.unsubscribePush(PushUnsubscribeRequest(endpoint = endpoint))
                     }.onFailure { Log.w(TAG, "Failed to unsubscribe on sign-out: ${it.message}") }
                 }
-                if (sent == null) Log.w(TAG, "Sign-out unsubscribe timed out")
+            }
+            if (completed == null) {
+                // Timed out, possibly without ever holding the lock, so the marker may still be
+                // there — and it is the half that has to go, because it is what stops the next
+                // sign-in re-subscribing. Safe outside the lock precisely BECAUSE we got here:
+                // no unsubscribe was sent, so the worst a racing subscribe can do is write the
+                // marker back for a backend row that still exists, which is the truth.
+                store.clearSubscribedUserId()
+                Log.w(TAG, "Sign-out unsubscribe gave up after ${SIGN_OUT_UNSUBSCRIBE_TIMEOUT_MS}ms")
             }
         }
     }
