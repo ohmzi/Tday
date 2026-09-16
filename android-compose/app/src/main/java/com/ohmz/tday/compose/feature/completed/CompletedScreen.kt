@@ -122,7 +122,7 @@ import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
-import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
+import com.ohmz.tday.compose.ui.theme.tdayListIconForList
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -1139,7 +1139,7 @@ private fun CompletedSwipeRow(
                             ) {
                                 if (showListIndicator) {
                                     Icon(
-                                        imageVector = tdayListIconForKey(listMeta?.iconKey),
+                                        imageVector = tdayListIconForList(listMeta?.iconKey, listMeta?.name),
                                         contentDescription = stringResource(R.string.label_task_list),
                                         tint = listIndicatorColor,
                                         modifier = Modifier.size(CompletedRowTrailingIconSize),
@@ -1155,7 +1155,7 @@ private fun CompletedSwipeRow(
                             }
                         } else if (showListIndicator) {
                             Icon(
-                                imageVector = tdayListIconForKey(listMeta?.iconKey),
+                                imageVector = tdayListIconForList(listMeta?.iconKey, listMeta?.name),
                                 contentDescription = stringResource(R.string.label_task_list),
                                 tint = listIndicatorColor,
                                 modifier = Modifier

@@ -49,7 +49,7 @@ import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotWriter
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColorOrNull
-import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
+import com.ohmz.tday.compose.ui.theme.tdayListIconForList
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -311,7 +311,7 @@ private fun WidgetListPickerRow(
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     Icon(
-                        imageVector = tdayListIconForKey(iconKey),
+                        imageVector = tdayListIconForList(iconKey, name),
                         contentDescription = null,
                         tint = accent,
                         modifier = Modifier.size(PickerListIconSize),

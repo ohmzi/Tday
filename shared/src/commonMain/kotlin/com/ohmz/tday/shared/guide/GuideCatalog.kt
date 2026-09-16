@@ -219,6 +219,15 @@ object GuideCatalog {
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.SCHEDULED_LISTS)),
         ),
         topic(
+            // ANDROID only, and that is the shipping truth rather than a plan: the
+            // keyword table lives in commonMain and iOS already links the framework,
+            // but until a client actually calls it, listing it here would promise a
+            // behaviour that platform does not have.
+            GuideTopicIds.LIST_ICONS, GuideSectionId.ORGANIZING, "wand-sparkles",
+            setOf(ANDROID), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.28",
+            body = listOf(para(GuideTopicIds.LIST_ICONS), tip(GuideTopicIds.LIST_ICONS)),
+        ),
+        topic(
             GuideTopicIds.COMPLETED_HISTORY, GuideSectionId.ORGANIZING, "check-check",
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.COMPLETED_HISTORY)),
         ),
