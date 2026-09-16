@@ -1156,9 +1156,11 @@ struct TodoListScreen: View {
     }
 
     private func emptyWatermarkSystemName(for date: Date) -> String {
-        emptyTimelineSystemImage(
+        let selectedList = viewModel.lists.first(where: { $0.id == viewModel.listId })
+        return emptyTimelineSystemImage(
             for: viewModel.mode,
-            listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey,
+            listIconKey: selectedList?.iconKey,
+            listName: selectedList?.name,
             date: date
         )
     }
@@ -1296,9 +1298,11 @@ struct TodoListScreen: View {
     }
 
     private var emptyStateAssetName: String {
-        emptyTimelineBadgeAssetName(
+        let selectedList = viewModel.lists.first(where: { $0.id == viewModel.listId })
+        return emptyTimelineBadgeAssetName(
             for: viewModel.mode,
-            listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
+            listIconKey: selectedList?.iconKey,
+            listName: selectedList?.name
         )
     }
 
@@ -1974,7 +1978,8 @@ struct TodoListScreen: View {
                             accentColor: modeAccentColor,
                             assetName: emptyTimelineAssetName(
                                 for: viewModel.mode,
-                                listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
+                                listIconKey: viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey,
+                                listName: viewModel.lists.first(where: { $0.id == viewModel.listId })?.name
                             )
                         )
                         // A live query answers for itself in the feed, so the
@@ -2148,11 +2153,13 @@ struct TodoListScreen: View {
     /// each mode already owns and falls back to the symbol — which is what
     /// Today wants anyway, since its glyph follows the time of day.
     private var timelineHeroMark: Image {
-        let listIconKey = viewModel.lists.first(where: { $0.id == viewModel.listId })?.iconKey
-        if let asset = emptyTimelineAssetName(for: viewModel.mode, listIconKey: listIconKey) {
+        let selectedList = viewModel.lists.first(where: { $0.id == viewModel.listId })
+        let listIconKey = selectedList?.iconKey
+        let listName = selectedList?.name
+        if let asset = emptyTimelineAssetName(for: viewModel.mode, listIconKey: listIconKey, listName: listName) {
             return Image(asset)
         }
-        return Image(systemName: emptyTimelineSystemImage(for: viewModel.mode, listIconKey: listIconKey))
+        return Image(systemName: emptyTimelineSystemImage(for: viewModel.mode, listIconKey: listIconKey, listName: listName))
     }
 
     private var timelineHeroTitleRowBase: some View {
@@ -6145,21 +6152,22 @@ private func emptyTimelineDescription(for mode: TodoListMode, isListDetail: Bool
 /// template asset; Today's watermark is an SF Symbol that follows the time of
 /// day, and the badge takes an asset only — so it takes the sun web's scope
 /// config gives Today at every hour.
-private func emptyTimelineBadgeAssetName(for mode: TodoListMode, listIconKey: String?) -> String {
-    emptyTimelineAssetName(for: mode, listIconKey: listIconKey) ?? "LucideSun"
+private func emptyTimelineBadgeAssetName(for mode: TodoListMode, listIconKey: String?, listName: String?) -> String {
+    emptyTimelineAssetName(for: mode, listIconKey: listIconKey, listName: listName) ?? "LucideSun"
 }
 
 /// Lucide template-asset watermark for the scheduled task home category modes, mirroring web.
 /// Returns nil for modes that keep their SF Symbol watermark (today/floater/list).
 ///
-/// Takes the RAW `iconKey`, never the inferred one, and that is deliberate. The `.floater`
-/// branch below reads blankness as a signal rather than as a missing value: an Anytime list
-/// with no chosen glyph shows the leaf that is the Anytime feed's own identity. Resolving the
-/// name-inferred key in here would swap that leaf for a shopping cart the first time someone
-/// emptied a list called Groceries — a screen nobody was thinking about, changed by a feature
-/// about task rows. The inference belongs at `TdayListIcon`, where the subject really is
-/// "which list is this".
-private func emptyTimelineAssetName(for mode: TodoListMode, listIconKey: String?) -> String? {
+/// Resolves through `tdayResolvedListIconKey` — key first, name-inferred second — the same
+/// two-step the row-level `TdayListIcon` uses, rather than the raw `iconKey` alone. The
+/// `.floater` branch's blank-`listName` case is still special: that is the ROOT Anytime feed,
+/// where no list is selected at all, and it keeps the leaf that is the feed's own identity
+/// rather than falling through to inference on a name that doesn't exist. A CUSTOM Floater
+/// list's own detail screen passes its `listName` and infers exactly like `.list` mode does —
+/// this used to skip that and show the leaf for every custom Floater list with no chosen
+/// glyph, which was the bug this comment used to justify.
+private func emptyTimelineAssetName(for mode: TodoListMode, listIconKey: String?, listName: String?) -> String? {
     switch mode {
     case .overdue:
         return "TileOverdue"
@@ -6170,18 +6178,18 @@ private func emptyTimelineAssetName(for mode: TodoListMode, listIconKey: String?
     case .priority:
         return "TilePriority"
     case .list:
-        return tdayLucideListAsset(listIconKey)
+        return tdayLucideListAsset(tdayResolvedListIconKey(listIconKey, listName: listName))
     case .floater:
-        if let listIconKey, !listIconKey.isEmpty {
-            return tdayLucideListAsset(listIconKey)
+        guard let listName, !listName.isEmpty else {
+            return "LucideLeaf"
         }
-        return "LucideLeaf"
+        return tdayLucideListAsset(tdayResolvedListIconKey(listIconKey, listName: listName))
     default:
         return nil
     }
 }
 
-private func emptyTimelineSystemImage(for mode: TodoListMode, listIconKey: String?, date: Date = Date()) -> String {
+private func emptyTimelineSystemImage(for mode: TodoListMode, listIconKey: String?, listName: String?, date: Date = Date()) -> String {
     switch mode {
     case .today:
         return todoTimeOfDaySystemImage(for: date)
@@ -6194,12 +6202,12 @@ private func emptyTimelineSystemImage(for mode: TodoListMode, listIconKey: Strin
     case .priority:
         return "flag.fill"
     case .floater:
-        if let listIconKey, !listIconKey.isEmpty {
-            return todoListSymbolName(for: listIconKey)
+        guard let listName, !listName.isEmpty else {
+            return "leaf"
         }
-        return "leaf"
+        return todoListSymbolName(for: tdayResolvedListIconKey(listIconKey, listName: listName))
     case .list:
-        return todoListSymbolName(for: listIconKey)
+        return todoListSymbolName(for: tdayResolvedListIconKey(listIconKey, listName: listName))
     }
 }
 

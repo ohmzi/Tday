@@ -252,6 +252,7 @@ import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayListIconForList
 import com.ohmz.tday.compose.ui.theme.tdayListIconResForKey
+import com.ohmz.tday.compose.ui.theme.tdayListIconResForList
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import com.ohmz.tday.shared.bulk.BulkAction
 import com.ohmz.tday.shared.bulk.BulkSelectionPolicy
@@ -1106,12 +1107,14 @@ fun TodoListScreen( // skipcq: KT-R1006
     val emptyWatermarkIcon = emptyStateIconForMode(
         mode = uiState.mode,
         listIconKey = selectedList?.iconKey,
+        listName = selectedList?.name,
         isTodayDaytime = isTodayDaytime,
     )
     val emptyWatermarkDrawable = emptyStateDrawableForMode(uiState.mode)
     val emptySceneIcon = emptyStateSceneIconForMode(
         mode = uiState.mode,
         listIconKey = selectedList?.iconKey,
+        listName = selectedList?.name,
         isTodayDaytime = isTodayDaytime,
     )
     // The floater leaf watermark is mirrored so it points the same way as the iOS "leaf" symbol
@@ -1360,6 +1363,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     val heroIcon = emptyStateIconForMode(
         mode = uiState.mode,
         listIconKey = selectedList?.iconKey,
+        listName = selectedList?.name,
         isTodayDaytime = isTodayDaytime,
     )
     val isCollapsibleTimelineMode =
@@ -6299,6 +6303,7 @@ private fun emptyStateDescriptionForMode(mode: TodoListMode, isFloaterList: Bool
 private fun emptyStateSceneIconForMode(
     mode: TodoListMode,
     listIconKey: String?,
+    listName: String?,
     isTodayDaytime: Boolean,
 ): Int {
     return when (mode) {
@@ -6309,14 +6314,21 @@ private fun emptyStateSceneIconForMode(
         TodoListMode.PRIORITY -> R.drawable.ic_lucide_flag
         TodoListMode.SCHEDULED -> R.drawable.ic_lucide_calendar_clock
         TodoListMode.ALL -> R.drawable.ic_lucide_layers
+        // FLOATER covers both the root Anytime feed (no `listName` — no list is
+        // selected there, and the brand leaf stays its default) and a custom
+        // Floater list's own detail screen (`listName` set). A custom list falls
+        // through to the same key-then-name resolution the home rows use —
+        // `tdayListIconResForList` — instead of the raw-key-only lookup, so a
+        // list with no chosen `iconKey` shows its name-inferred glyph here too.
+        // See `tdayListIconForList` for the same fix on the vector side.
         TodoListMode.FLOATER ->
-            if (listIconKey.isNullOrBlank()) {
+            if (listName.isNullOrBlank()) {
                 R.drawable.ic_lucide_leaf
             } else {
-                tdayListIconResForKey(listIconKey)
+                tdayListIconResForList(listIconKey, listName)
             }
 
-        TodoListMode.LIST -> tdayListIconResForKey(listIconKey)
+        TodoListMode.LIST -> tdayListIconResForList(listIconKey, listName)
     }
 }
 
@@ -6339,6 +6351,7 @@ private fun emptyStateDrawableForMode(mode: TodoListMode): Int? {
 private fun emptyStateIconForMode(
     mode: TodoListMode,
     listIconKey: String?,
+    listName: String?,
     isTodayDaytime: Boolean,
 ): ImageVector {
     return when (mode) {
@@ -6348,14 +6361,19 @@ private fun emptyStateIconForMode(
 
         TodoListMode.OVERDUE -> ImageVector.vectorResource(R.drawable.ic_lucide_circle_alert)
         TodoListMode.PRIORITY -> ImageVector.vectorResource(R.drawable.ic_lucide_flag)
+        // See `emptyStateSceneIconForMode` for why FLOATER branches on `listName`
+        // rather than `listIconKey` alone: the root Anytime feed has neither and
+        // keeps the brand leaf, while a custom Floater list infers from its name.
         TodoListMode.FLOATER ->
-            if (listIconKey.isNullOrBlank()) ImageVector.vectorResource(R.drawable.ic_lucide_leaf) else tdayListIconForKey(
-                listIconKey
-            )
+            if (listName.isNullOrBlank()) {
+                ImageVector.vectorResource(R.drawable.ic_lucide_leaf)
+            } else {
+                tdayListIconForList(listIconKey, listName)
+            }
 
         TodoListMode.SCHEDULED -> ImageVector.vectorResource(R.drawable.ic_lucide_clock)
         TodoListMode.ALL -> ImageVector.vectorResource(R.drawable.ic_lucide_inbox)
-        TodoListMode.LIST -> tdayListIconForKey(listIconKey)
+        TodoListMode.LIST -> tdayListIconForList(listIconKey, listName)
     }
 }
 
