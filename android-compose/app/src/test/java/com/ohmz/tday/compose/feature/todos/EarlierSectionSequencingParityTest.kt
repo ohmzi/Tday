@@ -32,12 +32,30 @@ import org.junit.Test
  * Worth recording here, since this file's name promises parity: Android is now
  * the only client without the beat, deliberately. Web's
  * `useEarlierExpandHandoff` and iOS's
- * `toggleEarlierSectionWithIllustrationHandoff` both still sequence, because on
- * both of those clients the scene is drawn OVER the list rather than in it and
- * rows expanding in would arrive underneath a scene still painting. Android's
- * scene is a lazy item that shares no pixels with the rows once it is below
- * them. The requirement is the same on all three; only Android's geometry stopped
- * needing a beat to meet it.
+ * `toggleEarlierSectionWithIllustrationHandoff` both still sequence -- but NOT
+ * for the single shared reason this doc used to give. It said the scene is drawn
+ * OVER the list rather than in it on both of them, which is true of iOS and
+ * false of web, whose scene is an inline sibling in the document flow and always
+ * was. A premise that holds for one of the two clients it names is worse than no
+ * premise, because it is the one a reader trusts instead of going to look; the
+ * same sentence was corrected at [TodoListScreen]'s own toggle and in
+ * `docs/motion.md`, and this was the third copy of it.
+ *
+ * What each keeps its beat for, which is a different argument per client:
+ *
+ *  * iOS, the overlay: rows expanding in arrive underneath a scene still
+ *    painting over them, so the beat is what stops the two being on the slot at
+ *    once;
+ *  * web: `.tday-empty-slot` is a grid track with a transition and no start
+ *    value on mount, so the scene's 42vh lands in ONE frame however the blocks
+ *    are ordered. Web moved its scene below Earlier in the same pass Android
+ *    did, reopened the question rather than inheriting this answer, and found
+ *    the wait still had something behind it in both directions.
+ *
+ * Android's scene is a lazy item that shares no pixels with the rows once it is
+ * below them, and `animateItem` gives the swap the beat was buying. The
+ * requirement is the same on all three; only Android's geometry stopped needing
+ * a beat to meet it.
  */
 class EarlierSectionSequencingParityTest {
 

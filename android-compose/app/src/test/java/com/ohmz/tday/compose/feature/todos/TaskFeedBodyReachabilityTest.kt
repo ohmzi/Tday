@@ -66,6 +66,21 @@ import org.junit.Test
  * So it gets a ceiling instead of a pass. [SEEDED] is a backlog, not a permit: an
  * entry may leave it, nothing may join it, and an entry that no longer names a
  * `val` in the file has to leave in the same commit that retires the `val`.
+ *
+ * ## What the seed does not cover
+ *
+ * A seeded `val` is tolerated; a dead BODY hanging off one is not, and the two
+ * were confused once already. The feed's `LazyColumn` carried a third
+ * `contentPadding` arm behind `usesTodayStyle ->`, unreachable for the same
+ * reason the skeleton's branch was, three lines above the comment explaining
+ * that a locally-constant `else` right there had been dead. It has been taken,
+ * because none of the costs listed above reaches it: it retired no parameter,
+ * deleted no composable and moved no pixel — four lines and one dimension
+ * constant that had no other reference. Written down so the next reader who
+ * greps `usesTodayStyle`, finds it still standing, and goes looking for what
+ * hangs off it does not re-find that arm as new. What is left are two
+ * `else if (usesTodayStyle)` sites with no trailing `else`: a condition that is
+ * constant, but no body behind it for a reader to mistake for live code.
  */
 class TaskFeedBodyReachabilityTest {
 

@@ -293,10 +293,6 @@ private val PressedCardElevation = 2.dp
 /** The target a finger gets where the control drawn inside it is smaller than a finger. */
 private val MinTouchTargetSize = 48.dp
 
-/** List mode insets 16 where the Today and root-feed styles inset
- *  `ContentPaddingHorizontal`'s 18; pulling it across would move a page margin. */
-private val ListModeContentHorizontalPadding = 16.dp
-
 /** The gap under every card in the floater feed — search results, tile, list rows. */
 private val FloaterFeedRowSpacing = 10.dp
 
@@ -2773,14 +2769,21 @@ fun TodoListScreen( // skipcq: KT-R1006
                         // No top padding: the hero item reserves the bar's
                         // height itself, so the scroll offset is a clean count
                         // from the top.
-                        usesTodayStyle -> PaddingValues(
+                        //
+                        // `else` rather than `usesTodayStyle ->`, because on
+                        // this screen those are the same condition and writing
+                        // the narrower-looking one back would cost a third arm
+                        // that cannot run. That is exactly the defect the
+                        // `verticalArrangement` note below is about, and it was
+                        // sitting three lines from it, in the same call: the arm
+                        // reserved a 16 dp page margin against the 18 the two
+                        // live styles share, so the only thing a reader could
+                        // take from it — that some scope insets differently —
+                        // was true of no scope that has ever been drawn.
+                        else -> PaddingValues(
                             start = TdayDimens.ContentPaddingHorizontal,
                             end = TdayDimens.ContentPaddingHorizontal,
                             bottom = TdayDimens.SpacingXxs,
-                        )
-                        else -> PaddingValues(
-                            horizontal = ListModeContentHorizontalPadding,
-                            vertical = TdayDimens.SpacingLg,
                         )
                     },
                     // Nothing, on every scope. The sections draw their own gaps —
