@@ -467,9 +467,13 @@ fun RootFeedHeroHeader(
                 enabled = !searchExpanded,
                 onClick = onCreateList,
             )
+            // Named for where it goes, not for the glyph it wears. The ellipsis
+            // has exactly one destination on both root feeds, so "More" told a
+            // TalkBack user the one thing about this button that is not true —
+            // and web has always called the same control "Settings".
             RootFeedHeaderCircleButton(
                 icon = R.drawable.ic_lucide_ellipsis,
-                contentDescription = stringResource(R.string.action_more),
+                contentDescription = stringResource(R.string.settings_title),
                 enabled = !searchExpanded,
                 onClick = onOpenSettings,
             )
