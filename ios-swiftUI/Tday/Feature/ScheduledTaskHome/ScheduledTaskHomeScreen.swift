@@ -800,7 +800,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
             if listMeta != nil || priorityIcon != nil {
                 HStack(spacing: TdayTaskRowMetrics.metaSpacing) {
                     if let listMeta {
-                        TdayListIcon(iconKey: listMeta.iconKey, size: TdayTaskRowMetrics.metaIcon)
+                        TdayListIcon(iconKey: listMeta.iconKey, listName: listMeta.name, size: TdayTaskRowMetrics.metaIcon)
                             .foregroundStyle(scheduledTaskHomeListAccentColor(for: listMeta.color))
                     }
                     if let priorityIcon {
@@ -1236,7 +1236,7 @@ private struct ScheduledTaskHomeListRow: View {
                         )
                     )
 
-                TdayListIcon(iconKey: iconKey, size: 60)
+                TdayListIcon(iconKey: iconKey, listName: name, size: 60)
                     .foregroundStyle(containerColor.blended(with: .white, amount: 0.34).opacity(0.42))
                     .offset(x: 18, y: 8)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
@@ -1244,7 +1244,7 @@ private struct ScheduledTaskHomeListRow: View {
 
                 HStack {
                     HStack(spacing: 10) {
-                        TdayListIcon(iconKey: iconKey, size: 22)
+                        TdayListIcon(iconKey: iconKey, listName: name, size: 22)
                             .foregroundStyle(.white)
                             .frame(width: 32, height: 32)
 
@@ -1323,7 +1323,7 @@ private struct ScheduledTaskHomeSearchResultsOverlay: View {
                             let tint = scheduledTaskHomeListAccentColor(for: list?.color)
 
                             HStack(spacing: 10) {
-                                TdayListIcon(iconKey: list?.iconKey, size: 17)
+                                TdayListIcon(iconKey: list?.iconKey, listName: list?.name, size: 17)
                                     .foregroundStyle(tint.opacity(0.92))
                                     .frame(width: 18)
 
@@ -1499,6 +1499,14 @@ struct CreateListSheet: View {
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
+    /// Whether the picker holds a CHOICE or only a PREVIEW.
+    ///
+    /// This sheet seeded the picker with the default and then posted it, so every list any
+    /// client ever created stored `iconKey = "inbox"` and no value was left that could mean
+    /// "never chose". That, rather than the matcher, was what blocked name-derived icons:
+    /// there was nothing for them to fill. The picker still shows a glyph the whole time;
+    /// what changed is that an untouched PREVIEW is no longer posted as a CHOICE.
+    @State private var iconTouched = false
     @State private var isSubmitting = false
 
     private var trimmedName: String {
@@ -1545,7 +1553,7 @@ struct CreateListSheet: View {
                     // (`CreateTaskSheet.submit`), so it gets the same pulse.
                     HapticManager.completion()
                     isSubmitting = true
-                    onSubmit(trimmedName, color, iconKey)
+                    onSubmit(trimmedName, color, iconTouched ? iconKey : nil)
                     dismiss()
                 }
             )
@@ -1572,6 +1580,16 @@ struct CreateListSheet: View {
                             .textInputAutocapitalization(.words)
                             .autocorrectionDisabled()
                             .multilineTextAlignment(.center)
+                            // The preview follows the name until the user overrules it.
+                            // Showing the guess in the picker is what makes it a suggestion
+                            // rather than something that happens to the list after they
+                            // leave: they can see it, and the next tap replaces it.
+                            // Untouched still SAVES as nil — this moves the preview, never
+                            // the stored choice.
+                            .onChange(of: name) { _, newName in
+                                guard !iconTouched else { return }
+                                iconKey = tdayInferredListIconKey(forListName: newName) ?? "inbox"
+                            }
                             .font(.tdayRounded(size: 22, weight: .bold))
                             .foregroundStyle(accentColor)
                             .padding(.horizontal, 14)
@@ -1628,6 +1646,7 @@ struct CreateListSheet: View {
                                     let isSelected = option.key == iconKey
                                     Button {
                                         iconKey = option.key
+                                        iconTouched = true
                                     } label: {
                                         Circle()
                                             .fill(isSelected ? accentColor.opacity(0.2) : colors.bottomSheetControlSurface)

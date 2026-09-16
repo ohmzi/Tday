@@ -723,6 +723,40 @@
       "searchBody": "ordena las tareas con fecha en listas con nombre y color. asigna una lista a las tareas programadas para que el trabajo relacionado se mantenga junto. las listas llevan nombre y color, y se pueden filtrar."
     },
     {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Iconos de lista automáticos",
+      "summary": "Una lista nueva adopta un icono que coincide con su nombre.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Llama a una lista Compra y llevará un carrito; Gimnasio recibe una mancuerna y Trabajo un maletín. T'Day solo lo deduce cuando tú no has elegido icono, y deja el icono predeterminado siempre que el nombre no sea lo bastante claro. Por ahora los nombres se reconocen en inglés."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Elige un icono en los ajustes de la lista cuando quieras: una vez elegido se conserva y nunca se sobrescribe."
+          ]
+        }
+      ],
+      "searchTitle": "iconos de lista automaticos",
+      "searchKeywords": "icono de lista, automatico, sugerido, glifo, nombre, compra, gimnasio, trabajo",
+      "searchBody": "una lista nueva adopta un icono que coincide con su nombre. llama a una lista compra y llevara un carrito; gimnasio recibe una mancuerna y trabajo un maletin. t'day solo lo deduce cuando tu no has elegido icono, y deja el icono predeterminado siempre que el nombre no sea lo bastante claro. por ahora los nombres se reconocen en ingles. elige un icono en los ajustes de la lista cuando quieras: una vez elegido se conserva y nunca se sobrescribe."
+    },
+    {
       "id": "completed-history",
       "section": "ORGANIZING",
       "sectionOrder": 3,

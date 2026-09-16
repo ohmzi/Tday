@@ -285,12 +285,23 @@ func tdayLucideListAsset(_ key: String?) -> String {
 }
 
 /// Renders a list icon as a tintable template image (replaces SF Symbol list icons).
+///
+/// `listName` is how a list that was never given a glyph gets one anyway: pass it and the
+/// icon falls back to `tdayInferredListIconKey` before it falls back to the inbox. Pass it
+/// at every site that is drawing a LIST — a row's trailing mark, a list card, the header —
+/// and omit it at sites drawing a picker OPTION, where the key under the finger is the whole
+/// subject and there is no list yet to have a name.
+///
+/// Defaulted to nil rather than made required so that the omission is the safe direction:
+/// forgetting it costs one list its guess, whereas a required parameter tempts the next
+/// caller to hand over whatever string is nearest.
 struct TdayListIcon: View {
     let iconKey: String?
+    var listName: String? = nil
     var size: CGFloat = 24
 
     var body: some View {
-        Image(tdayLucideListAsset(iconKey))
+        Image(tdayLucideListAsset(tdayResolvedListIconKey(iconKey, listName: listName)))
             .renderingMode(.template)
             .resizable()
             .scaledToFit()

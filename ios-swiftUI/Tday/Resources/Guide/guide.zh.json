@@ -723,6 +723,40 @@
       "searchBody": "把有日期的任务归入命名的、带颜色的列表。 给已安排的任务分配一个列表，让相关的事聚在一起。列表带有名称和颜色，还可以按其筛选。"
     },
     {
+      "id": "list-icons",
+      "section": "ORGANIZING",
+      "sectionOrder": 3,
+      "icon": "wand-sparkles",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": "HIDDEN_GEM",
+      "serverOnly": false,
+      "sinceVersion": "0.7.28",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "自动列表图标",
+      "summary": "新列表会自动获得与名称相符的图标。",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "把列表命名为 Groceries，它就会显示购物车；Gym 会得到哑铃，Work 会得到公文包。只有在你没有自己选择图标时，T'Day 才会推测；名称不够明确时，它会保留默认图标。目前仅按英文名称匹配。"
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "你随时可以在列表设置中选择图标：一旦选定就会保留，绝不会被推测覆盖。"
+          ]
+        }
+      ],
+      "searchTitle": "自动列表图标",
+      "searchKeywords": "列表图标, 自动, 建议, 字形, 名称, 购物, 健身, 工作",
+      "searchBody": "新列表会自动获得与名称相符的图标。 把列表命名为 groceries，它就会显示购物车；gym 会得到哑铃，work 会得到公文包。只有在你没有自己选择图标时，t'day 才会推测；名称不够明确时，它会保留默认图标。目前仅按英文名称匹配。 你随时可以在列表设置中选择图标：一旦选定就会保留，绝不会被推测覆盖。"
+    },
+    {
       "id": "completed-history",
       "section": "ORGANIZING",
       "sectionOrder": 3,

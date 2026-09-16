@@ -89,6 +89,37 @@ run {
     }
 }
 
+// ── List icon table codegen ──────────────────────────────────────────────
+// The third codegen, same shape as the two below it: generates the committed iOS
+// copy of the shared list-icon keyword table. iOS links no Kotlin (the pbxproj has
+// no TdayShared reference), so a committed artifact is the only way the table can
+// reach it without a second hand-maintained word list. `verifyListIconTable`
+// (--check) is the CI drift gate. See docs/ICONS.md.
+run {
+    val jvmMainCompilation = kotlin.jvm().compilations.getByName("main")
+    val exporterMain = "com.ohmz.tday.shared.listicon.export.ListIconTableExporterKt"
+    val exporterClasspath =
+        jvmMainCompilation.output.allOutputs + requireNotNull(jvmMainCompilation.runtimeDependencyFiles)
+
+    tasks.register<JavaExec>("exportListIconTable") {
+        group = "listicon"
+        description = "Generate the committed iOS copy of the shared list icon keyword table."
+        dependsOn(jvmMainCompilation.compileTaskProvider)
+        classpath = exporterClasspath
+        mainClass.set(exporterMain)
+        args(rootProject.rootDir.absolutePath)
+    }
+
+    tasks.register<JavaExec>("verifyListIconTable") {
+        group = "listicon"
+        description = "Fail if the committed list icon table artifact is stale (CI drift gate)."
+        dependsOn(jvmMainCompilation.compileTaskProvider)
+        classpath = exporterClasspath
+        mainClass.set(exporterMain)
+        args(rootProject.rootDir.absolutePath, "--check")
+    }
+}
+
 // ── Motion token codegen ─────────────────────────────────────────────────
 // The repo's second cross-platform Gradle codegen, modelled on the guide one
 // above: generates the committed Android/iOS/web motion artifacts from the

@@ -95,3 +95,6 @@ jobs:
 
       - name: Verify motion tokens are not stale
         run: ./gradlew :shared:verifyMotionTokens --no-daemon
+
+      - name: Verify the list icon table is not stale
+        run: ./gradlew :shared:verifyListIconTable --no-daemon
