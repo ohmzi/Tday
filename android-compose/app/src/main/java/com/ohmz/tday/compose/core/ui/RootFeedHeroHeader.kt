@@ -140,11 +140,27 @@ object RootFeedHeroHeaderMetrics {
     val TitleGap = 8.dp
 
     /**
-     * The field's trailing edge is fixed just inside the two round buttons, so
+     * How many round buttons the trailing cluster holds.
+     *
+     * Named because two separate things are solved for it: [SearchTrailingInset]
+     * reserves the room and [dockedTitleRoom] spends what is left over. A count
+     * written as a bare `2` in both places is a count that eventually disagrees
+     * with itself, and the way it disagrees is silent — the cluster grows, the
+     * reserve does not, and the search capsule slides under the new button.
+     */
+    const val TrailingActionCount = 2
+
+    /**
+     * The field's trailing edge is fixed just inside the round buttons, so
      * only its leading edge travels — it folds down into a button in place
      * rather than sliding across the toolbar.
+     *
+     * One gap per button: [TrailingActionCount] − 1 between the buttons, plus
+     * one between the capsule and the first of them.
      */
-    val SearchTrailingInset = HorizontalPadding + (BarButtonSize * 2) + (BarButtonSpacing * 2)
+    val SearchTrailingInset =
+        HorizontalPadding + (BarButtonSize * TrailingActionCount) +
+            (BarButtonSpacing * TrailingActionCount)
     val HeroSearchLeading = MarkLeading + HeroMarkBox + BarButtonSpacing
     val SearchIconSlot = 30.dp
     val SearchLeadingPadding = 13.dp
@@ -196,6 +212,35 @@ object RootFeedHeroHeaderMetrics {
     fun lerp(from: Float, to: Float, fraction: Float): Float = from + ((to - from) * fraction)
 
     /**
+     * Width the docked title has to itself at [availableWidth], once the trailing
+     * cluster, the folded search button and the docked mark have taken theirs.
+     *
+     * ```
+     * room = availableWidth
+     *      − trailing inset       the reserve the capsule's trailing edge is pinned to
+     *      − BarButtonSize        the folded capsule, which sits inside that reserve
+     *      − (MarkLeading + CompactMarkBox + TitleGap)
+     *                             the docked mark, to the title's left
+     *      − TitleGap             breathing room on the title's right
+     * ```
+     *
+     * [actionCount] is a parameter rather than [TrailingActionCount] read
+     * straight out of the object, so that a proposed third bar control can be
+     * PRICED before it is built instead of estimated after. That is not a
+     * hypothetical courtesy: the docked title is `maxLines = 1` with
+     * [TextOverflow.Clip] and a [MinTitleScale] floor, so a title that does not
+     * fit neither ellipsises nor shrinks any further — it runs on underneath the
+     * search button, which is the one failure mode this header cannot show you
+     * in a screenshot of its own resting state.
+     */
+    fun dockedTitleRoom(availableWidth: Dp, actionCount: Int = TrailingActionCount): Dp {
+        val trailingInset = HorizontalPadding + (BarButtonSize * actionCount) +
+            (BarButtonSpacing * actionCount)
+        return (availableWidth - trailingInset - BarButtonSize) -
+            (MarkLeading + CompactMarkBox + TitleGap) - TitleGap
+    }
+
+    /**
      * Fit-to-space caps for both ends of the title morph. A long localised title
      * would otherwise sit under the mark while centred, and under the search
      * button once docked beside it.
@@ -208,8 +253,7 @@ object RootFeedHeroHeaderMetrics {
         val heroRoom = availableWidth - (HeroSearchLeading * 2)
         val hero = (heroRoom / titleWidth).coerceIn(MinTitleScale, 1f)
 
-        val compactRoom = (availableWidth - SearchTrailingInset - BarButtonSize) -
-            (MarkLeading + CompactMarkBox + TitleGap) - TitleGap
+        val compactRoom = dockedTitleRoom(availableWidth)
         // coerceIn throws when max < min, and MaxCompactTitleScale * hero can dip
         // below MinTitleScale on a narrow screen.
         val compactCeiling = maxOf(MinTitleScale, MaxCompactTitleScale * hero)
@@ -467,9 +511,13 @@ fun RootFeedHeroHeader(
                 enabled = !searchExpanded,
                 onClick = onCreateList,
             )
+            // Named for where it goes, not for the glyph it wears. The ellipsis
+            // has exactly one destination on both root feeds, so "More" told a
+            // TalkBack user the one thing about this button that is not true —
+            // and web has always called the same control "Settings".
             RootFeedHeaderCircleButton(
                 icon = R.drawable.ic_lucide_ellipsis,
-                contentDescription = stringResource(R.string.action_more),
+                contentDescription = stringResource(R.string.settings_title),
                 enabled = !searchExpanded,
                 onClick = onOpenSettings,
             )
