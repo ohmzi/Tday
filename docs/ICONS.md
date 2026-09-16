@@ -74,6 +74,17 @@ Image("ActionEdit")
 
 These tile/screen icons are also reused as the faint full-screen background watermark on each corresponding screen, and list icons are resolved per list from the shared icon registry (`lib/listIcons.ts` on web, `TdayListIcons.kt` on Android, `todoListSymbolName` on iOS) — keep those registries Lucide-based too.
 
+### List icons inferred from a list's name
+
+A list whose owner never picked an icon takes one from its name — "Groceries" a cart, "Gym" a dumbbell. The keyword table is `ListIconInference` in `shared/src/commonMain/kotlin/com/ohmz/tday/shared/listicon/`, and four rules keep it honest:
+
+- **It only fills an unset icon.** A chosen `iconKey` always wins, including when the choice is the default `inbox` — which is why the create sheets post `null` for an untouched picker instead of the glyph they were previewing. Never infer on `iconKey == "inbox"`; that value now means "the user chose inbox".
+- **It is display-only.** The inferred key is never written back through a list repository or the device-local icon shadow. A guess that persists stops being a guess, and the next rename would inherit the old one.
+- **Unsure returns `null`, and `null` is not `inbox`.** Every client's resolver falls back to the inbox glyph for null, blank and unknown keys alike, silently — so a matcher that answered "inbox" would erase the only distinction the rules above rest on. Two different keys matching in one title is also unsure.
+- **English only, deliberately.** Stated in the KDoc because no gate can catch it: the i18n parity guardrail compares key sets and would pass nine locales of untranslated English. The path to ten locales is a `listIcons` namespace in `tday-web/messages/<locale>.json` exported into `shared` the way `SummaryStringBundlesGenerated.kt` already is.
+
+Every key the table can emit must exist in all three icon registries. `ListIconInferenceKeyParityTest` (Android unit tests) asserts both halves — emittable keys ⊆ Android's set, and Android's set == web's == iOS's — because a divergence would otherwise ship as a list quietly wearing an inbox on one platform, with no error anywhere. Android consumes the table today; web needs a generated artifact (copy the `exportMotionTokens` / `verifyMotionTokens` pair in `shared/build.gradle.kts`, `--check` gate included) and iOS can call it through the existing `TdayShared` framework.
+
 ### Settings rows
 
 Every tappable Settings row leads with a glyph in a 22px slot (20px glyph, 14px gap), tinted with the accent blue (`text-accent` on web, `colorScheme.secondary` on Android, `colors.secondary` on iOS) — never the heavier `primary`. Destructive rows inherit the row's own error colour instead. The icons are decorative (`aria-hidden` / `contentDescription = null` / `.accessibilityHidden(true)`) because the row label carries the meaning. Non-tappable fact rows sitting inside an iconed card (Role, Server version) reserve an equal-size empty slot so their labels stay aligned. A dash means the row does not exist on that platform.

@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.shared.listicon.ListIconInference
 import java.util.Locale
 
 // List icons are Lucide glyphs shared across web/Android/iOS — see docs/ICONS.md.
@@ -101,6 +102,37 @@ fun tdayListIconResForKey(iconKey: String?): Int {
 @Composable
 fun tdayListIconForKey(iconKey: String?): ImageVector =
     ImageVector.vectorResource(tdayListIconResForKey(iconKey))
+
+/**
+ * The glyph for a list that may never have been given one.
+ *
+ * Three sources, in this order, and the order is the whole rule:
+ *  1. [iconKey] — what the user picked, or what the device-local shadow in
+ *     `SecureConfigStore` remembers they picked against a server that dropped the
+ *     field. Set means chosen; it wins, always, and nothing below is consulted.
+ *  2. [listName] — [ListIconInference], which answers null whenever it is unsure.
+ *  3. the inbox default, exactly as before.
+ *
+ * DISPLAY ONLY. The inferred key is never written back through `ListRepository` or
+ * `SecureConfigStore.saveListIcon`: a guess that persists stops being a guess, and
+ * the next rename would inherit the old one while the user's "never chose" was
+ * quietly spent by a side effect they never saw.
+ *
+ * An UNSUPPORTED key is a choice too — a glyph this build cannot draw is still a
+ * decision the user made on some other version — so it falls through to the default
+ * rather than to inference, which is what it did before this function existed.
+ */
+@DrawableRes
+fun tdayListIconResForList(iconKey: String?, listName: String?): Int {
+    if (!iconKey.isNullOrBlank()) return tdayListIconResForKey(iconKey)
+    val inferredKey = ListIconInference.inferIconKey(listName)
+    return tdayListIconResForKey(inferredKey)
+}
+
+/** [tdayListIconResForList] as an [ImageVector], for `Icon(imageVector = ...)` call sites. */
+@Composable
+fun tdayListIconForList(iconKey: String?, listName: String?): ImageVector =
+    ImageVector.vectorResource(tdayListIconResForList(iconKey, listName))
 
 fun isTdayListIconKeySupported(iconKey: String): Boolean {
     return normalizeTdayListIconKeyOrNull(iconKey) != null

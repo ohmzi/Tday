@@ -1385,6 +1385,13 @@
         "step1": "Touchez les tâches pour les choisir, ou utilisez Tout sélectionner pour celles à l'écran.",
         "step2": "Choisissez Terminer, Priorité, Déplacer ou Supprimer dans la barre du bas.",
         "tip": "La suppression vous demande de confirmer le nombre exact et laisse quand même un message d'annulation. Les tâches récurrentes restent entièrement en dehors des actions en lot : une série entière n'est jamais modifiée par accident — ouvrez-en une seule pour la terminer, la déplacer ou la supprimer."
+      },
+      "list-icons": {
+        "title": "Icônes de liste automatiques",
+        "summary": "Une nouvelle liste adopte une icône correspondant à son nom.",
+        "keywords": "icône de liste, automatique, suggérée, glyphe, nom, courses, sport, travail",
+        "body": "Nommez une liste Groceries et elle porte un caddie ; Gym reçoit un haltère, Work une mallette. T'Day ne devine que si vous n'avez pas choisi d'icône vous-même, et conserve l'icône par défaut dès que le nom n'est pas assez clair. Les noms sont reconnus en anglais pour l'instant.",
+        "tip": "Choisissez une icône dans les réglages de la liste quand vous voulez : votre choix est conservé et jamais remplacé par une supposition."
       }
     }
   },

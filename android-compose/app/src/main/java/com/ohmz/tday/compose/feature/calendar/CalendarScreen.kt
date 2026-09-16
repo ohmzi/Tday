@@ -158,7 +158,7 @@ import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
-import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
+import com.ohmz.tday.compose.ui.theme.tdayListIconForList
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -2688,7 +2688,7 @@ private fun CalendarTaskDragPreview(
             }
             if (listMeta != null) {
                 Icon(
-                    imageVector = tdayListIconForKey(listMeta.iconKey),
+                    imageVector = tdayListIconForList(listMeta.iconKey, listMeta.name),
                     contentDescription = null,
                     tint = tdayListAccentColor(listMeta.color),
                     modifier = Modifier.size(CalendarRowTrailingIconSize),
@@ -3177,7 +3177,7 @@ private fun CalendarTodoRow(
                         ) {
                             if (showListIndicator) {
                                 Icon(
-                                    imageVector = tdayListIconForKey(listMeta?.iconKey),
+                                    imageVector = tdayListIconForList(listMeta?.iconKey, listMeta?.name),
                                     contentDescription = stringResource(R.string.label_task_list),
                                     tint = listIndicatorColor,
                                     modifier = Modifier.size(CalendarRowTrailingIconSize),
@@ -3426,7 +3426,7 @@ private fun CalendarCompletedTodoRow(
                     ) {
                         if (showListIndicator) {
                             Icon(
-                                imageVector = tdayListIconForKey(listMeta?.iconKey),
+                                imageVector = tdayListIconForList(listMeta?.iconKey, listMeta?.name),
                                 contentDescription = stringResource(R.string.label_task_list),
                                 tint = listIndicatorColor,
                                 modifier = Modifier.size(CalendarRowTrailingIconSize),
@@ -3442,7 +3442,7 @@ private fun CalendarCompletedTodoRow(
                     }
                 } else if (showListIndicator) {
                     Icon(
-                        imageVector = tdayListIconForKey(listMeta?.iconKey),
+                        imageVector = tdayListIconForList(listMeta?.iconKey, listMeta?.name),
                         contentDescription = stringResource(R.string.label_task_list),
                         tint = listIndicatorColor,
                         modifier = Modifier
