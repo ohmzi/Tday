@@ -219,14 +219,13 @@ object GuideCatalog {
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.SCHEDULED_LISTS)),
         ),
         topic(
-            // ANDROID and IOS, not WEB, and that is the shipping truth rather than a plan:
-            // web still picks list icons by hand and has no caller for the table, so
-            // listing it there would promise a behaviour that platform does not have.
-            // (The note this replaces said iOS "already links the framework" — it does
-            // not; the pbxproj names no Kotlin. iOS reads the table through the committed
-            // artifact `:shared:exportListIconTable` writes, which is how it got here.)
+            // All three now. Neither native client links the Kotlin — the pbxproj names
+            // none and web runs none — so iOS and web each read the same table through a
+            // committed artifact written by `:shared:exportListIconTable`, and Android
+            // calls it directly. One behaviour, one word list, three callers; listing
+            // fewer platforms here would understate what a reader will actually find.
             GuideTopicIds.LIST_ICONS, GuideSectionId.ORGANIZING, "wand-sparkles",
-            setOf(ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.28",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.28",
             body = listOf(para(GuideTopicIds.LIST_ICONS), tip(GuideTopicIds.LIST_ICONS)),
         ),
         topic(
