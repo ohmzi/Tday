@@ -105,6 +105,32 @@ function readHeaderMetrics(source: string): HeaderMetrics {
   );
   if (!inset) throw new Error("searchTrailingInset is no longer the padding + N buttons + N gaps form");
 
+  // `dockedTitleRoom` below is a *reimplementation* of `titleScales`' `compactRoom`, in another
+  // language, in another repo directory, with no compiler between them. Values alone cannot keep
+  // the two honest: every constant it reads can be right while the Swift spends them differently,
+  // and then this file goes on reporting a number iOS does not use. Android has no such gap —
+  // `titleScales` there calls `dockedTitleRoom`, and `RootFeedHeroHeaderActionsTest` asserts the
+  // two agree — so the shape is what has to be pinned on this side instead.
+  //
+  // Verified to bite: dropping the trailing `- titleGap` from the Swift (an 8pt error in the room
+  // this file prices a third button against) left all 31 guardrail files green before this check
+  // and fails here after it.
+  if (
+    !/let compactRoom = \(availableWidth - searchTrailingInset - barButtonSize\)\s*-\s*\(sunLeading \+ compactSunBox \+ titleGap\)\s*-\s*titleGap/.test(
+      source,
+    )
+  ) {
+    throw new Error(
+      "titleScales' compactRoom is no longer (width − inset − button) − (sunLeading + sunBox + gap) − gap; dockedTitleRoom below no longer describes iOS",
+    );
+  }
+
+  // The one term of that expression `dockedTitleRoom` cannot take as a parameter, because it is
+  // derived rather than primitive. It is spelled `horizontalPadding + 2` there too.
+  if (!/static let sunLeading: CGFloat = horizontalPadding \+ 2\b/.test(source)) {
+    throw new Error("sunLeading is no longer horizontalPadding + 2; dockedTitleRoom hardcodes it");
+  }
+
   return {
     horizontalPadding,
     barButtonSize: iosMetric(source, "barButtonSize"),
@@ -223,8 +249,13 @@ describe("root feed header — the trailing cluster", () => {
   it("names the ellipsis for where it goes, on all three clients", () => {
     // "More" over a one-destination control describes the glyph, not the outcome, and the label is
     // the whole of what a VoiceOver/TalkBack user gets.
-    expect(trailingActions).toContain('.accessibilityLabel("Settings")');
-    expect(trailingActions).toContain('.accessibilityLabel("Create list")');
+    // Either spelling of the same name: iOS runs this one through `L` because it replaced a
+    // localised menu row, while the sibling it sits beside is a bare literal that predates this
+    // change. What the assertion is for is the *word* — "More" coming back is the regression, not
+    // which side of `L` it is written on.
+    expect(trailingActions).toMatch(/\.accessibilityLabel\((?:L\()?"Settings"/);
+    expect(trailingActions).toMatch(/\.accessibilityLabel\((?:L\()?"Create list"/);
+    expect(trailingActions).not.toContain('"More"');
 
     const androidCluster = readCode(ANDROID_HEADER);
     expect(androidCluster).toContain("contentDescription = stringResource(R.string.settings_title)");
