@@ -189,6 +189,37 @@ describe("root feed header — the trailing cluster", () => {
     expect(ios).toContain(".buttonStyle(TdayToolbarButtonStyle())");
   });
 
+  it("keeps Android's cluster and its own reserve solved for the same count", () => {
+    // Android carries the identical geometry — the metrics object's doc says so in as many words
+    // ("these are the iOS numbers ... keep the two platforms in step") — and so it carries the
+    // identical trap: `SearchTrailingInset` reserves room for a FIXED number of 56dp circles, and a
+    // cluster that outgrows the reserve is not a layout error anywhere, it is just a search capsule
+    // that quietly ends up underneath a button.
+    //
+    // `RootFeedHeroHeaderActionsTest` proves the arithmetic on the JVM, where it belongs. What only
+    // a source read can see, and what that test cannot, is how many buttons the Row actually
+    // renders — so that half is asserted here, against the constant rather than against a literal.
+    const android = readCode(ANDROID_HEADER);
+
+    const declared = android.match(/const val TrailingActionCount = (\d+)/);
+    if (!declared) throw new Error("RootFeedHeroHeaderMetrics.TrailingActionCount not found");
+    const clusterButtons = Number(declared[1]);
+
+    expect(android).toMatch(
+      /val SearchTrailingInset =\s*HorizontalPadding \+ \(BarButtonSize \* TrailingActionCount\) \+\s*\(BarButtonSpacing \* TrailingActionCount\)/,
+    );
+
+    const cluster = blockAfter(
+      android,
+      "horizontalArrangement = Arrangement.spacedBy(metrics.BarButtonSpacing),",
+    );
+    const rendered = cluster.match(/RootFeedHeaderCircleButton\(/g) ?? [];
+    expect(rendered).toHaveLength(clusterButtons);
+
+    // And the two clients agree on the count, which is the whole of "like Android".
+    expect(clusterButtons).toBe(metrics.clusterButtons);
+  });
+
   it("names the ellipsis for where it goes, on all three clients", () => {
     // "More" over a one-destination control describes the glyph, not the outcome, and the label is
     // the whole of what a VoiceOver/TalkBack user gets.
