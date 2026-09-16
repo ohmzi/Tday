@@ -7,6 +7,11 @@ import {
 } from "@/lib/local/localDb";
 import { localBadRequest } from "@/lib/local/localError";
 import { epochMs } from "@/lib/local/localTime";
+import {
+  compactSummaryTitle,
+  planFloaterSummary,
+  renderFloaterSummary,
+} from "@/lib/floaterSummary";
 import { parseRecurrencePriority, parseTodoTitle } from "@/lib/todoNlp";
 import {
   buildReadableTaskSummary,
@@ -45,10 +50,7 @@ function st(key: string, options?: Record<string, unknown>): string {
 }
 
 function compactTitle(title: string): string {
-  const normalized = title.replace(/\s+/g, " ").trim();
-  if (!normalized) return st("untitledTask");
-  if (normalized.length <= 46) return normalized;
-  return `${normalized.slice(0, 43).trimEnd()}...`;
+  return compactSummaryTitle(title, st);
 }
 
 function priorityLabel(priority: string): SummaryTaskCandidate["priorityLabel"] {
@@ -115,23 +117,6 @@ function matchesScope(
       );
     }
   }
-}
-
-function anytimeCandidates(
-  titles: Array<{ title: string; priority: string }>,
-): SummaryTaskCandidate[] {
-  const anytime = st("dueAnytime");
-  return titles.map((entry, index) => ({
-    id: `T${index + 1}`,
-    title: compactTitle(entry.title),
-    priorityLabel: priorityLabel(entry.priority),
-    dueLabel: anytime,
-    dueEpochMs: Number.MAX_SAFE_INTEGER,
-    dueDayKey: "anytime",
-    dueDayTarget: anytime,
-    dueWindowPhrase: "",
-    isOverdue: false,
-  }));
 }
 
 /** Retrospective over the last 7 days of cleared work (mirrors `buildWeekReview`). */
@@ -216,16 +201,25 @@ export function summarizeLocal(body: Record<string, unknown>) {
     const floaters = workspace.floaters
       .filter((floater) => !floater.completed)
       .filter((floater) => listId === null || floater.listID === listId);
-    if (floaters.length === 0) return respond(st("clearForNow"), 0, "empty");
-    const candidates = anytimeCandidates(floaters);
-    return respond(
-      buildReadableTaskSummary({
-        startTask: candidates[0],
-        thenTasks: candidates.slice(1),
-      }),
-      floaters.length,
-      null,
+    // "No tasks need attention" is a sentence about deadlines; an empty Anytime view has none to
+    // be clear of. It is simply empty, and says so.
+    if (floaters.length === 0) return respond(st("floaterClear"), 0, "empty");
+    // Undated tasks are summarized by shape, not recited. The day-grouping path this branch used
+    // to take had nothing to group an undated task by, so it degraded into "both are due
+    // anytime" — a deadline the task does not have, and one several locales render as
+    // "expiring at any moment".
+    const plan = planFloaterSummary(
+      floaters.map((floater) => ({
+        title: floater.title,
+        priority: floater.priority,
+        pinned: floater.pinned,
+        // Same fallback `floaterUpdatedEpochMs` uses for the list's own fading, so the summary
+        // and the rows beneath it never disagree about what has gone quiet.
+        updatedAtEpochMs: epochMs(floater.updatedAt) ?? epochMs(floater.createdAt),
+      })),
+      now.getTime(),
     );
+    return respond(renderFloaterSummary(plan, st), floaters.length, null);
   }
 
   const scoped = workspace.todos

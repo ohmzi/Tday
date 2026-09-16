@@ -1042,20 +1042,7 @@ class TodoRepository @Inject constructor(
     ): TodoSummaryResponse {
         val state = cacheManager.loadOfflineState()
         val inputs = if (mode == TodoListMode.FLOATER) {
-            state.floaters
-                .filterNot { it.completed }
-                .map { floater ->
-                    SummaryTaskInput(
-                        title = floater.title,
-                        priority = floater.priority,
-                        dueEpochMs = null,
-                        pinned = floater.pinned,
-                        recurring = false,
-                        listId = floater.listId,
-                        completed = floater.completed,
-                        kind = "anytime",
-                    )
-                }
+            state.floaters.filterNot { it.completed }.map(CachedFloaterRecord::toSummaryInput)
         } else {
             state.todos
                 .filterNot { it.completed }
@@ -1303,3 +1290,24 @@ internal fun OfflineSyncState.withDeletedTodoCached(
         ),
     )
 }
+
+/**
+ * Offline cache row -> summary engine input, for the Anytime view.
+ *
+ * Pulled out of [TodoRepository.summarizeLocally] so the dormancy half of the summary has a seam
+ * a unit test can reach: the note only fires when `updatedAtEpochMs` actually crosses the wire,
+ * and it did not — the field was declared on the input, defaulted to null here, and every
+ * "untouched in months" sentence was unreachable in the shipped app. `0L` is the cache's "never
+ * synced" sentinel, mapped to null so an unstamped row reads as ACTIVE rather than as 1970.
+ */
+internal fun CachedFloaterRecord.toSummaryInput(): SummaryTaskInput = SummaryTaskInput(
+    title = title,
+    priority = priority,
+    dueEpochMs = null,
+    pinned = pinned,
+    recurring = false,
+    listId = listId,
+    completed = completed,
+    kind = "anytime",
+    updatedAtEpochMs = updatedAtEpochMs.takeIf { it > 0L },
+)

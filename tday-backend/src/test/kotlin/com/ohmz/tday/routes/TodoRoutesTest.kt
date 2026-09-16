@@ -18,6 +18,8 @@ import com.ohmz.tday.shared.model.FloaterUncompleteResponse
 import com.ohmz.tday.shared.model.TodoSummaryRequest
 import com.ohmz.tday.shared.model.TodoSummaryResponse
 import com.ohmz.tday.shared.model.UpdateTodoRequest
+import com.ohmz.tday.shared.summary.SummaryEngine
+import com.ohmz.tday.shared.summary.SummaryScope as SharedSummaryScope
 import io.ktor.client.request.delete
 import io.ktor.client.request.patch
 import io.ktor.client.request.post
@@ -42,6 +44,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -384,7 +388,142 @@ class TodoRoutesTest {
         assertEquals("logic", body.source)
         assertEquals("floater", body.mode)
         assertEquals(1, body.taskCount)
-        assertTrue(body.summary.orEmpty().contains("Anytime"))
+        // This used to assert the summary contained the word "Anytime" — which it did only
+        // because the old copy recited the single row's title, "Anytime task". Scoping is proved
+        // by the count and by the absence of the other list's row; naming the one row on screen
+        // is the redundancy the Anytime rewrite removed, so the summary names neither.
+        assertFalse(body.summary.orEmpty().contains("Other floater"))
+        assertFalse(body.summary.orEmpty().contains("Anytime task"))
+    }
+
+    @Test
+    fun `empty anytime view gets the undated empty line, not the deadline one`() = testApplication {
+        // The route used to hand the engine SummaryScope.ALL for the empty case to mean "already
+        // filtered", so an empty Anytime view on web, iOS and online Android read "No tasks need
+        // attention in this view" — a sentence about deadlines, on the one screen without any.
+        application {
+            configureTodoRoutesTestApp(
+                todoService = RecordingTodoService(),
+                floaterService = RecordingFloaterService(floaters = emptyList()),
+                summaryService = FakeTodoSummaryService(response = null),
+            )
+        }
+
+        val response = client.postSummary(TodoSummaryRequest(mode = "floater", timeZone = "UTC"))
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
+        assertEquals(0, body.taskCount)
+        assertEquals("empty", body.fallbackReason)
+        // Compared against the engine rather than against literal copy: the contract is that the
+        // route asks for the ANYTIME empty line, and the wording of that line belongs to the ten
+        // locale bundles, not to this test.
+        val anytimeEmpty = SummaryEngine.summarize(
+            tasks = emptyList(),
+            scope = SharedSummaryScope.FLOATER,
+            nowEpochMs = System.currentTimeMillis(),
+            timeZoneId = "UTC",
+            preFiltered = true,
+        )
+        val datedEmpty = SummaryEngine.summarize(
+            tasks = emptyList(),
+            scope = SharedSummaryScope.SCHEDULED,
+            nowEpochMs = System.currentTimeMillis(),
+            timeZoneId = "UTC",
+            preFiltered = true,
+        )
+        assertEquals(anytimeEmpty, body.summary)
+        assertNotEquals(datedEmpty, body.summary)
+    }
+
+    @Test
+    fun `anytime prompt never asks the model for urgency or a count`() = testApplication {
+        val summaryService = FakeTodoSummaryService(response = null)
+        application {
+            configureTodoRoutesTestApp(
+                todoService = RecordingTodoService(),
+                floaterService = RecordingFloaterService(
+                    floaters = listOf(makeFloater(title = "Renew passport")),
+                ),
+                summaryService = summaryService,
+            )
+        }
+
+        client.postSummary(TodoSummaryRequest(mode = "floater", timeZone = "UTC", locale = "fr-FR"))
+
+        val prompt = summaryService.lastPrompt.orEmpty()
+        assertFalse(prompt.contains("Mention urgency"), prompt)
+        assertFalse(prompt.contains("Task count"), prompt)
+        assertFalse(prompt.lowercase().contains("floater"), prompt)
+        assertTrue(prompt.contains("Anytime view"), prompt)
+        assertTrue(prompt.contains("fr-FR"), prompt)
+    }
+
+    @Test
+    fun `an ai answer stating a count the set cannot justify never reaches the user`() = testApplication {
+        val summaryService = FakeTodoSummaryService(response = "You have 9 things waiting here.")
+        application {
+            configureTodoRoutesTestApp(
+                todoService = RecordingTodoService(),
+                floaterService = RecordingFloaterService(
+                    floaters = listOf(makeFloater(title = "Renew passport")),
+                ),
+                summaryService = summaryService,
+            )
+        }
+
+        val response = client.postSummary(TodoSummaryRequest(mode = "floater", timeZone = "UTC"))
+
+        val body = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText())
+        // One floater in, "9" out: the guard drops it for the deterministic line and says so in
+        // the reason, which is structural — the refused text is user content and is never logged.
+        assertEquals("logic", body.source)
+        assertEquals("ai_rejected", body.fallbackReason)
+        assertFalse(body.summary.orEmpty().contains("9"))
+    }
+
+    @Test
+    fun `a floater left untouched for months reaches the engine as dormant`() {
+        // The dormancy note was unreachable in the shipped app: nothing populated
+        // updatedAtEpochMs, so FloaterResting.tierFor answered ACTIVE for every row and three of
+        // the eight notes could never fire. Same set, two ages, two different summaries.
+        val nowUtc = LocalDateTime.now(ZoneOffset.UTC)
+        val dormant = anytimeSummaryAndPrompt(nowUtc.minusDays(200).toString())
+        val fresh = anytimeSummaryAndPrompt(nowUtc.minusDays(1).toString())
+
+        assertNotEquals(fresh.first, dormant.first, "updatedAt never reached the engine: dormancy changed nothing")
+        // The prompt sees it too, so the AI half is briefed on the same fact as the planner. Only
+        // the task LINES are read: the instruction paragraph names dormancy as a thing to look
+        // for, so a whole-prompt `contains` would pass without a single task being marked.
+        fun markedRows(prompt: String) = prompt.lines().count {
+            it.startsWith("- ") && it.contains("untouched for months")
+        }
+        assertEquals(3, markedRows(dormant.second), dormant.second)
+        assertEquals(0, markedRows(fresh.second), fresh.second)
+    }
+
+    /** Runs an Anytime summary over three floaters last written at [updatedAt]; (summary, prompt). */
+    private fun anytimeSummaryAndPrompt(updatedAt: String): Pair<String, String> {
+        var summary = ""
+        var prompt = ""
+        testApplication {
+            val summaryService = FakeTodoSummaryService(response = null)
+            application {
+                configureTodoRoutesTestApp(
+                    todoService = RecordingTodoService(),
+                    floaterService = RecordingFloaterService(
+                        floaters = (1..3).map {
+                            makeFloater(id = "floater_$it", title = "Waiting $it", updatedAt = updatedAt)
+                        },
+                    ),
+                    summaryService = summaryService,
+                )
+            }
+            val response = client.postSummary(TodoSummaryRequest(mode = "floater", timeZone = "UTC"))
+            summary = json.decodeFromString<TodoSummaryResponse>(response.bodyAsText()).summary.orEmpty()
+            prompt = summaryService.lastPrompt.orEmpty()
+        }
+        return summary to prompt
     }
 
     @Test
@@ -896,6 +1035,7 @@ class TodoRoutesTest {
             description: String? = null,
             priority: String = "Low",
             listID: String? = null,
+            updatedAt: String? = null,
         ) = FloaterResponse(
             id = id,
             title = title,
@@ -904,6 +1044,7 @@ class TodoRoutesTest {
             listID = listID,
             completed = false,
             pinned = false,
+            updatedAt = updatedAt,
         )
     }
 }
