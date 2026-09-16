@@ -51,4 +51,30 @@ data class SummaryTaskInput(
     val kind: String = "task",
     /** When the task was completed (UTC epoch millis), for the WEEK retrospective. */
     val completedAtEpochMs: Long? = null,
+    /**
+     * Last write to the task (UTC epoch millis), for the undated "Anytime" summary only.
+     *
+     * Defaulted because it is a signal, not a requirement: a caller that does not have it gets
+     * a summary that simply never mentions dormancy, rather than one that guesses. It feeds
+     * [com.ohmz.tday.shared.floater.FloaterResting.tierFor], the same clock the clients already
+     * fade and group resting floaters by, so the summary and the list agree about what has gone
+     * quiet. It is a last-write clock, never a created-at — see FloaterSummaryPlanner for why
+     * that rules out naming the "oldest" floater.
+     */
+    val updatedAtEpochMs: Long? = null,
 )
+
+/** Rank used to order tasks by priority: High/Urgent/Important > Medium > everything else. */
+internal const val HIGH_PRIORITY_RANK = 3
+
+/**
+ * Shared by the engine's ranking and [FloaterSummaryPlanner], so "high priority" means one
+ * thing in this module. Unknown or absent priorities degrade to the lowest rank rather than
+ * inventing importance.
+ */
+internal fun priorityRankOf(priority: String?): Int =
+    when ((priority ?: "Low").trim().lowercase()) {
+        "high", "urgent", "important" -> HIGH_PRIORITY_RANK
+        "medium" -> 2
+        else -> 1
+    }
