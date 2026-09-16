@@ -73,10 +73,17 @@ export const CompletedFloaterItemContainer = ({
     >
       <div
         style={removing ? { overflow: "hidden", minHeight: 0 } : undefined}
-        className="group flex max-w-full items-center justify-between gap-3 px-1 py-2.5 sm:rounded-lg sm:transition-colors sm:duration-quick sm:hover:bg-muted/40"
+        // `items-start`: the text column is always the tallest thing in this row, so
+        // it is what sets the row's height either way — the only child this moves is
+        // the trailing list mark, which is exactly the one that was floating.
+        className="group flex max-w-full items-start justify-between gap-3 px-1 py-2.5 sm:rounded-lg sm:transition-colors sm:duration-quick sm:hover:bg-muted/40"
       >
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="shrink-0">
+        {/* Stacked from the TOP with the control in the title's own line box
+            (`leading-5` = 20 px). The title truncates here, but the notes under it do
+            not: a completed task with two lines of notes had its restore circle sitting
+            beside the notes rather than beside the task. */}
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-5 shrink-0 items-center">
             <TodoCheckbox
               icon={Check}
               onChange={handleUncomplete}
@@ -104,7 +111,9 @@ export const CompletedFloaterItemContainer = ({
         </div>
 
         {listName && (
-          <div className="flex shrink-0 items-center gap-1.5 pr-1">
+          // The list mark reads with the title's first line, in the same `h-5` box the
+          // restore circle gets. See `ItemContainer`.
+          <div className="flex h-5 shrink-0 items-center gap-1.5 pr-1">
             {/* Mobile: colored dot only. Desktop: dot + list name pill. */}
             <span
               className="inline-block h-3 w-3 shrink-0 rounded-full sm:hidden"

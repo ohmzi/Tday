@@ -165,10 +165,13 @@ enum TodoTimelineMetrics {
 /// somebody edits the row. `TdayTaskRowSkeletonMetrics.today` is built the same
 /// way, next to Today's own numbers.
 ///
-/// Two sets and not one because these are two rows. They agree on nearly
-/// everything and disagree on the thing that decides their height: a task list
-/// hangs its toggle off the title's first baseline so it stays on line one of a
-/// title that wraps, and Completed simply centres its own.
+/// Two sets and not one because these are two rows. They now agree on everything
+/// they are built from, including the thing that decides their height — both hang
+/// their toggle off the title's first baseline so it stays on line one of a title
+/// that wraps. Completed used to centre its own, which is the defect this pair of
+/// sets faithfully reproduced: the placeholder was right, and so was the row, and
+/// the row was wrong. Kept as two sets anyway, because they are still two screens
+/// and the next thing to diverge between them will not announce itself either.
 extension TdayTaskRowSkeletonMetrics {
 
     /// `TodoListScreen.minimalTimelineRow`.
@@ -191,7 +194,7 @@ extension TdayTaskRowSkeletonMetrics {
         checkBaselineNudge: TodoTimelineMetrics.minimalRowBaselineNudge
     )
 
-    /// `CompletedScreen`'s history row, which is the same row centred.
+    /// `CompletedScreen`'s history row, which is the same row.
     static let completedTimeline = TdayTaskRowSkeletonMetrics(
         contentSpacing: TodoTimelineMetrics.minimalRowContentSpacing,
         checkSlot: TodoTimelineMetrics.minimalRowToggleFrame,
@@ -203,8 +206,8 @@ extension TdayTaskRowSkeletonMetrics {
         metaTrailingPadding: TodoTimelineMetrics.minimalRowTrailingIndicatorPadding,
         verticalPadding: TodoTimelineMetrics.minimalRowVerticalPadding,
         horizontalPadding: 0,
-        rowAlignment: .center,
-        checkBaselineNudge: nil
+        rowAlignment: .firstTextBaseline,
+        checkBaselineNudge: TodoTimelineMetrics.minimalRowBaselineNudge
     )
 }
 
