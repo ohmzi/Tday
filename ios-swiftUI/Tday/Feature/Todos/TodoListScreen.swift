@@ -539,6 +539,117 @@ private struct FloaterTaskHomeListCard: View {
     }
 }
 
+/// The Anytime feed's entry to the browsable Completed screen.
+///
+/// Built in `FloaterTaskHomeListCard`'s idiom rather than reusing the Scheduled
+/// board's `ScheduledTaskHomeCategoryTile`: that one is `private` to its file,
+/// and promoting it would drag its 2-up grid metrics and its zoom source onto a
+/// single-column feed that has neither. Android reaches the same conclusion from
+/// the other side — it shares one `CategoryCard` across both feeds and the
+/// Anytime call site opts out of the grid geometry item by item.
+///
+/// No count, deliberately, and Android's call site passes none either
+/// (`CategoryCard`'s `count` defaults to null). The number this tile would want
+/// is "Anytime tasks ever completed", which is not a figure this screen holds —
+/// `completedTodayCount` is a different question with a different answer — and
+/// reading it would mean wiring the completed repository into the Anytime feed
+/// for a decoration.
+///
+/// No `.tdayZoomSource(.completed)` either. `ZoomNavigation` mints one shared id
+/// per route, the Scheduled board's Completed tile already claims it, and
+/// `AppRootView` crossfades the two root feeds through a `ZStack` — so during a
+/// tab swap both trees are mounted and two views would carry one id in one
+/// namespace. Android's tile has no shared-element transition here for the same
+/// reason it has none anywhere on this feed.
+private struct FloaterTaskHomeCompletedCard: View {
+    let onTap: () -> Void
+
+    /// The Completed accent, pinned across all three clients: Android's
+    /// `TdayCompletedTileAccent` (0xFF719F84), the Scheduled board's
+    /// `Color(hex: 0x719F84)`, web's `nativeScreenAccentColors.completed`.
+    /// Spelled in components because the `Color(hex:)` sugar is a `private
+    /// extension` in each of the two files that declare one — a third copy of
+    /// that extension to serve a single call site is a worse trade than this.
+    private static let accent = Color(
+        red: 113.0 / 255.0,
+        green: 159.0 / 255.0,
+        blue: 132.0 / 255.0
+    )
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+
+        // VoiceOver reads the whole button as its one piece of text,
+        // "Completed", the way the list cards beside it read as their list
+        // name. An explicit label would only restate what the `Text` already
+        // says, and would then be the copy that goes stale when the wording
+        // changes.
+        Button(action: onTap) {
+            ZStack {
+                shape.fill(Self.accent)
+                shape.fill(
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.22), Color.white.opacity(0.08), .clear],
+                        center: .topLeading,
+                        startRadius: 8,
+                        endRadius: 120
+                    )
+                )
+                shape.fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.12),
+                            Color(red: 231.0 / 255.0, green: 243.0 / 255.0, blue: 255.0 / 255.0).opacity(0.1),
+                            Color(red: 255.0 / 255.0, green: 242.0 / 255.0, blue: 250.0 / 255.0).opacity(0.08),
+                            .clear,
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+                Image("TileComplete")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 60, height: 60)
+                    // Tinted with the accent rather than pure white, at the
+                    // blend and opacity `FloaterTaskHomeListCard` uses right
+                    // below it. White at 0.42 on this mid-green reads as a
+                    // second, brighter glyph instead of a watermark.
+                    .foregroundStyle(todoBlendColor(Self.accent, .white, amount: 0.34).opacity(0.42))
+                    .offset(x: 18, y: 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .allowsHitTesting(false)
+
+                HStack(spacing: 10) {
+                    Image("TileComplete")
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 22, height: 22)
+                        .foregroundStyle(.white)
+                        .frame(width: 32, height: 32)
+
+                    Text(L("Completed"))
+                        .font(.tdayRounded(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .frame(maxWidth: .infinity, minHeight: 70, maxHeight: 70)
+            .clipShape(shape)
+            .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .shadow(color: .black.opacity(0.14), radius: 10, x: 0, y: 7)
+    }
+}
+
 struct TodoListScreen: View {
     let highlightedTodoId: String?
     let onListDeleted: () -> Void
@@ -555,9 +666,10 @@ struct TodoListScreen: View {
     let summaryAvailable: Bool
     let onOpenFloaterList: (String, String) -> Void
     let onOpenSettings: () -> Void
-    /// Floater root feed only — see `RootFeedHeroHeader.onOpenCompleted`. Every
-    /// other `TodoListScreen` mode never renders the root-feed header at all
-    /// (`usesRootFeedHeader` gates it), so the default no-op is never reached.
+    /// Floater root feed only — pushes the browsable Completed screen from the
+    /// feed's own Completed tile (`FloaterTaskHomeCompletedCard`). Every other
+    /// `TodoListScreen` mode fails `isFloaterTaskHomeScreen` and never emits the
+    /// tile, so the default no-op is never reached.
     let onOpenCompleted: () -> Void
     @State private var viewModel: TodoListViewModel
     @Environment(\.tdayColors) private var colors
@@ -2117,10 +2229,6 @@ struct TodoListScreen: View {
                 closeFloaterTaskHomeSearch()
                 onOpenSettings()
             },
-            onOpenCompleted: {
-                closeFloaterTaskHomeSearch()
-                onOpenCompleted()
-            },
             onScrollToTop: {
                 titleScrollToTopRequestID += 1
             }
@@ -3019,6 +3127,27 @@ struct TodoListScreen: View {
                             .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                             .listRowBackground(colors.background)
                             .listRowSeparator(.hidden)
+                        }
+                    }
+
+                    // Between the empty scene and "My Lists", which is exactly
+                    // where Android emits its own Completed tile. Web is not a
+                    // third vote for this slot and should not be read as one:
+                    // its dashboard puts the tile *above* the empty scene,
+                    // because that scene is a sibling in the same flex column
+                    // there and the tiles are the column's header. Android is
+                    // the reference for this screen, so this follows Android,
+                    // and the guardrail pins those two orders only.
+                    //
+                    // Not gated on anything having been completed: an archive
+                    // you can only reach once it is non-empty is an archive you
+                    // cannot learn exists.
+                    if isFloaterTaskHomeScreen {
+                        Section {
+                            FloaterTaskHomeCompletedCard(onTap: onOpenCompleted)
+                                .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 10, trailing: TodoTimelineMetrics.horizontalPadding))
+                                .listRowBackground(colors.background)
+                                .listRowSeparator(.hidden)
                         }
                     }
 
