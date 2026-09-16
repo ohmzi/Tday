@@ -1,5 +1,7 @@
 services:
   database:
+    security_opt:
+      - no-new-privileges:true
     image: postgres:15
     container_name: tday_db
     restart: always
@@ -20,6 +22,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   ollama:
+    security_opt:
+      - no-new-privileges:true
     image: ollama/ollama:latest
     pull_policy: always
     container_name: tday_ollama
@@ -41,6 +45,8 @@ services:
       - ollama_data:/root/.ollama
 
   ollama-model-setup:
+    security_opt:
+      - no-new-privileges:true
     image: ollama/ollama:latest
     pull_policy: always
     container_name: tday_ollama_model_setup
