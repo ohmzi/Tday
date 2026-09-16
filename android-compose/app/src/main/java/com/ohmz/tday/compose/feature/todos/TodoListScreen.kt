@@ -293,10 +293,6 @@ private val PressedCardElevation = 2.dp
 /** The target a finger gets where the control drawn inside it is smaller than a finger. */
 private val MinTouchTargetSize = 48.dp
 
-/** List mode insets 16 where the Today and root-feed styles inset
- *  `ContentPaddingHorizontal`'s 18; pulling it across would move a page margin. */
-private val ListModeContentHorizontalPadding = 16.dp
-
 /** The gap under every card in the floater feed — search results, tile, list rows. */
 private val FloaterFeedRowSpacing = 10.dp
 
@@ -906,10 +902,11 @@ internal fun shouldMountFloaterEmptyScene(
 //   * The decomposition already happened, and it helped. DeepSource measured
 //     this function at 310 before this PR. Pulling the sectioned-timeline
 //     body, the flat items path, and the root floater feed body out of the
-//     LazyColumn content below — see [sectionedTimelineContent],
-//     [flatTodoRowsContent], and [floaterTaskHomeRootFeedContent] — brought
-//     it to 272. DeepSource fingerprints an occurrence by its line and by the
-//     number in its message, so that improvement still reads as "1
+//     LazyColumn content below — see [sectionedTimelineContent] and
+//     [floaterTaskHomeRootFeedContent]; the flat path's extraction counted
+//     towards this too, and has since been deleted outright as unreachable
+//     — brought it to 272. DeepSource fingerprints an occurrence by its
+//     line and by the number in its message, so that improvement still reads as "1
 //     introduced, 0 resolved" and turns the check red on its own.
 //   * The remaining 272 is not the LazyColumn body's anymore — those three
 //     extractions already own it. It is this function's own state
@@ -1121,8 +1118,15 @@ fun TodoListScreen( // skipcq: KT-R1006
     // and the Tday widgets.
     val flipWatermark =
         uiState.mode == TodoListMode.FLOATER && selectedList?.iconKey.isNullOrBlank()
-    val showSectionedTimeline =
-        uiState.mode == TodoListMode.TODAY || uiState.mode == TodoListMode.OVERDUE || uiState.mode == TodoListMode.SCHEDULED || uiState.mode == TodoListMode.ALL || uiState.mode == TodoListMode.PRIORITY || uiState.mode == TodoListMode.FLOATER || uiState.mode == TodoListMode.LIST
+    // `showSectionedTimeline` used to be declared here, as a disjunction over all
+    // seven `TodoListMode` values — a constant `true` wearing the shape of a mode
+    // filter. It is gone, and so is everything that hung off its false arm: the
+    // flat `items` body, and the `if (showSectionedTimeline) SpacingNone else
+    // timelineItemSpacing` below. The tautology is not recorded as a `val = true`
+    // for the next reader to re-derive, because a constant guard is the thing that
+    // grows dead branches; the claim it was making is asserted where it can fail
+    // instead — see `TaskFeedBodyReachabilityTest`, whose `when` over
+    // `TodoListMode` stops compiling if an eighth scope is ever added.
     val suppressInitialTodayTimeline =
         uiState.mode == TodoListMode.TODAY &&
                 !uiState.hasHydratedSnapshot &&
@@ -2390,7 +2394,6 @@ fun TodoListScreen( // skipcq: KT-R1006
             null
         },
     )
-    val timelineItemSpacing = TimelineDateGroupSpacing
     fun highlightedTodoListTarget(todoId: String): Pair<Int, String>? {
         // Starts at 1: the hero block holds index 0 on this path, so every row
         // below it is one further down than the sections alone would say.
@@ -2603,14 +2606,27 @@ fun TodoListScreen( // skipcq: KT-R1006
             //
             // Web and iOS both still sequence this, deliberately, and the
             // divergence is written here so the next reader finds it rather than
-            // discovering it: their scene is drawn OVER the list rather than in
-            // it — web's `useEarlierExpandHandoff`, iOS's
-            // `toggleEarlierSectionWithIllustrationHandoff` behind the
-            // `EmptyStateReservedTopHeightPreferenceKey` overlay — so rows
-            // expanding in would arrive underneath a scene still painting over
-            // them. Android's is a lazy item, and once it is below the rows it
-            // shares no pixels with them at all. Same requirement, different
-            // geometry, and only the geometry decided the beat.
+            // discovering it. The reason is NOT the one this comment used to give.
+            // It said their scene is drawn OVER the list rather than in it, which
+            // is true of iOS — `toggleEarlierSectionWithIllustrationHandoff`
+            // behind the `EmptyStateReservedTopHeightPreferenceKey` overlay — and
+            // false of web, whose scene is an inline sibling in the document flow
+            // and always was. A premise that only holds for one of the two clients
+            // it names is worse than no premise, because it is the one a reader
+            // would have trusted instead of looking.
+            //
+            // What each actually keeps its beat for:
+            //   * iOS, the overlay: rows expanding in arrive underneath a scene
+            //     still painting over them.
+            //   * web, `useEarlierExpandHandoff`: `.tday-empty-slot` is a grid
+            //     track with a transition and no start value on mount, so the
+            //     scene's 42vh lands in ONE frame however the blocks are ordered.
+            //     Web moved its scene below Earlier too, and the beat still had
+            //     something behind it afterwards.
+            // Android's is a lazy item, and once it is below the rows it shares no
+            // pixels with them at all — so here, and only here, the reorder left
+            // the wait with nothing to cover. Same requirement, three geometries,
+            // and the geometry is what decided the beat on each.
             collapsedSectionKeys = if (wasCollapsed) {
                 collapsedSectionKeys - key
             } else {
@@ -2753,19 +2769,33 @@ fun TodoListScreen( // skipcq: KT-R1006
                         // No top padding: the hero item reserves the bar's
                         // height itself, so the scroll offset is a clean count
                         // from the top.
-                        usesTodayStyle -> PaddingValues(
+                        //
+                        // `else` rather than `usesTodayStyle ->`, because on
+                        // this screen those are the same condition and writing
+                        // the narrower-looking one back would cost a third arm
+                        // that cannot run. That is exactly the defect the
+                        // `verticalArrangement` note below is about, and it was
+                        // sitting three lines from it, in the same call: the arm
+                        // reserved a 16 dp page margin against the 18 the two
+                        // live styles share, so the only thing a reader could
+                        // take from it — that some scope insets differently —
+                        // was true of no scope that has ever been drawn.
+                        else -> PaddingValues(
                             start = TdayDimens.ContentPaddingHorizontal,
                             end = TdayDimens.ContentPaddingHorizontal,
                             bottom = TdayDimens.SpacingXxs,
                         )
-                        else -> PaddingValues(
-                            horizontal = ListModeContentHorizontalPadding,
-                            vertical = TdayDimens.SpacingLg,
-                        )
                     },
-                    verticalArrangement = Arrangement.spacedBy(
-                        if (showSectionedTimeline) TdayDimens.SpacingNone else timelineItemSpacing,
-                    ),
+                    // Nothing, on every scope. The sections draw their own gaps —
+                    // day groups space themselves and the hairline closes each row
+                    // — so a per-item gap here would be added on top of geometry
+                    // that already balances. This used to read `if
+                    // (showSectionedTimeline) SpacingNone else timelineItemSpacing`
+                    // and the `else` was unreachable, which is worth a line because
+                    // it did not merely sit there: it is the value two KDocs on
+                    // `TdayTaskRowSkeleton` were still costing their mount window
+                    // against. See [rememberTdayTaskRowSkeletonMounted].
+                    verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingNone),
                 ) {
                     // One branch, so index 0 is always well defined — the
                     // hero's progress is read off the first item's offset.
@@ -2823,12 +2853,21 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // tested against holds all seven modes, so what it actually
                     // excluded was everything — see [taskFeedSkeletonVisible].
                     //
+                    // Which makes the rows it stands in for the swipe cards THIS
+                    // feed draws, not the flat `TodayTodoRow` its KDoc was written
+                    // against. The first-line stacking survives the move exactly —
+                    // the placeholder and these rows make the same
+                    // `rememberTaskRowFirstLineAlignment` call with the same two
+                    // arguments — but the row box does not, and that is argued at
+                    // `TdayTaskRowSkeleton` rather than restated here. Corrected
+                    // where the claim is made, not left pointing at a body that no
+                    // longer exists.
+                    //
                     // Mounted for a window rather than removed by its guard: an
                     // item that its guard has already taken out of the list has no
                     // exit left to play, and the exit is the whole mechanism here.
-                    // The window closes one hand-over later, because this
-                    // `LazyColumn` spaces its items and a mounted item that draws
-                    // nothing is still charged `timelineItemSpacing` — see
+                    // The window closes one hand-over later — exactly as long as
+                    // the exit needs and no longer — see
                     // [rememberTdayTaskRowSkeletonMounted].
                     // Two lazy items cannot cross-fade over each other — they are
                     // stacked, not layered — so the hand-over is the placeholder
@@ -2901,7 +2940,11 @@ fun TodoListScreen( // skipcq: KT-R1006
                         }
                     }
 
-                    if (showSectionedTimeline && !suppressInitialTodayTimeline && !scopedSearchHasNoResults) {
+                    // No mode term. Every scope this screen serves draws the
+                    // sectioned timeline, so the two terms left are the two real
+                    // states that replace it with something else: Today's
+                    // pre-hydration hold, and a query that matched nothing.
+                    if (!suppressInitialTodayTimeline && !scopedSearchHasNoResults) {
                         sectionedTimelineContent(
                             uiState = uiState,
                             timelineSections = timelineSections,
@@ -2935,13 +2978,6 @@ fun TodoListScreen( // skipcq: KT-R1006
                             onDragMove = onTimelineDragMove,
                             onDragEnd = ::finishTimelineDrag,
                             onDragCancel = onTimelineDragCancel,
-                        )
-                    } else if (!showSectionedTimeline) {
-                        flatTodoRowsContent(
-                            todos = uiState.items,
-                            usesTodayStyle = usesTodayStyle,
-                            onComplete = completeAndCelebrate,
-                            onDelete = onDelete,
                         )
                     }
 
@@ -3755,53 +3791,40 @@ fun TodoListScreen( // skipcq: KT-R1006
     }
 }
 
-/**
- * The flat, unsectioned task list body — the non-timeline sibling of
- * [sectionedTimelineContent], used wherever [TodoListScreen] shows its items
- * in one plain run rather than under day/priority headers.
- *
- * A `LazyListScope` receiver extension, not a plain `@Composable`, so the
- * `items(...)` call below registers directly against the caller's
- * [LazyColumn] — its keys, content types and placement are exactly what
- * they were when this body lived inline in [TodoListScreen].
- */
-private fun LazyListScope.flatTodoRowsContent(
-    todos: List<TodoItem>,
-    usesTodayStyle: Boolean,
-    onComplete: (TodoItem) -> Unit,
-    onDelete: (TodoItem) -> Unit,
-) {
-    items(
-        items = todos,
-        key = { it.id },
-        contentType = { "todo-row" },
-    ) { todo ->
-        if (usesTodayStyle) {
-            TodayTodoRow(
-                todo = todo,
-                onComplete = { onComplete(todo) },
-                onDelete = { onDelete(todo) },
-            )
-        } else {
-            TodoRow(
-                todo = todo,
-                onComplete = { onComplete(todo) },
-                onDelete = { onDelete(todo) },
-            )
-        }
-    }
-}
+// `flatTodoRowsContent` used to sit here: the flat, unsectioned `items(...)` body,
+// the non-timeline sibling of [sectionedTimelineContent]. It is deleted rather
+// than repaired, and the difference between it and the skeleton above is the
+// whole argument.
+//
+// The skeleton's guard was a real state tested through the wrong term — a first
+// load does want a placeholder, so `FeedAnswer.AwaitingFirst` gave it the
+// condition it had always meant. This body has no such state behind it. Its guard
+// was a mode filter, its job was to serve a scope that wants its tasks in one
+// plain run with no day or priority headers, and there is no such scope: the
+// sectioned timeline took the last of them before this function was ever
+// extracted. Making it reachable would mean inventing a mode to reach it with.
+//
+// The rows it drew, `TodayTodoRow` and `TodoRow`, are deliberately NOT deleted
+// with it. They are still referenced from [TimelineTaskRow]'s `useMinimalStyle`
+// tail, and that guard is a PARAMETER rather than a local constant — dead only
+// because all three call sites happen to pass `usesTodayStyle`, which is the same
+// seven-mode tautology this commit retired for the feed body. Untangling it
+// deletes two row composables, the non-minimal section-header style and a
+// parameter threaded through four functions, on a screen with no Compose UI tests
+// and no device here to check a restyle against. That is a separate change with
+// its own risk, and it is named in `TaskFeedBodyReachabilityTest` so it is on the
+// record with a ceiling rather than left to be rediscovered.
 
 /**
- * The root floater feed's own content, below the shared timeline/flat item
- * paths: the inline empty scene, the Completed tile, and the "My Lists"
+ * The root floater feed's own content, below the shared timeline path: the
+ * inline empty scene, the Completed tile, and the "My Lists"
  * header with its rows. Lives only on [TodoListMode.FLOATER] with no
  * `listId` — every branch below re-checks [isFloaterTaskHomeScreen] (or
  * [floaterTaskHomeListRows], which is empty whenever that flag is false)
  * exactly as it did inline, so calling this unconditionally changes nothing.
  *
  * A `LazyListScope` receiver extension for the same reason as
- * [flatTodoRowsContent]: every `item`/`items` call below needs the caller's
+ * [sectionedTimelineContent]: every `item`/`items` call below needs the caller's
  * scope to register its key, content type and placement correctly.
  *
  * [timelineAnimationsEnabled] feeds [displacedFeedItemMotion] exactly as it

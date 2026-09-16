@@ -922,15 +922,34 @@ internal fun tdayBarButtonContainerColor(): Color {
  *
  * ## The three clients
  *
- * Web's bar is the twin of this one and still runs the OLD rule, constant for
- * constant (`symmetric = Math.max(leading, trailing) + gap`, gated on
- * `dockedTitleMinWidth: 56`, in `src/components/app/NativePageHeader.tsx`). It
- * has the same defect and worse — its "Today" control is a text pill rather than
- * a collapsing circle, so the Calendar title there gets about 68px against the
- * 146.6px "Calendar" wants at its 2.1rem/900 — and it owes this change. It is
- * not made here because it is not the same edit: this one needs the title
- * measured, which on web is a canvas or a reflow rather than four lines in a
- * frame callback.
+ * Web's bar is the twin of this one and now runs the SAME rule: mirrored branch
+ * still first, gate widened to `max(titleWidth, minWidth)`, in
+ * `tday-web/src/components/app/nativePageBarTitleReserve.ts` — its own pure
+ * module, for the reason `TdayBarTitleReserveTest` exists over here. This
+ * paragraph used to say web still ran the old rule and owed the change, which
+ * stopped being true and is corrected rather than left, because a premise about
+ * another client is the thing a reader trusts instead of going to look.
+ *
+ * It had the defect worse than this bar did, which is why it was worth the same
+ * fix: its Calendar "Today" control is a text pill rather than a collapsing
+ * circle, so at a 412px viewport the old gate left the title 64px for a word
+ * wanting 146.6px at 2.1rem/900, where the per-side fallback would have given it
+ * 158px. The two differences to know before reading the two functions against
+ * each other, both deliberate:
+ *
+ *  * it measures off a hidden, `aria-hidden` span sized by the docked type
+ *    classes and read with `getBoundingClientRect`, resettled on
+ *    `document.fonts.ready` — NOT the canvas `measureText` this paragraph once
+ *    guessed at, which `nativePageBarTitleReserve` argues against by name: it
+ *    would mean rebuilding the CSS font shorthand from computed style and
+ *    trusting it to match what the browser shapes. The span costs one extra
+ *    node per page and one layout read per frame callback; what an unmeasured
+ *    frame costs is nothing, because zero fits everything and the mirrored
+ *    branch is what the bar took before;
+ *  * it did not port [tdayBarTitleScale]. The bounded shrink would have to
+ *    multiply into the `scale()` web's reveal already writes every frame, which
+ *    is a restyle inside a layout repair — the same split this file makes for
+ *    the typeface below.
  *
  * iOS is split and must not be "reconciled" by someone who only reads one half.
  * `CalendarElasticTopBar` mirrors, for the crossfade reason quoted above.
