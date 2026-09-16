@@ -241,35 +241,6 @@ const ListContainer = ({ id }: { id: string }) => {
                         being unmounted in the frame it is supposed to fade in. */}
                     <TodoListLoading loading={listTodosLoading} />
 
-                    {/* Empty state — no current tasks (Earlier's own overdue
-                        tasks, if any, render below via `TimelineSections`;
-                        see `showEmptyIllustration`'s derivation above and
-                        `AllTasksTimelineContainer`'s matching JSX-ordering
-                        comment for why this renders BEFORE that block). */}
-                    {(showEmptyIllustration || sceneLeavingOnCancel) && (
-                        <TimelineEmptyState
-                            icon={getListIconForList(listMetaData[id])}
-                            accentColor={listAccent}
-                            isDayDone={false}
-                            celebrate={celebrate}
-                            // Drawn inline, so mounting it is what puts Earlier's block
-                            // into its new slot (the travel the wrapper above owns). The
-                            // burst waits that out instead of firing across it, and the
-                            // scene's own lead is added on top — travel, then burst, then
-                            // scene. Passed unconditionally, as the scoped screens pass
-                            // it: whether anything is left below is a fact about what the
-                            // list happens to hold, and timing the celebration off that
-                            // would make the same tick celebrate at two different speeds.
-                            celebrationStartDelayMs={DELAY_MS.placementLead}
-                            leavingOnCancel={sceneLeavingOnCancel}
-                            earlierHandoff={earlierHandoff}
-                            locale={locale}
-                            emptyTitle="listEmpty"
-                            emptyBody="listEmptyBody"
-                            appDict={appDict}
-                        />
-                    )}
-
                     {/* Empty state — no search results */}
                     {!listTodosLoading && isSearching && filteredTodos.length === 0 && (
                         <EmptyState
@@ -299,8 +270,8 @@ const ListContainer = ({ id }: { id: string }) => {
                         {/* Date-bucketed timeline with drag-and-drop — renders
                             whenever the list holds anything at all, Earlier's own
                             overdue tasks included, so a list with only overdue
-                            tasks left still shows its (collapsed) Earlier header
-                            under the illustration above. */}
+                            tasks left still shows its (collapsed) Earlier header —
+                            above the illustration, which renders below this block. */}
                         {!listTodosLoading && !(isSearching && filteredTodos.length === 0) && listTodos.length > 0 && (
                             <TimelineSections
                                 sections={timelineSections}
@@ -310,7 +281,7 @@ const ListContainer = ({ id }: { id: string }) => {
                                 // there must not stay hidden behind its header. Native
                                 // makes the same call. `earlierExpanded` alone is
                                 // the whole sequencing signal: the hand-off holds it
-                                // false until the illustration above has finished
+                                // false until the scene below has finished
                                 // exiting, and on the way back it goes false first
                                 // and the rows linger on their own fade.
                                 earlierExpanded={earlierExpanded || isSearching}
@@ -330,6 +301,52 @@ const ListContainer = ({ id }: { id: string }) => {
                             />
                         )}
                     </ListScopeProvider>
+
+                    {/* Empty state — no current tasks.
+
+                        Rendered AFTER the Earlier-holding `TimelineSections`
+                        above, not before it. The comment here used to say the
+                        opposite and point at `AllTasksTimelineContainer`'s
+                        matching claim as the authority; both were wrong in the
+                        same way, and both are rewritten. Earlier's header is
+                        not a separable node — it is a collapsible section
+                        inside the section loop — so putting the header above
+                        the scene means putting the whole Earlier block above
+                        it, and `placesEarlierBeforeToday` makes Earlier the
+                        first section a list builds, so this lands directly
+                        under its header. With the scene above, expanding
+                        Earlier shrank a 42vh box sitting ABOVE the header and
+                        threw the header to the top of the screen mid-tap; with
+                        it below, the rows grow downward from a header that does
+                        not move. See `AllTasksTimelineContainer` for the full
+                        argument and for the one cost (a drag restores empty day
+                        buckets, which can sit between the header and the
+                        scene for the length of the gesture). */}
+                    {(showEmptyIllustration || sceneLeavingOnCancel) && (
+                        <TimelineEmptyState
+                            icon={getListIconForList(listMetaData[id])}
+                            accentColor={listAccent}
+                            isDayDone={false}
+                            celebrate={celebrate}
+                            // Drawn inline — a sibling in the flow, not an overlay — so
+                            // mounting it still puts whatever follows it into a new slot
+                            // (the travel the wrapper above owns). Earlier's block is no
+                            // longer one of those, which is the point of the order. The
+                            // burst waits the travel out instead of firing across it, and
+                            // the scene's own lead is added on top — travel, then burst,
+                            // then scene. Passed unconditionally, as the scoped screens pass
+                            // it: whether anything is left below is a fact about what the
+                            // list happens to hold, and timing the celebration off that
+                            // would make the same tick celebrate at two different speeds.
+                            celebrationStartDelayMs={DELAY_MS.placementLead}
+                            leavingOnCancel={sceneLeavingOnCancel}
+                            earlierHandoff={earlierHandoff}
+                            locale={locale}
+                            emptyTitle="listEmpty"
+                            emptyBody="listEmptyBody"
+                            appDict={appDict}
+                        />
+                    )}
                 </div>
 
                 <ListFormSheet
