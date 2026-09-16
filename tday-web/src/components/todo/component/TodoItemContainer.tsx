@@ -28,6 +28,8 @@ import { useDemoteTodo } from "@/features/todayTodos/query/demote-todo";
 import { DeferTodoMenu } from "@/components/todo/component/DeferTodoMenu";
 import { SWIPE_COPY_COLOR, SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
 import { useTaskSelection } from "@/providers/TaskSelectionProvider";
+import { useScopedListId } from "@/providers/ListScopeProvider";
+import { shouldShowListMark } from "@/lib/listMark";
 import { hapticTick } from "@/lib/haptics";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
@@ -81,6 +83,12 @@ export const TodoItemCard = ({
   const { title, description, completed, priority, rrule } = todoItem;
   const isOverdue = overdue || (perTaskOverdue && !completed && todoItem.due < new Date());
   const itemListID = todoItem.listID;
+  // Null on every mixed feed — Today, Overdue, All, Priority, the calendar, Completed —
+  // and the list's own id on its detail screen, where `/api/list/:id` stamps every row
+  // with that same id (`get-list-todos` normalises it in) and the mark would otherwise
+  // reprint the heading beside every task.
+  const scopedListId = useScopedListId();
+  const showListMark = shouldShowListMark(itemListID, scopedListId);
   const priorityFlag = getPriorityFlag(priority);
   const [displayForm, setDisplayForm] = useState(false);
   const [editInstanceOnly, setEditInstanceOnly] = useState(false);
@@ -521,7 +529,7 @@ export const TodoItemCard = ({
               showHandle && "sm:opacity-0",
             )}
           >
-            {itemListID && (
+            {showListMark && itemListID && (
               <>
                 <ListDot id={itemListID} className="h-4 w-4 sm:hidden" />
                 <span className="hidden items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-xs font-black text-foreground/80 sm:flex">

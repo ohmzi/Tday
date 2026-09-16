@@ -1397,6 +1397,13 @@
         "step1": "Ketik tugasan untuk memilihnya, atau guna Pilih semua untuk semua yang ada di skrin.",
         "step2": "Pilih Selesai, Keutamaan, Pindah atau Padam pada bar di bawah.",
         "tip": "Pemadaman meminta anda mengesahkan jumlah tepat dahulu, dan masih meninggalkan pemberitahuan buat asal. Tugasan berulang dikecualikan sepenuhnya daripada tindakan pukal supaya keseluruhan siri tidak pernah berubah secara tidak sengaja — buka satu persatu untuk menyelesaikan, memindah atau memadamnya."
+      },
+      "list-icons": {
+        "title": "Ikon senarai automatik",
+        "summary": "Senarai tanpa ikon pilihannya sendiri mendapat ikon yang sepadan dengan namanya.",
+        "keywords": "ikon senarai, automatik, cadangan, glif, nama, barangan runcit, gim, kerja",
+        "body": "Namakan senarai sebagai Groceries dan ia akan memakai troli beli-belah; Gym mendapat dumbel, Work mendapat beg bimbit. T'Day hanya meneka apabila anda sendiri belum memilih ikon, dan mengekalkan ikon lalai apabila nama itu tidak cukup jelas. Buat masa ini nama dipadankan dalam bahasa Inggeris.",
+        "tip": "Pilih ikon dalam tetapan senarai bila-bila masa — setelah dipilih, ia dikekalkan dan tidak sekali-kali diteka semula."
       }
     }
   },

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
 import TimelineSections from "@/components/todo/dnd/TimelineSections";
+import ListScopeProvider from "@/providers/ListScopeProvider";
 import TimelineEmptyState from "@/features/todayTodos/component/TimelineEmptyState";
 import {
     earlierIsExpanding,
@@ -25,7 +26,7 @@ import NativePageHeader, { useNativePageBarSlots } from "@/components/app/Native
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
-import { getListIcon } from "@/lib/listIcons";
+import { getListIconForList } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import ListFormSheet from "@/components/Sidebar/List/ListFormSheet";
 import ManageMembersSheet from "@/features/list/component/ManageMembersSheet";
@@ -146,8 +147,10 @@ const ListContainer = ({ id }: { id: string }) => {
             <TaskSelectionProvider
                 rows={filteredTodos}
                 readOnly={isViewer}
-                // List rows carry no listID of their own, so a bulk move learns
-                // where they came from from the screen instead.
+                // Belt and braces for a bulk move's source list: `get-list-todos` now
+                // stamps every row with this id (`listID: todo.listID ?? listId`), but
+                // a row that arrived before that normalisation, or from a cache written
+                // by an older build, still has none.
                 scopeListId={id}
             >
                 {/* The page's children travel when one of them takes a new slot — the
@@ -161,7 +164,7 @@ const ListContainer = ({ id }: { id: string }) => {
                     unchanged and stays on the Scene rung; this is the Emphasis one the
                     geometry asks for, because a slot is a position. */}
                 <div ref={placementRef} className="mb-20">
-                    <ScreenWatermark icon={getListIcon(listMetaData[id]?.iconKey)} color={listAccent} />
+                    <ScreenWatermark icon={getListIconForList(listMetaData[id])} color={listAccent} />
                     {/* The list's own icon leads the header, so the edit/members
                         control moves into the pinned bar where the other screens
                         keep their actions. */}
@@ -221,7 +224,7 @@ const ListContainer = ({ id }: { id: string }) => {
                     <NativePageHeader
                         title={listName}
                         accentColor={listAccent}
-                        icon={getListIcon(listMetaData[id]?.iconKey)}
+                        icon={getListIconForList(listMetaData[id])}
                         barSlots={barSlots}
                         beneathTitle={
                             sharedByLabel ? (
@@ -245,7 +248,7 @@ const ListContainer = ({ id }: { id: string }) => {
                         comment for why this renders BEFORE that block). */}
                     {(showEmptyIllustration || sceneLeavingOnCancel) && (
                         <TimelineEmptyState
-                            icon={getListIcon(listMetaData[id]?.iconKey)}
+                            icon={getListIconForList(listMetaData[id])}
                             accentColor={listAccent}
                             isDayDone={false}
                             celebrate={celebrate}
@@ -286,39 +289,47 @@ const ListContainer = ({ id }: { id: string }) => {
                         />
                     )}
 
-                    {/* Date-bucketed timeline with drag-and-drop — renders
-                        whenever the list holds anything at all, Earlier's own
-                        overdue tasks included, so a list with only overdue
-                        tasks left still shows its (collapsed) Earlier header
-                        under the illustration above. */}
-                    {!listTodosLoading && !(isSearching && filteredTodos.length === 0) && listTodos.length > 0 && (
-                        <TimelineSections
-                            sections={timelineSections}
-                            timeZone={userTZ?.timeZone}
-                            // A live query outranks a shut bucket: a list opens
-                            // with Earlier closed, and a task the search turns up in
-                            // there must not stay hidden behind its header. Native
-                            // makes the same call. `earlierExpanded` alone is
-                            // the whole sequencing signal: the hand-off holds it
-                            // false until the illustration above has finished
-                            // exiting, and on the way back it goes false first
-                            // and the rows linger on their own fade.
-                            earlierExpanded={earlierExpanded || isSearching}
-                            // The one thing `earlierExpanded` cannot say: on
-                            // the way open it stays false for the whole
-                            // hand-off, so the header the finger just landed
-                            // on has nothing to show for the tap. See
-                            // `earlierIsExpanding`.
-                            earlierExpanding={earlierIsExpanding({ earlierHandoff })}
-                            // Passes `earlierSlotChangesHands` through exactly
-                            // like Today/All/Priority/Scheduled do: a tap that
-                            // trades the slot between the scene and Earlier's
-                            // rows is sequenced whichever way it goes, and stays
-                            // the plain immediate toggle otherwise.
-                            onToggleEarlier={() => toggleEarlierExpanded(earlierSlotChangesHands)}
-                            onDragActiveChange={setDragActive}
-                        />
-                    )}
+                    {/* The only rows this screen renders, and every one of them was
+                        filtered to this list before it was built — so the screen has
+                        already said which list each task is in, and the per-row mark
+                        would just reprint the heading beside every title.
+                        `shouldShowListMark` reads this; a row outside a scope provider
+                        keeps its mark, which is the safe direction to default in. */}
+                    <ListScopeProvider listId={id}>
+                        {/* Date-bucketed timeline with drag-and-drop — renders
+                            whenever the list holds anything at all, Earlier's own
+                            overdue tasks included, so a list with only overdue
+                            tasks left still shows its (collapsed) Earlier header
+                            under the illustration above. */}
+                        {!listTodosLoading && !(isSearching && filteredTodos.length === 0) && listTodos.length > 0 && (
+                            <TimelineSections
+                                sections={timelineSections}
+                                timeZone={userTZ?.timeZone}
+                                // A live query outranks a shut bucket: a list opens
+                                // with Earlier closed, and a task the search turns up in
+                                // there must not stay hidden behind its header. Native
+                                // makes the same call. `earlierExpanded` alone is
+                                // the whole sequencing signal: the hand-off holds it
+                                // false until the illustration above has finished
+                                // exiting, and on the way back it goes false first
+                                // and the rows linger on their own fade.
+                                earlierExpanded={earlierExpanded || isSearching}
+                                // The one thing `earlierExpanded` cannot say: on
+                                // the way open it stays false for the whole
+                                // hand-off, so the header the finger just landed
+                                // on has nothing to show for the tap. See
+                                // `earlierIsExpanding`.
+                                earlierExpanding={earlierIsExpanding({ earlierHandoff })}
+                                // Passes `earlierSlotChangesHands` through exactly
+                                // like Today/All/Priority/Scheduled do: a tap that
+                                // trades the slot between the scene and Earlier's
+                                // rows is sequenced whichever way it goes, and stays
+                                // the plain immediate toggle otherwise.
+                                onToggleEarlier={() => toggleEarlierExpanded(earlierSlotChangesHands)}
+                                onDragActiveChange={setDragActive}
+                            />
+                        )}
+                    </ListScopeProvider>
                 </div>
 
                 <ListFormSheet

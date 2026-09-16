@@ -219,6 +219,16 @@ object GuideCatalog {
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.SCHEDULED_LISTS)),
         ),
         topic(
+            // All three now. Neither native client links the Kotlin — the pbxproj names
+            // none and web runs none — so iOS and web each read the same table through a
+            // committed artifact written by `:shared:exportListIconTable`, and Android
+            // calls it directly. One behaviour, one word list, three callers; listing
+            // fewer platforms here would understate what a reader will actually find.
+            GuideTopicIds.LIST_ICONS, GuideSectionId.ORGANIZING, "wand-sparkles",
+            setOf(WEB, ANDROID, IOS), badge = GuideBadge.HIDDEN_GEM, sinceVersion = "0.7.28",
+            body = listOf(para(GuideTopicIds.LIST_ICONS), tip(GuideTopicIds.LIST_ICONS)),
+        ),
+        topic(
             GuideTopicIds.COMPLETED_HISTORY, GuideSectionId.ORGANIZING, "check-check",
             setOf(WEB, ANDROID, IOS), body = listOf(para(GuideTopicIds.COMPLETED_HISTORY)),
         ),

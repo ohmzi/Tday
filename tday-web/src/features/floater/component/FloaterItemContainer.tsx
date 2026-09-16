@@ -11,6 +11,8 @@ import { Check, Copy, Flag, SquarePen, Trash } from "lucide-react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
 import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
+import { useScopedListId } from "@/providers/ListScopeProvider";
+import { shouldShowListMark } from "@/lib/listMark";
 import { getPriorityFlag } from "@/lib/priority";
 import {
   floaterRestingTier,
@@ -58,6 +60,14 @@ export default function FloaterItemContainer({
   const { t: appDict, i18n } = useTranslation("app");
   const { toast } = useToast();
   const { title, description, completed, priority, listID } = floater;
+  // Same rule as the scheduled row, and applied here even though this screen's rows
+  // cannot currently trip it: `/api/floaterList/:id` answers with `FloaterListTodoDto`,
+  // which carries no list id at all, so an Anytime list's detail already draws no mark.
+  // One rule in both rows is still worth the line — the day that DTO gains the field to
+  // fix something else, the Anytime detail would otherwise quietly start repeating its
+  // own title the way the native clients' did.
+  const scopedListId = useScopedListId();
+  const showListMark = shouldShowListMark(listID, scopedListId);
   // "Resting floaters": dim Anytime tasks left untouched for a month+ (read-only cue).
   const resting =
     !completed &&
@@ -348,7 +358,7 @@ export default function FloaterItemContainer({
                 showHandle && "sm:opacity-0",
               )}
             >
-              {listID ? (
+              {showListMark && listID ? (
                 <>
                   <FloaterListDot id={listID} className="h-4 w-4 sm:hidden" />
                   <span className="hidden items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-xs font-black text-foreground/80 sm:flex">
