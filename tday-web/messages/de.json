@@ -248,6 +248,9 @@
     "save": "Speichern",
     "clear": "Leeren",
     "clearSearch": "Suche löschen",
+    "versionAvailableTitle": "Update verfügbar",
+    "versionAvailableBody": "Eine neue Version kann geladen werden.",
+    "versionAvailableReload": "Neu laden",
     "today": "Heute",
     "yesterday": "Gestern",
     "tomorrow": "Morgen",
@@ -719,12 +722,6 @@
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
       "securityQuestionsLoadFailed": "Could not load security questions",
-      "calendarFeedGenerated": "Kalender-Feed erstellt. Kopiere jetzt die URL.",
-      "calendarFeedGenerateFailed": "Kalender-Feed konnte nicht erstellt werden",
-      "calendarFeedRevoked": "Kalender-Feed widerrufen",
-      "calendarFeedRevokeFailed": "Kalender-Feed konnte nicht widerrufen werden",
-      "calendarFeedCopied": "Kalender-URL kopiert",
-      "calendarFeedCopyFailed": "Kalender-URL konnte nicht kopiert werden",
       "webhookCreated": "Webhook hinzugefügt. Kopiere jetzt das Signatur-Secret.",
       "webhookCreateFailed": "Webhook konnte nicht hinzugefügt werden",
       "webhookDeleted": "Webhook gelöscht",
@@ -769,17 +766,6 @@
       "confirmCancel": "Abbrechen",
       "confirmImport": "Importieren",
       "summaryLocal": "{{tasks}} Aufgaben · {{lists}} Listen · {{completed}} abgeschlossen, alles in diesem Browser."
-    },
-    "calendarFeed": {
-      "title": "Kalender-Feed",
-      "blurb": "Ein privater, schreibgeschützter .ics-Link für Apple/Google Calendar.",
-      "active": "Feed aktiv",
-      "inactive": "Kein Kalender-Feed",
-      "generate": "Feed-URL erzeugen",
-      "revoke": "Feed widerrufen",
-      "generating": "Wird erzeugt...",
-      "revoking": "Wird widerrufen...",
-      "copyUrl": "Kopiere diese Kalender-URL jetzt – behandle sie wie ein Passwort."
     },
     "webhooks": {
       "title": "Webhooks",
@@ -1280,15 +1266,6 @@
         "kbd": "N",
         "kbd2": "Ctrl / ⌘ + K",
         "kbd3": "?"
-      },
-      "calendar-feed": {
-        "title": "Kalender-Feed",
-        "summary": "Abonniere deine terminierten Aufgaben in jeder Kalender-App.",
-        "keywords": "kalender, ics, abonnieren, feed, apple calendar, google calendar, ical, webcal",
-        "body": "Veröffentliche einen schreibgeschützten Kalender-Feed, damit deine terminierten Aufgaben in Apple Calendar, Google Calendar oder jeder App erscheinen, die eine .ics-URL liest. Der Link enthält ein privates Token – wer es hat, sieht deine Aufgaben. Halte es geheim und widerrufe es bei einem Leck.",
-        "step0": "Öffne in den Einstellungen die Kalender-Feed-Karte und erzeuge eine URL.",
-        "step1": "Kopiere die URL – sie wird nur einmal angezeigt; bei Verlust neu erzeugen.",
-        "step2": "Füge sie als Abonnement-Kalender in deiner Kalender-App hinzu."
       },
       "device-calendar-sync": {
         "title": "Aufgaben im Gerätekalender",

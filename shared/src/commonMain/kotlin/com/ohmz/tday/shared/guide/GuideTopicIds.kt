@@ -64,7 +64,6 @@ object GuideTopicIds {
     const val LOCAL_TO_SERVER_MIGRATION = "local-to-server-migration"
     const val IN_APP_UPDATE = "in-app-update"
     const val API_KEY_HOMARR = "api-key-homarr"
-    const val CALENDAR_FEED = "calendar-feed"
     const val DEVICE_CALENDAR_SYNC = "device-calendar-sync"
     const val WEBHOOKS = "webhooks"
     const val UNIFIEDPUSH = "unifiedpush"

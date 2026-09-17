@@ -18,11 +18,10 @@ import { getListIconForList } from "@/lib/listIcons";
 import { listColorAccentColors, nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import FloaterGroup from "@/features/floater/component/FloaterGroup";
 import ListScopeProvider from "@/providers/ListScopeProvider";
-import { Skeleton } from "@/components/ui/skeleton";
 import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
 import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
 import { cn } from "@/lib/utils";
-import { buildFloaterSections } from "@/lib/floater/buildFloaterSections";
+import { sortFloatersByPriority } from "@/lib/floater/sortFloaters";
 import { useFloaterList } from "@/features/floaterList/query/get-floater-list";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 import FloaterListFormSheet from "./FloaterListFormSheet";
@@ -74,8 +73,8 @@ export default function FloaterListContainer({ id }: { id: string }) {
     });
   }, [floaterListTodos, searchQuery]);
 
-  const sections = useMemo(
-    () => buildFloaterSections(filteredFloaters),
+  const sortedFloaters = useMemo(
+    () => sortFloatersByPriority(filteredFloaters),
     [filteredFloaters],
   );
   const isSearching = Boolean(searchQuery.trim());
@@ -190,13 +189,12 @@ export default function FloaterListContainer({ id }: { id: string }) {
         // placeholder used to draw two 64 px cards inside `space-y-3 px-1 py-6`, which is
         // neither the row's height nor the section's rhythm nor where the section starts.
         <div className={cn("space-y-1", skeletonClassName)}>
-          {/* Unlike `TodoListLoading`'s heading, this one is genuinely not in hand while the
-              list is in flight: which buckets `buildFloaterSections` returns depends on the
-              tasks that have not arrived. So it keeps a bar — drawn by `Skeleton` rather
-              than by a hand-rolled `animate-pulse` div, and at the `leading-8` line box of
-              the `h2` it stands in for, so the rows under it land where they were already
-              sitting instead of 32 px lower. */}
-          <Skeleton className="ml-1 h-8 w-36 rounded-full" />
+          {/* No heading bar above the rows any more. It stood in for the priority heading
+              this screen used to draw — and at the `leading-8` line box of that `h2`, so
+              the rows under it would land where they were already sitting rather than 32 px
+              lower. With the heading gone it was a pill standing in for nothing. The Anytime
+              root feed's own placeholder never had a heading to stand in for and draws none
+              either; both load behind the same `TaskRowSkeletonGroup` now. */}
           <TaskRowSkeletonGroup />
         </div>
       ) : null}
@@ -240,25 +238,22 @@ export default function FloaterListContainer({ id }: { id: string }) {
         />
       ) : null}
 
-      {!floaterListLoading && sections.length > 0 ? (
+      {!floaterListLoading && sortedFloaters.length > 0 ? (
         // The other half of the crossfade: the rows arrive over the placeholder fading out
         // above them rather than appearing in the frame it vanishes.
-        <div className="tday-content-enter space-y-5">
-          {sections.map((section) => (
-            <section key={section.id} className="space-y-1">
-              <h2 className="px-1 text-[1.75rem] font-black leading-8 text-foreground">
-                {appDict(section.labelKey)}
-              </h2>
-              {/* Scoped for the same reason as the scheduled list: every row here was
-                  filtered to this list, so a per-row list mark would repeat the
-                  heading. These rows carry no list id today, so the rule is currently
-                  a no-op — see `FloaterItemContainer` for why it is stated anyway. */}
-              <ListScopeProvider listId={id}>
-                <FloaterGroup floaters={section.items} readOnly={isViewer} />
-              </ListScopeProvider>
-            </section>
-          ))}
-        </div>
+        //
+        // One flat list in the shared Anytime order, with no priority headings over it.
+        // The three buckets this drew ("Urgent" / "Important" / "Normal") said what each
+        // row's own priority `Flag` already says, which is why the task is to sort by
+        // priority and mark the row rather than to title a group of it — same order, same
+        // markers, no word in between. See `sortFloatersByPriority`.
+        <ListScopeProvider listId={id}>
+          <FloaterGroup
+            className="tday-content-enter"
+            floaters={sortedFloaters}
+            readOnly={isViewer}
+          />
+        </ListScopeProvider>
       ) : null}
 
       <FloaterListFormSheet
