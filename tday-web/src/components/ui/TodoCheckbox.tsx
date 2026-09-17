@@ -5,6 +5,14 @@ import { hapticSuccess } from "@/lib/haptics";
 import { isSoundEnabled } from "@/lib/feedbackPreferences";
 import { DURATION_MS } from "@/lib/motion";
 
+/**
+ * The level both cues are played at. The completion clip is the same file on every client, and
+ * this is the other half of "the same pop": Android's `TaskCompletionSound` plays it at
+ * `VOLUME = 0.5f` and iOS's `SoundManager` at `player.volume = 0.5`, so a bare `HTMLAudioElement`
+ * left on its 1.0 default would answer a completion some 6 dB louder here than on the phone.
+ */
+const PLAYBACK_VOLUME = 0.5;
+
 export default function TodoCheckbox({
   complete,
   onChange,
@@ -25,6 +33,11 @@ export default function TodoCheckbox({
   useEffect(() => {
     popAudio.current = new Audio("/task-complete.wav");
     unpopAudio.current = new Audio("/task-uncomplete.wav");
+    // Set once, on the elements, rather than at the tap: the level is a property of the player,
+    // not of the moment, and the phone sets it the same way (`SoundManager` at construction,
+    // `TaskCompletionSound` at its constant). Both cues take it so the pair stays matched.
+    popAudio.current.volume = PLAYBACK_VOLUME;
+    unpopAudio.current.volume = PLAYBACK_VOLUME;
   }, []);
 
   // The pop goes out as long as it came in. Quick is the rung for the app answering a finger
