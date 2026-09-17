@@ -20,6 +20,14 @@ export type ReleaseInfo = {
   latestRelease: ReleaseMetadata | null;
   hasUpdate: boolean;
   latestUrl: string;
+  /**
+   * True when the latest-release metadata could not be read, so `hasUpdate:
+   * false` means "not known" rather than "up to date". The installed release is
+   * still real; only the comparison is missing. The native apps get this for
+   * free from `releaseError`; the web has to say it, because a failed check and
+   * a genuine up-to-date build otherwise render identically.
+   */
+  latestLookupFailed: boolean;
 };
 
 function hasNotes(release: ReleaseMetadata | null | undefined) {
@@ -59,7 +67,13 @@ export async function loadCurrentRelease(): Promise<ReleaseMetadata> {
   return bundledRelease ?? cachedRelease ?? createFallbackReleaseMetadata(CURRENT_APP_VERSION);
 }
 
-/** Combines installed and latest release metadata into the admin-facing release state. */
+/**
+ * Combines installed and latest release metadata into the release state every
+ * signed-in user's version screen reads. Nothing here is privileged: the
+ * installed version comes from the bundle and the published metadata from
+ * public endpoints, so the same query backs the admin screen, the user-facing
+ * version screen and the Settings row's update hint.
+ */
 async function getReleaseInfo(): Promise<ReleaseInfo> {
   const currentRelease = await loadCurrentRelease();
 
@@ -76,6 +90,7 @@ async function getReleaseInfo(): Promise<ReleaseInfo> {
       latestRelease: hasUpdate ? latestRelease : null,
       hasUpdate,
       latestUrl: hasUpdate ? latestRelease.releaseUrl : currentRelease.releaseUrl,
+      latestLookupFailed: false,
     };
   } catch {
     return {
@@ -84,6 +99,7 @@ async function getReleaseInfo(): Promise<ReleaseInfo> {
       latestRelease: null,
       hasUpdate: false,
       latestUrl: currentRelease.releaseUrl || GITHUB_RELEASES_URL,
+      latestLookupFailed: true,
     };
   }
 }

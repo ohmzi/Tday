@@ -41,7 +41,11 @@ export default function ReleaseUpdateAnnouncer() {
 
     if (!releaseInfo?.hasUpdate || !latestVersion) return;
     if (lastAnnouncedVersionRef.current === latestVersion) return;
-    if (window.location.pathname.includes("/app/admin/version")) return;
+    // Both entries to the release screen — the admin route and the one every
+    // user reaches from Settings — already show this version's release notes,
+    // so neither is a moment to interrupt with a toast about them.
+    const path = window.location.pathname;
+    if (path.includes("/app/version") || path.includes("/app/admin/version")) return;
 
     const sessionKey = buildToastSessionKey(latestVersion);
     if (hasSessionFlag(sessionKey)) {

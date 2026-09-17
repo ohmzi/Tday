@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Github, Info, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,22 +14,36 @@ import {
   formatReleaseDate,
   type ReleaseMetadata,
 } from "@/features/release/lib/release";
-import { useReleaseInfo } from "@/features/release/query/get-release-info";
+import {
+  useReleaseInfo,
+  type ReleaseInfo,
+} from "@/features/release/query/get-release-info";
 
 const SURFACE_CLASS = "rounded-sm border border-border/70 bg-background/50";
 
 /** Wraps the version content in the same native screen chrome as every other app screen. */
-function VersionPageShell({ children }: { children: ReactNode }) {
+function VersionPageShell({
+  children,
+  backFallbackHref,
+}: {
+  children: ReactNode;
+  backFallbackHref?: string;
+}) {
+  const { t: settingsDict } = useTranslation("settings");
+  const { t } = useTranslation("release");
+
   return (
     <div className="w-full space-y-5 pb-10">
       <NativePageHeader
-        title="App Version"
+        title={settingsDict("about.appVersion")}
         accentColor={nativeScreenAccentColors.settings}
         icon={Info}
-        subtitle="Review the deployed build and the latest release available to admins."
-        // Opened from a bookmark there is nothing to pop, and this page lives
-        // under Admin rather than under the feed.
-        backFallbackHref="/app/admin"
+        subtitle={t("subtitle")}
+        // Opened from a bookmark there is nothing to pop, and which page owns
+        // this one depends on how it was reached: the admin dashboard sends
+        // admins here, the Settings row sends everyone else. The caller names
+        // its own parent rather than the page assuming Admin.
+        backFallbackHref={backFallbackHref}
       />
 
       <div className="space-y-5">{children}</div>
@@ -36,173 +51,178 @@ function VersionPageShell({ children }: { children: ReactNode }) {
   );
 }
 
-export default function VersionPage() {
-  const { data: releaseInfo } = useReleaseInfo();
+/**
+ * The release card every signed-in user sees at `/app/version`, and the one
+ * admins see at `/app/admin/version` — the two routes render this same
+ * component with a different `backFallbackHref`.
+ *
+ * The fields are the native release screen's fields: the status of the build
+ * against the latest published release, the installed and latest versions, the
+ * publish date, the changelog under "What's new in vX", and the GitHub link.
+ *
+ * Deliberately NOT here, because a browser tab can honour neither: Android's
+ * in-app APK download/install card (its asset name, size, progress, storage
+ * permission and signature-conflict states, `InAppApkUpdater.kt`) and iOS's
+ * "Open Update" button, which deep-links to the App Store / TestFlight. The
+ * only update action a web page can offer is "View on GitHub", which is what
+ * it offers.
+ */
+export default function VersionPage({ backFallbackHref }: { backFallbackHref?: string }) {
+  const { t } = useTranslation("release");
+  const { data: releaseInfo, refetch } = useReleaseInfo();
 
   if (!releaseInfo) {
     return (
-      <VersionPageShell>
+      <VersionPageShell backFallbackHref={backFallbackHref}>
         <Card className={WEB_VIEW_CARD_CLASS}>
           <CardContent className="flex items-center gap-3 py-8">
             <Loader2 className="h-5 w-5 animate-spin text-accent" />
-            <p className="text-sm text-muted-foreground">Loading release information…</p>
+            <p className="text-sm text-muted-foreground">{t("loading")}</p>
           </CardContent>
         </Card>
       </VersionPageShell>
     );
   }
 
+  const latestVersion = formatDisplayVersion(releaseInfo.latestRelease?.version);
+  const latestLabel = latestVersion ? `v${latestVersion}` : "";
+  const hasUpdate = releaseInfo.hasUpdate && latestLabel !== "";
+  // The release whose notes are worth reading: the newer one when there is an
+  // update, otherwise the installed one — the native update/installed card
+  // split, collapsed into one card because the two never appear together.
+  const notesRelease = hasUpdate && releaseInfo.latestRelease
+    ? releaseInfo.latestRelease
+    : releaseInfo.currentRelease;
+  const notesVersion = `v${formatDisplayVersion(notesRelease.version) ?? notesRelease.version}`;
+  // The native update card hides the whole notes block when the changelog is
+  // empty and offers no empty-message; the installed card always says so. Same
+  // rule here, minus an install button that would have kept the empty card up.
+  const showNotes = notesRelease.notes.length > 0 || !hasUpdate;
+
   return (
-    <VersionPageShell>
-      <ReleaseStatusCard releaseInfo={releaseInfo} />
-
-      {releaseInfo.hasUpdate && releaseInfo.latestRelease ? (
-        <ReleaseDetailCard
-          title="Latest release"
-          release={releaseInfo.latestRelease}
-          fallbackNote="No release notes are available for this release yet."
+    <VersionPageShell backFallbackHref={backFallbackHref}>
+      {releaseInfo.latestLookupFailed ? (
+        <ReleaseCheckFailedCard
+          onRetry={() => {
+            void refetch();
+          }}
         />
-      ) : null}
+      ) : (
+        <ReleaseStatusCard releaseInfo={releaseInfo} hasUpdate={hasUpdate} latestLabel={latestLabel} />
+      )}
 
-      <ReleaseDetailCard
-        title="Current release"
-        release={releaseInfo.currentRelease}
-        fallbackNote="No release notes are bundled with this release yet."
-      />
+      {showNotes ? <ReleaseNotesCard versionLabel={notesVersion} release={notesRelease} /> : null}
+
+      <ReleaseLinkButton releaseUrl={notesRelease.releaseUrl} />
     </VersionPageShell>
   );
 }
 
-/** Lays out the compact release-status fields in the shared grid. */
-const ReleaseStatusFields = ({
-  fields,
-  hasUpdate,
-}: {
-  fields: Array<{ label: string; value: string }>;
-  hasUpdate: boolean;
-}) => (
-  <div className={`grid min-w-0 gap-4 ${hasUpdate ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
-    {fields.map((field) => (
-      <StatusField key={field.label} label={field.label} value={field.value} />
-    ))}
-  </div>
-);
+/**
+ * Replaces the status card when the latest-publication check could not run —
+ * the one state the native error card covers, adapted to a page that always
+ * knows its installed version. Without it a failed check renders as "Latest /
+ * You're running the latest version", which is a claim the page cannot make.
+ */
+function ReleaseCheckFailedCard({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation("release");
 
-/** Shows the version and published date fields for a release card. */
-const ReleaseMetadataFields = ({
-  version,
-  publishedAt,
-}: {
-  version: string;
-  publishedAt: string | null;
-}) => (
-  <div className={`grid min-w-0 gap-4 ${publishedAt ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
-    <StatusField
-      label="Version"
-      value={`v${formatDisplayVersion(version) ?? version}`}
-    />
-    {publishedAt ? <StatusField label="Published" value={publishedAt} /> : null}
-  </div>
-);
-
-/** Switches between real release notes and the empty fallback copy. */
-const ReleaseNotesSection = ({
-  notes,
-  fallbackNote,
-}: {
-  notes: string[];
-  fallbackNote: string;
-}) => (
-  <div className="space-y-2">
-    <p className="text-sm font-medium text-foreground">Release Notes</p>
-    {notes.length > 0 ? (
-      <ReleaseNotesBlock notes={notes} />
-    ) : (
-      <div className={`${SURFACE_CLASS} px-4 py-4 text-sm text-muted-foreground`}>
-        {fallbackNote}
-      </div>
-    )}
-  </div>
-);
-
-/** Opens the matching GitHub release in a new tab. */
-const ReleaseLinkButton = ({ releaseUrl }: { releaseUrl: string }) => (
-  <Button
-    type="button"
-    variant="outline"
-    asChild
-    className="w-full gap-2 sm:w-auto"
-  >
-    <a href={releaseUrl} target="_blank" rel="noreferrer">
-      <Github className="h-4 w-4" />
-      Open Release
-    </a>
-  </Button>
-);
+  return (
+    <Card className={WEB_VIEW_CARD_CLASS}>
+      <CardContent className="space-y-4 py-8">
+        <p className="text-sm text-muted-foreground">{t("error")}</p>
+        <Button type="button" variant="outline" onClick={onRetry}>
+          {t("retry")}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 /** Summarizes whether the installed web build matches the latest published release metadata. */
 function ReleaseStatusCard({
   releaseInfo,
+  hasUpdate,
+  latestLabel,
 }: {
-  releaseInfo: NonNullable<ReturnType<typeof useReleaseInfo>["data"]>;
+  releaseInfo: ReleaseInfo;
+  hasUpdate: boolean;
+  latestLabel: string;
 }) {
-  const latestVersion = formatDisplayVersion(releaseInfo.latestRelease?.version);
-  const statusLabel = releaseInfo.hasUpdate ? "Update available" : "Up to date";
-  const statusFields = releaseInfo.hasUpdate
-    ? [
-        { label: "Status", value: statusLabel },
-        {
-          label: "Installed Version",
-          value: `v${formatDisplayVersion(releaseInfo.currentVersion) ?? releaseInfo.currentVersion}`,
-        },
-        {
-          label: "Latest Release",
-          value: latestVersion ? `v${latestVersion}` : "Unavailable",
-        },
-      ]
-    : [
-        { label: "Status", value: statusLabel },
-        {
-          label: "Installed Version",
-          value: `v${formatDisplayVersion(releaseInfo.currentVersion) ?? releaseInfo.currentVersion}`,
-        },
-      ];
+  const { t } = useTranslation("release");
+  const installedLabel = `v${formatDisplayVersion(releaseInfo.currentVersion) ?? releaseInfo.currentVersion}`;
+  const fields: Array<{ label: string; value: string }> = [
+    // Native labels the row "Installed" while an update exists and "Installed
+    // Version" otherwise, because next to it the "Latest" row needs the room.
+    { label: hasUpdate ? t("installed") : t("installedVersion"), value: installedLabel },
+  ];
+  if (hasUpdate) {
+    fields.push({ label: t("latest"), value: latestLabel });
+  }
 
   return (
-    <WebViewSectionCard
-      title="Release Status"
-      contentClassName={undefined}
-    >
-      <ReleaseStatusFields fields={statusFields} hasUpdate={releaseInfo.hasUpdate} />
+    <WebViewSectionCard title={hasUpdate ? t("statusUpdateAvailable") : t("statusLatest")}>
+      <div className="space-y-5">
+        <p className="text-sm text-muted-foreground">
+          {hasUpdate
+            ? t("messageUpdateAvailable", { version: latestLabel })
+            : t("messageLatest")}
+        </p>
+        <div className={`grid min-w-0 gap-4 ${fields.length > 1 ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
+          {fields.map((field) => (
+            <StatusField key={field.label} label={field.label} value={field.value} />
+          ))}
+        </div>
+      </div>
     </WebViewSectionCard>
   );
 }
 
-/** Shows the saved or latest release metadata in the shared section-card layout. */
-function ReleaseDetailCard({
-  title,
+/** Shows one release's publish date and changelog under the native "What's new in vX" heading. */
+function ReleaseNotesCard({
+  versionLabel,
   release,
-  fallbackNote,
 }: {
-  title: string;
+  versionLabel: string;
   release: ReleaseMetadata;
-  fallbackNote: string;
 }) {
+  const { t } = useTranslation("release");
   const publishedAt = formatReleaseDate(release.publishedAt);
 
   return (
     <WebViewSectionCard
-      title={title}
-      contentClassName="space-y-6"
+      title={t("whatsNew", { version: versionLabel })}
+      contentClassName="space-y-4"
     >
-      <ReleaseMetadataFields version={release.version} publishedAt={publishedAt} />
-      <ReleaseNotesSection notes={release.notes} fallbackNote={fallbackNote} />
-      <ReleaseLinkButton releaseUrl={release.releaseUrl} />
+      {publishedAt ? (
+        <p className="text-sm text-muted-foreground">{t("published", { date: publishedAt })}</p>
+      ) : null}
+      {release.notes.length > 0 ? (
+        <ReleaseNotesBlock notes={release.notes} />
+      ) : (
+        <div className={`${SURFACE_CLASS} px-4 py-4 text-sm text-muted-foreground`}>
+          {t("noNotes")}
+        </div>
+      )}
     </WebViewSectionCard>
   );
 }
 
-/** Renders the short release summary bullet list inside the shared surface block. */
+/** Opens the matching GitHub release in a new tab. */
+const ReleaseLinkButton = ({ releaseUrl }: { releaseUrl: string }) => {
+  const { t } = useTranslation("release");
+
+  return (
+    <Button type="button" variant="outline" asChild className="w-full gap-2 sm:w-auto">
+      <a href={releaseUrl} target="_blank" rel="noreferrer">
+        <Github className="h-4 w-4" />
+        {t("viewOnGithub")}
+      </a>
+    </Button>
+  );
+};
+
+/** Renders the release summary bullet list inside the shared surface block. */
 function ReleaseNotesBlock({ notes }: { notes: string[] }) {
   return (
     <div className={`${SURFACE_CLASS} px-4 py-4`}>
@@ -218,14 +238,8 @@ function ReleaseNotesBlock({ notes }: { notes: string[] }) {
   );
 }
 
-/** Renders a single label/value field in the compact admin utility layout. */
-function StatusField({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+/** Renders a single label/value field in the compact utility layout. */
+function StatusField({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium text-foreground">{label}</p>
