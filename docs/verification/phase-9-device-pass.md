@@ -1252,6 +1252,54 @@ animates.
               and not one of them can say whether forty-six pieces look like paper leaving or
               whether the gap under them closed smoothly. That is the whole of what this row is for.
 
+- [ ] **PR 199 · and · The root feed tab swap is web's fade, not a crossfade** — a phone with a
+      workspace and both feeds carrying enough rows to scroll. The swap is judged on the feed BODY,
+      and an empty feed has nothing to hand over. The dock is at the bottom; watch the feed under
+      the dock rather than the pill.
+      Do:     tap Anytime, then Scheduled, then Anytime again. On the first pass watch the whole of
+              each hand-over; on the second watch only the vertical middle of the screen, where the
+              two feeds overlap most.
+      Watch:  (a) the ARRIVING feed comes up from nothing while the DEPARTING one is still legible
+              over it — the outgoing screen holds through the first half and lets go in the second,
+              so it reads as the old screen dissolving into the new one rather than as one screen
+              sliding under the other. (b) because both layers are see-through for the whole of it,
+              the app background shows through them for a beat in the middle — the screen should dip
+              rather than pass through a flat 50/50 blend of the two feeds. (c) the departing feed is
+              the one on top while it goes, which is what makes (a) and (b) read that way. (d) the
+              dock pill and the create button stay FULLY DRAWN through the whole hand-over — the
+              chrome is above both feeds by its own `zIndex(8f)`, against `0f`/`1f` on the feeds, and
+              a pill that dims, dips or disappears into the outgoing screen means the departing feed
+              has outranked the control that was just tapped. This is the check that exists only
+              because the departing half is raised at all.
+      Fails:  one feed replaced by the other with no overlap at all (that is the cut this replaced);
+              a symmetric crossfade, which looks like the two screens meeting in the middle and then
+              swapping sides; the arriving feed appearing AT FULL STRENGTH over a fading outgoing one,
+              which is the reversed stacking and the wrong half on top; anything that travels — a
+              slide, a scale, or the feed resizing under the dock.
+      Also:   the create button in the corner must cross from blue to green over the same 200 ms the
+              body takes, not snap. Its own curve is `Standard` rather than either of the body's two,
+              so it should read as one colour becoming another rather than as an arrival.
+      Also:   the dock's pill keeps its own spring and is NOT expected to be on this clock — the pill
+              is the control and the body is following it. A body that lands before the pill, or
+              before the create button's accent, is the one ordering failure worth filing.
+      Reduce: turn Settings → Motion off and repeat both directions. The swap must be a CLEAN CUT,
+              and what a wrong Reduce Motion path looks like here is a HELD SCREEN — the screen the
+              user just left staying up, opaque, for a beat after the tap. That is a departing layer
+              left composed and drawn on top with no animation to take it away, which is exactly the
+              trap the web comment takes its outgoing snapshot off outright for rather than merely
+              un-animating; the arriving feed must be drawn finished, complete, in the frame the tab
+              changes, with no such frame anywhere in it.
+      Also:   with the widget, fire `tday://todos/create?target=floater` while sitting on Scheduled —
+              once with Reduce Motion on and once off. Exactly ONE create sheet opens each time, and
+              it is the Anytime feed's.
+      Why:    no device on the machine this was written on, and none of it is machine-checkable. The
+              asymmetry of the two curves, which of the two layers is above, and whether anything is
+              held under Reduce Motion are three looks. The one structural half is the deep link: the
+              departing feed is handed the `0` sentinel from the frame it stops being the selected
+              tab, so that hand-off no longer depends on a fade finishing before a sleep. Android's
+              gate is green — `:app:compileDebugKotlin :app:testDebugUnitTest`, `BUILD SUCCESSFUL`,
+              683 tests, 0 failures — and it cannot see any of the above.
+
 ## iOS
 
 - [ ] **PR 39c · ios · The burst is paper, not a diagram** — any list with exactly one task left on
@@ -1946,3 +1994,100 @@ animates.
               the row clip on the Anytime pair. Nothing on this machine can render a SwiftUI frame, and
               the one construct added here that no local gate can typecheck is that configuration
               closure, so a build against an iOS 18 SDK is owed alongside this pass.
+
+- [ ] **PR 198 · all · One glyph for Scheduled and its history** — a phone, the root dock, then the
+      Scheduled home board. Then the completion-history page from the Scheduled board's Completed tile.
+      Start on the dock at rest, which is the smallest the glyph is ever drawn.
+      Do:     look at the dock's collapsed pill with Scheduled active, then tap the Completed tile on
+              the Scheduled board and look at the page's hero mark.
+      Watch:  (a) the dock glyph is a CALENDAR WITH A TICK, and the tick reads as a tick at 22pt — not
+              as a smudge, not as a second horizontal rule under the calendar's header line. That is
+              the one number in this change that no gate can check: the tick is a 6×4-unit V inside a
+              24-unit viewport, stroked at 2, and it was computed to survive at 22pt rather than seen.
+              (b) the pill draws the bundled glyph, NOT an SF Symbol house and NOT nothing — a nil
+              `systemImage` renders nothing at all in SwiftUI, silently, so "no icon" is a real
+              failure mode here and not a hypothetical. (c) the history page's own mark is the same
+              calendar-with-a-tick.
+      Fails:  a house anywhere in the dock or on the history page; a blank dock pill on Scheduled; a
+              tick that has collapsed into the header rule.
+      Also:   the history page's hero mark is drawn three times over — a 44pt glyph, a 108pt echo of
+              it at 0.17 alpha, and a circular gradient wash behind both. The echo is clipped by a
+              circle, and a rectilinear calendar under a circular clip cuts differently from the
+              circle-check it replaced. Judge that: it should read as a soft echo of the mark, and a
+              failure is two horizontal bars and a vertical bar instead.
+      Also:   Android's car surface, which draws the dock's own pair — the Today/TODAY button should
+              be the calendar-with-a-tick and the Floater button the leaf. iOS's CarPlay bar is
+              deliberately unchanged and still wears SF Symbols on all three of its buttons; that is a
+              recorded gap, not a failure of this row.
+      Why:    Nothing in `tday-web/tests/guardrails/` gates this change in either direction. The icon
+              coverage tests assert existence for their own fixtures only, and the list-icon parity
+              tests lock the list registries — they would have stayed green if the new drawable were
+              misspelled, absent, or a hand-drawn approximation of the Lucide glyph, and they stay
+              green now. The asset's provenance is in the ledger row; whether it reads is only here.
+
+- [ ] **PR 199 · ios · The same swap on the same pairing** — an iPhone with a workspace and both feeds
+      carrying enough rows to scroll. Same action as the Android row above: tap between Scheduled and
+      Anytime on the root dock and watch the feed under the pill.
+      Do:     tap Anytime, then Scheduled, then Anytime again, watching the whole hand-over each time,
+              then the vertical middle of the screen on the last one.
+      Watch:  the same three things Android's row asks for — the old screen still legible over the new
+              one through the first half, the background showing through both for a beat in the
+              middle, and the departing feed being the one on top while it goes — plus Android's
+              fourth: the dock pill and the create button stay FULLY DRAWN through the whole
+              hand-over. On Android the chrome is above the feeds by `Modifier.zIndex(8f)`; on iOS
+              the same answer is written as `.zIndex(8)` on `rootFloatingControls`, against the
+              elevation the departing feed takes for itself. A pill that dims, dips or disappears
+              into the outgoing screen is the chrome losing that ordering, and it is the one failure
+              here that is a whole control going dark rather than a shade being wrong.
+      Fails:  a cut; a symmetric crossfade; the arriving feed at full strength over a fading outgoing
+              one, which is what the default stacking gives and is the failure this row is most likely
+              to catch — the raise is carried by the removal transition rather than by a `zIndex`
+              written in the arm, and a build that drops it falls back silently to the wrong half on
+              top rather than to anything that looks broken.
+      Reduce: Settings → Accessibility → Reduce Motion on (and, separately, the app's own Motion
+              preference off), then repeat both directions. Clean cut, arriving feed finished in the
+              frame the tab changes, and — the failure to look for — NO held screen: a departing feed
+              left opaque over the feed the user just asked for. The raise only ever applies inside a
+              removal transition, so a held frame here means the transition is being played with an
+              animation it should not have.
+      Also:   with Reduce Motion off, fire the create deep link from the widget while sitting on
+              Scheduled and confirm exactly ONE sheet opens, on the Anytime feed. What protects this
+              on iOS is NOT the same thing as on Android: the `0` sentinel the arms pass on the tab
+              they are not is unreachable where it is written, because a `switch rootFeedTab` arm is
+              only built while it is the selected tab. The protection is that the departing copy is
+              rendered from the body it had before the tab changed, so its request id never changes
+              and its `.onChange` cannot fire; the sentinel is kept only as the value the other
+              reading of that premise would need, refused by the same `> 0` guard. So: TWO sheets
+              means the frozen render is not what this file assumes, and that is a finding rather
+              than a test flake.
+      Why:    no local iOS compile and no xctest on this machine. The change is delimiter-balanced
+              against HEAD and the guardrails that read this file as text are green
+              (`launch-handover`, `motion-reachability-ios`, `reduced-motion-floor`), but nothing here
+              renders a SwiftUI frame, and the one construct with no precedent in this file — a
+              `ViewModifier` carried by `AnyTransition.modifier(active:identity:)` — is exactly the
+              kind whose effect is a look. That is what this row is for, and its failure mode is
+              silent.
+
+- [ ] **PR 200 · all · The Completion-history mark** — a phone, the Completed tile on either board, then
+      the page's hero mark. Repeat once with a light theme and once with a dark one.
+      Do:     tap through to Completion history and look at the page's own mark, then scroll until the
+              mark has collapsed away and back.
+      Watch:  (a) the mark is a green check with a faint calendar-with-a-tick and a leaf scaled behind it,
+              all in ONE green — not three icons at one size, and not a second colour for the two behind.
+              (b) the leaf reads as a LEAF and the calendar reads as a CALENDAR: the outlines must be
+              separate everywhere, including at the smallest size the mark is drawn. The arithmetic says
+              they clear by 1.54pt at the hero's 44pt; that is a computed clearance, not a seen one.
+      Fails:  the leaf and the calendar frame reading as one fused fringe; the whole mark reading as a
+              grey smudge; a second green appearing in the mark.
+      Also:   the two smaller sites. The page watermark (a very faint full-screen glyph) and the
+              empty-state badge are the same composite at much lower alpha and smaller size — check the
+              watermark is VISIBLE on the light theme, which is the one Android got wrong before the
+              blocker was fixed, and check the badge is not simply white.
+      Also:   the hero disc repeats the mark as an oversized echo behind it. That echo must be the SAME
+              green as the front mark on all three clients; on both natives it used to be the screen's
+              slate chrome, which made the mark hold two colours.
+      Why:    The composite was built and its geometry measured rather than eyeballed, and one part of it
+              is provably illegible: the `calendar-check`'s inner tick cannot be read behind the front
+              check at any size, and the two ways to buy it back were both rendered and rejected as worse
+              than the loss. That is disclosed in the code. Whether the leaf and the calendar still READ
+              as themselves at the small sizes is the half no arithmetic settles.

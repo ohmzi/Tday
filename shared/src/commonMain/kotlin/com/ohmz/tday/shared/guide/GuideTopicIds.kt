@@ -65,7 +65,6 @@ object GuideTopicIds {
     const val IN_APP_UPDATE = "in-app-update"
     const val API_KEY_HOMARR = "api-key-homarr"
     const val DEVICE_CALENDAR_SYNC = "device-calendar-sync"
-    const val WEBHOOKS = "webhooks"
     const val UNIFIEDPUSH = "unifiedpush"
     const val AI_SUMMARY = "ai-summary"
     const val KEYBOARD_SUBMIT = "keyboard-submit"

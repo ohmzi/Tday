@@ -17,7 +17,7 @@ How to generate every secret T'Day needs, set it on the deploy host, and roll ou
 |---|---|---|---|
 | `AUTH_SECRET` | **Yes** — the backend refuses to boot without it | Derives the JWE session key, and the HMAC key for throttle buckets | Everyone is signed out; persisted rate-limit buckets are orphaned |
 | `DATABASE_URL` | **Yes** — refuses to boot without it | Postgres connection | n/a |
-| `DATA_ENCRYPTION_KEY` | **No — optional, off by default** | Encrypts task titles, descriptions and webhook secrets at rest | Rows written with the old key become unreadable unless you keep it in `DATA_ENCRYPTION_KEYS` |
+| `DATA_ENCRYPTION_KEY` | **No — optional, off by default** | Encrypts task titles, descriptions and notes at rest | Rows written with the old key become unreadable unless you keep it in `DATA_ENCRYPTION_KEYS` |
 
 All live in `.env.docker` on the deploy host.
 

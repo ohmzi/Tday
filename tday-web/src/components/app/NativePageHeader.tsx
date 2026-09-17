@@ -202,6 +202,18 @@ type Props = {
   accentColor: string;
   /** The page's own glyph. Rendered at full accent inside the tinted circle. */
   icon: ElementType;
+  /**
+   * What the oversized echo behind the glyph is drawn from. Defaults to `icon`,
+   * which is right for every page whose mark is one glyph.
+   *
+   * The Completion-history mark is three glyphs stacked, and only the front one
+   * belongs in the echo: the echo is clipped to the circle, and the clip runs
+   * through the middle of the glyph — a rectilinear calendar under that arc is
+   * cut into bars rather than arcs, while the check's round-capped tail merely
+   * bleeds. So that page hands its check here and keeps the composite inside the
+   * disc.
+   */
+  echoIcon?: ElementType;
   subtitle?: string;
   /** Trailing controls in the pinned bar, to the right of the title. */
   actions?: ReactNode;
@@ -262,6 +274,7 @@ export default function NativePageHeader({
   title,
   accentColor,
   icon: Icon,
+  echoIcon,
   subtitle,
   actions,
   beneathTitle,
@@ -269,6 +282,7 @@ export default function NativePageHeader({
   barSlots,
   className,
 }: Props) {
+  const EchoIcon = echoIcon ?? Icon;
   const m = nativePageHeaderMetrics;
   const heroRef = useRef<HTMLDivElement | null>(null);
   const markBoxRef = useRef<HTMLDivElement | null>(null);
@@ -563,7 +577,7 @@ export default function NativePageHeader({
             }%, transparent))`,
           }}
         >
-          <Icon
+          <EchoIcon
             aria-hidden
             strokeWidth={2}
             className="pointer-events-none absolute left-1/2 top-1/2"

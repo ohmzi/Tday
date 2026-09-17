@@ -269,7 +269,7 @@ In Local Mode the browser is the workspace:
   ships (`rrule`, `lib/todoSummary.ts`, `lib/todoNlp.ts`); summaries always report
   `source: "logic"` because a browser workspace can't reach a model.
 - Server-only surfaces are hidden the way the native settings screens hide them:
-  account/password/security questions, push, webhooks, dashboard API
+  account/password/security questions, push, dashboard API
   keys, admin, list members, and the realtime WebSocket. A stray call to one of those
   routes fails as a plain 404 rather than silently pretending to succeed.
 - Settings gains a Workspace card with "Leave local workspace" (a mode switch that

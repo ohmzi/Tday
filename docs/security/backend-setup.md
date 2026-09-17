@@ -285,7 +285,7 @@ Two defaults to know before you schedule it:
 
 **Encryption of the dump is opt-in and off by default** (`TDAY_BACKUP_ENCRYPTION=none`,
 `scripts/backup-database.sh:107`, applied at `:294-311`). An unencrypted dump contains every
-password hash, API key, calendar-feed token and webhook secret in restorable form — and if you are
+password hash, API key and calendar-feed token in restorable form — and if you are
 running without field encryption, every task title and description in the clear. The script says so
 on every unencrypted run (`:309`). Two modes:
 

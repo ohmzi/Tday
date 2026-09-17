@@ -722,13 +722,7 @@
       "passwordChangeFailed": "Passwort konnte nicht geändert werden",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions",
-      "webhookCreated": "Webhook hinzugefügt. Kopiere jetzt das Signatur-Secret.",
-      "webhookCreateFailed": "Webhook konnte nicht hinzugefügt werden",
-      "webhookDeleted": "Webhook gelöscht",
-      "webhookDeleteFailed": "Webhook konnte nicht gelöscht werden",
-      "webhookSecretCopied": "Signatur-Secret kopiert",
-      "webhookSecretCopyFailed": "Signatur-Secret konnte nicht kopiert werden"
+      "securityQuestionsLoadFailed": "Could not load security questions"
     },
     "signOut": "Abmelden",
     "featureToggle": {
@@ -767,19 +761,6 @@
       "confirmCancel": "Abbrechen",
       "confirmImport": "Importieren",
       "summaryLocal": "{{tasks}} Aufgaben · {{lists}} Listen · {{completed}} abgeschlossen, alles in diesem Browser."
-    },
-    "webhooks": {
-      "title": "Webhooks",
-      "blurb": "Erhalte einen signierten HTTP-Ping bei Datenänderungen.",
-      "urlPlaceholder": "https://dein-server/webhook",
-      "eventsLabel": "Ereignisse (keine = alle)",
-      "creating": "Wird hinzugefügt...",
-      "add": "Webhook hinzufügen",
-      "secretCopyNow": "Kopiere dieses Signatur-Secret jetzt – es wird nicht erneut angezeigt.",
-      "allEvents": "Alle Ereignisse",
-      "disabled": "Deaktiviert",
-      "delete": "Webhook löschen",
-      "none": "Noch keine Webhooks"
     },
     "restingFloaters": {
       "title": "Ruhende Floater",
@@ -822,7 +803,8 @@
     "about": {
       "title": "Info",
       "appVersion": "App-Version",
-      "server": "Server"
+      "server": "Server",
+      "updateAvailable": "v{{version}} verfügbar"
     },
     "troubleshooting": {
       "reset": "App-Cache zurücksetzen",
@@ -1277,15 +1259,6 @@
         "step1": "Erlaube den Kalenderzugriff, wenn dein Handy danach fragt.",
         "step2": "Öffne deine Kalender-App – deine terminierten Aufgaben stehen im T'Day-Kalender."
       },
-      "webhooks": {
-        "title": "Webhooks",
-        "summary": "Erhalte einen HTTP-Ping, wenn sich deine Aufgaben ändern.",
-        "keywords": "webhook, http, integration, hmac, signatur, automatisierung, benachrichtigen, callback",
-        "body": "Registriere einen HTTP-Endpunkt und T'Day sendet per POST einen kleinen signierten „etwas hat sich geändert“-Ping, wenn sich Aufgaben, Listen oder Floater ändern — keine Inhalte, nur Ereignistyp und Listen-ID, damit deine Automatisierung über die normale API neu lädt. Jeder Webhook hat ein eigenes Secret, das den Body per HMAC-SHA256 im Header X-Tday-Signature signiert; prüfe es, bevor du einer Anfrage vertraust. Ein dauerhaft fehlschlagender Webhook wird automatisch deaktiviert.",
-        "step0": "Füge in den Einstellungen deine Endpunkt-URL ein und wähle die Ereignisse.",
-        "step1": "Füge den Webhook hinzu und kopiere sein Signatur-Secret — einmalig sichtbar.",
-        "step2": "Prüfe den X-Tday-Signature-HMAC bei jeder Anfrage, bevor du handelst."
-      },
       "unifiedpush": {
         "title": "UnifiedPush (Android)",
         "summary": "Server-Push ohne Google, über deinen eigenen Distributor.",
@@ -1396,5 +1369,22 @@
     "lists": "Listen",
     "newTask": "Neue Aufgabe",
     "brainDump": "Gedanken-Dump"
+  },
+  "release": {
+    "subtitle": "Prüfe den bereitgestellten Build und die neueste veröffentlichte Version.",
+    "loading": "Versionsinformationen werden geladen…",
+    "error": "Versionsinformationen konnten nicht abgerufen werden. Prüfe deine Verbindung und versuche es erneut.",
+    "retry": "Erneut versuchen",
+    "statusLatest": "Aktuell",
+    "statusUpdateAvailable": "Update verfügbar",
+    "messageLatest": "Du verwendest die neueste Version",
+    "messageUpdateAvailable": "Version {{version}} ist verfügbar.",
+    "installed": "Installiert",
+    "installedVersion": "Installierte Version",
+    "latest": "Neueste",
+    "whatsNew": "Neu in {{version}}",
+    "noNotes": "Für diese Version sind keine Versionshinweise verfügbar",
+    "viewOnGithub": "Auf GitHub ansehen",
+    "published": "Veröffentlicht am {{date}}"
   }
 }

@@ -30,7 +30,6 @@ import {
   SquarePlus,
   WandSparkles,
   Waves,
-  Webhook,
   WifiOff,
 } from "lucide-react";
 
@@ -66,7 +65,6 @@ const ICONS: Record<string, LucideIcon> = {
   "square-plus": SquarePlus,
   "wand-sparkles": WandSparkles,
   waves: Waves,
-  webhook: Webhook,
   "wifi-off": WifiOff,
 };
 

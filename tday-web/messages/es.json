@@ -722,13 +722,7 @@
       "passwordChangeFailed": "No se pudo cambiar la contraseña",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions",
-      "webhookCreated": "Webhook añadido. Copia el secreto de firma ahora.",
-      "webhookCreateFailed": "No se pudo añadir el webhook",
-      "webhookDeleted": "Webhook eliminado",
-      "webhookDeleteFailed": "No se pudo eliminar el webhook",
-      "webhookSecretCopied": "Secreto de firma copiado",
-      "webhookSecretCopyFailed": "No se pudo copiar el secreto de firma"
+      "securityQuestionsLoadFailed": "Could not load security questions"
     },
     "signOut": "Cerrar sesión",
     "featureToggle": {
@@ -767,19 +761,6 @@
       "confirmCancel": "Cancelar",
       "confirmImport": "Importar",
       "summaryLocal": "{{tasks}} tareas · {{lists}} listas · {{completed}} completadas, todo en este navegador."
-    },
-    "webhooks": {
-      "title": "Webhooks",
-      "blurb": "Recibe un aviso HTTP firmado cuando cambian tus datos.",
-      "urlPlaceholder": "https://tu-servidor/webhook",
-      "eventsLabel": "Eventos (ninguno = todos)",
-      "creating": "Añadiendo...",
-      "add": "Añadir webhook",
-      "secretCopyNow": "Copia este secreto de firma ahora: no se mostrará de nuevo.",
-      "allEvents": "Todos los eventos",
-      "disabled": "Desactivado",
-      "delete": "Eliminar webhook",
-      "none": "Aún no hay webhooks"
     },
     "restingFloaters": {
       "title": "Flotantes en reposo",
@@ -822,7 +803,8 @@
     "about": {
       "title": "Acerca de",
       "appVersion": "Versión de la app",
-      "server": "Servidor"
+      "server": "Servidor",
+      "updateAvailable": "v{{version}} disponible"
     },
     "troubleshooting": {
       "reset": "Restablecer la caché de la app",
@@ -1277,15 +1259,6 @@
         "step1": "Permite el acceso al calendario cuando tu teléfono lo pida.",
         "step2": "Abre tu app de calendario: tus tareas con fecha están en el calendario T'Day."
       },
-      "webhooks": {
-        "title": "Webhooks",
-        "summary": "Recibe un aviso HTTP cuando cambian tus tareas.",
-        "keywords": "webhook, http, integración, hmac, firma, automatización, notificar, callback",
-        "body": "Registra un endpoint HTTP y T'Day envía por POST un pequeño aviso firmado de “algo cambió” cuando cambian tus tareas, listas o flotantes: sin contenido, solo el tipo de evento y el id de lista, para que tu automatización vuelva a consultar por la API normal. Cada webhook tiene su propio secreto que firma el cuerpo con HMAC-SHA256 en la cabecera X-Tday-Signature; verifícalo antes de confiar en una solicitud. Un webhook que falla repetidamente se desactiva automáticamente.",
-        "step0": "En Ajustes, pega la URL de tu endpoint y elige qué eventos recibir.",
-        "step1": "Añade el webhook y copia su secreto de firma: se muestra una vez.",
-        "step2": "Verifica el HMAC de X-Tday-Signature en cada solicitud antes de actuar."
-      },
       "unifiedpush": {
         "title": "UnifiedPush (Android)",
         "summary": "Notificaciones del servidor sin Google, con tu distribuidor.",
@@ -1396,5 +1369,22 @@
     "lists": "Listas",
     "newTask": "Tarea nueva",
     "brainDump": "Volcado mental"
+  },
+  "release": {
+    "subtitle": "Revisa la versión desplegada y la última versión publicada.",
+    "loading": "Cargando información de la versión…",
+    "error": "No se pudo obtener la información de la versión. Comprueba tu conexión e inténtalo de nuevo.",
+    "retry": "Reintentar",
+    "statusLatest": "Última",
+    "statusUpdateAvailable": "Actualización disponible",
+    "messageLatest": "Estás usando la última versión",
+    "messageUpdateAvailable": "La versión {{version}} está disponible.",
+    "installed": "Instalada",
+    "installedVersion": "Versión instalada",
+    "latest": "Última",
+    "whatsNew": "Novedades de {{version}}",
+    "noNotes": "No hay notas de versión disponibles para esta versión",
+    "viewOnGithub": "Ver en GitHub",
+    "published": "Publicada el {{date}}"
   }
 }

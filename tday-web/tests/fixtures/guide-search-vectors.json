@@ -49,8 +49,7 @@
       "root-feeds",
       "create-task",
       "brain-dump",
-      "morning-sweep",
-      "webhooks"
+      "morning-sweep"
     ],
     "car": [
       "morning-sweep",
@@ -76,7 +75,6 @@
       "copy-task-text",
       "promote-and-float",
       "list-icons",
-      "webhooks",
       "keyboard-shortcuts"
     ],
     "keyboard": [

@@ -64,10 +64,9 @@ No shared DTO changes. No `ApiRoutes` constant. No `localApi.ts` case. No new
   bulk action. Contained by *not claiming atomicity*: collect per-item outcomes and
   report partial failure honestly (§6).
 - **Side-effect amplification.** Every mutation publishes one `/ws` event to the actor
-  and every share collaborator, dispatches one webhook POST per matching subscription,
-  fires one UnifiedPush data-changed POST per subscribed device, and invalidates the
-  server cache. Nothing coalesces, and web's realtime listener invalidates queries on
-  every message with no debounce.
+  and every share collaborator, fires one UnifiedPush data-changed POST per subscribed
+  device, and invalidates the server cache. Nothing coalesces, and web's realtime
+  listener invalidates queries on every message with no debounce.
 - **Rate limit.** The `api_global` policy covers all of `/api/` at
   `API_RATE_LIMIT_MAX` (default **180**) requests per `API_RATE_LIMIT_WINDOW_SEC`
   (default **60**), keyed per authenticated user. A large select-all would take 429s
@@ -81,7 +80,7 @@ reads it directly; web and iOS mirror the literal with a comment pointing back h
 
 ### When to revisit
 
-If real users hit the cap, or a webhook subscriber complains about storms, add `ids`
+If real users hit the cap, or push storms turn out to be real, add `ids`
 to `DELETE /api/todo` modelled byte-for-byte on the existing
 `DeleteListRequest(id: String? = null, ids: List<String> = emptyList())` /
 `DeleteListResponse(message, deletedIds)` served by `ListService.deleteMany`. That

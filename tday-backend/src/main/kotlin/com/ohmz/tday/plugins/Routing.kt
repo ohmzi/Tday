@@ -50,7 +50,6 @@ fun Application.configureRouting() {
             completedTodoRoutes()
             completedFloaterRoutes()
             exportRoutes()
-            webhookRoutes()
             timezoneRoutes()
             appSettingsRoutes()
             adminRoutes()

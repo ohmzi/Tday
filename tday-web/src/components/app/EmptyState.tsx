@@ -50,6 +50,7 @@ export default function EmptyState({
   description,
   action,
   className,
+  iconClassName = "h-6 w-6",
   celebrate = false,
   celebrationStartDelayMs = 0,
 }: {
@@ -59,6 +60,13 @@ export default function EmptyState({
   description?: string;
   action?: ReactNode;
   className?: string;
+  /**
+   * Size of the glyph on the badge. 24px is the scene's own drawing and what
+   * every screen takes; the Completion history raises it because its mark is
+   * three glyphs stacked, and at 24 the calendar's inner tick and the leaf's
+   * midrib land at ~2px where the three cannot be told apart.
+   */
+  iconClassName?: string;
   celebrate?: boolean;
   celebrationStartDelayMs?: number;
 }) {
@@ -151,7 +159,7 @@ export default function EmptyState({
             className="absolute -right-1 bottom-1 flex h-[52px] w-[52px] items-center justify-center rounded-full text-white shadow-[0_14px_26px_-14px_hsl(var(--shadow)/0.7)] ring-4 ring-background"
             style={{ backgroundColor: accentColor }}
           >
-            <Icon className="h-6 w-6" strokeWidth={2.6} />
+            <Icon className={iconClassName} strokeWidth={2.6} />
           </div>
 
           {/* Three sparkles on their own staggered twinkle. */}

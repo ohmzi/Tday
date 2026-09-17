@@ -69,9 +69,9 @@ import { exportWorkspace, importWorkspace } from "@/lib/local/localTransfer";
  * the feature hooks and the optimistic-update paths are untouched by the mode.
  *
  * Routes that only make sense against a real server (accounts, sharing, admin,
- * push, webhooks, API keys, calendar feed) deliberately have no handler; their
- * UI is hidden in Local Mode and a stray call fails as a plain 404 instead of
- * silently pretending to succeed.
+ * push, API keys) deliberately have no handler; their UI is hidden in Local
+ * Mode and a stray call fails as a plain 404 instead of silently pretending to
+ * succeed.
  */
 
 export type LocalRequest = {

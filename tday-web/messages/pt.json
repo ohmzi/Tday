@@ -722,13 +722,7 @@
       "passwordChangeFailed": "Falha ao alterar a senha",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions",
-      "webhookCreated": "Webhook adicionado. Copie o segredo de assinatura agora.",
-      "webhookCreateFailed": "Falha ao adicionar o webhook",
-      "webhookDeleted": "Webhook excluído",
-      "webhookDeleteFailed": "Falha ao excluir o webhook",
-      "webhookSecretCopied": "Segredo de assinatura copiado",
-      "webhookSecretCopyFailed": "Falha ao copiar o segredo de assinatura"
+      "securityQuestionsLoadFailed": "Could not load security questions"
     },
     "signOut": "Sair",
     "featureToggle": {
@@ -767,19 +761,6 @@
       "confirmCancel": "Cancelar",
       "confirmImport": "Importar",
       "summaryLocal": "{{tasks}} tarefas · {{lists}} listas · {{completed}} concluídas, tudo neste navegador."
-    },
-    "webhooks": {
-      "title": "Webhooks",
-      "blurb": "Receba um ping HTTP assinado quando seus dados mudarem.",
-      "urlPlaceholder": "https://seu-servidor/webhook",
-      "eventsLabel": "Eventos (nenhum = todos)",
-      "creating": "Adicionando...",
-      "add": "Adicionar webhook",
-      "secretCopyNow": "Copie este segredo de assinatura agora — não será mostrado de novo.",
-      "allEvents": "Todos os eventos",
-      "disabled": "Desativado",
-      "delete": "Excluir webhook",
-      "none": "Ainda não há webhooks"
     },
     "restingFloaters": {
       "title": "Flutuantes em repouso",
@@ -822,7 +803,8 @@
     "about": {
       "title": "Sobre",
       "appVersion": "Versão do app",
-      "server": "Servidor"
+      "server": "Servidor",
+      "updateAvailable": "v{{version}} disponível"
     },
     "troubleshooting": {
       "reset": "Repor a cache da aplicação",
@@ -1277,15 +1259,6 @@
         "step1": "Permita o acesso ao calendário quando o celular pedir.",
         "step2": "Abra seu app de calendário — suas tarefas com data estão no calendário T'Day."
       },
-      "webhooks": {
-        "title": "Webhooks",
-        "summary": "Receba um ping HTTP quando suas tarefas mudarem.",
-        "keywords": "webhook, http, integração, hmac, assinatura, automação, notificar, callback",
-        "body": "Registre um endpoint HTTP e o T'Day envia por POST um pequeno ping assinado de “algo mudou” quando suas tarefas, listas ou flutuantes mudam — sem conteúdo, apenas o tipo de evento e o id da lista, para sua automação consultar de novo pela API normal. Cada webhook tem seu próprio segredo que assina o corpo com HMAC-SHA256 no cabeçalho X-Tday-Signature; verifique antes de confiar em uma requisição. Um webhook que falha repetidamente é desativado automaticamente.",
-        "step0": "Nas Configurações, cole a URL do endpoint e escolha os eventos.",
-        "step1": "Adicione o webhook e copie o segredo de assinatura — exibido uma vez.",
-        "step2": "Verifique o HMAC X-Tday-Signature em cada requisição antes de agir."
-      },
       "unifiedpush": {
         "title": "UnifiedPush (Android)",
         "summary": "Push do servidor sem Google, pelo seu distribuidor.",
@@ -1396,5 +1369,22 @@
     "lists": "Listas",
     "newTask": "Nova tarefa",
     "brainDump": "Despejo mental"
+  },
+  "release": {
+    "subtitle": "Reveja a versão publicada e a última versão disponível.",
+    "loading": "A carregar informações da versão…",
+    "error": "Não foi possível obter as informações da versão. Verifique a sua ligação e tente novamente.",
+    "retry": "Tentar novamente",
+    "statusLatest": "Mais recente",
+    "statusUpdateAvailable": "Atualização disponível",
+    "messageLatest": "Está a usar a versão mais recente",
+    "messageUpdateAvailable": "A versão {{version}} está disponível.",
+    "installed": "Instalada",
+    "installedVersion": "Versão instalada",
+    "latest": "Mais recente",
+    "whatsNew": "Novidades da {{version}}",
+    "noNotes": "Não há notas de versão disponíveis para esta versão",
+    "viewOnGithub": "Ver no GitHub",
+    "published": "Publicada a {{date}}"
   }
 }

@@ -45,7 +45,7 @@ Both are plain Bash, `set -euo pipefail`, executable, and work from any director
 so the file contains **the entire application database**:
 
 - every user row (`public."User"`), including password hashes and security questions
-- `user_api_keys`, `calendar_feed_tokens`, `webhook_subscriptions`, `push_subscriptions`
+- `user_api_keys`, `calendar_feed_tokens`, `push_subscriptions`
 - `account` / `verificationtoken` (OAuth links and tokens)
 - all task data — `todos`, `todo_instances`, `task_steps`, `completedtodo`, `project`,
   floaters, lists and `list_shares` / `floater_list_shares`
@@ -78,8 +78,8 @@ not a backup, and it must not be relied on as one:
   in the file at all.
 - **No accounts.** The `User` table, password hashes, security questions, OAuth `account` rows and
   sessions are omitted entirely. You cannot log in to a server rebuilt from it.
-- **No credentials or integrations.** `user_api_keys`, `calendar_feed_tokens`,
-  `webhook_subscriptions` and `push_subscriptions` are not exported.
+- **No credentials or integrations.** `user_api_keys`, `calendar_feed_tokens` and
+  `push_subscriptions` are not exported.
 - **No operational tables.** No `eventlog`, `authsignal`, `auththrottle`, `cronlog`, no Flyway
   history.
 - **Plaintext.** The bundle is decrypted on the way out and written as clear JSON wherever the
@@ -146,7 +146,7 @@ set in the real environment always wins.
 ## Encryption at rest
 
 **Encryption is opt-in and off by default.** An unencrypted dump is a complete copy of every
-password hash, API key, calendar-feed token and webhook secret on your server. If it leaves the
+password hash, API key and calendar-feed token on your server. If it leaves the
 box — NAS, external disk, cloud sync — encrypt it.
 
 ### age (preferred)

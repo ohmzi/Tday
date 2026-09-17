@@ -17,8 +17,21 @@ function ThemeColorSync() {
 }
 
 export default function App() {
+  // No `disableTransitionOnChange` here, deliberately.
+  //
+  // It makes next-themes inject a global
+  // `*,*::before,*::after{transition:none!important}` on every `setTheme` call and hold it
+  // across the forced style recalc, so for exactly the frame the theme class flips, every
+  // transition in the app is dead. A theme change animates nothing on its own, so the only
+  // control that suffers is the one whose own `transform` changes in that same frame: the
+  // appearance segmented thumb, which SNAPPED to its next slot while the "Default home
+  // screen" thumb beside it — which no theme change accompanies — glided. That asymmetry is
+  // the bug this prop was causing; the two controls are the same widget and have to move the
+  // same way. Dropping it lets the flip crossfade the pressable colour transitions for
+  // `--tday-duration-quick` (150ms) rather than cutting them dead. The route handover's own
+  // view-transition rules in globals.css are unaffected either way.
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <ThemeColorSync />
       <QueryProvider>
         <AuthProvider>

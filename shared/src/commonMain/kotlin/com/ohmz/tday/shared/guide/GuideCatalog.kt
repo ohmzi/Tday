@@ -457,13 +457,6 @@ object GuideCatalog {
             helpAnchors = listOf("settings-api-key"),
         ),
         topic(
-            GuideTopicIds.WEBHOOKS, GuideSectionId.INTEGRATIONS, "webhook",
-            setOf(WEB), serverOnly = true, sinceVersion = "0.5.0",
-            body = listOf(para(GuideTopicIds.WEBHOOKS), steps(GuideTopicIds.WEBHOOKS, 3)),
-            deepLink = GuideDeepLink(web = "settings"),
-            helpAnchors = listOf("settings-webhooks"),
-        ),
-        topic(
             GuideTopicIds.WEEK_IN_REVIEW, GuideSectionId.INTEGRATIONS, "check-check",
             setOf(WEB), sinceVersion = "0.6.0",
             body = listOf(para(GuideTopicIds.WEEK_IN_REVIEW), tip(GuideTopicIds.WEEK_IN_REVIEW)),

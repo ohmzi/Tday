@@ -722,13 +722,7 @@
       "passwordChangeFailed": "パスワードの変更に失敗しました",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions",
-      "webhookCreated": "webhook を追加しました。署名シークレットをコピーしてください。",
-      "webhookCreateFailed": "webhook の追加に失敗しました",
-      "webhookDeleted": "webhook を削除しました",
-      "webhookDeleteFailed": "webhook の削除に失敗しました",
-      "webhookSecretCopied": "署名シークレットをコピーしました",
-      "webhookSecretCopyFailed": "署名シークレットのコピーに失敗しました"
+      "securityQuestionsLoadFailed": "Could not load security questions"
     },
     "signOut": "ログアウト",
     "featureToggle": {
@@ -767,19 +761,6 @@
       "confirmCancel": "キャンセル",
       "confirmImport": "インポート",
       "summaryLocal": "タスク {{tasks}} · リスト {{lists}} · 完了 {{completed}}、すべてこのブラウザ内にあります。"
-    },
-    "webhooks": {
-      "title": "Webhook",
-      "blurb": "データ変更時に署名付き HTTP 通知を受け取ります。",
-      "urlPlaceholder": "https://your-server/webhook",
-      "eventsLabel": "イベント（未選択=すべて）",
-      "creating": "追加中...",
-      "add": "webhook を追加",
-      "secretCopyNow": "この署名シークレットを今すぐコピー。二度と表示されません。",
-      "allEvents": "すべてのイベント",
-      "disabled": "無効",
-      "delete": "webhook を削除",
-      "none": "webhook はまだありません"
     },
     "restingFloaters": {
       "title": "休眠フローター",
@@ -822,7 +803,8 @@
     "about": {
       "title": "アプリについて",
       "appVersion": "アプリバージョン",
-      "server": "サーバー"
+      "server": "サーバー",
+      "updateAvailable": "v{{version}} が利用可能"
     },
     "troubleshooting": {
       "reset": "アプリのキャッシュをリセット",
@@ -1277,15 +1259,6 @@
         "step1": "端末から求められたらカレンダーへのアクセスを許可します。",
         "step2": "カレンダーアプリを開くと、日付のあるタスクが T'Day カレンダーに入っています。"
       },
-      "webhooks": {
-        "title": "Webhook",
-        "summary": "タスクが変わったときに HTTP 通知を受け取ります。",
-        "keywords": "webhook, http, 連携, hmac, 署名, 自動化, 通知, コールバック",
-        "body": "HTTP エンドポイントを登録すると、タスク・リスト・フローターが変わるたびに T'Day が署名付きの小さな「変更あり」通知を POST します。内容は含まず、イベント種別とリスト id だけなので、自動化は通常の API で再取得します。各 webhook には固有のシークレットがあり、X-Tday-Signature ヘッダーでボディを HMAC-SHA256 署名します。信頼する前に検証してください。失敗が続く webhook は自動的に無効になります。",
-        "step0": "設定でエンドポイント URL を貼り付け、受け取るイベントを選びます。",
-        "step1": "webhook を追加し、署名シークレットをコピーします。表示は一度だけです。",
-        "step2": "各リクエストで X-Tday-Signature の HMAC を検証してから処理します。"
-      },
       "unifiedpush": {
         "title": "UnifiedPush（Android）",
         "summary": "Google なしで、自分のディストリビューター経由のサーバープッシュ。",
@@ -1396,5 +1369,22 @@
     "lists": "リスト",
     "newTask": "新規タスク",
     "brainDump": "ブレインダンプ"
+  },
+  "release": {
+    "subtitle": "デプロイ済みのビルドと最新の公開リリースを確認できます。",
+    "loading": "リリース情報を読み込んでいます…",
+    "error": "リリース情報を取得できませんでした。接続を確認して、もう一度お試しください。",
+    "retry": "再試行",
+    "statusLatest": "最新",
+    "statusUpdateAvailable": "更新があります",
+    "messageLatest": "最新バージョンを使用しています",
+    "messageUpdateAvailable": "バージョン {{version}} が利用可能です。",
+    "installed": "インストール済み",
+    "installedVersion": "インストール済みバージョン",
+    "latest": "最新",
+    "whatsNew": "{{version}} の新機能",
+    "noNotes": "このバージョンのリリースノートはありません",
+    "viewOnGithub": "GitHub で見る",
+    "published": "公開日 {{date}}"
   }
 }

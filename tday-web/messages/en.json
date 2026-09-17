@@ -722,13 +722,7 @@
       "passwordChangeFailed": "Failed to change password",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions",
-      "webhookCreated": "Webhook added. Copy the signing secret now.",
-      "webhookCreateFailed": "Failed to add webhook",
-      "webhookDeleted": "Webhook deleted",
-      "webhookDeleteFailed": "Failed to delete webhook",
-      "webhookSecretCopied": "Signing secret copied to clipboard",
-      "webhookSecretCopyFailed": "Failed to copy signing secret"
+      "securityQuestionsLoadFailed": "Could not load security questions"
     },
     "signOut": "Sign out",
     "featureToggle": {
@@ -767,19 +761,6 @@
       "confirmCancel": "Cancel",
       "confirmImport": "Import",
       "summaryLocal": "{{tasks}} tasks · {{lists}} lists · {{completed}} completed, all in this browser."
-    },
-    "webhooks": {
-      "title": "Webhooks",
-      "blurb": "Get a signed HTTP ping when your data changes.",
-      "urlPlaceholder": "https://your-server/webhook",
-      "eventsLabel": "Events (none selected = all)",
-      "creating": "Adding...",
-      "add": "Add webhook",
-      "secretCopyNow": "Copy this signing secret now — it won't be shown again.",
-      "allEvents": "All events",
-      "disabled": "Disabled",
-      "delete": "Delete webhook",
-      "none": "No webhooks yet"
     },
     "restingFloaters": {
       "title": "Resting floaters",
@@ -822,7 +803,8 @@
     "about": {
       "title": "About",
       "appVersion": "App Version",
-      "server": "Server"
+      "server": "Server",
+      "updateAvailable": "v{{version}} available"
     },
     "troubleshooting": {
       "reset": "Reset cached app data",
@@ -1277,15 +1259,6 @@
         "step1": "Allow calendar access when your phone asks.",
         "step2": "Open your calendar app — your dated tasks are in the T'Day calendar."
       },
-      "webhooks": {
-        "title": "Webhooks",
-        "summary": "Get an HTTP ping whenever your tasks change.",
-        "keywords": "webhook, http, integration, hmac, signature, automation, notify, callback",
-        "body": "Register an HTTP endpoint and T'Day POSTs a small signed “something changed” ping whenever your tasks, lists, or floaters change — no task contents, just the event type and list id, so your automation refetches through the normal API. Each webhook has its own secret that signs the body with HMAC-SHA256 in the X-Tday-Signature header; verify it before trusting a request. A webhook that keeps failing is disabled automatically.",
-        "step0": "In Settings, paste your endpoint URL and pick which events to receive.",
-        "step1": "Add the webhook and copy its signing secret — it's shown once.",
-        "step2": "Verify the X-Tday-Signature HMAC on each request before acting."
-      },
       "unifiedpush": {
         "title": "UnifiedPush (Android)",
         "summary": "Server push without Google, via your own distributor.",
@@ -1396,5 +1369,22 @@
     "lists": "Lists",
     "newTask": "New task",
     "brainDump": "Brain dump"
+  },
+  "release": {
+    "subtitle": "Review the deployed build and the latest published release.",
+    "loading": "Loading release information…",
+    "error": "Unable to fetch release information. Please check your connection and try again.",
+    "retry": "Retry",
+    "statusLatest": "Latest",
+    "statusUpdateAvailable": "Update Available",
+    "messageLatest": "You're running the latest version",
+    "messageUpdateAvailable": "Version {{version}} is available.",
+    "installed": "Installed",
+    "installedVersion": "Installed Version",
+    "latest": "Latest",
+    "whatsNew": "What's new in {{version}}",
+    "noNotes": "No release notes available for this version",
+    "viewOnGithub": "View on GitHub",
+    "published": "Published {{date}}"
   }
 }

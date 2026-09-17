@@ -722,13 +722,7 @@
       "passwordChangeFailed": "Impossibile cambiare la password",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions",
-      "webhookCreated": "Webhook aggiunto. Copia ora il segreto di firma.",
-      "webhookCreateFailed": "Impossibile aggiungere il webhook",
-      "webhookDeleted": "Webhook eliminato",
-      "webhookDeleteFailed": "Impossibile eliminare il webhook",
-      "webhookSecretCopied": "Segreto di firma copiato",
-      "webhookSecretCopyFailed": "Impossibile copiare il segreto di firma"
+      "securityQuestionsLoadFailed": "Could not load security questions"
     },
     "signOut": "Esci",
     "featureToggle": {
@@ -767,19 +761,6 @@
       "confirmCancel": "Annulla",
       "confirmImport": "Importa",
       "summaryLocal": "{{tasks}} attività · {{lists}} liste · {{completed}} completate, tutto in questo browser."
-    },
-    "webhooks": {
-      "title": "Webhook",
-      "blurb": "Ricevi un ping HTTP firmato quando i dati cambiano.",
-      "urlPlaceholder": "https://il-tuo-server/webhook",
-      "eventsLabel": "Eventi (nessuno = tutti)",
-      "creating": "Aggiunta...",
-      "add": "Aggiungi webhook",
-      "secretCopyNow": "Copia ora questo segreto di firma: non verrà più mostrato.",
-      "allEvents": "Tutti gli eventi",
-      "disabled": "Disattivato",
-      "delete": "Elimina webhook",
-      "none": "Ancora nessun webhook"
     },
     "restingFloaters": {
       "title": "Floater a riposo",
@@ -822,7 +803,8 @@
     "about": {
       "title": "Informazioni",
       "appVersion": "Versione app",
-      "server": "Server"
+      "server": "Server",
+      "updateAvailable": "v{{version}} disponibile"
     },
     "troubleshooting": {
       "reset": "Reimposta la cache dell'app",
@@ -1277,15 +1259,6 @@
         "step1": "Consenti l'accesso al calendario quando il telefono lo chiede.",
         "step2": "Apri l'app calendario: le attività con data sono nel calendario T'Day."
       },
-      "webhooks": {
-        "title": "Webhook",
-        "summary": "Ricevi un ping HTTP quando cambiano le tue attività.",
-        "keywords": "webhook, http, integrazione, hmac, firma, automazione, notifica, callback",
-        "body": "Registra un endpoint HTTP e T'Day invia in POST un piccolo ping firmato “qualcosa è cambiato” quando cambiano attività, liste o floater — nessun contenuto, solo il tipo di evento e l'id della lista, così la tua automazione ricarica tramite l'API normale. Ogni webhook ha un proprio segreto che firma il corpo con HMAC-SHA256 nell'header X-Tday-Signature; verificalo prima di fidarti di una richiesta. Un webhook che continua a fallire viene disattivato automaticamente.",
-        "step0": "Nelle Impostazioni, incolla l'URL dell'endpoint e scegli gli eventi.",
-        "step1": "Aggiungi il webhook e copia il segreto di firma: mostrato una sola volta.",
-        "step2": "Verifica l'HMAC X-Tday-Signature a ogni richiesta prima di agire."
-      },
       "unifiedpush": {
         "title": "UnifiedPush (Android)",
         "summary": "Push dal server senza Google, col tuo distributore.",
@@ -1396,5 +1369,22 @@
     "lists": "Liste",
     "newTask": "Nuova attività",
     "brainDump": "Scarico mentale"
+  },
+  "release": {
+    "subtitle": "Controlla la build distribuita e l'ultima versione pubblicata.",
+    "loading": "Caricamento delle informazioni sulla versione…",
+    "error": "Impossibile recuperare le informazioni sulla versione. Controlla la connessione e riprova.",
+    "retry": "Riprova",
+    "statusLatest": "Ultima",
+    "statusUpdateAvailable": "Aggiornamento disponibile",
+    "messageLatest": "Stai usando l'ultima versione",
+    "messageUpdateAvailable": "La versione {{version}} è disponibile.",
+    "installed": "Installata",
+    "installedVersion": "Versione installata",
+    "latest": "Ultima",
+    "whatsNew": "Novità di {{version}}",
+    "noNotes": "Nessuna nota di rilascio disponibile per questa versione",
+    "viewOnGithub": "Vedi su GitHub",
+    "published": "Pubblicata il {{date}}"
   }
 }

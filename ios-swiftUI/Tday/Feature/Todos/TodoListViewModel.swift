@@ -906,9 +906,9 @@ enum BulkSelectionCopy {
     ///
     /// Every bulk action is a fan-out of N single-item requests, and the
     /// `api_global` policy allows `API_RATE_LIMIT_MAX` (default 180) per minute
-    /// per user — plus one realtime event, one webhook delivery and one push
-    /// poke per mutation, none of it coalesced. The cap is what keeps a large
-    /// selection from becoming a *partially applied* destructive action.
+    /// per user — plus one realtime event and one push poke per mutation, none
+    /// of it coalesced. The cap is what keeps a large selection from becoming a
+    /// *partially applied* destructive action.
     static let maxSelection = 100
 
     static func selectedCount(_ count: Int, capped: Bool) -> String {
