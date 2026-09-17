@@ -1840,3 +1840,39 @@ animates.
               but nothing here can see whether Compose finds a source rectangle for a tile inside a
               `LazyColumn` — which is this unit — and the predictive-back slot is scrubbed by a
               `SeekableTransitionState`, the one path a static spec cannot describe.
+
+- [ ] **PR 32e · android · The tile zoom reads like iOS** — a device with animations on, then again
+      with the in-app Reduce motion switch and with the device animator scale at 0. This rebuilds the
+      transition so a surface grows and the content fades, instead of the tile's own icon and label
+      scaling up into the screen; the open is checkable against the list below, and the CLOSE is the
+      item that could not be settled from source at all.
+      Do:     tap a category tile, then the Today card, then a custom list row, then the Anytime
+              feed's Completed tile and one of its list cards. Then close each one, both with the back
+              button and with the gesture. Repeat with Reduce Motion on.
+      Watch:  (a) the SURFACE for the first frames past the tile should be the tile's colour at the
+              tile's radius, squaring off as it reaches the screen — never a stretched picture of the
+              tile's icon or label. (b) NOTHING scales: the tile's icon, label and count fade where
+              they sit at their own size, and the screen's toolbar and back chevron are at final size
+              and position from the first frame they appear. Failure is a toolbar arriving at about
+              half scale and growing — the defect this rebuild exists for.
+      Also:   (c) the corners travel: the shape leaving the tile carries the tile's radius and the
+              shape arriving is square. A hard-edged rectangle over a rounded tile on the first
+              frames, or a rounded rectangle held over the full screen that snaps square at the end,
+              are both failures — the second is the bug this rebuild removed.
+      Also:   **(d) the close, which is the one thing this unit could not check.** Expect the surface
+              to shrink back into the tile while the screen fades out in place and the home feed fades
+              in — the open, reversed. What to watch specifically is whether the SCREEN SLIDES
+              SIDEWAYS as it goes: it is now a plain child of the destination, so it takes the
+              NavHost's pop exit, whose quarter-width travel and recede the shared element used to
+              cover by drawing nothing in place. A sideways slide against a shrinking surface is the
+              failure. The fix would be a per-destination `popExitTransition` on the nine
+              `composable(...)` blocks in `TdayApp.kt`, which trades against the predictive-back
+              argument `route-handover.test.ts` documents — so it wants a decision, not a patch.
+      Also:   (e) with Reduce Motion on: no surface and no zoom at all, the ordinary short fade, and
+              in particular no stray full-screen background left behind the screen.
+      Also:   (f) arrive at a tile route WITHOUT pressing a tile — a deep link, a notification, a
+              widget row, the launcher shortcut. The screen must not grow out of a tile nobody
+              pressed, and no stray background may appear behind it.
+      Why:    `:app:compileDebugKotlin` and `:app:testDebugUnitTest` are green and the guardrails pin
+              the key table and the origin gate, but nothing on this machine can render a frame. The
+              animation's quality — and the close in particular — is only visible on a device.

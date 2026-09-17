@@ -210,7 +210,7 @@ import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayPressable
-import com.ohmz.tday.compose.core.ui.tdayTileSharedElement
+import com.ohmz.tday.compose.core.ui.tdayTileTransitionSource
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.RootFeedDock
@@ -3930,11 +3930,11 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
             CategoryCard(
                 modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
                     .fillMaxWidth()
-                    .padding(bottom = FloaterFeedRowSpacing)
-                    // The source half of the zoom into the Completed screen — the same
-                    // destination the scheduled board's grid tile grows into, and the same
-                    // key, because both push the one `completed` route.
-                    .tdayTileSharedElement(AppRoute.Completed.tileTransitionKey()),
+                    .padding(bottom = FloaterFeedRowSpacing),
+                // The source half of the zoom into the Completed screen — the same
+                // destination the scheduled board's grid tile grows into, and the same
+                // key, because both push the one `completed` route.
+                tileTransitionKey = AppRoute.Completed.tileTransitionKey(),
                 color = TdayCompletedTileAccent,
                 iconRes = R.drawable.ic_lucide_circle_check_big,
                 watermarkRes = R.drawable.ic_lucide_circle_check_big,
@@ -3961,10 +3961,8 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
         ) { (list, count) ->
             FloaterTaskHomeListRow(
                 modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                    .padding(bottom = FloaterFeedRowSpacing)
-                    .tdayTileSharedElement(
-                        AppRoute.FloaterListTodos.tileTransitionKey(listId = list.id),
-                    ),
+                    .padding(bottom = FloaterFeedRowSpacing),
+                tileTransitionKey = AppRoute.FloaterListTodos.tileTransitionKey(listId = list.id),
                 name = list.name,
                 colorKey = list.color,
                 iconKey = list.iconKey,
@@ -4676,6 +4674,7 @@ private fun FloaterTaskHomeListRow(
     colorKey: String?,
     iconKey: String?,
     count: Int,
+    tileTransitionKey: String? = null,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -4687,70 +4686,81 @@ private fun FloaterTaskHomeListRow(
         lerpColor(colorScheme.surfaceVariant, accent, FLOATER_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT)
     val displayName = capitalizeFirstListLetter(name)
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(ListRowHeight)
-            .semantics(mergeDescendants = true) {}
-            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
-        onClick = {
-            TdayHaptics.buttonPress(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(TdayDimens.RadiusCard),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        // Was a third `animateDpAsState` off the same press fed into both slots.
-        // `cardElevation` holds exactly this pair and animates between them.
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = ListRowElevation,
-            pressedElevation = PressedCardElevation,
-        ),
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = lerpColor(containerColor, Color.White, 0.34f).copy(alpha = 0.42f),
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .offset(x = ListRowWatermarkOffsetX, y = ListRowWatermarkOffsetY)
-                    .size(ListRowWatermarkSize),
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = FeedCardHorizontalPadding, vertical = TdayDimens.SpacingLg),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
+    // The rectangle this row publishes rides a bounds-only Box beside the Card, not the
+    // Card: what carries the key is what the zoom scales into the destination. See
+    // `CategoryCard`.
+    Box(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .tdayTileTransitionSource(tileTransitionKey),
+        )
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(ListRowHeight)
+                .semantics(mergeDescendants = true) {}
+                .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
+            onClick = {
+                TdayHaptics.buttonPress(view)
+                onClick()
+            },
+            interactionSource = interactionSource,
+            shape = RoundedCornerShape(TdayDimens.RadiusCard),
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            // Was a third `animateDpAsState` off the same press fed into both slots.
+            // `cardElevation` holds exactly this pair and animates between them.
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = ListRowElevation,
+                pressedElevation = PressedCardElevation,
+            ),
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = lerpColor(containerColor, Color.White, 0.34f).copy(alpha = 0.42f),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(x = ListRowWatermarkOffsetX, y = ListRowWatermarkOffsetY)
+                        .size(ListRowWatermarkSize),
+                )
                 Row(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = FeedCardHorizontalPadding, vertical = TdayDimens.SpacingLg),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(ListRowIconSize),
-                    )
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(ListRowIconSize),
+                        )
+                        Text(
+                            text = displayName,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = TdayDimens.SpacingMd),
+                        )
+                    }
                     Text(
-                        text = displayName,
-                        style = MaterialTheme.typography.titleLarge,
+                        text = count.toString(),
                         color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = TdayDimens.SpacingMd),
+                        modifier = Modifier.padding(start = TdayDimens.SpacingLg),
                     )
                 }
-                Text(
-                    text = count.toString(),
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.padding(start = TdayDimens.SpacingLg),
-                )
             }
         }
     }

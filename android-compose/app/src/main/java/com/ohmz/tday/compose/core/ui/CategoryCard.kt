@@ -36,6 +36,18 @@ import androidx.compose.ui.unit.dp
  * feed's home screen — originally the scheduled-task home's `CategoryGrid`
  * tile, promoted here so the Floater root feed's own nav entries (e.g.
  * Completed) render with the exact same look instead of a re-implementation.
+ *
+ * [tileTransitionKey] is the rectangle this tile publishes to the screen it opens; see
+ * `TdayTileTransition.kt`. It is carried by a bounds-only sibling of the Card, NOT by the
+ * Card itself, and the Box below is why: whatever carries the key is what the library
+ * scales or re-measures into the destination, and a tile that handed over its Card would
+ * be handing over its icon, its label and its watermark. On the sibling, the tile end
+ * contributes the rectangle and the tile's own content stays where it is drawn — inside
+ * the route's own fade, not scaled.
+ *
+ * The Card keeps its own modifier chain and its own sizing, so the wrapper is layout-
+ * neutral: the Box takes the same slot the Card used to, and its height is still the
+ * Card's.
  */
 @Composable
 fun CategoryCard(
@@ -45,116 +57,126 @@ fun CategoryCard(
     @DrawableRes watermarkRes: Int? = null,
     title: String,
     count: Int? = null,
+    tileTransitionKey: String? = null,
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
 
-    Card(
-        modifier = modifier
-            .semantics(mergeDescendants = true) {}
-            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
-        onClick = {
-            TdayHaptics.buttonPress(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        colors = CardDefaults.cardColors(containerColor = color),
-        // The lift was a third `animateDpAsState` reading the same press and fed
-        // into both slots, which is the pair `cardElevation` already holds and
-        // already animates between. Two states, two numbers, one animation.
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 9.dp,
-            pressedElevation = 2.dp,
-        ),
-        shape = RoundedCornerShape(26.dp),
-    ) {
+    Box(modifier = modifier) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .drawWithCache {
-                    val iconSideGlow = Brush.radialGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.22f),
-                            Color.White.copy(alpha = 0.08f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(
-                            x = size.width * 0.22f,
-                            y = size.height * 0.2f,
-                        ),
-                        radius = size.maxDimension * 0.9f,
-                    )
-                    val pearlWash = Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.12f),
-                            Color(0xFFE7F3FF).copy(alpha = 0.1f),
-                            Color(0xFFFFF2FA).copy(alpha = 0.08f),
-                            Color.Transparent,
-                        ),
-                        start = Offset(
-                            x = size.width * 0.05f,
-                            y = size.height * 0.04f,
-                        ),
-                        end = Offset(
-                            x = size.width * 0.9f,
-                            y = size.height * 0.75f,
-                        ),
-                    )
-                    onDrawWithContent {
-                        drawRect(iconSideGlow)
-                        drawRect(pearlWash)
-                        drawContent()
-                    }
-                },
-        ) {
-            if (watermarkRes != null) {
-                Box(modifier = Modifier.matchParentSize()) {
-                    Icon(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .offset(x = 22.dp, y = 12.dp)
-                            .size(124.dp),
-                        painter = painterResource(watermarkRes),
-                        contentDescription = null,
-                        tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
-                    )
-                }
-            }
+                .matchParentSize()
+                .tdayTileTransitionSource(tileTransitionKey),
+        )
 
-            Column(
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {}
+                .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
+            onClick = {
+                TdayHaptics.buttonPress(view)
+                onClick()
+            },
+            interactionSource = interactionSource,
+            colors = CardDefaults.cardColors(containerColor = color),
+            // The lift was a third `animateDpAsState` reading the same press and fed
+            // into both slots, which is the pair `cardElevation` already holds and
+            // already animates between. Two states, two numbers, one animation.
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 9.dp,
+                pressedElevation = 2.dp,
+            ),
+            shape = RoundedCornerShape(26.dp),
+        ) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                    .drawWithCache {
+                        val iconSideGlow = Brush.radialGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.22f),
+                                Color.White.copy(alpha = 0.08f),
+                                Color.Transparent,
+                            ),
+                            center = Offset(
+                                x = size.width * 0.22f,
+                                y = size.height * 0.2f,
+                            ),
+                            radius = size.maxDimension * 0.9f,
+                        )
+                        val pearlWash = Brush.linearGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.12f),
+                                Color(0xFFE7F3FF).copy(alpha = 0.1f),
+                                Color(0xFFFFF2FA).copy(alpha = 0.08f),
+                                Color.Transparent,
+                            ),
+                            start = Offset(
+                                x = size.width * 0.05f,
+                                y = size.height * 0.04f,
+                            ),
+                            end = Offset(
+                                x = size.width * 0.9f,
+                                y = size.height * 0.75f,
+                            ),
+                        )
+                        onDrawWithContent {
+                            drawRect(iconSideGlow)
+                            drawRect(pearlWash)
+                            drawContent()
+                        }
+                    },
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = painterResource(iconRes),
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp),
-                    )
-                    if (count != null) {
-                        Text(
-                            text = count.toString(),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Black,
+                if (watermarkRes != null) {
+                    Box(modifier = Modifier.matchParentSize()) {
+                        Icon(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .offset(x = 22.dp, y = 12.dp)
+                                .size(124.dp),
+                            painter = painterResource(watermarkRes),
+                            contentDescription = null,
+                            tint = lerp(color, Color.White, 0.28f).copy(alpha = 0.4f),
                         )
                     }
                 }
 
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            painter = painterResource(iconRes),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(26.dp),
+                        )
+                        if (count != null) {
+                            Text(
+                                text = count.toString(),
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
             }
         }
     }

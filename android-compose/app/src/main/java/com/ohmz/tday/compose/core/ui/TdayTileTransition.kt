@@ -4,19 +4,37 @@ package com.ohmz.tday.compose.core.ui
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.BoundsTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import com.ohmz.tday.compose.core.navigation.AppRoute
@@ -35,7 +53,41 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
  * grow into the screen they open, so the arrival is seen coming from where it was
  * asked for.
  *
- * Three pieces, none of which a tile has to know about:
+ * WHAT TRAVELS IS A SURFACE, AND ONLY A SURFACE.
+ *
+ * iOS's zoom does not carry a picture of either end from one rectangle to the other. What
+ * grows is a surface, and the content on each side crossfades behind it: the tile's own
+ * icon, label and count fade where they stand — they do not scale — and the screen's
+ * toolbar and rows are laid out where they are going to end up and fade in as the surface
+ * arrives. The screen opening "evenly" is exactly that: every component reaching its final
+ * place at once and becoming visible underneath a surface that is covering it. It is the
+ * one shape that a scaled copy cannot produce, because a scaled copy keeps every component
+ * at its own size inside a window that is still growing — which is what reads as giant UI
+ * components climbing out of a tile.
+ *
+ * Compose draws the shared element's OWN CONTENT at both ends, so this file's whole job is
+ * to make the shared element contain nothing but that surface:
+ *
+ * 1. THE DESTINATION contributes the surface. It is a full-size filled rectangle, and it is
+ *    the travelling half — the thing the eye follows. Its corners are clipped to a radius
+ *    that starts at the tile's and ends square, so the rectangle is the tile's shape where
+ *    it comes out of the tile and the screen's (no radius) where it lands. THE SCREEN IS
+ *    NOT INSIDE IT: `content()` is a sibling, laid out at its final size, and fades in on
+ *    the route's own enter. That is deliberate and is the whole difference between this and
+ *    a stretched screenshot of the screen — see [TdayTileResizeMode] for how the rectangle is
+ *    reconciled with the surface it carries, and [TdayTileCornerClip] for why the corners
+ *    need a clip at all when the thing inside it is a solid colour.
+ *
+ * 2. THE SOURCE contributes nothing at all. It publishes the rectangle the push started
+ *    from and draws no pixels: the tile's own `Card` already paints exactly that rounded
+ *    rectangle, in place, in the colour the tile is, and a second copy drawn in the overlay
+ *    over the tile could only cover the icon and label the user just pressed — the pop this
+ *    shape exists to remove. The tile's content therefore leaves the screen the ordinary
+ *    way, on the route's own exit fade, which is the same length the surface arrives on, so
+ *    the two blend rather than cut.
+ *
+ * Three pieces, none of which a tile has to know about beyond being handed its key — a
+ * value it passes straight to a bounds-only sibling, not a modifier it has to place:
  *
  * 1. [LocalTdaySharedTransitionScope] is the namespace. It is provided ONCE, around
  *    the NavHost, by [TdayTileTransitionLayout] — every tile and every destination
@@ -48,12 +100,12 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
  *    through all of them would be plumbing with no reader.
  *
  * 2. [LocalTdayTileSourceScope] is the `AnimatedVisibilityScope` of the screen the
- *    TILES are drawn on. `Modifier.sharedElement` needs the scope of the visibility
- *    the element participates in, and for a source tile that is the `home`
- *    destination's own scope, not the one it is navigating to. It is provided at
- *    that one destination, so a tile cannot be wired to the wrong half.
+ *    TILES are drawn on. A shared bounds node needs the scope of the visibility the
+ *    element participates in, and for a source tile that is the `home` destination's
+ *    own scope, not the one it is navigating to. It is provided at that one
+ *    destination, so a tile cannot be wired to the wrong half.
  *
- * 3. [tdayTileSharedElement] on the tile and [TdayTileDestination] on the screen it
+ * 3. [tdayTileTransitionSource] on the tile and [TdayTileDestination] on the screen it
  *    opens. Both are no-ops when anything is missing — no scope, no key, no origin, or
  *    no motion — which is what keeps a half-wired surface from being worse than an
  *    unwired one.
@@ -79,6 +131,9 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
  * large-amplitude trip, not the destination. The gate is read symmetrically on purpose:
  * a shared element whose source plays and whose destination does not is a transition
  * that silently degrades, which is exactly the failure mode this file exists to avoid.
+ * The surface is not painted at all in that case — with no shared node there is no
+ * rectangle for it to fill, and painting one would only put a second full-screen
+ * background behind the screen.
  */
 val LocalTdaySharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }
 
@@ -125,27 +180,143 @@ fun TdayTileTransitionLayout(
  * finding its size is that same description; `snappy` is the vocabulary's slot for a
  * control committing to a new state, which this is not.
  *
+ * Assessed against the two ways a rectangle spring can be read as jank, and kept:
+ *
+ * - It cannot fight a clip any more. `dampingRatio` 0.86 is about half a percent of
+ *   overshoot, and the shape the overlay is clipped to — [TdayTileCornerClip] — is
+ *   recomputed from the rectangle's own size on every frame, so a half percent of
+ *   overshoot moves the corner with the rectangle instead of against it.
+ * - Its tail is invisible here, and it is a tail and not a cut. The rectangle is most of
+ *   the way there at roughly 200 ms and runs on to about half a second before it is inside
+ *   `Rect.VisibilityThreshold`; what sits at the end of it is the screen drawing itself
+ *   underneath the surface, so the last percent of the spring is the surface settling
+ *   rather than a blank window. And the tail is not truncated: the shared transition stays
+ *   active until the bounds animation reports finished (Compose ends a `Transition` only
+ *   once its child transitions agree with it, so the bounds spring is what decides when
+ *   this hand-over is over), which means the destination's own screen takes over at the
+ *   settled rectangle rather than at whatever fraction a shorter transition had reached.
+ *   That is the sub-pixel hand-off this shape depends on, and it is worth knowing it is the
+ *   spring's own threshold, not the route fade's length, that decides where the open ends.
+ *
  * The threshold is `Rect`'s own and not a number written here: the token factory keeps
  * `visibilityThreshold` a parameter because how close is close enough to stopped is a
- * question about the units being animated, and these units are a rectangle.
+ * question about the units being animated, and these units are a rectangle. It follows
+ * that the four edges settle independently and not off one progress value; the only thing
+ * below that reads a progress back out of the rectangle is [TdayTileCornerClip], and it is
+ * fed by the transition's own state rather than by the bounds — see there for why.
  */
 private val TdayTileBoundsTransform = BoundsTransform { _, _ ->
     TdayMotionTokens.Springs.settle(visibilityThreshold = Rect.VisibilityThreshold)
 }
 
 /**
- * Marks this tile as the rectangle the screen it opens grows out of.
+ * HOW THE GROWING RECTANGLE IS RECONCILED WITH REAL CONTENT. THE DECISION, AND WHY.
  *
- * Applied to the tile's own [Modifier] chain, OUTSIDE its semantics and its press
- * feedback, so the shared bounds are the whole tile and the spring that squashes it
- * under a finger stays press feedback rather than becoming part of the transition.
+ * `ResizeMode` is the one place Compose asks the question this whole file is about, and it
+ * has exactly two answers. They differ in what the shared element's content has to be, so
+ * the answer follows from the shape above rather than from taste:
+ *
+ * - `RemeasureToBounds` gives the content the animated rectangle as `Constraints.fixed(...)`
+ *   on every frame. It is the mode for content that must genuinely track the rectangle —
+ *   and it is exactly the wrong one here, twice over. It re-lays-out whatever is inside
+ *   sixty times a second, and what is inside is now the surface and only the surface, so
+ *   there would be nothing for that to buy; and it is the mode that produces the reported
+ *   symptom when the thing inside is a screen: a component keeps its own size inside a
+ *   window that is still growing, which is "giant UI components coming out of the tile".
+ *
+ * - `ScaleToBounds` measures the content ONCE, at its lookahead size — its stable layout —
+ *   and then re-PLACES it under a scale for the rest of the flight. Nothing re-measures,
+ *   nothing re-wraps, and nothing re-places at a new size. That is the mode for content that
+ *   is not the same at both ends, which is what a surface is: it has the tile's rectangle at
+ *   one end and the screen's at the other.
+ *
+ * `ContentScale.FillBounds` rather than the library's default `FillWidth`, and rather than
+ * `Fit`. The content of this node is a single solid colour, so the one thing that would make
+ * a non-uniform scale the wrong choice — a stretched picture — cannot happen: there is no
+ * detail in it to distort. What the choice buys is that the rectangle is COVERED. `Fit` is
+ * min-based, uniform and alignment-centred, so it inscribes the content inside the
+ * rectangle and leaves the rectangle's own area unpainted — as tile-coloured bands down the
+ * left and right of the growing shape for as long as the two aspects differ, which is the
+ * whole flight. `FillWidth` matches the width and overflows vertically, which covers only if
+ * the overlay's clip is there to trim the overflow. `FillBounds` maps width to width and
+ * height to height, so the surface is the rectangle exactly, at every frame, with nothing
+ * left over for the clip to trim and nothing of the rectangle left showing.
+ *
+ * The clip is still needed, and only for the corners: see [TdayTileCornerClip].
+ */
+private val TdayTileResizeMode: SharedTransitionScope.ResizeMode =
+    SharedTransitionScope.ResizeMode.ScaleToBounds(ContentScale.FillBounds, Alignment.Center)
+
+/**
+ * What the surface does with its own opacity while the rectangle travels.
+ *
+ * `sharedElement` takes no enter or exit at all, which is why the first shape cut: the end
+ * that was not arriving drew NOTHING for the whole transition, so the tile vanished on the
+ * push's first frame and the screen vanished on the pop's first frame, with no faded pixels
+ * in between for the eye to follow. `sharedBounds` draws the ends it is given, each in the
+ * overlay with its own alpha, and these are that alpha for the surface.
+ *
+ * `Durations.Enter` for both, with the vocabulary's decelerate curve arriving and its
+ * accelerate curve leaving, for two reasons that agree. It is the rung the route
+ * hand-over itself runs on (see `navigationEnterTransition` in `TdayApp.kt`), so the
+ * surface's copy of the destination and the destination's own arrival are on ONE clock
+ * rather than two, which is the difference between a surface opening and two events; and
+ * on `Springs.settle` the rectangle is about 95% of the way at exactly that length, so
+ * neither half is left visibly waiting on the other.
+ *
+ * No new number: both are existing tokens, and both are named rather than left to the
+ * library's `fadeIn()`/`fadeOut()` defaults, which would be a bare Compose spec in a
+ * counted file.
+ */
+private val TdayTileEnter: EnterTransition = fadeIn(
+    animationSpec = tween(
+        durationMillis = TdayMotionTokens.Durations.Enter,
+        easing = TdayMotionTokens.Easings.Enter,
+    ),
+)
+
+private val TdayTileExit: ExitTransition = fadeOut(
+    animationSpec = tween(
+        durationMillis = TdayMotionTokens.Durations.Enter,
+        easing = TdayMotionTokens.Easings.Exit,
+    ),
+)
+
+/**
+ * Publishes THIS RECTANGLE as the one the screen it opens grows out of, and draws
+ * nothing at all.
+ *
+ * Applied to an empty box that matches the tile's own bounds, a SIBLING of the tile's
+ * `Card` rather than the Card itself — which is the whole point. What a shared bounds
+ * node contributes is whatever is composed inside it, so a tile that put this on its Card
+ * would be handing the library its icon, its label and its watermark to carry and scale.
+ * Put on a sibling that paints none of them, the tile end contributes the rectangle and
+ * only the rectangle: the tile is then free to leave on the route's own fade like any
+ * other content, and the screen has somewhere honest to come from.
+ *
+ * No `OverlayClip` here and none wanted: the node renders in place, never in the overlay
+ * (`renderInOverlay = false`), so no clip is ever consulted, and the shape a reader would
+ * expect to see it clipped to is the tile's `Card`'s own `RoundedCornerShape`, which is
+ * drawn by the Card.
  *
  * A no-op when [key] is null, when there is no namespace or no source scope above it,
  * or when motion is refused — see the file comment.
  */
 @Composable
-fun Modifier.tdayTileSharedElement(key: String?): Modifier =
-    tdaySharedElement(key = key, animatedVisibilityScope = LocalTdayTileSourceScope.current)
+fun Modifier.tdayTileTransitionSource(key: String?): Modifier =
+    tdaySharedBounds(
+        key = key,
+        animatedVisibilityScope = LocalTdayTileSourceScope.current,
+        // The rectangle, not pixels. Nothing is composed inside this node, so there is
+        // nothing an overlay copy could add, and keeping it out of the overlay keeps the
+        // node inside its parent's clip the way a tile is.
+        renderInOverlay = false,
+        // Unused at this end and passed for the same reason the argument is not defaulted:
+        // a reader of either call site should be able to see what that end contributes
+        // without looking up a library default. A rectangle with square corners is the
+        // honest description of a node that paints nothing.
+        cornerFraction = null,
+    )
 
 /**
  * Marks this screen as the destination a tile grows into, and gives it the
@@ -156,13 +327,14 @@ fun Modifier.tdayTileSharedElement(key: String?): Modifier =
  * [route] is the route this destination was opened as, and the key is read from it, so
  * the two ends cannot be handed different answers.
  *
- * The content is wrapped in a full-size box because the rectangle that grows is the
- * whole screen: `sharedElement` on the screen's own root is what says "this screen is
- * that tile, at a different size". Everything inside it is that screen and travels with
- * it — which is the effect, and also its one risk: a screen whose content reads badly at
- * a small intermediate scale would read badly here. The clip is the tile's own corner
- * radius, so the growing rectangle is the tile's shape all the way out rather than a
- * hard-edged window.
+ * The SCREEN IS NOT THE SHARED ELEMENT. [TdayTileSurface] is, and it is laid out first so
+ * that when no transition is playing it sits UNDER the screen and paints nothing anybody
+ * can see; while a transition is playing it is drawn in the shared scope's overlay, above
+ * everything, and the screen underneath it is the ordinary screen. That ordering is the
+ * whole reason `content()` can be a plain sibling: what the user asked for is the screen
+ * reaching its final layout and fading in as the surface covering it arrives, and a screen
+ * that is inside the shared element cannot do either — it would be measured once and scaled,
+ * or re-measured every frame.
  */
 @Composable
 fun AnimatedVisibilityScope.TdayTileDestination(
@@ -172,19 +344,127 @@ fun AnimatedVisibilityScope.TdayTileDestination(
     highlighted: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        TdayTileSurface(
+            key = route.tileTransitionKey(
+                listId = listId,
+                highlighted = highlighted,
+                fromHomeTile = fromHomeTile,
+            ),
+            animatedVisibilityScope = this@TdayTileDestination,
+        )
+        content()
+    }
+}
+
+/**
+ * The surface a tile grows into: a full-size filled rectangle, and the whole of what the
+ * destination end of a shared element contributes.
+ *
+ * It carries nothing but the fill. Not one pixel of the screen is inside it, which is the
+ * property this file exists to hold — see the file comment. The fill is the app's own
+ * background (`colorScheme.background`, the colour every screen's `Scaffold` is filled
+ * with), so as the rectangle grows over the tile the eye reads a surface being uncovered
+ * rather than a lid being put on one.
+ *
+ * The fill is on an inner box rather than on the shared node itself on purpose: modifiers
+ * applied ABOVE `sharedBounds` in the chain draw outside the layer the library records and
+ * hands to the overlay, so a background there would be painted in place, under the screen
+ * and outside the animation, and the rectangle in the overlay would still be empty.
+ * Anything composed INSIDE the node is what travels.
+ *
+ * Composed at all only when [key] is non-null. A destination nobody pressed a tile for — a
+ * deep link, a widget row, a shortcut — has no rectangle to grow out of, and a full-screen
+ * background behind the screen for the life of that destination is a draw nobody asked for.
+ */
+@Composable
+private fun TdayTileSurface(
+    key: String?,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+) {
+    if (key == null) return
+    // One fraction for the corners, riding the same `Springs.settle` the rectangle rides so
+    // that the corner closes at the rate the rectangle opens. It is read as a `State` and
+    // never in composition, so nothing recomposes per frame — the fraction is pulled in the
+    // draw phase, by the clip, where the rectangle itself is already being pulled per frame.
+    // `settle` with no threshold: what is animated here is a 0..1 fraction, and the token
+    // factory keeps `visibilityThreshold` a parameter precisely because the answer is about
+    // the units — for a fraction, Compose's own default is the answer.
+    val cornerFraction = animatedVisibilityScope.transition.animateFloat(
+        transitionSpec = { TdayMotionTokens.Springs.settle<Float>() },
+        label = "tdayTileSurfaceCorner",
+    ) { state ->
+        // Visible is the screen's own rectangle, which has square corners; anything on the
+        // way in or out is somewhere between the tile and the screen, so it takes the
+        // tile's. Written as the negative case so a state this file has never heard of
+        // rounds rather than squares — a rounded corner over a tile is invisible, and a
+        // square one over a tile is a pop.
+        if (state == EnterExitState.Visible) 0f else 1f
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .tdaySharedElement(
-                key = route.tileTransitionKey(
-                    listId = listId,
-                    highlighted = highlighted,
-                    fromHomeTile = fromHomeTile,
-                ),
-                animatedVisibilityScope = this@TdayTileDestination,
+            .tdaySharedBounds(
+                key = key,
+                animatedVisibilityScope = animatedVisibilityScope,
+                renderInOverlay = true,
+                cornerFraction = cornerFraction,
             ),
     ) {
-        content()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+        )
+    }
+}
+
+/**
+ * The corner of the travelling surface: the tile's radius at the tile, square at the
+ * screen, and whatever is between those two on every frame in between.
+ *
+ * The clip is needed because the surface's own content is a rectangle with square corners.
+ * It cannot be a background with a rounded shape instead: the shape would have to be
+ * fixed, and a fixed radius is one of only two wrong answers — the tile's 26.dp held all
+ * the way over a full screen reads as a rounded screen that snaps square at the end of
+ * every open, and a square corner at the tile reads as the tile's own radius being taken
+ * away on the first frame. Only a radius that travels with the rectangle is right at both
+ * ends, so the radius is a function of the animation and the clip is where the two meet.
+ *
+ * A `Path` is built rather than a `Shape` handed to the library's `OverlayClip(shape)`
+ * factory for one reason: the factory takes a shape at CONSTRUCTION time, so a morphing
+ * radius would mean rebuilding the whole shared-bounds modifier every frame. Reading the
+ * fraction here instead keeps the modifier stable for the life of the transition and moves
+ * only the path, which is rebuilt on every draw anyway.
+ *
+ * The path is built over the rectangle's own size at the origin and then translated to its
+ * top-left, which is the contract `OverlayClip` documents: the rectangle arrives in the
+ * scope's coordinate space, and the path has to be handed back in the same one.
+ */
+private class TdayTileCornerClip(
+    private val cornerFraction: State<Float>,
+) : SharedTransitionScope.OverlayClip {
+
+    private val path = Path()
+
+    override fun getClipPath(
+        sharedContentState: SharedTransitionScope.SharedContentState,
+        bounds: Rect,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Path {
+        val radius = with(density) {
+            (TdayDimens.RadiusCard * cornerFraction.value).toPx()
+        }
+        path.reset()
+        path.addRoundRect(
+            RoundRect(
+                rect = Rect(Offset.Zero, bounds.size),
+                cornerRadius = CornerRadius(radius, radius),
+            ),
+        )
+        path.translate(bounds.topLeft)
+        return path
     }
 }
 
@@ -224,32 +504,46 @@ fun rememberHomeTileOrigin(navController: NavController, entry: NavBackStackEntr
  * means the modifier is not installed and the route change plays as it always did, which
  * is the fallback `docs/motion.md` asks for: the trip is removed, and the destination is
  * still handed over.
+ *
+ * Every decision that differs between the two halves is a parameter and both are passed
+ * at the call sites above rather than defaulted, so what each end contributes is readable
+ * where the end is declared: [renderInOverlay] is true only for the destination, and the
+ * clip is only meaningful where that is true.
  */
 @Composable
-private fun Modifier.tdaySharedElement(
+private fun Modifier.tdaySharedBounds(
     key: String?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
+    renderInOverlay: Boolean,
+    cornerFraction: State<Float>?,
 ): Modifier {
     val sharedTransitionScope = LocalTdaySharedTransitionScope.current
     val motionEnabled = rememberTdayMotionEnabled()
-    val anchor = if (
+    val bounds = if (
         key != null &&
         animatedVisibilityScope != null &&
         sharedTransitionScope != null &&
         motionEnabled
     ) {
         with(sharedTransitionScope) {
-            this@tdaySharedElement.sharedElement(
-                state = rememberSharedContentState(key),
+            this@tdaySharedBounds.sharedBounds(
+                sharedContentState = rememberSharedContentState(key),
                 animatedVisibilityScope = animatedVisibilityScope,
+                enter = TdayTileEnter,
+                exit = TdayTileExit,
                 boundsTransform = TdayTileBoundsTransform,
-                clipInOverlayDuringTransition = OverlayClip(
-                    RoundedCornerShape(TdayDimens.RadiusCard),
-                ),
+                resizeMode = TdayTileResizeMode,
+                renderInOverlayDuringTransition = renderInOverlay,
+                // A morphing radius where the destination supplies one, and a plain
+                // rectangle where it does not — which is the source, which never draws in
+                // the overlay and so never consults this at all.
+                clipInOverlayDuringTransition = cornerFraction
+                    ?.let { TdayTileCornerClip(it) }
+                    ?: OverlayClip(RectangleShape),
             )
         }
     } else {
         Modifier
     }
-    return this.then(anchor)
+    return this.then(bounds)
 }
