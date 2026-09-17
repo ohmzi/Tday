@@ -1,8 +1,13 @@
 import Foundation
 
+/// `origin` on the four cases below is `HomeTileOrigin?` — see `ZoomNavigation.swift`,
+/// which declares the type and is the only place that reads it. A non-nil origin means the
+/// push came from the tile that has a rectangle to grow out of; every construction site that
+/// is not that tile passes `nil`, and the deep links in `from(url:)` are all `nil` because a
+/// link has no rectangle either.
 enum AppRoute: Hashable {
     case scheduledTaskHome
-    case todayTodos
+    case todayTodos(origin: HomeTileOrigin?)
     case createTodayTodo
     case createFloaterTodo
     case overdueTodos
@@ -10,9 +15,9 @@ enum AppRoute: Hashable {
     case allTodos(highlightTodoId: String?)
     case priorityTodos
     case floaterTaskHome
-    case floaterListTodos(listId: String, listName: String)
-    case listTodos(listId: String, listName: String)
-    case completed
+    case floaterListTodos(listId: String, listName: String, origin: HomeTileOrigin?)
+    case listTodos(listId: String, listName: String, origin: HomeTileOrigin?)
+    case completed(origin: HomeTileOrigin?)
     case calendar
     case settings
     case latestRelease
@@ -43,9 +48,9 @@ enum AppRoute: Hashable {
             return "todos/priority"
         case .floaterTaskHome:
             return "floater"
-        case let .floaterListTodos(listId, listName):
+        case let .floaterListTodos(listId, listName, _):
             return "floater/list/\(listId)/\(listName)"
-        case let .listTodos(listId, listName):
+        case let .listTodos(listId, listName, _):
             return "todos/list/\(listId)/\(listName)"
         case .completed:
             return "completed"
@@ -84,7 +89,7 @@ enum AppRoute: Hashable {
         case "home":
             return .scheduledTaskHome
         case "completed":
-            return .completed
+            return .completed(origin: nil)
         case "calendar":
             return .calendar
         case "settings":
@@ -105,7 +110,7 @@ enum AppRoute: Hashable {
             let second = components.dropFirst().first ?? ""
             switch second {
             case "today":
-                return .todayTodos
+                return .todayTodos(origin: nil)
             case "create":
                 let target = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                     .queryItems?
@@ -134,7 +139,7 @@ enum AppRoute: Hashable {
             case "floater":
                 let remaining = Array(components.dropFirst(2))
                 if remaining.first == "list", remaining.count >= 3 {
-                    return .floaterListTodos(listId: remaining[1], listName: remaining[2])
+                    return .floaterListTodos(listId: remaining[1], listName: remaining[2], origin: nil)
                 }
                 return .floaterTaskHome
             case "list":
@@ -142,7 +147,7 @@ enum AppRoute: Hashable {
                 guard remaining.count >= 2 else {
                     return nil
                 }
-                return .listTodos(listId: remaining[0], listName: remaining[1])
+                return .listTodos(listId: remaining[0], listName: remaining[1], origin: nil)
             default:
                 return nil
             }
@@ -150,7 +155,7 @@ enum AppRoute: Hashable {
             if first == "floater" {
                 let remaining = Array(components.dropFirst())
                 if remaining.first == "list", remaining.count >= 3 {
-                    return .floaterListTodos(listId: remaining[1], listName: remaining[2])
+                    return .floaterListTodos(listId: remaining[1], listName: remaining[2], origin: nil)
                 }
                 return .floaterTaskHome
             }

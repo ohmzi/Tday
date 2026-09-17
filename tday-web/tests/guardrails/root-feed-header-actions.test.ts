@@ -273,7 +273,9 @@ describe("the Anytime feed's Completed entry", () => {
   const ios = readCode(IOS_TODO_LIST);
 
   it("sits between the inline empty scene and My Lists, as it does on Android", () => {
-    const tileAt = ios.indexOf("FloaterTaskHomeCompletedCard(onTap: onOpenCompleted)");
+    // Without the closing paren so an argument added after `onTap: onOpenCompleted` (the
+    // zoom route) does not move every anchor in this block to -1.
+    const tileAt = ios.indexOf("FloaterTaskHomeCompletedCard(onTap: onOpenCompleted");
     const emptySceneAt = ios.indexOf("if showInlineFloaterTaskHomeEmpty {");
     const myListsAt = ios.indexOf("if !floaterTaskHomeListRows.isEmpty {");
 
@@ -327,7 +329,7 @@ describe("the Anytime feed's Completed entry", () => {
   it("is always present on the Anytime home, not gated on anything having been completed", () => {
     // An archive you can only reach once it is non-empty is an archive you cannot learn exists.
     // Android gates its tile on `isFloaterTaskHomeScreen` alone; so does this.
-    const gate = ios.slice(0, ios.indexOf("FloaterTaskHomeCompletedCard(onTap: onOpenCompleted)"));
+    const gate = ios.slice(0, ios.indexOf("FloaterTaskHomeCompletedCard(onTap: onOpenCompleted"));
     expect(gate.lastIndexOf("if isFloaterTaskHomeScreen {")).toBeGreaterThan(
       gate.lastIndexOf("if showInlineFloaterTaskHomeEmpty {"),
     );
@@ -361,15 +363,30 @@ describe("the Anytime feed's Completed entry", () => {
     expect(card).toContain("blue: 132.0 / 255.0");
     expect(readCode(ANDROID_TODO_LIST)).toContain("color = TdayCompletedTileAccent");
 
-    // No zoom source: `ZoomNavigation` mints one shared id per route and the Scheduled board's
-    // Completed tile already claims `.completed`, while `AppRootView` keeps both root feeds mounted
-    // through a tab crossfade.
-    expect(card).not.toContain(".tdayZoomSource(");
+    // It DOES carry a zoom source now, and the id is this feed's, never the Scheduled board's.
+    // The two Completed tiles sit in feeds `AppRootView` crossfades through a `ZStack`, so during
+    // a tab swap both trees are mounted — the same window that made one shared `.completed` id
+    // collide, and the reason this card used to carry no source at all. The origin travels on
+    // the route, so the board's tile publishes `home-tile.completed` and this one
+    // `floater-tile.completed`: two ids, and the both-mounted window has nothing to collide.
+    // Asserting the id is the FLOATER's is strictly stronger than asserting there is no id.
+    expect(card).toContain(".tdayZoomSource(zoomRoute)");
+    expect(card).not.toContain("home-tile.completed");
+
+    const entryAt = ios.indexOf("FloaterTaskHomeCompletedCard(onTap: onOpenCompleted");
+    expect(entryAt, "the Anytime feed's Completed entry").toBeGreaterThan(-1);
+    const entry = ios.slice(entryAt, ios.indexOf("\n", entryAt));
+    expect(
+      entry,
+      "the card's source route must be the floater feed's — the scheduled board's origin here " +
+        "would put two views on one id in one namespace while both feeds are mounted",
+    ).toContain("zoomRoute: .completed(origin: .floaterFeed)");
+    expect(entry).not.toContain(".scheduledBoard");
   });
 
   it("leaves every client's floater feed with a Completed entry", () => {
     expect(readCode(WEB_FLOATER_DASHBOARD)).toContain('href="/app/completed?scope=floater"');
     expect(readCode(ANDROID_TODO_LIST)).toContain('key = "floater-completed-entry"');
-    expect(ios).toContain("FloaterTaskHomeCompletedCard(onTap: onOpenCompleted)");
+    expect(ios).toContain("FloaterTaskHomeCompletedCard(onTap: onOpenCompleted");
   });
 });

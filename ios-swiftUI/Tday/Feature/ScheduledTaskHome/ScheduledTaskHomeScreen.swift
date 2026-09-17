@@ -243,9 +243,10 @@ struct ScheduledTaskHomeScreen: View {
 
                                 ScheduledTaskHomeTodayCard(
                                     count: viewModel.summary.todayCount,
+                                    zoomRoute: .todayTodos(origin: .scheduledBoard),
                                     action: {
                                         closeSearch()
-                                        onNavigate(.todayTodos)
+                                        onNavigate(.todayTodos(origin: .scheduledBoard))
                                     }
                                 )
 
@@ -345,7 +346,7 @@ struct ScheduledTaskHomeScreen: View {
                                     },
                                     onOpenCompleted: {
                                         closeSearch()
-                                        onNavigate(.completed)
+                                        onNavigate(.completed(origin: .scheduledBoard))
                                     },
                                     onOpenCalendar: {
                                         closeSearch()
@@ -359,7 +360,7 @@ struct ScheduledTaskHomeScreen: View {
                                         displayName: displayName(for:)
                                     ) { list, name in
                                         closeSearch()
-                                        onNavigate(.listTodos(listId: list.id, listName: name))
+                                        onNavigate(.listTodos(listId: list.id, listName: name, origin: .scheduledBoard))
                                     }
                                 }
 
@@ -892,6 +893,13 @@ private struct ScheduledTaskHomeTodayTaskTitle: View {
 
 private struct ScheduledTaskHomeTodayCard: View {
     let count: Int
+    /// The route this card pushes, carried alongside the closure that pushes it.
+    ///
+    /// Same reason as `ScheduledTaskHomeCategoryTile` below: the closure is an opaque
+    /// `() -> Void`, so it cannot be asked where it goes, and the zoom needs an id both
+    /// ends agree on. Stored rather than derived from `dateLabel` or `count` — neither
+    /// is the thing `AppRootView` keys its destination on.
+    let zoomRoute: AppRoute
     let action: () -> Void
 
     @Environment(\.tdayAnimation) private var tdayAnimation
@@ -953,6 +961,11 @@ private struct ScheduledTaskHomeTodayCard: View {
             .contentShape(shape)
         }
         .buttonStyle(ScheduledTaskHomeTileButtonStyle())
+        // The rectangle the pushed screen grows out of — the same chain position as the
+        // category tiles below, and for the same reason. On iOS 17, under Reduce Motion,
+        // or for a route with no source id this resolves to nothing and the push is the
+        // stock slide; see `ZoomNavigation.swift`.
+        .tdayZoomSource(zoomRoute)
     }
 }
 
@@ -1023,7 +1036,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileComplete",
                     title: L("Completed"),
                     count: completedCount,
-                    zoomRoute: .completed,
+                    zoomRoute: .completed(origin: .scheduledBoard),
                     action: onOpenCompleted
                 )
 
@@ -1172,7 +1185,12 @@ private struct ScheduledTaskHomeListsSection: View {
                     name: name,
                     colorKey: list.color,
                     iconKey: list.iconKey,
-                    count: list.todoCount
+                    count: list.todoCount,
+                    // Built here rather than inside the row because `list.id` is not one
+                    // of the row's parameters, and the id has to be per-list: several of
+                    // these rows are on screen at once, so one shared id would match the
+                    // wrong rectangle. It is the same route `onOpenList` pushes.
+                    zoomRoute: .listTodos(listId: list.id, listName: name, origin: .scheduledBoard)
                 ) {
                     onOpenList(list, name)
                 }
@@ -1186,6 +1204,13 @@ private struct ScheduledTaskHomeListRow: View {
     let colorKey: String?
     let iconKey: String?
     let count: Int
+    /// The route this row pushes, carried alongside the closure that pushes it.
+    ///
+    /// As with the two tiles above, the closure is opaque — and here it is the trailing
+    /// one, handed up to `ScheduledTaskHomeListsSection`, which builds this route from the
+    /// same `list` and name it passes to `onOpenList`. The two have to agree by value or
+    /// the row publishes an id no destination asks for.
+    let zoomRoute: AppRoute
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
@@ -1277,6 +1302,9 @@ private struct ScheduledTaskHomeListRow: View {
             .contentShape(shape)
         }
         .buttonStyle(ScheduledTaskHomeListButtonStyle())
+        // Own chain, immediately after its own button style — this row uses a different
+        // style from the tiles above, so it is asserted separately for the same reason.
+        .tdayZoomSource(zoomRoute)
     }
 }
 

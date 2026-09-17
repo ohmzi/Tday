@@ -24,13 +24,14 @@ struct AppRootView: View {
     // Optional biometric gate, default OFF. When disabled every member below is inert.
     @State private var appLock = AppLockController()
     @Environment(\.scenePhase) private var scenePhase
-    /// The namespace the six home tiles and the screens they open are matched in.
+    /// The namespace the home feeds' tiles and the screens they open are matched in.
     ///
     /// Owned here because this is the one view that contains both ends: the tiles are
-    /// built inside `ScheduledTaskHomeScreen`, the destinations by `destinationView(for:)`
-    /// below, and a `@Namespace` only matches views that share the one instance. It is
-    /// published into the environment rather than passed down — see `ZoomNavigation.swift`
-    /// for why a parameter chain through two private types was not the way to spend it.
+    /// built inside `ScheduledTaskHomeScreen` and `TodoListScreen`, the destinations by
+    /// `destinationView(for:)` below, and a `@Namespace` only matches views that share the
+    /// one instance. It is published into the environment rather than passed down — see
+    /// `ZoomNavigation.swift` for why a parameter chain through two private types was not
+    /// the way to spend it.
     @Namespace private var zoomNamespace
     /// The app's one motion gate — see `TdayMotionEnvironment.swift`. Every
     /// `.animation` in this view's body passes its spec through it, so Reduce Motion
@@ -122,13 +123,19 @@ struct AppRootView: View {
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
                                     onOpenFloaterList: { listId, listName in
-                                        handleRoute(.floaterListTodos(listId: listId, listName: listName))
+                                        // `.floaterFeed` is the id the list card beside it publishes,
+                                        // and the two have to agree or the push silently falls back to
+                                        // the stock slide — see `ZoomNavigation.swift`.
+                                        handleRoute(.floaterListTodos(listId: listId, listName: listName, origin: .floaterFeed))
                                     },
                                     onOpenSettings: {
                                         handleRoute(.settings)
                                     },
                                     onOpenCompleted: {
-                                        handleRoute(.completed)
+                                        // The Anytime feed's own Completed id, not the Scheduled
+                                        // board's — both feeds are mounted together during the tab
+                                        // crossfade, so the two tiles cannot share one.
+                                        handleRoute(.completed(origin: .floaterFeed))
                                     },
                                     summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
                                 )
@@ -229,9 +236,9 @@ struct AppRootView: View {
                     .toolbar(.hidden, for: .navigationBar)
                     .navigationDestination(for: AppRoute.self) { route in
                         // One site covers every push. `tdayZoomDestination` reads the route's
-                        // own source id, so the six home tiles grow into their screens and
-                        // everything else falls through to the stock push without a list here
-                        // to keep in step with the one in `ZoomNavigation.swift`.
+                        // own source id, so the home tiles that publish one grow into their
+                        // screens and everything else falls through to the stock push without a
+                        // list here to keep in step with the one in `ZoomNavigation.swift`.
                         destinationView(for: route)
                             .tdayZoomDestination(route)
                     }
@@ -654,7 +661,7 @@ struct AppRootView: View {
                 .onAppear {
                     selectRootFeedTab(.floaterTaskHome)
                 }
-        case let .floaterListTodos(listId, listName):
+        case let .floaterListTodos(listId, listName, _):
             TodoListScreen(
                 container: container,
                 mode: .floater,
@@ -666,7 +673,7 @@ struct AppRootView: View {
                     handleRoute(.floaterTaskHome)
                 }
             )
-        case let .listTodos(listId, listName):
+        case let .listTodos(listId, listName, _):
             TodoListScreen(
                 container: container,
                 mode: .list,

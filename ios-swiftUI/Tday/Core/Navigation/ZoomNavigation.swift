@@ -7,9 +7,11 @@ import SwiftUI
 /// paired with `.matchedTransitionSource(id:in:)` on the source). It is the one
 /// place in this app where the system already knows the answer the vocabulary
 /// keeps arriving at by hand: a surface that came from somewhere should be seen
-/// coming from there. The six category tiles on the scheduled home are the only
-/// surfaces in the tree that qualify — each is a large, distinct rectangle whose
-/// destination fills the screen with the same list it was counting.
+/// coming from there. The surfaces in the tree that qualify are the large, distinct
+/// rectangles on the two home feeds whose destination fills the screen with the same
+/// list they were counting: the six category tiles and the Today card on the
+/// scheduled board, that board's custom list rows, and the Anytime feed's list cards
+/// and Completed entry.
 ///
 /// Three things make this file necessary rather than two modifiers written at the
 /// call sites.
@@ -18,12 +20,12 @@ import SwiftUI
 /// APIs have to sit behind `#available(iOS 18.0, *)` and iOS 17 has to come out
 /// the far side with the stock push and no trace of the branch.
 ///
-/// The second is distance. The tiles are built inside a private struct in
-/// `ScheduledTaskHomeScreen.swift`; the destinations are built by
-/// `AppRootView.destinationView(for:)` two files away, behind a single
+/// The second is distance. The tiles are built inside private structs in
+/// `ScheduledTaskHomeScreen.swift` and `TodoListScreen.swift`; the destinations are
+/// built by `AppRootView.destinationView(for:)` two files away, behind a single
 /// `.navigationDestination(for: AppRoute.self)`. A `Namespace.ID` cannot be
-/// threaded between those without a parameter chain through two private types, so
-/// it travels in the environment — the same call `TdayMotionEnvironment.swift`
+/// threaded between those without a parameter chain through several private types,
+/// so it travels in the environment — the same call `TdayMotionEnvironment.swift`
 /// made for the motion gate, for the same reason.
 ///
 /// The third is that the two halves have to agree on an id, and the only thing
@@ -43,12 +45,24 @@ extension AppRoute {
     /// a URL contract with its own reasons to change, and an id that moves when a deep
     /// link is re-spelled is a broken transition nobody would think to look for.
     ///
-    /// `.allTodos` is the case with an argument and the only one that needs an
-    /// argument about it. A highlight id means the arrival came from the home
-    /// screen's own search results or from a deep link — not from the All tile — and
-    /// the All tile is on screen either way. Zooming out of it would be the animation
-    /// claiming the user pressed something they did not press, which is worse than no
-    /// animation: a transition's whole job is to say where a screen came from.
+    /// Two kinds of argument reach this table, and they say the same thing.
+    ///
+    /// `.allTodos` is the one whose argument was already there for another purpose: a
+    /// highlight id means the arrival came from the home screen's own search results or
+    /// from a deep link — not from the All tile — and the All tile is on screen either
+    /// way. Zooming out of it would be the animation claiming the user pressed something
+    /// they did not press, which is worse than no animation: a transition's whole job is
+    /// to say where a screen came from.
+    ///
+    /// `todayTodos`, `listTodos`, `floaterListTodos` and `completed` say the same thing
+    /// through an explicit `HomeTileOrigin?`, added for it. A non-nil origin says the
+    /// arrival was that feed's own tile, so the id is the one the tile publishes; `nil`
+    /// says it came from the sidebar, the search results or a deep link — none of which
+    /// has a rectangle to grow out of — so the answer is `nil` and the push is the stock
+    /// slide. `completed` is the one with two tiles rather than one, and the two ids
+    /// differ by origin for the reason `HomeTileOrigin` gives: both root feeds are
+    /// mounted together during a tab crossfade, so the Scheduled board's Completed tile
+    /// and the Anytime feed's cannot share an id.
     var zoomSourceID: String? {
         switch self {
         case .scheduledTodos:
@@ -59,17 +73,26 @@ extension AppRoute {
             return "home-tile.overdue"
         case let .allTodos(highlightTodoId):
             return highlightTodoId == nil ? "home-tile.all" : nil
-        case .completed:
-            return "home-tile.completed"
+        case let .completed(origin):
+            guard let origin else { return nil }
+            switch origin {
+            case .scheduledBoard:
+                return "home-tile.completed"
+            case .floaterFeed:
+                return "floater-tile.completed"
+            }
         case .calendar:
             return "home-tile.calendar"
+        case let .todayTodos(origin):
+            return origin == nil ? nil : "home-tile.today"
+        case let .listTodos(listId, _, origin):
+            return origin == nil ? nil : "home-tile.list.\(listId)"
+        case let .floaterListTodos(listId, _, origin):
+            return origin == nil ? nil : "floater-tile.list.\(listId)"
         case .scheduledTaskHome,
-             .todayTodos,
              .createTodayTodo,
              .createFloaterTodo,
              .floaterTaskHome,
-             .floaterListTodos,
-             .listTodos,
              .settings,
              .latestRelease,
              .helpGuide,
@@ -78,6 +101,26 @@ extension AppRoute {
             return nil
         }
     }
+}
+
+/// Which home feed's tile an arrival was pressed on.
+///
+/// Four routes are reachable both from a tile that has a rectangle and from a surface
+/// that does not — the sidebar, the home screen's search results, a deep link. The route
+/// is the only thing both ends of the zoom hold, so the difference has to travel on it:
+/// an `AppRoute` built by a tile carries the tile's origin, and every other construction
+/// site passes `nil`. `zoomSourceID` reads it and answers `nil` for the arrivals with
+/// nothing to zoom out of.
+///
+/// `completed` is the case that makes the two values distinct rather than merely
+/// informative: the Scheduled board and the Anytime feed each have a Completed tile, and
+/// `AppRootView` draws both root feeds through one `ZStack` — during a tab crossfade both
+/// trees are mounted, so a single id shared by the two tiles would be two views publishing
+/// one id in one namespace, which is a match the user did not ask for. The origin splits
+/// it into "home-tile.completed" and "floater-tile.completed".
+enum HomeTileOrigin: Hashable {
+    case scheduledBoard
+    case floaterFeed
 }
 
 /// The namespace the two halves of the zoom are matched in.

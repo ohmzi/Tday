@@ -1762,3 +1762,47 @@ animates.
               misses, and `TdayConfettiKinematicsTests` pins the envelope's curve and its Quick rung
               — and neither can say whether forty-six pieces fade while still in flight or whether
               the scene above them waited. That is the whole of what this row is for.
+
+- [ ] **PR 32c · ios · The other four tiles grow into their screens too** — an iOS **18** device or
+      simulator, on the scheduled home and on the Anytime feed. `PR 32b` checked the six category
+      tiles; this checks the four beside them, and one of the four is the first shared element in
+      this app to live in a `List` **cell** rather than a `LazyVStack` sibling — the two Anytime
+      cards are `Section` rows in a `.listStyle(.plain)` List, and whether SwiftUI finds a source
+      rectangle there is the whole question this row exists for. Nothing here can be read off
+      source and there is no Swift toolchain in the repo.
+      Do:     tap the **Today** card, a **custom list row** on the scheduled board, the **Completed**
+              card on the Anytime feed, and a **Floater list** card — one at a time. After each,
+              swipe back from the left edge. Then do the same four on an iOS **17** device.
+      Watch:  each screen grows out of the rectangle of the tile just pressed — its corner radius and
+              its position — and the back swipe shrinks it home to that same tile. Today grows from
+              the Today card, not from the board behind it.
+      Fails:  a stock slide on any of the four, which means the source and the destination did not
+              agree on an id and SwiftUI fell back without saying so. A screen growing out of the
+              WRONG rectangle — most likely the **Floater Completed card growing out of the Scheduled
+              board's Completed tile**, which is exactly the collision the two distinct ids
+              (`home-tile.completed` / `floater-tile.completed`) were introduced to remove, and the
+              one to look hardest for because both ids resolve while the two root feeds are
+              crossfading.
+      Also:   **do not press a tile at all** and open the same four destinations the other ways — a
+              list from the sidebar, a list from the home screen's search results, and a deep link
+              (`tday://todos/list/<id>/<name>`). Every one of those must be the stock push: nothing
+              on screen was pressed to reach them, and a zoom there is the animation claiming the
+              user did something they did not.
+      Also:   tap the Floater Completed card **immediately after a root-feed tab swap**, while both
+              feeds are still mounted in the `ZStack`. It must grow from the Anytime feed's own card.
+              Growing out of the scheduled board's tile is the failure this row was written for.
+      Also:   on an **iOS 17** device, all ten tiles. Every one is the stock push, the screens are
+              correct, and nothing is missing or misdrawn — the availability branch is the one thing
+              here that compiles nowhere if it is wrong.
+      Also:   with Reduce Motion on, tap all ten. Each is the stock push: the platform's own
+              substitute for a large-amplitude travel, still putting the finished screen in front of
+              the user and adding no wait (`docs/motion.md`'s fifth idiom rule). A tap that is slower
+              with the setting on, or one that still zooms, is the gate not reaching one of the two
+              halves.
+      Why:    no Swift toolchain here. What is verified locally is the wiring read as text:
+              `ZoomNavigationTests` pins the id table in CI — ten distinct ids, six of them
+              unchanged, and none for a non-tile arrival — and `launch-handover.test.ts` pins that
+              each of the three source sites publishes the id of the route its own closure pushes,
+              with the four new rules mutation-tested red. What none of it can see is whether SwiftUI
+              finds the source rectangle for a tile three levels inside a `List` cell — which is this
+              unit.

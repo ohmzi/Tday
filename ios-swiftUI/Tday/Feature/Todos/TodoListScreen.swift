@@ -456,6 +456,14 @@ private struct FloaterTaskHomeSearchResultsCard: View {
 private struct FloaterTaskHomeListCard: View {
     let list: ListSummary
     let count: Int
+    /// The route this card pushes, carried alongside the closure that pushes it.
+    ///
+    /// The closure is an opaque `() -> Void` handed up to `AppRootView`, so it cannot
+    /// be asked where it goes, and the zoom needs an id both ends agree on. Per-list,
+    /// because several of these cards are on screen at once — a single shared id would
+    /// match the wrong rectangle. The argument list it is built from is the same
+    /// `row.list` the `onTap` closure hands to `onOpenFloaterList`.
+    let zoomRoute: AppRoute
     let onTap: () -> Void
 
     @Environment(\.tdayColors) private var colors
@@ -536,6 +544,10 @@ private struct FloaterTaskHomeListCard: View {
         }
         .buttonStyle(.plain)
         .shadow(color: .black.opacity(0.14), radius: 10, x: 0, y: 7)
+        // The rectangle the pushed screen grows out of, on this card's own chain. On
+        // iOS 17, under Reduce Motion, or for a route with no source id it resolves to
+        // nothing and the push is the stock slide — see `ZoomNavigation.swift`.
+        .tdayZoomSource(zoomRoute)
     }
 }
 
@@ -555,14 +567,24 @@ private struct FloaterTaskHomeListCard: View {
 /// reading it would mean wiring the completed repository into the Anytime feed
 /// for a decoration.
 ///
-/// No `.tdayZoomSource(.completed)` either. `ZoomNavigation` mints one shared id
-/// per route, the Scheduled board's Completed tile already claims it, and
-/// `AppRootView` crossfades the two root feeds through a `ZStack` — so during a
-/// tab swap both trees are mounted and two views would carry one id in one
-/// namespace. Android's tile has no shared-element transition here for the same
-/// reason it has none anywhere on this feed.
+/// It does carry a `.tdayZoomSource`, and what used to stop that is worth writing
+/// down because the reason is gone. `ZoomNavigation` minted one id per route, the
+/// Scheduled board's Completed tile already claimed `.completed`, and `AppRootView`
+/// crossfades the two root feeds through a `ZStack` — so during a tab swap both trees
+/// are mounted and two views would have carried one id in one namespace. The origin
+/// now travels on the route, so the board's tile publishes `home-tile.completed` and
+/// this one publishes `floater-tile.completed`: two distinct ids, and the both-mounted
+/// window has nothing to collide. Android's tile still has no shared-element
+/// transition here; that is a separate piece of work.
 private struct FloaterTaskHomeCompletedCard: View {
     let onTap: () -> Void
+    /// The route this card pushes, carried alongside the closure that pushes it.
+    ///
+    /// Same reason as `FloaterTaskHomeListCard` above: the closure is opaque and the
+    /// zoom needs an id both ends agree on. `.completed(origin: .floaterFeed)` is the
+    /// floater feed's id, and a copy of the Scheduled board's would put two views on one
+    /// id in one namespace while both feeds are mounted.
+    let zoomRoute: AppRoute
 
     /// The Completed accent, pinned across all three clients: Android's
     /// `TdayCompletedTileAccent` (0xFF719F84), the Scheduled board's
@@ -647,6 +669,8 @@ private struct FloaterTaskHomeCompletedCard: View {
         }
         .buttonStyle(.plain)
         .shadow(color: .black.opacity(0.14), radius: 10, x: 0, y: 7)
+        // This card's own chain, and this feed's own id — not the Scheduled board's.
+        .tdayZoomSource(zoomRoute)
     }
 }
 
@@ -3151,7 +3175,7 @@ struct TodoListScreen: View {
                     // cannot learn exists.
                     if isFloaterTaskHomeScreen {
                         Section {
-                            FloaterTaskHomeCompletedCard(onTap: onOpenCompleted)
+                            FloaterTaskHomeCompletedCard(onTap: onOpenCompleted, zoomRoute: .completed(origin: .floaterFeed))
                                 .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 10, trailing: TodoTimelineMetrics.horizontalPadding))
                                 .listRowBackground(colors.background)
                                 .listRowSeparator(.hidden)
@@ -3164,6 +3188,10 @@ struct TodoListScreen: View {
                                 FloaterTaskHomeListCard(
                                     list: row.list,
                                     count: row.count,
+                                    // The same list the onTap closure hands to `onOpenFloaterList`
+                                    // below — the id has to match the route AppRootView pushes or
+                                    // the card publishes an id no destination asks for.
+                                    zoomRoute: .floaterListTodos(listId: row.list.id, listName: row.list.name, origin: .floaterFeed),
                                     onTap: {
                                         onOpenFloaterList(row.list.id, row.list.name)
                                     }
