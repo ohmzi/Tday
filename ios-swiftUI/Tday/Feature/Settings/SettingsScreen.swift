@@ -20,6 +20,7 @@ struct SettingsScreen: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var colors
+    @Environment(\.tdayAnimation) private var tdayAnimation
     @State private var settingsScrollOffset: CGFloat = 0
     @State private var showingReminderSelector = false
     @State private var showingDayAheadSelector = false
@@ -81,6 +82,7 @@ struct SettingsScreen: View {
                 "Appearance",
                 "Behavior",
                 "Default home screen",
+                "Reduce motion",
                 "Reminders",
                 "Default reminder",
                 "Day Ahead digest",
@@ -168,7 +170,7 @@ struct SettingsScreen: View {
 
     private func openSearch() {
         HapticManager.buttonPress()
-        withAnimation(TdayMotion.snappy) {
+        withAnimation(tdayAnimation(TdayMotion.snappy)) {
             searchExpanded = true
         }
     }
@@ -178,7 +180,7 @@ struct SettingsScreen: View {
     private func closeSearch() {
         HapticManager.buttonPress()
         searchFieldFocused = false
-        withAnimation(TdayMotion.snappy) {
+        withAnimation(tdayAnimation(TdayMotion.snappy)) {
             searchExpanded = false
         }
         searchQuery = ""
@@ -271,10 +273,10 @@ struct SettingsScreen: View {
             await viewModel.refreshDefaultHomeScreen()
             await viewModel.refreshVersionInfo()
         }
-        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingReminderSelector)
-        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingDayAheadSelector)
-        .animation(.spring(response: 0.24, dampingFraction: 0.9), value: showingLanguageSelector)
-        .animation(.spring(response: 0.28, dampingFraction: 0.9), value: profileEditor)
+        .animation(tdayAnimation(.spring(response: 0.24, dampingFraction: 0.9)), value: showingReminderSelector)
+        .animation(tdayAnimation(.spring(response: 0.24, dampingFraction: 0.9)), value: showingDayAheadSelector)
+        .animation(tdayAnimation(.spring(response: 0.24, dampingFraction: 0.9)), value: showingLanguageSelector)
+        .animation(tdayAnimation(.spring(response: 0.28, dampingFraction: 0.9)), value: profileEditor)
     }
 
     private var settingsContent: some View {
@@ -305,6 +307,11 @@ struct SettingsScreen: View {
                             onSelect: { tab in
                                 Task { await viewModel.setDefaultHomeScreen(tab) }
                             }
+                        )
+                        SettingsDivider()
+                        SettingsReduceMotionRow(
+                            isEnabled: viewModel.reduceMotion,
+                            onToggle: { viewModel.reduceMotion = $0 }
                         )
                         SettingsDivider()
                         HStack {
@@ -637,6 +644,67 @@ private struct SettingsRestingFloatersSection: View {
         }
         .tint(colors.secondary)
         .onChange(of: enabled) { _, value in store.isEnabled = value }
+    }
+}
+
+// MARK: - Reduce motion
+
+/// The in-app Reduce Motion switch — the second source `TdayMotionEnvironment` composes, and the
+/// only row in this screen whose value can be taken away from the user.
+///
+/// Android has had this since `PR 34b`; iOS went without it because the platform publishes an
+/// answer of its own, which is a good answer and not the whole one. Someone may want this app
+/// quieter than their phone without quieting every other app on it, and `MotionPreferenceStore`
+/// is local for the same reason Android's is: it is a fact about the device in the reader's hand,
+/// not about their account.
+///
+/// Mirrors Android's `ReduceMotionRow` down to its honest edge. When the platform has already
+/// removed animation the switch is drawn ON and is untappable, with a line saying who decided:
+/// the preference can only ever subtract, so offering a control that would be ignored would be
+/// worse than showing the truth. That is also why the two are read apart — the caption needs to
+/// name which half of the pair it came from, and `\.tdayAnimation` is the composed answer and
+/// cannot say.
+private struct SettingsReduceMotionRow: View {
+    @Environment(\.tdayColors) private var colors
+
+    /// The phone's own answer, published by the gate. Reading `accessibilityReduceMotion` here
+    /// instead would make this a second reader of the accessibility setting, which
+    /// `reduced-motion-floor.test.ts`'s block D refuses — one reader per client is what keeps a
+    /// second source from quietly becoming a second gate.
+    @Environment(\.tdaySystemReduceMotion) private var systemReduceMotion
+
+    /// Passed in and written out rather than held as `@State` the way the sibling rows hold
+    /// theirs. Those rows own a store each and are the only writers of it; this one has to move
+    /// the same store the root gate is reading, so a local copy would flip the switch without
+    /// flipping anything the user can see.
+    let isEnabled: Bool
+    let onToggle: (Bool) -> Void
+
+    var body: some View {
+        Toggle(
+            isOn: Binding(
+                get: { isEnabled || systemReduceMotion },
+                set: onToggle
+            )
+        ) {
+            HStack(spacing: 14) {
+                SettingsRowIcon(asset: "LucideActivity")
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L("Reduce motion"))
+                        .font(.body.weight(.heavy))
+                        .foregroundStyle(colors.onSurface)
+
+                    if systemReduceMotion {
+                        Text(L("Animations are already off in iOS settings."))
+                            .font(.tdayRounded(size: 13, weight: .bold))
+                            .foregroundStyle(colors.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+        .tint(colors.secondary)
+        .disabled(systemReduceMotion)
     }
 }
 

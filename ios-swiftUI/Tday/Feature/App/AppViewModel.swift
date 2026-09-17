@@ -717,6 +717,24 @@ final class AppViewModel {
         container.themeStore.save(mode)
     }
 
+    /// The in-app Reduce Motion preference, proxied rather than mirrored.
+    ///
+    /// `themeMode` above is a stored property written back through its store, because
+    /// `ThemeStore` is a plain `load()`/`save()` pair with nothing to observe — the view model has
+    /// to hold the live value itself or the theme would not follow the picker. `MotionPreferenceStore`
+    /// is `@Observable`, so this reads straight through instead: one source of truth, and a view
+    /// that reads it in its `body` is registered on the store, which is what makes the Settings
+    /// switch move the animations rather than a value read once at launch. A stored copy here
+    /// would be a second thing to keep in step for no gain.
+    ///
+    /// Composed with the system setting inside `TdayMotionEnvironment`, not here: this property is
+    /// only ever *this app's* half of the answer, and the Settings row needs them apart so it can
+    /// say which one decided.
+    var reduceMotion: Bool {
+        get { container.motionPreference.isEnabled }
+        set { container.motionPreference.isEnabled = newValue }
+    }
+
     /// Concrete locale identifier to apply (resolves "system" to the device language).
     var resolvedLocaleIdentifier: String {
         container.languageStore.resolvedCode()

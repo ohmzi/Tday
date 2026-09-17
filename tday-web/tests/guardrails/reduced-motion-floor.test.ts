@@ -211,18 +211,48 @@ describe("reduced motion D — one module owns the iOS accessibility read", () =
    * device row's half (`docs/verification/phase-8-device-pass.md`, PR 35a).
    */
   it("installs the gate above the root view and again for the lock window", () => {
-    const installs = (file: string) =>
-      /\.tdayResolvedMotion\(\)/.test(stripSwiftComments(readFileSync(file, "utf-8")));
+    // Matches the call with its argument list rather than `()` alone, because the call now takes
+    // the in-app preference. The two argument assertions below are what keep that from being a
+    // loosening: an install that still compiles but is handed no preference would leave the
+    // user's own switch reaching everything except the surface the install exists for, which is
+    // invisible in review and on screen.
+    const installs = (file: string) => {
+      const source = stripSwiftComments(readFileSync(file, "utf-8"));
+      return source.match(/\.tdayResolvedMotion\([^)]*\)/g) ?? [];
+    };
+    const [sceneCall] = installs(path.join(IOS_SRC, "TdayApp.swift"));
+    const [lockCall] = installs(path.join(IOS_SRC, "UI", "Theme", "TdayTheme.swift"));
+
     expect(
-      installs(path.join(IOS_SRC, "TdayApp.swift")),
-      "TdayApp's scene must install .tdayResolvedMotion() ABOVE AppRootView — a provider " +
+      sceneCall,
+      "TdayApp's scene must install .tdayResolvedMotion(…) ABOVE AppRootView — a provider " +
         "AppRootView installs on its own body never reaches AppRootView's own @Environment",
-    ).toBe(true);
+    ).toBeTruthy();
     expect(
-      installs(path.join(IOS_SRC, "UI", "Theme", "TdayTheme.swift")),
-      "tdayAppTheme must keep its .tdayResolvedMotion() — AppLockWindowHost renders into a " +
+      lockCall,
+      "tdayAppTheme must keep its .tdayResolvedMotion(…) — AppLockWindowHost renders into a " +
         "separate window and inherits nothing from the scene",
-    ).toBe(true);
+    ).toBeTruthy();
+
+    // The scene is the one install that can read the store, so it is the one that must.
+    expect(sceneCall, "the scene must pass the user's own preference through").toContain(
+      "motionPreference",
+    );
+    // The lock window cannot reach the store; it passes on whatever it was handed.
+    expect(lockCall, "the theme must forward the preference it was given").toContain("reduceMotion:");
+  });
+
+  it("composes the in-app preference with the system setting, and can only subtract", () => {
+    // The pair is the whole point of the second source: a phone that has already removed
+    // animation wins, and the app's own switch may take more away but never hand any back. An
+    // `&&` here, or a substitution, would silently reverse one half of that.
+    const gate = stripSwiftComments(readFileSync(IOS_GATE, "utf-8"));
+    expect(gate, "the gate no longer reads the platform's answer").toMatch(/accessibilityReduceMotion/);
+    expect(
+      gate,
+      "the preference must be ORed with the system answer, not substituted for it — this switch " +
+        "can only ever subtract",
+    ).toMatch(/systemReduceMotion\s*\|\|\s*reduceMotion/);
   });
 
   it("nothing outside it reads the accessibility setting for itself", () => {

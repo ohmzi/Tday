@@ -204,3 +204,38 @@ goes looking for.
       Fails:  it shutting at ~2.4 s with the setting at 30 s. Also a fail: it staying open
               for good at the default, which would be the base and the resolved window the
               wrong way round.
+
+- [ ] **PR 34c · ios · The in-app Reduce Motion switch moves the app, without a relaunch** — any
+      screen with motion on it, plus Settings. This is PR 34b's Android row on the other platform,
+      and the half that has no local proof: there is no Swift toolchain in this repo, so nothing in
+      this PR has been compiled, and `reduced-motion-floor` can see the shape of the composition
+      (`systemReduceMotion || reduceMotion`) without being able to see that SwiftUI honours it.
+      Do:     Settings -> Appearance -> Behavior -> **Reduce motion**, turn it on. Then complete a
+              task on the Scheduled task home and watch the row leave. Come back and turn it off,
+              and complete another.
+      Watch:  with it on, the row leaves without travel or fade and the gap closes on the next
+              frame; the title's strikethrough does not sweep; the Today card's scroll-to-top jumps
+              rather than scrolls; opening Settings' search does not spring. With it off, all of
+              those are the full choreography again. Nothing needs the app killed, and the switch is
+              where it was left after a relaunch.
+      Fails:  a switch that flips and changes nothing on screen. That is the whole feature, and it is
+              the failure `MotionPreferenceStore` being `@Observable` exists to prevent — a value
+              read once at launch would leave every animation running while the row said otherwise.
+      Also:   turn **Settings -> Accessibility -> Motion -> Reduce Motion** ON as well, with the app
+              open. The app's switch should draw itself ON and go untappable, with the caption naming
+              iOS, and the motion should be off. Then turn the phone's setting back off without
+              touching the app: the row goes live again holding whatever the app's own value was —
+              the two are composed, not merged.
+      Also:   with the phone's setting ON and the app's switch OFF, the motion is still OFF. This is
+              the direction the composition can get wrong silently: an `&&` where the `||` is would
+              leave the app animating for a user whose phone has asked it not to.
+      Also:   the lock window. With Face ID required, lock and unlock: the cover's own animations
+              follow the same switch. `AppLockWindowHost` renders into a separate window and is
+              handed the preference rather than reading it, so this is where a forwarding mistake
+              shows up as "everything is quiet except the lock screen".
+      Why:    no Swift toolchain here. What is verified locally is the wiring read as text —
+              `reduced-motion-floor`'s block D (one reader of the accessibility setting, both install
+              sites, and the subtract-only composition pinned by name), `settings-icons` (the
+              `LucideActivity` imageset this row names), and `ios-target-membership` (the new file is
+              registered in the pbxproj). Whether the switch actually moves an animation is this row
+              and nothing else.

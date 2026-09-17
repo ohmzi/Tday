@@ -89,6 +89,7 @@
 		957E83469CA6C09174B1B374 /* LoginCredentialCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C31F2E171A73F2774E89A1 /* LoginCredentialCoordinator.swift */; };
 		9D9B4F301D7261C3F4F95B6D /* ScheduledTaskHomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42749601AFF38EAE17BD3213 /* ScheduledTaskHomeViewModel.swift */; };
 		9F8E7D6C5B4A00000000B101 /* LanguageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F101 /* LanguageStore.swift */; };
+		9F8E7D6C5B4A00000000B301 /* MotionPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F301 /* MotionPreferenceStore.swift */; };
 		9F8E7D6C5B4A00000000B102 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F102 /* AppLanguage.swift */; };
 		9F8E7D6C5B4A00000000B103 /* Bundle+Language.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F103 /* Bundle+Language.swift */; };
 		9F8E7D6C5B4A00000000B104 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F8E7D6C5B4A00000000F104 /* Localization.swift */; };
@@ -341,6 +342,7 @@
 		9BA781886DCE6963CA364F6F /* CompletedScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedScreen.swift; sourceTree = "<group>"; };
 		9CC7B17CE45842F8DF7D522B /* RealtimeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeClient.swift; sourceTree = "<group>"; };
 		9F8E7D6C5B4A00000000F101 /* LanguageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageStore.swift; sourceTree = "<group>"; };
+		9F8E7D6C5B4A00000000F301 /* MotionPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPreferenceStore.swift; sourceTree = "<group>"; };
 		9F8E7D6C5B4A00000000F102 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
 		9F8E7D6C5B4A00000000F103 /* Bundle+Language.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+Language.swift"; sourceTree = "<group>"; };
 		9F8E7D6C5B4A00000000F104 /* Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localization.swift; sourceTree = "<group>"; };
@@ -842,6 +844,7 @@
 				D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */,
 				AD41A49221B1A947AF8A94D0 /* ThemeStore.swift */,
 				9F8E7D6C5B4A00000000F101 /* LanguageStore.swift */,
+				9F8E7D6C5B4A00000000F301 /* MotionPreferenceStore.swift */,
 				0032E16ECBA0642C6108F28D /* Auth */,
 				9B7A416E298DA7E2D5DAD2FC /* Cache */,
 				A4AB62DB656606572D396BB2 /* Completed */,
@@ -1490,6 +1493,7 @@
 				BA2D51423497337836ADD5E9 /* TdayTheme.swift in Sources */,
 				0536D5C87C017F1DAC4F316C /* ThemeStore.swift in Sources */,
 				9F8E7D6C5B4A00000000B101 /* LanguageStore.swift in Sources */,
+				9F8E7D6C5B4A00000000B301 /* MotionPreferenceStore.swift in Sources */,
 				9F8E7D6C5B4A00000000B102 /* AppLanguage.swift in Sources */,
 				B5C6D7E8F9A000000000B201 /* AppLocale.swift in Sources */,
 				9F8E7D6C5B4A00000000B103 /* Bundle+Language.swift in Sources */,

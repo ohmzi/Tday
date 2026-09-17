@@ -20,6 +20,7 @@
     "waves"
   ],
   "ios": [
+    "activity",
     "at-sign",
     "bell",
     "bell-ring",
