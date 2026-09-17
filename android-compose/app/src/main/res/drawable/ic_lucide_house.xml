@@ -1,4 +1,7 @@
-<!-- lucide House (ISC) — https://lucide.dev. Shared root-dock Home glyph. -->
+<!-- lucide House (ISC) — https://lucide.dev. A list icon: the `home` entry in the
+     shared registry, and the keyword "apartment" infers it. It is NOT the root dock's
+     glyph any more — that slot wears ic_lucide_calendar_check — so do not delete this
+     file with the dock icon; the three-way list-icon key parity test needs it. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"

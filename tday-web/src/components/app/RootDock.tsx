@@ -1,4 +1,4 @@
-import { Home, Leaf, MoreHorizontal } from "lucide-react";
+import { CalendarCheck, Leaf, MoreHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { usePathname, useRouter } from "@/lib/navigation";
 import { hapticTick } from "@/lib/haptics";
@@ -19,11 +19,11 @@ type DockTab = "scheduledTaskHome" | "floaterTaskHome" | "more";
 const dockTabs: Array<{
   id: DockTab;
   labelKey: "scheduledTaskHome" | "root_feed_tab_floater" | "more";
-  icon: typeof Home;
+  icon: typeof CalendarCheck;
   path?: string;
   accentColor?: string;
 }> = [
-  { id: "scheduledTaskHome", labelKey: "scheduledTaskHome", icon: Home, path: "/app/tday", accentColor: nativeScreenAccentColors.today },
+  { id: "scheduledTaskHome", labelKey: "scheduledTaskHome", icon: CalendarCheck, path: "/app/tday", accentColor: nativeScreenAccentColors.today },
   {
     id: "floaterTaskHome",
     labelKey: "root_feed_tab_floater",

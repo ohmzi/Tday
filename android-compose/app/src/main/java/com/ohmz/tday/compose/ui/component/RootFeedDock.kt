@@ -172,7 +172,7 @@ internal fun RootFeedTab.labelRes(): Int {
 @Composable
 private fun RootFeedTab.icon(): ImageVector {
     return when (this) {
-        RootFeedTab.SCHEDULED_TASK_HOME -> ImageVector.vectorResource(R.drawable.ic_lucide_house)
+        RootFeedTab.SCHEDULED_TASK_HOME -> ImageVector.vectorResource(R.drawable.ic_lucide_calendar_check)
         RootFeedTab.FLOATER_TASK_HOME -> ImageVector.vectorResource(R.drawable.ic_lucide_leaf)
     }
 }
@@ -528,7 +528,7 @@ fun RootFeedDock(
 
                     Icon(
                         painter = if (tab == RootFeedTab.SCHEDULED_TASK_HOME) {
-                            painterResource(R.drawable.ic_lucide_house)
+                            painterResource(R.drawable.ic_lucide_calendar_check)
                         } else {
                             rememberVectorPainter(tab.icon())
                         },

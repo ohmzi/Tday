@@ -61,7 +61,9 @@ Image("ActionEdit")
 | Settings / more | `ellipsis` | `Ellipsis` | `ic_lucide_ellipsis` | `NavEllipsis` |
 | Close / clear | `x` | `X` | `ic_lucide_x` | `NavClose` |
 | Undo (toast action) | `undo-2` | `Undo2` | `ic_lucide_undo_2` | `ActionUndo` |
-| Scheduled (root dock) | `house` | `Home` | `ic_lucide_house` | `NavHouse` |
+| Scheduled (root dock) | `calendar-check` | `CalendarCheck` | `ic_lucide_calendar_check` | `LucideCalendarCheck` |
+| Completion history mark | `calendar-check` | `CalendarCheck` | `ic_lucide_calendar_check` | `LucideCalendarCheck` |
+| List icon: `home` key | `house` | `House` | `ic_lucide_house` | `LucideHouse` |
 | Task edit | `square-pen` | `SquarePen` | `ic_lucide_square_pen` | `ActionEdit` |
 | Task copy | `copy` | `Copy` | `ic_lucide_copy` | `ActionCopy` |
 | Task delete | `trash` | `Trash` | `ic_lucide_trash` | `ActionDelete` |
@@ -71,6 +73,12 @@ Image("ActionEdit")
 | Notes: strikethrough | `strikethrough` | `Strikethrough` | `ic_lucide_strikethrough` | `LucideStrikethrough` |
 | Notes: bulleted list | `list` | `List` | `ic_lucide_list` | `LucideList` |
 | Notes: numbered list | `list-ordered` | `ListOrdered` | `ic_lucide_list_ordered` | `LucideListOrdered` |
+
+The Scheduled root dock and the Completion-history page mark share the one `calendar-check`
+glyph and the one pair of native assets on purpose — the dock tab and the page it opens
+should not be two drawings. The old dock glyph (`house` / `NavHouse`) is **retained**: `house`
+is still a user-pickable list icon in all three registries, so `ic_lucide_house.xml` and
+`LucideHouse.imageset` must stay. `NavHouse.imageset` is now undrawn but is left in place.
 
 These tile/screen icons are also reused as the faint full-screen background watermark on each corresponding screen, and list icons are resolved per list from the shared icon registry (`lib/listIcons.ts` on web, `TdayListIcons.kt` on Android, `todoListSymbolName` on iOS) — keep those registries Lucide-based too.
 
@@ -142,4 +150,4 @@ Every tappable Settings row leads with a glyph in a 22px slot (20px glyph, 14px 
 | Delete local data | `trash-2` | `Trash2` | — | — |
 | Sign out | `log-out` | `LogOut` | `ic_lucide_log_out` | `LucideLogOut` |
 
-Section headings, the theme segmented control, sync-status blocks, the web Calendar-feed and Webhooks form cards, and filled buttons that already carry their own icon stay bare. The native glyphs above are listed in `tday-web/tests/fixtures/settings-icons.json`; the `settings-icons` coverage test fails if an Android drawable or iOS imageset is missing, so update the fixture when a row's glyph changes.
+Section headings, the theme segmented control, sync-status blocks, and filled buttons that already carry their own icon stay bare. The native glyphs above are listed in `tday-web/tests/fixtures/settings-icons.json`; the `settings-icons` coverage test fails if an Android drawable or iOS imageset is missing, so update the fixture when a row's glyph changes.
