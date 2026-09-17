@@ -65,9 +65,10 @@ const stagedIdsByClient = new WeakMap<QueryClient, Set<string>>();
  * A restore removes a row from the completed cache and inserts it into the active
  * ones, and both halves need defending — which is what one claim per todo id
  * gives, since it withholds the row from every root at once rather than naming a
- * direction. See `isStagedRow` for why the match has to normalise the id: the
- * completed caches key their rows by `` `${todo.id}:${instanceDate}` `` and
- * everything else uses the bare todo id.
+ * direction. See `normalizeStagedId` for why the match normalises the id: nearly
+ * every row-list cache here, this one included, keys its rows by
+ * `` `${todo.id}:${instanceDateMillis}` ``, and that suffix differs per cache for
+ * the same task.
  *
  * `["overdueTodo"]` is in the realtime todo-family set but has no reader today
  * (the overdue screen reads `["todoTimeline"]`) and no prune site writes it, so
@@ -102,12 +103,15 @@ function rowIdOf(row: unknown): string | null {
  * A row id reduced to the todo it names, so two caches that spell the same task
  * differently still agree about which task it is.
  *
- * The suffix is the instance date, and it is appended in two places: the
- * completed caches key their rows `` `${todo.id}:${instanceDateMillis}` `` (see
- * `get-completedTodo`), and the active caches key theirs `` `${todo.id}:${undefined}` ``
- * for a task with no instance date — which is most of them, since `:undefined` is
- * what `String(undefined)` produces and the id is built the same way. A bare id
- * is left alone, so the two spellings collapse onto the same claim.
+ * Nearly every row-list cache keys its rows by
+ * `` `${todo.id}:${instanceDate?.getTime()}` `` — `get-todo`, `get-todo-timeline`,
+ * `get-list-todos`, `get-calendar-todo` and `get-completedTodo` all build it the
+ * same way. For a task with no instance date that suffix is the literal string
+ * `"undefined"` (what `String(undefined)` produces), and the completed list's
+ * suffix is a real timestamp for the same task — so the same todo is spelled
+ * differently depending on which cache is holding it. Both reduce to the bare
+ * todo id, which is also what a mutation body carries, so one claim covers all of
+ * them. An id with no suffix is already normal and passes through untouched.
  *
  * This is a comparison key, never a display or wire value. Applied at BOTH ends —
  * `stageTodoRows`/`releaseTodoRows` normalise what they are handed, and

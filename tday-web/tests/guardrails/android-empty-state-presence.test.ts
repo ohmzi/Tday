@@ -348,7 +348,13 @@ describe("an Android cache read that failed still ends the wait", () => {
       // The initializer runs once; `load()` and every cache-version bump come back through
       // `hydrateFromCache`. Without an `onFailure` leg there, a device whose read fails twice gets
       // a second chance that changes nothing.
-      const hydrate = blockAfter(source, "private fun hydrateFromCache() {");
+      // Anchored on the declaration without its modifiers: `CompletedViewModel`'s
+      // hydrate became `suspend` when it took over the restore path's re-read on
+      // `Dispatchers.IO` (four blocking Room reads were running on the main thread
+      // once no network round trip was there to hide them), and `CalendarViewModel`'s
+      // is still plain. What this pins is the failure leg inside the body, which is
+      // the same obligation either way — the modifier is not the assertion.
+      const hydrate = blockAfter(source, "fun hydrateFromCache() {");
       expect(hydrate, `${file} no longer declares hydrateFromCache`).not.toBe("");
       const failure = blockAfter(hydrate, ".onFailure {");
       expect(failure, `${file}'s hydrate has no failure leg`).not.toBe("");
