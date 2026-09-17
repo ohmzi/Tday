@@ -116,6 +116,28 @@ private extension Color {
     }
 }
 
+/// The corner radii this UI draws with, named once.
+///
+/// The rung is the same one the other two clients draw — Android's
+/// `TdayDimens.RadiusCard` (26.dp), which its own wizard's tiles wear too, and
+/// web's `rounded-[26px]`, written out at each of its tile sites rather than named
+/// and the same value on its board's tiles and its wizard's alike — so the three
+/// clients draw one corner from one number. This client is the only one where the
+/// rung and the drawing sites have been made to agree in one place; web's is a
+/// value its sites share by hand, which is the drift this enum exists to stop
+/// here. It lives here rather than at a
+/// call site because a corner more than one shape has to agree on is a token: the
+/// home board's tiles, the Today card, the scheduled board's list rows, the
+/// Anytime feed's two cards, the onboarding wizard's two tiles, the auth flow's
+/// hero tile and the shape `ZoomNavigation` grows a pushed screen out of are all
+/// this corner, and before this enum six sites across four files spelled it
+/// themselves with nothing binding them together.
+enum TdayRadius {
+    /// The card a section is drawn on — the tiles that group rows, and the hero tiles
+    /// the wizard and the reset flow open with, never the rows themselves.
+    static let card: CGFloat = 26
+}
+
 enum TdayFont {
     static func font(size: CGFloat, weight: Font.Weight) -> Font {
         .custom(postScriptName(for: weight), size: size)

@@ -1918,3 +1918,31 @@ animates.
               defect and fixed it the same way (`TdayHeroTitleHeader`, drawn first and offset below);
               web's `NativePageHeader` still draws its band after its back button and is exposed the
               same way — a separate change, not covered here.
+
+- [ ] **PR 197 · ios · The tiles' square edge** — a phone on iOS 18, the Scheduled home board and the
+      Anytime feed. Start with the three-second check, because it decides whether the rest of this row
+      means anything.
+      Do:     look at the floating + button, at rest, on any screen. Then tap a category tile and watch
+              the push, and swipe back from the tile's screen.
+      Watch:  (a) the + button's own shadow is ROUND. That is the discriminator: it is an unshaped
+              `.background` under a `.clipShape(Circle())` wearing the same press shadow the tiles wear,
+              so a square behind it would mean the mechanism is real and app-wide — and if that is what
+              you see, stop here and say so, because the fix belongs in the shared press effect rather
+              than on the ten tiles. (b) with a round + button: each tile leaves the screen as a rounded
+              surface and comes back as one, with no square-cornered rectangle over the fill on the
+              first frame of the push and none on the interactive dismiss either.
+      Fails:  (a) a square shadow behind the + button — an app-wide defect, see above. (b) the travelling
+              source squares off at the moment it leaves, or the returning source squares off as it
+              lands back on the tile. That is the zoom's own rectangle and nothing on the tile can fix
+              it.
+      Also:   the Anytime feed's two cards, which are the only two of the ten drawn as `List` rows, and
+              whose row insets leave the card no vertical room for its own shadow. Watch the shadow at
+              the card's TOP edge in particular: `top: 0` puts SwiftUI's row clip exactly on it, so a
+              straight horizontal cut there is a row clip rather than a shadow shape, and the fix would
+              be vertical room on those two rows. Then the same two cards' bottom edge.
+      Why:    The audit found no chrome on any of the ten that can draw a square at rest, and took back
+              out the flattening step that was added on the opposite assumption. What is left is the
+              zoom source — fixed by clipping it in the `matchedTransitionSource` configuration — and
+              the row clip on the Anytime pair. Nothing on this machine can render a SwiftUI frame, and
+              the one construct added here that no local gate can typecheck is that configuration
+              closure, so a build against an iOS 18 SDK is owed alongside this pass.
