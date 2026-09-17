@@ -160,6 +160,8 @@ import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.model.supportsTaskReschedule
 import com.ohmz.tday.compose.core.model.timelineRescheduleTargetDate
+import com.ohmz.tday.compose.core.navigation.AppRoute
+import com.ohmz.tday.compose.core.navigation.tileTransitionKey
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import com.ohmz.tday.compose.core.ui.CategoryCard
@@ -206,6 +208,7 @@ import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayPressable
+import com.ohmz.tday.compose.core.ui.tdayTileSharedElement
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.RootFeedDock
@@ -3878,7 +3881,11 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
             CategoryCard(
                 modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
                     .fillMaxWidth()
-                    .padding(bottom = FloaterFeedRowSpacing),
+                    .padding(bottom = FloaterFeedRowSpacing)
+                    // The source half of the zoom into the Completed screen — the same
+                    // destination the scheduled board's grid tile grows into, and the same
+                    // key, because both push the one `completed` route.
+                    .tdayTileSharedElement(AppRoute.Completed.tileTransitionKey()),
                 color = TdayCompletedTileAccent,
                 iconRes = R.drawable.ic_lucide_circle_check_big,
                 watermarkRes = R.drawable.ic_lucide_circle_check_big,
@@ -3905,7 +3912,10 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
         ) { (list, count) ->
             FloaterTaskHomeListRow(
                 modifier = displacedFeedItemMotion(timelineAnimationsEnabled)
-                    .padding(bottom = FloaterFeedRowSpacing),
+                    .padding(bottom = FloaterFeedRowSpacing)
+                    .tdayTileSharedElement(
+                        AppRoute.FloaterListTodos.tileTransitionKey(listId = list.id),
+                    ),
                 name = list.name,
                 colorKey = list.color,
                 iconKey = list.iconKey,

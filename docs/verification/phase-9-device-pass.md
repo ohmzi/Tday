@@ -1806,3 +1806,37 @@ animates.
               with the four new rules mutation-tested red. What none of it can see is whether SwiftUI
               finds the source rectangle for a tile three levels inside a `List` cell — which is this
               unit.
+
+- [ ] **PR 32d · android · The ten Android tiles grow into their screens** — any Android device or
+      emulator with animations on, then again with the device's animator scale at 0 and with the
+      in-app **Reduce motion** switch on. This is Android's first shared-element transition and
+      there is no prior art in this codebase to compare it against, so every one of these taps is
+      new behaviour rather than a regression check.
+      Do:     tap each of the ten in turn — Scheduled, Priority, Overdue, All, Completed, Calendar,
+              the **Today** card, a **custom list** row, the Anytime feed's **Completed** tile, and a
+              **Floater list** row. Then press back from each (the button AND, where the device has
+              it, the gesture).
+      Watch:  the pressed tile grows into the screen it opens — its rectangle, its corner radius, and
+              no content stretching on the way — and back returns it to that same tile. Rows further
+              down the feed shift rather than jump.
+      Fails:  a crossfade on any of the ten, which means the key never matched and both halves went
+              inert without saying so. A screen growing out of the WRONG tile. A destination that
+              arrives already full-size with the tile still visible underneath.
+      Also:   **arrive without pressing a tile** and confirm nothing zooms: a list from the Android
+              launcher shortcut, a notification tap, a widget row (`tday://todos/create?target=today`
+              and the widget's own create route), and the create flow's push onto Today. These set no
+              origin, so all of them must be the ordinary hand-over. An origin flag that leaked would
+              zoom out of a tile the user never touched.
+      Also:   **Reduce motion ON** (the in-app switch), and with the device's animator scale at 0:
+              every tap is the short fade, no zoom, and the destination is drawn and readable — not
+              blank, not half-faded, and not slower than the tap. Then check the **search-close** on
+              the scheduled home with the in-app switch on and the device scale at 1x: the wait before
+              the results close must still cover the hand-over rather than firing instantly over an
+              animation still playing.
+      Also:   **predictive back** — start a back gesture and hold it. The dragged screen should recede
+              and travel with the finger and finish where the back button would have; with Reduce
+              motion on it should be a plain fade with nothing parked mid-recede.
+      Why:    `TileTransitionKeyTest` pins the key table in CI and the web guardrails pin the wiring,
+              but nothing here can see whether Compose finds a source rectangle for a tile inside a
+              `LazyColumn` — which is this unit — and the predictive-back slot is scrubbed by a
+              `SeekableTransitionState`, the one path a static spec cannot describe.
