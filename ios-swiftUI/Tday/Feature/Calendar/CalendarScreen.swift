@@ -2391,8 +2391,41 @@ private struct CalendarElasticTopBar: View {
     let searchFieldFocused: FocusState<Bool>.Binding?
     let onSearchClose: () -> Void
 
+    /// What the title wants at the size it is drawn, measured off a hidden copy
+    /// of it — see `tdayMeasuresDockedTitle`. Zero until the probe has a box.
+    @State private var dockedTitleWidth: CGFloat = 0
+    /// The bar's inner width, from the same probe. Zero until the first layout.
+    @State private var barWidth: CGFloat = 0
+
     private var progress: CGFloat {
         min(max(collapseProgress, 0), 1)
+    }
+
+    /// The one font the docked and expanded copies of the title are both drawn
+    /// with, named once because the probe has to measure against exactly what the
+    /// visible `Text` will be laid out in. Two copies that spelled the size
+    /// separately could drift, and the measurement would then be answering a
+    /// question about a title nobody is looking at.
+    private var dockedTitleFont: Font {
+        .tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy)
+    }
+
+    /// How much of the row the title may not have, and whether it gets one at all.
+    ///
+    /// Read from `TdayBarTitleReserve`, which is the same rule Android's
+    /// `tdayBarTitleReserve` and web's `nativePageBarTitleReserve` run, and the
+    /// reason this bar no longer shrinks or ellipsises the word it is handing off
+    /// from. The controls are the ones that are actually there whenever the title
+    /// is on screen: one 56pt back chevron on the left, and on the right the two
+    /// 56pt circles the search button and the Today button have both folded into
+    /// by the time `collapsedTitleOpacity` leaves zero.
+    private var titleReserve: TdayBarTitleReserve {
+        tdayBarTitleReserve(
+            barWidth: barWidth,
+            leading: TodoTimelineMetrics.topBarButtonFrame,
+            trailing: trailingActionReservedWidth,
+            titleWidth: dockedTitleWidth
+        )
     }
 
     // Show the word "Today" while the title is down (expanded); collapse to an
@@ -2517,49 +2550,70 @@ private struct CalendarElasticTopBar: View {
                     }
                 }
 
-                if !searchActive {
+                if !searchActive, titleReserve.hasRoom {
                     Text(title)
-                        .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
+                        .font(dockedTitleFont)
                         .foregroundStyle(accentColor)
                         .lineLimit(1)
-                        // Two trailing buttons now, so what is left for the docked
-                        // title is about 157pt — narrower than "Calendario" or
-                        // "Calendrier" at 32pt. Scale it rather than clip it.
+                        // The backstop below the floor, and nothing more now. It
+                        // is Android's `DockedTitleMinScale` in origin — that
+                        // constant was taken from this line — and it stays where
+                        // it is because there is still one bar in the app that
+                        // needs it: `TimelineTopBar`'s three- and four-action
+                        // scopes, whose comment books the same modifier as owed.
+                        // Here it is reached only past the give-up above, so a
+                        // title is either whole or not drawn.
                         .minimumScaleFactor(0.72)
                         .opacity(collapsedTitleOpacity)
                         .offset(y: collapsedTitleOffsetY)
                         .scaleEffect(0.985 + (0.015 * CGFloat(collapsedTitleOpacity)))
-                        // The WIDER side, mirrored — not each side for what
-                        // actually sits there. This title crossfades with the
-                        // expanded one below it, which is centred on the bar, so
-                        // reserving 68 left against 132 right slid the name 32pt
-                        // sideways over the handoff while both were on screen.
-                        // Mirroring keeps both halves of the crossfade on the same
-                        // centre line. It is what the web bar does.
+                        // Each side for what actually sits there, and the WIDER
+                        // side mirrored on both wherever the name fits inside that.
+                        // The choice is `tdayBarTitleReserve`'s, argued in full on
+                        // that function; what matters at this call site is the
+                        // second branch.
                         //
-                        // Android used to mirror unconditionally too, and it cost
-                        // them the bug this `.minimumScaleFactor` was added for:
-                        // with two trailing buttons the mirrored reserve handed
-                        // "Calendar" less than the word needs and it rendered
-                        // "Cale…" — no scale factor there to catch it.
-                        // `tdayBarTitleReserve` now measures the title and mirrors
-                        // only while the mirrored reserve actually fits it, falling
-                        // through to per-side before it shrinks. This bar does not
-                        // need that arithmetic BECAUSE of the modifier three lines
-                        // up: the same 0.72 is what stands in for it here, so the
-                        // word survives a reserve that is too generous to the
-                        // buttons. Keep both, and do not port the Android branch
-                        // here without also asking what it does to the crossfade
-                        // the mirroring exists for.
-                        .padding(.horizontal, max(
-                            TodoTimelineMetrics.topBarButtonFrame,
-                            trailingActionReservedWidth
-                        ) + 12)
+                        // This comment used to end by saying the bar did not need
+                        // that arithmetic because `.minimumScaleFactor(0.72)` stood
+                        // in for it, and that the word therefore survived. It does
+                        // not. Mirroring two 56pt circles spends 132pt on BOTH
+                        // sides — 264 of the 357pt this bar has on a 393pt phone —
+                        // which leaves "Calendar" 93pt for a word that is 137.5pt
+                        // at 32pt Nunito ExtraBold, and the 0.72 floor still needs
+                        // 99. So the copy was not merely small: it was ellipsised
+                        // to "Cale…" at the one moment it was supposed to be
+                        // handing off from the same word drawn in full in the block
+                        // underneath. The arithmetic the comment waved away is the
+                        // fix.
+                        //
+                        // What the fall-through costs is the crossfade, and it is
+                        // spent only here. Per-side leaves the room for the word
+                        // but centres the docked copy on the leftovers rather than
+                        // on the bar, so it sits (trailing - leading) / 2 — 32pt on
+                        // this phone — to the left of the expanded copy while both
+                        // are on screen over progress 0.72-0.86. That is real, and
+                        // it is what the mirrored branch exists to prevent. It is
+                        // still the right trade: the mirrored reserve is what put
+                        // the two copies at DIFFERENT SIZES over that same window,
+                        // which is a worse disagreement than a lateral one, and
+                        // past about a 437pt device neither branch is needed. Both
+                        // other clients reached the same conclusion — Android's
+                        // `tdayBarTitleReserve` and web's `nativePageBarTitleReserve`
+                        // fall through in as many words.
+                        .padding(.leading, titleReserve.leading)
+                        .padding(.trailing, titleReserve.trailing)
                         .frame(maxWidth: .infinity)
                         .allowsHitTesting(false)
                 }
             }
             .frame(height: TodoTimelineMetrics.topBarRowHeight)
+            // The two numbers the reserve is a function of, taken off this row:
+            // its own inner width, and the natural width of the title about to
+            // dock into it. Hung as a background so neither can move anything —
+            // the title's own box is the thing being sized, so its width is the
+            // answer rather than the question, and the probe is a hidden copy at
+            // `fixedSize` for exactly that reason.
+            .tdayMeasuresDockedTitle(barTitle: title, font: dockedTitleFont)
 
             if markBlockHeight > 0.5 {
                 heroMark
@@ -2573,7 +2627,10 @@ private struct CalendarElasticTopBar: View {
 
             ZStack(alignment: .bottom) {
                 Text(title)
-                    .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
+                    // The same object the probe measures against, so a change to
+                    // either copy cannot leave the reserve answering a question
+                    // about a size nobody draws.
+                    .font(dockedTitleFont)
                     .foregroundStyle(accentColor)
                     .lineLimit(1)
                     .opacity(expandedTitleOpacity)
@@ -2604,6 +2661,18 @@ private struct CalendarElasticTopBar: View {
             .offset(y: TodoTimelineMetrics.contentFadeHeight)
             .opacity(Double(min(1, progress * 8)))
             .allowsHitTesting(false)
+        }
+        // Both readings land one frame after the row they describe, which is the
+        // same frame the reserve's own degenerate case is written for: until the
+        // title has a width the reserve mirrors, exactly as this bar did before
+        // anything measured it, and until the bar has a width it reserves only
+        // what is really there. So the first frame is the old behaviour and the
+        // second is the fixed one, with no third state between them.
+        .onPreferenceChange(TdayBarWidthKey.self) { width in
+            barWidth = width
+        }
+        .onPreferenceChange(TdayDockedTitleWidthKey.self) { width in
+            dockedTitleWidth = width
         }
     }
 

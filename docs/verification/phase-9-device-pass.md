@@ -1876,3 +1876,22 @@ animates.
       Why:    `:app:compileDebugKotlin` and `:app:testDebugUnitTest` are green and the guardrails pin
               the key table and the origin gate, but nothing on this machine can render a frame. The
               animation's quality — and the close in particular — is only visible on a device.
+
+- [ ] **PR 195 · ios · The calendar's docked title** — a phone, Calendar, scrolled until the bar has
+      collapsed. Run it at the default text size and again at a large Dynamic Type size.
+      Do:     scroll up until the title docks, then scroll back down to the top, slowly.
+      Watch:  (a) the word arrives WHOLE and at full size — "Calendar" keeps all eight letters and is
+              the same 32pt as the block's own copy it is handing off from, never smaller and never
+              "Cale…".
+              (b) over the handoff, roughly the last quarter of the scroll, the docked copy sits
+              about 32pt to the LEFT of the expanded one. That is the accepted cost of the reserve
+              and not a failure: the reserve falls through to per-side rather than shrink the word,
+              and per-side gives up the bar-centring the mirrored branch exists for.
+      Fails:  the title ellipsises at any scroll position; or the docked copy is drawn at a
+              different SIZE from the expanded one while both are on screen — the failure this row
+              exists for, and the one the old `minimumScaleFactor` produced.
+      Also:   open the search field and close it; the title must come back whole rather than arriving
+              mid-reserve. Then rotate to landscape and back.
+      Why:    `TdayBarTitleReserveTests` proves the arithmetic — 93pt before, 157pt after, against a
+              137.5pt word — and proves nothing about how a 32pt lateral shift reads while two copies
+              of the same word cross-fade. That is the half only an eye can settle. iOS 17 and up.
