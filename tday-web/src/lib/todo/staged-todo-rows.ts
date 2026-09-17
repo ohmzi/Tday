@@ -54,9 +54,20 @@ const stagedIdsByClient = new WeakMap<QueryClient, Set<string>>();
  * the row back in. So the set is the row-list members of the `todo` and
  * `floater` event families `src/lib/realtime.tsx` invalidates — `["todo"]`,
  * `["todoTimeline"]`, `["overdueTodo"]`, `["calendarTodo"]`, `["list", …]`,
- * `["floater"]`, `["floaterList", …]` — minus the *completed* history caches
- * (`["completedTodo"]`, `["completedFloater"]`), where a completed row belongs,
- * and minus the metadata maps (`["listMetaData"]`, `["floaterListMetaData"]`).
+ * `["floater"]`, `["floaterList", …]`, `["completedTodo"]`,
+ * `["completedFloater"]` — minus the metadata maps (`["listMetaData"]`,
+ * `["floaterListMetaData"]`).
+ *
+ * The two *completed* caches were excluded here until un-complete needed the
+ * same claim from the other direction, and the reason they were is worth keeping
+ * on the record because it is still true: a completed row belongs in them, so
+ * holding one out is wrong for a completion. It is exactly right for a restore.
+ * A restore removes a row from the completed cache and inserts it into the active
+ * ones, and both halves need defending — which is what one claim per todo id
+ * gives, since it withholds the row from every root at once rather than naming a
+ * direction. See `isStagedRow` for why the match has to normalise the id: the
+ * completed caches key their rows by `` `${todo.id}:${instanceDate}` `` and
+ * everything else uses the bare todo id.
  *
  * `["overdueTodo"]` is in the realtime todo-family set but has no reader today
  * (the overdue screen reads `["todoTimeline"]`) and no prune site writes it, so
@@ -74,6 +85,8 @@ export const ROW_LIST_KEY_ROOTS = [
   "list",
   "floater",
   "floaterList",
+  "completedTodo",
+  "completedFloater",
 ] as const;
 
 const ROW_LIST_KEY_ROOT_SET: ReadonlySet<string> = new Set(ROW_LIST_KEY_ROOTS);
@@ -85,10 +98,40 @@ function rowIdOf(row: unknown): string | null {
   return typeof id === "string" ? id : null;
 }
 
+/**
+ * A row id reduced to the todo it names, so two caches that spell the same task
+ * differently still agree about which task it is.
+ *
+ * The suffix is the instance date, and it is appended in two places: the
+ * completed caches key their rows `` `${todo.id}:${instanceDateMillis}` `` (see
+ * `get-completedTodo`), and the active caches key theirs `` `${todo.id}:${undefined}` ``
+ * for a task with no instance date — which is most of them, since `:undefined` is
+ * what `String(undefined)` produces and the id is built the same way. A bare id
+ * is left alone, so the two spellings collapse onto the same claim.
+ *
+ * This is a comparison key, never a display or wire value. Applied at BOTH ends —
+ * `stageTodoRows`/`releaseTodoRows` normalise what they are handed, and
+ * `isStagedRow` normalises what it finds in a cache — because normalising only
+ * one end would leave a claim on `"todo-1"` unable to match a row cached as
+ * `"todo-1:undefined"`, and the guard would silently stop covering the active
+ * caches it was built for.
+ */
+function normalizeStagedId(id: string): string {
+  const separator = id.indexOf(":");
+  return separator === -1 ? id : id.slice(0, separator);
+}
+
+/** [normalizeStagedId] over a whole set, for the claim and release paths. */
+function normalizeStagedIds(ids: Iterable<string>): Set<string> {
+  const normalized = new Set<string>();
+  for (const id of ids) normalized.add(normalizeStagedId(id));
+  return normalized;
+}
+
 /** Whether this value is one of the rows the guard is holding out of the caches. */
 function isStagedRow(row: unknown, staged: ReadonlySet<string>): boolean {
   const id = rowIdOf(row);
-  return id !== null && staged.has(id);
+  return id !== null && staged.has(normalizeStagedId(id));
 }
 
 /**
@@ -165,7 +208,7 @@ export function stageTodoRows(queryClient: QueryClient, ids: Iterable<string>): 
     stagedIdsByClient.set(queryClient, staged);
     installGuard(queryClient, staged);
   }
-  for (const id of ids) staged.add(id);
+  for (const id of normalizeStagedIds(ids)) staged.add(id);
 }
 
 /**
@@ -185,7 +228,7 @@ export function stageTodoRows(queryClient: QueryClient, ids: Iterable<string>): 
 export function releaseTodoRows(queryClient: QueryClient, ids: Iterable<string>): void {
   const staged = stagedIdsByClient.get(queryClient);
   if (!staged) return;
-  for (const id of ids) staged.delete(id);
+  for (const id of normalizeStagedIds(ids)) staged.delete(id);
 }
 
 /**
@@ -210,10 +253,14 @@ export function pruneTodoRowCaches(
   ids: ReadonlySet<string>,
 ): void {
   if (ids.size === 0) return;
+  // Normalised to match `isStagedRow`, which is what actually decides whether a row
+  // in a cache is one of these — a caller handing in `"todo-1:undefined"` and a
+  // completed cache holding `"todo-1:1730000000000"` are the same task.
+  const staged = normalizeStagedIds(ids);
   for (const root of ROW_LIST_KEY_ROOTS) {
     queryClient.setQueriesData(
       { queryKey: [root], predicate: (query) => query.queryKey[0] === root },
-      (data: unknown) => withoutStagedRows(data, ids),
+      (data: unknown) => withoutStagedRows(data, staged),
     );
   }
 }
