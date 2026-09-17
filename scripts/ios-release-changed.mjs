@@ -28,6 +28,9 @@
  *
  * `version.json` is deliberately absent from the relevant set entirely: `ios.buildNumber`
  * increments on every single release, so counting it would make the filter a permanent no-op.
+ * Its `version` DOES count, but only under the compatibility policy that makes a version
+ * mismatch fatal — see [requiresVersionParity] for why, and for what that policy cost when
+ * this filter answered "no" to a release that still moved the version.
  *
  * The normalisation patterns intentionally mirror `scripts/version.mjs` (`syncInfoPlist` /
  * `syncXcodeProject`) and the guide exporter's `currentVersion` field. If a new version mirror
@@ -123,6 +126,59 @@ function isReleaseNoiseOnly(filePath, base, head) {
   return normalize(filePath, before) === normalize(filePath, after);
 }
 
+/**
+ * True when the compatibility policy in force at `head` makes an iOS version mismatch fatal.
+ *
+ * `compatibility.mode: "exact"` with `updateRequired: true` is what the server hands the mobile
+ * clients through the probe (`{"appVersion":…,"updateRequired":true,"compatibilityMode":"exact"}`),
+ * and both mobile clients answer ANY version difference with "update required" — the app's own
+ * update when it is older, the server's when it is newer. So under that policy the iOS build and
+ * the server must ship the same version: a release that moves the version without shipping iOS
+ * points every iOS user at a TestFlight build that does not exist, and the one thing they can do
+ * about it is nothing.
+ *
+ * That is not hypothetical. v0.7.30 was the first release this filter ever answered "no" to —
+ * nothing under ios-swiftUI/ changed but the version tokens it normalises away, so the build was
+ * skipped, TestFlight stayed at v0.7.29, and the iOS app was left telling its owner to update a
+ * server that had already moved past them.
+ *
+ * Read at `head` rather than at `base`: what matters is the policy the release being evaluated
+ * will enforce. A policy relaxed since the base is exactly the case where no build is needed.
+ */
+function requiresVersionParity(head) {
+  const raw = readBlob(head, "version.json");
+  if (raw === null) return false;
+  try {
+    const compatibility = JSON.parse(raw).compatibility ?? {};
+    return (
+      String(compatibility.mode ?? "exact").toLowerCase() === "exact" &&
+      compatibility.updateRequired === true
+    );
+  } catch {
+    // An unreadable manifest is not this script's to diagnose — `version.mjs check` owns that,
+    // and guessing "parity required" here would spend a macOS run on every malformed manifest.
+    return false;
+  }
+}
+
+/** True when the release version itself moved between the two refs. */
+function versionMoved(base, head) {
+  const versionOf = (ref) => {
+    const raw = readBlob(ref, "version.json");
+    if (raw === null) return null;
+    try {
+      return String(JSON.parse(raw).version ?? "");
+    } catch {
+      return null;
+    }
+  };
+  const before = versionOf(base);
+  const after = versionOf(head);
+  if (after === null) return false;
+  // No manifest at the base (a tag from before version.json existed) counts as moved.
+  return before !== after;
+}
+
 /** Writes a line to stdout. `console` is not used: DeepSource's JS-0002 forbids it. */
 function log(line) {
   process.stdout.write(`${line}\n`);
@@ -148,15 +204,26 @@ function main() {
     .filter(isIosRelevantPath)
     .filter((filePath) => !isReleaseNoiseOnly(filePath, base, head));
 
-  const shouldBuild = relevant.length > 0;
+  // Asked before the path result is trusted: under an exact + updateRequired policy the version
+  // moving is itself a reason to build, because skipping it is what strands iOS users.
+  const parityForcesBuild = requiresVersionParity(head) && versionMoved(base, head);
+
+  const shouldBuild = relevant.length > 0 || parityForcesBuild;
 
   log(`Comparing ${base}...${head}`);
   log(`${changed.length} file(s) changed in total.`);
-  if (shouldBuild) {
+  if (relevant.length > 0) {
     log(`${relevant.length} iOS-relevant file(s):`);
     for (const filePath of relevant.slice(0, 40)) log(`  ${filePath}`);
     if (relevant.length > 40) log(`  ... and ${relevant.length - 40} more`);
-  } else {
+  }
+  if (parityForcesBuild) {
+    log(
+      "The version moved under compatibility exact + updateRequired, which both mobile clients " +
+        "read as a hard mismatch in either direction — building so iOS ships the same version.",
+    );
+  }
+  if (!shouldBuild) {
     log("No iOS-relevant changes — only release version mirrors, if anything.");
   }
 
