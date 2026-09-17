@@ -40,7 +40,12 @@ class FloaterListRepository @Inject constructor(
     fun fetchListsSnapshot(): List<ListSummary> =
         buildListsForState(cacheManager.loadOfflineStateBlocking())
 
-    suspend fun createList(name: String, color: String? = null, iconKey: String? = null) {
+    suspend fun createList(
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+        reusable: Boolean = false,
+    ) {
         val normalizedName = capitalizeFirstListLetter(name).trim()
         if (normalizedName.isBlank()) return
 
@@ -56,6 +61,7 @@ class FloaterListRepository @Inject constructor(
                 todoCount = 0,
                 createdAtEpochMs = timestampMs,
                 updatedAtEpochMs = timestampMs,
+                reusable = reusable,
             )
             state.copy(
                 floaterLists = state.floaterLists + newList,
@@ -67,6 +73,7 @@ class FloaterListRepository @Inject constructor(
                     name = normalizedName,
                     color = color,
                     iconKey = iconKey,
+                    reusable = reusable,
                 ),
             )
         }
@@ -89,6 +96,7 @@ class FloaterListRepository @Inject constructor(
                             name = normalizedName,
                             color = color,
                             iconKey = iconKey,
+                            reusable = reusable,
                         ),
                     ),
                     "Could not create floater list",
@@ -117,6 +125,7 @@ class FloaterListRepository @Inject constructor(
                                     todoCount = todoCount,
                                     updatedAtEpochMs = updatedAt,
                                     createdAtEpochMs = createdAt,
+                                    reusable = createdList.reusable,
                                 )
                             } else {
                                 list
@@ -133,7 +142,8 @@ class FloaterListRepository @Inject constructor(
         listId: String,
         name: String,
         color: String? = null,
-        iconKey: String? = null
+        iconKey: String? = null,
+        reusable: Boolean? = null,
     ) {
         val trimmedName = capitalizeFirstListLetter(name).trim()
         if (listId.isBlank()) return
@@ -151,6 +161,7 @@ class FloaterListRepository @Inject constructor(
                                 color = color ?: list.color,
                                 iconKey = iconKey ?: list.iconKey,
                                 updatedAtEpochMs = timestampMs,
+                                reusable = reusable ?: list.reusable,
                             )
                         } else {
                             list
@@ -163,6 +174,7 @@ class FloaterListRepository @Inject constructor(
                                 color = color ?: mutation.color,
                                 iconKey = iconKey ?: mutation.iconKey,
                                 timestampEpochMs = timestampMs,
+                                reusable = reusable ?: mutation.reusable,
                             )
                         } else {
                             mutation
@@ -186,6 +198,7 @@ class FloaterListRepository @Inject constructor(
             name = trimmedName,
             color = color,
             iconKey = iconKey,
+            reusable = reusable,
         )
         cacheManager.updateOfflineState { state ->
             state.copy(
@@ -196,6 +209,7 @@ class FloaterListRepository @Inject constructor(
                             color = color ?: list.color,
                             iconKey = iconKey ?: list.iconKey,
                             updatedAtEpochMs = timestampMs,
+                            reusable = reusable ?: list.reusable,
                         )
                     } else {
                         list
@@ -221,6 +235,7 @@ class FloaterListRepository @Inject constructor(
                         name = trimmedName,
                         color = color,
                         iconKey = iconKey,
+                        reusable = reusable,
                     ),
                 ),
                 "Could not update floater list",

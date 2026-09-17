@@ -334,6 +334,11 @@
     <string name="todos_summary_modes_unavailable">Ringkasan hanya tersedia untuk Hari ini, Dijadualkan, Semua, dan Keutamaan</string>
     <string name="todos_summary_offline_unavailable">Tiada ringkasan tersedia semasa luar talian.</string>
     <string name="todos_list_settings">Tetapan senarai</string>
+    <string name="reusable_list">Senarai boleh guna semula</string>
+    <string name="reusable_list_hint">Tunjuk Set Semula untuk nyahtanda semua dan guna lagi</string>
+    <string name="reset_floater_list">Set semula senarai</string>
+    <string name="floater_list_reset">Senarai diset semula — semua dinyahtanda</string>
+    <string name="error_reset_list_failed">Tidak dapat menetapkan semula senarai.</string>
     <string name="share_list_action">Kongsi senarai</string>
     <string name="share_section_title">Perkongsian</string>
     <string name="action_share">Kongsi</string>

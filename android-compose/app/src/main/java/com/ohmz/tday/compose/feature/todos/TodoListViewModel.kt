@@ -1273,6 +1273,7 @@ class TodoListViewModel @Inject constructor(
         name: String,
         color: String? = null,
         iconKey: String? = null,
+        reusable: Boolean? = null,
     ) {
         val trimmedName = capitalizeFirstListLetter(name).trim()
         if (trimmedName.isBlank()) return
@@ -1311,6 +1312,7 @@ class TodoListViewModel @Inject constructor(
                             name = trimmedName,
                             color = color ?: list.color,
                             iconKey = iconKey ?: list.iconKey,
+                            reusable = reusable ?: list.reusable,
                         )
                     } else {
                         list
@@ -1328,6 +1330,7 @@ class TodoListViewModel @Inject constructor(
                         name = trimmedName,
                         color = color,
                         iconKey = iconKey,
+                        reusable = reusable,
                     )
                 } else {
                     listRepository.updateList(
@@ -1348,7 +1351,47 @@ class TodoListViewModel @Inject constructor(
         }
     }
 
-    fun createList(name: String, color: String? = null, iconKey: String? = null) {
+    /**
+     * Reset a reusable floater list: un-check every floater so the same checklist
+     * can be run again. The web twin is `useResetFloaterList` plus the toast in
+     * FloaterListContainer — the route returns only a message/count, never the
+     * list, so the screen is re-read from the cache afterwards.
+     *
+     * Local Mode is honest rather than a no-op: FloaterListRepository writes the
+     * un-complete to the cache and queues RESET_FLOATER_LIST, exactly as web's
+     * localLists.resetFloaterList un-checks locally before returning.
+     */
+    fun resetFloaterList(listId: String) {
+        if (listId.isBlank()) return
+        viewModelScope.launch {
+            runCatching {
+                floaterListRepository.resetFloaterList(listId)
+            }.onSuccess {
+                hydrateFromCache(
+                    mode = _uiState.value.mode,
+                    listId = _uiState.value.listId,
+                )
+                snackbarManager.showInfo(appContext.getString(R.string.floater_list_reset))
+            }.onFailure { error ->
+                Log.e(TAG, "resetFloaterList failed", error)
+                _uiState.update {
+                    it.copy(
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_reset_list_failed,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun createList(
+        name: String,
+        color: String? = null,
+        iconKey: String? = null,
+        reusable: Boolean = false,
+    ) {
         val trimmedName = capitalizeFirstListLetter(name).trim()
         if (trimmedName.isBlank()) return
 
@@ -1364,6 +1407,7 @@ class TodoListViewModel @Inject constructor(
                         name = trimmedName,
                         color = color,
                         iconKey = iconKey,
+                        reusable = reusable,
                     )
                 } else {
                     listRepository.createList(

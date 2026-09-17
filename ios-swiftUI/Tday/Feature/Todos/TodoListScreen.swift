@@ -1398,6 +1398,23 @@ struct TodoListScreen: View {
             ))
         }
 
+        if viewModel.mode == .floater,
+           let resetTarget = selectedListSummary,
+           resetTarget.reusable,
+           !resetTarget.isViewer {
+            // Web's FloaterListContainer draws Reset on the SAVED list's `reusable`
+            // (never the in-sheet toggle) and hides it from viewers — the backend
+            // forbids a VIEWER at FloaterListService.resetFloaters. Same gate here,
+            // so the affordance and the server agree.
+            actions.append(TimelineTopBarAction(
+                systemName: "arrow.counterclockwise",
+                assetName: "LucideRefreshCw",
+                usesCircularChrome: true,
+                accessibilityLabel: L("Reset list"),
+                action: { Task { await viewModel.resetFloaterList() } }
+            ))
+        }
+
         if isListDetailScreen {
             // One entry point per role: owners get list settings (which hosts
             // the Sharing section); members go straight to the members sheet.
@@ -1909,9 +1926,9 @@ struct TodoListScreen: View {
             createTaskSheetContent
         }
         .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
-            CreateListSheet { name, color, iconKey in
+            CreateListSheet(showsReusable: viewModel.mode == .floater) { name, color, iconKey, reusable in
                 Task {
-                    await viewModel.createList(name: name, color: color, iconKey: iconKey)
+                    await viewModel.createList(name: name, color: color, iconKey: iconKey, reusable: reusable ?? false)
                 }
             }
         }
@@ -2642,8 +2659,16 @@ struct TodoListScreen: View {
                 pendingMembersAfterSettings = true
                 showingListSettings = false
             },
-            onSubmit: { name, color, iconKey in
-                Task { await viewModel.updateListSettings(name: name, color: color, iconKey: iconKey) }
+            showsReusable: viewModel.mode == .floater,
+            onSubmit: { name, color, iconKey, reusable in
+                Task {
+                    await viewModel.updateListSettings(
+                        name: name,
+                        color: color,
+                        iconKey: iconKey,
+                        reusable: reusable
+                    )
+                }
             },
             onDeleteRequest: {
                 showingListSettings = false
@@ -5183,7 +5208,11 @@ private struct ListSettingsSheet: View {
     let list: ListSummary?
     var shareText: String? = nil
     var onMembersRequest: (() -> Void)? = nil
-    let onSubmit: (String, String?, String?) -> Void
+    /// True on a floater list, which is the only kind that can be reused: a
+    /// scheduled list has no Reset to reveal, so the row is hidden and the save
+    /// submits nil (the shared UpdateFloaterListRequest reads that as "leave it").
+    var showsReusable: Bool = false
+    let onSubmit: (String, String?, String?, Bool?) -> Void
     let onDeleteRequest: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var tdayColors
@@ -5191,6 +5220,10 @@ private struct ListSettingsSheet: View {
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
+    /// Seeded from the SAVED list on open, and always submitted when the row is
+    /// shown — web's sheet posts `reusable` on every save, so an off-flip has to
+    /// reach the server or the Reset it reveals can never be retired.
+    @State private var reusable = false
     /// Whether the picker below holds a CHOICE or only a PREVIEW.
     ///
     /// Without it this sheet cannot help destroying an unset icon: it seeds `iconKey` from
@@ -5357,6 +5390,27 @@ private struct ListSettingsSheet: View {
                         }
                     }
 
+                    if showsReusable {
+                        // Web draws this card between the icon picker and the
+                        // sharing/delete actions, with the hint under the title.
+                        TdaySheetCard {
+                            Toggle(isOn: $reusable) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L("Reusable list"))
+                                        .font(.tdayRounded(size: 17, weight: .heavy))
+                                        .foregroundStyle(tdayColors.onSurface)
+                                    Text(L("Show a Reset to un-check everything and run it again"))
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(tdayColors.onSurfaceVariant.opacity(0.78))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .tint(accentColor)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
                     if list != nil, shareText != nil || onMembersRequest != nil {
                         TdaySheetSectionTitle(text: L("Sharing"))
                         HStack(spacing: 10) {
@@ -5431,6 +5485,7 @@ private struct ListSettingsSheet: View {
                 tdayResolvedListIconKey(list?.iconKey, listName: list?.name)
             )
             iconTouched = false
+            reusable = list?.reusable ?? false
         }
     }
 
@@ -5443,7 +5498,10 @@ private struct ListSettingsSheet: View {
         // An untouched picker submits nil, which every repository reads as "leave the icon
         // alone" (`iconKey ?? list.iconKey`). Sending the seeded preview instead would turn
         // a rename into an icon choice the user never made.
-        onSubmit(trimmedName, color, iconTouched ? iconKey : nil)
+        //
+        // `reusable` is the other way round: it is always sent when the row is
+        // shown, so switching it off is a change and not an omission.
+        onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil)
         dismiss()
     }
 

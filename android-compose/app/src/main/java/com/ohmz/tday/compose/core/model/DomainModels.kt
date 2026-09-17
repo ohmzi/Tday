@@ -162,6 +162,10 @@ data class ListSummary(
     val isShared: Boolean = false,
     val memberCount: Int = 0,
     val ownerUsername: String? = null,
+    // A reusable list can be Reset (all its floaters un-completed) to run again.
+    // Drives both the settings toggle and the header's Reset affordance, exactly
+    // as `listMeta.reusable` does on web (FloaterListContainer).
+    val reusable: Boolean = false,
 ) {
     val isViewer: Boolean
         get() = myRole.equals("VIEWER", ignoreCase = true)

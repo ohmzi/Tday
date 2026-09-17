@@ -38,7 +38,7 @@ final class FloaterListRepository {
         buildLists(from: cacheManager.loadOfflineState())
     }
 
-    func createList(name: String, color: String? = nil, iconKey: String? = nil) async throws {
+    func createList(name: String, color: String? = nil, iconKey: String? = nil, reusable: Bool = false) async throws {
         let normalizedName = capitalizeFirstListLetter(name).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedName.isEmpty else {
             return
@@ -57,7 +57,8 @@ final class FloaterListRepository {
                     iconKey: iconKey,
                     todoCount: 0,
                     updatedAtEpochMs: now,
-                    createdAtEpochMs: now
+                    createdAtEpochMs: now,
+                    reusable: reusable
                 )
             )
             nextState.pendingMutations.append(
@@ -77,7 +78,8 @@ final class FloaterListRepository {
                     instanceDateEpochMs: nil,
                     name: normalizedName,
                     color: color,
-                    iconKey: iconKey
+                    iconKey: iconKey,
+                    reusable: reusable
                 )
             )
             return nextState
@@ -98,7 +100,7 @@ final class FloaterListRepository {
         await cacheManager.withSyncLock {
             do {
                 let response = try await api.createFloaterList(
-                    payload: CreateFloaterListRequest(name: normalizedName, color: color, iconKey: iconKey)
+                    payload: CreateFloaterListRequest(name: normalizedName, color: color, iconKey: iconKey, reusable: reusable)
                 )
                 guard let createdList = response.list else {
                     return
@@ -123,7 +125,8 @@ final class FloaterListRepository {
                             iconKey: createdList.iconKey ?? list.iconKey,
                             todoCount: todoCount,
                             updatedAtEpochMs: updatedAt,
-                            createdAtEpochMs: createdAt
+                            createdAtEpochMs: createdAt,
+                            reusable: createdList.reusable ?? reusable
                         )
                     }
                     nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
@@ -135,7 +138,7 @@ final class FloaterListRepository {
         }
     }
 
-    func updateList(listId: String, name: String, color: String? = nil, iconKey: String? = nil) async throws {
+    func updateList(listId: String, name: String, color: String? = nil, iconKey: String? = nil, reusable: Bool? = nil) async throws {
         let normalizedName = capitalizeFirstListLetter(name).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !listId.isEmpty, !normalizedName.isEmpty else {
             return
@@ -156,7 +159,8 @@ final class FloaterListRepository {
                         iconKey: iconKey ?? list.iconKey,
                         todoCount: list.todoCount,
                         updatedAtEpochMs: now,
-                        createdAtEpochMs: list.createdAtEpochMs
+                        createdAtEpochMs: list.createdAtEpochMs,
+                        reusable: reusable ?? list.reusable
                     )
                 }
                 nextState.pendingMutations = state.pendingMutations.compactMap { mutation in
@@ -182,7 +186,8 @@ final class FloaterListRepository {
                         instanceDateEpochMs: mutation.instanceDateEpochMs,
                         name: normalizedName,
                         color: color ?? mutation.color,
-                        iconKey: iconKey ?? mutation.iconKey
+                        iconKey: iconKey ?? mutation.iconKey,
+                        reusable: reusable ?? mutation.reusable
                     )
                 }
                 return nextState
@@ -205,7 +210,8 @@ final class FloaterListRepository {
                     iconKey: iconKey ?? list.iconKey,
                     todoCount: list.todoCount,
                     updatedAtEpochMs: now,
-                    createdAtEpochMs: list.createdAtEpochMs
+                    createdAtEpochMs: list.createdAtEpochMs,
+                    reusable: reusable ?? list.reusable
                 )
             }
             nextState.pendingMutations.removeAll { $0.kind == .updateFloaterList && $0.targetId == listId }
@@ -226,7 +232,74 @@ final class FloaterListRepository {
                     instanceDateEpochMs: nil,
                     name: normalizedName,
                     color: color,
-                    iconKey: iconKey
+                    iconKey: iconKey,
+                    reusable: reusable
+                )
+            )
+            return nextState
+        }
+        if syncManager.isLocalMode {
+            return
+        }
+        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
+        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
+            throw error
+        }
+    }
+
+    /// Reset a reusable list: locally un-complete all its floaters, then queue the
+    /// reset for the server. The twin of web's `useResetFloaterList` plus
+    /// `localLists.resetFloaterList`, and of Android's `resetFloaterList`; the
+    /// route returns only a message/resetCount and never the list, so callers
+    /// re-read the cache afterwards.
+    ///
+    /// Local Mode is honest rather than a no-op: the un-complete is written to the
+    /// cache and the mutation stays queued for the next server sync, exactly as the
+    /// create/update paths above do.
+    func resetFloaterList(listId: String) async throws {
+        guard !listId.isEmpty else {
+            return
+        }
+        let now = Date().epochMilliseconds
+        let mutationID = UUID().uuidString
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.floaters = state.floaters.map { floater in
+                guard floater.listId == listId, floater.completed else {
+                    return floater
+                }
+                return CachedFloaterRecord(
+                    id: floater.id,
+                    canonicalId: floater.canonicalId,
+                    title: floater.title,
+                    description: floater.description,
+                    priority: floater.priority,
+                    pinned: floater.pinned,
+                    completed: false,
+                    listId: floater.listId,
+                    updatedAtEpochMs: now
+                )
+            }
+            nextState.completedFloaters = state.completedFloaters.filter { $0.listId != listId }
+            nextState.pendingMutations.removeAll { $0.kind == .resetFloaterList && $0.targetId == listId }
+            nextState.pendingMutations.append(
+                PendingMutationRecord(
+                    mutationId: mutationID,
+                    kind: .resetFloaterList,
+                    targetId: listId,
+                    timestampEpochMs: now,
+                    title: nil,
+                    description: nil,
+                    priority: nil,
+                    dueEpochMs: nil,
+                    rrule: nil,
+                    listId: nil,
+                    pinned: nil,
+                    completed: nil,
+                    instanceDateEpochMs: nil,
+                    name: nil,
+                    color: nil,
+                    iconKey: nil
                 )
             )
             return nextState
@@ -470,7 +543,8 @@ final class FloaterListRepository {
                 iconKey: list.iconKey,
                 todoCount: list.todoCount,
                 updatedAtEpochMs: list.updatedAtEpochMs,
-                createdAtEpochMs: list.createdAtEpochMs
+                createdAtEpochMs: list.createdAtEpochMs,
+                reusable: list.reusable
             )
         }.dedupedByID()
         nextState.pendingMutations = state.pendingMutations.map { mutation in
@@ -490,7 +564,8 @@ final class FloaterListRepository {
                 instanceDateEpochMs: mutation.instanceDateEpochMs,
                 name: mutation.name,
                 color: mutation.color,
-                iconKey: mutation.iconKey
+                iconKey: mutation.iconKey,
+                reusable: mutation.reusable
             )
         }
         return nextState

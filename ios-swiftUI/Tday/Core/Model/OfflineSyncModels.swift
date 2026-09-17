@@ -200,6 +200,9 @@ struct CachedFloaterListRecord: Identifiable, Equatable, Codable {
     var isShared: Bool?
     var memberCount: Int?
     var ownerUsername: String?
+    /// Optional for the same reason as the sharing fields: state persisted
+    /// before the flag existed decodes as "not reusable".
+    var reusable: Bool?
 
     init(
         id: String,
@@ -212,7 +215,8 @@ struct CachedFloaterListRecord: Identifiable, Equatable, Codable {
         myRole: String? = nil,
         isShared: Bool? = nil,
         memberCount: Int? = nil,
-        ownerUsername: String? = nil
+        ownerUsername: String? = nil,
+        reusable: Bool? = nil
     ) {
         self.id = id
         self.name = name
@@ -225,6 +229,7 @@ struct CachedFloaterListRecord: Identifiable, Equatable, Codable {
         self.isShared = isShared
         self.memberCount = memberCount
         self.ownerUsername = ownerUsername
+        self.reusable = reusable
     }
 }
 
@@ -320,6 +325,11 @@ struct PendingMutationRecord: Identifiable, Equatable, Codable {
     let name: String?
     let color: String?
     let iconKey: String?
+    // Reusable flag for the floater-list create/update mutations
+    // (CREATE_FLOATER_LIST / UPDATE_FLOATER_LIST). Nil means "not part of this
+    // mutation", the same convention the shared UpdateFloaterListRequest uses.
+    // Defaulted so the existing memberwise-init call sites keep compiling.
+    var reusable: Bool? = nil
     // Task-step ordering (REORDER_STEPS): the full ordered list of step ids.
     // Defaulted so the 30+ existing memberwise-init call sites keep compiling.
     var orderedIds: [String]? = nil

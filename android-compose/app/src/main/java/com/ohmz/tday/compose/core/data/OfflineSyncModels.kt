@@ -76,6 +76,11 @@ data class CachedFloaterListRecord(
     val isShared: Boolean = false,
     val memberCount: Int = 0,
     val ownerUsername: String? = null,
+    // A reusable list can be Reset (all its floaters un-completed) to run again.
+    // Mirrors `FloaterListDto.reusable` (shared ListModels.kt) and web's
+    // `floaterList-utils.ts` normalization. Defaulted so state persisted before
+    // the flag existed still decodes as "not reusable".
+    val reusable: Boolean = false,
 )
 
 @Serializable
@@ -132,6 +137,10 @@ data class PendingMutationRecord(
     val name: String? = null,
     val color: String? = null,
     val iconKey: String? = null,
+    // Reusable flag for the floater-list create/update mutations (UPDATE_FLOATER_LIST,
+    // CREATE_FLOATER_LIST). Null means "not part of this mutation", the same
+    // convention the shared UpdateFloaterListRequest uses for `reusable`.
+    val reusable: Boolean? = null,
     // Task-step ordering (REORDER_STEPS): the full ordered list of step ids.
     val orderedIds: List<String>? = null,
     // True only for the marker a delayed-commit list/floater-list delete writes while

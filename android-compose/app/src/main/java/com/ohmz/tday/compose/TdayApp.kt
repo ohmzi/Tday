@@ -2222,12 +2222,13 @@ private fun TodosRoute(
         onBulkSetPriority = viewModel::setPriorityForSelected,
         onBulkMoveToList = viewModel::moveSelectedToList,
         onOpenMorningSweep = onOpenMorningSweep,
-        onUpdateListSettings = { targetListId, name, color, iconKey ->
+        onUpdateListSettings = { targetListId, name, color, iconKey, reusable ->
             viewModel.updateListSettings(
                 listId = targetListId,
                 name = name,
                 color = color,
                 iconKey = iconKey,
+                reusable = reusable,
             )
         },
         onDeleteList = { targetListId ->
@@ -2240,6 +2241,7 @@ private fun TodosRoute(
         onOpenCompleted = onOpenCompleted,
         onOpenSettings = onOpenSettings,
         onCreateList = viewModel::createList,
+        onResetFloaterList = viewModel::resetFloaterList,
         rootFeedTab = rootFeedTab,
         onRootFeedTabSelected = onRootFeedTabSelected,
         showRootFeedDock = showRootFeedDock,

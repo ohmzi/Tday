@@ -334,6 +334,11 @@
     <string name="todos_summary_modes_unavailable">Le résumé est disponible uniquement pour Aujourd\'hui, Planifiées, Toutes et Priorité</string>
     <string name="todos_summary_offline_unavailable">Aucun résumé disponible hors ligne.</string>
     <string name="todos_list_settings">Paramètres de la liste</string>
+    <string name="reusable_list">Liste réutilisable</string>
+    <string name="reusable_list_hint">Affiche Réinitialiser pour tout décocher et refaire</string>
+    <string name="reset_floater_list">Réinitialiser la liste</string>
+    <string name="floater_list_reset">Liste réinitialisée — tout décoché</string>
+    <string name="error_reset_list_failed">Impossible de réinitialiser la liste.</string>
     <string name="share_list_action">Partager la liste</string>
     <string name="share_section_title">Partage</string>
     <string name="action_share">Partager</string>

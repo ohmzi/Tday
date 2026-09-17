@@ -334,6 +334,11 @@
     <string name="todos_summary_modes_unavailable">Il riepilogo è disponibile solo per Oggi, Programmate, Tutte e Priorità</string>
     <string name="todos_summary_offline_unavailable">Nessun riepilogo disponibile offline.</string>
     <string name="todos_list_settings">Impostazioni elenco</string>
+    <string name="reusable_list">Lista riutilizzabile</string>
+    <string name="reusable_list_hint">Mostra Reimposta per deselezionare tutto e rifarla</string>
+    <string name="reset_floater_list">Reimposta lista</string>
+    <string name="floater_list_reset">Lista reimpostata: tutto deselezionato</string>
+    <string name="error_reset_list_failed">Impossibile reimpostare l\'elenco.</string>
     <string name="share_list_action">Condividi elenco</string>
     <string name="share_section_title">Condivisione</string>
     <string name="action_share">Condividi</string>

@@ -318,13 +318,17 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
     var isShared: Bool = false
     var memberCount: Int = 0
     var ownerUsername: String?
+    /// A reusable list can be Reset (all its floaters un-completed) to run again.
+    /// Drives both the settings toggle and the header's Reset, exactly as
+    /// `listMeta.reusable` does on web. False for scheduled lists.
+    var reusable: Bool = false
 
     var isViewer: Bool { myRole.caseInsensitiveCompare("VIEWER") == .orderedSame }
     var isOwner: Bool { myRole.caseInsensitiveCompare("OWNER") == .orderedSame }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, color, iconKey, todoCount, updatedAt, createdAt
-        case myRole, isShared, memberCount, ownerUsername
+        case myRole, isShared, memberCount, ownerUsername, reusable
     }
 
     init(
@@ -338,7 +342,8 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         myRole: String = "OWNER",
         isShared: Bool = false,
         memberCount: Int = 0,
-        ownerUsername: String? = nil
+        ownerUsername: String? = nil,
+        reusable: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -351,6 +356,7 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         self.isShared = isShared
         self.memberCount = memberCount
         self.ownerUsername = ownerUsername
+        self.reusable = reusable
     }
 
     // Tolerates payloads persisted before sharing existed (widget snapshots).
@@ -367,6 +373,7 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         isShared = try container.decodeIfPresent(Bool.self, forKey: .isShared) ?? false
         memberCount = try container.decodeIfPresent(Int.self, forKey: .memberCount) ?? 0
         ownerUsername = try container.decodeIfPresent(String.self, forKey: .ownerUsername)
+        reusable = try container.decodeIfPresent(Bool.self, forKey: .reusable) ?? false
     }
 }
 

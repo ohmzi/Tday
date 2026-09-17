@@ -602,12 +602,12 @@ final class TodoListViewModel {
         hydrateFromCache()
     }
 
-    func updateListSettings(name: String, color: String?, iconKey: String?) async {
+    func updateListSettings(name: String, color: String?, iconKey: String?, reusable: Bool? = nil) async {
         guard let listId else { return }
         TdayTelemetry.addBreadcrumb("list.update", data: listTelemetryData(color: color, iconKey: iconKey))
         do {
             if mode == .floater {
-                try await container.floaterListRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey)
+                try await container.floaterListRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey, reusable: reusable)
             } else {
                 try await container.listRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey)
             }
@@ -621,11 +621,30 @@ final class TodoListViewModel {
         }
     }
 
-    func createList(name: String, color: String?, iconKey: String?) async {
+    /// Reset a reusable floater list (un-check everything so it can be run again).
+    /// The twin of web's `resetFloaterList` header button and its `floaterListReset`
+    /// toast in FloaterListContainer; the route returns only a message/count, so the
+    /// screen is re-read from the cache afterwards. Local Mode un-checks locally and
+    /// keeps the mutation queued (see FloaterListRepository.resetFloaterList).
+    func resetFloaterList() async {
+        guard let listId, mode == .floater else { return }
+        do {
+            try await container.floaterListRepository.resetFloaterList(listId: listId)
+            hydrateFromCache()
+            container.snackbarManager.show(L("List reset — everything un-checked"), kind: .info)
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not reset list."),
+                kind: .error
+            )
+        }
+    }
+
+    func createList(name: String, color: String?, iconKey: String?, reusable: Bool = false) async {
         TdayTelemetry.addBreadcrumb("list.create", data: listTelemetryData(color: color, iconKey: iconKey))
         do {
             if mode == .floater {
-                try await container.floaterListRepository.createList(name: name, color: color, iconKey: iconKey)
+                try await container.floaterListRepository.createList(name: name, color: color, iconKey: iconKey, reusable: reusable)
             } else {
                 try await container.listRepository.createList(name: name, color: color, iconKey: iconKey)
             }

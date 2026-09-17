@@ -463,6 +463,9 @@ struct CreateFloaterListRequest: Codable {
     let name: String
     let color: String?
     let iconKey: String?
+    /// Defaults false, matching the shared `CreateFloaterListRequest` and the
+    /// backend column default.
+    var reusable: Bool = false
 }
 
 struct ListDTO: Codable, Equatable {
@@ -584,6 +587,10 @@ struct UpdateFloaterListRequest: Codable {
     let name: String?
     let color: String?
     let iconKey: String?
+    /// Nil means "leave the stored value alone", the same convention the shared
+    /// `UpdateFloaterListRequest` uses. The settings sheet always sends a value
+    /// for a floater list, so an off-flip reaches the server.
+    var reusable: Bool? = nil
 }
 
 struct DeleteListRequest: Codable {

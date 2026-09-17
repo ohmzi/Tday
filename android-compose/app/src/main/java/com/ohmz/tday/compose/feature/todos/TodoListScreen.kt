@@ -82,6 +82,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.ripple
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -358,6 +360,10 @@ private val ListIconSwatchSelectedOutline = 2.dp
 private val ListSettingsActionTileSpacing = 10.dp
 private val ListSettingsActionContentSpacing = 10.dp
 private val ListSettingsDeleteHorizontalPadding = 16.dp
+
+// The Reusable row: a two-line title + hint beside a switch, so it needs the same
+// minimum touch height the other sheet toggle rows use.
+private val ListSettingsToggleRowMinHeight = 72.dp
 
 // A timeline section header and the placeholder a dragged task opens under it. Each
 // draws at two heights and the pairs are the point — the minimal one is what Today
@@ -949,12 +955,17 @@ fun TodoListScreen( // skipcq: KT-R1006
     onBulkSetPriority: (todos: List<TodoItem>, priority: String) -> Unit = { _, _ -> },
     onBulkMoveToList: (todos: List<TodoItem>, listId: String?) -> Unit = { _, _ -> },
     onOpenMorningSweep: () -> Unit = {},
-    onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?) -> Unit,
+    onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?, reusable: Boolean?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
     onOpenFloaterList: (listId: String, listName: String) -> Unit = { _, _ -> },
     onOpenCompleted: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
-    onCreateList: (name: String, color: String?, iconKey: String?) -> Unit = { _, _, _ -> },
+    onCreateList: (name: String, color: String?, iconKey: String?, reusable: Boolean) -> Unit = { _, _, _, _ -> },
+    /**
+     * Reset a reusable floater list (un-check everything so it can be run again).
+     * The twin of web's `resetFloaterList` header button in FloaterListContainer.
+     */
+    onResetFloaterList: (listId: String) -> Unit = {},
     rootFeedTab: RootFeedTab? = null,
     onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
     showRootFeedDock: Boolean = true,
@@ -2242,9 +2253,14 @@ fun TodoListScreen( // skipcq: KT-R1006
     var listSettingsIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var listSettingsColorTouched by rememberSaveable { mutableStateOf(false) }
     var listSettingsIconTouched by rememberSaveable { mutableStateOf(false) }
+    // Seeded from the SAVED list's `reusable` on open, then carried into the save.
+    // Unlike the icon, this is always sent (never a "touched" flag): web's sheet
+    // posts `reusable` on every save, so an off-flip must reach the server.
+    var listSettingsReusable by rememberSaveable { mutableStateOf(false) }
     var createListName by rememberSaveable { mutableStateOf("") }
     var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var createListIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
+    var createListReusable by rememberSaveable { mutableStateOf(false) }
     // Mirrors `listSettingsIconTouched` above, for the sheet that never had it. The
     // picker still shows a glyph the whole time; what changes is that an untouched
     // PREVIEW is no longer posted as a CHOICE. Without this the stored `iconKey` is
@@ -2369,6 +2385,24 @@ fun TodoListScreen( // skipcq: KT-R1006
         } else {
             null
         },
+        if (
+            isListDetailScreen &&
+            uiState.mode == TodoListMode.FLOATER &&
+            selectedList?.reusable == true &&
+            !isViewerList
+        ) {
+            // Web's FloaterListContainer draws Reset on the SAVED list's `reusable`
+            // (never the in-sheet toggle) and hides it from viewers — the backend
+            // forbids a VIEWER at FloaterListService.resetFloaters. Same gate here,
+            // so the affordance and the server agree.
+            TodoTopBarAction(
+                icon = ImageVector.vectorResource(R.drawable.ic_lucide_refresh_cw),
+                contentDescription = stringResource(R.string.reset_floater_list),
+                onClick = { onResetFloaterList(selectedList.id) },
+            )
+        } else {
+            null
+        },
         if (isListDetailScreen && selectedList != null) {
             // One entry point per role: owners get list settings (which hosts
             // the Sharing section); members go straight to the members sheet.
@@ -2393,6 +2427,9 @@ fun TodoListScreen( // skipcq: KT-R1006
                             ?: TDAY_DEFAULT_LIST_ICON_KEY
                         listSettingsColorTouched = false
                         listSettingsIconTouched = false
+                        // Seeded from the saved value, like name/color/icon: web's
+                        // sheet reads `list.reusable` the same way.
+                        listSettingsReusable = selectedList.reusable
                         showListSettingsSheet = true
                     }
                 },
@@ -3569,6 +3606,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                 createListIconKey = it
                 createListIconTouched = true
             },
+            reusable = createListReusable,
+            onReusableChange = { createListReusable = it },
             showDelete = false,
             onDismiss = { showCreateListSheet = false },
             onSave = {
@@ -3578,11 +3617,13 @@ fun TodoListScreen( // skipcq: KT-R1006
                         normalizedName,
                         createListColor,
                         createListIconKey.takeIf { createListIconTouched },
+                        createListReusable,
                     )
                     createListName = ""
                     createListColor = TDAY_DEFAULT_LIST_COLOR_KEY
                     createListIconKey = TDAY_DEFAULT_LIST_ICON_KEY
                     createListIconTouched = false
+                    createListReusable = false
                     showCreateListSheet = false
                 }
             },
@@ -3610,6 +3651,11 @@ fun TodoListScreen( // skipcq: KT-R1006
                 listSettingsIconKey = it
                 listSettingsIconTouched = true
             },
+            // The Reusable row is a floater-list concept only. Web's sheet hosts it
+            // on every floater list; a scheduled list has no Reset, so `null` here
+            // hides the row AND keeps the save from writing the flag on one.
+            reusable = if (uiState.mode == TodoListMode.FLOATER) listSettingsReusable else null,
+            onReusableChange = { listSettingsReusable = it },
             onShare = {
                 showListSettingsSheet = false
                 listSettingsTargetId = null
@@ -3632,6 +3678,9 @@ fun TodoListScreen( // skipcq: KT-R1006
                     listSettingsName,
                     if (listSettingsColorTouched) listSettingsColor else null,
                     if (listSettingsIconTouched) listSettingsIconKey else null,
+                    // Sent on every floater-list save, like web's sheet — an
+                    // off-flip has to reach the server or Reset can't be retired.
+                    if (uiState.mode == TodoListMode.FLOATER) listSettingsReusable else null,
                 )
                 showListSettingsSheet = false
                 listSettingsTargetId = null
@@ -4955,6 +5004,9 @@ private fun ListSettingsBottomSheet(
     showDelete: Boolean = true,
     onShare: (() -> Unit)? = null,
     onMembers: (() -> Unit)? = null,
+    /** Null hides the Reusable row — a scheduled list has no Reset to reveal. */
+    reusable: Boolean? = null,
+    onReusableChange: (Boolean) -> Unit = {},
     onDismiss: () -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
@@ -5207,6 +5259,17 @@ private fun ListSettingsBottomSheet(
                         }
                     }
 
+                    if (reusable != null) {
+                        // Web draws this card between the icon picker and the
+                        // sharing/delete actions, with the hint under the title.
+                        TdaySheetCard {
+                            ListSettingsReusableToggleRow(
+                                checked = reusable,
+                                onCheckedChange = onReusableChange,
+                            )
+                        }
+                    }
+
                     if (onShare != null || onMembers != null) {
                         TdaySheetSectionTitle(
                             text = stringResource(R.string.share_section_title),
@@ -5300,6 +5363,58 @@ private fun ListSettingsActionTile(
                 maxLines = 1,
             )
         }
+    }
+}
+
+/**
+ * The list settings sheet's Reusable row — web's `role="switch"` card
+ * (`FloaterListFormSheet`): title, hint, and a Switch. Its meaning is the same
+ * on all three clients: a reusable list can be Reset to run the checklist again.
+ */
+@Composable
+private fun ListSettingsReusableToggleRow(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val view = LocalView.current
+    val colorScheme = MaterialTheme.colorScheme
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                TdayHaptics.toggle(view, on = !checked)
+                onCheckedChange(!checked)
+            }
+            .heightIn(min = ListSettingsToggleRowMinHeight)
+            .padding(horizontal = TdayDimens.SpacingXxl, vertical = TdayDimens.SpacingXxl),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.reusable_list),
+                style = MaterialTheme.typography.titleMedium,
+                color = colorScheme.onSurface,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            Text(
+                text = stringResource(R.string.reusable_list_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            // The same row-switch colours as the create sheet's schedule toggle.
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = colorScheme.onPrimary,
+                checkedTrackColor = colorScheme.primary,
+                uncheckedThumbColor = colorScheme.onSurfaceVariant,
+                uncheckedTrackColor = colorScheme.surfaceVariant,
+            ),
+        )
     }
 }
 

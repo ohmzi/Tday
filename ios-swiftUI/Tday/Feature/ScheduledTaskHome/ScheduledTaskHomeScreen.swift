@@ -542,7 +542,7 @@ struct ScheduledTaskHomeScreen: View {
             )
         }
         .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
-            CreateListSheet { name, color, iconKey in
+            CreateListSheet { name, color, iconKey, _ in
                 Task {
                     await viewModel.createList(name: name, color: color, iconKey: iconKey)
                 }
@@ -1522,7 +1522,15 @@ private struct ScheduledTaskHomeTdayLogoMark: View {
 }
 
 struct CreateListSheet: View {
-    let onSubmit: (String, String?, String?) -> Void
+    /// True only where the list being created is a floater list, which is the
+    /// only kind that can be reused: web's create sheet hosts the Reusable switch,
+    /// and a scheduled list has no Reset to reveal.
+    ///
+    /// Declared before `onSubmit` on purpose — the call sites pass `onSubmit` as a
+    /// trailing closure, and a trailing closure binds to the LAST memberwise
+    /// parameter.
+    var showsReusable: Bool = false
+    let onSubmit: (String, String?, String?, Bool?) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var colors
@@ -1530,6 +1538,7 @@ struct CreateListSheet: View {
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
+    @State private var reusable = false
     /// Whether the picker holds a CHOICE or only a PREVIEW.
     ///
     /// This sheet seeded the picker with the default and then posted it, so every list any
@@ -1584,7 +1593,7 @@ struct CreateListSheet: View {
                     // (`CreateTaskSheet.submit`), so it gets the same pulse.
                     HapticManager.completion()
                     isSubmitting = true
-                    onSubmit(trimmedName, color, iconTouched ? iconKey : nil)
+                    onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil)
                     dismiss()
                 }
             )
@@ -1705,6 +1714,27 @@ struct CreateListSheet: View {
                                 }
                             }
                             .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    if showsReusable {
+                        // Web's create sheet hosts the same switch, in the same
+                        // place: after the icon picker, before the footer.
+                        TdaySheetCard {
+                            Toggle(isOn: $reusable) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L("Reusable list"))
+                                        .font(.tdayRounded(size: 17, weight: .heavy))
+                                        .foregroundStyle(colors.onSurface)
+                                    Text(L("Show a Reset to un-check everything and run it again"))
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .tint(accentColor)
+                            .padding(.horizontal, 18)
                             .padding(.vertical, 14)
                         }
                     }

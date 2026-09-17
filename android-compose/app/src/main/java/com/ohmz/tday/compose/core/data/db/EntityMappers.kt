@@ -103,6 +103,7 @@ fun CachedFloaterListRecord.toEntity() = CachedFloaterListEntity(
     isShared = isShared,
     memberCount = memberCount,
     ownerUsername = ownerUsername,
+    reusable = reusable,
 )
 
 fun CachedFloaterListEntity.toRecord() = CachedFloaterListRecord(
@@ -117,6 +118,7 @@ fun CachedFloaterListEntity.toRecord() = CachedFloaterListRecord(
     isShared = isShared,
     memberCount = memberCount,
     ownerUsername = ownerUsername,
+    reusable = reusable,
 )
 
 fun CachedCompletedRecord.toEntity() = CachedCompletedEntity(
