@@ -3,44 +3,60 @@ import { CalendarCheck, Check, Leaf } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * How much of the box each glyph behind the check is drawn in.
+ * How much of the box each glyph behind the check is drawn in, and where the leaf
+ * sits inside it.
  *
- * The three used to be drawn at one size and concentric, and the leaf stopped
- * reading: at 1:1 its contour runs *inside* the calendar's frame by 0–1 of
- * lucide's 24 units — its left arc 1 unit inside the left wall, its rightmost
- * point (21,10) exactly on the right wall at the header rule's own y, its tip
- * level with the calendar's own binding ticks. Two strokes need a full stroke
- * width between their centrelines to read as two, so the leaf fused into a fringe
- * along the frame and the back plate became one grey box.
+ * Two things had to be true of the back plate at once: the two rear glyphs have to
+ * read as two rather than fuse into one fringe, and each has to be nameable at the
+ * size the mark is actually drawn. Drawn concentric at one size the three fused;
+ * graduated by scale alone — leaf 0.62, calendar 0.88, the first arrangement —
+ * the leaf still did not name, because at 0.62 its contour runs through the
+ * calendar's header rule and *within* both frame walls, so the calendar's own
+ * straight lines cut its silhouette at every crossing. Rasterised, that leaf kept
+ * 59.3% of its ink, in six disconnected pieces: the "scratch" the mark was
+ * reported as, and the one glyph of the three that was present, paid for and not
+ * nameable.
  *
- * Different sizes are what separate them, and the binding pair is the leaf's
- * rightmost point against the calendar's right wall: both sit at 12 + 9 × scale,
- * so they move apart by 9 × (calendar − leaf) = 9 × 0.26 = 2.34 units. The two
- * strokes carry 0.88 + 0.62 = 1.50 units of half-width between them, because a
- * scaled glyph scales its stroke with it, so the outlines clear by 0.84 of a unit
- * — over half a stroke width — at every size the mark is drawn.
+ * So the leaf is drawn small enough to sit *inside* the calendar's body — under
+ * the header rule, above the frame's foot, and inside both walls — and shifted
+ * right, out from under the front check's own lower arm. At 0.335 of the box its
+ * outline clears the calendar's frame by 0.88 of a unit on every side, against
+ * the 0.84 the first arrangement recorded: 1.61pt at the hero's 44pt, 1.17pt at
+ * the badge's 32, 7.77dp at Android's 212dp watermark, 10.56px at web's 288px.
+ * Rasterised, the same leaf now keeps 88.6% of its ink, in a single piece.
  *
- * The scaling also thins the strokes, which is the right direction: the mark is
- * one green, and the pair behind reads as *behind* partly because it is drawn in
- * a finer line (1.24 units for the leaf, 1.76 for the calendar) than the check
- * (2 units).
+ * The one contour it cannot avoid is the calendar's own inner tick, which sits in
+ * the middle of the body the leaf now occupies: the leaf is drawn *over* it, so
+ * the tick is covered rather than cut. That tick was already unreadable behind the
+ * front check — its arms pass within the strokes' half-widths of the check's arms
+ * at every pair of scales these two glyphs allow — so nothing legible is lost, and
+ * the leaf's silhouette survives whole.
  *
- * One pair is not fully cleared and it is worth naming: the leaf's tip passes
- * within ~0.82 units of the calendar's 1.76-unit right binding tick, which is
- * inside the 1.50 the two carry, so the tip grazes that tick. It is the one
- * contour that cannot be separated at any pair of scales these shapes allow —
- * clearing it needs the leaf below 0.375 of the calendar, where it stops reading
- * at 44pt, or a plate moved off-centre, which is visibly lopsided at the hero's
- * 96pt disc. It is a ~1pt graze at 44pt, under a 0.17 ghost.
+ * The binding pair is now the leaf's topmost point against the header rule and its
+ * foot against the frame's, both 0.88 of a unit. A scaled glyph scales its stroke
+ * with it, so the leaf carries 0.67 of a unit of stroke against the calendar's
+ * 1.76: the pair behind reads as *behind* partly by being drawn in a finer line
+ * than the check's 2.
  */
-const rearScale = { leaf: 0.62, calendar: 0.88 } as const;
+const rearScale = { leaf: 0.335, calendar: 0.88 } as const;
 
 /**
- * The Completion-history page's mark: one green check, with the Floater's leaf
- * and the Scheduled board's `calendar-check` stacked behind it as a single faint
- * plate, at the graduated sizes [rearScale] describes. The two behind read as
- * depth under the check rather than as three icons, which is the arrangement the
- * page was asked for.
+ * Where the leaf sits inside the box, as a fraction of it — lucide draws in a
+ * 24-unit box, so these are 2.5 and 3.69 of those units. Down and to the right:
+ * down is what puts the leaf under the calendar's header rule, and right is what
+ * takes it out from under the front check's lower arm. The rightward half is
+ * worth a third of the leaf's ink — at the box's centre, at this scale, the same
+ * leaf keeps 60.1% where it keeps 88.6% here.
+ */
+const rearLeafOffset = { x: 2.5 / 24, y: 3.69 / 24 } as const;
+
+/**
+ * The Completion-history page's mark: one green check, with the Scheduled board's
+ * `calendar-check` and the Floater's leaf behind it as a single faint plate, at
+ * the graduated sizes and the leaf offset [rearScale] and [rearLeafOffset]
+ * describe. The two behind read as depth under the check rather than as three
+ * icons: the calendar is the page the leaf is drawn on, and the check is over
+ * both. At the three sizes this mark is drawn, all three are nameable.
  *
  * A component and not an asset, because there is no compositing primitive to
  * reach for: three `lucide-react` icons in one relative box is the whole drawing.
@@ -78,14 +94,16 @@ export default function CompletedMark({
   return (
     <span aria-hidden className={cn("relative inline-block", className)} style={style}>
       <CompletedMarkLayer
-        Icon={Leaf}
-        scale={rearScale.leaf}
+        Icon={CalendarCheck}
+        scale={rearScale.calendar}
         strokeWidth={strokeWidth}
         opacity={rearOpacity}
       />
       <CompletedMarkLayer
-        Icon={CalendarCheck}
-        scale={rearScale.calendar}
+        Icon={Leaf}
+        scale={rearScale.leaf}
+        offsetX={rearLeafOffset.x}
+        offsetY={rearLeafOffset.y}
         strokeWidth={strokeWidth}
         opacity={rearOpacity}
       />
@@ -105,18 +123,32 @@ function CompletedMarkLayer({
   scale,
   strokeWidth,
   opacity,
+  offsetX = 0,
+  offsetY = 0,
 }: {
   Icon: ElementType;
   scale: number;
   strokeWidth: number;
   opacity: number;
+  /** Displacement from the box's centre, as a fraction of the box. */
+  offsetX?: number;
+  offsetY?: number;
 }) {
   return (
     <Icon
       aria-hidden
       strokeWidth={strokeWidth}
-      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-      style={{ width: `${scale * 100}%`, height: `${scale * 100}%`, opacity }}
+      className="absolute -translate-x-1/2 -translate-y-1/2"
+      style={{
+        width: `${scale * 100}%`,
+        height: `${scale * 100}%`,
+        opacity,
+        // `top`/`left` rather than a transform, because `translate` is already
+        // doing the centring and a percentage of an absolutely positioned box
+        // resolves against its containing block on both axes.
+        left: `calc(50% + ${offsetX * 100}%)`,
+        top: `calc(50% + ${offsetY * 100}%)`,
+      }}
     />
   );
 }
