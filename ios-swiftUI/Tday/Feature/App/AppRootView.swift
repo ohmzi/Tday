@@ -492,7 +492,10 @@ struct AppRootView: View {
                 EmptyView()
             }
         }
-        .tdayAppTheme(themeMode: appViewModel.themeMode)
+        .tdayAppTheme(
+            themeMode: appViewModel.themeMode,
+            reduceMotion: container.motionPreference.isEnabled
+        )
         // One provider for every contextual "?" help link (GuideHelpLink):
         // pushes the guide onto the main navigation stack, pre-scrolled.
         .environment(\.openGuideTopic, { topicId in
@@ -517,6 +520,7 @@ struct AppRootView: View {
                 isAuthenticating: appLock.isAuthenticating,
                 failureMessage: appLock.failureMessage,
                 themeMode: appViewModel.themeMode,
+                reduceMotion: container.motionPreference.isEnabled,
                 onUnlock: {
                     await appLock.authenticate()
                 }
@@ -1144,6 +1148,9 @@ private struct AppLockWindowHost: UIViewRepresentable {
     let isAuthenticating: Bool
     let failureMessage: String?
     let themeMode: AppThemeMode
+    /// Carried in for the same reason `themeMode` is: this content renders into a separate
+    /// window and inherits nothing from the scene's `.tdayResolvedMotion`.
+    let reduceMotion: Bool
     let onUnlock: () async -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -1192,7 +1199,7 @@ private struct AppLockWindowHost: UIViewRepresentable {
                 EmptyView()
             }
         }
-        .tdayAppTheme(themeMode: themeMode)
+        .tdayAppTheme(themeMode: themeMode, reduceMotion: reduceMotion)
         .tdayAppTypography()
     }
 

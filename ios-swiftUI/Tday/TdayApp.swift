@@ -54,7 +54,13 @@ struct TdayApp: App {
             // `accessibilityReduceMotion` through the accessor, which is correct at
             // first draw and says nothing about the flip. The copy inside the theme
             // stays for `AppLockWindowHost`, whose separate window inherits none of this.
-            .tdayResolvedMotion()
+            //
+            // The in-app preference is read from the container right here, which is what makes
+            // the toggle live: this body is a reader of `MotionPreferenceStore.isEnabled`, so
+            // flipping the switch in Settings invalidates it and every animation below gets the
+            // new answer in that frame. A container that has not arrived yet animates, which is
+            // what a launch splash wants anyway.
+            .tdayResolvedMotion(reduceMotion: appContainer?.motionPreference.isEnabled ?? false)
             .task {
                 guard appContainer == nil else {
                     return

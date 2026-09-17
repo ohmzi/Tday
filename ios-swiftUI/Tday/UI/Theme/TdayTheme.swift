@@ -379,6 +379,10 @@ struct TdayCardModifier: ViewModifier {
 private struct TdayAppThemeModifier: ViewModifier {
     let themeMode: AppThemeMode
 
+    /// The in-app Reduce Motion preference, passed down beside the theme mode and for the same
+    /// reason: both are root decisions a `UIViewRepresentable`'s separate window cannot inherit.
+    let reduceMotion: Bool
+
     @Environment(\.colorScheme) private var systemColorScheme
 
     private var resolvedColorScheme: ColorScheme {
@@ -395,7 +399,7 @@ private struct TdayAppThemeModifier: ViewModifier {
             // The motion gate rides with the palette because it answers the same shape of
             // question — one root decision every surface below reads — and because this
             // modifier is already the one wrapper both window roots go through.
-            .tdayResolvedMotion()
+            .tdayResolvedMotion(reduceMotion: reduceMotion)
             .tint(colors.primary)
             .background(colors.backgroundGradient.ignoresSafeArea())
             .preferredColorScheme(themeMode.colorScheme)
@@ -407,8 +411,8 @@ extension View {
         modifier(TdayCardModifier())
     }
 
-    func tdayAppTheme(themeMode: AppThemeMode) -> some View {
-        modifier(TdayAppThemeModifier(themeMode: themeMode))
+    func tdayAppTheme(themeMode: AppThemeMode, reduceMotion: Bool) -> some View {
+        modifier(TdayAppThemeModifier(themeMode: themeMode, reduceMotion: reduceMotion))
     }
 
     func tdayAppTypography() -> some View {

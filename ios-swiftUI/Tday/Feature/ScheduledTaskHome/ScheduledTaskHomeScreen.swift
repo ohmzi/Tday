@@ -404,7 +404,7 @@ struct ScheduledTaskHomeScreen: View {
                         .onChange(of: scrollToTopRequestID) { _, requestID in
                             guard requestID > 0 else { return }
                             closeSearch()
-                            withAnimation(.easeInOut(duration: 0.34)) {
+                            withAnimation(tdayAnimation(.easeInOut(duration: 0.34))) {
                                 scrollProxy.scrollTo(scheduledTaskHomeScrollTopID, anchor: .top)
                             }
                         }
@@ -413,7 +413,7 @@ struct ScheduledTaskHomeScreen: View {
                         .onChange(of: titleScrollToTopRequestID) { _, requestID in
                             guard requestID > 0 else { return }
                             closeSearch()
-                            withAnimation(.easeInOut(duration: 0.34)) {
+                            withAnimation(tdayAnimation(.easeInOut(duration: 0.34))) {
                                 scrollProxy.scrollTo(scheduledTaskHomeScrollTopID, anchor: .top)
                             }
                         }
@@ -706,6 +706,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
     @Binding var openSwipeTaskID: String?
 
     @Environment(\.tdayColors) private var colors
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     @State private var completionPhase = ScheduledTaskHomeTodayTaskCompletionPhase.active
 
@@ -742,7 +743,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
         .opacity(isFading ? 0 : 1)
         .scaleEffect(isFading ? 0.985 : 1, anchor: .center)
         .offset(y: isFading ? -10 : 0)
-        .animation(TdayMotion.standard(duration: TdayMotion.Durations.change), value: isFading)
+        .animation(tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.change)), value: isFading)
         .allowsHitTesting(!isCompleting)
     }
 
@@ -791,7 +792,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
                         // per-line strikethrough (not the title's animated
                         // sweep) because notes wrap to several lines.
                         .strikethrough(showStrikethrough, color: colors.onSurfaceVariant)
-                        .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: showStrikethrough)
+                        .animation(tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)), value: showStrikethrough)
                 }
             }
 
@@ -862,6 +863,8 @@ private struct ScheduledTaskHomeTodayTaskTitle: View {
     let titleColor: Color
     let strikeColor: Color
 
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
     private var strikeProgress: CGFloat {
         isCompleted ? 1 : 0
     }
@@ -883,7 +886,7 @@ private struct ScheduledTaskHomeTodayTaskTitle: View {
                 }
                 .allowsHitTesting(false)
             }
-            .animation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis), value: isCompleted)
+            .animation(tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis)), value: isCompleted)
     }
 }
 
