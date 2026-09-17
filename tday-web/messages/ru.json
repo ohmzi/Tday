@@ -251,6 +251,8 @@
     "versionAvailableTitle": "Доступно обновление",
     "versionAvailableBody": "Новая версия готова к загрузке.",
     "versionAvailableReload": "Обновить",
+    "releaseUpdateTitle": "Доступно обновление",
+    "releaseUpdateVersion": "Версия {{version}}",
     "today": "Сегодня",
     "yesterday": "Вчера",
     "tomorrow": "Завтра",

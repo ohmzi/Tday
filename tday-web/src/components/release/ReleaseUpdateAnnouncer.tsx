@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import ClickableToast from "@/hooks/ClickableToast";
 import { useRouter } from "@/lib/navigation";
 import { useAuth } from "@/providers/AuthProvider";
 import { useReleaseInfo } from "@/features/release/query/get-release-info";
@@ -24,6 +26,7 @@ function setSessionFlag(key: string) {
 }
 
 export default function ReleaseUpdateAnnouncer() {
+  const { t: appDict } = useTranslation("app");
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
   const lastAnnouncedVersionRef = useRef<string | null>(null);
@@ -49,31 +52,31 @@ export default function ReleaseUpdateAnnouncer() {
     lastAnnouncedVersionRef.current = latestVersion;
     setSessionFlag(sessionKey);
 
+    // Content only, like every other toast: the surrounding sonner <li> draws
+    // the shared frosted pill. This used to hand-roll its own bordered,
+    // backdrop-blurred card (a `rounded-[24px] bg-popover/92` button inside the
+    // rounded-full pill), which rendered as a box inside a box — larger,
+    // lighter, off the shared radius, and left-aligned. A custom toast is
+    // `data-styled="false"`, so sonner's own surface rules skip it; see
+    // [ClickableToast] and `src/components/ui/sonner.tsx`. Distinct from
+    // VersionGate's stale-build prompt: both are id-less, so sonner keeps them
+    // separate toasts, and this one is timed (the prompt is pinned).
     toast.custom(
       (id) => (
-        <button
-          type="button"
+        <ClickableToast
+          title={appDict("releaseUpdateTitle")}
+          description={appDict("releaseUpdateVersion", { version: latestVersion })}
           onClick={() => {
             toast.dismiss(id);
             router.push("/app/admin/version");
           }}
-          className="flex w-[min(calc(100vw-2rem),24rem)] items-center gap-3 rounded-[24px] border border-border bg-popover/92 px-4 py-3.5 text-left text-popover-foreground backdrop-blur-xl shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)] transition-colors hover:bg-popover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
-        >
-          <span className="block min-w-0 flex-1">
-            <span className="block font-extrabold leading-tight">
-              Update available
-            </span>
-            <span className="mt-0.5 block text-[13px] font-medium leading-snug text-current/75">
-              Version {latestVersion}
-            </span>
-          </span>
-        </button>
+        />
       ),
       {
         duration: 10000,
       },
     );
-  }, [isAdmin, router, releaseInfoQuery.data]);
+  }, [appDict, isAdmin, router, releaseInfoQuery.data]);
 
   return null;
 }

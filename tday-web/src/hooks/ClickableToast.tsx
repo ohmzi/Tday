@@ -22,12 +22,16 @@ export default function ClickableToast({
   action,
 }: ClickableToastProps) {
   // Content only — no box of its own. The surrounding sonner <li> supplies the
-  // frosted, fully-rounded pill (surface, border, padding, blur) and the 13px
-  // base font size, so clickable toasts look identical to plain ones. The title
-  // uses the same font-extrabold weight and centered alignment as a regular
-  // toast's title — otherwise this custom toast (data-styled="false") renders
-  // larger/lighter than the rest. The optional action (e.g. Undo) is a sibling
-  // button so the tap-through body and the action stay separate targets.
+  // frosted, fully-rounded pill (surface, border, padding, blur, the fixed
+  // 356px width) and the 15px base font size, so clickable toasts look
+  // identical to plain ones. The title uses the same font-extrabold weight and
+  // centered alignment as a regular toast's title, and the description the same
+  // 13px/medium/75%-currentColor treatment — the shared class list in
+  // `components/ui/sonner.tsx` forces both (custom toasts render
+  // data-styled="false", so nothing sonner sets applies to them, and every
+  // declaration competing with sonner's own sheet has to be `!important`). The
+  // optional action (e.g. Undo) is a sibling button so the tap-through body and
+  // the action stay separate targets.
   return (
     <div className="flex w-full min-w-0 items-center gap-3">
       <button

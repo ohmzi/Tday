@@ -251,6 +251,8 @@
     "versionAvailableTitle": "Kemas kini tersedia",
     "versionAvailableBody": "Versi baharu sedia dimuatkan.",
     "versionAvailableReload": "Muat semula",
+    "releaseUpdateTitle": "Kemas kini tersedia",
+    "releaseUpdateVersion": "Versi {{version}}",
     "today": "Hari ini",
     "yesterday": "Semalam",
     "tomorrow": "Esok",

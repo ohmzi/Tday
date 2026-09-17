@@ -251,6 +251,8 @@
     "versionAvailableTitle": "Atualização disponível",
     "versionAvailableBody": "Uma nova versão está pronta para carregar.",
     "versionAvailableReload": "Recarregar",
+    "releaseUpdateTitle": "Atualização disponível",
+    "releaseUpdateVersion": "Versão {{version}}",
     "today": "Hoje",
     "yesterday": "Ontem",
     "tomorrow": "Amanhã",

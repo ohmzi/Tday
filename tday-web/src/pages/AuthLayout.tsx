@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { Navigate, Outlet, useParams } from "react-router-dom";
-import { SonnerToaster } from "@/components/ui/sonner";
 import { useAuth } from "@/providers/AuthProvider";
 import { DEFAULT_LOCALE } from "@/i18n";
 import AuthBootstrapScreen from "@/components/auth/AuthBootstrapScreen";
@@ -34,10 +33,13 @@ export default function AuthLayout() {
   // The onboarding wizard rendered by /login and /register owns the full-screen
   // layout (background + centered card), so AuthLayout only handles auth gating
   // here and lets the wizard control its own presentation.
-  return (
-    <>
-      <Outlet />
-      <SonnerToaster />
-    </>
-  );
+  //
+  // No `<SonnerToaster />` here. Sonner's toaster subscribes to one global
+  // toast store and renders every toast it sees, so mounting a second one and
+  // App's root one at the same time (App.tsx renders `<SonnerToaster />` beside
+  // `<RouterProvider>`, so it is already live on these routes) draws every
+  // toast twice — two translucent pills stacked in the same spot composite to
+  // a visibly more solid one, i.e. the same toast looked different on the login
+  // screen than everywhere else. Exactly one toaster may be mounted at a time.
+  return <Outlet />;
 }
