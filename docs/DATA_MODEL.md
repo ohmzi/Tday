@@ -229,7 +229,7 @@ Differences from the server contract, all deliberate:
   at `0` for scheduled lists (only floater lists compute it), and reporting a truthful
   count locally is better than mirroring that gap.
 - Summaries always report `source: "logic"`; a browser workspace can't reach a model.
-- Server-only routes (accounts, sharing, admin, push, webhooks, API keys, calendar feed)
+- Server-only routes (accounts, sharing, admin, push, API keys)
   have no local handler and fail as a 404 rather than pretending to succeed.
 - Clearing the browser's cookies/site data deletes the workspace. Export/import
   (`/api/export`, `/api/import`, same `TdayExport` bundle) is the only way to carry it off
@@ -294,7 +294,7 @@ Rules for anything under `db/tables/`:
   pass.
 
 Tables absent from the `createMissingTablesAndColumns` list (`user_api_keys`,
-`calendar_feed_tokens`, `webhook_subscriptions`, `user_security_questions`, `task_steps`) keep
+`calendar_feed_tokens`, `user_security_questions`, `task_steps`) keep
 whatever their migration created. Their declarations now state `CASCADE` to match, so adding one
 of them to that list cannot silently downgrade it.
 

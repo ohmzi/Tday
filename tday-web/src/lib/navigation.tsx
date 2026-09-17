@@ -16,7 +16,13 @@ function resolveLocale(params: Record<string, string | undefined>): string {
   return i18n.language || DEFAULT_LOCALE;
 }
 
-function localizePath(path: string, locale: string): string {
+/**
+ * The one place a locale-relative path becomes a URL. Exported because the router's
+ * locale-less entry (`/app/...`, see LocaleAppRedirectPage) has to produce exactly
+ * what every Link/useRouter call site produces, and two implementations of that
+ * rule would be two chances to drift.
+ */
+export function localizePath(path: string, locale: string): string {
   if (!path.startsWith("/")) return path;
   for (const l of SUPPORTED_LOCALES) {
     if (path === `/${l}` || path.startsWith(`/${l}/`)) return path;

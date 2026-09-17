@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import * as Sentry from "@sentry/react";
 import { resolveInitialLocale } from "@/i18n";
 import ShareTargetRedirectPage from "@/pages/ShareTargetRedirectPage";
+import LocaleAppRedirectPage from "@/pages/LocaleAppRedirectPage";
 import ProtectedRoute from "@/pages/ProtectedRoute";
 import { lazy, Suspense } from "react";
 import RouteErrorPage from "@/pages/RouteErrorPage";
@@ -65,6 +66,15 @@ export const router = sentryCreateBrowserRouter([
     // PWA share_target entry (manifest.webmanifest): bounce into the app.
     path: "/share",
     element: <ShareTargetRedirectPage />,
+    errorElement: <RouteErrorPage />,
+  },
+  {
+    // Locale-less app entry: the installed PWA's manifest start_url and shortcuts
+    // (and any home-screen bookmark) are `/app/...`, which has no locale segment.
+    // Static `app` outranks the dynamic `:locale` below, so this claims those URLs
+    // and the real `/:locale/app/...` routes are untouched. Keep it above `/:locale`.
+    path: "/app/*",
+    element: <LocaleAppRedirectPage />,
     errorElement: <RouteErrorPage />,
   },
   {

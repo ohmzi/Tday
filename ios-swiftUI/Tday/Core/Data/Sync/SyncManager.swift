@@ -17,6 +17,8 @@ private struct RemoteSnapshot {
     let lists: [ListSummary]
     let floaterLists: [ListSummary]
     let aiSummaryEnabled: Bool
+    /// "scheduled" or "floater" — the account's default home screen, mirrored into the cache.
+    let defaultHomeScreen: String
 
     var todoUpdatedAtByCanonical: [String: Int64] {
         todos.reduce(into: [:]) { result, todo in
@@ -403,6 +405,11 @@ final class SyncManager {
         let floaterLists = floaterListsResponse.lists.map { mapFloaterListDTO($0) }
         // NULL preference is treated as enabled (default ON), matching the backend.
         let aiSummaryEnabled = preferencesResponse.aiSummaryEnabled ?? true
+        // The default home screen is an account preference, so it has to arrive with sync —
+        // it used to be dropped here and refreshed on nothing but a Settings appear, which left
+        // a second device, or a reinstall, opening the hardcoded Scheduled feed until its owner
+        // happened to visit Settings over there. Absent means Scheduled, as on the backend.
+        let defaultHomeScreen = preferencesResponse.defaultHomeScreen ?? "scheduled"
         return RemoteSnapshot(
             todos: todos,
             floaters: floaters,
@@ -410,7 +417,8 @@ final class SyncManager {
             completedFloaters: completedFloaters,
             lists: lists,
             floaterLists: floaterLists,
-            aiSummaryEnabled: aiSummaryEnabled
+            aiSummaryEnabled: aiSummaryEnabled,
+            defaultHomeScreen: defaultHomeScreen
         )
     }
 
@@ -611,7 +619,11 @@ final class SyncManager {
                 }
             ),
             pendingMutations: pendingMutations,
-            aiSummaryEnabled: remote.aiSummaryEnabled
+            aiSummaryEnabled: remote.aiSummaryEnabled,
+            // Account preference, so the server wins: this is what makes a change made on
+            // another device (or on the web) show up on this one's next cold launch, instead
+            // of waiting for someone to open Settings here.
+            defaultHomeScreen: remote.defaultHomeScreen
         )
     }
 

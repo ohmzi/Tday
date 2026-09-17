@@ -178,9 +178,23 @@ struct CompletedScreen: View {
                 // that has to stay tappable.
                 ZStack {
                     EmptyTaskWatermark(
+                        // Both glyph names are what a watermark drawn as an
+                        // asset would use, and are kept in step with
+                        // `markContent`; the mark itself is the composite.
+                        // `systemName` is already dead on the asset path —
+                        // `assetName` wins — and stays only because it is not
+                        // optional.
                         systemName: "checkmark",
                         accentColor: completedAccentColor,
-                        assetName: "TileComplete"
+                        assetName: "LucideCalendarCheck",
+                        // The composite's back plate is stronger here than the
+                        // hero's: the whole mark sits under this watermark's own
+                        // 0.10 fade, and at the hero's ratio the two glyphs
+                        // behind the check would not survive it.
+                        markContent: AnyView(CompletedMark(
+                            size: EmptyTaskWatermark.markGlyphSize,
+                            rearOpacity: CompletedMark.watermarkRearOpacity
+                        ))
                     )
                     if showsCompletedEmptyState {
                         if isSearching {
@@ -188,10 +202,17 @@ struct CompletedScreen: View {
                                 .transition(completedEmptyStateTransition)
                         } else {
                             TdayEmptyState(
-                                assetName: "TileComplete",
+                                // The fallback for a badge drawn as an asset;
+                                // `markContent` is what actually draws here.
+                                assetName: "LucideCalendarCheck",
                                 accentColor: completedAccentColor,
                                 title: L("No completed tasks"),
-                                description: L("Tick something off and it will land here.")
+                                description: L("Tick something off and it will land here."),
+                                markContent: AnyView(CompletedMark(
+                                    size: CompletedMark.badgeGlyphSize,
+                                    tint: colors.onPrimary,
+                                    rearOpacity: CompletedMark.badgeRearOpacity
+                                ))
                             )
                             // This scene is decoration: nothing in it is
                             // tappable, and the overlay it sits in spans the
@@ -409,7 +430,18 @@ struct CompletedScreen: View {
             title: L("Completed"),
             accentColor: completedAccentColor,
             collapseProgress: titleCollapseProgress,
-            mark: Image("TileComplete")
+            // The disc's echo is the check alone — `frontMark` says why — so the
+            // mark the echo repeats is the check, not the calendar.
+            mark: Image("LucideCheck"),
+            frontMark: AnyView(CompletedMark(
+                size: TodoTimelineMetrics.heroMarkGlyph,
+                tint: .tdayCompletedGreen
+            )),
+            // The echo is a drawing of the mark, so it takes the mark's colour
+            // rather than the disc's chrome: left on `markAccentColor` the disc
+            // drew the same check twice in two colours — slate behind, green in
+            // front — where the web draws both from its one accent.
+            markEchoColor: .tdayCompletedGreen
         )
         .background {
             TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
@@ -586,6 +618,107 @@ struct CompletedScreen: View {
             },
             openSwipeTaskID: $openSwipeTaskID
         )
+    }
+}
+
+/// The Completion-history page's mark: one green check, with the Floater's leaf
+/// and the Scheduled board's `calendar-check` stacked behind it as a single faint
+/// plate. The two behind read as depth under the check rather than as two more
+/// icons, which is the arrangement the page was asked for.
+///
+/// A view and not an asset, because there is no compositing primitive to reach
+/// for: three `Image`s in one `ZStack` is the whole thing. Built once — here —
+/// and used at all three of the page's own mark sites: the hero disc, the page
+/// watermark and the empty state's badge. A composite that reached only the hero
+/// would leave the page drawing two different marks.
+///
+/// The three glyphs are concentric but NOT the same size — `rearLeafScale` and
+/// `rearCalendarScale` say why, and what it costs at the one pair of contours
+/// that cannot be cleared.
+///
+/// This supersedes the single `calendar-check` those three sites carried for one
+/// commit: the glyph is still on the page, and no longer alone.
+private struct CompletedMark: View {
+    /// The box all three glyphs are drawn in.
+    let size: CGFloat
+    /// The check's colour; each glyph behind it is the same colour at
+    /// `rearOpacity` and never a second one. `nil` inherits the environment's
+    /// foreground style, which is how the page watermark tints the whole mark
+    /// from its own blended colour without a call site re-deriving it.
+    var tint: Color? = nil
+    /// The pair behind the check, as a fraction of the front one, so it survives
+    /// an opacity the host puts on the whole mark.
+    var rearOpacity: Double = CompletedMark.heroRearOpacity
+
+    /// The hero disc's own echo alpha, so the back plate and the bleed out of the
+    /// disc's bottom-right are one depth plane rather than two.
+    static let heroRearOpacity: Double = 0.17
+    /// Stronger, because nothing in that drawing is strong: the whole mark sits
+    /// under the page watermark's own 0.10 fade, and at the hero's ratio the pair
+    /// behind the check would not survive it — the watermark would show the check
+    /// alone, and the page would be drawing two different marks.
+    static let watermarkRearOpacity: Double = 0.45
+    /// Stronger again, for the opposite reason: the badge is a white glyph on the
+    /// accent disc, drawn at `badgeGlyphSize` rather than the hero's 44, and a
+    /// 0.17 ghost goes missing at that size and contrast.
+    static let badgeRearOpacity: Double = 0.25
+    /// The badge's glyph box. The badge's circle is 52pt and every other screen
+    /// draws its single glyph at 24pt inside it; three glyphs stacked need the
+    /// room, and at 24 the calendar's inner tick lands at ~2pt where the three
+    /// cannot be told apart. Raised here rather than in `TdayEmptyState`, so the
+    /// eight other screens that draw a badge keep the drawing they have.
+    static let badgeGlyphSize: CGFloat = 32
+
+    /// How much of the box each glyph behind the check is drawn in.
+    ///
+    /// The three used to be drawn at one size and concentric, and the leaf stopped
+    /// reading: at 1:1 its contour runs *inside* the calendar's frame by 0–1 of
+    /// lucide's 24 units — its left arc 1 unit inside the left wall, its rightmost
+    /// point (21,10) exactly on the right wall at the header rule's own y, its tip
+    /// level with the calendar's own binding ticks. Two strokes need a full stroke
+    /// width between their centrelines to read as two, so the leaf fused into a
+    /// fringe along the frame and the back plate became one grey box.
+    ///
+    /// Different sizes are what separate them, and the binding pair is the leaf's
+    /// rightmost point against the calendar's right wall: both sit at 12 + 9 ×
+    /// scale, so they move apart by 9 × (calendar − leaf) = 9 × 0.26 = 2.34 units.
+    /// The two strokes carry 0.88 + 0.62 = 1.50 units of half-width between them,
+    /// because a scaled glyph scales its stroke with it, so the outlines clear by
+    /// 0.84 of a unit — over half a stroke width — at every size the mark is drawn.
+    /// The scaling also thins the strokes, which is the right direction: the pair
+    /// behind reads as *behind* partly because it is drawn in a finer line.
+    ///
+    /// One pair is not fully cleared, and it is worth naming: the leaf's tip
+    /// passes within ~0.82 units of the calendar's 1.76-unit right binding tick,
+    /// which is inside the 1.50 the two carry, so the tip grazes that tick. It is
+    /// the one contour no pair of scales can separate — clearing it needs the leaf
+    /// below 0.375 of the calendar, where it stops reading at 44pt, or a plate
+    /// moved off-centre, which is visibly lopsided in the hero's 96pt disc.
+    static let rearLeafScale: CGFloat = 0.62
+    static let rearCalendarScale: CGFloat = 0.88
+
+    var body: some View {
+        ZStack {
+            glyph("LucideLeaf", scale: Self.rearLeafScale, opacity: rearOpacity)
+            glyph("LucideCalendarCheck", scale: Self.rearCalendarScale, opacity: rearOpacity)
+            glyph("LucideCheck", scale: 1, opacity: 1)
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private func glyph(_ name: String, scale: CGFloat, opacity: Double) -> some View {
+        let image = Image(name)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size * scale, height: size * scale)
+        if let tint {
+            image.foregroundStyle(tint.opacity(opacity))
+        } else {
+            image.opacity(opacity)
+        }
     }
 }
 

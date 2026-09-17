@@ -20,12 +20,14 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 private const val PREFERENCES_PATH = "/api/preferences"
 
@@ -87,6 +89,14 @@ class PreferencesRoutesTest {
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals("floater", preferencesService.lastDefaultHomeScreen)
+
+        // The response has to CARRY the stored preferences, not just acknowledge the write.
+        // Web renders the "Default home screen" thumb from this body and Android mirrors
+        // `defaultHomeScreen` straight into its launch cache, so a message-only body made both
+        // of them fall back to their own Scheduled default the moment the write succeeded.
+        val payload = json.parseToJsonElement(response.bodyAsText()).jsonObject
+        assertEquals("floater", payload.getValue("defaultHomeScreen").jsonPrimitive.content)
+        assertTrue(payload.getValue("aiSummaryEnabled").jsonPrimitive.boolean)
     }
 
     private fun Application.configurePreferencesRoutesTestApp(
@@ -139,11 +149,15 @@ class PreferencesRoutesTest {
             direction: String?,
             aiSummaryEnabled: Boolean?,
             defaultHomeScreen: String?,
-        ): Either<AppError, Unit> {
+        ): Either<AppError, PreferencesResponse> {
             lastGroupBy = groupBy
             lastAiSummaryEnabled = aiSummaryEnabled
             lastDefaultHomeScreen = defaultHomeScreen
-            return Unit.right()
+            // Mirrors the real service: the patch is applied and the stored row is read back.
+            return PreferencesResponse(
+                defaultHomeScreen = defaultHomeScreen ?: "scheduled",
+                aiSummaryEnabled = aiSummaryEnabled ?: true,
+            ).right()
         }
     }
 }

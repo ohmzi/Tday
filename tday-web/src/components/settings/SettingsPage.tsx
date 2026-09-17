@@ -35,7 +35,6 @@ import {
   Vibrate,
   Volume2,
   Waves,
-  Webhook,
   type LucideIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -86,6 +85,7 @@ import {
 } from "@/lib/local/passphrasePolicy";
 import { resetAppData } from "@/lib/resetAppData";
 import { CURRENT_APP_VERSION, formatDisplayVersion } from "@/features/release/lib/release";
+import { useReleaseInfo } from "@/features/release/query/get-release-info";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import {
@@ -134,29 +134,6 @@ const LANGUAGE_OPTIONS = [
 ] as const;
 
 type ApiKeyScope = "READ" | "FULL";
-
-/** Metadata for an outbound webhook subscription (GET /api/webhook). */
-type WebhookInfo = {
-  id: string;
-  url: string;
-  events: string[];
-  enabled: boolean;
-  consecutiveFailures: number;
-  lastStatus?: number | null;
-  lastAttemptAt?: string | null;
-  createdAt: string;
-};
-
-// The event types a webhook can filter on — mirrors WEBHOOK_EVENT_TYPES on the
-// backend. An empty selection means "all events".
-const WEBHOOK_EVENT_TYPES = [
-  "todo.changed",
-  "floater.changed",
-  "list.changed",
-  "floaterList.changed",
-  "list.members",
-  "completed.changed",
-] as const;
 
 /** Metadata for a personal API key, as returned by GET /api/user/api-key. */
 type ApiKeyInfo = {
@@ -215,8 +192,10 @@ function SectionHeading({
   );
 }
 
-/** A row that only reports a fact — a version string, nothing to tap. Keeps the
- * icon column of the card it sits in so its label lines up with the rest. */
+/** A row that only reports a fact — the server's version, nothing to tap. Keeps
+ * the icon column of the card it sits in so its label lines up with the
+ * tappable rows around it. The App Version row used to be one of these; it
+ * opens the release screen now, so it is a [SettingsOptionRow]. */
 function SettingsFactRow({
   icon,
   label,
@@ -546,13 +525,6 @@ export default function SettingsPage() {
   const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
   const [generateKeyDialogOpen, setGenerateKeyDialogOpen] = useState(false);
   const [expandedKeyId, setExpandedKeyId] = useState<string | null>(null);
-  const [webhooks, setWebhooks] = useState<WebhookInfo[] | null>(null);
-  const [newWebhookUrl, setNewWebhookUrl] = useState("");
-  const [newWebhookEvents, setNewWebhookEvents] = useState<string[]>([]);
-  const [webhookLoading, setWebhookLoading] = useState(false);
-  const [generatedWebhookSecret, setGeneratedWebhookSecret] = useState<string | null>(null);
-  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
-  const [revokingWebhookId, setRevokingWebhookId] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [deleteLocalOpen, setDeleteLocalOpen] = useState(false);
   // Read once per render pass rather than subscribed to: the only thing that can
@@ -572,6 +544,14 @@ export default function SettingsPage() {
   // until the probe answers, and the row stays away with it — an empty or
   // "unknown" Server line says less than no line at all.
   const [serverVersion, setServerVersion] = useState<string | null>(null);
+  // The version row says an update exists before you open the release screen,
+  // the way both native settings rows do. Same public client-side query the
+  // release screen runs, under one react-query key, so mounting both on the way
+  // through Settings costs no second fetch.
+  const { data: releaseInfo } = useReleaseInfo();
+  const latestAvailableVersion = releaseInfo?.hasUpdate
+    ? formatDisplayVersion(releaseInfo.latestRelease?.version)
+    : null;
   const appVersionLabel = `v${formatDisplayVersion(CURRENT_APP_VERSION) ?? CURRENT_APP_VERSION}`;
 
   useEffect(() => {
@@ -678,94 +658,6 @@ export default function SettingsPage() {
       });
     } finally {
       setRevokingKeyId(null);
-    }
-  };
-
-  useEffect(() => {
-    if (isLocalMode) return;
-    let cancelled = false;
-    api
-      .GET({ url: "/api/webhook" })
-      .then((res) => {
-        if (!cancelled) setWebhooks(res?.webhooks ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setWebhooks([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isLocalMode]);
-
-  const toggleWebhookEvent = (event: string) => {
-    setNewWebhookEvents((prev) =>
-      prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event],
-    );
-  };
-
-  const handleCreateWebhook = async () => {
-    setWebhookLoading(true);
-    try {
-      const res = await api.POST({
-        url: "/api/webhook",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: newWebhookUrl.trim(),
-          events: newWebhookEvents,
-        }),
-      });
-      const created = res?.webhook;
-      setGeneratedWebhookSecret(created?.secret ?? null);
-      setShowWebhookSecret(true);
-      setNewWebhookUrl("");
-      setNewWebhookEvents([]);
-      if (created) {
-        setWebhooks((prev) => [
-          {
-            id: created.id,
-            url: created.url,
-            events: created.events ?? [],
-            enabled: true,
-            consecutiveFailures: 0,
-            createdAt: created.createdAt,
-          },
-          ...(prev ?? []),
-        ]);
-      }
-      toast({ description: t("toast.webhookCreated") });
-    } catch (err) {
-      toast({
-        description: getErrorMessage(err, t("toast.webhookCreateFailed")),
-        variant: "destructive",
-      });
-    } finally {
-      setWebhookLoading(false);
-    }
-  };
-
-  const handleDeleteWebhook = async (id: string) => {
-    setRevokingWebhookId(id);
-    try {
-      await api.DELETE({ url: `/api/webhook/${id}` });
-      setWebhooks((prev) => (prev ?? []).filter((w) => w.id !== id));
-      toast({ description: t("toast.webhookDeleted") });
-    } catch (err) {
-      toast({
-        description: getErrorMessage(err, t("toast.webhookDeleteFailed")),
-        variant: "destructive",
-      });
-    } finally {
-      setRevokingWebhookId(null);
-    }
-  };
-
-  const handleCopyWebhookSecret = async () => {
-    if (!generatedWebhookSecret) return;
-    try {
-      await navigator.clipboard.writeText(generatedWebhookSecret);
-      toast({ description: t("toast.webhookSecretCopied") });
-    } catch {
-      toast({ description: t("toast.webhookSecretCopyFailed"), variant: "destructive" });
     }
   };
 
@@ -1094,11 +986,6 @@ export default function SettingsPage() {
   // was half-usable there. Hidden outright rather than half-disabled.
   const showDataCard =
     !isLocalMode && cardMatches(t("data.title"), t("data.download"), t("data.import"));
-  // The blurb stopped being printed when the "?" took over explaining these
-  // cards, but it is still a sentence people half-remember and type at the
-  // search box, so it stays in the term list.
-  const showWebhooksCard =
-    !isLocalMode && cardMatches(t("webhooks.title"), t("webhooks.blurb"), t("webhooks.add"));
   const showDashboardCard =
     !isLocalMode && cardMatches(t("dashboard.title"), t("dashboard.generateKey"));
   // Splitting the old workspace/dashboard card splits its term list too: each
@@ -1131,7 +1018,6 @@ export default function SettingsPage() {
     !showAppearanceCard &&
     !showPreferencesCard &&
     !showDataCard &&
-    !showWebhooksCard &&
     !showDashboardCard &&
     !showAboutCard &&
     !showMaintenanceCard &&
@@ -1733,136 +1619,6 @@ export default function SettingsPage() {
       </SheetCard>
       )}
 
-      {/* Webhooks and dashboard API keys are both consumed by something outside
-          the browser, so they need a server to serve them. */}
-      {showWebhooksCard && (
-      <SettingsSection
-        title={t("webhooks.title")}
-        titleAction={<GuideHelpLink topic="webhooks" />}
-      >
-        <div className="space-y-3">
-          <Input
-            type="url"
-            inputMode="url"
-            value={newWebhookUrl}
-            onChange={(event) => setNewWebhookUrl(event.target.value)}
-            placeholder={t("webhooks.urlPlaceholder")}
-            className="h-11 rounded-lg font-mono text-xs"
-          />
-          <div className="space-y-1.5">
-            <p className="text-xs font-extrabold text-muted-foreground">
-              {t("webhooks.eventsLabel")}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {WEBHOOK_EVENT_TYPES.map((event) => {
-                const selected = newWebhookEvents.includes(event);
-                return (
-                  <button
-                    key={event}
-                    type="button"
-                    onClick={() => toggleWebhookEvent(event)}
-                    aria-pressed={selected}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 text-xs font-black transition-colors",
-                      selected
-                        ? "bg-accent text-accent-foreground"
-                        : "bg-muted/60 text-muted-foreground",
-                    )}
-                  >
-                    {event}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <Button
-            type="button"
-            disabled={webhookLoading || newWebhookUrl.trim().length === 0}
-            onClick={handleCreateWebhook}
-            className="h-11 w-full rounded-lg font-black"
-          >
-            {webhookLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t("webhooks.creating")}
-              </>
-            ) : (
-              <>
-                <Webhook className="mr-2 h-4 w-4" />
-                {t("webhooks.add")}
-              </>
-            )}
-          </Button>
-        </div>
-
-        {generatedWebhookSecret && (
-          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/40 p-3">
-            <p className="text-xs font-extrabold text-muted-foreground">
-              {t("webhooks.secretCopyNow")}
-            </p>
-            <div className="flex gap-2">
-              <Input
-                type={showWebhookSecret ? "text" : "password"}
-                value={generatedWebhookSecret}
-                readOnly
-                className="h-10 flex-1 rounded-sm bg-background/50 font-mono text-xs"
-              />
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-sm" onClick={() => setShowWebhookSecret(!showWebhookSecret)}>
-                {showWebhookSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-sm" onClick={handleCopyWebhookSecret}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {webhooks !== null && webhooks.length > 0 && (
-          <div className="space-y-2">
-            {webhooks.map((webhook) => (
-              <div
-                key={webhook.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 p-3"
-              >
-                <div className="min-w-0 text-sm">
-                  <p className="truncate font-mono text-xs font-black text-foreground">
-                    {webhook.url}
-                  </p>
-                  <p className="text-xs font-extrabold text-muted-foreground">
-                    {webhook.events.length > 0
-                      ? webhook.events.join(", ")
-                      : t("webhooks.allEvents")}
-                    {webhook.enabled ? "" : ` · ${t("webhooks.disabled")}`}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  disabled={revokingWebhookId === webhook.id}
-                  onClick={() => handleDeleteWebhook(webhook.id)}
-                  aria-label={t("webhooks.delete")}
-                  className="h-10 w-10 shrink-0 rounded-sm"
-                >
-                  {revokingWebhookId === webhook.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {webhooks !== null && webhooks.length === 0 && (
-          <p className="text-xs font-extrabold text-muted-foreground">
-            {t("webhooks.none")}
-          </p>
-        )}
-      </SettingsSection>
-      )}
-
       {/* Dashboard access — the keys that reach this account from outside the
           browser, so it sits with the other two integration cards. The heading
           is load-bearing: the backend sends people here BY NAME — McpRoutes,
@@ -2024,7 +1780,28 @@ export default function SettingsPage() {
           </>
         )}
 
-        <SettingsFactRow icon={Info} label={t("about.appVersion")} value={appVersionLabel} />
+        {/* Opens the release screen, like the native App Version rows do — so it
+            is a navigating row with a chevron, and the version string rides in
+            the trailing slot next to it the way native prints value + chevron. */}
+        <SettingsOptionRow
+          icon={Info}
+          label={t("about.appVersion")}
+          href="/app/version"
+          showChevron
+          trailing={
+            <span className="shrink-0 text-sm font-black text-muted-foreground">
+              {appVersionLabel}
+            </span>
+          }
+        />
+        {/* The native rows' "vX available" hint under the version. It comes from
+            the same public release query the version page runs, so it costs no
+            second fetch when both are mounted. */}
+        {latestAvailableVersion ? (
+          <p className="pl-9 text-[11px] font-black text-muted-foreground">
+            {t("about.updateAvailable", { version: latestAvailableVersion })}
+          </p>
+        ) : null}
 
         {/* Server Mode only, and only once the probe has answered: a browser-only
             workspace has no server, and an empty or "unknown" server line is

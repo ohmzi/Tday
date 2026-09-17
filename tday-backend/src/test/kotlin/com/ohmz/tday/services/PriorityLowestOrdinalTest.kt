@@ -84,7 +84,7 @@ class PriorityLowestOrdinalTest {
     private val cache = CacheServiceImpl()
     private val realtime = RealtimeServiceImpl()
     private val shareService = ListShareServiceImpl(cache, realtime, push)
-    private val publisher = RealtimePublisher(realtime, shareService, cache, NoOpWebhookDispatchService, push)
+    private val publisher = RealtimePublisher(realtime, shareService, cache, push)
     private val floaterService: FloaterService = FloaterServiceImpl(PassthroughFieldEncryption, cache, shareService, publisher)
 
     @BeforeEach

@@ -722,13 +722,7 @@
       "passwordChangeFailed": "更改密码失败",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions",
-      "webhookCreated": "已添加 webhook，请立即复制签名密钥。",
-      "webhookCreateFailed": "添加 webhook 失败",
-      "webhookDeleted": "已删除 webhook",
-      "webhookDeleteFailed": "删除 webhook 失败",
-      "webhookSecretCopied": "签名密钥已复制",
-      "webhookSecretCopyFailed": "复制签名密钥失败"
+      "securityQuestionsLoadFailed": "Could not load security questions"
     },
     "signOut": "退出登录",
     "featureToggle": {
@@ -767,19 +761,6 @@
       "confirmCancel": "取消",
       "confirmImport": "导入",
       "summaryLocal": "{{tasks}} 个任务 · {{lists}} 个清单 · {{completed}} 个已完成，全部在这个浏览器中。"
-    },
-    "webhooks": {
-      "title": "Webhook",
-      "blurb": "数据变更时获得已签名的 HTTP 通知。",
-      "urlPlaceholder": "https://你的服务器/webhook",
-      "eventsLabel": "事件（不选=全部）",
-      "creating": "添加中...",
-      "add": "添加 webhook",
-      "secretCopyNow": "立即复制此签名密钥——不会再次显示。",
-      "allEvents": "所有事件",
-      "disabled": "已禁用",
-      "delete": "删除 webhook",
-      "none": "暂无 webhook"
     },
     "restingFloaters": {
       "title": "休眠浮动任务",
@@ -822,7 +803,8 @@
     "about": {
       "title": "关于",
       "appVersion": "应用版本",
-      "server": "服务器"
+      "server": "服务器",
+      "updateAvailable": "v{{version}} 可用"
     },
     "troubleshooting": {
       "reset": "重置应用缓存",
@@ -1277,15 +1259,6 @@
         "step1": "当手机询问时，允许访问日历。",
         "step2": "打开日历应用 —— 带日期的任务就在 T'Day 日历里。"
       },
-      "webhooks": {
-        "title": "Webhook",
-        "summary": "任务变更时获得 HTTP 通知。",
-        "keywords": "webhook, http, 集成, hmac, 签名, 自动化, 通知, 回调",
-        "body": "注册一个 HTTP 端点，当你的任务、列表或浮动项变更时，T'Day 会 POST 一个小型的已签名“发生变更”通知——不包含任务内容，仅含事件类型和列表 id，便于你的自动化通过普通 API 重新获取。每个 webhook 都有自己的密钥，在 X-Tday-Signature 头中用 HMAC-SHA256 对主体签名；信任请求前请先验证。持续失败的 webhook 会被自动禁用。",
-        "step0": "在设置中粘贴端点 URL 并选择要接收的事件。",
-        "step1": "添加 webhook 并复制其签名密钥——只显示一次。",
-        "step2": "在处理每个请求前验证 X-Tday-Signature 的 HMAC。"
-      },
       "unifiedpush": {
         "title": "UnifiedPush（Android）",
         "summary": "无需 Google，通过你自己的分发器接收服务器推送。",
@@ -1396,5 +1369,22 @@
     "lists": "清单",
     "newTask": "新任务",
     "brainDump": "想法速记"
+  },
+  "release": {
+    "subtitle": "查看已部署的版本和最新发布的版本。",
+    "loading": "正在加载版本信息…",
+    "error": "无法获取版本信息。请检查网络连接后重试。",
+    "retry": "重试",
+    "statusLatest": "最新版本",
+    "statusUpdateAvailable": "有可用更新",
+    "messageLatest": "你正在使用最新版本",
+    "messageUpdateAvailable": "版本 {{version}} 已可用。",
+    "installed": "已安装",
+    "installedVersion": "已安装版本",
+    "latest": "最新",
+    "whatsNew": "{{version}} 的新内容",
+    "noNotes": "此版本没有可用的发行说明",
+    "viewOnGithub": "在 GitHub 上查看",
+    "published": "发布于 {{date}}"
   }
 }

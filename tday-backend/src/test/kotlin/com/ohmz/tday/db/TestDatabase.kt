@@ -17,7 +17,6 @@ import com.ohmz.tday.db.tables.UserApiKeys
 import com.ohmz.tday.db.tables.UserPreferences
 import com.ohmz.tday.db.tables.UserSecurityQuestions
 import com.ohmz.tday.db.tables.Users
-import com.ohmz.tday.db.tables.WebhookSubscriptions
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.Table
@@ -52,7 +51,6 @@ object TestDatabase {
         Users, Accounts, Lists, FloaterLists, Todos, TodoInstances, CompletedTodos,
         CompletedFloaters, Floaters, Files, UserPreferences, UserSecurityQuestions,
         ListShares, FloaterListShares, PushSubscriptions, UserApiKeys, CalendarFeedTokens,
-        WebhookSubscriptions,
     )
 
     /**

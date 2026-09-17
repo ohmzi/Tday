@@ -201,9 +201,8 @@ object GuideContentExporter {
      *    this changes no observable behavior.
      * 2. What's left is genuine cross-locale or cross-key coincidence — e.g. Spanish
      *    and Portuguese both translate two unrelated English keys as "Modo
-     *    servidor", or Italian/Chinese/Japanese/Malay all render "Webhooks" as the
-     *    singular "Webhook" — where the repeated text is not interchangeable with
-     *    English, so it can't be nulled away. [DEEPSOURCE_MIN_LEN]/[DEEPSOURCE_MIN_COUNT]
+     *    servidor", where the repeated text is not interchangeable with English, so it
+     *    can't be nulled away. [DEEPSOURCE_MIN_LEN]/[DEEPSOURCE_MIN_COUNT]
      *    reproduce DeepSource's own threshold (confirmed empirically against its
      *    reported PR #109 findings: 7 literals, each >=5 chars and occurring >=3x).
      *    Any surviving literal meeting it is hoisted once into a `private val`

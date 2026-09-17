@@ -255,6 +255,15 @@ final class AppViewModel {
                     offlineNoticeID += 1
                 }
             }
+            // The account's "Default home screen", read from the cache the sync above just
+            // refreshed — `bootstrapSession()` runs `syncCachedData`, and that mirrors the
+            // account value into the cache. Set BEFORE `finishBootstrap()` flips
+            // `hasCompletedInitialBootstrap`, because that is the moment `AppRootView`
+            // reconciles its launch feed against this property; see
+            // `AppRootView.applyAccountRootFeedTabIfUnchosen`.
+            defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+                container.settingsRepository.defaultHomeScreenSnapshot()
+            )
             finishBootstrap()
             await refreshAiSummarySetting()
             refreshSyncStatusFromCache()
@@ -457,6 +466,13 @@ final class AppViewModel {
         lastSyncAttemptEpochMs = 0
         versionCheckResult = .compatible
         backendVersion = nil
+        // Same rule as the server branch of `bootstrap()`: Local Mode has no account to ask, so
+        // the cache it writes through directly IS the answer — and `AppRootView` reconciles the
+        // launch feed against this property, so leaving it at its `scheduledTaskHome` default
+        // would move a Local-Mode user who chose Floaters back onto Scheduled.
+        defaultHomeScreen = rootFeedTabFromDefaultHomeScreenApiValue(
+            container.settingsRepository.defaultHomeScreenSnapshot()
+        )
         await container.reminderScheduler.requestAuthorization()
         await rescheduleReminders()
         finishBootstrap()

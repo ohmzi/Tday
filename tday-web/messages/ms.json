@@ -722,13 +722,7 @@
       "passwordChangeFailed": "Gagal menukar kata laluan",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions",
-      "webhookCreated": "Webhook ditambah. Salin rahsia tandatangan sekarang.",
-      "webhookCreateFailed": "Gagal menambah webhook",
-      "webhookDeleted": "Webhook dipadam",
-      "webhookDeleteFailed": "Gagal memadam webhook",
-      "webhookSecretCopied": "Rahsia tandatangan disalin",
-      "webhookSecretCopyFailed": "Gagal menyalin rahsia tandatangan"
+      "securityQuestionsLoadFailed": "Could not load security questions"
     },
     "signOut": "Log keluar",
     "featureToggle": {
@@ -767,19 +761,6 @@
       "confirmCancel": "Batal",
       "confirmImport": "Import",
       "summaryLocal": "{{tasks}} tugasan · {{lists}} senarai · {{completed}} selesai, semuanya dalam pelayar ini."
-    },
-    "webhooks": {
-      "title": "Webhook",
-      "blurb": "Dapatkan ping HTTP bertandatangan apabila data berubah.",
-      "urlPlaceholder": "https://pelayan-anda/webhook",
-      "eventsLabel": "Peristiwa (tiada = semua)",
-      "creating": "Menambah...",
-      "add": "Tambah webhook",
-      "secretCopyNow": "Salin rahsia tandatangan ini sekarang — ia tidak dipaparkan lagi.",
-      "allEvents": "Semua peristiwa",
-      "disabled": "Dilumpuhkan",
-      "delete": "Padam webhook",
-      "none": "Belum ada webhook"
     },
     "restingFloaters": {
       "title": "Floater berehat",
@@ -822,7 +803,8 @@
     "about": {
       "title": "Perihal",
       "appVersion": "Versi Apl",
-      "server": "Pelayan"
+      "server": "Pelayan",
+      "updateAvailable": "v{{version}} tersedia"
     },
     "troubleshooting": {
       "reset": "Set semula cache aplikasi",
@@ -1277,15 +1259,6 @@
         "step1": "Benarkan akses kalendar apabila telefon anda meminta.",
         "step2": "Buka aplikasi kalendar anda — tugas bertarikh anda ada dalam kalendar T'Day."
       },
-      "webhooks": {
-        "title": "Webhook",
-        "summary": "Dapatkan ping HTTP apabila tugasan anda berubah.",
-        "keywords": "webhook, http, integrasi, hmac, tandatangan, automasi, maklum, callback",
-        "body": "Daftarkan endpoint HTTP dan T'Day akan POST satu ping kecil bertandatangan “sesuatu berubah” apabila tugasan, senarai atau floater anda berubah — tanpa kandungan tugasan, hanya jenis peristiwa dan id senarai, supaya automasi anda mengambil semula melalui API biasa. Setiap webhook mempunyai rahsianya sendiri yang menandatangani badan dengan HMAC-SHA256 dalam pengepala X-Tday-Signature; sahkannya sebelum mempercayai permintaan. Webhook yang terus gagal dilumpuhkan secara automatik.",
-        "step0": "Dalam Tetapan, tampal URL endpoint anda dan pilih peristiwa yang diterima.",
-        "step1": "Tambah webhook dan salin rahsia tandatangannya — dipaparkan sekali.",
-        "step2": "Sahkan HMAC X-Tday-Signature pada setiap permintaan sebelum bertindak."
-      },
       "unifiedpush": {
         "title": "UnifiedPush (Android)",
         "summary": "Tolakan pelayan tanpa Google, melalui pengedar anda.",
@@ -1396,5 +1369,22 @@
     "lists": "Senarai",
     "newTask": "Tugasan baharu",
     "brainDump": "Curah minda"
+  },
+  "release": {
+    "subtitle": "Semak binaan yang digunakan dan keluaran terkini yang diterbitkan.",
+    "loading": "Memuatkan maklumat versi…",
+    "error": "Tidak dapat mengambil maklumat versi. Sila semak sambungan anda dan cuba lagi.",
+    "retry": "Cuba lagi",
+    "statusLatest": "Terkini",
+    "statusUpdateAvailable": "Kemas kini tersedia",
+    "messageLatest": "Anda menggunakan versi terkini",
+    "messageUpdateAvailable": "Versi {{version}} tersedia.",
+    "installed": "Dipasang",
+    "installedVersion": "Versi dipasang",
+    "latest": "Terkini",
+    "whatsNew": "Apa yang baharu dalam {{version}}",
+    "noNotes": "Tiada nota keluaran tersedia untuk versi ini",
+    "viewOnGithub": "Lihat di GitHub",
+    "published": "Diterbitkan {{date}}"
   }
 }

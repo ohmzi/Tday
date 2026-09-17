@@ -6,7 +6,6 @@ import com.ohmz.tday.db.tables.Lists
 import com.ohmz.tday.db.tables.PushSubscriptions
 import com.ohmz.tday.db.tables.UserApiKeys
 import com.ohmz.tday.db.tables.Users
-import com.ohmz.tday.db.tables.WebhookSubscriptions
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.AuthenticatedUser
 import com.ohmz.tday.security.PasswordServiceImpl
@@ -100,13 +99,6 @@ class AdminPurgeTest {
                 it[tokenPreview] = "feed_1"
                 it[createdAt] = LocalDateTime.now()
             }
-            WebhookSubscriptions.insert {
-                it[id] = "hook_1"
-                it[userID] = TARGET_ID
-                it[url] = "https://hook.example/tday"
-                it[secret] = "secret"
-                it[createdAt] = LocalDateTime.now()
-            }
         }
 
         val result = service.deleteUser(TARGET_ID, admin)
@@ -115,7 +107,6 @@ class AdminPurgeTest {
         transaction(db) {
             assertEquals(0, UserApiKeys.selectAll().count())
             assertEquals(0, CalendarFeedTokens.selectAll().count())
-            assertEquals(0, WebhookSubscriptions.selectAll().count())
         }
     }
 

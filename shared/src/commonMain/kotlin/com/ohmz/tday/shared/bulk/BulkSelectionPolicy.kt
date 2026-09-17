@@ -32,8 +32,8 @@ object BulkSelectionPolicy {
      * The `api_global` rate-limit policy allows `API_RATE_LIMIT_MAX` (default 180)
      * requests per `API_RATE_LIMIT_WINDOW_SEC` (default 60) per authenticated user,
      * and every mutation additionally fans out one realtime event to each share
-     * collaborator, one webhook delivery per subscription and one push poke per
-     * device — none of it coalesced. Staying comfortably under the limit is what
+     * collaborator and one push poke per device — none of it coalesced. Staying
+     * comfortably under the limit is what
      * keeps a large selection from becoming a *partially applied* destructive
      * action halfway through.
      */

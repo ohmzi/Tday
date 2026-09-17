@@ -44,11 +44,11 @@ fun validateOptionalValue(value: String?, field: String, allowedValues: Set<Stri
     }
 }
 
-/** Longest outbound URL we will store (webhook + push endpoints). */
+/** Longest outbound URL we will store (push endpoints). */
 const val MAX_OUTBOUND_URL_LENGTH = 2048
 
 /**
- * True when [host] is a literal IP address that must never be a webhook/push destination.
+ * True when [host] is a literal IP address that must never be a push destination.
  *
  * The backend runs inside a Docker network on a home LAN, so an unvalidated outbound URL turns it
  * into a request forger with a trusted position: `http://database:5432`, `http://ollama:11434`,

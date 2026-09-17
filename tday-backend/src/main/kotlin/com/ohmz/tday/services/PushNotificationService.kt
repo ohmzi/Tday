@@ -233,7 +233,7 @@ class PushNotificationServiceImpl(private val config: AppConfig) : PushNotificat
     }
 
     // Detached scope for fire-and-forget silent pushes so a mutation's response is never blocked
-    // on the distributor POST (mirrors WebhookDispatchService).
+    // on the distributor POST.
     private val dataChangedScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun notifyDataChanged(userIds: Collection<String>) {

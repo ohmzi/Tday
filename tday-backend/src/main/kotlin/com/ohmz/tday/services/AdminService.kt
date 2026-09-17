@@ -69,7 +69,6 @@ internal val USER_OWNED_CHILD_COLUMNS: List<Column<String>> = listOf(
     PushSubscriptions.userID,
     UserApiKeys.userID,
     CalendarFeedTokens.userID,
-    WebhookSubscriptions.userID,
 )
 
 interface AdminService {

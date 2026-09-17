@@ -15,13 +15,6 @@ data class ChangePasswordRequest(
 )
 
 @Serializable
-data class CreateWebhookRequest(
-    val url: String,
-    /** Event types to receive; empty means all events. */
-    val events: List<String> = emptyList(),
-)
-
-@Serializable
 data class CreateApiKeyRequest(
     val label: String? = null,
     /** "READ" or "FULL"; defaults to FULL when absent or unrecognised. */

@@ -4195,12 +4195,36 @@ struct TimelineExpandedTitleRow: View {
     let accentColor: Color
     let collapseProgress: CGFloat
     let showsTimeOfDayIcon: Bool
-    /// The screen's own glyph, shown in a tinted circle above the title.
+    /// The screen's own glyph, shown in a tinted circle above the title — and
+    /// the glyph the disc's oversized echo is drawn from.
     let mark: Image?
+    /// Drawn instead of `mark` as the disc's front glyph, for a screen whose mark
+    /// is more than one glyph. `mark` still supplies the echo.
+    ///
+    /// The echo is deliberately the one part a composite cannot reach: the disc
+    /// clips it, and the clip runs through the middle of the glyph, so a
+    /// rectilinear calendar under that arc is cut into bars rather than arcs
+    /// while a check's round-capped tail merely bleeds. A screen that hands a
+    /// composite here therefore hands the check as its `mark` too.
+    ///
+    /// An `AnyView` rather than a generic because `mark` is concrete and this is
+    /// optional: the six callers that pass no composite must keep compiling
+    /// untouched.
+    let frontMark: AnyView?
     /// Tint for the circle. Separate from `accentColor` because screens whose
     /// title is plain onSurface — Settings, App Version — still want a coloured
     /// mark rather than a grey disc.
     let markAccentColor: Color
+    /// Tint for the oversized echo — the same glyph the mark draws, one size up
+    /// and dropped to `heroMarkEchoAlpha` behind it.
+    ///
+    /// It defaults to `markAccentColor`, which is right wherever the mark and the
+    /// disc's chrome are one colour. A screen whose mark is a different colour
+    /// from its chrome has to say so: the echo is a second drawing of the mark,
+    /// so leaving it on the chrome's colour puts one glyph on the disc in two
+    /// colours. The Completion history is that screen — its check is the green
+    /// the page is *about* while its chrome is slate.
+    let markEchoColor: Color
 
     init(
         title: String,
@@ -4208,14 +4232,18 @@ struct TimelineExpandedTitleRow: View {
         collapseProgress: CGFloat,
         showsTimeOfDayIcon: Bool = false,
         mark: Image? = nil,
-        markAccentColor: Color? = nil
+        frontMark: AnyView? = nil,
+        markAccentColor: Color? = nil,
+        markEchoColor: Color? = nil
     ) {
         self.title = title
         self.accentColor = accentColor
         self.collapseProgress = collapseProgress
         self.showsTimeOfDayIcon = showsTimeOfDayIcon
         self.mark = mark
+        self.frontMark = frontMark
         self.markAccentColor = markAccentColor ?? accentColor
+        self.markEchoColor = markEchoColor ?? markAccentColor ?? accentColor
     }
 
     /// Clears out well before the title reaches the bar, so the two never
@@ -4296,18 +4324,25 @@ struct TimelineExpandedTitleRow: View {
                     width: TodoTimelineMetrics.heroMarkEchoGlyph,
                     height: TodoTimelineMetrics.heroMarkEchoGlyph
                 )
-                .foregroundStyle(markAccentColor.opacity(TodoTimelineMetrics.heroMarkEchoAlpha))
+                .foregroundStyle(markEchoColor.opacity(TodoTimelineMetrics.heroMarkEchoAlpha))
                 .offset(x: 22, y: 26)
 
-            image
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(
-                    width: TodoTimelineMetrics.heroMarkGlyph,
-                    height: TodoTimelineMetrics.heroMarkGlyph
-                )
-                .foregroundStyle(markAccentColor)
+            if let frontMark {
+                // The composite draws its own layers in its own colours — the
+                // disc's `markAccentColor` is the screen's chrome, not the accent
+                // its mark is about.
+                frontMark
+            } else {
+                image
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(
+                        width: TodoTimelineMetrics.heroMarkGlyph,
+                        height: TodoTimelineMetrics.heroMarkGlyph
+                    )
+                    .foregroundStyle(markAccentColor)
+            }
         }
         .frame(width: TodoTimelineMetrics.heroMarkBox, height: TodoTimelineMetrics.heroMarkBox)
         .background(

@@ -346,7 +346,11 @@ private fun CarModeButton(
         modifier = modifier.fillMaxHeight(),
     ) {
         Icon(
-            imageVector = if (mode == CarTaskMode.TODAY) ImageVector.vectorResource(R.drawable.ic_lucide_house) else ImageVector.vectorResource(
+            // The dock's own pair, in the car's form factor: `CarTaskMode.TODAY` opens the
+            // same feed the dock's Scheduled tab opens, so it wears the same glyph. It is
+            // the one place outside `RootFeedDock` that names it, and leaving it on the
+            // house would have put two drawings of one feed one screen apart.
+            imageVector = if (mode == CarTaskMode.TODAY) ImageVector.vectorResource(R.drawable.ic_lucide_calendar_check) else ImageVector.vectorResource(
                 R.drawable.ic_lucide_leaf
             ),
             contentDescription = stringResource(mode.titleRes),

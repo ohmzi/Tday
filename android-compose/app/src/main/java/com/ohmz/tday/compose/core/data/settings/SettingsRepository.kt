@@ -54,13 +54,21 @@ class SettingsRepository @Inject constructor(
             return
         }
 
-        val response = requireApiBody(
+        requireApiBody(
             api.patchPreferences(PreferencesDto(defaultHomeScreen = value)),
             "Could not update preferences",
         )
+        // Mirror the value the server ACCEPTED, not a field read back out of the response.
+        // `PreferencesResponse.defaultHomeScreen` is a non-null String defaulting to
+        // "scheduled" and the JSON layer ignores unknown keys, so a response carrying no
+        // preferences at all (the route answered `{"message": "preferences updated"}`) still
+        // deserialises — to "scheduled" — and reading it back wrote Scheduled into the launch
+        // cache after every successful change, so the next cold start opened the wrong root
+        // feed while the account row correctly said "floater". A 200 means the value passed
+        // validation and was written, so the request is the authority here; iOS keeps its
+        // cache the same way (`response.defaultHomeScreen ?? value`).
         cacheManager.updateOfflineState { state ->
-            if (state.defaultHomeScreen == response.defaultHomeScreen) state
-            else state.copy(defaultHomeScreen = response.defaultHomeScreen)
+            if (state.defaultHomeScreen == value) state else state.copy(defaultHomeScreen = value)
         }
     }
 
@@ -116,13 +124,15 @@ class SettingsRepository @Inject constructor(
             return
         }
 
-        val response = requireApiBody(
+        requireApiBody(
             api.patchPreferences(PreferencesDto(aiSummaryEnabled = enabled)),
             "Could not update preferences",
         )
+        // Same rule as [setDefaultHomeScreen]: mirror what was accepted rather than a response
+        // field that defaults to `true` when the body carries no preferences, which turned the
+        // gate back on behind a user who had just switched it off.
         cacheManager.updateOfflineState { state ->
-            if (state.aiSummaryEnabled == response.aiSummaryEnabled) state
-            else state.copy(aiSummaryEnabled = response.aiSummaryEnabled)
+            if (state.aiSummaryEnabled == enabled) state else state.copy(aiSummaryEnabled = enabled)
         }
     }
 

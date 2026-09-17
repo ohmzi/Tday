@@ -722,13 +722,7 @@
       "passwordChangeFailed": "Не удалось изменить пароль",
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
-      "securityQuestionsLoadFailed": "Could not load security questions",
-      "webhookCreated": "Вебхук добавлен. Скопируйте секрет подписи.",
-      "webhookCreateFailed": "Не удалось добавить вебхук",
-      "webhookDeleted": "Вебхук удалён",
-      "webhookDeleteFailed": "Не удалось удалить вебхук",
-      "webhookSecretCopied": "Секрет подписи скопирован",
-      "webhookSecretCopyFailed": "Не удалось скопировать секрет подписи"
+      "securityQuestionsLoadFailed": "Could not load security questions"
     },
     "signOut": "Выйти",
     "featureToggle": {
@@ -767,19 +761,6 @@
       "confirmCancel": "Отмена",
       "confirmImport": "Импорт",
       "summaryLocal": "{{tasks}} задач · {{lists}} списков · {{completed}} завершено, всё в этом браузере."
-    },
-    "webhooks": {
-      "title": "Вебхуки",
-      "blurb": "Получайте подписанный HTTP-сигнал при изменении данных.",
-      "urlPlaceholder": "https://ваш-сервер/webhook",
-      "eventsLabel": "События (ничего = все)",
-      "creating": "Добавление...",
-      "add": "Добавить вебхук",
-      "secretCopyNow": "Скопируйте этот секрет подписи сейчас — он больше не покажется.",
-      "allEvents": "Все события",
-      "disabled": "Отключён",
-      "delete": "Удалить вебхук",
-      "none": "Пока нет вебхуков"
     },
     "restingFloaters": {
       "title": "Отдыхающие плавающие",
@@ -822,7 +803,8 @@
     "about": {
       "title": "О приложении",
       "appVersion": "Версия приложения",
-      "server": "Сервер"
+      "server": "Сервер",
+      "updateAvailable": "доступна версия v{{version}}"
     },
     "troubleshooting": {
       "reset": "Сбросить кэш приложения",
@@ -1277,15 +1259,6 @@
         "step1": "Разрешите доступ к календарю, когда телефон спросит.",
         "step2": "Откройте приложение календаря — задачи с датой лежат в календаре T'Day."
       },
-      "webhooks": {
-        "title": "Вебхуки",
-        "summary": "Получайте HTTP-уведомление при изменении задач.",
-        "keywords": "вебхук, http, интеграция, hmac, подпись, автоматизация, callback",
-        "body": "Зарегистрируйте HTTP-адрес, и T'Day отправит POST — небольшой подписанный сигнал «что-то изменилось» при изменении задач, списков или плавающих — без содержимого, только тип события и id списка, чтобы ваша автоматизация обновила данные через обычный API. У каждого вебхука свой секрет, подписывающий тело через HMAC-SHA256 в заголовке X-Tday-Signature; проверяйте его. Вебхук с постоянными ошибками отключается автоматически.",
-        "step0": "В Настройках вставьте URL и выберите события.",
-        "step1": "Добавьте вебхук и скопируйте секрет подписи — он показывается один раз.",
-        "step2": "Проверяйте HMAC X-Tday-Signature в каждом запросе."
-      },
       "unifiedpush": {
         "title": "UnifiedPush (Android)",
         "summary": "Пуши сервера без Google — через свой дистрибьютор.",
@@ -1396,5 +1369,22 @@
     "lists": "Списки",
     "newTask": "Новая задача",
     "brainDump": "Поток мыслей"
+  },
+  "release": {
+    "subtitle": "Проверьте развёрнутую сборку и последнюю опубликованную версию.",
+    "loading": "Загрузка сведений о версии…",
+    "error": "Не удалось получить сведения о версии. Проверьте подключение и повторите попытку.",
+    "retry": "Повторить",
+    "statusLatest": "Последняя",
+    "statusUpdateAvailable": "Доступно обновление",
+    "messageLatest": "У вас последняя версия",
+    "messageUpdateAvailable": "Версия {{version}} доступна.",
+    "installed": "Установлена",
+    "installedVersion": "Установленная версия",
+    "latest": "Последняя",
+    "whatsNew": "Что нового в {{version}}",
+    "noNotes": "Для этой версии нет примечаний к выпуску",
+    "viewOnGithub": "Открыть на GitHub",
+    "published": "Опубликовано {{date}}"
   }
 }

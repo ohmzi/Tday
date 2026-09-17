@@ -18,8 +18,8 @@ export type BulkFanOutResult = {
  *   its own rejection and keeps pulling work, so this settles every item — the
  *   `Promise.allSettled` guarantee, with a concurrency limit bolted on.
  * - **Bounded concurrency.** `api_global` rate-limits to 180 requests/60s per
- *   user and every mutation fans out realtime + webhook + push work server-side,
- *   so a hundred simultaneous requests would take 429s mid-batch.
+ *   user and every mutation fans out realtime + push work server-side, so a
+ *   hundred simultaneous requests would take 429s mid-batch.
  *
  * The count returned is a count of *thrown* requests only. `update`,
  * `prioritize` and `completeTodo` all return success even when the tenant filter

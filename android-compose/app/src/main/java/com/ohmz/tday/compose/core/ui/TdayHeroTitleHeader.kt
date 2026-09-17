@@ -689,6 +689,8 @@ fun TdayHeroTitleBlock(
     collapseProgress: () -> Float,
     modifier: Modifier = Modifier,
     titleColor: Color? = null,
+    frontMark: (@Composable () -> Unit)? = null,
+    echoColor: Color? = null,
 ) {
     val m = TdayHeroTitleMetrics
     val colorScheme = MaterialTheme.colorScheme
@@ -732,18 +734,38 @@ fun TdayHeroTitleBlock(
                 ),
             contentAlignment = Alignment.Center,
         ) {
+            // The echo is always `icon`, never `frontMark`: the circle clips it,
+            // and the clip runs through the middle of the glyph — a rectilinear
+            // calendar under that arc is cut into bars rather than arcs, while a
+            // check's round-capped tail merely bleeds. A screen whose mark is a
+            // composite therefore hands its check here and keeps the composite
+            // inside the disc.
+            //
+            // Its colour defaults to `accentColor`, which is right wherever the
+            // mark and the disc's chrome are one colour. A screen whose mark is a
+            // different colour from its chrome has to say so through `echoColor`:
+            // the echo is a second drawing of the mark, so leaving it on the
+            // chrome's colour puts one glyph on the disc in two colours.
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = accentColor.copy(alpha = 0.17f),
+                tint = (echoColor ?: accentColor).copy(alpha = 0.17f),
                 modifier = Modifier.size(108.dp).offset(x = 22.dp, y = 26.dp),
             )
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(m.MarkGlyph),
-            )
+            if (frontMark != null) {
+                // `accentColor` is the disc's wash and the title's colour, which
+                // is not the colour a composite mark draws its own layers in —
+                // the check takes the accent the screen is *about*, not the one
+                // its chrome happens to wear.
+                frontMark()
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(m.MarkGlyph),
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(m.TitleTopGap))
@@ -802,6 +824,8 @@ fun LazyListScope.tdayHeroTitleItem(
     accentColor: Color,
     collapseProgress: () -> Float,
     titleColor: Color? = null,
+    frontMark: (@Composable () -> Unit)? = null,
+    echoColor: Color? = null,
 ) {
     item(key = "tday-hero-title", contentType = "tday-hero-title") {
         TdayHeroTitleBlock(
@@ -810,6 +834,8 @@ fun LazyListScope.tdayHeroTitleItem(
             accentColor = accentColor,
             collapseProgress = collapseProgress,
             titleColor = titleColor,
+            frontMark = frontMark,
+            echoColor = echoColor,
         )
     }
 }

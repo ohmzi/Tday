@@ -337,13 +337,38 @@ struct EmptyTaskWatermark: View {
     /// Optional asset-catalog name of a lucide template glyph; when set it is used
     /// instead of the SF Symbol so screens match the web tile icons.
     var assetName: String? = nil
+    /// The watermark's mark as a drawing rather than a glyph, for a screen whose
+    /// mark is more than one glyph — the Completion history's is three stacked.
+    /// Drawn exactly where and at exactly the size `assetName` would have been,
+    /// so the two paths cannot drift.
+    ///
+    /// A composite leaves its own layers untinted and is drawn in the
+    /// environment's foreground style, which is the `watermarkColor` below. The
+    /// alternative is a call site re-deriving `onSurfaceVariant` blended 36%
+    /// toward the accent in order to say what colour it is standing in.
+    var markContent: AnyView? = nil
 
     @Environment(\.tdayColors) private var colors
-    private let iconSize: CGFloat = 194
+    /// The box the watermark's glyph is drawn in — 194pt, the native twin of
+    /// Android's `WatermarkGlyphSize` (212dp). Public because a caller handing in
+    /// a drawing through `markContent` has to draw it in this box: the slot
+    /// centres whatever it is given, so a mark built at any other size lands at
+    /// the wrong scale inside the same rotation and offset.
+    static let markGlyphSize: CGFloat = 194
+    private var iconSize: CGFloat { Self.markGlyphSize }
     private let trailingOffset: CGFloat = 26
 
     private var watermarkColor: Color {
         colors.onSurfaceVariant.tdayBlended(with: accentColor, amount: 0.36).opacity(0.10)
+    }
+
+    @ViewBuilder
+    private var watermarkContent: some View {
+        if let markContent {
+            markContent
+        } else {
+            watermarkImage
+        }
     }
 
     @ViewBuilder
@@ -367,7 +392,7 @@ struct EmptyTaskWatermark: View {
             let targetX = screenBounds.width - (iconSize / 2) + trailingOffset - frame.minX
             let targetY = (screenBounds.height * (2.0 / 3.0)) - frame.minY
 
-            watermarkImage
+            watermarkContent
                 .foregroundStyle(watermarkColor)
                 .rotationEffect(.degrees(-7))
                 .frame(width: iconSize, height: iconSize)

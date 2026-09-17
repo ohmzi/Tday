@@ -17,10 +17,10 @@ export type BulkAction = "complete" | "delete" | "priority" | "move";
 /**
  * Hardest cap on one bulk action, because every action is a fan-out of N
  * single-item requests. `api_global` allows 180 requests per 60s per user, and
- * each mutation additionally fans one realtime event to every collaborator, one
- * webhook delivery per subscription and one push poke per device — none of it
- * coalesced. Staying well under the limit is what keeps a large selection from
- * becoming a *partially applied* destructive action halfway through.
+ * each mutation additionally fans one realtime event to every collaborator and
+ * one push poke per device — none of it coalesced. Staying well under the limit
+ * is what keeps a large selection from becoming a *partially applied*
+ * destructive action halfway through.
  */
 export const BULK_MAX_SELECTION = 100;
 

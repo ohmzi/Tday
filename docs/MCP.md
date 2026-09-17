@@ -265,6 +265,5 @@ curl -s -X POST https://tday.example.com/mcp -H "Authorization: Bearer tday_<key
   key so you can revoke that one alone, and set an expiry if it is only needed for a while.
 - Prefer a `READ` key when you only want the assistant to answer questions about your tasks.
 - Everything an assistant does through MCP is an ordinary authenticated write: it shows up in your
-  apps immediately over `/ws`, and fires any [webhooks](API_INTEGRATION.md#outbound-webhooks) you
-  have registered.
+  apps immediately over `/ws`.
 - Always connect over HTTPS. If a key leaks, revoke it in **Settings → Dashboard access**.

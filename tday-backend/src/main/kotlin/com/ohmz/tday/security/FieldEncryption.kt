@@ -30,7 +30,6 @@ class FieldEncryptionImpl(private val config: AppConfig) : FieldEncryption {
         "description",
         "content",
         "overriddenDescription",
-        "webhookSecret",
     )
     private val random = SecureRandom()
 

@@ -26,26 +26,23 @@ interface PreferencesService {
         direction: String?,
         aiSummaryEnabled: Boolean?,
         defaultHomeScreen: String?,
-    ): Either<AppError, Unit>
+    ): Either<AppError, PreferencesResponse>
 }
 
 class PreferencesServiceImpl : PreferencesService {
     override suspend fun get(userId: String): Either<AppError, PreferencesResponse> {
-        val prefs = newSuspendedTransaction(Dispatchers.IO) {
-            val row = UserPreferences.selectAll().where { UserPreferences.userID eq userId }.firstOrNull()
-            PreferencesResponse(
-                sortBy = row?.get(UserPreferences.sortBy)?.name,
-                groupBy = row?.get(UserPreferences.groupBy)?.let { GroupBy.toApi(it) },
-                direction = row?.get(UserPreferences.direction)?.name,
-                // NULL (no row / never set) means the feature is on by default.
-                aiSummaryEnabled = row?.get(UserPreferences.aiSummaryEnabled) ?: true,
-                // NULL (no row / never set) means the app opens on Scheduled by default.
-                defaultHomeScreen = row?.get(UserPreferences.defaultHomeScreen)?.name ?: "scheduled",
-            )
-        }
+        val prefs = newSuspendedTransaction(Dispatchers.IO) { loadPreferences(userId) }
         return prefs.right()
     }
 
+    /**
+     * Applies the patch and answers with the row as it stands AFTER the write, in the same
+     * shape [get] returns. Every client renders the control straight from this response, so a
+     * PATCH that answered with anything else — it used to answer with the bare
+     * `{"message": "preferences updated"}` — left each of them to fill the absent fields from
+     * its own defaults, which is what snapped the web "Default home screen" thumb back to
+     * Scheduled and wrote Scheduled into Android's launch cache.
+     */
     override suspend fun update(
         userId: String,
         sortBy: String?,
@@ -53,8 +50,8 @@ class PreferencesServiceImpl : PreferencesService {
         direction: String?,
         aiSummaryEnabled: Boolean?,
         defaultHomeScreen: String?,
-    ): Either<AppError, Unit> {
-        newSuspendedTransaction(Dispatchers.IO) {
+    ): Either<AppError, PreferencesResponse> {
+        val prefs = newSuspendedTransaction(Dispatchers.IO) {
             val existing = UserPreferences.selectAll().where { UserPreferences.userID eq userId }.firstOrNull()
             if (existing != null) {
                 UserPreferences.update({ UserPreferences.userID eq userId }) {
@@ -75,7 +72,22 @@ class PreferencesServiceImpl : PreferencesService {
                     defaultHomeScreen?.let { h -> it[UserPreferences.defaultHomeScreen] = DefaultHomeScreen.valueOf(h) }
                 }
             }
+            loadPreferences(userId)
         }
-        return Unit.right()
+        return prefs.right()
+    }
+
+    /** The canonical preferences payload for one user, read inside the caller's transaction. */
+    private fun loadPreferences(userId: String): PreferencesResponse {
+        val row = UserPreferences.selectAll().where { UserPreferences.userID eq userId }.firstOrNull()
+        return PreferencesResponse(
+            sortBy = row?.get(UserPreferences.sortBy)?.name,
+            groupBy = row?.get(UserPreferences.groupBy)?.let { GroupBy.toApi(it) },
+            direction = row?.get(UserPreferences.direction)?.name,
+            // NULL (no row / never set) means the feature is on by default.
+            aiSummaryEnabled = row?.get(UserPreferences.aiSummaryEnabled) ?: true,
+            // NULL (no row / never set) means the app opens on Scheduled by default.
+            defaultHomeScreen = row?.get(UserPreferences.defaultHomeScreen)?.name ?: "scheduled",
+        )
     }
 }

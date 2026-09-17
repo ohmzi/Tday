@@ -32,6 +32,11 @@ struct TdayEmptyState: View {
     var description: String? = nil
     var action: AnyView? = nil
     var celebrate: Bool = false
+    /// The badge's glyph as a drawing rather than an asset, for a screen whose
+    /// mark is more than one glyph — the Completion history's is three stacked.
+    /// The caller sizes it: a composite has to be given a box the 52pt badge can
+    /// actually carry, and 24pt cannot hold three glyphs' worth of detail.
+    var markContent: AnyView? = nil
 
     @Environment(\.tdayColors) private var colors
     @Environment(\.tdayAnimation) private var tdayAnimation
@@ -203,20 +208,30 @@ struct TdayEmptyState: View {
         }
     }
 
+    /// The badge's glyph, whichever way it arrives. The composite path is white
+    /// on the accent disc like the asset path it replaces, so the badge reads the
+    /// same either way.
+    @ViewBuilder
+    private var badgeGlyph: some View {
+        if let markContent {
+            markContent
+        } else {
+            Image(assetName)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 24, height: 24)
+                .foregroundStyle(colors.onPrimary)
+        }
+    }
+
     /// The ring is drawn as a wider circle behind rather than a stroke, because a
     /// SwiftUI stroke centres on the path and would eat 2pt of the accent fill.
     private var glyphBadge: some View {
         Circle()
             .fill(accentColor)
             .frame(width: 52, height: 52)
-            .overlay(
-                Image(assetName)
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 24, height: 24)
-                    .foregroundStyle(colors.onPrimary)
-            )
+            .overlay(badgeGlyph)
             .padding(4)
             .background(Circle().fill(colors.background))
             .shadow(color: Color.black.opacity(colors.isDark ? 0.34 : 0.14), radius: 10, x: 0, y: 8)

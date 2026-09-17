@@ -6,9 +6,9 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Destination rules for URLs the *server* calls on a user's behalf (webhooks, push endpoints).
+ * Destination rules for URLs the *server* calls on a user's behalf (push endpoints).
  *
- * The backend sits inside a Docker network on a home LAN, so before this existed a webhook could
+ * The backend sits inside a Docker network on a home LAN, so without this a subscription could
  * be pointed at `http://database:5432`, the backend itself, the cloud metadata address, or any
  * device on the owner's network — turning the app into a request forger with a trusted position.
  */

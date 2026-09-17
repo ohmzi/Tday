@@ -13,10 +13,23 @@ enum RootFeedTab: Hashable {
         }
     }
 
-    var systemImage: String {
+    /// The SF Symbol the collapsed pill draws — only for the tabs that have one.
+    ///
+    /// Scheduled returns nil because it wears the bundled `calendar-check` glyph
+    /// instead, which is what `docs/ICONS.md` asks of a shared product surface; the
+    /// pill must never quietly fall back to a symbol for it. Returning nil rather
+    /// than a name is the point — a caller that ignores the optional gets nothing
+    /// drawn rather than the old house.
+    ///
+    /// Floater still returns `"leaf"`, and that is a KNOWN GAP rather than an
+    /// endorsement: `LucideLeaf` is vendored and the pill already mirrors whatever
+    /// it draws, so the swap is one line — it is left out of this change because it
+    /// redraws a tab nobody reported, and this comment is not allowed to claim a
+    /// rule the branch below it does not follow.
+    var systemImage: String? {
         switch self {
         case .scheduledTaskHome:
-            return "house.fill"
+            return nil
         case .floaterTaskHome:
             return "leaf"
         }
@@ -143,13 +156,13 @@ struct RootFeedDock: View {
         } label: {
             Group {
                 if activeTab == .scheduledTaskHome {
-                    Image("NavHouse")
+                    Image("LucideCalendarCheck")
                         .renderingMode(.template)
                         .resizable()
                         .scaledToFit()
                         .frame(width: 22, height: 22)
-                } else {
-                    Image(systemName: activeTab.systemImage)
+                } else if let systemImage = activeTab.systemImage {
+                    Image(systemName: systemImage)
                         .font(.system(size: 22, weight: .semibold))
                         .scaleEffect(x: activeTab == .floaterTaskHome ? -1 : 1, y: 1)
                 }

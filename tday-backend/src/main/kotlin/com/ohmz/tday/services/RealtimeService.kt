@@ -41,7 +41,6 @@ class RealtimePublisher(
     private val realtime: RealtimeService,
     private val shareService: ListShareService,
     private val cache: CacheService,
-    private val webhookDispatch: WebhookDispatchService,
     private val push: PushNotificationService,
 ) {
     suspend fun publishToCollaborators(actorId: String, event: DomainEvent) {
@@ -57,9 +56,6 @@ class RealtimePublisher(
             if (userId != actorId) cache.invalidateForUser(userId)
         }
         realtime.emitToUsers(recipients, event)
-        // Fan the same "something changed" signal out to any registered webhooks
-        // (fire-and-forget; never blocks the mutation response).
-        webhookDispatch.dispatch(recipients, event)
         // Silent push so a backgrounded device (app process dead) can refresh its home-screen
         // widgets — the widget's only realtime path, since /ws lives in the app process.
         // Fire-and-forget, UnifiedPush endpoints only.

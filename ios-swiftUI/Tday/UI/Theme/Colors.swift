@@ -5,6 +5,27 @@ extension Color {
     static let tdayFloaterGreen = Color(red: 77.0 / 255.0, green: 143.0 / 255.0, blue: 131.0 / 255.0)
     static let tdayCalendarPurple = Color(red: 125.0 / 255.0, green: 103.0 / 255.0, blue: 182.0 / 255.0)
 
+    /// The Completed green, pinned across all three clients: Android's
+    /// `TdayCompletedTileAccent` (0xFF719F84) and web's
+    /// `nativeScreenAccentColors.completed` are this same value, and web's is
+    /// also the Completion-history page's own accent.
+    ///
+    /// It is the colour of the Completed *tile* on every client, which is what
+    /// makes it the right colour for the Completion-history mark's check: the
+    /// tile is the thing the user comes through to reach the page, so the mark
+    /// they arrive at is the same green they tapped, not a second one.
+    ///
+    /// The value is spelled out because it has no other name on this client: the
+    /// only two places 0x719F84 appears today are the Completed tiles —
+    /// `FloaterTaskHomeCompletedCard.accent` in `TodoListScreen.swift` and the
+    /// board's `Color(hex: 0x719F84)` in `ScheduledTaskHomeScreen.swift` — and
+    /// neither can be repointed at this token. The card's sRGB components are
+    /// pinned by `tests/guardrails/root-feed-header-actions.test.ts` as the
+    /// cross-client pin on this value, and `Color(hex:)` is a `private extension`
+    /// in each file that declares one, so a token could not use it either. This
+    /// is the name the mark draws in.
+    static let tdayCompletedGreen = Color(red: 113.0 / 255.0, green: 159.0 / 255.0, blue: 132.0 / 255.0)
+
     static let tdayDarkBackground = Color(red: 0.02, green: 0.02, blue: 0.03)
     static let tdayDarkSurface = Color(red: 0.09, green: 0.10, blue: 0.13)
     static let tdayDarkSurfaceVariant = Color(red: 0.13, green: 0.15, blue: 0.21)

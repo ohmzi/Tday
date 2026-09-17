@@ -35,7 +35,7 @@ class CompletedFloaterDurabilityTest {
     private val cache = CacheServiceImpl()
     private val realtime = RealtimeServiceImpl()
     private val shareService = ListShareServiceImpl(cache, realtime, push)
-    private val publisher = RealtimePublisher(realtime, shareService, cache, NoOpWebhookDispatchService, push)
+    private val publisher = RealtimePublisher(realtime, shareService, cache, push)
     private val floaterService: FloaterService = FloaterServiceImpl(PassthroughFieldEncryption, cache, shareService, publisher)
     private val floaterListService: FloaterListService = FloaterListServiceImpl(PassthroughFieldEncryption, cache, shareService, publisher)
     private val completedFloaterService: CompletedFloaterService = CompletedFloaterServiceImpl(PassthroughFieldEncryption, cache)
@@ -230,12 +230,4 @@ internal object PassthroughFieldEncryption : FieldEncryption {
     override fun isEncrypted(value: String): Boolean = false
     override fun encryptIfSensitive(fieldName: String, value: String?): String? = value
     override fun decryptIfEncrypted(value: String?): String? = value
-}
-
-/**
- * Nothing is registered to dispatch in these tests; skip the real HTTP-backed implementation.
- * Internal (not private) so [CompletedFloaterConcurrencyTest] can reuse it too.
- */
-internal object NoOpWebhookDispatchService : WebhookDispatchService {
-    override fun dispatch(recipientUserIds: Collection<String>, event: com.ohmz.tday.domain.DomainEvent) = Unit
 }

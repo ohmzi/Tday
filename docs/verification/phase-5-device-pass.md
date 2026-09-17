@@ -140,6 +140,12 @@ one screen at a time.
       Fails:  the body is the new feed on the frame after the tap while the pill is still moving —
               that is the defect. Also a fail: the body still resolving after the pill has landed,
               which would mean the swap is running longer than Quick.
+      Superseded: by **PR 199 · ios** at the end of `phase-9-device-pass.md`. This row was written
+              against a symmetric 150 ms crossfade on `Quick` and both its `Watch:` and its `Fails:`
+              line encode that spec: the hand-over is now web's two-curve pairing on `Enter` (200 ms),
+              so it deliberately does outlast the pill's spring and the second `Fails:` half now names
+              correct behaviour as a failure. Run PR 199's pair instead. This row is kept as the record
+              of what was asked at the time rather than as a row to run.
 
 - [ ] **PR 46 · ios · Locking and unlocking is one event** — a server account, signed in, on the
       root feed. Sign out from Settings, then sign back in.
@@ -227,6 +233,11 @@ built the preference and the file that checks it.
               in the slot the other had.
       Fails:  the body cutting to the new feed while the pill is still on its way. Also a fail: the
               body still resolving after the pill has landed.
+      Superseded: by **PR 199 · and** at the end of `phase-9-device-pass.md`, twin of the iOS row
+              above. "The two feeds cross over 150 ms" is no longer what ships: the swap is web's
+              two-curve pairing over `Enter` (200 ms), the leaving feed is drawn above the arriving
+              one, and the second `Fails:` half — the body resolving after the pill has landed — is
+              now the intended read rather than a defect. Run PR 199's pair instead.
 
 - [ ] **PR 28/46 · and · The unlock is one handover, not three** — a server account signed in on
       the root feed. Sign out from Settings, then sign back in.

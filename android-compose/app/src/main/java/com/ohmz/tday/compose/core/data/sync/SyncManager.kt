@@ -305,15 +305,20 @@ class SyncManager @Inject constructor(
             }
         }
 
-        val aiSummaryEnabled = async {
+        // One GET feeds BOTH preference mirrors below: the AI-summary gate and the root feed a
+        // cold launch opens on. The default home screen is an account preference, so it has to
+        // arrive with sync — it used to be dropped here (only SyncManager's `aiSummaryEnabled`
+        // was read) and was therefore refreshed on nothing but a Settings resume, which left a
+        // second device, or a reinstall, opening the hardcoded Scheduled feed until its owner
+        // happened to visit Settings over there. `null` means the GET failed; each mirror then
+        // keeps whatever the cache already holds.
+        val preferences = async {
             runCatching {
                 requireApiBody(
                     api.getPreferences(),
                     "Could not load preferences",
-                ).aiSummaryEnabled
-            }.getOrElse {
-                cacheManager.loadOfflineState().aiSummaryEnabled
-            }
+                )
+            }.getOrElse { null }
         }
 
         // Capability (configured/healthy) lives in SecureConfigStore, not Room. Refresh it
@@ -329,6 +334,8 @@ class SyncManager @Inject constructor(
             }
         }
 
+        val remotePreferences = preferences.await()
+
         RemoteSnapshot(
             todos = todos.await(),
             floaters = floaters.await(),
@@ -336,7 +343,12 @@ class SyncManager @Inject constructor(
             completedFloaters = completedFloaters.await(),
             lists = lists.await(),
             floaterLists = floaterLists.await(),
-            aiSummaryEnabled = aiSummaryEnabled.await(),
+            // A failed preferences GET falls back to the cache the state is being merged into,
+            // which leaves that field exactly as it was.
+            aiSummaryEnabled = remotePreferences?.aiSummaryEnabled
+                ?: cacheManager.loadOfflineState().aiSummaryEnabled,
+            defaultHomeScreen = remotePreferences?.defaultHomeScreen
+                ?: cacheManager.loadOfflineState().defaultHomeScreen,
         ).also { aiCapability.await() }
     }
 
@@ -1577,6 +1589,10 @@ class SyncManager @Inject constructor(
             lists = normalizedLists,
             floaterLists = normalizedFloaterLists,
             aiSummaryEnabled = remote.aiSummaryEnabled,
+            // Account preference, so the server wins: this is what makes a change made on
+            // another device (or on the web) show up on this one's next cold launch, instead
+            // of waiting for someone to open Settings here.
+            defaultHomeScreen = remote.defaultHomeScreen,
         )
         val localWinsMutations = buildLocalWinsMutations(
             mergedState = dataMergedState,
@@ -1995,6 +2011,8 @@ class SyncManager @Inject constructor(
         val lists: List<ListSummary>,
         val floaterLists: List<ListSummary>,
         val aiSummaryEnabled: Boolean,
+        /** "scheduled" or "floater" — the account's default home screen, mirrored into the cache. */
+        val defaultHomeScreen: String,
     ) {
         val todoUpdatedAtByCanonical: Map<String, Long> = todos
             .groupBy { it.canonicalId }

@@ -37,6 +37,32 @@ function readPreferences(data: Record<string, unknown> | null): UserPreferences 
   };
 }
 
+/**
+ * The same payload, but carrying ONLY the fields the response actually holds.
+ *
+ * A PATCH answers with the stored preferences, so this normally returns the whole record.
+ * A body with none of them is not a preferences payload at all — an acknowledgement such as
+ * `{ message: "preferences updated" }`, which is what the route used to send and what Local
+ * Mode still sends (see `lib/local/localApi.ts`) — and yields `{}`, which the caller merges
+ * as a no-op. Substituting [readPreferences]'s own defaults here instead is what snapped the
+ * "Default home screen" thumb back to Scheduled on the tick the write succeeded.
+ */
+function readPreferencesPatch(data: Record<string, unknown> | null): Partial<UserPreferences> {
+  if (!data) return {};
+  const patch: Partial<UserPreferences> = {};
+  if ("sortBy" in data) patch.sortBy = (data.sortBy as SortBy | null) ?? null;
+  if ("groupBy" in data) patch.groupBy = (data.groupBy as GroupBy | null) ?? null;
+  if ("direction" in data) patch.direction = (data.direction as Direction | null) ?? null;
+  if ("aiSummaryEnabled" in data) {
+    patch.aiSummaryEnabled = (data.aiSummaryEnabled as boolean | undefined) ?? true;
+  }
+  if ("defaultHomeScreen" in data) {
+    patch.defaultHomeScreen =
+      (data.defaultHomeScreen as DefaultHomeScreen | undefined) ?? DefaultHomeScreen.scheduled;
+  }
+  return patch;
+}
+
 async function fetchPreferences(): Promise<UserPreferences> {
   const data = await api.GET({ url: "/api/preferences" });
   return readPreferences(data);
@@ -44,7 +70,7 @@ async function fetchPreferences(): Promise<UserPreferences> {
 
 async function updatePreferencesAPI(
   preferences: Partial<UserPreferences>,
-): Promise<UserPreferences> {
+): Promise<Partial<UserPreferences>> {
   const cleanedPrefs = Object.fromEntries(
     Object.entries(preferences).map(([key, value]) => [key, value === undefined ? null : value]),
   );
@@ -53,7 +79,7 @@ async function updatePreferencesAPI(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(cleanedPrefs),
   });
-  return readPreferences(data);
+  return readPreferencesPatch(data);
 }
 
 function UserPreferencesProviderInner({ children }: { children: React.ReactNode }) {
@@ -87,7 +113,20 @@ function UserPreferencesProviderInner({ children }: { children: React.ReactNode 
       }
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["userPreferences"], data);
+      // MERGE the response over what is in the cache NOW — which is the optimistic value
+      // `onMutate` just wrote, not the pre-mutation snapshot `onError` would put back —
+      // rather than replacing the cache with the response. The response is the stored record
+      // and normally says the same thing the optimistic write already said; a response that
+      // carries no preference fields at all (older server, Local Mode) contributes nothing
+      // and the optimistic value stands. Replacing the cache outright is what made the
+      // control spring back: the body it wrote was the acknowledgement, and every field it
+      // could not find was filled with a default.
+      const current = queryClient.getQueryData<UserPreferences>(["userPreferences"]);
+      if (!current) return;
+      queryClient.setQueryData<UserPreferences>(["userPreferences"], {
+        ...current,
+        ...data,
+      });
     },
   });
 
