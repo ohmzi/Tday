@@ -6,7 +6,6 @@ import {
   CURRENT_RELEASE_PATH,
   fetchGitHubReleaseMetadataByTag,
   fetchReleaseMetadata,
-  GITHUB_RELEASES_URL,
   LATEST_RELEASE_METADATA_URL,
   normalizeVersion,
   readStoredCurrentRelease,
@@ -19,7 +18,8 @@ export type ReleaseInfo = {
   currentRelease: ReleaseMetadata;
   latestRelease: ReleaseMetadata | null;
   hasUpdate: boolean;
-  latestUrl: string;
+  /** The newest release's page, when a source gave one; null otherwise. */
+  latestUrl: string | null;
   /**
    * True when the latest-release metadata could not be read, so `hasUpdate:
    * false` means "not known" rather than "up to date". The installed release is
@@ -28,14 +28,34 @@ export type ReleaseInfo = {
    * a genuine up-to-date build otherwise render identically.
    */
   latestLookupFailed: boolean;
+  /**
+   * True when every source for the installed build failed and `currentRelease`
+   * is the synthesized placeholder rather than a real release object. The
+   * natives reach the same state as `currentRelease == null`, and it is the one
+   * condition under which their notes section prints
+   * "No release notes available for this version" — a real release that simply
+   * has no bullets renders no notes block at all.
+   */
+  currentReleaseIsPlaceholder: boolean;
 };
 
 function hasNotes(release: ReleaseMetadata | null | undefined) {
   return (release?.notes.length ?? 0) > 0;
 }
 
-/** Loads the installed release metadata, preferring the bundled copy and falling back to local storage. */
-export async function loadCurrentRelease(): Promise<ReleaseMetadata> {
+/**
+ * The installed build's release metadata together with where it came from.
+ *
+ * `isPlaceholder` is true only in the last branch, where no source had anything
+ * at all and the payload is invented from the version number. That is web's
+ * stand-in for the natives' `currentRelease == null`: a real release whose
+ * changelog happens to be empty is still a real release, and the notes block
+ * says nothing about it in either client.
+ */
+async function resolveCurrentRelease(): Promise<{
+  release: ReleaseMetadata;
+  isPlaceholder: boolean;
+}> {
   const cachedRelease = readStoredCurrentRelease(CURRENT_APP_VERSION);
   let bundledRelease: ReleaseMetadata | null = null;
 
@@ -45,7 +65,7 @@ export async function loadCurrentRelease(): Promise<ReleaseMetadata> {
       bundledRelease = currentRelease;
       if (hasNotes(currentRelease)) {
         storeCurrentRelease(currentRelease);
-        return currentRelease;
+        return { release: currentRelease, isPlaceholder: false };
       }
     }
   } catch {
@@ -53,18 +73,26 @@ export async function loadCurrentRelease(): Promise<ReleaseMetadata> {
   }
 
   if (cachedRelease && hasNotes(cachedRelease)) {
-    return cachedRelease;
+    return { release: cachedRelease, isPlaceholder: false };
   }
 
   try {
     const currentRelease = await fetchGitHubReleaseMetadataByTag(CURRENT_APP_VERSION);
     storeCurrentRelease(currentRelease);
-    return currentRelease;
+    return { release: currentRelease, isPlaceholder: false };
   } catch {
     // Fall back to the best local copy when GitHub is unavailable.
   }
 
-  return bundledRelease ?? cachedRelease ?? createFallbackReleaseMetadata(CURRENT_APP_VERSION);
+  return {
+    release: bundledRelease ?? cachedRelease ?? createFallbackReleaseMetadata(CURRENT_APP_VERSION),
+    isPlaceholder: bundledRelease === null && cachedRelease === null,
+  };
+}
+
+/** Loads the installed release metadata, preferring the bundled copy and falling back to local storage. */
+export async function loadCurrentRelease(): Promise<ReleaseMetadata> {
+  return (await resolveCurrentRelease()).release;
 }
 
 /**
@@ -75,7 +103,7 @@ export async function loadCurrentRelease(): Promise<ReleaseMetadata> {
  * version screen and the Settings row's update hint.
  */
 async function getReleaseInfo(): Promise<ReleaseInfo> {
-  const currentRelease = await loadCurrentRelease();
+  const { release: currentRelease, isPlaceholder } = await resolveCurrentRelease();
 
   try {
     const latestRelease = await fetchReleaseMetadata(
@@ -91,6 +119,7 @@ async function getReleaseInfo(): Promise<ReleaseInfo> {
       hasUpdate,
       latestUrl: hasUpdate ? latestRelease.releaseUrl : currentRelease.releaseUrl,
       latestLookupFailed: false,
+      currentReleaseIsPlaceholder: isPlaceholder,
     };
   } catch {
     return {
@@ -98,8 +127,9 @@ async function getReleaseInfo(): Promise<ReleaseInfo> {
       currentRelease,
       latestRelease: null,
       hasUpdate: false,
-      latestUrl: currentRelease.releaseUrl || GITHUB_RELEASES_URL,
+      latestUrl: currentRelease.releaseUrl,
       latestLookupFailed: true,
+      currentReleaseIsPlaceholder: isPlaceholder,
     };
   }
 }

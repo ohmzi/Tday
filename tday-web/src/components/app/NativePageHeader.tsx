@@ -507,6 +507,36 @@ export default function NativePageHeader({
           className="pointer-events-none absolute inset-x-0 bottom-full h-screen bg-background"
         />
 
+        {/* Content dissolves into the bar instead of being cut by its edge.
+            Painted below the bar's own box, and hidden until the page moves so
+            a page sitting at the top has no band across it.
+
+            BEFORE the buttons, not after them. Every control in both clusters
+            is positioned — `position: relative`, written onto `button` by the
+            press-affordance rule in `globals.css` — so the back button and the
+            actions paint in the same step as this band (positioned, `z-index:
+            auto`), where tree order alone decides, and later wins. The back
+            button carries `rootFeedHeaderButtonClass`'s shadow, whose ink
+            reaches about 7px past the bar's 6px bottom padding and therefore
+            lands inside this band: with the band painted last, its opaque top
+            edge sat exactly on the bar's bottom edge and cut that shadow off in
+            a straight line. Painted first, the band is underneath, the shadow
+            falls on top of it, and the two fade out together.
+
+            Nothing about the band itself changes: same offset below the bar,
+            same height, same opacity ramp, still off at rest. Only the paint
+            order moves. `RootFeedHeroHeader` and `MobileSearchHeader` already
+            draw it this way — that is why the pages which hand their bar in
+            through `barSlots` were never cut — so this is the third copy of the
+            arrangement rather than a new rule. The title layer stays below the
+            buttons, so the docked name still paints over both. */}
+        <div
+          ref={fadeRef}
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent"
+          style={{ height: m.contentFadeHeight, opacity: 0 }}
+        />
+
         <div ref={leadingRef} className="flex shrink-0 items-center">
           <NativePageBackButton fallbackHref={backFallbackHref} />
         </div>
@@ -515,15 +545,6 @@ export default function NativePageHeader({
           {actions}
         </div>
 
-        {/* Content dissolves into the bar instead of being cut by its edge.
-            Painted below the bar's own box, and hidden until the page moves so
-            a page sitting at the top has no band across it. */}
-        <div
-          ref={fadeRef}
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-full bg-gradient-to-b from-background to-transparent"
-          style={{ height: m.contentFadeHeight, opacity: 0 }}
-        />
         {/* The page's title — the only one there is. It lives here, in the
             pinned bar, and is translated down to the block's gap at rest, so
             what travels up is this element rather than a copy of it. Out of
