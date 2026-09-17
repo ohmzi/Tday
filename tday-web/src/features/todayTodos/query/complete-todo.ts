@@ -8,11 +8,22 @@ import {
   markCelebrationCancelled,
   markTaskCompleted,
 } from "@/lib/task-completion-signal";
+import {
+  releaseAndRestoreTodoRows,
+  stageTodoRows,
+} from "@/lib/todo/staged-todo-rows";
 
 // Delayed-commit complete: `completeMutateFn` only stages the completion (prunes
 // the active-list caches and shows an undoable toast). The PATCH /complete fires
 // when the toast closes without undo; undo just refetches since the server never
 // saw it. Mirrors the delayed-commit delete flow.
+//
+// The prune is one write and the window is five seconds of refetching, so the
+// row is also *claimed* — `stageTodoRows` below holds it out of every list cache
+// until this mutation settles or the undo releases it. Without that, the "undo
+// just refetches" shortcut works against the row instead of for it: the server
+// has not been told yet, so any refetch in the window restores the row the user
+// just ticked. See `@/lib/todo/staged-todo-rows`.
 export const useCompleteTodo = () => {
   const { toast } = useToast();
   const { showTodoCompletedToast } = useTodoActionToast();
@@ -36,10 +47,15 @@ export const useCompleteTodo = () => {
       // incomplete rows from the server.
       toast({ description: error.message, variant: "destructive" });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
+    onSettled: (_data, _error, todoItem) => {
+      // The server has been told, so the row is the read path's business again —
+      // and if the request failed it is still pending and MUST come back through
+      // the invalidations below. Released before them, not after: the refetch
+      // they trigger is the first one allowed to answer for this row. Every
+      // row-list root is refetched, not only the two this site pruned, because
+      // the guard claimed the row in all of them.
+      releaseAndRestoreTodoRows(queryClient, [todoItem.id]);
       queryClient.invalidateQueries({ queryKey: ["completedTodo"] });
-      queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
       // Refresh per-list task counts shown in the sidebar / dashboard.
       queryClient.invalidateQueries({ queryKey: ["listMetaData"] });
     },
@@ -51,6 +67,9 @@ export const useCompleteTodo = () => {
     // The empty state that follows the last row leaving reads this to tell a
     // list the user finished from one that was never filled.
     markTaskCompleted();
+    // Claim the row before the prune: from here the cache boundary refuses it,
+    // so a refetch that was already in flight cannot slip back in behind this.
+    stageTodoRows(queryClient, [todoItem.id]);
     void queryClient.cancelQueries({ queryKey: ["todo"] });
     void queryClient.cancelQueries({ queryKey: ["todoTimeline"] });
     queryClient.setQueryData<TodoItemType[]>(["todo"], (oldTodos = []) =>
@@ -69,9 +88,11 @@ export const useCompleteTodo = () => {
         // round trip, and `useArrivalCancel`'s count-rise backstop cannot see
         // the row until it lands.
         markCelebrationCancelled();
-        // The server still has the row (incomplete) — a refetch restores it.
-        void queryClient.invalidateQueries({ queryKey: ["todo"] });
-        void queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
+        // The server still has the row (incomplete) — a refetch restores it, so
+        // the claim goes first: this is the refetch that is meant to win. All of
+        // the caches the claim covered, not just the pruned pair; see
+        // `releaseAndRestoreTodoRows`.
+        releaseAndRestoreTodoRows(queryClient, [todoItem.id]);
       },
     });
   };

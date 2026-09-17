@@ -5,10 +5,19 @@ import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 import { markTaskDeletedLocally } from "@/lib/task-completion-signal";
+import {
+  releaseAndRestoreTodoRows,
+  stageTodoRows,
+} from "@/lib/todo/staged-todo-rows";
 
 // Delayed-commit delete: `deleteMutateFn` only stages the delete (prunes the
 // caches and shows an undoable toast). The DELETE request fires when the toast
 // closes without undo; undo just refetches since the server never saw it.
+//
+// Same claim as the completion path and for the same reason — see
+// `@/lib/todo/staged-todo-rows`. This verb has the identical resurrection hole
+// (a refetch inside the window restores the pruned row), so it takes the
+// identical guard rather than a second one.
 export const useDeleteTodo = () => {
   const { toast } = useToast();
   const { showTodoDeletedToast } = useTodoActionToast();
@@ -33,12 +42,13 @@ export const useDeleteTodo = () => {
         variant: "destructive",
       });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["todo"] });
+    onSettled: (_data, _error, todo) => {
+      // Sent (or failed) — the read path may answer for this row again. Before
+      // the invalidations, so the refetch they fire is not filtered. Every
+      // row-list root, not only the pruned pair: the guard claimed the row in all
+      // of them.
+      releaseAndRestoreTodoRows(queryClient, [todo.id]);
       queryClient.invalidateQueries({ queryKey: ["completedTodo"] });
-      queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
-      queryClient.invalidateQueries({ queryKey: ["overdueTodo"] });
-      queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
       // Refresh per-list task counts shown in the sidebar / dashboard.
       queryClient.invalidateQueries({ queryKey: ["listMetaData"] });
     },
@@ -50,6 +60,9 @@ export const useDeleteTodo = () => {
     // The empty state that follows the last row leaving reads this to tell a
     // list a task was deleted out of from one that was just finished.
     markTaskDeletedLocally();
+    // Claim the row before the prune, so an already-in-flight refetch cannot
+    // slip back in behind it.
+    stageTodoRows(queryClient, [todo.id]);
     void queryClient.cancelQueries({ queryKey: ["todo"] });
     void queryClient.cancelQueries({ queryKey: ["todoTimeline"] });
     void queryClient.cancelQueries({ queryKey: ["calendarTodo"] });
@@ -66,9 +79,11 @@ export const useDeleteTodo = () => {
     showTodoDeletedToast(todo, {
       commit: () => commitDelete(todo),
       undo: () => {
-        // The server still has the row — a refetch restores the pruned caches.
-        void queryClient.invalidateQueries({ queryKey: ["todo"] });
-        void queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
+        // The server still has the row — a refetch restores the pruned caches,
+        // so the claim goes first: this is the refetch that is meant to win, and
+        // it covers every cache the claim reached; see
+        // `releaseAndRestoreTodoRows`.
+        releaseAndRestoreTodoRows(queryClient, [todo.id]);
       },
     });
   };

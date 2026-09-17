@@ -820,20 +820,22 @@ class TodoListViewModel @Inject constructor(
                 errorMessage = null,
             )
         }
-        // Delayed-commit complete: stage the UI removal now, show the undoable
-        // toast, and let the coordinator run the real complete after the toast
-        // window — or restore the row on Undo (nothing was committed yet).
-        undoableDeleteCoordinator.showUndoableComplete(
-            message = appContext.getString(R.string.task_completed_toast),
-            onCommit = {
+        // Delayed-commit complete: stage the completion into the CACHE now, show
+        // the undoable toast, and let the coordinator release it after the toast
+        // window — or reverse the whole staged write on Undo. Staging here and
+        // not just in `items` is what keeps the row gone: the read path hides a
+        // task by its cached `completed` flag, so a UI-only removal comes
+        // straight back on the next hydrate (every sync bump re-hydrates).
+        viewModelScope.launch {
+            val onCommit: suspend () -> Unit = {
                 if (mode == TodoListMode.FLOATER) {
-                    todoRepository.completeFloater(todo)
+                    todoRepository.commitStagedFloaterCompletions(listOf(todo))
                 } else {
-                    todoRepository.completeTodo(todo)
+                    todoRepository.commitStagedTodoCompletions(listOf(todo))
                     runCatching { reminderScheduler.rescheduleAll() }
                 }
-            },
-            onUndo = {
+            }
+            val restoreRow: () -> Unit = {
                 _uiState.update {
                     it.copy(
                         items = previousItems,
@@ -857,8 +859,44 @@ class TodoListViewModel @Inject constructor(
                         errorMessage = null,
                     )
                 }
-            },
-        )
+            }
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    val staged = todoRepository.stageFloaterCompletions(listOf(todo))
+                    undoableDeleteCoordinator.showUndoableComplete(
+                        message = appContext.getString(R.string.task_completed_toast),
+                        onCommit = onCommit,
+                        onUndo = {
+                            todoRepository.undoStagedFloaterCompletion(staged)
+                            restoreRow()
+                        },
+                    )
+                } else {
+                    val staged = todoRepository.stageTodoCompletions(listOf(todo))
+                    undoableDeleteCoordinator.showUndoableComplete(
+                        message = appContext.getString(R.string.task_completed_toast),
+                        onCommit = onCommit,
+                        onUndo = {
+                            todoRepository.undoStagedTodoCompletion(staged)
+                            // Runs on the coordinator scope: this ViewModel may be
+                            // gone by the time Undo restores a reminder-bearing task.
+                            runCatching { reminderScheduler.rescheduleAll() }
+                            restoreRow()
+                        },
+                    )
+                }
+            }.onFailure { error ->
+                restoreRow()
+                _uiState.update {
+                    it.copy(
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_update_task_failed,
+                        ),
+                    )
+                }
+            }
+        }
     }
 
     fun delete(todo: TodoItem) {
@@ -942,15 +980,23 @@ class TodoListViewModel @Inject constructor(
     // docs/design/bulk-selection.md §4.1).
 
     /**
-     * Delayed-commit bulk complete: stage the removal in the UI now, show one
-     * undoable toast for the batch, and let the coordinator run the real
-     * completes after the window — or restore the rows on Undo, at which point
-     * nothing was ever written.
+     * Delayed-commit bulk complete: stage the whole batch into the CACHE now
+     * (one write: every row flipped, every history row filed, every mutation
+     * queued staged and held out of the server), show one undoable toast for the
+     * batch, and let the coordinator release the marker after the window — or
+     * reverse the staged write on Undo.
+     *
+     * Staging into the cache rather than only into `items` is the whole fix, and
+     * it is the same discipline [deleteSelected] already uses: with N rows
+     * staged the hydrator re-runs on every `cacheDataVersion` bump, so a
+     * memory-only removal has N rows' worth of chances to be undone by a sync
+     * that still reads them as pending.
      */
     fun completeSelected(todos: List<TodoItem>) {
         if (todos.isEmpty()) return
         val previousItems = _uiState.value.items
         val mode = _uiState.value.mode
+        val listId = _uiState.value.listId
         val selectedIds = todos.mapTo(mutableSetOf()) { it.id }
         TdayTelemetry.addBreadcrumb(
             "task.bulk_complete",
@@ -967,40 +1013,73 @@ class TodoListViewModel @Inject constructor(
                 errorMessage = null,
             )
         }
-        undoableDeleteCoordinator.showUndoableComplete(
-            message = appContext.resources.getQuantityString(
-                R.plurals.bulk_tasks_completed,
-                todos.size,
-                todos.size,
-            ),
-            onCommit = {
-                runCatching {
-                    if (mode == TodoListMode.FLOATER) {
-                        bulkTaskRepository.completeFloaters(todos)
+        val message = appContext.resources.getQuantityString(
+            R.plurals.bulk_tasks_completed,
+            todos.size,
+            todos.size,
+        )
+        // Same two writes as the single-task undo, for the same two reasons --
+        // the bulk bar is every bit as able to empty a list and raise a burst as
+        // one tick is.
+        val restoreRows: () -> Unit = {
+            _uiState.update {
+                it.copy(
+                    items = previousItems,
+                    completedTodayCount = if (mode == TodoListMode.TODAY) {
+                        (it.completedTodayCount - todos.size).coerceAtLeast(0)
                     } else {
-                        bulkTaskRepository.completeTodos(todos)
-                        runCatching { reminderScheduler.rescheduleAll() }
-                    }
-                }.onFailure { error -> bulkFailureToast(error, todos.size, deleting = false) }
-            },
-            onUndo = {
+                        it.completedTodayCount
+                    },
+                    celebrationCancelledAtMs = SystemClock.uptimeMillis(),
+                    errorMessage = null,
+                )
+            }
+        }
+        viewModelScope.launch {
+            runCatching {
+                if (mode == TodoListMode.FLOATER) {
+                    val staged = todoRepository.stageFloaterCompletions(todos)
+                    undoableDeleteCoordinator.showUndoableComplete(
+                        message = message,
+                        onCommit = { todoRepository.commitStagedFloaterCompletions(todos) },
+                        onUndo = {
+                            todoRepository.undoStagedFloaterCompletion(staged)
+                            restoreRows()
+                        },
+                    )
+                } else {
+                    val staged = todoRepository.stageTodoCompletions(todos)
+                    undoableDeleteCoordinator.showUndoableComplete(
+                        message = message,
+                        onCommit = {
+                            todoRepository.commitStagedTodoCompletions(todos)
+                            // Runs on the coordinator scope: this ViewModel may be
+                            // gone by the time the batch's reminders reschedule.
+                            runCatching { reminderScheduler.rescheduleAll() }
+                        },
+                        onUndo = {
+                            todoRepository.undoStagedTodoCompletion(staged)
+                            runCatching { reminderScheduler.rescheduleAll() }
+                            restoreRows()
+                        },
+                    )
+                }
+            }.onSuccess {
+                resyncItemsFromCache(mode = mode, listId = listId)
+            }.onFailure { error ->
                 _uiState.update {
                     it.copy(
                         items = previousItems,
-                        // Same two writes as the single-task undo above, for the
-                        // same two reasons -- the bulk bar is every bit as able
-                        // to empty a list and raise a burst as one tick is.
                         completedTodayCount = if (mode == TodoListMode.TODAY) {
                             (it.completedTodayCount - todos.size).coerceAtLeast(0)
                         } else {
                             it.completedTodayCount
                         },
-                        celebrationCancelledAtMs = SystemClock.uptimeMillis(),
-                        errorMessage = null,
+                        errorMessage = bulkFailureToast(error, todos.size, deleting = false),
                     )
                 }
-            },
-        )
+            }
+        }
     }
 
     /**

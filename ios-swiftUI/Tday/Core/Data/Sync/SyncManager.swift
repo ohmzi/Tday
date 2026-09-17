@@ -180,11 +180,11 @@ func runPendingMutationReplay(
     for index in orderedMutations.indices {
         let mutation = orderedMutations[index]
         if mutation.staged {
-            // A delayed-commit list/floater-list delete still inside its undo
-            // window (see PendingMutationRecord.staged): never replay it — that
-            // would leak the delete to the server before Undo/commit resolves —
-            // just keep it pending so mergeRemoteWithLocal's resurrection guard
-            // keeps covering the list for as long as it stays staged.
+            // A delayed-commit delete or completion still inside its undo window
+            // (see PendingMutationRecord.staged): never replay it — that would
+            // leak the change to the server before Undo/commit resolves — just
+            // keep it pending so mergeRemoteWithLocal's resurrection guard keeps
+            // covering the row for as long as it stays staged.
             remaining.append(mutation)
             continue
         }

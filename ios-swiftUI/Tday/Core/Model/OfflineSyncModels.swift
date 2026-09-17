@@ -323,18 +323,21 @@ struct PendingMutationRecord: Identifiable, Equatable, Codable {
     // Task-step ordering (REORDER_STEPS): the full ordered list of step ids.
     // Defaulted so the 30+ existing memberwise-init call sites keep compiling.
     var orderedIds: [String]? = nil
-    // True only for the marker a delayed-commit list/floater-list delete writes while
-    // staged (see ListRepository.stageDeleteList / FloaterListRepository.stageDeleteList):
-    // it makes the sync merge's resurrection guard (pendingDeletedListIds /
-    // pendingDeletedFloaterListIds in SyncManager.mergeRemoteWithLocal) treat the
-    // staged-but-not-yet-committed delete exactly like a real one, so a refresh mid
-    // undo-window can't write the still-server-side list back into the cache.
-    // SyncManager's replay pass must never send a staged mutation to the server — the
-    // whole point of staging is that Undo needs no network trace — so it always
-    // re-queues these unresolved instead of acting on them. The real commit
-    // (deleteList()/its floater-list twin) replaces the marker with a normal
-    // (non-staged) pending mutation of the same kind. Defaulted for the same reason
-    // as orderedIds above.
+    // True for a mutation queued by a delayed-commit action while its undo window
+    // is open: the list/floater-list delete markers
+    // (ListRepository.stageDeleteList / FloaterListRepository.stageDeleteList) and
+    // the completions TodoRepository's `stageCompleteTodo(s:)` /
+    // `stageCompleteFloater(s:)` queue. It has two effects. SyncManager's replay
+    // pass must never send a staged mutation to the server — the whole point of
+    // staging is that Undo needs no network trace — so it always re-queues these
+    // unresolved instead of acting on them; the delete commits replace the marker
+    // with a normal (non-staged) mutation of the same kind, and a completion is
+    // un-staged by TodoRepository.commitStagedCompletion(_:). And the sync merge's
+    // resurrection guards (pendingDeletedListIds / pendingDeletedFloaterListIds,
+    // and the kind-only pendingTodoTargets query, none of which filter on `staged`)
+    // treat the staged-but-not-yet-committed change exactly like a real one, so a
+    // refresh mid undo-window cannot write the still-server-side row back into the
+    // cache. Defaulted for reasons of source compatibility, like orderedIds above.
     var staged: Bool = false
 
     var id: String {

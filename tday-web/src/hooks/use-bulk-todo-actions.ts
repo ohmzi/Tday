@@ -7,6 +7,11 @@ import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { patchTodo } from "@/lib/todo/patch-todo";
 import {
+  releaseTodoRows,
+  restoreTodoRowCaches,
+  stageTodoRows,
+} from "@/lib/todo/staged-todo-rows";
+import {
   markCelebrationCancelled,
   markTaskCompleted,
   markTaskDeletedLocally,
@@ -95,12 +100,15 @@ export function useBulkTodoActions({
    * the emptying quiet), so the stamp changes no answer there — and if some
    * later path ever let one open, rows arriving back would still be the end of
    * it.
+   *
+   * The refetch set comes from `restoreTodoRowCaches` rather than being spelled
+   * out here, so it cannot drift from the set the guard holds rows out of — the
+   * guard claims a batch's ids in every row-list cache, not only the three this
+   * hook prunes.
    */
   const restoreStagedRows = useCallback(() => {
     markCelebrationCancelled();
-    void queryClient.invalidateQueries({ queryKey: ["todo"] });
-    void queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
-    void queryClient.invalidateQueries({ queryKey: ["list"] });
+    restoreTodoRowCaches(queryClient);
   }, [queryClient]);
 
   /**
@@ -148,7 +156,14 @@ export function useBulkTodoActions({
       // list the user just finished from one that was never filled.
       markTaskCompleted();
       cancelActiveTodoQueries();
-      pruneStagedRows(new Set(rows.map((row) => row.id)));
+      const rowIds = new Set(rows.map((row) => row.id));
+      pruneStagedRows(rowIds);
+      // The prune is one write; the window is five seconds of refetching (a
+      // realtime `todo` event per completion, a focus refetch, a sibling's
+      // `onSettled`). Claim the ids at the cache boundary too, so a refetch
+      // cannot restore a row the batch staged away. One marker for the whole
+      // batch, released as a whole below — see `@/lib/todo/staged-todo-rows`.
+      stageTodoRows(queryClient, rowIds);
 
       // ONE toast for the batch. N toasts would mean N independent commit
       // timers with only the last one visible, so Undo would reach exactly one
@@ -176,15 +191,23 @@ export function useBulkTodoActions({
               result,
               "bulkUpdateFailed",
             );
+            // Released before the refresh, and released even when rows failed:
+            // the batch is over, so whatever the server did not accept is
+            // pending again and the refetch below has to be allowed to say so.
+            releaseTodoRows(queryClient, rowIds);
             refreshTodoViews();
           });
         },
-        undo: restoreStagedRows,
+        undo: () => {
+          releaseTodoRows(queryClient, rowIds);
+          restoreStagedRows();
+        },
       });
     },
     [
       cancelActiveTodoQueries,
       pruneStagedRows,
+      queryClient,
       refreshTodoViews,
       reportFailures,
       restoreStagedRows,
@@ -210,7 +233,11 @@ export function useBulkTodoActions({
       // a list a batch was deleted out of from one that was just finished.
       markTaskDeletedLocally();
       cancelActiveTodoQueries();
-      pruneStagedRows(new Set(rows.map((row) => row.id)));
+      const rowIds = new Set(rows.map((row) => row.id));
+      pruneStagedRows(rowIds);
+      // Same claim as the batch complete above: the delete has the identical
+      // resurrection hole, so it takes the identical guard.
+      stageTodoRows(queryClient, rowIds);
 
       showUndoableDelete({
         message: t("tasksDeleted", { count: rows.length }),
@@ -227,15 +254,20 @@ export function useBulkTodoActions({
               result,
               "bulkDeleteFailed",
             );
+            releaseTodoRows(queryClient, rowIds);
             refreshTodoViews();
           });
         },
-        undo: restoreStagedRows,
+        undo: () => {
+          releaseTodoRows(queryClient, rowIds);
+          restoreStagedRows();
+        },
       });
     },
     [
       cancelActiveTodoQueries,
       pruneStagedRows,
+      queryClient,
       refreshTodoViews,
       reportFailures,
       restoreStagedRows,

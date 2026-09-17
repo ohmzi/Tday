@@ -4,10 +4,17 @@ import { api } from "@/lib/api-client";
 import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
+import {
+  releaseAndRestoreTodoRows,
+  stageTodoRows,
+} from "@/lib/todo/staged-todo-rows";
 
 // Delayed-commit delete: `deleteInstanceMutate` only stages the delete (prunes
 // the caches and shows an undoable toast). The DELETE request fires when the
 // toast closes without undo; undo just refetches since the server never saw it.
+//
+// The row is claimed at the cache boundary as well as pruned — see
+// `delete-calendar-todo.ts`.
 export const useDeleteCalendarInstanceTodo = () => {
   const { toast } = useToast();
   const { showTodoDeletedToast } = useTodoActionToast();
@@ -39,22 +46,20 @@ export const useDeleteCalendarInstanceTodo = () => {
           variant: "destructive",
         });
       },
-      onSettled: () => {
-        queryClient.invalidateQueries({
-          queryKey: ["todo"],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["calendarTodo"],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["todoTimeline"],
-        });
+      onSettled: (_data, _error, todo) => {
+        // Sent (or failed) — released before the invalidations, which are the
+        // refetches allowed to answer for the row again.
+        releaseAndRestoreTodoRows(queryClient, [todo.id]);
       },
     });
 
   // Stage: prune the caches now, but DON'T send the DELETE yet — the undo
   // toast decides whether the request ever fires.
   const deleteInstanceMutate = (todo: TodoItemType) => {
+    // Claim this occurrence's row before the prune. As in
+    // `complete-calendar-todo-instance`, the prune matches on `instanceDate`
+    // while the claim matches the occurrence's cache id.
+    stageTodoRows(queryClient, [todo.id]);
     void queryClient.cancelQueries({
       queryKey: ["calendarTodo"],
     });
@@ -69,8 +74,9 @@ export const useDeleteCalendarInstanceTodo = () => {
     showTodoDeletedToast(todo, {
       commit: () => commitDelete(todo),
       undo: () => {
-        // The server still has the row — a refetch restores the cache.
-        void queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
+        // The server still has the row — a refetch restores the cache, so the
+        // claim goes first: this is the refetch that is meant to win.
+        releaseAndRestoreTodoRows(queryClient, [todo.id]);
       },
     });
   };
