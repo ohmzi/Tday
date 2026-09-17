@@ -1,10 +1,11 @@
 {
-  "version": "0.7.32",
-  "publishedAt": "2026-09-17T02:36:49-04:00",
+  "version": "0.7.33",
+  "publishedAt": "2026-09-17T09:59:31-04:00",
   "notes": [
-    "Fix the gate's second value, and the two ways the store would not have compiled",
-    "Give iOS its own Reduce Motion switch, and turn two more screens down"
+    "Fix the reusable-list toggle, and bring it to Android and iOS",
+    "Stop completed tasks reappearing mid-bulk, on all three clients",
+    "Make every toast in the web app render as one surface"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.32",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.31..v0.7.32"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.33",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.32..v0.7.33"
 }
