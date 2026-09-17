@@ -30,7 +30,10 @@ import {
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 
 const vibrate = vi.fn();
-const play = vi.fn();
+// `play()` answers with a promise in a browser, and `TodoCheckbox` reads it — it catches a
+// refusal to record a breadcrumb. The stub answers the same way, so the app meets here the shape
+// it meets in the wild rather than the `undefined` jsdom's not-implemented placeholder returns.
+const play = vi.fn(() => Promise.resolve());
 
 beforeEach(() => {
   window.localStorage.clear();
