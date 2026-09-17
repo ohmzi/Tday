@@ -29,9 +29,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
@@ -114,6 +116,13 @@ fun TdayEmptyState(
     celebrate: Boolean = false,
     celebrationStartDelayMillis: Long = 0L,
     animateAppearance: Boolean = true,
+    /**
+     * The badge's glyph as a drawing rather than an asset, for a screen whose
+     * mark is more than one glyph — the Completion history's is three stacked.
+     * Drawn in the same box `icon` would have been; the caller sizes it, because
+     * a composite has to be given a box the badge can actually carry.
+     */
+    markContent: (@Composable () -> Unit)? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val motion = rememberEmptySceneMotion()
@@ -232,12 +241,20 @@ fun TdayEmptyState(
                         .background(accentColor, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        painter = painterResource(icon),
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp),
-                    )
+                    if (markContent != null) {
+                        // White on the accent disc, like the single glyph it
+                        // replaces, so the badge reads the same either way.
+                        CompositionLocalProvider(LocalContentColor provides Color.White) {
+                            markContent()
+                        }
+                    } else {
+                        Icon(
+                            painter = painterResource(icon),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
                 }
 
                 // Three sparkles on their own staggered twinkle.

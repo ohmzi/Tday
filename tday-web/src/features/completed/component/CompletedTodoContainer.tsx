@@ -9,7 +9,11 @@ import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
-import { CheckCircle, Search } from "lucide-react";
+import CompletedMark, {
+  CompletedBadgeMark,
+  CompletedWatermarkMark,
+} from "@/components/app/CompletedMark";
+import { Check, Search } from "lucide-react";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 
 const CompletedTodoContainer = ({
@@ -47,7 +51,14 @@ const CompletedTodoContainer = ({
 
   return (
     <div className="mb-20">
-      <ScreenWatermark icon={CheckCircle} />
+      {/* The accent, like its Floater twin below and like both natives. It used
+          to take no `color`, so this page's watermark was the page text colour
+          while the other two marks on it — and the whole of the Floater tab's —
+          were the accent. */}
+      <ScreenWatermark
+        icon={CompletedWatermarkMark}
+        color={nativeScreenAccentColors.completed}
+      />
 
       <MobileSearchHeader
         searchQuery={searchQuery}
@@ -66,7 +77,9 @@ const CompletedTodoContainer = ({
       <NativePageHeader
         title={completedDict("title")}
         accentColor={nativeScreenAccentColors.completed}
-        icon={CheckCircle}
+        icon={CompletedMark}
+        // The echo is the check alone — see `echoIcon`.
+        echoIcon={Check}
         barSlots={barSlots}
         beneathTitle={tabSwitcher}
       />
@@ -76,7 +89,8 @@ const CompletedTodoContainer = ({
       {/* Empty state — nothing has been ticked off yet */}
       {!todoLoading && !isSearching && completedTodos.length === 0 && (
         <EmptyState
-          icon={CheckCircle}
+          icon={CompletedBadgeMark}
+          iconClassName="h-8 w-8"
           accentColor={nativeScreenAccentColors.completed}
           title={completedDict("empty")}
           description={completedDict("emptyBody")}

@@ -9,7 +9,11 @@ import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
-import { CheckCircle, Search } from "lucide-react";
+import CompletedMark, {
+  CompletedBadgeMark,
+  CompletedWatermarkMark,
+} from "@/components/app/CompletedMark";
+import { Check, Search } from "lucide-react";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 import type { CompletedFloaterItemType } from "@/types";
 
@@ -58,7 +62,7 @@ const CompletedFloaterContainer = ({
 
   return (
     <div className="mb-20">
-      <ScreenWatermark icon={CheckCircle} color={floaterAccent} />
+      <ScreenWatermark icon={CompletedWatermarkMark} color={floaterAccent} />
 
       <MobileSearchHeader
         searchQuery={searchQuery}
@@ -75,7 +79,9 @@ const CompletedFloaterContainer = ({
       <NativePageHeader
         title={completedDict("title")}
         accentColor={floaterAccent}
-        icon={CheckCircle}
+        icon={CompletedMark}
+        // The echo is the check alone — see `echoIcon`.
+        echoIcon={Check}
         barSlots={barSlots}
         beneathTitle={tabSwitcher}
       />
@@ -84,7 +90,8 @@ const CompletedFloaterContainer = ({
 
       {!floaterLoading && !isSearching && completedFloaters.length === 0 && (
         <EmptyState
-          icon={CheckCircle}
+          icon={CompletedBadgeMark}
+          iconClassName="h-8 w-8"
           accentColor={floaterAccent}
           title={completedDict("floaterEmpty")}
           description={completedDict("floaterEmptyBody")}

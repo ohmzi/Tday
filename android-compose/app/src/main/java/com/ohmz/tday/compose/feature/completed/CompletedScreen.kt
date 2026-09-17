@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.feature.completed
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterTransition
@@ -40,6 +41,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -61,16 +63,19 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.CompletedItem
@@ -92,6 +97,7 @@ import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
 import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeleton
 import com.ohmz.tday.compose.core.ui.TdayTaskRowSkeletonGroup
+import com.ohmz.tday.compose.core.ui.WatermarkGlyphSize
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
 import com.ohmz.tday.compose.core.ui.feedAnswer
 import com.ohmz.tday.compose.core.ui.rememberLazyListHeroTitleCollapse
@@ -114,6 +120,7 @@ import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
+import com.ohmz.tday.compose.ui.theme.TdayCompletedTileAccent
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
@@ -284,7 +291,13 @@ fun CompletedScreen(
     val showEmptyState = completedAnswer == FeedAnswer.Empty
     val heroCollapse = rememberLazyListHeroTitleCollapse(listState = listState)
     val completedTitle = stringResource(R.string.completed_title)
-    val completedIcon = ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
+    // The hero disc's echo, and nothing else — the mark's front glyph is the
+    // composite below, which the echo is deliberately not part of. The disc
+    // clips the echo, and the clip runs through the middle of the glyph: a
+    // rectilinear calendar under that arc is cut into bars rather than arcs,
+    // while the check's round-capped tail merely bleeds, so the echo is the
+    // check alone.
+    val completedEchoIcon = ImageVector.vectorResource(R.drawable.ic_lucide_check)
     var collapsedSectionKeys by rememberSaveable {
         mutableStateOf(emptySet<String>())
     }
@@ -376,10 +389,24 @@ fun CompletedScreen(
                 ) {
                     tdayHeroTitleItem(
                         title = completedTitle,
-                        icon = completedIcon,
+                        // The echo's glyph only — see `completedEchoIcon`, and
+                        // `frontMark` for the mark itself.
+                        icon = completedEchoIcon,
                         accentColor = COMPLETED_TITLE_COLOR,
                         titleColor = COMPLETED_TITLE_COLOR,
                         collapseProgress = heroCollapse.progress,
+                        frontMark = {
+                            CompletedMark(
+                                size = TdayHeroTitleMetrics.MarkGlyph,
+                                tint = TdayCompletedTileAccent,
+                            )
+                        },
+                        // The echo is a drawing of the mark, so it takes the
+                        // mark's colour rather than the disc's slate chrome:
+                        // left on `accentColor` the disc drew the same check
+                        // twice in two colours, where the web draws both from its
+                        // one accent.
+                        echoColor = TdayCompletedTileAccent,
                     )
                     timelineSections.forEachIndexed { sectionIndex, section ->
                         // A live query outranks a shut month: history opens with
@@ -510,11 +537,21 @@ fun CompletedScreen(
                                 )
                             } else {
                                 TdayEmptyState(
-                                    icon = R.drawable.ic_lucide_circle_check_big,
+                                    // The fallback for a badge drawn as an
+                                    // asset; `markContent` is what actually
+                                    // draws here. Kept in step with it so the
+                                    // two paths cannot silently diverge.
+                                    icon = R.drawable.ic_lucide_calendar_check,
                                     accentColor = COMPLETED_TITLE_COLOR,
                                     title = stringResource(R.string.completed_empty),
                                     description = stringResource(R.string.completed_empty_body),
                                     modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
+                                    markContent = {
+                                        CompletedMark(
+                                            size = COMPLETED_MARK_BADGE_SIZE,
+                                            rearAlpha = COMPLETED_MARK_BADGE_REAR_ALPHA,
+                                        )
+                                    },
                                 )
                             }
                         }
@@ -555,8 +592,16 @@ fun CompletedScreen(
             // behind a picture of the same glyph.
             if (!showEmptyState) {
                 EmptyTaskWatermark(
-                    iconRes = R.drawable.ic_lucide_circle_check_big,
+                    // The fallback for a watermark drawn as an asset;
+                    // `markContent` is what actually draws here.
+                    iconRes = R.drawable.ic_lucide_calendar_check,
                     accentColor = COMPLETED_TITLE_COLOR,
+                    markContent = {
+                        CompletedMark(
+                            size = WatermarkGlyphSize,
+                            rearAlpha = COMPLETED_MARK_WATERMARK_REAR_ALPHA,
+                        )
+                    },
                 )
             }
 
@@ -1377,6 +1422,156 @@ private fun buildCompletedTimelineSections(
 }
 
 private val COMPLETED_TITLE_COLOR = TdayCompletedTitleAccent
+
+/**
+ * The Completion-history page's mark: one green check, with the Floater's leaf
+ * and the Scheduled board's `calendar-check` stacked behind it as a single faint
+ * plate. The two behind read as depth under the check rather than as two more
+ * icons, which is the arrangement the page was asked for.
+ *
+ * A drawing and not an asset, because there is no compositing primitive to reach
+ * for: three `Icon`s in one `Box` is the whole thing. But there is no compositing
+ * primitive to reach for, so it is built once — here — and handed to all three of
+ * the page's own mark sites (the hero disc, the page watermark, the empty state's
+ * badge) through the mark slot each shared component carries. A composite that
+ * reached only the hero would leave the page drawing two different marks.
+ *
+ * The three glyphs are concentric but NOT the same size — [COMPLETED_MARK_LEAF_SCALE]
+ * and [COMPLETED_MARK_CALENDAR_SCALE] say why, and what it costs at the one pair
+ * of contours no pair of scales can separate.
+ *
+ * The check takes [TdayCompletedTileAccent] — the same green the Scheduled and
+ * Floater boards' Completed tile is, and the tile the user arrives through. The
+ * page's own chrome (its title, its toolbar) wears
+ * [TdayCompletedTitleAccent], a slate; the mark is green on purpose, because a
+ * check is what the page is *about* rather than a piece of its chrome. The two
+ * behind it are that one green at [rearAlpha] and never a second colour.
+ *
+ * @param size the box all three glyphs are drawn in.
+ * @param tint the check's colour; each glyph behind it is the same colour at
+ *   [rearAlpha]. `Color.Unspecified` means "the colour my host is standing in",
+ *   which is how a host whose own tint is computed somewhere the caller cannot
+ *   see — the page watermark's blend, the empty state's white — says what colour
+ *   to draw in without a call site re-deriving it. It is resolved to
+ *   `LocalContentColor` here, in [CompletedMark], and never handed on as
+ *   unspecified: Material3's `Icon(painter, …)` reads `Color.Unspecified` as
+ *   *no colour filter*, not as "inherit", and these three vendored drawables are
+ *   white — so an unspecified tint draws white, at whatever alpha the host asked
+ *   for, which on a light background is nothing at all.
+ * @param rearAlpha the pair behind the check, as a fraction of the front one, so
+ *   it survives an opacity the host puts on the whole mark.
+ */
+@Composable
+private fun CompletedMark(
+    size: Dp,
+    tint: Color = Color.Unspecified,
+    rearAlpha: Float = COMPLETED_MARK_REAR_ALPHA,
+) {
+    val resolvedTint = tint.takeOrElse { LocalContentColor.current }
+    Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
+        CompletedMarkLayer(
+            iconRes = R.drawable.ic_lucide_leaf,
+            size = size,
+            scale = COMPLETED_MARK_LEAF_SCALE,
+            tint = resolvedTint,
+            alpha = rearAlpha,
+        )
+        CompletedMarkLayer(
+            iconRes = R.drawable.ic_lucide_calendar_check,
+            size = size,
+            scale = COMPLETED_MARK_CALENDAR_SCALE,
+            tint = resolvedTint,
+            alpha = rearAlpha,
+        )
+        CompletedMarkLayer(
+            iconRes = R.drawable.ic_lucide_check,
+            size = size,
+            scale = 1f,
+            tint = resolvedTint,
+            alpha = 1f,
+        )
+    }
+}
+
+@Composable
+private fun CompletedMarkLayer(
+    @DrawableRes iconRes: Int,
+    size: Dp,
+    scale: Float,
+    tint: Color,
+    alpha: Float,
+) {
+    Icon(
+        painter = painterResource(iconRes),
+        contentDescription = null,
+        tint = tint,
+        modifier = Modifier
+            .size(size * scale)
+            .graphicsLayer { this.alpha = alpha },
+    )
+}
+
+/**
+ * The pair behind the check on the hero mark, matching
+ * `TdayHeroTitleMetrics`'s own echo alpha — the back plate and the bleed out of
+ * the disc's bottom-right are one depth plane, not two.
+ */
+private const val COMPLETED_MARK_REAR_ALPHA = 0.17f
+
+/**
+ * The same pair on the page watermark. Stronger, because nothing in that drawing
+ * is strong: the whole mark sits under the watermark's own 0.10 fade, and at the
+ * hero's ratio the back plate would not survive it — the watermark would show the
+ * check alone, and the page would be drawing two different marks.
+ */
+private const val COMPLETED_MARK_WATERMARK_REAR_ALPHA = 0.45f
+
+/**
+ * The same pair on the empty state's badge, which is a white glyph on the accent
+ * disc and is drawn at 32dp rather than the hero's 44 — a 0.17 ghost goes missing
+ * at that size and contrast.
+ */
+private const val COMPLETED_MARK_BADGE_REAR_ALPHA = 0.25f
+
+/**
+ * The badge's glyph box. The badge's circle is 52dp and every other screen draws
+ * its single glyph at 24dp inside it; three glyphs stacked need the room, and at
+ * 24 the calendar's inner tick lands at ~2pt where the three cannot be told
+ * apart. Raised here rather than in `TdayEmptyState`, so the eight other screens
+ * that draw a badge keep the drawing they have.
+ */
+private val COMPLETED_MARK_BADGE_SIZE = 32.dp
+
+/**
+ * How much of [CompletedMark]'s box each glyph behind the check is drawn in.
+ *
+ * The three used to be drawn at one size and concentric, and the leaf stopped
+ * reading: at 1:1 its contour runs *inside* the calendar's frame by 0–1 of
+ * lucide's 24 units — its left arc 1 unit inside the left wall, its rightmost
+ * point (21,10) exactly on the right wall at the header rule's own y, its tip
+ * level with the calendar's own binding ticks. Two strokes need a full stroke
+ * width between their centrelines to read as two, so the leaf fused into a fringe
+ * along the frame and the back plate became one grey box.
+ *
+ * Different sizes are what separate them, and the binding pair is the leaf's
+ * rightmost point against the calendar's right wall: both sit at 12 + 9 × scale,
+ * so they move apart by 9 × (0.88 − 0.62) = 2.34 units. The two strokes carry
+ * 0.88 + 0.62 = 1.50 units of half-width between them, because a scaled glyph
+ * scales its stroke with it, so the outlines clear by 0.84 of a unit — over half
+ * a stroke width — at every size the mark is drawn. The scaling also thins the
+ * strokes, which is the right direction: the pair behind reads as *behind* partly
+ * because it is drawn in a finer line.
+ *
+ * One pair is not fully cleared, and it is worth naming: the leaf's tip passes
+ * within ~0.82 units of the calendar's 1.76-unit right binding tick, which is
+ * inside the 1.50 the two carry, so the tip grazes that tick. It is the one
+ * contour no pair of scales can separate — clearing it needs the leaf below 0.375
+ * of the calendar, where it stops reading at 44dp, or a plate moved off-centre,
+ * which is visibly lopsided in the hero's 96dp disc.
+ */
+private const val COMPLETED_MARK_LEAF_SCALE = 0.62f
+private const val COMPLETED_MARK_CALENDAR_SCALE = 0.88f
+
 private val COMPLETED_SECTION_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())
 private val COMPLETED_ROW_TIME_FORMATTER: DateTimeFormatter =
