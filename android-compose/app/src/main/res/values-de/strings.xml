@@ -334,6 +334,11 @@
     <string name="todos_summary_modes_unavailable">Zusammenfassung ist nur für Heute, Geplant, Alle und Priorität verfügbar</string>
     <string name="todos_summary_offline_unavailable">Offline ist keine Zusammenfassung verfügbar.</string>
     <string name="todos_list_settings">Listeneinstellungen</string>
+    <string name="reusable_list">Wiederverwendbare Liste</string>
+    <string name="reusable_list_hint">Zeigt Zurücksetzen, um alles abzuwählen und erneut zu nutzen</string>
+    <string name="reset_floater_list">Liste zurücksetzen</string>
+    <string name="floater_list_reset">Liste zurückgesetzt – alles abgewählt</string>
+    <string name="error_reset_list_failed">Liste konnte nicht zurückgesetzt werden.</string>
     <string name="share_list_action">Liste teilen</string>
     <string name="share_section_title">Teilen</string>
     <string name="action_share">Teilen</string>

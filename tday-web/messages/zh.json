@@ -251,6 +251,8 @@
     "versionAvailableTitle": "有可用更新",
     "versionAvailableBody": "新版本已准备好加载。",
     "versionAvailableReload": "重新加载",
+    "releaseUpdateTitle": "有可用更新",
+    "releaseUpdateVersion": "版本 {{version}}",
     "today": "今天",
     "yesterday": "昨天",
     "tomorrow": "明天",

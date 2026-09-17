@@ -334,6 +334,11 @@
     <string name="todos_summary_modes_unavailable">Сводка доступна только для разделов «Сегодня», «Запланированные», «Все» и «Приоритет»</string>
     <string name="todos_summary_offline_unavailable">Сводка недоступна в офлайн-режиме.</string>
     <string name="todos_list_settings">Настройки списка</string>
+    <string name="reusable_list">Многоразовый список</string>
+    <string name="reusable_list_hint">Показывает «Сбросить», чтобы снять все отметки и пройти заново</string>
+    <string name="reset_floater_list">Сбросить список</string>
+    <string name="floater_list_reset">Список сброшен — все отметки сняты</string>
+    <string name="error_reset_list_failed">Не удалось сбросить список.</string>
     <string name="share_list_action">Поделиться списком</string>
     <string name="share_section_title">Совместный доступ</string>
     <string name="action_share">Поделиться</string>

@@ -286,19 +286,39 @@ class CalendarViewModel @Inject constructor(
                 errorMessage = null,
             )
         }
-        // Delayed-commit complete: stage the UI removal now, show the undoable
-        // toast, and run the real complete after the toast window — or restore
-        // the row on Undo (nothing was committed yet).
-        undoableDeleteCoordinator.showUndoableComplete(
-            message = appContext.getString(R.string.task_completed_toast),
-            onCommit = {
-                todoRepository.completeTodo(todo)
-                runCatching { reminderScheduler.rescheduleAll() }
-            },
-            onUndo = {
-                _uiState.update { it.copy(items = previousItems, errorMessage = null) }
-            },
-        )
+        // Delayed-commit complete. Staged into the CACHE and not just into
+        // `items`: this screen re-hydrates from the same cache on every
+        // `cacheDataVersion` bump, so a UI-only removal is restored by the next
+        // sync (which still reads the row as pending until the commit lands).
+        viewModelScope.launch {
+            runCatching {
+                val staged = todoRepository.stageTodoCompletions(listOf(todo))
+                undoableDeleteCoordinator.showUndoableComplete(
+                    message = appContext.getString(R.string.task_completed_toast),
+                    onCommit = {
+                        todoRepository.commitStagedTodoCompletions(listOf(todo))
+                        runCatching { reminderScheduler.rescheduleAll() }
+                    },
+                    onUndo = {
+                        todoRepository.undoStagedTodoCompletion(staged)
+                        // Runs on the coordinator scope: this ViewModel may be
+                        // gone by the time Undo restores a reminder-bearing task.
+                        runCatching { reminderScheduler.rescheduleAll() }
+                        _uiState.update { it.copy(items = previousItems, errorMessage = null) }
+                    },
+                )
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        items = previousItems,
+                        errorMessage = mutationFailureMessage(
+                            error,
+                            R.string.error_update_task_failed,
+                        ),
+                    )
+                }
+            }
+        }
     }
 
     fun uncomplete(item: CompletedItem) {

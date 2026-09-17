@@ -229,11 +229,14 @@ describe("the cold launch hands over instead of cutting", () => {
  *      value test and never touches the modifiers, and there is no Swift toolchain
  *      here. This is the one mistake in the unit that nothing else would catch
  *      before an Xcode build.
- *   2. The six tiles naming the routes their own closures push. `zoomRoute` and
- *      `action` are two independent arguments at each construction, and a tile
- *      wired to the Overdue screen while publishing the All tile's id is six ids,
+ *   2. Every source tile naming the route its own closure pushes. `zoomRoute` and the
+ *      closure that runs are two independent things at each construction, and a tile
+ *      wired to the Overdue screen while publishing the All tile's id is ids that are
  *      all distinct, every assertion in `ZoomNavigationTests` green, and a screen
- *      growing out of the wrong rectangle.
+ *      growing out of the wrong rectangle. The three surfaces reach their push
+ *      differently — the six category tiles through a board parameter, the Today card
+ *      inline, the list row through the section's `onOpenList` — so the pairing below
+ *      is resolved once per shape rather than once for the file.
  *   3. One destination site. The zoom is applied over every route at a single
  *      `.navigationDestination`, which is what lets a route with no source id fall
  *      through without a list to keep in step; a second site is a second list.
@@ -273,6 +276,40 @@ describe("the home tiles zoom into the screens they open", () => {
       if (depth < 0) throw new Error(`${where_}: ${label} ran past its argument list`);
     }
     return args.slice(at + label.length + 1).trim().replace(/\s+/g, " ");
+  }
+
+  /**
+   * The route inside the first `onNavigate(…)` in `body`, whitespace collapsed.
+   *
+   * This is the text of the push a press actually runs, read off the closure rather than
+   * off the argument that names it — a closure is opaque to Swift and, being text, one
+   * step less so here.
+   */
+  function pushedRoute(body: string, where_: string): string | null {
+    const at = body.indexOf("onNavigate(");
+    if (at === -1) return null;
+    const open = at + "onNavigate".length;
+    return body
+      .slice(open + 1, balanced(body, open, ")", where_))
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
+  /**
+   * The body of the trailing closure handed to the first call to `name`.
+   *
+   * `constructions` stops at the argument list's own `)`, and a trailing closure is
+   * written outside it — which is exactly the shape the list row uses, so the route its
+   * press pushes is not reachable from the argument list it is built with.
+   */
+  function trailingClosure(source: string, name: string, where_: string): string {
+    const at = source.indexOf(`${name}(`);
+    expect(at, `${name} in ${where_}`).toBeGreaterThan(-1);
+    const open = at + name.length;
+    const close = balanced(source, open, ")", where_);
+    const braceAt = source.indexOf("{", close);
+    expect(braceAt, `${name} must be handed a trailing closure`).toBeGreaterThan(-1);
+    return source.slice(braceAt + 1, balanced(source, braceAt, "}", where_));
   }
 
   /** The `{ … }` bodies of every `if #available(iOS 18.0, *)` in `ZoomNavigation.swift`. */
@@ -337,10 +374,9 @@ describe("the home tiles zoom into the screens they open", () => {
     for (const label of ["onOpenOverdue", "onOpenScheduled", "onOpenAll", "onOpenPriority", "onOpenCompleted", "onOpenCalendar"]) {
       const closure = argument(board[0], label, "ScheduledTaskHomeScreen.swift");
       expect(closure, `the board must be handed ${label}`).not.toBeNull();
-      const at = closure!.indexOf("onNavigate(");
-      expect(at, `${label} must push a route`).toBeGreaterThan(-1);
-      const open = at + "onNavigate".length;
-      pushedBy.set(label, closure!.slice(open + 1, balanced(closure!, open, ")", "ScheduledTaskHomeScreen.swift")).trim());
+      const route = pushedRoute(closure!, "ScheduledTaskHomeScreen.swift");
+      expect(route, `${label} must push a route`).not.toBeNull();
+      pushedBy.set(label, route!);
     }
 
     const wiring = tiles.map((tile) => [
@@ -360,10 +396,55 @@ describe("the home tiles zoom into the screens they open", () => {
       wiring.map(([action]) => `${action} → ${pushedBy.get(action!)}`).sort(),
     );
 
-    // And the source half is applied once, on the tile itself rather than on one of
-    // the gradients inside it — the Phase-7 shape, where a modifier is written, is
-    // read, and is attached to a node the transition never looks at.
-    expect(home.match(/\.tdayZoomSource\(/g) ?? []).toHaveLength(1);
-    expect(home).toMatch(/\.buttonStyle\(ScheduledTaskHomeTileButtonStyle\(\)\)\s*\.tdayZoomSource\(zoomRoute\)/);
+    // The Today card and the list row are built by the same screen but reach their push
+    // differently, and both have to be resolved rather than skipped. The Today card's
+    // action is an inline `{ closeSearch(); onNavigate(…) }`, so its own argument list
+    // holds the route. The list row's action is the TRAILING closure, and it pushes
+    // nothing itself — it hands the section's `onOpenList` the values the section then
+    // turns into the route — so the section is where this one has to be read.
+    const today = constructions(home, "ScheduledTaskHomeTodayCard", "ScheduledTaskHomeScreen.swift");
+    expect(today, "the Today card is built at exactly one site").toHaveLength(1);
+    const todayAction = argument(today[0], "action", "ScheduledTaskHomeScreen.swift");
+    expect(todayAction, "the Today card must be handed an action").not.toBeNull();
+    expect(
+      argument(today[0], "zoomRoute", "ScheduledTaskHomeScreen.swift"),
+      "the Today card must publish the id of the route its own action pushes — an unset or " +
+        "drifted zoomRoute here publishes an id no destination asks for, or the wrong one, " +
+        "and nothing else in this unit says so",
+    ).toBe(pushedRoute(todayAction!, "ScheduledTaskHomeScreen.swift"));
+
+    const rows = constructions(home, "ScheduledTaskHomeListRow", "ScheduledTaskHomeScreen.swift");
+    expect(rows, "the list rows are built at exactly one site").toHaveLength(1);
+    const rowAction = trailingClosure(home, "ScheduledTaskHomeListRow", "ScheduledTaskHomeScreen.swift");
+    expect(
+      rowAction,
+      "the list row must push through the section's onOpenList — the closure whose route is " +
+        "asserted here is the section's, so a row that no longer calls it has escaped the check",
+    ).toContain("onOpenList(list, name)");
+    expect(
+      argument(rows[0], "zoomRoute", "ScheduledTaskHomeScreen.swift"),
+      "the list row must publish the id of the route the lists section's own closure pushes — " +
+        "the route is per-list, so a shared or missing id matches the wrong rectangle among " +
+        "rows that are all on screen at once",
+    ).toBe(
+      pushedRoute(trailingClosure(home, "ScheduledTaskHomeListsSection", "ScheduledTaskHomeScreen.swift"), "ScheduledTaskHomeScreen.swift"),
+    );
+
+    // And the source half is applied once per surface, on the surface itself rather than
+    // on one of the gradients inside it — the Phase-7 shape, where a modifier is written,
+    // is read, and is attached to a node the transition never looks at.
+    expect(
+      home.match(/\.tdayZoomSource\(/g) ?? [],
+      "one source per surface that publishes an id: the six category tiles, the Today card and the list row",
+    ).toHaveLength(3);
+    expect(
+      home.match(/\.buttonStyle\(ScheduledTaskHomeTileButtonStyle\(\)\)\s*\.tdayZoomSource\(zoomRoute\)/g) ?? [],
+      "each tile-style surface carries the source on its own chain, immediately after its own button style",
+    ).toHaveLength(2);
+    expect(
+      home.match(/\.buttonStyle\(ScheduledTaskHomeListButtonStyle\(\)\)\s*\.tdayZoomSource\(zoomRoute\)/g) ?? [],
+      "the list row uses a different button style, so it is asserted against that one — a rule " +
+        "that only knew the tile style would go green here having never looked at the row",
+    ).toHaveLength(1);
   });
 });

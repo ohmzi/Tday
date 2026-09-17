@@ -29,25 +29,63 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
           // own background rule. Without this the outer <li> would be a
           // transparent bordered box wrapping the inner card → a double box.
           //
-          // The explicit `text-[15px]` base is required so custom/clickable toasts
-          // match plain ones: custom toasts render data-styled="false", so sonner's
-          // own font-size rule (gated on [data-styled=true]) never applies and they'd
-          // otherwise fall back to the document's size. 15px + py-3.5 matches iOS's
-          // toast height (subheadline ~15pt + 14pt vertical padding) for cross-platform
-          // parity.
+          // EVERY surface/typography property here carries `!` — and it has to.
+          // Sonner injects its sheet UNLAYERED at runtime
+          // (`__insertCSS` → `head.appendChild(<style>)`,
+          // node_modules/sonner/dist/index.js), while Tailwind v4 emits every
+          // utility inside `@layer utilities`. Unlayered normal declarations
+          // beat layered normal declarations regardless of specificity, so
+          // sonner's stock
+          // `[data-sonner-toast][data-styled=true]{border-radius:var(--border-radius);
+          // padding:16px;font-size:13px;gap:6px;box-shadow:0 4px 12px rgba(0,0,0,.1)}`
+          // silently won every one of these for PLAIN toasts: `rounded-full` was
+          // in the class list, compiled, and did nothing, so every plain toast
+          // rendered as sonner's stock 8px/13px box while only the custom ones
+          // (which skip that rule, `data-styled="false"`) wore the pill this
+          // config describes — two families, not one. `!` moves each declaration
+          // into the important tier, which outranks unlayered normal no matter
+          // what. (The `actionButton`/`cancelButton` lists below always did this;
+          // it is this same mechanism, not a source-order tie.) Do NOT drop a
+          // `!`: the class stays in the list and silently stops applying.
+          //
+          // The explicit `text-[15px]` base is what makes a custom/clickable
+          // toast (which falls back to the document size otherwise — sonner's
+          // own font-size rule is gated on [data-styled=true]) the same size as
+          // a plain one. 15px + py-3.5 matches iOS's toast height (subheadline
+          // ~15pt + 14pt vertical padding) for cross-platform parity.
+          //
+          // `min-[601px]:!w-full` is the width half of the same job: sonner only
+          // sets a toast's width under `[data-styled=true]{width:var(--width)}`,
+          // so a custom toast shrink-to-fits (~160px against every plain toast's
+          // 356px). Phones are excluded on purpose — sonner's
+          // `@media (max-width:600px) [data-sonner-toaster] [data-sonner-toast]`
+          // width rule is NOT gated on data-styled, so it already gives custom
+          // and plain toasts one width there (601px mirrors the end of that
+          // query), and forcing 100% inside it would overflow the inset toaster.
           toast:
-            "group toast group-[.toaster]:flex group-[.toaster]:items-center group-[.toaster]:gap-3 group-[.toaster]:rounded-full group-[.toaster]:border group-[.toaster]:border-border/60 group-[.toaster]:bg-popover/55 group-[.toaster]:px-4 group-[.toaster]:py-3.5 group-[.toaster]:text-[15px] group-[.toaster]:backdrop-blur-xl group-[.toaster]:shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)]",
+            "group toast group-[.toaster]:!flex group-[.toaster]:!items-center group-[.toaster]:!gap-3 group-[.toaster]:!rounded-full group-[.toaster]:!border group-[.toaster]:!border-border/60 group-[.toaster]:!bg-popover/55 group-[.toaster]:!px-4 group-[.toaster]:!py-3.5 group-[.toaster]:!text-[15px] group-[.toaster]:!backdrop-blur-xl group-[.toaster]:!shadow-[0_10px_30px_-12px_hsl(var(--shadow)/0.45)] group-[.toaster]:min-[601px]:!w-full",
           // No status glyph — hide Sonner's default per-variant icon slot
-          // entirely (unrelated to the Undo action's own icon, below).
-          // !important is required: the plain `hidden` ties specificity with
-          // sonner's runtime-injected `[data-styled=true] [data-icon]{display:flex}`
-          // and loses on source order, so the icon would otherwise still show.
+          // entirely (unrelated to the Undo action's own icon, below). Forced
+          // for the same reason as the surface above: sonner's injected
+          // `[data-styled=true] [data-icon]{display:flex}` is unlayered and
+          // would otherwise still show the icon.
           icon: "group-[.toast]:!hidden",
-          // Content fills the pill and centers its text horizontally.
-          content: "group-[.toast]:min-w-0 group-[.toast]:flex-1 group-[.toast]:text-center",
-          title: "group-[.toast]:font-extrabold group-[.toast]:leading-tight group-[.toast]:text-center",
+          // Content fills the pill and centers its text horizontally. `!gap-0`
+          // cancels sonner's unlayered `[data-styled=true] [data-content]{gap:2px}`
+          // so a plain two-line toast spaces its description the way a custom
+          // one does (the description's own mt-0.5), not by an extra 2px.
+          content:
+            "group-[.toast]:min-w-0 group-[.toast]:flex-1 group-[.toast]:!gap-0 group-[.toast]:text-center",
+          title:
+            "group-[.toast]:!font-extrabold group-[.toast]:!leading-tight group-[.toast]:text-center",
+          // `text-[13px]` is forced, not inherited: the pill's 15px base would
+          // otherwise carry into the description, while a custom toast's
+          // description (ClickableToast) is 13px — this keeps the two families
+          // identical. Weight/colour/leading are forced for the same reason as
+          // the surface above (sonner's unlayered `[data-styled=true]
+          // [data-description]{font-weight:400;line-height:1.4;color:#3f3f3f}`).
           description:
-            "group-[.toast]:mt-0.5 group-[.toast]:text-current/75 group-[.toast]:font-medium group-[.toast]:leading-snug group-[.toast]:text-center",
+            "group-[.toast]:mt-0.5 group-[.toast]:!text-[13px] group-[.toast]:!text-current/75 group-[.toast]:!font-medium group-[.toast]:!leading-snug group-[.toast]:text-center",
           // Icon-based, not a filled pill — the Undo action is the one
           // deliberate reversal of "icons removed app-wide" (see the toast
           // comment above and use-undoable-delete.tsx), matching iOS's
@@ -56,9 +94,10 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
           // the icon paints with `currentColor`, so the forced colour below
           // is what tints it.
           //
-          // EVERY property here needs `!`. Sonner injects
-          // `[data-sonner-toast][data-styled=true] [data-button]` at runtime — specificity
-          // (0,3,0), which outranks any utility class, so a plain utility silently loses.
+          // EVERY property here needs `!`, for the unlayered-sheet reason spelled
+          // out on `toast` above. Sonner injects
+          // `[data-sonner-toast][data-styled=true] [data-button]` at runtime and a
+          // plain utility silently loses to it.
           // Colour especially: sonner paints the action `color: var(--normal-bg)`, i.e. the
           // toast's OWN surface colour, because it normally sits on a filled chip. Drop the
           // chip without forcing the colour and the icon is painted in the surface it sits
@@ -68,7 +107,7 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
           actionButton:
             "group-[.toast]:!bg-transparent group-[.toast]:!px-0 group-[.toast]:!h-auto group-[.toast]:shrink-0 group-[.toast]:!text-[15px] group-[.toast]:!font-extrabold group-[.toast]:!text-[hsl(var(--toast-action))]",
           cancelButton:
-            "group-[.toast]:rounded-full group-[.toast]:bg-muted group-[.toast]:px-3 group-[.toast]:font-bold group-[.toast]:text-muted-foreground",
+            "group-[.toast]:!rounded-full group-[.toast]:!bg-muted group-[.toast]:!px-3 group-[.toast]:!font-bold group-[.toast]:!text-muted-foreground",
         },
       }}
       style={

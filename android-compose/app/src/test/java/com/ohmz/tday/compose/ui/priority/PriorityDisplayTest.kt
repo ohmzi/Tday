@@ -71,15 +71,18 @@ class PriorityDisplayTest {
     }
 
     @Test
-    fun `picker options lead with the new Lowest tier, low to high urgency`() {
+    fun `picker options lead with the urgent tier, high to low urgency`() {
+        // All four tiers present, most urgent first and the newest Lowest tier last. The order
+        // is deliberately inverted from the original low-to-high arrangement so urgent sits at
+        // the top of every picker.
         assertEquals(
             listOf(
-                PRIORITY_LOWEST_VALUE,
-                PRIORITY_NORMAL_VALUE,
-                PRIORITY_IMPORTANT_VALUE,
                 PRIORITY_URGENT_VALUE,
+                PRIORITY_IMPORTANT_VALUE,
+                PRIORITY_NORMAL_VALUE,
+                PRIORITY_LOWEST_VALUE,
             ),
-            PRIORITY_OPTIONS_LOW_TO_HIGH,
+            PRIORITY_OPTIONS_HIGH_TO_LOW,
         )
     }
 }

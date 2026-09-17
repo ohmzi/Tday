@@ -15,11 +15,16 @@ const val PRIORITY_IMPORTANT_VALUE = "Medium"
 const val PRIORITY_URGENT_VALUE = "High"
 
 /**
- * Low-to-high urgency — the display order every picker renders in, with the new [PRIORITY_LOWEST_VALUE]
- * tier leading, ahead of Normal. Mirrors iOS's `TaskPriorityDisplay.options` and web's picker order.
+ * High-to-low urgency — the display order every picker renders in, with [PRIORITY_URGENT_VALUE]
+ * leading and the newest [PRIORITY_LOWEST_VALUE] tier trailing. Mirrors iOS's
+ * `TaskPriorityDisplay.options` and web's picker order.
+ *
+ * This was originally low-to-high (Lowest leading). It is inverted so the most urgent tier sits
+ * at the top of every picker and the least urgent at the bottom. The task *sort* order is
+ * unaffected and already High-first; see shared `TaskSortEngine`.
  */
-val PRIORITY_OPTIONS_LOW_TO_HIGH: List<String> =
-    listOf(PRIORITY_LOWEST_VALUE, PRIORITY_NORMAL_VALUE, PRIORITY_IMPORTANT_VALUE, PRIORITY_URGENT_VALUE)
+val PRIORITY_OPTIONS_HIGH_TO_LOW: List<String> =
+    listOf(PRIORITY_URGENT_VALUE, PRIORITY_IMPORTANT_VALUE, PRIORITY_NORMAL_VALUE, PRIORITY_LOWEST_VALUE)
 
 fun canonicalPriorityValue(value: String?): String {
     return when (value?.trim()?.lowercase()) {

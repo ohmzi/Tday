@@ -397,6 +397,11 @@
     <string name="summary_source_server">Server model</string>
     <string name="summary_source_local">Local model</string>
     <string name="todos_list_settings">List settings</string>
+    <string name="reusable_list">Reusable list</string>
+    <string name="reusable_list_hint">Show a Reset to un-check everything and run it again</string>
+    <string name="reset_floater_list">Reset list</string>
+    <string name="floater_list_reset">List reset — everything un-checked</string>
+    <string name="error_reset_list_failed">Could not reset list.</string>
     <string name="share_list_action">Share list</string>
     <string name="share_section_title">Sharing</string>
     <string name="action_share">Share</string>

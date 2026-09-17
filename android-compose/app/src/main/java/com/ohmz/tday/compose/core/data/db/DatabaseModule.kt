@@ -43,6 +43,15 @@ private class Migration9To10 : Migration(9, 10) {
     }
 }
 
+// v11: the floater-list `reusable` flag (Drives the settings toggle and the
+// header's Reset). Local Mode has no server to ask, so it has to survive in the
+// cache like every other list field; a pre-v11 list simply isn't reusable.
+private class Migration10To11 : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE cached_floater_lists ADD COLUMN reusable INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -83,7 +92,7 @@ object DatabaseModule {
             // The DB holds unsynced pending mutations, not just re-fetchable
             // cache, so schema bumps must ship a real Migration. Pre-v7 schemas
             // (no exported history) still fall back destructively.
-            .addMigrations(Migration7To8(), Migration8To9(), Migration9To10())
+            .addMigrations(Migration7To8(), Migration8To9(), Migration9To10(), Migration10To11())
             .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6)
             // Safety net: callers should run DAO access off the main thread (see
             // OfflineCacheManager / repositories using Dispatchers.IO). Kept so a missed

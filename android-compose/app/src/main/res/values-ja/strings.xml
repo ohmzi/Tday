@@ -334,6 +334,11 @@
     <string name="todos_summary_modes_unavailable">要約は今日、予定、すべて、優先でのみ利用できます</string>
     <string name="todos_summary_offline_unavailable">オフライン中は要約を利用できません。</string>
     <string name="todos_list_settings">リスト設定</string>
+    <string name="reusable_list">再利用リスト</string>
+    <string name="reusable_list_hint">「リセット」を表示し、全て外して再利用できます</string>
+    <string name="reset_floater_list">リストをリセット</string>
+    <string name="floater_list_reset">リストをリセットしました。全て外れました</string>
+    <string name="error_reset_list_failed">リストをリセットできませんでした。</string>
     <string name="share_list_action">リストを共有</string>
     <string name="share_section_title">共有</string>
     <string name="action_share">共有</string>

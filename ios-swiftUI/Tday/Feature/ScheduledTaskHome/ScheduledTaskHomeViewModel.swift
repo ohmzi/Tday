@@ -149,19 +149,30 @@ final class ScheduledTaskHomeViewModel {
         }
     }
 
-    /// Delayed-commit complete (see TodoListViewModel.complete): hide the row
-    /// now, show an undoable toast, and only commit the real completion once the
-    /// undo window expires. Undo re-reads the untouched cache to restore it.
+    /// Delayed-commit complete (see TodoListViewModel.complete): stage the
+    /// completion into the local cache now, show an undoable toast, and un-stage
+    /// then flush the already-queued mutation once the undo window expires.
+    ///
+    /// Staging rather than hiding the row in memory is the whole point: this
+    /// screen re-reads the cache on every `.offlineCacheDidChange`, so a row
+    /// removed only from `todayTodos` comes straight back off the next sync and
+    /// the deferred commit then takes it away again. Same discipline as
+    /// `delete(_:)` below.
     func complete(_ todo: TodoItem) async {
         let container = container
         todayTodos.removeAll { $0.id == todo.id }
         searchableTodos.removeAll { $0.id == todo.id }
+        let staged = await container.todoRepository.stageCompleteTodo(todo)
+        refreshFromCache()
         container.undoableDeleteScheduler.schedule(
             message: L("Task completed"),
-            restore: { [weak self] in self?.refreshFromCache() },
+            restore: { [weak self] in
+                container.todoRepository.undoStagedCompletion(staged)
+                self?.refreshFromCache()
+            },
             commit: { [weak self] in
                 do {
-                    try await container.completeTodo(todo)
+                    try await container.todoRepository.commitStagedCompletion(staged)
                 } catch {
                     container.snackbarManager.show(
                         userFacingMessage(for: error, fallback: "Could not complete task."),

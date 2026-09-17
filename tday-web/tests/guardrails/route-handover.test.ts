@@ -258,6 +258,30 @@ describe("the Android half of the same hand-over", () => {
     throw new Error(`TdayApp.kt: ${callee}( is never closed`);
   }
 
+  /** The refused half of a two-branch transition declaration — the `if (!motionEnabled) { … }` arm. */
+  function refusedBranch(text: string): string {
+    const at = text.indexOf("if (!motionEnabled)");
+    expect(at, "the `if (!motionEnabled)` arm is gone").toBeGreaterThan(-1);
+    return balancedBraces(text, text.indexOf("{", at));
+  }
+
+  /** The permitted half — the `} else { … }` arm of the same declaration. */
+  function allowedBranch(text: string): string {
+    const at = text.indexOf("} else {");
+    expect(at, "the `} else {` arm is gone").toBeGreaterThan(-1);
+    return balancedBraces(text, text.indexOf("{", at + 1));
+  }
+
+  /** The text inside the braces opened at `open`, by balancing them. */
+  function balancedBraces(text: string, open: number): string {
+    let depth = 0;
+    for (let i = open; i < text.length; i++) {
+      if (text[i] === "{") depth++;
+      else if (text[i] === "}" && --depth === 0) return text.slice(open + 1, i);
+    }
+    throw new Error("TdayApp.kt: an arm is never closed");
+  }
+
   it("has no constant left holding a route fade's own length", () => {
     // Searched in the RAW text on purpose. These two are the numbers the unit retired, and a
     // comment that still names one of them as something the app does would be a doc rotting
@@ -317,17 +341,26 @@ describe("the Android half of the same hand-over", () => {
     expect(exit).not.toContain("LinearOutSlowInEasing");
   });
 
-  it("draws the destination finished rather than fading it when motion is refused", () => {
-    // Compose's animator scale zeroes these on its own; the in-app Reduce Motion switch is
-    // the half Compose cannot see, and the NavHost was the last surface deaf to it. `None`
-    // is the fifth idiom rule in one word — the arriving screen on its first frame, not a
-    // fade held at its start.
-    expect(declaration("private fun navigationEnterTransition(")).toContain(
-      "EnterTransition.None",
-    );
-    expect(declaration("private fun navigationExitTransition(")).toContain(
-      "ExitTransition.None",
-    );
+  it("refuses the travel but keeps the shortest hand-over when motion is refused", () => {
+    // Compose's animator scale zeroes these on its own; the in-app Reduce Motion switch is the
+    // half Compose cannot see, and the NavHost was the last surface deaf to it.
+    //
+    // These two used to answer `None`, and this assertion used to require exactly that. THE
+    // DECISION CHANGED, deliberately: a refused hand-over now keeps the app's shortest fade, so
+    // the screen still ARRIVES rather than appearing between two frames. What the old assertion
+    // protected has not been given up, and is what is checked here — the refused arm must be a
+    // still frame with nothing travelling and nothing parked mid-recede, on the shortest rung
+    // the vocabulary has. The full argument is in `TdayApp.kt`'s own KDoc on these functions,
+    // including that this is a departure and not an application of the fifth idiom rule; it
+    // lives there rather than here because a reversal read off a test file is a reversal nobody
+    // can weigh.
+    for (const fn of ["navigationEnterTransition", "navigationExitTransition"]) {
+      const refused = refusedBranch(declaration(`private fun ${fn}(`));
+      expect(refused, `${fn}'s refused arm is on the shortest rung`).toContain(
+        "TdayMotionTokens.Durations.Quick",
+      );
+      expect(refused, `${fn}'s refused arm must not travel`).not.toMatch(/slideOut|scaleOut/);
+    }
     // Hoisted above the NavHost, because the four lambdas are transition scopes and not
     // composables. Read it inside one and this does not compile; forget it and it silently
     // does not apply — which is why this looks for the hoist in the NavHost's OWN scope
@@ -380,7 +413,11 @@ describe("the Android half of the same hand-over", () => {
     // own comment says is the risk. Comparing against the leg count rather than against 2
     // also lets a later third leg through on the rung and stops it off the rung, which is the
     // rule being asserted and not the shape it happens to have today.
-    const spec = popExit();
+    // Read from the PERMITTED arm. The refused arm now carries a third `tween<` leg on `Quick`,
+    // so counting rungs across the whole declaration would fail for the one leg that is
+    // deliberately off the `Enter` rung — that is the reversal this file now records, not drift.
+    // The rule is unchanged inside the arm it is about.
+    const spec = allowedBranch(popExit());
     const legs = spec.match(/tween</g) ?? [];
     expect(legs.length, "the pop exit's legs are no longer tweens").toBeGreaterThan(1);
     // `toEqual` against a filled array is one assertion doing two jobs: every rung named is
@@ -404,7 +441,13 @@ describe("the Android half of the same hand-over", () => {
   });
 
   it("takes the dragged screen away rather than parking it mid-recede when motion is refused", () => {
-    expect(popExit()).toContain("ExitTransition.None");
+    // The same reversal as the push pair, and the same thing protected: the recede and the travel
+    // are the gesture's travelling half, a refused drag has none to report, and what must not come
+    // back is a screen held at 0.9 scale halfway off the side. It keeps a short fade rather than a
+    // cut, so back is still a hand-over.
+    const refused = refusedBranch(declaration("private fun navigationPopExitTransition("));
+    expect(refused).toContain("TdayMotionTokens.Durations.Quick");
+    expect(refused).not.toMatch(/slideOut|scaleOut/);
   });
 
   it("marks the recede depth as a considered non-token, since no counter can see it", () => {

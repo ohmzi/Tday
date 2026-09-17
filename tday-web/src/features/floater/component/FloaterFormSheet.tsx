@@ -31,14 +31,17 @@ type FloaterFormSheetProps = {
   overrideFields?: { listID?: string };
 };
 
+// High-to-low: the most urgent tier leads, with the newest Lowest tier last, matching
+// iOS's TaskPriorityDisplay.options and Android's PRIORITY_OPTIONS_HIGH_TO_LOW. This is the
+// display order only — the task sort order is a separate concern and already High-first.
 const priorityOptions: Array<{
   value: FloaterItemType["priority"];
   labelKey: "low" | "normal" | "important" | "urgent";
 }> = [
-  { value: "Lowest", labelKey: "low" },
-  { value: "Low", labelKey: "normal" },
-  { value: "Medium", labelKey: "important" },
   { value: "High", labelKey: "urgent" },
+  { value: "Medium", labelKey: "important" },
+  { value: "Low", labelKey: "normal" },
+  { value: "Lowest", labelKey: "low" },
 ];
 
 export default function FloaterFormSheet({

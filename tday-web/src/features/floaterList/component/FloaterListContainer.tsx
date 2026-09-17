@@ -54,6 +54,12 @@ export default function FloaterListContainer({ id }: { id: string }) {
         name: listMeta.name,
         color: listMeta.color,
         iconKey: listMeta.iconKey,
+        // Carried through, not just read by the Reset gate below: the edit sheet
+        // seeds its switch from this field and compares its flip against it to
+        // decide whether anything changed. Dropping it here made the switch read
+        // OFF on every open AND made turning it back off look like a no-op, so
+        // `reusable` stayed true on the server and Reset could never be retired.
+        reusable: listMeta.reusable,
       }
     : null;
   const myRole = listMeta && "myRole" in listMeta ? (listMeta.myRole ?? "OWNER") : "OWNER";

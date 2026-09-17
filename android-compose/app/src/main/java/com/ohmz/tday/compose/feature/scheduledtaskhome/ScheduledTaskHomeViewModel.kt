@@ -8,6 +8,7 @@ import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.settings.SettingsRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
+import com.ohmz.tday.compose.core.data.todo.StagedTodoCompletion
 import com.ohmz.tday.compose.core.data.todo.StagedTodoDeletion
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
@@ -386,7 +387,7 @@ class ScheduledTaskHomeViewModel @Inject constructor(
                 errorMessage = null,
             )
         }
-        showUndoableTaskComplete(todo) {
+        stageComplete(todo) {
             _uiState.update { it.copy(searchableTodos = previousSearchable, errorMessage = null) }
         }
     }
@@ -450,23 +451,60 @@ class ScheduledTaskHomeViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(todayTodos = current.todayTodos.filterNot { it.id == todo.id })
         }
-        showUndoableTaskComplete(todo) {
+        stageComplete(todo) {
             _uiState.update { it.copy(todayTodos = previousToday) }
         }
     }
 
-    // Delayed-commit complete: stage the UI removal (done by the caller), show an
-    // undoable toast, and run the real complete after the window unless Undo
-    // restores the row. Mirrors [showUndoableTaskDelete].
-    private fun showUndoableTaskComplete(todo: TodoItem, onUndo: () -> Unit) {
+    /**
+     * Delayed-commit complete. Staged into the CACHE, not just into the screen's
+     * own list: this ViewModel re-hydrates from that cache on every
+     * `cacheDataVersion` bump, so a UI-only removal is restored by the next sync
+     * (which still reads the row as pending until the commit lands) — the
+     * reappear-then-leave the user reported. Mirrors [deleteTodo], which stages
+     * for the same reason.
+     */
+    private fun stageComplete(todo: TodoItem, onUndo: () -> Unit) {
+        viewModelScope.launch {
+            runCatching { todoRepository.stageTodoCompletions(listOf(todo)) }
+                .onSuccess { staged ->
+                    showUndoableTaskComplete(todo, staged, onUndo)
+                    refreshInternal(forceSync = false, showLoading = false)
+                }
+                .onFailure { error ->
+                    onUndo()
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = mutationFailureMessage(
+                                error,
+                                R.string.error_update_task_failed
+                            )
+                        )
+                    }
+                }
+        }
+    }
+
+    // Delayed-commit complete: the staged write is already in the cache; show an
+    // undoable toast, release the staged marker after the window, or reverse the
+    // write on Undo. Mirrors [showUndoableTaskDelete].
+    private fun showUndoableTaskComplete(
+        todo: TodoItem,
+        staged: StagedTodoCompletion,
+        onUndo: () -> Unit,
+    ) {
         undoableDeleteCoordinator.showUndoableComplete(
             message = appContext.getString(R.string.task_completed_toast),
             onCommit = {
-                todoRepository.completeTodo(todo)
+                todoRepository.commitStagedTodoCompletions(listOf(todo))
                 // Runs on the coordinator scope: this ViewModel may be gone.
                 runCatching { reminderScheduler.rescheduleAll() }
             },
-            onUndo = { onUndo() },
+            onUndo = {
+                todoRepository.undoStagedTodoCompletion(staged)
+                runCatching { reminderScheduler.rescheduleAll() }
+                onUndo()
+            },
         )
     }
 

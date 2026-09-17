@@ -78,16 +78,22 @@ import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
+import com.ohmz.tday.compose.core.navigation.navigateFromHomeTile
+import com.ohmz.tday.compose.core.navigation.tileTransitionKey
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
+import com.ohmz.tday.compose.core.ui.LocalTdayTileSourceScope
 import com.ohmz.tday.compose.core.ui.SnackbarEvent
 import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.TdayTileDestination
+import com.ohmz.tday.compose.core.ui.TdayTileTransitionLayout
 import com.ohmz.tday.compose.core.ui.TdayToastData
 import com.ohmz.tday.compose.core.ui.TdayToastHost
 import com.ohmz.tday.compose.core.ui.TdayToastKind
 import com.ohmz.tday.compose.core.ui.actionToastTimeoutMillis
 import com.ohmz.tday.compose.core.ui.informationalToastTimeoutMillis
+import com.ohmz.tday.compose.core.ui.rememberHomeTileOrigin
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
 import com.ohmz.tday.compose.feature.app.AppUiState
@@ -355,89 +361,97 @@ fun TdayApp(
                 // half Compose knows nothing about, and until now the NavHost was the one
                 // surface in the app still deaf to it.
                 val motionEnabled = rememberTdayMotionEnabled()
-                NavHost(
-                    navController = navController,
-                    startDestination = AppRoute.Splash.route,
-                    modifier = Modifier.haze(hazeState),
-                    // Crossfade, with no slide in it.
-                    //
-                    // Every screen draws its own toolbar at the same place in the same
-                    // row, so a slide carried the back chevron and the action cluster
-                    // 18% of the screen's width sideways and then dropped them back
-                    // where they started — the one part of the frame that is the SAME
-                    // on both screens, moving. Fading in place hands each button over
-                    // to its counterpart instead of travelling it there and back.
-                    //
-                    // Directional transitions go with it wherever the change is COMMITTED:
-                    // there is no direction left to express once nothing moves, so three of
-                    // the four slots below share one pair. The fourth is the one the system
-                    // SEEKS against a finger rather than plays, and a seeked crossfade is a
-                    // progress report nobody can read — see `navigationPopExitTransition`.
-                    // The screen being dragged off is the only thing that moves, and the
-                    // arriving screen still fades in place, so the hand-over argument above
-                    // survives in the half it was written about.
-                    enterTransition = { navigationEnterTransition(motionEnabled) },
-                    exitTransition = { navigationExitTransition(motionEnabled) },
-                    popEnterTransition = { navigationEnterTransition(motionEnabled) },
-                    popExitTransition = { navigationPopExitTransition(motionEnabled) },
-                ) {
-                    splashAndAuthRoutes(
-                        startupTagline = startupTagline,
-                        onStartupSplashHoldChanged = { isStartupSplashHeld = it },
+                // One namespace for every tile and the screen it opens. It wraps the
+                // NavHost rather than any one screen: the two halves of a shared element
+                // live in two different destinations, and only the layout above both of
+                // them can match them. The scope is read back out of a local by the tiles,
+                // and `home` below publishes the visibility scope they are drawn in. Every
+                // piece of this is a no-op where motion is refused.
+                TdayTileTransitionLayout(modifier = Modifier.fillMaxSize()) {
+                    NavHost(
                         navController = navController,
-                        appViewModel = appViewModel,
-                    )
-                    // Every changing value crosses into a route as a `() -> T` reader, never as
-                    // the value itself. This lambda is the NavGraph *builder*: it runs once per
-                    // graph build, inside NavHost's `remember(route, startDestination, builder)`,
-                    // and NOT on recomposition. A `by`-delegated read performed here is recorded
-                    // against NavHost's scope and then frozen into the destination for the life of
-                    // the graph, so writing the state would never reach the screen. Reading through
-                    // the lambda instead defers the snapshot read to the `composable { }` body,
-                    // where it belongs to the destination's own recompose scope.
-                    rootFeedRoutes(
-                        appUiState = { appUiState },
-                        appViewModel = appViewModel,
-                        navController = navController,
-                        unauthenticatedUiState = unauthenticatedScheduledTaskHomeUiState,
-                        rootFeedTab = { rootFeedTab },
-                        onSelectRootFeedTab = ::handleRootFeedTabSelection,
-                        onChangeRootFeedTab = { rootFeedTab = it },
-                        rootCreateTaskRequestKey = { rootCreateTaskRequestKey },
-                        onCreateTaskRequestHandled = ::consumeRootCreateTaskRequest,
-                        onRequestCreateTask = ::requestRootCreateTask,
-                        scheduledScrollToTopRequestKey = { scheduledTaskHomeScrollToTopRequestKey },
-                        floaterScrollToTopRequestKey = { floaterTaskHomeScrollToTopRequestKey },
-                        rootDockCollapsed = { rootDockCollapsed },
-                        onRootDockCollapsedChange = { rootDockCollapsed = it },
-                        rootControlsVisible = { rootControlsVisible },
-                        onRootControlsVisibleChange = { rootControlsVisible = it },
-                    )
-                    todoScopeRoutes(
-                        navController = navController,
-                        isLocalMode = { appUiState.isLocalMode },
-                        onChangeRootFeedTab = { rootFeedTab = it },
-                        onRequestFloaterCreateTask = { pendingFloaterTaskHomeCreateTask = true },
-                    )
-                    listRoutes(
-                        navController = navController,
-                        isLocalMode = { appUiState.isLocalMode },
-                        onChangeRootFeedTab = { rootFeedTab = it },
-                    )
-                    utilityRoutes(
-                        navController = navController,
-                        isLocalMode = { appUiState.isLocalMode },
-                    )
-                    settingsRoutes(
-                        navController = navController,
-                        appUiState = { appUiState },
-                        appViewModel = appViewModel,
-                        releaseUiState = { releaseUiState },
-                        releaseViewModel = releaseViewModel,
-                        passwordChangedToastMessage = passwordChangedToastMessage,
-                        profileNameUpdatedToastMessage = profileNameUpdatedToastMessage,
-                        securityQuestionsUpdatedToastMessage = securityQuestionsUpdatedToastMessage,
-                    )
+                        startDestination = AppRoute.Splash.route,
+                        modifier = Modifier.haze(hazeState),
+                        // Crossfade, with no slide in it.
+                        //
+                        // Every screen draws its own toolbar at the same place in the same
+                        // row, so a slide carried the back chevron and the action cluster
+                        // 18% of the screen's width sideways and then dropped them back
+                        // where they started — the one part of the frame that is the SAME
+                        // on both screens, moving. Fading in place hands each button over
+                        // to its counterpart instead of travelling it there and back.
+                        //
+                        // Directional transitions go with it wherever the change is COMMITTED:
+                        // there is no direction left to express once nothing moves, so three of
+                        // the four slots below share one pair. The fourth is the one the system
+                        // SEEKS against a finger rather than plays, and a seeked crossfade is a
+                        // progress report nobody can read — see `navigationPopExitTransition`.
+                        // The screen being dragged off is the only thing that moves, and the
+                        // arriving screen still fades in place, so the hand-over argument above
+                        // survives in the half it was written about.
+                        enterTransition = { navigationEnterTransition(motionEnabled) },
+                        exitTransition = { navigationExitTransition(motionEnabled) },
+                        popEnterTransition = { navigationEnterTransition(motionEnabled) },
+                        popExitTransition = { navigationPopExitTransition(motionEnabled) },
+                    ) {
+                        splashAndAuthRoutes(
+                            startupTagline = startupTagline,
+                            onStartupSplashHoldChanged = { isStartupSplashHeld = it },
+                            navController = navController,
+                            appViewModel = appViewModel,
+                        )
+                        // Every changing value crosses into a route as a `() -> T` reader, never as
+                        // the value itself. This lambda is the NavGraph *builder*: it runs once per
+                        // graph build, inside NavHost's `remember(route, startDestination, builder)`,
+                        // and NOT on recomposition. A `by`-delegated read performed here is recorded
+                        // against NavHost's scope and then frozen into the destination for the life of
+                        // the graph, so writing the state would never reach the screen. Reading through
+                        // the lambda instead defers the snapshot read to the `composable { }` body,
+                        // where it belongs to the destination's own recompose scope.
+                        rootFeedRoutes(
+                            appUiState = { appUiState },
+                            appViewModel = appViewModel,
+                            navController = navController,
+                            unauthenticatedUiState = unauthenticatedScheduledTaskHomeUiState,
+                            rootFeedTab = { rootFeedTab },
+                            onSelectRootFeedTab = ::handleRootFeedTabSelection,
+                            onChangeRootFeedTab = { rootFeedTab = it },
+                            rootCreateTaskRequestKey = { rootCreateTaskRequestKey },
+                            onCreateTaskRequestHandled = ::consumeRootCreateTaskRequest,
+                            onRequestCreateTask = ::requestRootCreateTask,
+                            scheduledScrollToTopRequestKey = { scheduledTaskHomeScrollToTopRequestKey },
+                            floaterScrollToTopRequestKey = { floaterTaskHomeScrollToTopRequestKey },
+                            rootDockCollapsed = { rootDockCollapsed },
+                            onRootDockCollapsedChange = { rootDockCollapsed = it },
+                            rootControlsVisible = { rootControlsVisible },
+                            onRootControlsVisibleChange = { rootControlsVisible = it },
+                        )
+                        todoScopeRoutes(
+                            navController = navController,
+                            isLocalMode = { appUiState.isLocalMode },
+                            onChangeRootFeedTab = { rootFeedTab = it },
+                            onRequestFloaterCreateTask = { pendingFloaterTaskHomeCreateTask = true },
+                        )
+                        listRoutes(
+                            navController = navController,
+                            isLocalMode = { appUiState.isLocalMode },
+                            onChangeRootFeedTab = { rootFeedTab = it },
+                        )
+                        utilityRoutes(
+                            navController = navController,
+                            isLocalMode = { appUiState.isLocalMode },
+                        )
+                        settingsRoutes(
+                            navController = navController,
+                            appUiState = { appUiState },
+                            appViewModel = appViewModel,
+                            releaseUiState = { releaseUiState },
+                            releaseViewModel = releaseViewModel,
+                            passwordChangedToastMessage = passwordChangedToastMessage,
+                            profileNameUpdatedToastMessage = profileNameUpdatedToastMessage,
+                            securityQuestionsUpdatedToastMessage = securityQuestionsUpdatedToastMessage,
+                        )
+                    }
                 }
             }
 
@@ -525,24 +539,31 @@ private fun NavGraphBuilder.rootFeedRoutes(
         route = AppRoute.ScheduledTaskHome.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://home" }),
     ) {
-        ScheduledTaskHomeRoute(
-            appUiState = appUiState(),
-            appViewModel = appViewModel,
-            navController = navController,
-            unauthenticatedUiState = unauthenticatedUiState,
-            rootFeedTab = rootFeedTab(),
-            onSelectRootFeedTab = onSelectRootFeedTab,
-            onChangeRootFeedTab = onChangeRootFeedTab,
-            rootCreateTaskRequestKey = rootCreateTaskRequestKey(),
-            onCreateTaskRequestHandled = onCreateTaskRequestHandled,
-            onRequestCreateTask = onRequestCreateTask,
-            scheduledScrollToTopRequestKey = scheduledScrollToTopRequestKey(),
-            floaterScrollToTopRequestKey = floaterScrollToTopRequestKey(),
-            rootDockCollapsed = rootDockCollapsed(),
-            onRootDockCollapsedChange = onRootDockCollapsedChange,
-            rootControlsVisible = rootControlsVisible(),
-            onRootControlsVisibleChange = onRootControlsVisibleChange,
-        )
+        // This screen draws all ten tiles, so it is the source half of every zoom, and a
+        // shared element has to name the visibility it is drawn in. That scope is `this` —
+        // the destination's own `AnimatedContentScope`, which is an `AnimatedVisibilityScope`
+        // — and it is published once here rather than threaded down through the feed and the
+        // private composables that build the tiles.
+        CompositionLocalProvider(LocalTdayTileSourceScope provides this) {
+            ScheduledTaskHomeRoute(
+                appUiState = appUiState(),
+                appViewModel = appViewModel,
+                navController = navController,
+                unauthenticatedUiState = unauthenticatedUiState,
+                rootFeedTab = rootFeedTab(),
+                onSelectRootFeedTab = onSelectRootFeedTab,
+                onChangeRootFeedTab = onChangeRootFeedTab,
+                rootCreateTaskRequestKey = rootCreateTaskRequestKey(),
+                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                onRequestCreateTask = onRequestCreateTask,
+                scheduledScrollToTopRequestKey = scheduledScrollToTopRequestKey(),
+                floaterScrollToTopRequestKey = floaterScrollToTopRequestKey(),
+                rootDockCollapsed = rootDockCollapsed(),
+                onRootDockCollapsedChange = onRootDockCollapsedChange,
+                rootControlsVisible = rootControlsVisible(),
+                onRootControlsVisibleChange = onRootControlsVisibleChange,
+            )
+        }
     }
 
     composable(
@@ -570,13 +591,27 @@ private fun NavGraphBuilder.todoScopeRoutes(
     composable(
         route = AppRoute.TodayTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/today" }),
-    ) {
-        TodosRoute(
-            mode = TodoListMode.TODAY,
-            onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode(),
-            summaryAvailable = !isLocalMode(),
-        )
+    ) { entry ->
+        // The arriving half of a tile's zoom. The screen is wrapped in a full-size anchor
+        // whose shared-element key comes from this route, so the tile that pushed it and
+        // this destination cannot be handed different answers; the block's own receiver is
+        // the `AnimatedVisibilityScope` this screen is transitioning in, which is what
+        // `Modifier.sharedElement` needs from the destination end. The route says which
+        // tile, and `rememberHomeTileOrigin` says whether a tile was pressed at all — the
+        // two questions this screen's arrival has to answer before it may grow out of a
+        // rectangle. Where either answer is no, or where motion is refused, this is an
+        // ordinary box around the screen and the route change plays as it always did.
+        TdayTileDestination(
+            route = AppRoute.TodayTodos,
+            fromHomeTile = rememberHomeTileOrigin(navController, entry),
+        ) {
+            TodosRoute(
+                mode = TodoListMode.TODAY,
+                onBack = { navController.popBackStack() },
+                pullRefreshEnabled = !isLocalMode(),
+                summaryAvailable = !isLocalMode(),
+            )
+        }
     }
 
     createTodayTodoRoute(
@@ -589,30 +624,40 @@ private fun NavGraphBuilder.todoScopeRoutes(
     composable(
         route = AppRoute.OverdueTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/overdue" }),
-    ) {
-        TodosRoute(
-            mode = TodoListMode.OVERDUE,
-            onBack = { navController.popBackStack() },
-            onOpenMorningSweep = {
-                navController.navigate(AppRoute.MorningSweep.route) {
-                    launchSingleTop = true
-                }
-            },
-            pullRefreshEnabled = !isLocalMode(),
-            summaryAvailable = !isLocalMode(),
-        )
+    ) { entry ->
+        TdayTileDestination(
+            route = AppRoute.OverdueTodos,
+            fromHomeTile = rememberHomeTileOrigin(navController, entry),
+        ) {
+            TodosRoute(
+                mode = TodoListMode.OVERDUE,
+                onBack = { navController.popBackStack() },
+                onOpenMorningSweep = {
+                    navController.navigate(AppRoute.MorningSweep.route) {
+                        launchSingleTop = true
+                    }
+                },
+                pullRefreshEnabled = !isLocalMode(),
+                summaryAvailable = !isLocalMode(),
+            )
+        }
     }
 
     composable(
         route = AppRoute.ScheduledTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/scheduled" }),
-    ) {
-        TodosRoute(
-            mode = TodoListMode.SCHEDULED,
-            onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode(),
-            summaryAvailable = !isLocalMode(),
-        )
+    ) { entry ->
+        TdayTileDestination(
+            route = AppRoute.ScheduledTodos,
+            fromHomeTile = rememberHomeTileOrigin(navController, entry),
+        ) {
+            TodosRoute(
+                mode = TodoListMode.SCHEDULED,
+                onBack = { navController.popBackStack() },
+                pullRefreshEnabled = !isLocalMode(),
+                summaryAvailable = !isLocalMode(),
+            )
+        }
     }
 
     composable(
@@ -637,25 +682,40 @@ private fun NavGraphBuilder.todoScopeRoutes(
             entry.arguments?.getString(ARG_HIGHLIGHT_TODO_ID).orEmpty(),
         ).ifBlank { null }
         val highlightTodoId = pendingSearchHighlightTodoId ?: argumentHighlightTodoId
-        TodosRoute(
-            mode = TodoListMode.ALL,
-            highlightTodoId = highlightTodoId,
-            onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode(),
-            summaryAvailable = !isLocalMode(),
-        )
+        // `highlighted` is the one argument in the table that reaches past the route: a
+        // resolved highlight id means this arrival came from the home screen's search
+        // results or from a deep link rather than from the All tile, so no key is named and
+        // the screen does not grow out of a tile the user did not press.
+        TdayTileDestination(
+            route = AppRoute.AllTodos,
+            fromHomeTile = rememberHomeTileOrigin(navController, entry),
+            highlighted = highlightTodoId != null,
+        ) {
+            TodosRoute(
+                mode = TodoListMode.ALL,
+                highlightTodoId = highlightTodoId,
+                onBack = { navController.popBackStack() },
+                pullRefreshEnabled = !isLocalMode(),
+                summaryAvailable = !isLocalMode(),
+            )
+        }
     }
 
     composable(
         route = AppRoute.PriorityTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/priority" }),
-    ) {
-        TodosRoute(
-            mode = TodoListMode.PRIORITY,
-            onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode(),
-            summaryAvailable = !isLocalMode(),
-        )
+    ) { entry ->
+        TdayTileDestination(
+            route = AppRoute.PriorityTodos,
+            fromHomeTile = rememberHomeTileOrigin(navController, entry),
+        ) {
+            TodosRoute(
+                mode = TodoListMode.PRIORITY,
+                onBack = { navController.popBackStack() },
+                pullRefreshEnabled = !isLocalMode(),
+                summaryAvailable = !isLocalMode(),
+            )
+        }
     }
 }
 
@@ -740,20 +800,29 @@ private fun NavGraphBuilder.listRoutes(
     ) { entry ->
         val listId = entry.arguments?.getString(ARG_LIST_ID).orEmpty()
         val listName = Uri.decode(entry.arguments?.getString(ARG_LIST_NAME).orEmpty())
-        TodosRoute(
-            mode = TodoListMode.LIST,
+        // A list's key carries its id, so this row grows only out of the row for THIS list —
+        // and the id comes from the route on both ends, here from the argument and on the
+        // tile from the list it is drawn for.
+        TdayTileDestination(
+            route = AppRoute.ListTodos,
+            fromHomeTile = rememberHomeTileOrigin(navController, entry),
             listId = listId,
-            listName = listName,
-            onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode(),
-            summaryAvailable = !isLocalMode(),
-            onListDeleted = {
-                navController.navigate(AppRoute.ScheduledTaskHome.route) {
-                    popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = false }
-                    launchSingleTop = true
-                }
-            },
-        )
+        ) {
+            TodosRoute(
+                mode = TodoListMode.LIST,
+                listId = listId,
+                listName = listName,
+                onBack = { navController.popBackStack() },
+                pullRefreshEnabled = !isLocalMode(),
+                summaryAvailable = !isLocalMode(),
+                onListDeleted = {
+                    navController.navigate(AppRoute.ScheduledTaskHome.route) {
+                        popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
     }
 
     composable(
@@ -768,21 +837,27 @@ private fun NavGraphBuilder.listRoutes(
     ) { entry ->
         val listId = entry.arguments?.getString(ARG_LIST_ID).orEmpty()
         val listName = Uri.decode(entry.arguments?.getString(ARG_LIST_NAME).orEmpty())
-        TodosRoute(
-            mode = TodoListMode.FLOATER,
+        TdayTileDestination(
+            route = AppRoute.FloaterListTodos,
+            fromHomeTile = rememberHomeTileOrigin(navController, entry),
             listId = listId,
-            listName = listName,
-            onBack = { navController.popBackStack() },
-            pullRefreshEnabled = !isLocalMode(),
-            summaryAvailable = !isLocalMode(),
-            onListDeleted = {
-                onChangeRootFeedTab(RootFeedTab.FLOATER_TASK_HOME)
-                navController.navigate(AppRoute.ScheduledTaskHome.route) {
-                    popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = false }
-                    launchSingleTop = true
-                }
-            },
-        )
+        ) {
+            TodosRoute(
+                mode = TodoListMode.FLOATER,
+                listId = listId,
+                listName = listName,
+                onBack = { navController.popBackStack() },
+                pullRefreshEnabled = !isLocalMode(),
+                summaryAvailable = !isLocalMode(),
+                onListDeleted = {
+                    onChangeRootFeedTab(RootFeedTab.FLOATER_TASK_HOME)
+                    navController.navigate(AppRoute.ScheduledTaskHome.route) {
+                        popUpTo(AppRoute.ScheduledTaskHome.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
     }
 }
 
@@ -794,38 +869,51 @@ private fun NavGraphBuilder.utilityRoutes(
     composable(
         route = AppRoute.Completed.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://completed" }),
-    ) {
+    ) { entry ->
         val viewModel: CompletedViewModel = hiltViewModel()
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         OnRouteResume { viewModel.load() }
-        CompletedScreen(
-            uiState = uiState,
-            onBack = { navController.popBackStack() },
-            onRefresh = { viewModel.refresh(userInitiated = true) },
-            onUncomplete = viewModel::uncomplete,
-            onDelete = viewModel::delete,
-            onUpdateTask = viewModel::update,
-        )
+        // Both root feeds have a Completed entry — the scheduled board's grid tile and the
+        // Anytime feed's single-column one — and both push this one route, so both answer
+        // with this one key; see the argument on `AppRoute.tileTransitionKey`.
+        TdayTileDestination(
+            route = AppRoute.Completed,
+            fromHomeTile = rememberHomeTileOrigin(navController, entry),
+        ) {
+            CompletedScreen(
+                uiState = uiState,
+                onBack = { navController.popBackStack() },
+                onRefresh = { viewModel.refresh(userInitiated = true) },
+                onUncomplete = viewModel::uncomplete,
+                onDelete = viewModel::delete,
+                onUpdateTask = viewModel::update,
+            )
+        }
     }
 
     composable(
         route = AppRoute.Calendar.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://calendar" }),
-    ) {
+    ) { entry ->
         val viewModel: CalendarViewModel = hiltViewModel()
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         OnRouteResume { viewModel.load() }
-        CalendarScreen(
-            uiState = uiState,
-            onBack = { navController.popBackStack() },
-            onRefresh = { viewModel.refresh(userInitiated = true) },
-            onCreateTask = viewModel::createTask,
-            onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
-            onCompleteTask = viewModel::complete,
-            onUpdateTask = viewModel::updateTask,
-            onMoveTask = viewModel::moveTask,
-            onDelete = viewModel::delete,
-        )
+        TdayTileDestination(
+            route = AppRoute.Calendar,
+            fromHomeTile = rememberHomeTileOrigin(navController, entry),
+        ) {
+            CalendarScreen(
+                uiState = uiState,
+                onBack = { navController.popBackStack() },
+                onRefresh = { viewModel.refresh(userInitiated = true) },
+                onCreateTask = viewModel::createTask,
+                onParseTaskTitleNlp = viewModel::parseTaskTitleNlp,
+                onCompleteTask = viewModel::complete,
+                onUpdateTask = viewModel::updateTask,
+                onMoveTask = viewModel::moveTask,
+                onDelete = viewModel::delete,
+            )
+        }
     }
 
     composable(
@@ -1421,13 +1509,18 @@ private fun ScheduledTaskHomeFeed(
         uiState = scheduledTaskHomeUiState,
         onRefresh = { scheduledTaskHomeViewModel.refresh(userInitiated = true) },
         pullRefreshEnabled = !appUiState.isLocalMode,
-        onOpenToday = { navController.navigate(AppRoute.TodayTodos.route) },
-        onOpenOverdue = { navController.navigate(AppRoute.OverdueTodos.route) },
-        onOpenScheduled = { navController.navigate(AppRoute.ScheduledTodos.route) },
-        onOpenAll = { navController.navigate(AppRoute.AllTodos.create()) },
-        onOpenPriority = { navController.navigate(AppRoute.PriorityTodos.route) },
-        onOpenCompleted = { navController.navigate(AppRoute.Completed.route) },
-        onOpenCalendar = { navController.navigate(AppRoute.Calendar.route) },
+        // Every one of these is a tile press, so every one of them says so: the destination
+        // may only grow out of the rectangle that was actually pressed. `navigateFromHomeTile`
+        // is the whole of that statement — see `TILE_TRANSITION_ORIGIN`. The pushes that are
+        // NOT presses (the shortcut, the notification, the widget row) call `navigate` and
+        // therefore leave the origin unset.
+        onOpenToday = { navController.navigateFromHomeTile(AppRoute.TodayTodos.route) },
+        onOpenOverdue = { navController.navigateFromHomeTile(AppRoute.OverdueTodos.route) },
+        onOpenScheduled = { navController.navigateFromHomeTile(AppRoute.ScheduledTodos.route) },
+        onOpenAll = { navController.navigateFromHomeTile(AppRoute.AllTodos.create()) },
+        onOpenPriority = { navController.navigateFromHomeTile(AppRoute.PriorityTodos.route) },
+        onOpenCompleted = { navController.navigateFromHomeTile(AppRoute.Completed.route) },
+        onOpenCalendar = { navController.navigateFromHomeTile(AppRoute.Calendar.route) },
         onOpenFloater = {
             onChangeRootFeedTab(RootFeedTab.FLOATER_TASK_HOME)
         },
@@ -1442,7 +1535,7 @@ private fun ScheduledTaskHomeFeed(
             navController.navigate(AppRoute.AllTodos.create())
         },
         onOpenList = { id, name ->
-            navController.navigate(
+            navController.navigateFromHomeTile(
                 AppRoute.ListTodos.create(
                     id,
                     name
@@ -1508,7 +1601,7 @@ private fun FloaterTaskHomeFeed(
         pullRefreshEnabled = !appUiState.isLocalMode,
         summaryAvailable = !appUiState.isLocalMode,
         onOpenFloaterList = { id, name ->
-            navController.navigate(
+            navController.navigateFromHomeTile(
                 AppRoute.FloaterListTodos.create(
                     id,
                     name
@@ -1516,7 +1609,7 @@ private fun FloaterTaskHomeFeed(
             )
         },
         onOpenCompleted = {
-            navController.navigate(AppRoute.Completed.route)
+            navController.navigateFromHomeTile(AppRoute.Completed.route)
         },
         onOpenSettings = {
             navController.navigate(AppRoute.Settings.route)
@@ -2129,12 +2222,13 @@ private fun TodosRoute(
         onBulkSetPriority = viewModel::setPriorityForSelected,
         onBulkMoveToList = viewModel::moveSelectedToList,
         onOpenMorningSweep = onOpenMorningSweep,
-        onUpdateListSettings = { targetListId, name, color, iconKey ->
+        onUpdateListSettings = { targetListId, name, color, iconKey, reusable ->
             viewModel.updateListSettings(
                 listId = targetListId,
                 name = name,
                 color = color,
                 iconKey = iconKey,
+                reusable = reusable,
             )
         },
         onDeleteList = { targetListId ->
@@ -2147,6 +2241,7 @@ private fun TodosRoute(
         onOpenCompleted = onOpenCompleted,
         onOpenSettings = onOpenSettings,
         onCreateList = viewModel::createList,
+        onResetFloaterList = viewModel::resetFloaterList,
         rootFeedTab = rootFeedTab,
         onRootFeedTabSelected = onRootFeedTabSelected,
         showRootFeedDock = showRootFeedDock,
@@ -2218,9 +2313,13 @@ private fun OnAppForegroundResume(
 }
 
 /**
- * The route hand-over: one length, two curves, and the same pair everywhere the change is
+ * The route hand-over: one shape, two curves, and the same pair everywhere the change is
  * already committed. The fourth wiring left this pair for a gesture; see
  * [navigationPopExitTransition].
+ *
+ * Two rungs, not two hand-overs: `Enter` while motion plays, and `Quick` where it is
+ * refused, because the length is the thing Reduce Motion is asking to be spared and the
+ * curves are what is left saying which way the change is going.
  *
  * The 360 this replaced carried half an argument and the half survives. A route fade sits
  * between a tap and the screen the user asked for, and anything longer than that reads as
@@ -2241,13 +2340,44 @@ private fun OnAppForegroundResume(
  * more than tidiness — a route that escapes a gate wired at the NavHost.
  *
  * [motionEnabled] is a parameter and not a `remember` because the callers are
- * `AnimatedContentTransitionScope` lambdas, which are not composable. `None` is not "no
- * transition", it is the destination drawn finished on its first frame, which is the whole
- * of what a route change has to show for itself.
+ * `AnimatedContentTransitionScope` lambdas, which are not composable.
+ *
+ * WHAT REDUCE MOTION GETS, AND WHY IT IS NOT `None`. A DELIBERATE DEPARTURE, NAMED AS ONE.
+ *
+ * These three used to answer `None` when motion was refused. `None` is not "no transition":
+ * it is the destination drawn finished on its first frame, which is the whole of what a
+ * route change has to SAY, and `docs/motion.md`'s fifth idiom rule — "removes the trip,
+ * never the destination" — is satisfied by it: the rule forbids a scene held at the START
+ * of its fade, and a finished frame is not that. So what follows is not an application of
+ * the rule, and this comment is not here to claim it is.
+ *
+ * It is a departure from two places that encode the opposite, and either would have to move
+ * with it. `tday-web/tests/guardrails/route-handover.test.ts` asserts `EnterTransition.None`
+ * and `ExitTransition.None` in these three declarations, and requires every rung named in
+ * `navigationPopExitTransition` to be `Durations.Enter` — its Android block is the only
+ * thing in the tree pinning this decision, and it cannot pass while this stands. Web's
+ * answer at a route change is the other: `tday-web/src/globals.css` turns `.tday-route-fade`
+ * into `animation: none` under `prefers-reduced-motion: reduce`, commented "The destination
+ * is the whole of the finished state at a route change". This makes Android the only client
+ * that fades.
+ *
+ * What it buys, stated as the thing it is: a route change is a hand-over, and with the tile
+ * zoom gated off by the same switch (`TdayTileTransition.kt`) there is nothing left in it
+ * but the hand-over itself — so the destination is still handed over rather than appearing,
+ * on the shortest rung the vocabulary has. The trip Reduce Motion is spared is the LENGTH,
+ * the 200 ms in front of a screen the user has already chosen, not the hand-over.
+ *
+ * If the trade is not wanted, this paragraph and the three `Quick` branches below are the
+ * whole of it: put `None` back and the guardrail above stops failing.
  */
 private fun navigationEnterTransition(motionEnabled: Boolean): EnterTransition =
     if (!motionEnabled) {
-        EnterTransition.None
+        fadeIn(
+            animationSpec = tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = LinearOutSlowInEasing,
+            ),
+        )
     } else {
         fadeIn(
             animationSpec = tween(
@@ -2260,7 +2390,12 @@ private fun navigationEnterTransition(motionEnabled: Boolean): EnterTransition =
 /** The other curve of the pair; see [navigationEnterTransition] for the length they share. */
 private fun navigationExitTransition(motionEnabled: Boolean): ExitTransition =
     if (!motionEnabled) {
-        ExitTransition.None
+        fadeOut(
+            animationSpec = tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = FastOutLinearInEasing,
+            ),
+        )
     } else {
         fadeOut(
             animationSpec = tween(
@@ -2296,10 +2431,20 @@ private fun navigationExitTransition(motionEnabled: Boolean): ExitTransition =
  * quarter width is a travel and not a distance anybody measures, so it is written here rather
  * than named; [PREDICTIVE_BACK_MIN_SCALE] is the number that needed an argument and carries
  * one.
+ *
+ * With motion refused the travel and the recede go — they are the gesture's travelling
+ * half, and a refused drag has no travel to report — and the screen being taken away
+ * still fades on [navigationEnterTransition]'s short rung, so back remains a hand-over
+ * rather than a cut.
  */
 private fun navigationPopExitTransition(motionEnabled: Boolean): ExitTransition =
     if (!motionEnabled) {
-        ExitTransition.None
+        fadeOut(
+            animationSpec = tween(
+                durationMillis = TdayMotionTokens.Durations.Quick,
+                easing = FastOutLinearInEasing,
+            ),
+        )
     } else {
         // Two tweens for one spec, because Compose types an animation by what it animates and
         // the slide moves an `IntOffset` while the other two move a `Float`. The rung and the

@@ -180,11 +180,11 @@ func runPendingMutationReplay(
     for index in orderedMutations.indices {
         let mutation = orderedMutations[index]
         if mutation.staged {
-            // A delayed-commit list/floater-list delete still inside its undo
-            // window (see PendingMutationRecord.staged): never replay it — that
-            // would leak the delete to the server before Undo/commit resolves —
-            // just keep it pending so mergeRemoteWithLocal's resurrection guard
-            // keeps covering the list for as long as it stays staged.
+            // A delayed-commit delete or completion still inside its undo window
+            // (see PendingMutationRecord.staged): never replay it — that would
+            // leak the change to the server before Undo/commit resolves — just
+            // keep it pending so mergeRemoteWithLocal's resurrection guard keeps
+            // covering the row for as long as it stays staged.
             remaining.append(mutation)
             continue
         }
@@ -605,7 +605,8 @@ final class SyncManager {
                         iconKey: list.iconKey,
                         todoCount: floaterCountsByList[list.id] ?? 0,
                         updatedAtEpochMs: list.updatedAtEpochMs,
-                        createdAtEpochMs: list.createdAtEpochMs
+                        createdAtEpochMs: list.createdAtEpochMs,
+                        reusable: list.reusable
                     )
                 }
             ),
@@ -753,7 +754,8 @@ final class SyncManager {
                 instanceDateEpochMs: nil,
                 name: list.name,
                 color: list.color,
-                iconKey: list.iconKey
+                iconKey: list.iconKey,
+                reusable: list.reusable
             )
             if !existingKeys.contains(mutationKey(for: mutation)) {
                 generated.append(mutation)
@@ -850,7 +852,7 @@ final class SyncManager {
                 return
             }
             let response = try await api.createFloaterList(
-                payload: CreateFloaterListRequest(name: mutation.name ?? "Untitled", color: mutation.color, iconKey: mutation.iconKey)
+                payload: CreateFloaterListRequest(name: mutation.name ?? "Untitled", color: mutation.color, iconKey: mutation.iconKey, reusable: mutation.reusable ?? false)
             )
             guard let createdList = response.list else { return }
             resolvedFloaterListIDs[localListID] = createdList.id
@@ -861,7 +863,7 @@ final class SyncManager {
             let remoteUpdatedAt = remoteSnapshot.floaterListUpdatedAtByID[targetID] ?? 0
             guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
             _ = try await api.patchFloaterListByBody(
-                payload: UpdateFloaterListRequest(id: targetID, name: mutation.name, color: mutation.color, iconKey: mutation.iconKey)
+                payload: UpdateFloaterListRequest(id: targetID, name: mutation.name, color: mutation.color, iconKey: mutation.iconKey, reusable: mutation.reusable)
             )
 
         case .deleteFloaterList:
@@ -1405,7 +1407,8 @@ final class SyncManager {
                     iconKey: list.iconKey,
                     todoCount: list.todoCount,
                     updatedAtEpochMs: list.updatedAtEpochMs,
-                    createdAtEpochMs: list.createdAtEpochMs
+                    createdAtEpochMs: list.createdAtEpochMs,
+                    reusable: list.reusable
                 )
             }.dedupedByID(),
             pendingMutations: state.pendingMutations.map { mutation in

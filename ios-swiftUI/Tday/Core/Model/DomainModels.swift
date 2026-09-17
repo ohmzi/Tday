@@ -78,14 +78,19 @@ enum TaskPriorityDisplay {
     static var importantLabel: String { L("Important") }
     static var urgentLabel: String { L("Urgent") }
 
-    /// Low-to-high urgency — the display order every picker renders in. The new
-    /// tier leads, ahead of Normal.
+    /// High-to-low urgency — the display order every picker renders in, with the most
+    /// urgent tier leading and the newest tier trailing.
+    ///
+    /// This was originally low-to-high (the newest tier leading). It is inverted so the
+    /// most urgent tier sits at the top of every picker and the least urgent at the
+    /// bottom, mirroring Android's `PRIORITY_OPTIONS_HIGH_TO_LOW` and web's picker order.
+    /// The task *sort* order is a separate concern and is unaffected.
     static var options: [(label: String, value: String)] {
         [
-            (lowestLabel, lowestValue),
-            (normalLabel, normalValue),
-            (importantLabel, importantValue),
             (urgentLabel, urgentValue),
+            (importantLabel, importantValue),
+            (normalLabel, normalValue),
+            (lowestLabel, lowestValue),
         ]
     }
 
@@ -313,13 +318,17 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
     var isShared: Bool = false
     var memberCount: Int = 0
     var ownerUsername: String?
+    /// A reusable list can be Reset (all its floaters un-completed) to run again.
+    /// Drives both the settings toggle and the header's Reset, exactly as
+    /// `listMeta.reusable` does on web. False for scheduled lists.
+    var reusable: Bool = false
 
     var isViewer: Bool { myRole.caseInsensitiveCompare("VIEWER") == .orderedSame }
     var isOwner: Bool { myRole.caseInsensitiveCompare("OWNER") == .orderedSame }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, color, iconKey, todoCount, updatedAt, createdAt
-        case myRole, isShared, memberCount, ownerUsername
+        case myRole, isShared, memberCount, ownerUsername, reusable
     }
 
     init(
@@ -333,7 +342,8 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         myRole: String = "OWNER",
         isShared: Bool = false,
         memberCount: Int = 0,
-        ownerUsername: String? = nil
+        ownerUsername: String? = nil,
+        reusable: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -346,6 +356,7 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         self.isShared = isShared
         self.memberCount = memberCount
         self.ownerUsername = ownerUsername
+        self.reusable = reusable
     }
 
     // Tolerates payloads persisted before sharing existed (widget snapshots).
@@ -362,6 +373,7 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         isShared = try container.decodeIfPresent(Bool.self, forKey: .isShared) ?? false
         memberCount = try container.decodeIfPresent(Int.self, forKey: .memberCount) ?? 0
         ownerUsername = try container.decodeIfPresent(String.self, forKey: .ownerUsername)
+        reusable = try container.decodeIfPresent(Bool.self, forKey: .reusable) ?? false
     }
 }
 

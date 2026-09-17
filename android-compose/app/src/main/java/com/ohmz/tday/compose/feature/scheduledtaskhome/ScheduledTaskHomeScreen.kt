@@ -137,6 +137,8 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
+import com.ohmz.tday.compose.core.navigation.AppRoute
+import com.ohmz.tday.compose.core.navigation.tileTransitionKey
 import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
 import com.ohmz.tday.compose.core.ui.CategoryCard
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
@@ -149,6 +151,7 @@ import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySheetMotion
 import com.ohmz.tday.compose.core.ui.animateTaskSwipeOffsetAsState
+import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskRowFirstLineAlignment
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
@@ -161,6 +164,7 @@ import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayPressable
+import com.ohmz.tday.compose.core.ui.tdayTileSharedElement
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.rememberSheetDismissState
@@ -390,14 +394,27 @@ fun ScheduledTaskHomeScreen(
         searchImeWasVisible = false
         searchResultOpening = false
     }
-    // The app's scale, because what this is timed against is the route handover in
-    // `TdayApp` and that handover now answers the in-app switch as well as the
-    // animator scale. This val used to read the device's for exactly the opposite
-    // reason, and leaving it there would have broken the same rule from the other
-    // side: the transition cut to nothing while the search surface stayed up for its
-    // full length, swallowing taps, over a task screen already drawn whole. A wait
-    // runs on the clock of the motion it covers — see [effectiveMotionScale].
-    val searchCloseMotionScale = rememberTdayMotionScale()
+    // The clock, and the rung, of the route handover this wait covers — and the fact that
+    // the two are read from two different places is the whole of this comment.
+    //
+    // The wait is timed against the push onto the task in `TdayApp`, so it runs on that
+    // handover's clock. The in-app Reduce Motion switch does not change that clock: it
+    // changes which RUNG the handover plays — `Quick` rather than `Enter`, see
+    // `navigationEnterTransition` — while the clock stays the device's animator scale,
+    // the one Compose is already scaling every animation by. Reading the app's scale here,
+    // as this used to, zeroed the wait at the switch while a 150 ms handover went on
+    // playing, so the search surface came down over a departing board still at most of its
+    // alpha. That is exactly the jump this wait exists to hide. A wait runs on the clock of
+    // the motion it covers — see [effectiveMotionScale] and [scaledDelay].
+    val searchCloseMotionScale = rememberSystemMotionScale()
+    // ...and it is as long as that motion. The rung is the handover's own: the long beat
+    // while motion plays, and `Quick` where the handover was cut down to it. The constant
+    // is the long beat and stays a non-token; the rung beside it is named, not re-written.
+    val searchCloseRung = if (rememberTdayMotionEnabled()) {
+        SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS
+    } else {
+        TdayMotionTokens.Durations.Quick.toLong()
+    }
     val openTaskFromSearch: (String) -> Unit = openTask@{ todoId ->
         if (searchResultOpening) return@openTask
         searchResultOpening = true
@@ -405,11 +422,12 @@ fun ScheduledTaskHomeScreen(
         focusManager.clearFocus(force = true)
         onOpenTaskFromSearch(todoId)
         searchResultScope.launch {
-            // Scaled, because what it is waiting out is the push onto the task:
-            // tearing the search surface down underneath a transition that is
-            // still running is the jump this wait exists to hide, and with that
-            // push refused there is no transition left to hide behind.
-            scaledDelay(SEARCH_RESULT_SEARCH_CLOSE_DELAY_MS, searchCloseMotionScale)
+            // Scaled, because what it is waiting out is the push onto the task: tearing
+            // the search surface down underneath a transition that is still running is
+            // the jump this wait exists to hide. The wait moves with the handover — its
+            // clock above, its rung beside that — so a handover cut down to `Quick` still
+            // has the wait under it rather than losing it.
+            scaledDelay(searchCloseRung, searchCloseMotionScale)
             closeSearch()
         }
     }
@@ -676,6 +694,9 @@ fun ScheduledTaskHomeScreen(
                         if (!showSearchResultsOverlay) {
                         item {
                             ScheduledTaskHomeTodayCard(
+                                modifier = Modifier.tdayTileSharedElement(
+                                    AppRoute.TodayTodos.tileTransitionKey(),
+                                ),
                                 count = uiState.summary.todayCount,
                                 onClick = {
                                     closeSearch()
@@ -760,7 +781,10 @@ fun ScheduledTaskHomeScreen(
                             contentType = { _, _ -> "list_row" },
                         ) { _, list ->
                             ListRow(
-                                modifier = scheduledTaskHomeDisplacedItemMotion(),
+                                modifier = scheduledTaskHomeDisplacedItemMotion()
+                                    .tdayTileSharedElement(
+                                        AppRoute.ListTodos.tileTransitionKey(listId = list.id),
+                                    ),
                                 name = list.name,
                                 colorKey = list.color,
                                 iconKey = list.iconKey,
@@ -1558,6 +1582,7 @@ private val SCHEDULED_TASK_HOME_TODAY_DATE_FORMATTER: DateTimeFormatter =
 
 @Composable
 private fun ScheduledTaskHomeTodayCard(
+    modifier: Modifier = Modifier,
     count: Int,
     onClick: () -> Unit,
 ) {
@@ -1567,7 +1592,7 @@ private fun ScheduledTaskHomeTodayCard(
     val color = Color(0xFF6EA8E1)
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {}
             .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
@@ -2143,11 +2168,22 @@ private fun CategoryGrid(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val completedColor = completedTileColor(colorScheme)
+    // The six tiles are the source half of six zooms, and each key comes from the route its
+    // click already opens — the one table both ends read, so a tile re-pointed at a
+    // different route cannot end up growing out of a rectangle it never came from. The
+    // modifier is a no-op when there is no tile scope above this grid or when motion is
+    // refused.
+    val scheduledKey = AppRoute.ScheduledTodos.tileTransitionKey()
+    val priorityKey = AppRoute.PriorityTodos.tileTransitionKey()
+    val overdueKey = AppRoute.OverdueTodos.tileTransitionKey()
+    val allKey = AppRoute.AllTodos.tileTransitionKey()
+    val completedKey = AppRoute.Completed.tileTransitionKey()
+    val calendarKey = AppRoute.Calendar.tileTransitionKey()
 
     Column(verticalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
         Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).tdayTileSharedElement(scheduledKey),
                 color = Color(0xFFD98F4B),
                 iconRes = R.drawable.ic_lucide_calendar_clock,
                 watermarkRes = R.drawable.ic_lucide_calendar_clock,
@@ -2156,7 +2192,7 @@ private fun CategoryGrid(
                 onClick = onOpenScheduled,
             )
             CategoryCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).tdayTileSharedElement(priorityKey),
                 color = Color(0xFFC97880),
                 iconRes = R.drawable.ic_lucide_flag,
                 watermarkRes = R.drawable.ic_lucide_flag,
@@ -2167,7 +2203,7 @@ private fun CategoryGrid(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).tdayTileSharedElement(overdueKey),
                 color = Color(0xFFE06F66),
                 iconRes = R.drawable.ic_lucide_clock_3,
                 watermarkRes = R.drawable.ic_lucide_clock_3,
@@ -2176,7 +2212,7 @@ private fun CategoryGrid(
                 onClick = onOpenOverdue,
             )
             CategoryCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).tdayTileSharedElement(allKey),
                 color = Color(0xFF68717A),
                 iconRes = R.drawable.ic_lucide_layers,
                 watermarkRes = R.drawable.ic_lucide_layers,
@@ -2187,7 +2223,7 @@ private fun CategoryGrid(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).tdayTileSharedElement(completedKey),
                 color = completedColor,
                 iconRes = R.drawable.ic_lucide_circle_check_big,
                 watermarkRes = R.drawable.ic_lucide_circle_check_big,
@@ -2196,7 +2232,7 @@ private fun CategoryGrid(
                 onClick = onOpenCompleted,
             )
             CategoryCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).tdayTileSharedElement(calendarKey),
                 color = calendarTileColor(colorScheme),
                 iconRes = R.drawable.ic_lucide_calendar_1,
                 watermarkRes = R.drawable.ic_lucide_calendar_1,

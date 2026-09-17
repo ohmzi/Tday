@@ -3,12 +3,14 @@
 /**
  * Completion is delayed-commit: the caches are pruned immediately but the PATCH only fires when
  * the undo toast closes (5s later). For that whole window the server still reports the task as
- * incomplete, so ANY refetch of ["todo"] / ["todoTimeline"] in that window refills the cache from
- * the server and the row the user just ticked comes back.
+ * incomplete, so a refetch of ["todo"] / ["todoTimeline"] refills the cache from the server and
+ * the row the user just ticked comes back — unless the staged row is claimed somewhere the read
+ * path respects, which is what `@/lib/todo/staged-todo-rows` does and what this pins.
  *
- * Refetches in that window are not hypothetical: src/lib/realtime.tsx invalidates exactly those
- * two keys on every `todo` realtime event, and React Query also refetches on window focus and on
- * remount once the 60s staleTime has passed.
+ * Refetches in that window are not hypothetical: src/lib/realtime.tsx invalidates ["todo"],
+ * ["todoTimeline"], ["overdueTodo"], ["calendarTodo"] and ["list"] on every `todo` realtime event
+ * (each completion emits one back to the actor who caused it), and React Query also refetches on
+ * window focus and on remount once the 60s staleTime has passed.
  */
 
 import type { ReactNode } from "react";
@@ -66,10 +68,10 @@ describe("the delayed-commit window", () => {
     capturedHandlers = null;
   });
 
-  // KNOWN BUG (it.fails): this documents current behaviour, so it passes only while the bug is
-  // present. When the completion flow is fixed to survive a refetch, this test starts failing and
-  // the `.fails` marker should be dropped along with the fix.
-  it.fails("should keep the ticked task out of the list even if something refetches first", async () => {
+  // Was `it.fails` while the completion flow was memory-only until commit. The staged row is now
+  // claimed at the cache boundary (`stageTodoRows`), so a refetch of the pruned keys cannot
+  // restore it, and the marker came off with the fix.
+  it("should keep the ticked task out of the list even if something refetches first", async () => {
     const server = makeServer();
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -108,8 +110,9 @@ describe("the delayed-commit window", () => {
       await queryClient.invalidateQueries({ queryKey: ["todoTimeline"] });
     });
 
-    // DESIRED: the task the user just ticked stays out of the list.
-    // ACTUAL: the server was never told, so the refetch brings it straight back.
+    // The task the user just ticked stays out of the list: the server was never
+    // told, but the cached row is claimed until the commit, so the refetch's
+    // result is stripped of it before it lands.
     await waitFor(() =>
       expect(
         queryClient.getQueryData<TodoItemType[]>(["todoTimeline"])?.map((t) => t.id),

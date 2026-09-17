@@ -456,6 +456,14 @@ private struct FloaterTaskHomeSearchResultsCard: View {
 private struct FloaterTaskHomeListCard: View {
     let list: ListSummary
     let count: Int
+    /// The route this card pushes, carried alongside the closure that pushes it.
+    ///
+    /// The closure is an opaque `() -> Void` handed up to `AppRootView`, so it cannot
+    /// be asked where it goes, and the zoom needs an id both ends agree on. Per-list,
+    /// because several of these cards are on screen at once — a single shared id would
+    /// match the wrong rectangle. The argument list it is built from is the same
+    /// `row.list` the `onTap` closure hands to `onOpenFloaterList`.
+    let zoomRoute: AppRoute
     let onTap: () -> Void
 
     @Environment(\.tdayColors) private var colors
@@ -536,6 +544,10 @@ private struct FloaterTaskHomeListCard: View {
         }
         .buttonStyle(.plain)
         .shadow(color: .black.opacity(0.14), radius: 10, x: 0, y: 7)
+        // The rectangle the pushed screen grows out of, on this card's own chain. On
+        // iOS 17, under Reduce Motion, or for a route with no source id it resolves to
+        // nothing and the push is the stock slide — see `ZoomNavigation.swift`.
+        .tdayZoomSource(zoomRoute)
     }
 }
 
@@ -555,14 +567,24 @@ private struct FloaterTaskHomeListCard: View {
 /// reading it would mean wiring the completed repository into the Anytime feed
 /// for a decoration.
 ///
-/// No `.tdayZoomSource(.completed)` either. `ZoomNavigation` mints one shared id
-/// per route, the Scheduled board's Completed tile already claims it, and
-/// `AppRootView` crossfades the two root feeds through a `ZStack` — so during a
-/// tab swap both trees are mounted and two views would carry one id in one
-/// namespace. Android's tile has no shared-element transition here for the same
-/// reason it has none anywhere on this feed.
+/// It does carry a `.tdayZoomSource`, and what used to stop that is worth writing
+/// down because the reason is gone. `ZoomNavigation` minted one id per route, the
+/// Scheduled board's Completed tile already claimed `.completed`, and `AppRootView`
+/// crossfades the two root feeds through a `ZStack` — so during a tab swap both trees
+/// are mounted and two views would have carried one id in one namespace. The origin
+/// now travels on the route, so the board's tile publishes `home-tile.completed` and
+/// this one publishes `floater-tile.completed`: two distinct ids, and the both-mounted
+/// window has nothing to collide. Android's tile still has no shared-element
+/// transition here; that is a separate piece of work.
 private struct FloaterTaskHomeCompletedCard: View {
     let onTap: () -> Void
+    /// The route this card pushes, carried alongside the closure that pushes it.
+    ///
+    /// Same reason as `FloaterTaskHomeListCard` above: the closure is opaque and the
+    /// zoom needs an id both ends agree on. `.completed(origin: .floaterFeed)` is the
+    /// floater feed's id, and a copy of the Scheduled board's would put two views on one
+    /// id in one namespace while both feeds are mounted.
+    let zoomRoute: AppRoute
 
     /// The Completed accent, pinned across all three clients: Android's
     /// `TdayCompletedTileAccent` (0xFF719F84), the Scheduled board's
@@ -647,6 +669,8 @@ private struct FloaterTaskHomeCompletedCard: View {
         }
         .buttonStyle(.plain)
         .shadow(color: .black.opacity(0.14), radius: 10, x: 0, y: 7)
+        // This card's own chain, and this feed's own id — not the Scheduled board's.
+        .tdayZoomSource(zoomRoute)
     }
 }
 
@@ -1374,6 +1398,23 @@ struct TodoListScreen: View {
             ))
         }
 
+        if viewModel.mode == .floater,
+           let resetTarget = selectedListSummary,
+           resetTarget.reusable,
+           !resetTarget.isViewer {
+            // Web's FloaterListContainer draws Reset on the SAVED list's `reusable`
+            // (never the in-sheet toggle) and hides it from viewers — the backend
+            // forbids a VIEWER at FloaterListService.resetFloaters. Same gate here,
+            // so the affordance and the server agree.
+            actions.append(TimelineTopBarAction(
+                systemName: "arrow.counterclockwise",
+                assetName: "LucideRefreshCw",
+                usesCircularChrome: true,
+                accessibilityLabel: L("Reset list"),
+                action: { Task { await viewModel.resetFloaterList() } }
+            ))
+        }
+
         if isListDetailScreen {
             // One entry point per role: owners get list settings (which hosts
             // the Sharing section); members go straight to the members sheet.
@@ -1885,9 +1926,9 @@ struct TodoListScreen: View {
             createTaskSheetContent
         }
         .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
-            CreateListSheet { name, color, iconKey in
+            CreateListSheet(showsReusable: viewModel.mode == .floater) { name, color, iconKey, reusable in
                 Task {
-                    await viewModel.createList(name: name, color: color, iconKey: iconKey)
+                    await viewModel.createList(name: name, color: color, iconKey: iconKey, reusable: reusable ?? false)
                 }
             }
         }
@@ -2618,8 +2659,16 @@ struct TodoListScreen: View {
                 pendingMembersAfterSettings = true
                 showingListSettings = false
             },
-            onSubmit: { name, color, iconKey in
-                Task { await viewModel.updateListSettings(name: name, color: color, iconKey: iconKey) }
+            showsReusable: viewModel.mode == .floater,
+            onSubmit: { name, color, iconKey, reusable in
+                Task {
+                    await viewModel.updateListSettings(
+                        name: name,
+                        color: color,
+                        iconKey: iconKey,
+                        reusable: reusable
+                    )
+                }
             },
             onDeleteRequest: {
                 showingListSettings = false
@@ -3151,7 +3200,7 @@ struct TodoListScreen: View {
                     // cannot learn exists.
                     if isFloaterTaskHomeScreen {
                         Section {
-                            FloaterTaskHomeCompletedCard(onTap: onOpenCompleted)
+                            FloaterTaskHomeCompletedCard(onTap: onOpenCompleted, zoomRoute: .completed(origin: .floaterFeed))
                                 .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 10, trailing: TodoTimelineMetrics.horizontalPadding))
                                 .listRowBackground(colors.background)
                                 .listRowSeparator(.hidden)
@@ -3164,6 +3213,10 @@ struct TodoListScreen: View {
                                 FloaterTaskHomeListCard(
                                     list: row.list,
                                     count: row.count,
+                                    // The same list the onTap closure hands to `onOpenFloaterList`
+                                    // below — the id has to match the route AppRootView pushes or
+                                    // the card publishes an id no destination asks for.
+                                    zoomRoute: .floaterListTodos(listId: row.list.id, listName: row.list.name, origin: .floaterFeed),
                                     onTap: {
                                         onOpenFloaterList(row.list.id, row.list.name)
                                     }
@@ -5155,7 +5208,11 @@ private struct ListSettingsSheet: View {
     let list: ListSummary?
     var shareText: String? = nil
     var onMembersRequest: (() -> Void)? = nil
-    let onSubmit: (String, String?, String?) -> Void
+    /// True on a floater list, which is the only kind that can be reused: a
+    /// scheduled list has no Reset to reveal, so the row is hidden and the save
+    /// submits nil (the shared UpdateFloaterListRequest reads that as "leave it").
+    var showsReusable: Bool = false
+    let onSubmit: (String, String?, String?, Bool?) -> Void
     let onDeleteRequest: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var tdayColors
@@ -5163,6 +5220,10 @@ private struct ListSettingsSheet: View {
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
+    /// Seeded from the SAVED list on open, and always submitted when the row is
+    /// shown — web's sheet posts `reusable` on every save, so an off-flip has to
+    /// reach the server or the Reset it reveals can never be retired.
+    @State private var reusable = false
     /// Whether the picker below holds a CHOICE or only a PREVIEW.
     ///
     /// Without it this sheet cannot help destroying an unset icon: it seeds `iconKey` from
@@ -5329,6 +5390,27 @@ private struct ListSettingsSheet: View {
                         }
                     }
 
+                    if showsReusable {
+                        // Web draws this card between the icon picker and the
+                        // sharing/delete actions, with the hint under the title.
+                        TdaySheetCard {
+                            Toggle(isOn: $reusable) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L("Reusable list"))
+                                        .font(.tdayRounded(size: 17, weight: .heavy))
+                                        .foregroundStyle(tdayColors.onSurface)
+                                    Text(L("Show a Reset to un-check everything and run it again"))
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(tdayColors.onSurfaceVariant.opacity(0.78))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .tint(accentColor)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
                     if list != nil, shareText != nil || onMembersRequest != nil {
                         TdaySheetSectionTitle(text: L("Sharing"))
                         HStack(spacing: 10) {
@@ -5403,6 +5485,7 @@ private struct ListSettingsSheet: View {
                 tdayResolvedListIconKey(list?.iconKey, listName: list?.name)
             )
             iconTouched = false
+            reusable = list?.reusable ?? false
         }
     }
 
@@ -5415,7 +5498,10 @@ private struct ListSettingsSheet: View {
         // An untouched picker submits nil, which every repository reads as "leave the icon
         // alone" (`iconKey ?? list.iconKey`). Sending the seeded preview instead would turn
         // a rename into an icon choice the user never made.
-        onSubmit(trimmedName, color, iconTouched ? iconKey : nil)
+        //
+        // `reusable` is the other way round: it is always sent when the row is
+        // shown, so switching it off is a change and not an omission.
+        onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil)
         dismiss()
     }
 

@@ -75,6 +75,7 @@ data class CachedFloaterListEntity(
     @ColumnInfo(defaultValue = "0") val isShared: Boolean = false,
     @ColumnInfo(defaultValue = "0") val memberCount: Int = 0,
     val ownerUsername: String? = null,
+    @ColumnInfo(defaultValue = "0") val reusable: Boolean = false,
 )
 
 @Entity(

@@ -242,6 +242,7 @@ internal fun floaterListToCache(list: ListSummary): CachedFloaterListRecord {
         isShared = list.isShared,
         memberCount = list.memberCount,
         ownerUsername = list.ownerUsername,
+        reusable = list.reusable,
     )
 }
 
@@ -261,6 +262,7 @@ internal fun floaterListFromCache(
         isShared = cache.isShared,
         memberCount = cache.memberCount,
         ownerUsername = cache.ownerUsername,
+        reusable = cache.reusable,
     )
 }
 
@@ -445,6 +447,7 @@ internal fun mapFloaterListDto(dto: FloaterListDto, iconFallback: String? = null
         isShared = dto.isShared,
         memberCount = dto.memberCount,
         ownerUsername = dto.ownerUsername,
+        reusable = dto.reusable,
     )
 }
 

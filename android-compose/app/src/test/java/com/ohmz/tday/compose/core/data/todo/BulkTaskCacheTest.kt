@@ -10,6 +10,7 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.shared.bulk.BulkAction
 import com.ohmz.tday.shared.bulk.BulkSelectionPolicy
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -171,6 +172,94 @@ class BulkTaskCacheTest {
         assertEquals(MutationKind.COMPLETE_TODO, mutation.kind)
         assertNull(mutation.instanceDateEpochMs)
         assertTrue(next.todos.single().completed)
+    }
+
+    @Test
+    fun `a staged completion survives a re-read and never syncs out early`() {
+        // The Android half of the reported bug: the completion used to live only
+        // in a ViewModel's `items` list until the undo window closed, so every
+        // hydrate in the window (`observeCacheChanges` fires on every
+        // `cacheDataVersion` bump, i.e. on every sync) put the row straight back.
+        // The read path — `buildTodosForMode` — hides a row by its CACHED
+        // `completed` flag, so the stage has to write that flag, and that is what
+        // this pins.
+        val state = OfflineSyncState(
+            todos = listOf(
+                cachedTodo(id = "todo-1", canonicalId = "todo-1"),
+                cachedTodo(id = "todo-2", canonicalId = "todo-2"),
+            ),
+        )
+
+        val (next, staged) = state.withStagedTodoCompletion(
+            todo = todoItem(id = "todo-1", canonicalId = "todo-1"),
+            timestampEpochMs = 5_000L,
+            mutationId = "complete-1",
+            completedRecordId = "local-completed-1",
+        )
+
+        // Exactly what buildTodosForMode does with the rows it reads.
+        assertEquals(listOf("todo-2"), next.todos.filterNot { it.completed }.map { it.id })
+        assertEquals(5_000L, next.todos.single { it.canonicalId == "todo-1" }.updatedAtEpochMs)
+        // Its history row is filed now too, so the Completed screen and
+        // completedTodayCount agree with the tap rather than with the commit.
+        assertEquals(listOf("local-completed-1"), next.completedItems.map { it.id })
+        // And the queued mutation is STAGED, which is what keeps the undo
+        // lossless: runPendingMutationReplay skips staged mutations, so no sync
+        // inside the window can tell the server before the user has decided.
+        assertTrue(next.pendingMutations.single().staged)
+        assertEquals(MutationKind.COMPLETE_TODO, next.pendingMutations.single().kind)
+        // The snapshot is what an Undo needs to put all of that back.
+        assertEquals(listOf("todo-1"), staged.previousTodos.map { it.id })
+    }
+
+    @Test
+    fun `committing a staged completion only releases the marker`() {
+        val state = OfflineSyncState(
+            todos = listOf(cachedTodo(id = "todo-1", canonicalId = "todo-1")),
+        )
+        val (stagedState, _) = state.withStagedTodoCompletion(
+            todo = todoItem(id = "todo-1", canonicalId = "todo-1"),
+            timestampEpochMs = 5_000L,
+            mutationId = "complete-1",
+            completedRecordId = "local-completed-1",
+        )
+
+        val committed = stagedState.withTodoCompletionCommitted(
+            todoItem(id = "todo-1", canonicalId = "todo-1"),
+        )
+
+        // Replayable now — and only now.
+        assertFalse(committed.pendingMutations.single().staged)
+        // A flush, not a second transform: the stage already filed the history
+        // row, so re-running the complete here would duplicate it.
+        assertEquals(listOf("local-completed-1"), committed.completedItems.map { it.id })
+        assertEquals(stagedState.todos, committed.todos)
+    }
+
+    @Test
+    fun `undoing a staged completion restores the row and drops what the stage added`() {
+        val state = OfflineSyncState(
+            todos = listOf(
+                cachedTodo(id = "todo-1", canonicalId = "todo-1"),
+                cachedTodo(id = "todo-2", canonicalId = "todo-2"),
+            ),
+        )
+        val (stagedState, staged) = state.withStagedTodoCompletion(
+            todo = todoItem(id = "todo-1", canonicalId = "todo-1"),
+            timestampEpochMs = 5_000L,
+            mutationId = "complete-1",
+            completedRecordId = "local-completed-1",
+        )
+
+        val undone = stagedState.withTodoCompletionUndone(staged)
+
+        // The row the user got back must be PLAIN — not completed, not struck —
+        // which is why the stage's row version, not a `completed = false` copy of
+        // it, is what gets restored.
+        assertEquals(state.todos, undone.todos)
+        assertTrue(undone.todos.none { it.completed })
+        assertTrue(undone.completedItems.isEmpty())
+        assertTrue(undone.pendingMutations.isEmpty())
     }
 
     @Test

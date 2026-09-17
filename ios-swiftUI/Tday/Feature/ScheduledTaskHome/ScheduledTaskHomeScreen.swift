@@ -243,9 +243,10 @@ struct ScheduledTaskHomeScreen: View {
 
                                 ScheduledTaskHomeTodayCard(
                                     count: viewModel.summary.todayCount,
+                                    zoomRoute: .todayTodos(origin: .scheduledBoard),
                                     action: {
                                         closeSearch()
-                                        onNavigate(.todayTodos)
+                                        onNavigate(.todayTodos(origin: .scheduledBoard))
                                     }
                                 )
 
@@ -345,7 +346,7 @@ struct ScheduledTaskHomeScreen: View {
                                     },
                                     onOpenCompleted: {
                                         closeSearch()
-                                        onNavigate(.completed)
+                                        onNavigate(.completed(origin: .scheduledBoard))
                                     },
                                     onOpenCalendar: {
                                         closeSearch()
@@ -359,7 +360,7 @@ struct ScheduledTaskHomeScreen: View {
                                         displayName: displayName(for:)
                                     ) { list, name in
                                         closeSearch()
-                                        onNavigate(.listTodos(listId: list.id, listName: name))
+                                        onNavigate(.listTodos(listId: list.id, listName: name, origin: .scheduledBoard))
                                     }
                                 }
 
@@ -541,7 +542,7 @@ struct ScheduledTaskHomeScreen: View {
             )
         }
         .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
-            CreateListSheet { name, color, iconKey in
+            CreateListSheet { name, color, iconKey, _ in
                 Task {
                     await viewModel.createList(name: name, color: color, iconKey: iconKey)
                 }
@@ -892,6 +893,13 @@ private struct ScheduledTaskHomeTodayTaskTitle: View {
 
 private struct ScheduledTaskHomeTodayCard: View {
     let count: Int
+    /// The route this card pushes, carried alongside the closure that pushes it.
+    ///
+    /// Same reason as `ScheduledTaskHomeCategoryTile` below: the closure is an opaque
+    /// `() -> Void`, so it cannot be asked where it goes, and the zoom needs an id both
+    /// ends agree on. Stored rather than derived from `dateLabel` or `count` — neither
+    /// is the thing `AppRootView` keys its destination on.
+    let zoomRoute: AppRoute
     let action: () -> Void
 
     @Environment(\.tdayAnimation) private var tdayAnimation
@@ -953,6 +961,11 @@ private struct ScheduledTaskHomeTodayCard: View {
             .contentShape(shape)
         }
         .buttonStyle(ScheduledTaskHomeTileButtonStyle())
+        // The rectangle the pushed screen grows out of — the same chain position as the
+        // category tiles below, and for the same reason. On iOS 17, under Reduce Motion,
+        // or for a route with no source id this resolves to nothing and the push is the
+        // stock slide; see `ZoomNavigation.swift`.
+        .tdayZoomSource(zoomRoute)
     }
 }
 
@@ -1023,7 +1036,7 @@ private struct ScheduledTaskHomeCategoryBoard: View {
                     watermark: "TileComplete",
                     title: L("Completed"),
                     count: completedCount,
-                    zoomRoute: .completed,
+                    zoomRoute: .completed(origin: .scheduledBoard),
                     action: onOpenCompleted
                 )
 
@@ -1172,7 +1185,12 @@ private struct ScheduledTaskHomeListsSection: View {
                     name: name,
                     colorKey: list.color,
                     iconKey: list.iconKey,
-                    count: list.todoCount
+                    count: list.todoCount,
+                    // Built here rather than inside the row because `list.id` is not one
+                    // of the row's parameters, and the id has to be per-list: several of
+                    // these rows are on screen at once, so one shared id would match the
+                    // wrong rectangle. It is the same route `onOpenList` pushes.
+                    zoomRoute: .listTodos(listId: list.id, listName: name, origin: .scheduledBoard)
                 ) {
                     onOpenList(list, name)
                 }
@@ -1186,6 +1204,13 @@ private struct ScheduledTaskHomeListRow: View {
     let colorKey: String?
     let iconKey: String?
     let count: Int
+    /// The route this row pushes, carried alongside the closure that pushes it.
+    ///
+    /// As with the two tiles above, the closure is opaque — and here it is the trailing
+    /// one, handed up to `ScheduledTaskHomeListsSection`, which builds this route from the
+    /// same `list` and name it passes to `onOpenList`. The two have to agree by value or
+    /// the row publishes an id no destination asks for.
+    let zoomRoute: AppRoute
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
@@ -1277,6 +1302,9 @@ private struct ScheduledTaskHomeListRow: View {
             .contentShape(shape)
         }
         .buttonStyle(ScheduledTaskHomeListButtonStyle())
+        // Own chain, immediately after its own button style — this row uses a different
+        // style from the tiles above, so it is asserted separately for the same reason.
+        .tdayZoomSource(zoomRoute)
     }
 }
 
@@ -1494,7 +1522,15 @@ private struct ScheduledTaskHomeTdayLogoMark: View {
 }
 
 struct CreateListSheet: View {
-    let onSubmit: (String, String?, String?) -> Void
+    /// True only where the list being created is a floater list, which is the
+    /// only kind that can be reused: web's create sheet hosts the Reusable switch,
+    /// and a scheduled list has no Reset to reveal.
+    ///
+    /// Declared before `onSubmit` on purpose — the call sites pass `onSubmit` as a
+    /// trailing closure, and a trailing closure binds to the LAST memberwise
+    /// parameter.
+    var showsReusable: Bool = false
+    let onSubmit: (String, String?, String?, Bool?) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var colors
@@ -1502,6 +1538,7 @@ struct CreateListSheet: View {
     @State private var name = ""
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
+    @State private var reusable = false
     /// Whether the picker holds a CHOICE or only a PREVIEW.
     ///
     /// This sheet seeded the picker with the default and then posted it, so every list any
@@ -1556,7 +1593,7 @@ struct CreateListSheet: View {
                     // (`CreateTaskSheet.submit`), so it gets the same pulse.
                     HapticManager.completion()
                     isSubmitting = true
-                    onSubmit(trimmedName, color, iconTouched ? iconKey : nil)
+                    onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil)
                     dismiss()
                 }
             )
@@ -1677,6 +1714,27 @@ struct CreateListSheet: View {
                                 }
                             }
                             .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
+                    if showsReusable {
+                        // Web's create sheet hosts the same switch, in the same
+                        // place: after the icon picker, before the footer.
+                        TdaySheetCard {
+                            Toggle(isOn: $reusable) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L("Reusable list"))
+                                        .font(.tdayRounded(size: 17, weight: .heavy))
+                                        .foregroundStyle(colors.onSurface)
+                                    Text(L("Show a Reset to un-check everything and run it again"))
+                                        .font(.tdayRounded(size: 12, weight: .bold))
+                                        .foregroundStyle(colors.onSurfaceVariant.opacity(0.78))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .tint(accentColor)
+                            .padding(.horizontal, 18)
                             .padding(.vertical, 14)
                         }
                     }

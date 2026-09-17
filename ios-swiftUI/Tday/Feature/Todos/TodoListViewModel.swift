@@ -337,13 +337,17 @@ final class TodoListViewModel {
     }
 
     /// Delayed-commit complete: the completion is written to the local cache
-    /// (and its mutation queued) immediately, an undoable toast is shown, and
-    /// only the network replay is deferred until the undo window expires.
-    /// Tapping Undo cancels the pending commit and reverses the staged write.
+    /// (and its mutation queued `staged`) immediately, an undoable toast is
+    /// shown, and only the network replay is deferred until the undo window
+    /// expires. Tapping Undo cancels the pending commit and reverses the staged
+    /// write; the commit itself is `commitStagedCompletion(_:)`, which drops the
+    /// staged marker and only then flushes — a bare `syncPendingMutations()` here
+    /// would send the completion to the server while the Undo button is still on
+    /// screen.
     ///
     /// This writes durably up front rather than staying in-memory-only until
-    /// commit: a completion the user already saw must survive the app dying
-    /// inside the undo window, not silently revert with no trace on relaunch.
+    /// commit: a completion the user already saw survives the app dying inside
+    /// the undo window rather than silently reverting with no trace on relaunch.
     /// See `TodoRepository.stageCompleteTodo(_:)` for the full rationale.
     ///
     /// The two `restore:` closures here capture `self` weakly, which `delete`'s
@@ -361,7 +365,7 @@ final class TodoListViewModel {
         let isFloater = mode == .floater
         lastCompletionAt = Date()
         if isFloater {
-            let staged = container.todoRepository.stageCompleteFloater(todo)
+            let staged = await container.todoRepository.stageCompleteFloater(todo)
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: L("Task completed"),
@@ -371,7 +375,7 @@ final class TodoListViewModel {
                 },
                 commit: {
                     do {
-                        try await container.todoRepository.syncPendingMutations()
+                        try await container.todoRepository.commitStagedFloaterCompletion(staged)
                     } catch {
                         container.snackbarManager.show(
                             userFacingMessage(for: error, fallback: "Could not complete task."),
@@ -381,7 +385,7 @@ final class TodoListViewModel {
                 }
             )
         } else {
-            let staged = container.todoRepository.stageCompleteTodo(todo)
+            let staged = await container.todoRepository.stageCompleteTodo(todo)
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: L("Task completed"),
@@ -391,7 +395,7 @@ final class TodoListViewModel {
                 },
                 commit: {
                     do {
-                        try await container.todoRepository.syncPendingMutations()
+                        try await container.todoRepository.commitStagedCompletion(staged)
                     } catch {
                         container.snackbarManager.show(
                             userFacingMessage(for: error, fallback: "Could not complete task."),
@@ -456,15 +460,16 @@ final class TodoListViewModel {
 
     /// Delayed-commit bulk complete — the batch shape of `complete(_:)`. The
     /// whole selection is staged into the local cache (and its mutations
-    /// queued) in ONE cache write, ONE undoable toast covers the batch, and
-    /// only the network replay is deferred until the undo window closes. N
+    /// queued `staged`) in ONE cache write, ONE undoable toast covers the batch,
+    /// and only the network replay is deferred until the undo window closes. N
     /// toasts would mean N commit timers with only the last one visible, so the
     /// user could undo exactly one of them.
     ///
-    /// Staging durably up front (rather than in-memory-only until commit)
-    /// means a crash or kill during the up-to-100-request replay that commit
-    /// triggers loses nothing: every completion in the batch already survived
-    /// to disk before the network round-trips even began. See
+    /// Staging durably up front (rather than in-memory-only until commit) means
+    /// every completion in the batch survived to disk before the up-to-100-request
+    /// replay even began, so a crash or kill during that replay loses nothing. The
+    /// replay itself is deferred to the commit, which un-stages the batch's own
+    /// mutations and only then flushes — see `commitStagedCompletion(_:)`. See
     /// `TodoRepository.stageCompleteTodos(_:)`.
     ///
     /// Recurring occurrences stay in the batch: complete is the one action with a
@@ -477,7 +482,7 @@ final class TodoListViewModel {
         let count = todos.count
         lastCompletionAt = Date()
         if isFloater {
-            let staged = container.todoRepository.stageCompleteFloaters(todos)
+            let staged = await container.todoRepository.stageCompleteFloaters(todos)
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: BulkSelectionCopy.completedToast(count),
@@ -487,14 +492,14 @@ final class TodoListViewModel {
                 },
                 commit: {
                     do {
-                        try await container.todoRepository.syncPendingMutations()
+                        try await container.todoRepository.commitStagedFloaterCompletion(staged)
                     } catch {
                         container.snackbarManager.show(BulkSelectionCopy.updateFailed(count), kind: .error)
                     }
                 }
             )
         } else {
-            let staged = container.todoRepository.stageCompleteTodos(todos)
+            let staged = await container.todoRepository.stageCompleteTodos(todos)
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: BulkSelectionCopy.completedToast(count),
@@ -504,7 +509,7 @@ final class TodoListViewModel {
                 },
                 commit: {
                     do {
-                        try await container.todoRepository.syncPendingMutations()
+                        try await container.todoRepository.commitStagedCompletion(staged)
                     } catch {
                         container.snackbarManager.show(BulkSelectionCopy.updateFailed(count), kind: .error)
                     }
@@ -597,12 +602,12 @@ final class TodoListViewModel {
         hydrateFromCache()
     }
 
-    func updateListSettings(name: String, color: String?, iconKey: String?) async {
+    func updateListSettings(name: String, color: String?, iconKey: String?, reusable: Bool? = nil) async {
         guard let listId else { return }
         TdayTelemetry.addBreadcrumb("list.update", data: listTelemetryData(color: color, iconKey: iconKey))
         do {
             if mode == .floater {
-                try await container.floaterListRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey)
+                try await container.floaterListRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey, reusable: reusable)
             } else {
                 try await container.listRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey)
             }
@@ -616,11 +621,30 @@ final class TodoListViewModel {
         }
     }
 
-    func createList(name: String, color: String?, iconKey: String?) async {
+    /// Reset a reusable floater list (un-check everything so it can be run again).
+    /// The twin of web's `resetFloaterList` header button and its `floaterListReset`
+    /// toast in FloaterListContainer; the route returns only a message/count, so the
+    /// screen is re-read from the cache afterwards. Local Mode un-checks locally and
+    /// keeps the mutation queued (see FloaterListRepository.resetFloaterList).
+    func resetFloaterList() async {
+        guard let listId, mode == .floater else { return }
+        do {
+            try await container.floaterListRepository.resetFloaterList(listId: listId)
+            hydrateFromCache()
+            container.snackbarManager.show(L("List reset — everything un-checked"), kind: .info)
+        } catch {
+            container.snackbarManager.show(
+                userFacingMessage(for: error, fallback: "Could not reset list."),
+                kind: .error
+            )
+        }
+    }
+
+    func createList(name: String, color: String?, iconKey: String?, reusable: Bool = false) async {
         TdayTelemetry.addBreadcrumb("list.create", data: listTelemetryData(color: color, iconKey: iconKey))
         do {
             if mode == .floater {
-                try await container.floaterListRepository.createList(name: name, color: color, iconKey: iconKey)
+                try await container.floaterListRepository.createList(name: name, color: color, iconKey: iconKey, reusable: reusable)
             } else {
                 try await container.listRepository.createList(name: name, color: color, iconKey: iconKey)
             }

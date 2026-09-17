@@ -5,10 +5,20 @@ import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { TodoItemType } from "@/types";
 import { useTodoActionToast } from "@/hooks/use-todo-action-toast";
 import { markCelebrationCancelled } from "@/lib/task-completion-signal";
+import {
+  releaseAndRestoreTodoRows,
+  stageTodoRows,
+} from "@/lib/todo/staged-todo-rows";
 
 // Delayed-commit complete (see complete-todo.ts): stage the removal from the
 // calendar cache, show an undoable toast, and only PATCH /complete once the
 // toast closes without undo.
+//
+// The prune is one write and the window is seconds of refetching — the calendar
+// re-reads `["calendarTodo"]` on every `todo` realtime event, including the echo
+// of this completion — so the row is claimed at the cache boundary too; see
+// `@/lib/todo/staged-todo-rows`. Without that the server, which has not been
+// told yet, restores the row the user just ticked.
 export const useCompleteCalendarTodo = () => {
   const { toast } = useToast();
   const { showTodoCompletedToast } = useTodoActionToast();
@@ -29,14 +39,19 @@ export const useCompleteCalendarTodo = () => {
     onError: (error) => {
       toast({ description: error.message, variant: "destructive" });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
-      queryClient.invalidateQueries({ queryKey: ["todo"] });
+    onSettled: (_data, _error, { todoItem }) => {
+      // Sent (or failed) — released before the invalidations, which are the
+      // refetches allowed to answer for the row again. Every root the claim
+      // reached, not only the calendar cache.
+      releaseAndRestoreTodoRows(queryClient, [todoItem.id]);
       queryClient.invalidateQueries({ queryKey: ["completedTodo"] });
     },
   });
 
   const mutateComplete = ({ todoItem }: { todoItem: TodoItemType }) => {
+    // Claim the row before the prune, so a refetch already in flight cannot slip
+    // back in behind it.
+    stageTodoRows(queryClient, [todoItem.id]);
     void queryClient.cancelQueries({ queryKey: ["calendarTodo"] });
     queryClient.setQueriesData<TodoItemType[]>(
       { queryKey: ["calendarTodo"] },
@@ -52,8 +67,10 @@ export const useCompleteCalendarTodo = () => {
         // that is a network round trip, and `useArrivalCancel`'s count-rise
         // backstop cannot see the row until it lands.
         markCelebrationCancelled();
-        // The server still has the row (incomplete) — a refetch restores it.
-        void queryClient.invalidateQueries({ queryKey: ["calendarTodo"] });
+        // The server still has the row (incomplete) — a refetch restores it, so
+        // the claim goes first: this is the refetch that is meant to win, and it
+        // covers every cache the claim reached.
+        releaseAndRestoreTodoRows(queryClient, [todoItem.id]);
       },
     });
   };

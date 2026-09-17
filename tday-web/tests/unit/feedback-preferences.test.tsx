@@ -137,6 +137,35 @@ describe("sound preference", () => {
     expect(play).not.toHaveBeenCalled();
     expect(vibrate).toHaveBeenCalledTimes(1);
   });
+
+  it("plays at the level both native clients use, not the element's default", () => {
+    // The clip is the same file on all three clients, and the level it goes out at is the other
+    // half of "the same pop": Android's `TaskCompletionSound` plays it at `VOLUME = 0.5f` and
+    // iOS's `SoundManager` at `player.volume = 0.5`. A bare `HTMLMediaElement` would stay on its
+    // 1.0 default — about 6 dB louder than the phone for the same clip — so this is the assertion
+    // that keeps web from drifting back to it. `TodoCheckbox` builds its own elements, so what
+    // the constructor hands back is the only place the player's level is observable.
+    const built: HTMLAudioElement[] = [];
+    const browserAudio = window.Audio;
+    const audioSpy = vi.spyOn(window, "Audio").mockImplementation((function (
+      this: unknown,
+      src?: string,
+    ) {
+      const element = new browserAudio(src);
+      built.push(element);
+      return element;
+    }) as unknown as typeof Audio);
+
+    try {
+      renderCheckbox(false);
+      expect(built.length).toBeGreaterThan(0);
+      for (const element of built) {
+        expect(element.volume).toBe(0.5);
+      }
+    } finally {
+      audioSpy.mockRestore();
+    }
+  });
 });
 
 describe("both preferences, where storage refuses", () => {

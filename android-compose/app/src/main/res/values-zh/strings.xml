@@ -334,6 +334,11 @@
     <string name="todos_summary_modes_unavailable">摘要仅适用于今天、已安排、全部和优先</string>
     <string name="todos_summary_offline_unavailable">离线时无法提供摘要。</string>
     <string name="todos_list_settings">列表设置</string>
+    <string name="reusable_list">可重用清单</string>
+    <string name="reusable_list_hint">显示“重置”以取消所有勾选并再次使用</string>
+    <string name="reset_floater_list">重置清单</string>
+    <string name="floater_list_reset">清单已重置——全部取消勾选</string>
+    <string name="error_reset_list_failed">无法重置清单。</string>
     <string name="share_list_action">分享列表</string>
     <string name="share_section_title">共享</string>
     <string name="action_share">分享</string>

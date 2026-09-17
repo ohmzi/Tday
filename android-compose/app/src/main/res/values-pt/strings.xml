@@ -334,6 +334,11 @@
     <string name="todos_summary_modes_unavailable">O resumo está disponível apenas para Hoje, Agendadas, Todas e Prioridade</string>
     <string name="todos_summary_offline_unavailable">Nenhum resumo disponível offline.</string>
     <string name="todos_list_settings">Configurações da lista</string>
+    <string name="reusable_list">Lista reutilizável</string>
+    <string name="reusable_list_hint">Mostra Reiniciar para desmarcar tudo e usar de novo</string>
+    <string name="reset_floater_list">Reiniciar lista</string>
+    <string name="floater_list_reset">Lista reiniciada — tudo desmarcado</string>
+    <string name="error_reset_list_failed">Não foi possível redefinir a lista.</string>
     <string name="share_list_action">Compartilhar lista</string>
     <string name="share_section_title">Compartilhamento</string>
     <string name="action_share">Compartilhar</string>

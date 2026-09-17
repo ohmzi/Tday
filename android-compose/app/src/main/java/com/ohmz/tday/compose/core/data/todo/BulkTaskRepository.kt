@@ -5,8 +5,6 @@ import com.ohmz.tday.compose.core.data.CachedCompletedRecord
 import com.ohmz.tday.compose.core.data.MutationKind
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import com.ohmz.tday.compose.core.data.PendingMutationRecord
-import com.ohmz.tday.compose.core.data.cache.LOCAL_COMPLETED_FLOATER_PREFIX
-import com.ohmz.tday.compose.core.data.cache.LOCAL_COMPLETED_PREFIX
 import com.ohmz.tday.compose.core.data.cache.LOCAL_FLOATER_PREFIX
 import com.ohmz.tday.compose.core.data.cache.LOCAL_TODO_PREFIX
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
@@ -57,45 +55,58 @@ class BulkTaskRepository @Inject constructor(
      * nothing can sync out during the undo window. The returned snapshot covers
      * the whole batch, so a single [TodoRepository.undoStagedTodoDeletion] puts
      * all of it back — the staged types are already list-shaped.
+     *
+     * Runs inside [OfflineCacheManager.withSyncLock], like
+     * [TodoRepository.stageDeleteTodo] and the single-item `stageTodoCompletions`:
+     * a sync holds that mutex for its whole read-fetch-merge-save span and saves a
+     * merge built from its pre-fetch snapshot, so a stage landing inside the span
+     * would be overwritten by rows the sync still believed were there.
      */
     suspend fun stageDeleteTodos(todos: List<TodoItem>): StagedTodoDeletion {
         if (todos.isEmpty()) return StagedTodoDeletion()
         var staged = StagedTodoDeletion()
-        cacheManager.updateOfflineState { state ->
-            var collected = StagedTodoDeletion()
-            val next = todos.fold(state) { current, todo ->
-                val (pruned, removed) = current.withStagedTodoDeletion(
-                    canonicalId = todo.canonicalId,
-                    instanceDateEpochMs = todo.instanceDateEpochMillis,
-                    isRecurringInstanceDelete = todo.isRecurring && todo.instanceDate != null,
-                    isLocalOnly = todo.canonicalId.startsWith(LOCAL_TODO_PREFIX),
-                )
-                collected = collected + removed
-                pruned
+        cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state ->
+                var collected = StagedTodoDeletion()
+                val next = todos.fold(state) { current, todo ->
+                    val (pruned, removed) = current.withStagedTodoDeletion(
+                        canonicalId = todo.canonicalId,
+                        instanceDateEpochMs = todo.instanceDateEpochMillis,
+                        isRecurringInstanceDelete = todo.isRecurring && todo.instanceDate != null,
+                        isLocalOnly = todo.canonicalId.startsWith(LOCAL_TODO_PREFIX),
+                    )
+                    collected = collected + removed
+                    pruned
+                }
+                staged = collected
+                next
             }
-            staged = collected
-            next
         }
         refreshWidgetsNow()
         return staged
     }
 
-    /** Floater counterpart of [stageDeleteTodos]. */
+    /**
+     * Floater counterpart of [stageDeleteTodos] — including its
+     * [OfflineCacheManager.withSyncLock].
+     */
     suspend fun stageDeleteFloaters(floaters: List<TodoItem>): StagedFloaterDeletion {
         if (floaters.isEmpty()) return StagedFloaterDeletion()
         var staged = StagedFloaterDeletion()
-        cacheManager.updateOfflineState { state ->
-            var collected = StagedFloaterDeletion()
-            val next = floaters.fold(state) { current, floater ->
-                val (pruned, removed) = current.withStagedFloaterDeletion(
-                    canonicalId = floater.canonicalId,
-                    isLocalOnly = floater.canonicalId.startsWith(LOCAL_FLOATER_PREFIX),
-                )
-                collected = collected + removed
-                pruned
+        cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state ->
+                var collected = StagedFloaterDeletion()
+                val next = floaters.fold(state) { current, floater ->
+                    val (pruned, removed) = current.withStagedFloaterDeletion(
+                        canonicalId = floater.canonicalId,
+                        isLocalOnly = floater.canonicalId.startsWith(LOCAL_FLOATER_PREFIX),
+                    )
+                    collected = collected + removed
+                    pruned
+                }
+                staged = collected
+                next
             }
-            staged = collected
-            next
         }
         refreshWidgetsNow()
         return staged
@@ -133,43 +144,6 @@ class BulkTaskRepository @Inject constructor(
                     isLocalOnly = floater.canonicalId.startsWith(LOCAL_FLOATER_PREFIX),
                     mutationId = UUID.randomUUID().toString(),
                     timestampEpochMs = timestampMs,
-                )
-            }
-        }
-    }
-
-    /**
-     * Commit step of the bulk complete. A recurring occurrence is completed as
-     * the occurrence it represents — the queued mutation carries its
-     * `instanceDate`, because `PATCH /api/todo/complete` without one writes a
-     * history row and leaves the task standing.
-     */
-    suspend fun completeTodos(todos: List<TodoItem>) {
-        if (todos.isEmpty()) return
-        val timestampMs = System.currentTimeMillis()
-        applyBulk { state ->
-            todos.fold(state) { current, todo ->
-                current.withCompletedTodoCached(
-                    todo = todo,
-                    timestampEpochMs = timestampMs,
-                    mutationId = UUID.randomUUID().toString(),
-                    completedRecordId = "$LOCAL_COMPLETED_PREFIX${UUID.randomUUID()}",
-                )
-            }
-        }
-    }
-
-    /** Floater counterpart of [completeTodos]. */
-    suspend fun completeFloaters(floaters: List<TodoItem>) {
-        if (floaters.isEmpty()) return
-        val timestampMs = System.currentTimeMillis()
-        applyBulk { state ->
-            floaters.fold(state) { current, floater ->
-                current.withCompletedFloaterCached(
-                    floater = floater,
-                    timestampEpochMs = timestampMs,
-                    mutationId = UUID.randomUUID().toString(),
-                    completedRecordId = "$LOCAL_COMPLETED_FLOATER_PREFIX${UUID.randomUUID()}",
                 )
             }
         }
@@ -307,6 +281,24 @@ internal operator fun StagedFloaterDeletion.plus(
     removedPendingMutations = removedPendingMutations + other.removedPendingMutations,
 )
 
+/** Merges two completion snapshots so a batch undoes through a single call. */
+internal operator fun StagedTodoCompletion.plus(
+    other: StagedTodoCompletion,
+): StagedTodoCompletion = StagedTodoCompletion(
+    previousTodos = previousTodos + other.previousTodos,
+    addedCompletedItems = addedCompletedItems + other.addedCompletedItems,
+    addedPendingMutations = addedPendingMutations + other.addedPendingMutations,
+)
+
+/** Floater counterpart of the completion-snapshot merge above. */
+internal operator fun StagedFloaterCompletion.plus(
+    other: StagedFloaterCompletion,
+): StagedFloaterCompletion = StagedFloaterCompletion(
+    previousFloaters = previousFloaters + other.previousFloaters,
+    addedCompletedFloaters = addedCompletedFloaters + other.addedCompletedFloaters,
+    addedPendingMutations = addedPendingMutations + other.addedPendingMutations,
+)
+
 /**
  * Prune-only half of a delete: removes the task, its completed-history rows and
  * its outstanding mutations, and returns what it removed so an Undo can put the
@@ -418,12 +410,24 @@ internal fun OfflineSyncState.withDeletedFloaterCached(
  * queues the matching complete mutation. A recurring occurrence flips only the
  * cached row for its own `instanceDate` and queues `COMPLETE_TODO_INSTANCE`, so
  * the rest of the series is untouched.
+ *
+ * [staged] writes the queued mutation with [PendingMutationRecord.staged] set —
+ * the delayed-commit form, used by [TodoRepository.stageTodoCompletions] while
+ * the undo window is open. Nothing else about the transform differs: the row is
+ * completed and its history row filed exactly as at commit, so the read path
+ * (`buildTodosForMode`) and `completedTodayCount` see a finished task from the
+ * tap. The marker is what keeps that write local: `runPendingMutationReplay`
+ * skips staged mutations, `mergeRemoteWithLocal`'s `pendingTodoCanonicalIds`
+ * keeps the still-unsent completion over a server that has not heard about it,
+ * and `buildLocalWinsMutations` skips the id instead of synthesising a second
+ * COMPLETE for it.
  */
 internal fun OfflineSyncState.withCompletedTodoCached(
     todo: TodoItem,
     timestampEpochMs: Long,
     mutationId: String,
     completedRecordId: String,
+    staged: Boolean = false,
 ): OfflineSyncState {
     val isOccurrence = todo.isRecurring && todo.instanceDate != null
     val updatedTodos = todos.map {
@@ -470,6 +474,7 @@ internal fun OfflineSyncState.withCompletedTodoCached(
             targetId = todo.canonicalId,
             timestampEpochMs = timestampEpochMs,
             instanceDateEpochMs = todo.instanceDateEpochMillis,
+            staged = staged,
         ),
     )
 }
@@ -480,6 +485,7 @@ internal fun OfflineSyncState.withCompletedFloaterCached(
     timestampEpochMs: Long,
     mutationId: String,
     completedRecordId: String,
+    staged: Boolean = false,
 ): OfflineSyncState {
     val updatedFloaters = floaters.map {
         if (it.canonicalId == floater.canonicalId) {
@@ -509,8 +515,149 @@ internal fun OfflineSyncState.withCompletedFloaterCached(
             kind = MutationKind.COMPLETE_FLOATER,
             targetId = floater.canonicalId,
             timestampEpochMs = timestampEpochMs,
+            staged = staged,
         ),
     )
+}
+
+/**
+ * Stage half of the delayed-commit complete, the mirror of
+ * [withStagedTodoDeletion]: applies the full [withCompletedTodoCached] transform
+ * with its queued mutation marked `staged`, and returns what the undo has to
+ * take back — the row versions this replaced, and the history row and mutation
+ * it added.
+ *
+ * The snapshot is diffed out of the transform rather than restated, so the stage
+ * and the commit cannot describe the completion differently.
+ */
+internal fun OfflineSyncState.withStagedTodoCompletion(
+    todo: TodoItem,
+    timestampEpochMs: Long,
+    mutationId: String,
+    completedRecordId: String,
+): Pair<OfflineSyncState, StagedTodoCompletion> {
+    val next = withCompletedTodoCached(
+        todo = todo,
+        timestampEpochMs = timestampEpochMs,
+        mutationId = mutationId,
+        completedRecordId = completedRecordId,
+        staged = true,
+    )
+    val previousById = todos.associateBy { it.id }
+    return next to StagedTodoCompletion(
+        previousTodos = next.todos.mapNotNull { row ->
+            previousById[row.id]?.takeIf { it != row }
+        },
+        addedCompletedItems = next.completedItems.filter { it.id == completedRecordId },
+        addedPendingMutations = next.pendingMutations.filter { it.mutationId == mutationId },
+    )
+}
+
+/** Floater counterpart of [withStagedTodoCompletion]. */
+internal fun OfflineSyncState.withStagedFloaterCompletion(
+    floater: TodoItem,
+    timestampEpochMs: Long,
+    mutationId: String,
+    completedRecordId: String,
+): Pair<OfflineSyncState, StagedFloaterCompletion> {
+    val next = withCompletedFloaterCached(
+        floater = floater,
+        timestampEpochMs = timestampEpochMs,
+        mutationId = mutationId,
+        completedRecordId = completedRecordId,
+        staged = true,
+    )
+    val previousById = floaters.associateBy { it.id }
+    return next to StagedFloaterCompletion(
+        previousFloaters = next.floaters.mapNotNull { row ->
+            previousById[row.id]?.takeIf { it != row }
+        },
+        addedCompletedFloaters = next.completedFloaters.filter { it.id == completedRecordId },
+        addedPendingMutations = next.pendingMutations.filter { it.mutationId == mutationId },
+    )
+}
+
+/**
+ * Commit half of a staged complete: drops the staged marker so the next replay
+ * sends the mutation the stage already wrote.
+ *
+ * A marker flip and nothing else, because the stage already did the whole
+ * transform. Re-running [withCompletedTodoCached] here — as the bulk commit used
+ * to — would append a SECOND completed-history row for the same completion.
+ */
+internal fun OfflineSyncState.withTodoCompletionCommitted(todo: TodoItem): OfflineSyncState = copy(
+    pendingMutations = pendingMutations.map { mutation ->
+        if (mutation.staged && mutation.isCompletionOf(todo.canonicalId, todo.instanceDateEpochMillis)) {
+            mutation.copy(staged = false)
+        } else {
+            mutation
+        }
+    },
+)
+
+/** Floater counterpart of [withTodoCompletionCommitted]. */
+internal fun OfflineSyncState.withFloaterCompletionCommitted(floater: TodoItem): OfflineSyncState =
+    copy(
+        pendingMutations = pendingMutations.map { mutation ->
+            if (mutation.staged && mutation.kind == MutationKind.COMPLETE_FLOATER &&
+                mutation.targetId == floater.canonicalId
+            ) {
+                mutation.copy(staged = false)
+            } else {
+                mutation
+            }
+        },
+    )
+
+/**
+ * Undo half of a staged complete: puts the rows back exactly as the stage found
+ * them and drops the history row and mutation the stage added. Idempotent — the
+ * mirror of [TodoRepository.undoStagedTodoDeletion].
+ */
+internal fun OfflineSyncState.withTodoCompletionUndone(
+    staged: StagedTodoCompletion,
+): OfflineSyncState {
+    if (staged.isEmpty) return this
+    val previousById = staged.previousTodos.associateBy { it.id }
+    val currentIds = todos.mapTo(HashSet()) { it.id }
+    return copy(
+        todos = todos.map { previousById[it.id] ?: it } +
+            staged.previousTodos.filterNot { it.id in currentIds },
+        completedItems = completedItems.filterNot { record ->
+            staged.addedCompletedItems.any { it.id == record.id }
+        },
+        pendingMutations = pendingMutations.filterNot { mutation ->
+            staged.addedPendingMutations.any { it.mutationId == mutation.mutationId }
+        },
+    )
+}
+
+/** Floater counterpart of [withTodoCompletionUndone]. */
+internal fun OfflineSyncState.withFloaterCompletionUndone(
+    staged: StagedFloaterCompletion,
+): OfflineSyncState {
+    if (staged.isEmpty) return this
+    val previousById = staged.previousFloaters.associateBy { it.id }
+    val currentIds = floaters.mapTo(HashSet()) { it.id }
+    return copy(
+        floaters = floaters.map { previousById[it.id] ?: it } +
+            staged.previousFloaters.filterNot { it.id in currentIds },
+        completedFloaters = completedFloaters.filterNot { record ->
+            staged.addedCompletedFloaters.any { it.id == record.id }
+        },
+        pendingMutations = pendingMutations.filterNot { mutation ->
+            staged.addedPendingMutations.any { it.mutationId == mutation.mutationId }
+        },
+    )
+}
+
+/** Whether this is the queued completion the stage wrote for that task. */
+private fun PendingMutationRecord.isCompletionOf(
+    canonicalId: String,
+    instanceDateEpochMs: Long?,
+): Boolean {
+    val isCompletion = kind == MutationKind.COMPLETE_TODO || kind == MutationKind.COMPLETE_TODO_INSTANCE
+    return isCompletion && targetId == canonicalId && this.instanceDateEpochMs == instanceDateEpochMs
 }
 
 /**
