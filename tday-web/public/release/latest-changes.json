@@ -1,9 +1,11 @@
 {
   "version": "0.7.31",
-  "publishedAt": "2026-09-16T17:06:36-04:00",
+  "publishedAt": "2026-09-16T23:29:01-04:00",
   "notes": [
-    "Point the i18n docs at the bundles the app actually loads"
+    "Lead the Anytime feed with its tasks, translate the update toast, and drop the web calendar feed",
+    "Stop Today drawing an earlier-today task in two buckets",
+    "Write the release contract down, and the deploy step CI cannot do"
   ],
   "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.31",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.29..v0.7.30"
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.30..v0.7.31"
 }
