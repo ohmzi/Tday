@@ -59,6 +59,75 @@ final class CompletedSyncMergeTests: XCTestCase {
         XCTAssertEqual(merged, [kept])
     }
 
+    /// The inverse of `testLocalCompletedRecordsOverrideRemoteForPendingTodoMutation`, and
+    /// the half that was missing: the user has just restored this task, so the completion
+    /// record is gone locally while the server snapshot still carries it. The loop above
+    /// cannot cover this — it re-adds LOCAL completions, and there are none — so a stale
+    /// read put the restored row straight back on screen, struck through.
+    func testPendingUncompleteKeepsRemoteCompletedRecordOut() {
+        let remote = completedRecord(id: "completed-server", originalTodoId: "todo-1", completedAtEpochMs: 1_000)
+
+        let merged = mergeCompletedRecordsWithPendingOverrides(
+            localRecords: [],
+            remoteRecords: [remote],
+            pendingTodoTargets: ["todo-1"],
+            pendingUncompletedTodoTargets: ["todo-1"]
+        )
+
+        XCTAssertTrue(merged.isEmpty)
+    }
+
+    /// The guard is a window, not a permanent local override: with the mutation
+    /// acknowledged there is nothing to protect, so a completion made on another device
+    /// still lands here.
+    func testRemoteCompletedRecordReturnsOnceUncompleteIsAcknowledged() {
+        let remote = completedRecord(id: "completed-server", originalTodoId: "todo-1", completedAtEpochMs: 1_000)
+
+        let merged = mergeCompletedRecordsWithPendingOverrides(
+            localRecords: [],
+            remoteRecords: [remote],
+            pendingTodoTargets: [],
+            pendingUncompletedTodoTargets: []
+        )
+
+        XCTAssertEqual(merged, [remote])
+    }
+
+    /// A restore stays unacknowledged for as long as its request takes, and a user who
+    /// restores a task and immediately completes it again has both queued. The merge sees
+    /// only the net set, so the completion wins — hiding the row would take it out of the
+    /// list the user just put it in, which is the same bug mirrored.
+    func testRecompletingWhileRestoreIsUnacknowledgedKeepsTheRowCompleted() {
+        let remote = completedRecord(id: "completed-server", originalTodoId: "todo-1", completedAtEpochMs: 3_000)
+        let uncompleted: Set<String> = ["todo-1"]
+        let completed: Set<String> = ["todo-1"]
+
+        let merged = mergeCompletedRecordsWithPendingOverrides(
+            localRecords: [remote],
+            remoteRecords: [remote],
+            pendingTodoTargets: ["todo-1"],
+            pendingUncompletedTodoTargets: uncompleted.subtracting(completed)
+        )
+
+        XCTAssertEqual(merged, [remote])
+    }
+
+    /// Scoping this to the un-complete kind matters: an ordinary field edit is not a
+    /// statement about where the row belongs, and letting it hide a genuine completion
+    /// would be a second bug rather than a wider fix.
+    func testOtherPendingTodoMutationsDoNotHideARemoteCompletion() {
+        let remote = completedRecord(id: "completed-server", originalTodoId: "todo-1", completedAtEpochMs: 1_000)
+
+        let merged = mergeCompletedRecordsWithPendingOverrides(
+            localRecords: [],
+            remoteRecords: [remote],
+            pendingTodoTargets: ["todo-1"],
+            pendingUncompletedTodoTargets: []
+        )
+
+        XCTAssertEqual(merged, [remote])
+    }
+
     // MARK: - Floater side (mergeCompletedFloaterRecordsWithPendingOverrides)
     //
     // Unlike the Todo side above, this has no `pendingDeletedListIds` parameter at all:
