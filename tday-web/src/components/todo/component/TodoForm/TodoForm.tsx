@@ -19,6 +19,7 @@ import {
   SheetRow,
   SheetSectionTitle,
   SheetSelectorRow,
+  SheetTitleNotesCard,
 } from "@/components/ui/sheet-chrome";
 import {
   CenteredSelectorOverlay,
@@ -124,10 +125,10 @@ const TodoForm = ({
   return (
     <div className="flex flex-col gap-3 pb-2">
       {/* Title + Notes */}
-      <SheetCard>
-        <div className="flex items-start gap-2 px-[18px] pb-2 pt-3">
+      <SheetTitleNotesCard
+        title={
           <NLPTitleInput
-            className="min-w-0 flex-1 text-lg font-black"
+            className="text-lg font-black"
             title={title}
             setTitle={setTitle}
             titleRef={titleRef}
@@ -136,15 +137,15 @@ const TodoForm = ({
             setRruleOptions={setRruleOptions}
             onSubmit={() => handleForm()}
           />
-          <GuideHelpLink topic="nlp-date-syntax" className="mt-0.5" />
-        </div>
-        <SheetDivider />
+        }
+        titleAccessory={<GuideHelpLink topic="nlp-date-syntax" className="mt-0.5" />}
+      >
         <NotesField
           value={desc}
           onChange={setDesc}
           placeholder={appDict("notes")}
         />
-      </SheetCard>
+      </SheetTitleNotesCard>
 
       <RepeatSuggestionChip
         title={title}
