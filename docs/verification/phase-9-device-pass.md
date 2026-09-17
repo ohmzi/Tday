@@ -1895,3 +1895,26 @@ animates.
       Why:    `TdayBarTitleReserveTests` proves the arithmetic — 93pt before, 157pt after, against a
               137.5pt word — and proves nothing about how a 32pt lateral shift reads while two copies
               of the same word cross-fade. That is the half only an eye can settle. iOS 17 and up.
+
+- [ ] **PR 196 · ios · The bar's back-button shadow, and the band under it** — a phone, Calendar and
+      then the Anytime feed. Run once with the bar merely collapsed, and once on iOS 18.
+      Do:     scroll up until the bar has collapsed to its docked height and rows are passing under
+              it, then keep scrolling a little and let it settle.
+      Watch:  (a) the back chevron's shadow fades out UNDER the bar rather than being cut at it —
+              there must be no straight horizontal edge across the shadow at the bar's bottom edge.
+              (b) the rows passing under the bar still dissolve into it; the band still starts at the
+              bar's edge and the gap under the title is unchanged.
+      Fails:  (a) a hard horizontal line across the shadow, right at the bar's bottom edge — the
+              reported defect, and it appears late in the collapse rather than early, which is why
+              it reads as "when the toolbar shrinks". (b) rows visibly guillotined at the bar's edge,
+              or a pale rectangle below the bar where the band no longer paints.
+      Also:   the same check on the Anytime feed's own bar, which shares the band and the argument.
+              And on iOS 18 only: push into Calendar from a home tile and watch the frame the zoom
+              lands on. The bar is inside a matched-transition destination, so a cut seen during or
+              just after the push would be hosted by the transition rather than by the band — the
+              one hypothesis source alone could not separate, and the reason this row says iOS 18.
+      Why:    A paint order is settled by looking. The guardrails are green and nothing in this
+              repository pins which of two layers a gradient is drawn in. Android had this exact
+              defect and fixed it the same way (`TdayHeroTitleHeader`, drawn first and offset below);
+              web's `NativePageHeader` still draws its band after its back button and is exposed the
+              same way — a separate change, not covered here.

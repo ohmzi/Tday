@@ -2651,7 +2651,39 @@ private struct CalendarElasticTopBar: View {
         // Painted outside the bar's bounds so the grid dissolves into it rather
         // than being cut off at its edge. Keeping it out of the VStack keeps the
         // bar's own height — and every collapse calculation — untouched.
-        .overlay(alignment: .bottom) {
+        //
+        // A `background` rather than an `overlay`, and that is the whole of this
+        // line's argument. An overlay paints ON TOP of the bar's own content, so
+        // once the bar is short enough for the back button's shadow to reach
+        // past its bottom edge the band's opaque top edge landed on the shadow
+        // and cut it off in a straight horizontal line across the bar's edge,
+        // while the button was still drawing it. It is a late-collapse defect
+        // and not an early one, which is why it reads as "when the toolbar
+        // shrinks": the button sits 2pt below the bar's top, the shared bar
+        // button's shadow reaches about 26pt past its own frame (`.shadow` at
+        // radius 16, y 10), and the mark block, its spacer and the expanded
+        // title hold ~200pt of bar under the row until the collapse is nearly
+        // done — so the two only meet once the bar is down to its docked
+        // height, which is where the title lives.
+        //
+        // Paint order is the fix rather than geometry: nothing moves, the band
+        // still starts exactly at the bar's edge and the gap under the title is
+        // unchanged, but the shadow now falls on top of the band and fades out
+        // with it.
+        //
+        // Android's twin of this bar had the identical defect and the identical
+        // fix one client over — its band was a Column sibling drawn after the
+        // bar, and it is drawn first now (`TdayHeroTitleHeader`, "Drawn FIRST,
+        // and offset below the bar rather than stacked after it").
+        //
+        // Web is NOT a precedent for this ordering and must not be read as one.
+        // Its `NativePageHeader` paints the band below the bar's box but renders
+        // the back button and the actions BEFORE it, so that bar is exposed the
+        // same way; only the pages that happen to render `MobileSearchHeader`
+        // instead — the calendar among them — escape it, and there the band
+        // precedes the leading block. Fixing web is a separate change with its
+        // own blast radius and is not done here.
+        .background(alignment: .bottom) {
             LinearGradient(
                 colors: [colors.background, colors.background.opacity(0)],
                 startPoint: .top,
