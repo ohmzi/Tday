@@ -6,7 +6,7 @@
 # custom-format dump to a backup directory on the host.
 #
 # Unlike the in-app JSON export (GET /api/export), this captures EVERYTHING:
-# the users table, credential hashes, API keys, webhooks, calendar-feed tokens,
+# the users table, credential hashes, API keys, calendar-feed tokens,
 # sessions and the encrypted task fields exactly as stored. See
 # docs/security/backups.md.
 #
