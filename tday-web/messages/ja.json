@@ -513,7 +513,7 @@
     "title": "完了履歴",
     "empty": "まだ完了したタスクはありません",
     "emptyBody": "タスクを完了すると、ここに表示されます。",
-    "tabTasks": "タスク",
+    "tabTasks": "予定",
     "floaterEmpty": "完了したフローターはまだありません",
     "floaterEmptyBody": "フローターで何かにチェックを入れると、ここに表示されます。",
     "listDeletedSuffix": "リストは削除されました",
@@ -1371,20 +1371,20 @@
     "brainDump": "ブレインダンプ"
   },
   "release": {
-    "subtitle": "デプロイ済みのビルドと最新の公開リリースを確認できます。",
     "loading": "リリース情報を読み込んでいます…",
     "error": "リリース情報を取得できませんでした。接続を確認して、もう一度お試しください。",
     "retry": "再試行",
     "statusLatest": "最新",
     "statusUpdateAvailable": "更新があります",
     "messageLatest": "最新バージョンを使用しています",
-    "messageUpdateAvailable": "バージョン {{version}} が利用可能です。",
+    "messageUpdateReady": "バージョン {{version}} をインストールする準備ができました。",
     "installed": "インストール済み",
     "installedVersion": "インストール済みバージョン",
     "latest": "最新",
     "whatsNew": "{{version}} の新機能",
     "noNotes": "このバージョンのリリースノートはありません",
     "viewOnGithub": "GitHub で見る",
-    "published": "公開日 {{date}}"
+    "published": "公開日 {{date}}",
+    "serverUnavailable": "利用不可"
   }
 }

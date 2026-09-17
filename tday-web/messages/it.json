@@ -513,7 +513,7 @@
     "title": "Cronologia completamento",
     "empty": "Ancora niente di completato",
     "emptyBody": "Segna qualcosa come fatto e finirà qui.",
-    "tabTasks": "Attività",
+    "tabTasks": "Pianificato",
     "floaterEmpty": "Nessun elemento flottante completato",
     "floaterEmptyBody": "Spunta qualcosa in Flottante e apparirà qui.",
     "listDeletedSuffix": "lista eliminata",
@@ -1371,20 +1371,20 @@
     "brainDump": "Scarico mentale"
   },
   "release": {
-    "subtitle": "Controlla la build distribuita e l'ultima versione pubblicata.",
     "loading": "Caricamento delle informazioni sulla versione…",
     "error": "Impossibile recuperare le informazioni sulla versione. Controlla la connessione e riprova.",
     "retry": "Riprova",
     "statusLatest": "Ultima",
     "statusUpdateAvailable": "Aggiornamento disponibile",
     "messageLatest": "Stai usando l'ultima versione",
-    "messageUpdateAvailable": "La versione {{version}} è disponibile.",
+    "messageUpdateReady": "La versione {{version}} è pronta per l'installazione.",
     "installed": "Installata",
     "installedVersion": "Versione installata",
     "latest": "Ultima",
     "whatsNew": "Novità di {{version}}",
     "noNotes": "Nessuna nota di rilascio disponibile per questa versione",
     "viewOnGithub": "Vedi su GitHub",
-    "published": "Pubblicata il {{date}}"
+    "published": "Pubblicata il {{date}}",
+    "serverUnavailable": "Non disponibile"
   }
 }

@@ -407,6 +407,8 @@
     <string name="completed_title">Завершённые</string>
     <string name="completed_empty">Пока нет завершённых задач</string>
     <string name="completed_empty_body">Отметьте задачу выполненной — она появится здесь.</string>
+    <string name="completed_floater_empty">Пока нет завершённых плавающих задач</string>
+    <string name="completed_floater_empty_body">Отметьте что-нибудь как выполненное во «Плавающих», и оно появится здесь.</string>
     <string name="completed_section_earlier">Ранее</string>
     <string name="completed_section_today">Сегодня</string>
     <string name="completed_section_tomorrow">Завтра</string>

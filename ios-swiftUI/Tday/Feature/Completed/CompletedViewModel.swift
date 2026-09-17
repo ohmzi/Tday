@@ -18,7 +18,14 @@ final class CompletedViewModel {
     /// `isLocalMode || lastSuccessfulSyncEpochMs > 0` — see
     /// `feedFirstAnswerLanded(in:)`. Re-read on every hydrate.
     private(set) var firstAnswerLanded = false
-    var items: [CompletedItem] = []
+    /// The completion history's two tabs, kept apart rather than concatenated into one
+    /// timeline: the screen draws one at a time, and each tab's rows, its count and its
+    /// empty state all come from its own list. The two were always fetched separately
+    /// (`fetchCompletedItemsSnapshot` / `fetchCompletedFloatersSnapshot` — two fields of the
+    /// offline cache), so the split costs no extra round trip, and `CompletedItem.isFloater`
+    /// still says which of the two a row is for every write path that routes on it.
+    var completedItems: [CompletedItem] = []
+    var floaterItems: [CompletedItem] = []
     var lists: [ListSummary] = []
     /// For the edit sheet's list picker when the item being edited is a
     /// completed Floater — `lists` above is scheduled (Todo) lists only.
@@ -113,9 +120,11 @@ final class CompletedViewModel {
     }
 
     private func hydrateFromCache() {
-        let todoItems = container.completedRepository.fetchCompletedItemsSnapshot()
-        let floaterItems = container.completedRepository.fetchCompletedFloatersSnapshot()
-        items = todoItems + floaterItems
+        // Two lists rather than one concatenation. The merge this replaced was the only
+        // place the two kinds were combined, and it is gone rather than left beside the
+        // split: a merge nothing reads is a second answer to "what is on this screen".
+        completedItems = container.completedRepository.fetchCompletedItemsSnapshot()
+        floaterItems = container.completedRepository.fetchCompletedFloatersSnapshot()
         lists = container.listRepository.fetchListsSnapshot()
         floaterLists = container.floaterListRepository.fetchListsSnapshot()
         errorMessage = nil

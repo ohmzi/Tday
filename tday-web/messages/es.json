@@ -513,7 +513,7 @@
     "title": "Historial de tareas completadas",
     "empty": "Aún no has completado nada",
     "emptyBody": "Marca algo como hecho y aparecerá aquí.",
-    "tabTasks": "Tareas",
+    "tabTasks": "Programado",
     "floaterEmpty": "Aún no hay flotantes terminados",
     "floaterEmptyBody": "Marca algo como hecho en Flotante y aparecerá aquí.",
     "listDeletedSuffix": "lista eliminada",
@@ -1371,20 +1371,20 @@
     "brainDump": "Volcado mental"
   },
   "release": {
-    "subtitle": "Revisa la versión desplegada y la última versión publicada.",
     "loading": "Cargando información de la versión…",
     "error": "No se pudo obtener la información de la versión. Comprueba tu conexión e inténtalo de nuevo.",
     "retry": "Reintentar",
     "statusLatest": "Última",
     "statusUpdateAvailable": "Actualización disponible",
     "messageLatest": "Estás usando la última versión",
-    "messageUpdateAvailable": "La versión {{version}} está disponible.",
+    "messageUpdateReady": "La versión {{version}} está lista para instalar.",
     "installed": "Instalada",
     "installedVersion": "Versión instalada",
     "latest": "Última",
     "whatsNew": "Novedades de {{version}}",
     "noNotes": "No hay notas de versión disponibles para esta versión",
     "viewOnGithub": "Ver en GitHub",
-    "published": "Publicada el {{date}}"
+    "published": "Publicada el {{date}}",
+    "serverUnavailable": "No disponible"
   }
 }

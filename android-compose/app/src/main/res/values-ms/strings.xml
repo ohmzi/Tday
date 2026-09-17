@@ -404,6 +404,8 @@
     <string name="completed_title">Selesai</string>
     <string name="completed_empty">Belum ada tugasan selesai</string>
     <string name="completed_empty_body">Tandakan sesuatu sebagai selesai dan ia akan muncul di sini.</string>
+    <string name="completed_floater_empty">Belum ada floater yang selesai</string>
+    <string name="completed_floater_empty_body">Tandakan sesuatu selesai dalam Floater dan ia akan muncul di sini.</string>
     <string name="completed_section_earlier">Lebih awal</string>
     <string name="completed_section_today">Hari ini</string>
     <string name="completed_section_tomorrow">Esok</string>

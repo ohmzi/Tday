@@ -1,6 +1,12 @@
 import SwiftUI
 import UIKit
 
+/// The id of the list's first row, which the screen scrolls back to when the tab
+/// changes. The same shape `TodoListScreen` uses for its own top (`todoTimelineScrollTopID`):
+/// a `List` row cannot be named by offset, so the way to say "the top" is to give the
+/// first row an id and ask for it.
+private let completedTimelineScrollTopID = "completed-timeline-scroll-top"
+
 private enum CompletedRestorePhase {
     case completed
     case unchecked
@@ -12,10 +18,8 @@ struct CompletedScreen: View {
     private let pullRefreshEnabled: Bool
     @State private var viewModel: CompletedViewModel
     @Environment(\.tdayColors) private var colors
-    @Environment(\.dismiss) private var dismiss
-    /// Gates the history's own motion — see `completedTimelineAnimationKey`'s
-    /// `.animation(_:value:)` and `completedRowTransition`.
     @Environment(\.tdayAnimation) private var tdayAnimation
+    @Environment(\.dismiss) private var dismiss
     @State private var editingItem: CompletedItem?
     @State private var timelineScrollOffset: CGFloat = 0
     @State private var collapsedSectionIDs: Set<String> = []
@@ -23,17 +27,61 @@ struct CompletedScreen: View {
     /// every dismissal is a WRITE to this and nothing else. No host `body` may read it, or a
     /// cheap write becomes a full re-evaluation of the screen.
     @State private var openSwipeTaskID: String?
+    /// Which of the history's two tabs is showing.
+    ///
+    /// The vocabulary is `HomeTileOrigin`, which this client already speaks for exactly this
+    /// question — "which board did this arrival come through" — and which the route already
+    /// carries, unused for the tab until now. A third enum of `tasks` / `floater` beside it
+    /// would be the same idea spelled twice, so there is none.
+    @State private var scope: HomeTileOrigin
     @FocusState private var searchFieldFocused: Bool
     @State private var searchExpanded = false
     @State private var searchQuery = ""
 
-    init(container: AppContainer, pullRefreshEnabled: Bool = false) {
+    init(
+        container: AppContainer,
+        pullRefreshEnabled: Bool = false,
+        origin: HomeTileOrigin? = nil
+    ) {
         self.pullRefreshEnabled = pullRefreshEnabled
         _viewModel = State(initialValue: CompletedViewModel(container: container))
+        // Everything that is not the Floater feed opens the first tab, which is web's own
+        // rule for `?scope=floater` and the safe polarity: a deep link, a shortcut or a
+        // notification names no board and lands on the history rather than nowhere.
+        //
+        // Read ONCE, into state, and never written back to the route. Pushing a new
+        // `.completed(origin:)` on a tab switch would change an `AppRoute`'s `Hashable`
+        // payload, which SwiftUI resolves as a different destination — re-running
+        // `.navigationTransition` and re-zooming the screen mid-flight.
+        _scope = State(initialValue: origin ?? .scheduledBoard)
+    }
+
+    /// The active tab's own rows, and nothing else's: this is the whole of the split.
+    ///
+    /// Each list already comes from its own half of the cache, so nothing here filters on
+    /// `isFloater` — a partition of a concatenation would be a second definition of what a
+    /// floater is, and the tab is the only thing that decides which list is drawn.
+    private var activeItems: [CompletedItem] {
+        scope == .floaterFeed ? viewModel.floaterItems : viewModel.completedItems
+    }
+
+    private var isFloaterTab: Bool {
+        scope == .floaterFeed
+    }
+
+    /// Which tab, as an opaque discriminator for the section identity.
+    ///
+    /// Not a name — there is no third spelling of the tab vocabulary here, and the two
+    /// section sets never have to agree on what to call themselves. It exists so a day that
+    /// both histories have rows for is not one section id twice: the collapse state is keyed
+    /// by section id, so without it a month shut on the Scheduled tab would arrive shut on
+    /// the Floater one.
+    private var tabDiscriminator: Int {
+        isFloaterTab ? 1 : 0
     }
 
     private var groupedItems: [TimelineSection<CompletedItem>] {
-        buildCompletedTimelineSections(items: searchedItems)
+        buildCompletedTimelineSections(items: searchedItems, tabDiscriminator: tabDiscriminator)
     }
 
     private var normalizedSearchQuery: String {
@@ -44,17 +92,30 @@ struct CompletedScreen: View {
         searchExpanded && !normalizedSearchQuery.isEmpty
     }
 
-    /// The history and nothing else: this screen searches what it is showing,
-    /// the way each web page searches its own list.
+    /// The active tab, and nothing else: each web container searches what it is showing, and
+    /// this screen searches what its own tab is showing.
+    ///
+    /// The FLOATER tab has a third term the scheduled one does not — the list's name —
+    /// because web's `CompletedFloaterContainer` matches it and `CompletedTodoContainer`
+    /// does not. That asymmetry is web's and it is copied rather than tidied.
     private var searchedItems: [CompletedItem] {
         guard isSearching else {
-            return viewModel.items
+            return activeItems
         }
-        return viewModel.items.filter { item in
-            item.title.lowercased(with: .current).contains(normalizedSearchQuery) ||
-                flattenNotesToPlainText(item.description)
-                    .lowercased(with: .current)
-                    .contains(normalizedSearchQuery)
+        let query = normalizedSearchQuery
+        return activeItems.filter { item in
+            if item.title.lowercased(with: .current).contains(query) {
+                return true
+            }
+            if flattenNotesToPlainText(item.description)
+                .lowercased(with: .current)
+                .contains(query) {
+                return true
+            }
+            guard isFloaterTab, let listName = item.listName else {
+                return false
+            }
+            return listName.lowercased(with: .current).contains(query)
         }
     }
 
@@ -62,12 +123,16 @@ struct CompletedScreen: View {
         L("Search in %@", L("Completed"))
     }
 
-    /// No magnifier over an empty history: there is no set for a query to
-    /// narrow, and the button would only raise a keyboard over the empty-state
+    /// No magnifier over an empty history: there is no set for a query to narrow,
+    /// and the button would only raise a keyboard over the empty-state
     /// scene, which is the whole of what the screen has to say. Gates the
     /// button, not the bar — a search already open stays open.
+    ///
+    /// Read against the ACTIVE TAB, the same per-tab gate web's two containers each write
+    /// for themselves: an empty Floater tab gets no magnifier even while the scheduled
+    /// history behind it is full.
     private var topBarActions: [TimelineTopBarAction] {
-        guard !viewModel.items.isEmpty else {
+        guard !activeItems.isEmpty else {
             return []
         }
         return [
@@ -87,6 +152,26 @@ struct CompletedScreen: View {
 
     private var completedCheckmarkColor: Color {
         Color(.sRGB, red: 111.0 / 255.0, green: 191.0 / 255.0, blue: 134.0 / 255.0, opacity: 1)
+    }
+
+    /// Each tab's own accent, which is what web gives them: `nativeScreenAccentColors`
+    /// pairs the completed history's green (#719F84) with the Floater board's teal
+    /// (#4D8F83), and each container hands its own to the mark and the header. Both are
+    /// named tokens on this client already — `.tdayCompletedGreen` and `.tdayFloaterGreen`
+    /// — so this picks between two names rather than spelling two colours.
+    ///
+    /// It tints the mark and everything the mark is drawn in — the hero's front glyph, its
+    /// echo, the page watermark, the empty state's badge — and the tab strip. Those are the
+    /// four sites web's one accent reaches on this page, and before this it reached only the
+    /// first two on this client, so the page drew its own mark in two colours at once (a
+    /// green or teal hero over a slate watermark and a slate badge).
+    ///
+    /// The disc's wash, the hero title and the top bar keep `completedAccentColor`, the
+    /// page's slate chrome. The wash is the one of those that touches the mark, and it is
+    /// left alone deliberately: here it sits directly above a slate title, and re-tinting it
+    /// alone would put a green disc over a slate title where web has the two the same colour.
+    private var activeScopeAccent: Color {
+        isFloaterTab ? .tdayFloaterGreen : .tdayCompletedGreen
     }
 
     private var titleCollapseProgress: CGFloat {
@@ -185,7 +270,13 @@ struct CompletedScreen: View {
                         // `assetName` wins — and stays only because it is not
                         // optional.
                         systemName: "checkmark",
-                        accentColor: completedAccentColor,
+                        // The tab's accent, not the page's slate. The watermark is
+                        // the same mark at another size, and it and the badge were
+                        // the two sites still wearing the page's slate while the
+                        // hero wore the tab's colour — this page drawing its own
+                        // mark in two colours at once. Web draws all three of its
+                        // own mark sites from the one accent.
+                        accentColor: activeScopeAccent,
                         assetName: "LucideCalendarCheck",
                         // The composite's back plate is stronger here than the
                         // hero's: the whole mark sits under this watermark's own
@@ -205,9 +296,23 @@ struct CompletedScreen: View {
                                 // The fallback for a badge drawn as an asset;
                                 // `markContent` is what actually draws here.
                                 assetName: "LucideCalendarCheck",
-                                accentColor: completedAccentColor,
-                                title: L("No completed tasks"),
-                                description: L("Tick something off and it will land here."),
+                                // The tab's accent, for the watermark's reason above.
+                                accentColor: activeScopeAccent,
+                                // Two scenes, not one with a swapped word: web keeps a
+                                // Floater empty state of its own beside the scheduled
+                                // one, because "Tick something off and it will land
+                                // here" is only half true on a tab whose way in is the
+                                // Floater board rather than the schedule.
+                                title: L(
+                                    isFloaterTab
+                                        ? "No finished floaters yet"
+                                        : "No completed tasks"
+                                ),
+                                description: L(
+                                    isFloaterTab
+                                        ? "Tick something off in Floater and it will land here."
+                                        : "Tick something off and it will land here."
+                                ),
                                 markContent: AnyView(CompletedMark(
                                     size: CompletedMark.badgeGlyphSize,
                                     tint: colors.onPrimary,
@@ -279,9 +384,17 @@ struct CompletedScreen: View {
                     onSearchClose: closeSearch
                 )
             }
-            .onChange(of: viewModel.items.map(\.id)) { _, ids in
+            .onChange(of: activeItems.map(\.id)) { _, ids in
                 guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
                 self.openSwipeTaskID = nil
+            }
+            // A switch lands on a different list, so the field starts empty there — web's
+            // own consequence rather than a rule invented here: its two tabs are two
+            // independent screens, so the query belongs to the screen the user was on and a
+            // freshly mounted one has none. The field itself stays open, so a user who was
+            // searching keeps the keyboard and the placeholder.
+            .onChange(of: scope) { _, _ in
+                searchQuery = ""
             }
             .onDisappear {
                 // Returning to a screen must never show an armed Delete pill — see
@@ -321,10 +434,30 @@ struct CompletedScreen: View {
             .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
+    /// The screen's list, under the reader that can name the row it scrolls back to.
+    ///
+    /// A tab switch lands on a different list, so the newly-selected one opens at its own
+    /// first row rather than at the scroll offset the other tab left behind — web's
+    /// `scrollCompletedToTop()` and Android's `listState.scrollToItem(0)`, without which a
+    /// Floater tab with a short history opens showing its middle or nothing where web shows
+    /// its first row. Deliberately OUTSIDE `withAnimation`: the jump is the cut, so there is
+    /// no motion for the app's Reduce Motion switch to have to take back.
     private var completedTimelineContent: some View {
+        ScrollViewReader { scrollProxy in
+            completedTimelineList
+                .onChange(of: scope) { _, _ in
+                    scrollProxy.scrollTo(completedTimelineScrollTopID, anchor: .top)
+                }
+        }
+    }
+
+    private var completedTimelineList: some View {
         ZStack {
             List {
                 timelineHeroTitleRow
+                    .id(completedTimelineScrollTopID)
+
+                completedScopeTabsRow
 
                 if let errorMessage = viewModel.errorMessage {
                     Section {
@@ -435,13 +568,13 @@ struct CompletedScreen: View {
             mark: Image("LucideCheck"),
             frontMark: AnyView(CompletedMark(
                 size: TodoTimelineMetrics.heroMarkGlyph,
-                tint: .tdayCompletedGreen
+                tint: activeScopeAccent
             )),
             // The echo is a drawing of the mark, so it takes the mark's colour
             // rather than the disc's chrome: left on `markAccentColor` the disc
             // drew the same check twice in two colours — slate behind, green in
             // front — where the web draws both from its one accent.
-            markEchoColor: .tdayCompletedGreen
+            markEchoColor: activeScopeAccent
         )
         .background {
             TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
@@ -449,6 +582,28 @@ struct CompletedScreen: View {
         }
         .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+
+    /// The two tabs, directly under the title and inside the block that scrolls away —
+    /// web's `NativePageHeader` `beneathTitle` slot, and the position the calendar screen
+    /// already puts its own segmented strip in on this client.
+    ///
+    /// An in-list row rather than anything in `TimelineTopBar`, which has no slot to put
+    /// it in: its only content parameters (`searchActive`, `selectionActive`) are whole-row
+    /// take-overs rather than insertion points.
+    private var completedScopeTabsRow: some View {
+        CompletedScopeTabs(
+            isFloaterTab: isFloaterTab,
+            scheduledCount: viewModel.completedItems.count,
+            floaterCount: viewModel.floaterItems.count,
+            accentColor: activeScopeAccent,
+            onSelect: { next in
+                scope = next
+            }
+        )
+        .listRowInsets(EdgeInsets(top: CompletedScopeTabsMetrics.topSpacing, leading: TodoTimelineMetrics.horizontalPadding, bottom: CompletedScopeTabsMetrics.bottomSpacing, trailing: TodoTimelineMetrics.horizontalPadding))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
     }
@@ -603,6 +758,12 @@ struct CompletedScreen: View {
     private func completedTimelineRow(_ item: CompletedItem) -> some View {
         CompletedTimelineRow(
             item: item,
+            // Both namespaces, so the row's own kind picks the collection: the two
+            // stores are disjoint and their ids are prefixed differently, so a
+            // completed Floater resolved against the scheduled lists would lose its
+            // mark rather than draw the wrong one.
+            scheduledLists: viewModel.lists,
+            floaterLists: viewModel.floaterLists,
             completedCheckmarkColor: completedCheckmarkColor,
             onUncomplete: {
                 await viewModel.uncomplete(item)
@@ -621,10 +782,123 @@ struct CompletedScreen: View {
     }
 }
 
-/// The Completion-history page's mark: one green check, with the Floater's leaf
-/// and the Scheduled board's `calendar-check` stacked behind it as a single faint
-/// plate. The two behind read as depth under the check rather than as two more
-/// icons, which is the arrangement the page was asked for.
+/// The completion history's two tabs.
+///
+/// A hand-rolled SwiftUI strip rather than `TdayNativeSegmentedControl`, and the reason is
+/// the motion requirement rather than the look. That control is a `UISegmentedControl`, so
+/// its indicator stays on UIKit's own timing — a deviation the dock's pill already carries
+/// with a written argument (`AppRootView`) and which the calendar's view-mode strip inherits.
+/// This control cannot take it: web's Completed strip runs on the **Enter** rung, argued at
+/// its call site ("Enter, not Emphasis, and that is a choice rather than an oversight"), and
+/// it has to be a clean cut when the app's own Reduce Motion gate is on. A `UISegmentedControl`
+/// can express neither, so this one draws its own thumb and takes both from
+/// `tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter))` — `nil` under the
+/// gate, which is the clean cut, and the token's 200 ms and `(0, 0, 0.2, 1)` curve when it plays.
+///
+/// Both counts are the FULL length of their own history and never the search-narrowed one,
+/// which is web's rule too: a tab's number says how much history it holds, not how much of it
+/// the current query happens to match.
+private struct CompletedScopeTabs: View {
+    let isFloaterTab: Bool
+    let scheduledCount: Int
+    let floaterCount: Int
+    let accentColor: Color
+    let onSelect: (HomeTileOrigin) -> Void
+
+    @Environment(\.tdayColors) private var colors
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
+    private let options: [HomeTileOrigin] = [.scheduledBoard, .floaterFeed]
+
+    private var selectedIndex: Int {
+        options.firstIndex(of: isFloaterTab ? .floaterFeed : .scheduledBoard) ?? 0
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let segmentWidth = proxy.size.width / CGFloat(options.count)
+            ZStack(alignment: .leading) {
+                RoundedRectangle(
+                    cornerRadius: CompletedScopeTabsMetrics.trackCorner,
+                    style: .continuous
+                )
+                .fill(colors.surfaceVariant.opacity(0.76))
+
+                RoundedRectangle(
+                    cornerRadius: CompletedScopeTabsMetrics.thumbCorner,
+                    style: .continuous
+                )
+                .fill(colors.surface)
+                .frame(width: segmentWidth - CompletedScopeTabsMetrics.inset * 2)
+                .padding(.vertical, CompletedScopeTabsMetrics.inset)
+                .padding(.leading, CompletedScopeTabsMetrics.inset)
+                .offset(x: CGFloat(selectedIndex) * segmentWidth)
+                .animation(
+                    tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter)),
+                    value: selectedIndex
+                )
+
+                HStack(spacing: 0) {
+                    ForEach(options, id: \.self) { option in
+                        let selected = option == (isFloaterTab ? .floaterFeed : .scheduledBoard)
+                        Button {
+                            guard !selected else { return }
+                            HapticManager.selection()
+                            onSelect(option)
+                        } label: {
+                            HStack(spacing: CompletedScopeTabsMetrics.labelBadgeSpacing) {
+                                Text(option == .floaterFeed ? L("Floater") : L("Scheduled"))
+                                Text(option == .floaterFeed
+                                    ? String(floaterCount)
+                                    : String(scheduledCount))
+                                    .opacity(0.6)
+                            }
+                            .font(TdayFont.font(size: CompletedScopeTabsMetrics.fontSize, weight: .black))
+                            .foregroundStyle(selected ? accentColor : colors.onSurfaceVariant)
+                            // The labels' own tint travels on the same rung as the thumb, as it
+                            // does on web (`transition-colors duration-enter` beside the thumb's
+                            // `transition-transform duration-enter`), and goes instant with it
+                            // under the motion gate.
+                            .animation(
+                                tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter)),
+                                value: selectedIndex
+                            )
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: CompletedScopeTabsMetrics.height)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .frame(height: CompletedScopeTabsMetrics.height)
+    }
+}
+
+private enum CompletedScopeTabsMetrics {
+    /// The strip's own height, taken from the app's other segmented control so the two sit
+    /// at the same weight in a page.
+    static let height: CGFloat = TdayNativeSegmentedControlMetrics.height
+    /// From the track's edge to the thumb's, on every side of it.
+    static let inset: CGFloat = 5
+    static let trackCorner: CGFloat = 16
+    static let thumbCorner: CGFloat = 12
+    /// The same count size the task lists' own segmented control draws its number at
+    /// (`TdaySegmentedSlider`), so the two strips' badges read alike.
+    static let fontSize: CGFloat = 13
+    static let labelBadgeSpacing: CGFloat = 4
+    /// The hero block above already leaves the settled content gap; this is the distance
+    /// from the title's block to the control and from the control to the first section.
+    static let topSpacing: CGFloat = 4
+    static let bottomSpacing: CGFloat = 10
+}
+
+/// The Completion-history page's mark: one check, with the Scheduled board's
+/// `calendar-check` and the Floater's leaf behind it as a single faint plate —
+/// the calendar is the page the leaf is drawn on, and the check is over both. At
+/// the three sizes this mark is drawn, all three are nameable.
 ///
 /// A view and not an asset, because there is no compositing primitive to reach
 /// for: three `Image`s in one `ZStack` is the whole thing. Built once — here —
@@ -632,9 +906,9 @@ struct CompletedScreen: View {
 /// watermark and the empty state's badge. A composite that reached only the hero
 /// would leave the page drawing two different marks.
 ///
-/// The three glyphs are concentric but NOT the same size — `rearLeafScale` and
-/// `rearCalendarScale` say why, and what it costs at the one pair of contours
-/// that cannot be cleared.
+/// The three glyphs are NOT the same size, and the leaf is not concentric with
+/// the other two — `rearLeafScale`, `rearCalendarScale`, `rearLeafOffsetX` and
+/// `rearLeafOffsetY` say why, and what the arrangement is measured at.
 ///
 /// This supersedes the single `calendar-check` those three sites carried for one
 /// commit: the glyph is still on the page, and no longer alone.
@@ -669,38 +943,62 @@ private struct CompletedMark: View {
     /// eight other screens that draw a badge keep the drawing they have.
     static let badgeGlyphSize: CGFloat = 32
 
-    /// How much of the box each glyph behind the check is drawn in.
+    /// How much of the box each glyph behind the check is drawn in, and where the
+    /// leaf sits inside it.
     ///
-    /// The three used to be drawn at one size and concentric, and the leaf stopped
-    /// reading: at 1:1 its contour runs *inside* the calendar's frame by 0–1 of
-    /// lucide's 24 units — its left arc 1 unit inside the left wall, its rightmost
-    /// point (21,10) exactly on the right wall at the header rule's own y, its tip
-    /// level with the calendar's own binding ticks. Two strokes need a full stroke
-    /// width between their centrelines to read as two, so the leaf fused into a
-    /// fringe along the frame and the back plate became one grey box.
+    /// Two things had to be true of the back plate at once: the two rear glyphs have
+    /// to read as two rather than fuse into one fringe, and each has to be nameable
+    /// at the size the mark is actually drawn. Drawn concentric at one size the three
+    /// fused; graduated by scale alone — leaf 0.62, calendar 0.88, the first
+    /// arrangement — the leaf still did not name, because at 0.62 its contour runs
+    /// through the calendar's header rule and *within* both frame walls, so the
+    /// calendar's own straight lines cut its silhouette at every crossing.
+    /// Rasterised, that leaf kept 59.3% of its ink, in six disconnected pieces: the
+    /// "scratch" the mark was reported as, and the one glyph of the three that was
+    /// present, paid for and not nameable.
     ///
-    /// Different sizes are what separate them, and the binding pair is the leaf's
-    /// rightmost point against the calendar's right wall: both sit at 12 + 9 ×
-    /// scale, so they move apart by 9 × (calendar − leaf) = 9 × 0.26 = 2.34 units.
-    /// The two strokes carry 0.88 + 0.62 = 1.50 units of half-width between them,
-    /// because a scaled glyph scales its stroke with it, so the outlines clear by
-    /// 0.84 of a unit — over half a stroke width — at every size the mark is drawn.
-    /// The scaling also thins the strokes, which is the right direction: the pair
-    /// behind reads as *behind* partly because it is drawn in a finer line.
+    /// So the leaf is drawn small enough to sit *inside* the calendar's body — under
+    /// the header rule, above the frame's foot, and inside both walls — and shifted
+    /// right, out from under the front check's own lower arm. At 0.335 of the box its
+    /// outline clears the calendar's frame by 0.88 of a unit on every side, against
+    /// the 0.84 the first arrangement recorded: 1.61pt of the hero's 44, 1.17 at the
+    /// badge's 32, 7.77pt at `EmptyTaskWatermark.markGlyphSize`. Rasterised, the same
+    /// leaf now keeps 88.6% of its ink, in a single piece.
     ///
-    /// One pair is not fully cleared, and it is worth naming: the leaf's tip
-    /// passes within ~0.82 units of the calendar's 1.76-unit right binding tick,
-    /// which is inside the 1.50 the two carry, so the tip grazes that tick. It is
-    /// the one contour no pair of scales can separate — clearing it needs the leaf
-    /// below 0.375 of the calendar, where it stops reading at 44pt, or a plate
-    /// moved off-centre, which is visibly lopsided in the hero's 96pt disc.
-    static let rearLeafScale: CGFloat = 0.62
+    /// The one contour it cannot avoid is the calendar's own inner tick, which sits in
+    /// the middle of the body the leaf now occupies: the leaf is drawn *over* it, so
+    /// the tick is covered rather than cut. That tick was already unreadable behind
+    /// the front check — its arms pass within the strokes' half-widths of the check's
+    /// arms at every pair of scales these two glyphs allow — so nothing legible is
+    /// lost, and the leaf's silhouette survives whole.
+    ///
+    /// The binding pair is now the leaf's topmost point against the header rule and
+    /// its foot against the frame's, both 0.88 of a unit. A scaled glyph scales its
+    /// stroke with it, so the leaf carries 0.67 of a unit of stroke against the
+    /// calendar's 1.76: the pair behind reads as *behind* partly by being drawn in a
+    /// finer line than the check's 2.
+    static let rearLeafScale: CGFloat = 0.335
     static let rearCalendarScale: CGFloat = 0.88
+
+    /// Where the leaf sits inside the box, as a fraction of it — lucide draws in a
+    /// 24-unit box, so these are 2.5 and 3.69 of those units. Down and to the right:
+    /// down is what puts the leaf under the calendar's header rule, and right is what
+    /// takes it out from under the front check's lower arm. The rightward half is
+    /// worth a third of the leaf's ink — at the box's centre, at this scale, the same
+    /// leaf keeps 60.1% where it keeps 88.6% here.
+    static let rearLeafOffsetX: CGFloat = 2.5 / 24
+    static let rearLeafOffsetY: CGFloat = 3.69 / 24
 
     var body: some View {
         ZStack {
-            glyph("LucideLeaf", scale: Self.rearLeafScale, opacity: rearOpacity)
             glyph("LucideCalendarCheck", scale: Self.rearCalendarScale, opacity: rearOpacity)
+            glyph(
+                "LucideLeaf",
+                scale: Self.rearLeafScale,
+                offsetX: Self.rearLeafOffsetX,
+                offsetY: Self.rearLeafOffsetY,
+                opacity: rearOpacity
+            )
             glyph("LucideCheck", scale: 1, opacity: 1)
         }
         .frame(width: size, height: size)
@@ -708,22 +1006,42 @@ private struct CompletedMark: View {
     }
 
     @ViewBuilder
-    private func glyph(_ name: String, scale: CGFloat, opacity: Double) -> some View {
+    private func glyph(
+        _ name: String,
+        scale: CGFloat,
+        offsetX: CGFloat = 0,
+        offsetY: CGFloat = 0,
+        opacity: Double
+    ) -> some View {
         let image = Image(name)
             .renderingMode(.template)
             .resizable()
             .scaledToFit()
             .frame(width: size * scale, height: size * scale)
-        if let tint {
-            image.foregroundStyle(tint.opacity(opacity))
-        } else {
-            image.opacity(opacity)
+        Group {
+            if let tint {
+                image.foregroundStyle(tint.opacity(opacity))
+            } else {
+                image.opacity(opacity)
+            }
         }
+        // Displacement from the box's centre as a fraction of the box, so the
+        // drawing is the same proportion at every size the mark is drawn.
+        .offset(x: size * offsetX, y: size * offsetY)
     }
 }
 
 private struct CompletedTimelineRow: View {
     let item: CompletedItem
+    /// The two list namespaces the trailing mark resolves against.
+    ///
+    /// BOTH are handed over rather than the call site choosing one, because the choice
+    /// belongs to `item.isFloater` and is answered inside `tdayResolvedRowList` — the
+    /// function the unit tests pin. A call site that picked would be the one untested
+    /// place a completed Floater's mark could be looked for in the scheduled lists,
+    /// find nothing, and silently vanish.
+    let scheduledLists: [ListSummary]
+    let floaterLists: [ListSummary]
     let completedCheckmarkColor: Color
     let onUncomplete: () async -> Void
     let onDelete: () async -> Void
@@ -761,7 +1079,13 @@ private struct CompletedTimelineRow: View {
     var body: some View {
         let completedDate = item.completedAt ?? item.due ?? .distantPast
         let completedTimeText = completedDate.formatted(.dateTime.hour().minute().locale(AppLocale.current))
-        let showListIndicator = item.listName?.isEmpty == false
+        let resolvedList = tdayResolvedRowList(
+            for: item,
+            scheduledLists: scheduledLists,
+            floaterLists: floaterLists
+        )
+        let showListIndicator = item.listName?.isEmpty == false || resolvedList != nil
+        let listIndicatorColor = todoListAccentColor(for: resolvedList?.color ?? item.listColor)
         let priorityIcon = priorityIndicatorSymbolName(item.priority)
 
         VStack(spacing: 0) {
@@ -823,9 +1147,12 @@ private struct CompletedTimelineRow: View {
                 if showListIndicator || priorityIcon != nil {
                     HStack(spacing: 8) {
                         if showListIndicator {
-                            Image(systemName: "tray.fill")
-                                .font(.system(size: TodoTimelineMetrics.minimalRowIndicatorSize, weight: .semibold))
-                                .foregroundStyle(todoListAccentColor(for: item.listColor))
+                            TdayListIcon(
+                                iconKey: resolvedList?.iconKey,
+                                listName: resolvedList?.name ?? item.listName,
+                                size: TodoTimelineMetrics.minimalRowIndicatorSize
+                            )
+                            .foregroundStyle(listIndicatorColor)
                         }
                         if let priorityIcon {
                             Image(systemName: priorityIcon)
@@ -896,7 +1223,10 @@ private struct CompletedTimelineRow: View {
     }
 }
 
-private func buildCompletedTimelineSections(items: [CompletedItem]) -> [TimelineSection<CompletedItem>] {
+private func buildCompletedTimelineSections(
+    items: [CompletedItem],
+    tabDiscriminator: Int
+) -> [TimelineSection<CompletedItem>] {
     let calendar = Calendar.current
     let grouped = Dictionary(grouping: items) { item in
         calendar.startOfDay(for: item.completedAt ?? item.due ?? .distantPast)
@@ -913,7 +1243,11 @@ private func buildCompletedTimelineSections(items: [CompletedItem]) -> [Timeline
         }
 
         return TimelineSection(
-            id: "completed-\(date.timeIntervalSince1970)",
+            // The tab is part of the identity, and it is load-bearing: the collapse state
+            // is keyed by section id, so a day both histories have rows for would be one
+            // id twice — a duplicate `ForEach` identity, and a month shut on one tab
+            // arriving shut on the other.
+            id: "completed-\(tabDiscriminator)-\(date.timeIntervalSince1970)",
             title: completedTimelineSectionTitle(for: date),
             items: sectionItems,
             isCollapsible: false

@@ -513,7 +513,7 @@
     "title": "Completion history",
     "empty": "No finished tasks yet",
     "emptyBody": "Tick something off and it will land here.",
-    "tabTasks": "Tasks",
+    "tabTasks": "Scheduled",
     "floaterEmpty": "No finished floaters yet",
     "floaterEmptyBody": "Tick something off in Floater and it will land here.",
     "listDeletedSuffix": "list deleted",
@@ -1371,20 +1371,20 @@
     "brainDump": "Brain dump"
   },
   "release": {
-    "subtitle": "Review the deployed build and the latest published release.",
     "loading": "Loading release information…",
     "error": "Unable to fetch release information. Please check your connection and try again.",
     "retry": "Retry",
     "statusLatest": "Latest",
     "statusUpdateAvailable": "Update Available",
     "messageLatest": "You're running the latest version",
-    "messageUpdateAvailable": "Version {{version}} is available.",
+    "messageUpdateReady": "Version {{version}} is ready to install.",
     "installed": "Installed",
     "installedVersion": "Installed Version",
     "latest": "Latest",
     "whatsNew": "What's new in {{version}}",
     "noNotes": "No release notes available for this version",
     "viewOnGithub": "View on GitHub",
-    "published": "Published {{date}}"
+    "published": "Published {{date}}",
+    "serverUnavailable": "Unavailable"
   }
 }

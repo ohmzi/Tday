@@ -78,10 +78,24 @@ final class CompletedRepository {
         if syncManager.isLocalMode {
             return
         }
-        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
-        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
-            throw error
-        }
+        // No sync here, deliberately — the local half above is the whole of the write's
+        // optimistic part, and the network half belongs to the queue.
+        //
+        // This used to end in a forced `syncCachedData(replayPendingMutations: true)`,
+        // which on a burst of restores meant a full read-fetch-merge-save per tap. Two
+        // things went wrong with that. The obvious one is volume: restoring a handful of
+        // rows fired dozens of requests, enough to trip the backend's limiter. The
+        // subtler one is that the pass fetches its snapshot BEFORE it replays the queue,
+        // so the read it merged back was taken while the server still had the task
+        // completed — it undid the restore it had just been asked to commit. The guard in
+        // `mergeCompletedRecordsWithPendingOverrides` covers that window, but the cheapest
+        // way not to be undone by a stale read is not to take one.
+        //
+        // Nothing is lost. The queued `.uncompleteTodo` is replayed by the next sync, and
+        // the server's own `completed` event comes back over the realtime socket, which
+        // `AppViewModel` already coalesces into a sync on this device. A mutation the
+        // server will never accept is still dropped by the queue's own replay, with its
+        // error surfaced the way every other dropped mutation is.
     }
 
     func updateCompletedTodo(_ item: CompletedItem, payload: CreateTaskPayload) async throws {

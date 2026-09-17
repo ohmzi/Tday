@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -82,6 +83,7 @@ import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoItem
+import com.ohmz.tday.compose.core.navigation.CompletedScope
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import com.ohmz.tday.compose.core.ui.EmptyTaskWatermark
 import com.ohmz.tday.compose.core.ui.FeedAnswer
@@ -119,6 +121,8 @@ import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
+import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
+import com.ohmz.tday.compose.ui.component.TdaySegmentedSliderMotion
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTileAccent
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTitleAccent
@@ -144,6 +148,12 @@ private val CompletedTimelineSectionTopSpacing = 6.dp
 private val CompletedTimelineHeaderBodySpacing = 2.dp
 private val CompletedTimelineCollapsedSectionSpacing = 4.dp
 private val CompletedSwipeRowHeight = 56.dp
+
+// The tab strip's own breathing room. The hero block above it already leaves the settled
+// content gap; this is the distance from the title's block to the control and from the
+// control to the first section header, and neither is a TdayDimens step.
+private val CompletedScopeTabsTopSpacing = 4.dp
+private val CompletedScopeTabsBottomSpacing = 10.dp
 
 // The rest of what this screen draws that the scale has no rung for, named here rather than
 // snapped onto a neighbouring step. Nearly all of it is one task row, and the names are the ones
@@ -224,6 +234,7 @@ private enum class CompletedRestorePhase {
 @Composable
 fun CompletedScreen(
     uiState: CompletedUiState,
+    initialScope: CompletedScope,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onUncomplete: (CompletedItem) -> Unit,
@@ -232,6 +243,11 @@ fun CompletedScreen(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val listState = rememberLazyListState()
+    // Which of the history's two tabs is on screen. The initial value is the route's own
+    // argument — the board the user came through — and after that it is the user's. Keyed
+    // on `initialScope` rather than seeded once, so an arrival on the other board's tile
+    // opens where that tile says.
+    var scope by rememberSaveable(initialScope) { mutableStateOf(initialScope) }
     // Scoped search: the history this screen is showing, and nothing else. The
     // field takes the toolbar row the way the list-detail screens hand theirs
     // over, so there is no second bar for it to live in.
@@ -253,24 +269,40 @@ fun CompletedScreen(
         searchQuery = ""
         searchNeedsFocus = false
     }
-    val visibleItems = remember(uiState.items, searchActive, normalizedSearchQuery) {
+    // The active tab's own rows, and nothing else's: this is the whole of the split. Each
+    // list already comes from its own half of the cache, so no filter on `isFloater` is
+    // written here — a partition of a merged list would be a second definition of what a
+    // floater is, and the tab is the only thing that decides which list is drawn.
+    val scopeItems = uiState.itemsFor(scope)
+    val visibleItems = remember(scopeItems, scope, searchActive, normalizedSearchQuery) {
         if (!searchActive) {
-            uiState.items
+            scopeItems
         } else {
             // The same two fields the web completed page and the list-detail
-            // screens match on: the title and the notes flattened out of their
-            // rich-text form.
-            uiState.items.filter { completed ->
+            // screens match on — the title and the notes flattened out of their
+            // rich-text form — plus the list name, which only web's FLOATER tab
+            // matches (`CompletedFloaterContainer.tsx`); its scheduled twin has
+            // no such term.
+            scopeItems.filter { completed ->
                 completed.title.lowercase(Locale.getDefault())
                     .contains(normalizedSearchQuery) ||
                         flattenNotesToPlainText(completed.description)
                             .lowercase(Locale.getDefault())
-                            .contains(normalizedSearchQuery)
+                            .contains(normalizedSearchQuery) ||
+                        (
+                            scope == CompletedScope.Floater &&
+                                completed.listName.orEmpty()
+                                    .lowercase(Locale.getDefault())
+                                    .contains(normalizedSearchQuery)
+                            )
             }
         }
     }
-    val timelineSections = remember(visibleItems) {
-        buildCompletedTimelineSections(visibleItems)
+    // The tab scopes every key the list below is built out of. Without it, two tabs sharing
+    // a day would share a section key, and a month collapsed on one tab would close the
+    // other tab's header the moment the user switched.
+    val timelineSections = remember(visibleItems, scope) {
+        buildCompletedTimelineSections(visibleItems, scope = scope)
     }
     // Two readings of one rule, because the two lists below are different
     // questions: the scene answers for what is VISIBLE (a live query narrows it),
@@ -278,6 +310,10 @@ fun CompletedScreen(
     // and must never flash a placeholder per keystroke). Neither reads
     // `isLoading` any more -- see [feedAnswer] for why that flag meant the
     // opposite of what every gate like this was using it for.
+    //
+    // Both read the ACTIVE TAB, which is the whole of what the split changes here: a
+    // Floater tab with nothing in it may not answer with the scheduled history's
+    // emptiness, and the placeholder may not be held up by the other tab's store.
     val completedAnswer = feedAnswer(
         storeRead = uiState.hasHydratedSnapshot,
         rowsEmpty = visibleItems.isEmpty(),
@@ -285,12 +321,36 @@ fun CompletedScreen(
     )
     val completedStoreAnswer = feedAnswer(
         storeRead = uiState.hasHydratedSnapshot,
-        rowsEmpty = uiState.items.isEmpty(),
+        rowsEmpty = scopeItems.isEmpty(),
         firstAnswerLanded = uiState.firstAnswerLanded,
     )
     val showEmptyState = completedAnswer == FeedAnswer.Empty
     val heroCollapse = rememberLazyListHeroTitleCollapse(listState = listState)
     val completedTitle = stringResource(R.string.completed_title)
+    // Each tab's own accent, which is what web gives them: `nativeScreenAccentColors`
+    // pairs the completed history's green (#719F84) with the Floater board's teal
+    // (#4D8F83), and `CompletedFloaterContainer` hands the teal to its own header,
+    // watermark and empty state. Android already carries both — `TdayCompletedTileAccent`
+    // and `TdayFloaterAccent`, the same two values — so the pair costs nothing here.
+    //
+    // It tints the mark and everything the mark is drawn in — the hero's front glyph, its
+    // echo, the page watermark, the empty state's badge — and the tab strip. Those are the
+    // four sites web's one accent reaches on this page, and before this it reached only the
+    // first two on the natives, so the page drew its own mark in two colours at once (a
+    // green or teal hero over a slate watermark and a slate badge).
+    //
+    // The disc's wash, the hero title and the toolbar keep [COMPLETED_TITLE_COLOR], the
+    // page's own slate chrome. The wash is the one of those that touches the mark, and it
+    // is left alone deliberately: on the natives it sits directly above a slate title,
+    // and re-tinting it alone would put a green disc over a slate title where web has the
+    // two the same colour. Re-colouring the chrome is a change to a shape this did not
+    // come to make.
+    val activeScopeAccent = when (scope) {
+        CompletedScope.Tasks -> TdayCompletedTileAccent
+        CompletedScope.Floater -> TdayFloaterAccent
+    }
+    // The tab switch scrolls the new tab to its own top — web's `scrollCompletedToTop()`.
+    val scrollScope = rememberCoroutineScope()
     // The hero disc's echo, and nothing else — the mark's front glyph is the
     // composite below, which the echo is deliberately not part of. The disc
     // clips the echo, and the clip runs through the middle of the glyph: a
@@ -309,16 +369,22 @@ fun CompletedScreen(
     val swipeSlot = remember { TaskSwipeSlot() }
     val editTarget = rememberEditSheetTarget(
         id = editTargetId,
-        current = remember(editTargetId, uiState.items) {
-            editTargetId?.let { targetId -> uiState.items.firstOrNull { it.id == targetId } }
+        // The edit sheet's target is looked up across BOTH tabs: the sheet outlives a tab
+        // switch only in principle, but a lookup scoped to the visible list would silently
+        // drop an edit the user opened, and neither list is expensive to search.
+        current = remember(editTargetId, uiState.todoItems, uiState.floaterItems) {
+            editTargetId?.let { targetId ->
+                uiState.todoItems.firstOrNull { it.id == targetId }
+                    ?: uiState.floaterItems.firstOrNull { it.id == targetId }
+            }
         },
     )
     // The open row's task leaving the feed hands the slot back. Read through
     // `snapshotFlow` rather than as an effect key so that no read of the slot
     // happens in this composable's body -- see [TaskSwipeSlot].
-    LaunchedEffect(uiState.items, swipeSlot) {
+    LaunchedEffect(uiState.todoItems, uiState.floaterItems, swipeSlot) {
         snapshotFlow { swipeSlot.openId }.collect { openId ->
-            if (openId != null && uiState.items.none { it.id == openId }) {
+            if (openId != null && uiState.itemsFor(scope).none { it.id == openId }) {
                 swipeSlot.openId = null
             }
         }
@@ -398,7 +464,7 @@ fun CompletedScreen(
                         frontMark = {
                             CompletedMark(
                                 size = TdayHeroTitleMetrics.MarkGlyph,
-                                tint = TdayCompletedTileAccent,
+                                tint = activeScopeAccent,
                             )
                         },
                         // The echo is a drawing of the mark, so it takes the
@@ -406,8 +472,38 @@ fun CompletedScreen(
                         // left on `accentColor` the disc drew the same check
                         // twice in two colours, where the web draws both from its
                         // one accent.
-                        echoColor = TdayCompletedTileAccent,
+                        echoColor = activeScopeAccent,
                     )
+                    // The two tabs, directly under the title and inside the block that
+                    // scrolls away — the slot web hands this control through
+                    // `NativePageHeader`'s `beneathTitle`, and the position the calendar
+                    // already puts its own segmented strip in on this client.
+                    item(key = "completed-tab-strip", contentType = "completed-tab-strip") {
+                        CompletedScopeTabs(
+                            scope = scope,
+                            todoCount = uiState.todoItems.size,
+                            floaterCount = uiState.floaterItems.size,
+                            accentColor = activeScopeAccent,
+                            onScopeSelected = { next ->
+                                if (next == scope) return@CompletedScopeTabs
+                                // The selection haptic is the slider's own, fired on a tap
+                                // that is not the selected option — the same single tick
+                                // web's `hapticTick()` makes in its own handler.
+                                //
+                                // The history is a different list on each tab, so the new
+                                // one opens at its own top rather than at the other tab's
+                                // scroll offset — web's `scrollCompletedToTop()`. The
+                                // query goes with it, for web's reason too: its two tabs
+                                // are two independent screens, so the query belongs to the
+                                // screen rather than to the page, and a fresh one starts
+                                // empty.
+                                scope = next
+                                searchQuery = ""
+                                searchNeedsFocus = false
+                                scrollScope.launch { listState.scrollToItem(0) }
+                            },
+                        )
+                    }
                     timelineSections.forEachIndexed { sectionIndex, section ->
                         // A live query outranks a shut month: history opens with
                         // older months collapsed, and a task the search turns up
@@ -416,18 +512,28 @@ fun CompletedScreen(
                         val isCollapsed = !searchActive &&
                                 collapsedSectionKeys.contains(section.key)
                         item(key = "completed-header-${section.key}") {
+                            // Read through the gate, like the error card below and the
+                            // empty scene's exit above: the tab is part of this section's
+                            // key, so a switch replaces every item in one frame, and an
+                            // ungated `animateItem` here would slide the arriving tab's
+                            // headers into place while the thumb snapped — a switch that
+                            // is half a cut. Reduce Motion is a clean cut at both ends.
+                            val headerMotionEnabled = rememberTdayMotionEnabled()
+                            // Placement and nothing else: a month header is never added
+                            // or removed by a check-off, only displaced by one. That is
+                            // [TdayFeedItemMotion]'s rule 1, which this site was already
+                            // obeying by hand at the same 320.
+                            val headerMotionModifier = if (headerMotionEnabled) {
+                                Modifier.animateItem(
+                                    fadeInSpec = null,
+                                    placementSpec = TdayFeedItemMotion.Placement,
+                                    fadeOutSpec = null,
+                                )
+                            } else {
+                                Modifier
+                            }
                             CompletedTimelineSectionHeader(
-                                modifier = Modifier
-                                    // Placement and nothing else: a month header is
-                                    // never added or removed by a check-off, only
-                                    // displaced by one. That is [TdayFeedItemMotion]'s
-                                    // rule 1, which this site was already obeying by
-                                    // hand at the same 320.
-                                    .animateItem(
-                                        fadeInSpec = null,
-                                        placementSpec = TdayFeedItemMotion.Placement,
-                                        fadeOutSpec = null,
-                                    )
+                                modifier = headerMotionModifier
                                     .padding(
                                         top = if (sectionIndex == 0) {
                                             TdayDimens.SpacingNone
@@ -461,13 +567,23 @@ fun CompletedScreen(
                                     collapsedSectionKeys = collapsedSectionKeys,
                                 )
                                 item(key = "completed-row-${section.key}-${completed.id}") {
+                                    // Same gate as the header above, and for the same
+                                    // reason: a tab switch re-keys every row, and the
+                                    // three specs this row runs for a check-off are motion
+                                    // the app's Reduce Motion switch owns. With the gate on,
+                                    // the switch is a placement-only, no-fade replacement.
+                                    val rowMotionEnabled = rememberTdayMotionEnabled()
+                                    val rowMotionModifier = if (rowMotionEnabled) {
+                                        Modifier.animateItem(
+                                            fadeInSpec = TdayFeedItemMotion.FadeIn,
+                                            placementSpec = TdayFeedItemMotion.Placement,
+                                            fadeOutSpec = TdayFeedItemMotion.FadeOut,
+                                        )
+                                    } else {
+                                        Modifier
+                                    }
                                     CompletedSwipeRow(
-                                        modifier = Modifier
-                                            .animateItem(
-                                                fadeInSpec = TdayFeedItemMotion.FadeIn,
-                                                placementSpec = TdayFeedItemMotion.Placement,
-                                                fadeOutSpec = TdayFeedItemMotion.FadeOut,
-                                            )
+                                        modifier = rowMotionModifier
                                             .padding(
                                                 bottom = completedTaskBottomSpacing(
                                                     itemIndex = itemIndex,
@@ -526,7 +642,13 @@ fun CompletedScreen(
                     }
 
                     if (showEmptyState) {
-                        item(key = "completed-empty", contentType = "completed-empty") {
+                        // Keyed by tab as well as by kind: the two tabs' scenes carry
+                        // different copy, and a lazy item that keeps its identity across a
+                        // switch would hand the new tab the old one's title for a frame.
+                        item(
+                            key = "completed-empty-${scope.wire}",
+                            contentType = "completed-empty",
+                        ) {
                             if (searchActive) {
                                 TdayEmptyState(
                                     icon = R.drawable.ic_lucide_search,
@@ -542,9 +664,32 @@ fun CompletedScreen(
                                     // draws here. Kept in step with it so the
                                     // two paths cannot silently diverge.
                                     icon = R.drawable.ic_lucide_calendar_check,
-                                    accentColor = COMPLETED_TITLE_COLOR,
-                                    title = stringResource(R.string.completed_empty),
-                                    description = stringResource(R.string.completed_empty_body),
+                                    // The tab's accent, not the page's slate —
+                                    // the mark's other two sites on this page
+                                    // (the hero and the watermark) are the tab's
+                                    // colour, and web draws all three of its own
+                                    // from the one accent. A slate disc under a
+                                    // tab-coloured mark was this page drawing its
+                                    // mark in two colours at once.
+                                    accentColor = activeScopeAccent,
+                                    // Two scenes, not one with a swapped word: web keeps a
+                                    // Floater empty state of its own
+                                    // (`completed.floaterEmpty` / `floaterEmptyBody`) beside
+                                    // the scheduled one, because "Tick something off and it
+                                    // will land here" is only half true on a tab where the
+                                    // way in is the Floater board rather than the schedule.
+                                    title = stringResource(
+                                        when (scope) {
+                                            CompletedScope.Tasks -> R.string.completed_empty
+                                            CompletedScope.Floater -> R.string.completed_floater_empty
+                                        },
+                                    ),
+                                    description = stringResource(
+                                        when (scope) {
+                                            CompletedScope.Tasks -> R.string.completed_empty_body
+                                            CompletedScope.Floater -> R.string.completed_floater_empty_body
+                                        },
+                                    ),
                                     modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
                                     markContent = {
                                         CompletedMark(
@@ -595,7 +740,11 @@ fun CompletedScreen(
                     // The fallback for a watermark drawn as an asset;
                     // `markContent` is what actually draws here.
                     iconRes = R.drawable.ic_lucide_calendar_check,
-                    accentColor = COMPLETED_TITLE_COLOR,
+                    // The tab's accent, for the badge's reason above: the
+                    // watermark is the same mark at another size, and it was the
+                    // one site still wearing the page's slate while the hero and
+                    // the badge wore the tab's colour.
+                    accentColor = activeScopeAccent,
                     markContent = {
                         CompletedMark(
                             size = WatermarkGlyphSize,
@@ -646,11 +795,14 @@ fun CompletedScreen(
                         onClose = closeSearch,
                         trailingContentDescription = stringResource(R.string.action_close_search),
                     )
-                } else if (uiState.items.isNotEmpty()) {
+                } else if (scopeItems.isNotEmpty()) {
                     // No magnifier over an empty history: there is no set for a
                     // query to narrow, and the button would only raise a keyboard
                     // over the empty-state scene, which is the whole of what the
-                    // screen has to say.
+                    // screen has to say. Read against the ACTIVE TAB, so an empty
+                    // Floater tab gets no magnifier even while the scheduled
+                    // history behind it is full — the same per-tab gate web's two
+                    // containers each write for themselves.
                     CompletedBarButton(
                         // Only opens: the bar hands its row over to the field,
                         // so this button is not on screen to be tapped again.
@@ -1399,6 +1551,7 @@ private fun Instant.isSameLocalDayAs(other: Instant, zoneId: ZoneId): Boolean =
 
 private fun buildCompletedTimelineSections(
     items: List<CompletedItem>,
+    scope: CompletedScope,
     zoneId: ZoneId = ZoneId.systemDefault(),
 ): List<CompletedSection> {
     val groupedByDate = items.groupBy { item ->
@@ -1414,11 +1567,66 @@ private fun buildCompletedTimelineSections(
                     .thenBy { it.id },
             )
             CompletedSection(
-                key = "completed-$date",
+                // The tab is part of the key, and it is load-bearing: the two tabs draw
+                // into one LazyColumn, and a day that both histories have rows for would
+                // otherwise be one section key twice — a duplicate key in a lazy layout,
+                // and a month collapsed on one tab closing the other tab's header.
+                key = "completed-${scope.wire}-$date",
                 title = date.format(COMPLETED_SECTION_FORMATTER),
                 items = sectionItems,
             )
         }
+}
+
+/**
+ * The completion history's two tabs.
+ *
+ * The control is [TdaySegmentedSlider] — the one this app draws on the calendar and twice
+ * on Settings — rather than a second segmented control written for this screen, because
+ * web's own argument for its Completed strip is that it is "the same segmented control
+ * `SettingsPage` draws twice". Its rung here is [TdaySegmentedSliderMotion.Enter], which is
+ * the rung web picked for this control and argues for at the call site.
+ *
+ * Both counts are the FULL length of their own history and never the search-narrowed one,
+ * which is web's rule too (`CompletedContainer.tsx` reads `completedTodos.length`, not the
+ * filtered list): a tab's badge says how much history it holds, not how much of it the
+ * current query happens to match.
+ */
+@Composable
+private fun CompletedScopeTabs(
+    scope: CompletedScope,
+    todoCount: Int,
+    floaterCount: Int,
+    accentColor: Color,
+    onScopeSelected: (CompletedScope) -> Unit,
+) {
+    val scheduledLabel = stringResource(R.string.root_feed_tab_scheduled_task_home)
+    val floaterLabel = stringResource(R.string.root_feed_tab_floater)
+    TdaySegmentedSlider(
+        options = CompletedScope.entries,
+        selectedOption = scope,
+        onOptionSelected = onScopeSelected,
+        modifier = Modifier.padding(
+            top = CompletedScopeTabsTopSpacing,
+            bottom = CompletedScopeTabsBottomSpacing,
+        ),
+        accentColor = accentColor,
+        // The dock's own two labels, reused rather than respelled: the tab mirrors the
+        // board it mirrors, so it should not be able to drift from it.
+        label = { option ->
+            when (option) {
+                CompletedScope.Tasks -> scheduledLabel
+                CompletedScope.Floater -> floaterLabel
+            }
+        },
+        badge = { option ->
+            when (option) {
+                CompletedScope.Tasks -> todoCount.toString()
+                CompletedScope.Floater -> floaterCount.toString()
+            }
+        },
+        selectorAnimationSpec = TdaySegmentedSliderMotion.Enter,
+    )
 }
 
 private val COMPLETED_TITLE_COLOR = TdayCompletedTitleAccent
@@ -1470,16 +1678,18 @@ private fun CompletedMark(
     val resolvedTint = tint.takeOrElse { LocalContentColor.current }
     Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
         CompletedMarkLayer(
-            iconRes = R.drawable.ic_lucide_leaf,
+            iconRes = R.drawable.ic_lucide_calendar_check,
             size = size,
-            scale = COMPLETED_MARK_LEAF_SCALE,
+            scale = COMPLETED_MARK_CALENDAR_SCALE,
             tint = resolvedTint,
             alpha = rearAlpha,
         )
         CompletedMarkLayer(
-            iconRes = R.drawable.ic_lucide_calendar_check,
+            iconRes = R.drawable.ic_lucide_leaf,
             size = size,
-            scale = COMPLETED_MARK_CALENDAR_SCALE,
+            scale = COMPLETED_MARK_LEAF_SCALE,
+            offsetX = COMPLETED_MARK_LEAF_OFFSET_X,
+            offsetY = COMPLETED_MARK_LEAF_OFFSET_Y,
             tint = resolvedTint,
             alpha = rearAlpha,
         )
@@ -1500,6 +1710,8 @@ private fun CompletedMarkLayer(
     scale: Float,
     tint: Color,
     alpha: Float,
+    offsetX: Float = 0f,
+    offsetY: Float = 0f,
 ) {
     Icon(
         painter = painterResource(iconRes),
@@ -1507,6 +1719,9 @@ private fun CompletedMarkLayer(
         tint = tint,
         modifier = Modifier
             .size(size * scale)
+            // Displacement from the box's centre as a fraction of the box, so the
+            // drawing is the same proportion at every size the mark is drawn.
+            .offset(x = size * offsetX, y = size * offsetY)
             .graphicsLayer { this.alpha = alpha },
     )
 }
@@ -1543,34 +1758,53 @@ private const val COMPLETED_MARK_BADGE_REAR_ALPHA = 0.25f
 private val COMPLETED_MARK_BADGE_SIZE = 32.dp
 
 /**
- * How much of [CompletedMark]'s box each glyph behind the check is drawn in.
+ * How much of [CompletedMark]'s box each glyph behind the check is drawn in, and
+ * where the leaf sits inside it.
  *
- * The three used to be drawn at one size and concentric, and the leaf stopped
- * reading: at 1:1 its contour runs *inside* the calendar's frame by 0–1 of
- * lucide's 24 units — its left arc 1 unit inside the left wall, its rightmost
- * point (21,10) exactly on the right wall at the header rule's own y, its tip
- * level with the calendar's own binding ticks. Two strokes need a full stroke
- * width between their centrelines to read as two, so the leaf fused into a fringe
- * along the frame and the back plate became one grey box.
+ * Two things had to be true of the back plate at once: the two rear glyphs have to
+ * read as two rather than fuse into one fringe, and each has to be nameable at the
+ * size the mark is actually drawn. Drawn concentric at one size the three fused;
+ * graduated by scale alone — leaf 0.62, calendar 0.88, the first arrangement — the
+ * leaf still did not name, because at 0.62 its contour runs through the calendar's
+ * header rule and *within* both frame walls, so the calendar's own straight lines
+ * cut its silhouette at every crossing. Rasterised, that leaf kept 59.3% of its
+ * ink, in six disconnected pieces: the "scratch" the mark was reported as, and the
+ * one glyph of the three that was present, paid for and not nameable.
  *
- * Different sizes are what separate them, and the binding pair is the leaf's
- * rightmost point against the calendar's right wall: both sit at 12 + 9 × scale,
- * so they move apart by 9 × (0.88 − 0.62) = 2.34 units. The two strokes carry
- * 0.88 + 0.62 = 1.50 units of half-width between them, because a scaled glyph
- * scales its stroke with it, so the outlines clear by 0.84 of a unit — over half
- * a stroke width — at every size the mark is drawn. The scaling also thins the
- * strokes, which is the right direction: the pair behind reads as *behind* partly
- * because it is drawn in a finer line.
+ * So the leaf is drawn small enough to sit *inside* the calendar's body — under
+ * the header rule, above the frame's foot, and inside both walls — and shifted
+ * right, out from under the front check's own lower arm. At 0.335 of the box its
+ * outline clears the calendar's frame by 0.88 of a unit on every side, against the
+ * 0.84 the first arrangement recorded: 1.61pt of the hero's 44dp, 1.17 at the
+ * badge's 32, 7.77dp at [WatermarkGlyphSize]. Rasterised, the same leaf now keeps
+ * 88.6% of its ink, in a single piece.
  *
- * One pair is not fully cleared, and it is worth naming: the leaf's tip passes
- * within ~0.82 units of the calendar's 1.76-unit right binding tick, which is
- * inside the 1.50 the two carry, so the tip grazes that tick. It is the one
- * contour no pair of scales can separate — clearing it needs the leaf below 0.375
- * of the calendar, where it stops reading at 44dp, or a plate moved off-centre,
- * which is visibly lopsided in the hero's 96dp disc.
+ * The one contour it cannot avoid is the calendar's own inner tick, which sits in
+ * the middle of the body the leaf now occupies: the leaf is drawn *over* it, so
+ * the tick is covered rather than cut. That tick was already unreadable behind the
+ * front check — its arms pass within the strokes' half-widths of the check's arms
+ * at every pair of scales these two glyphs allow — so nothing legible is lost, and
+ * the leaf's silhouette survives whole.
+ *
+ * The binding pair is now the leaf's topmost point against the header rule and its
+ * foot against the frame's, both 0.88 of a unit. A scaled glyph scales its stroke
+ * with it, so the leaf carries 0.67 of a unit of stroke against the calendar's
+ * 1.76: the pair behind reads as *behind* partly by being drawn in a finer line
+ * than the check's 2.
  */
-private const val COMPLETED_MARK_LEAF_SCALE = 0.62f
+private const val COMPLETED_MARK_LEAF_SCALE = 0.335f
 private const val COMPLETED_MARK_CALENDAR_SCALE = 0.88f
+
+/**
+ * Where the leaf sits inside [CompletedMark]'s box, as a fraction of it — lucide
+ * draws in a 24-unit box, so these are 2.5 and 3.69 of those units. Down and to
+ * the right: down is what puts the leaf under the calendar's header rule, and
+ * right is what takes it out from under the front check's lower arm. The
+ * rightward half is worth a third of the leaf's ink — at the box's centre, at this
+ * scale, the same leaf keeps 60.1% where it keeps 88.6% here.
+ */
+private const val COMPLETED_MARK_LEAF_OFFSET_X = 2.5f / 24f
+private const val COMPLETED_MARK_LEAF_OFFSET_Y = 3.69f / 24f
 
 private val COMPLETED_SECTION_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())

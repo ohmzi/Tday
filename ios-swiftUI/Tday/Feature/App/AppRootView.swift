@@ -850,8 +850,13 @@ struct AppRootView: View {
                     appViewModel.navigate(to: .scheduledTaskHome)
                 }
             )
-        case .completed:
-            CompletedScreen(container: container)
+        case let .completed(origin):
+            // The origin has a second reader now, beside `zoomSourceID`: which board the
+            // user came through decides which of the history's two tabs opens. It is read
+            // here and nowhere else, and the tab it picks is held in the screen's own
+            // state — the route is never written back, because changing an `AppRoute`'s
+            // associated value is a different destination and would re-run the zoom.
+            CompletedScreen(container: container, origin: origin)
         case .calendar:
             CalendarScreen(container: container)
         case .settings:

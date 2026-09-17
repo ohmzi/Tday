@@ -468,6 +468,8 @@
     <string name="completed_title">Completed</string>
     <string name="completed_empty">No completed tasks yet</string>
     <string name="completed_empty_body">Tick something off and it will land here.</string>
+    <string name="completed_floater_empty">No finished floaters yet</string>
+    <string name="completed_floater_empty_body">Tick something off in Floater and it will land here.</string>
     <string name="completed_section_earlier">Earlier</string>
     <string name="completed_section_today">Today</string>
     <string name="completed_section_tomorrow">Tomorrow</string>

@@ -513,7 +513,7 @@
     "title": "Sejarah penyelesaian",
     "empty": "Belum ada yang selesai",
     "emptyBody": "Tandakan sesuatu sebagai selesai dan ia akan muncul di sini.",
-    "tabTasks": "Tugasan",
+    "tabTasks": "Dijadualkan",
     "floaterEmpty": "Belum ada floater yang selesai",
     "floaterEmptyBody": "Tandakan sesuatu selesai dalam Floater dan ia akan muncul di sini.",
     "listDeletedSuffix": "senarai dipadam",
@@ -1371,20 +1371,20 @@
     "brainDump": "Curah minda"
   },
   "release": {
-    "subtitle": "Semak binaan yang digunakan dan keluaran terkini yang diterbitkan.",
     "loading": "Memuatkan maklumat versi…",
     "error": "Tidak dapat mengambil maklumat versi. Sila semak sambungan anda dan cuba lagi.",
     "retry": "Cuba lagi",
     "statusLatest": "Terkini",
     "statusUpdateAvailable": "Kemas kini tersedia",
     "messageLatest": "Anda menggunakan versi terkini",
-    "messageUpdateAvailable": "Versi {{version}} tersedia.",
+    "messageUpdateReady": "Versi {{version}} sedia untuk dipasang.",
     "installed": "Dipasang",
     "installedVersion": "Versi dipasang",
     "latest": "Terkini",
     "whatsNew": "Apa yang baharu dalam {{version}}",
     "noNotes": "Tiada nota keluaran tersedia untuk versi ini",
     "viewOnGithub": "Lihat di GitHub",
-    "published": "Diterbitkan {{date}}"
+    "published": "Diterbitkan {{date}}",
+    "serverUnavailable": "Tidak tersedia"
   }
 }
