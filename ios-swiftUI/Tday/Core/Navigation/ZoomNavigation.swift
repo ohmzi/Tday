@@ -171,7 +171,42 @@ private struct TdayZoomSourceModifier: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 18.0, *) {
             if let zoomNamespace, let sourceID = route.zoomSourceID, tdayAnimation.isEnabled {
-                content.matchedTransitionSource(id: sourceID, in: zoomNamespace)
+                // The source's SHAPE, which the transition engine does not read off the
+                // view it is attached to. Called with no configuration the engine clips
+                // the travelling source to a plain rectangle, so a tile whose fill is
+                // drawn with 26pt corners leaves its corner square on the first frame and
+                // stays square all the way out — and all the way back, on the interactive
+                // dismiss — while the fill underneath is round. That is the reported
+                // defect, and this closure is the documented place to answer it: the
+                // corner the source travels with is the corner the fill is drawn with,
+                // read from the one rung both of them name.
+                //
+                // Nothing else about the transition moves. The closure sits INSIDE the
+                // existing availability branch and the existing gate, so it adds no third
+                // `if #available(iOS 18.0, *)` block and no second condition, and not one
+                // call site is touched: the five surfaces keep `.tdayZoomSource(route)`
+                // immediately after their own button style, which is what
+                // `tests/guardrails/launch-handover.test.ts` asserts. The fix is written
+                // here, on the modifier, precisely so that chain stays intact.
+                //
+                // The DESTINATION is still a full screen, so the surface squares off as it
+                // lands. That is by construction — `matchedTransitionSource` carries no
+                // destination shape, and this closure has nowhere to put a moving one: it
+                // configures a static source clip, so whatever corner is named here is the
+                // corner the source travels with for the whole push. Android, which owns
+                // both ends, can do better and does: its `TdayTileCornerClip` re-derives
+                // the radius on every draw, 26dp at the tile and 0 at the screen. This is
+                // deliberately not part of the fix, and whether the corner snaps square as
+                // the transition lands is on the device row rather than asserted here.
+                //
+                // (Android's row calls a radius HELD over the full screen and then popped
+                // square the bug its rebuild removed, which is why that side animates it.
+                // This side cannot, and does not claim to.)
+                content.matchedTransitionSource(id: sourceID, in: zoomNamespace) { source in
+                    source.clipShape(
+                        RoundedRectangle(cornerRadius: TdayRadius.card, style: .continuous)
+                    )
+                }
             } else {
                 content
             }

@@ -3,7 +3,7 @@
 #
 # THIS IS DESTRUCTIVE. It DROPS the live database inside the Postgres container
 # (compose service `database`, container `tday_db`) and recreates it from the
-# dump. Every task, list, user, API key and webhook created since that dump is
+# dump. Every task, list, user, API key and calendar-feed token created since that dump is
 # gone. There is no undo beyond the safety dump this script takes first.
 #
 # Usage:
@@ -195,7 +195,7 @@ cat >&2 <<EOF
 
   The database "$DB_NAME" will be DROPPED and rebuilt from that dump.
   ALL current data is overwritten: every task, list, user account,
-  credential hash, API key, webhook and calendar-feed token created after
+  credential hash, API key and calendar-feed token created after
   the dump was taken is permanently lost.
 
   Type exactly:  $CONFIRM_PHRASE
@@ -227,7 +227,7 @@ if [ "$PRE_BACKUP" = true ]; then
     *.age|*.enc)
       case "${TDAY_BACKUP_ENCRYPTION:-none}" in
         age|openssl) ;;
-        *) warn "restoring an ENCRYPTED dump but TDAY_BACKUP_ENCRYPTION is not set - the safety dump will be written in PLAINTEXT (password hashes, API keys, webhook secrets). Set TDAY_BACKUP_ENCRYPTION to match if that is not what you want." ;;
+        *) warn "restoring an ENCRYPTED dump but TDAY_BACKUP_ENCRYPTION is not set - the safety dump will be written in PLAINTEXT (password hashes, API keys, calendar-feed tokens). Set TDAY_BACKUP_ENCRYPTION to match if that is not what you want." ;;
       esac
       ;;
   esac

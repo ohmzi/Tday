@@ -4,7 +4,10 @@ private enum ScheduledTaskHomeMetrics {
     static let screenPadding: CGFloat = 18
     static let sectionSpacing: CGFloat = 14
     static let tileGap: CGFloat = 10
-    static let tileCornerRadius: CGFloat = 26
+    /// The board's own name for the shared card corner — `TdayRadius.card`, the rung
+    /// `ZoomNavigation` also clips the zoom's source with, so the shape the tiles are
+    /// drawn with and the shape the pushed screen grows out of cannot drift apart.
+    static let tileCornerRadius: CGFloat = TdayRadius.card
     static let tileHeight: CGFloat = 94
     static let tileInnerPadding: CGFloat = 12
     static let todayCardHeight: CGFloat = 70
@@ -1150,6 +1153,18 @@ private struct ScheduledTaskHomeCategoryTile: View {
             .frame(height: ScheduledTaskHomeMetrics.tileHeight)
             .clipShape(shape)
             .contentShape(shape)
+            // No flattening step belongs between this clip and the shadow the button
+            // style below adds, and one was tried here and taken back out. The style
+            // puts the depth on this whole label, and the label's own last drawing step
+            // is the clip above, so the silhouette that shadow is taken from is already
+            // the rounded corner — the arrangement the FAB, the empty-state badge, the
+            // sheet chrome and a colour swatch all wear with nothing in between, and
+            // none of them is among the surfaces this report names. A group there buys
+            // no demonstrable change and costs a re-rasterisation of this tile on every
+            // frame of the count roll above. It is the FAB that reopens the question,
+            // not this line: a square shadow behind that 56pt circle would mean the
+            // mechanism is real and app-wide, and the fix would belong in
+            // `TdayPressEffectModifier` rather than on the ten surfaces the report names.
         }
         .buttonStyle(ScheduledTaskHomeTileButtonStyle())
         // The rectangle the pushed screen grows out of. On iOS 17, under Reduce Motion,

@@ -31,6 +31,7 @@ const MONO = resolve(__dirname, "..", "..", "..");
 
 const IOS_HEADER = resolve(MONO, "ios-swiftUI/Tday/Core/UI/RootFeedHeroHeader.swift");
 const IOS_TODO_LIST = resolve(MONO, "ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift");
+const IOS_THEME = resolve(MONO, "ios-swiftUI/Tday/UI/Theme/TdayTheme.swift");
 const ANDROID_HEADER = resolve(
   MONO,
   "android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/RootFeedHeroHeader.kt",
@@ -353,8 +354,21 @@ describe("the Anytime feed's Completed entry", () => {
 
     // 70pt tall, 26pt radius — `FloaterTaskHomeListCard` beside it, Android's `CategoryCard`, and
     // web's `h-[70px] rounded-[26px]` all agree, and the tile sits in that same single column.
-    expect(card).toContain("RoundedRectangle(cornerRadius: 26, style: .continuous)");
+    //
+    // The radius is asserted as the RUNG rather than as the number, because the card now reads
+    // it from `TdayRadius.card` instead of spelling it. That is not a loosening: the value the
+    // rung holds is pinned below, against the same 26 the other two clients draw. What the pair
+    // buys over the single literal it replaces is the thing a literal could not — this card, the
+    // list card beside it, the five scheduled-home surfaces and the shape `ZoomNavigation` clips
+    // the zoom's source with all move together, so a tile and the rectangle the tile grows into
+    // cannot end up drawing different corners.
+    expect(card).toContain("RoundedRectangle(cornerRadius: TdayRadius.card, style: .continuous)");
     expect(card).toContain("minHeight: 70, maxHeight: 70");
+    expect(
+      readCode(IOS_THEME),
+      "`TdayRadius.card` must be the 26 Android's `RadiusCard` and web's `rounded-[26px]` draw — " +
+        "the rung is only a pin on those two if it still holds their number",
+    ).toContain("static let card: CGFloat = 26");
 
     // 0x719F84, spelled in sRGB components because `Color(hex:)` is a private extension in each of
     // the two files that declare one.

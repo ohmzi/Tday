@@ -160,7 +160,7 @@ export default function FloaterListContainer({ id }: { id: string }) {
               }
               aria-label={
                 myRole === "OWNER"
-                  ? `${appDict("editFloaterList")} ${listName}`
+                  ? `${appDict("listSettings")} ${listName}`
                   : appDict("members")
               }
             >

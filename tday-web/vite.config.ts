@@ -55,8 +55,27 @@ export default defineConfig({
       strategies: "injectManifest",
       srcDir: "src",
       filename: "sw.ts",
+      // The glob list is written HERE, under `injectManifest`, and not under `workbox` — which is
+      // where it used to live, and which is the reason the two task cues were never precached.
+      // `workbox` configures `generateSW` only; this project injects its own worker (`sw.ts`), so
+      // nothing read the key and workbox fell back to its own default,
+      // `**/*.{js,wasm,css,html}` — js, css and html, which is exactly what the manifest held.
+      // So `/task-complete.wav` and `/task-uncomplete.wav` were network-only: not in the manifest,
+      // and no runtime route in `src/sw.ts` touches audio either. An installed PWA that played a
+      // completion offline therefore handed `play()` an element with no usable source, and a
+      // refused cue is silent — as was a first play over a fetch that failed.
+      //
+      // `wav` is the entry this bug needed: the cues are the only assets the app reaches for at a
+      // tap rather than at load, and the native clients bundle the same clip into the app for the
+      // same reason — a cue that answers a finger is not a network resource. Both clips together
+      // are ~52 KB, fetched once at install. The rest of the list is the set the dead `workbox`
+      // key was meant to precache, restored along with it rather than quietly narrowed.
+      injectManifest: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,wav}"],
+      },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // `sw.ts` registers its own NavigationRoute; these two are kept for a move back to
+        // `generateSW`, and are likewise unread here.
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api/, /^\/ws/],
       },

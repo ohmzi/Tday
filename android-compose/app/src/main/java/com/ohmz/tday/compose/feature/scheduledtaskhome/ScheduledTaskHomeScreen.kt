@@ -164,7 +164,7 @@ import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayPressable
-import com.ohmz.tday.compose.core.ui.tdayTileSharedElement
+import com.ohmz.tday.compose.core.ui.tdayTileTransitionSource
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
 import com.ohmz.tday.compose.ui.component.rememberSheetDismissState
@@ -694,10 +694,8 @@ fun ScheduledTaskHomeScreen(
                         if (!showSearchResultsOverlay) {
                         item {
                             ScheduledTaskHomeTodayCard(
-                                modifier = Modifier.tdayTileSharedElement(
-                                    AppRoute.TodayTodos.tileTransitionKey(),
-                                ),
                                 count = uiState.summary.todayCount,
+                                tileTransitionKey = AppRoute.TodayTodos.tileTransitionKey(),
                                 onClick = {
                                     closeSearch()
                                     onOpenToday()
@@ -781,10 +779,10 @@ fun ScheduledTaskHomeScreen(
                             contentType = { _, _ -> "list_row" },
                         ) { _, list ->
                             ListRow(
-                                modifier = scheduledTaskHomeDisplacedItemMotion()
-                                    .tdayTileSharedElement(
-                                        AppRoute.ListTodos.tileTransitionKey(listId = list.id),
-                                    ),
+                                modifier = scheduledTaskHomeDisplacedItemMotion(),
+                                tileTransitionKey = AppRoute.ListTodos.tileTransitionKey(
+                                    listId = list.id,
+                                ),
                                 name = list.name,
                                 colorKey = list.color,
                                 iconKey = list.iconKey,
@@ -1580,10 +1578,18 @@ private val SCHEDULED_TASK_HOME_TODAY_DUE_FORMATTER: DateTimeFormatter =
 private val SCHEDULED_TASK_HOME_TODAY_DATE_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEE, MMM d", Locale.getDefault()).withZone(ZoneId.systemDefault())
 
+/**
+ * The Today entry tile.
+ *
+ * [tileTransitionKey] rides a bounds-only Box beside the Card rather than the Card itself:
+ * what carries the key is what the zoom scales into the destination, and the Card is the
+ * tile. See `CategoryCard` for the same shape and the full argument.
+ */
 @Composable
 private fun ScheduledTaskHomeTodayCard(
     modifier: Modifier = Modifier,
     count: Int,
+    tileTransitionKey: String? = null,
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
@@ -1591,77 +1597,85 @@ private fun ScheduledTaskHomeTodayCard(
     val dateLabel = remember { SCHEDULED_TASK_HOME_TODAY_DATE_FORMATTER.format(Instant.now()) }
     val color = Color(0xFF6EA8E1)
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .semantics(mergeDescendants = true) {}
-            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
-        onClick = {
-            TdayHaptics.buttonPress(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        colors = CardDefaults.cardColors(containerColor = color),
-        // The elevation is Material's to animate now. It was a third
-        // `animateDpAsState` fed into BOTH slots, which is a way of telling
-        // `CardDefaults` that this card has one elevation and then animating it
-        // behind its back; handing it the two ends instead says the same thing
-        // in the API's own terms.
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = TodayCardElevation,
-            pressedElevation = PressedCardElevation
-        ),
-        shape = RoundedCornerShape(TdayDimens.RadiusCard),
-    ) {
+    Box(modifier = modifier) {
         Box(
             modifier = Modifier
+                .matchParentSize()
+                .tdayTileTransitionSource(tileTransitionKey),
+        )
+
+        Card(
+            modifier = Modifier
                 .fillMaxWidth()
-                .drawWithCache {
-                    val glow = Brush.radialGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.1f),
-                            Color.White.copy(alpha = 0.03f),
-                            Color.Transparent
-                        ),
-                        center = Offset(size.width * 0.22f, size.height * 0.2f),
-                        radius = size.width * 0.72f,
-                    )
-                    val pearl = Brush.radialGradient(
-                        colors = listOf(Color.White.copy(alpha = 0.10f), Color.Transparent),
-                        center = Offset(size.width * 0.9f, size.height * 0.75f),
-                        radius = size.width * 0.55f,
-                    )
-                    onDrawWithContent { drawRect(glow); drawRect(pearl); drawContent() }
-                },
+                .semantics(mergeDescendants = true) {}
+                .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
+            onClick = {
+                TdayHaptics.buttonPress(view)
+                onClick()
+            },
+            interactionSource = interactionSource,
+            colors = CardDefaults.cardColors(containerColor = color),
+            // The elevation is Material's to animate now. It was a third
+            // `animateDpAsState` fed into BOTH slots, which is a way of telling
+            // `CardDefaults` that this card has one elevation and then animating it
+            // behind its back; handing it the two ends instead says the same thing
+            // in the API's own terms.
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = TodayCardElevation,
+                pressedElevation = PressedCardElevation
+            ),
+            shape = RoundedCornerShape(TdayDimens.RadiusCard),
         ) {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = FeedCardHorizontalPadding, vertical = TdayDimens.SpacingXl),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                    .drawWithCache {
+                        val glow = Brush.radialGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.1f),
+                                Color.White.copy(alpha = 0.03f),
+                                Color.Transparent
+                            ),
+                            center = Offset(size.width * 0.22f, size.height * 0.2f),
+                            radius = size.width * 0.72f,
+                        )
+                        val pearl = Brush.radialGradient(
+                            colors = listOf(Color.White.copy(alpha = 0.10f), Color.Transparent),
+                            center = Offset(size.width * 0.9f, size.height * 0.75f),
+                            radius = size.width * 0.55f,
+                        )
+                        onDrawWithContent { drawRect(glow); drawRect(pearl); drawContent() }
+                    },
             ) {
-                Text(
-                    text = dateLabel,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
-                    fontFamily = TdayFontFamily,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    lineHeight = 28.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = count.toString(),
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = Color.White,
-                    fontFamily = TdayFontFamily,
-                    fontSize = 34.sp,
-                    fontWeight = FontWeight.Black,
-                    lineHeight = 40.sp,
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = FeedCardHorizontalPadding, vertical = TdayDimens.SpacingXl),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = dateLabel,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontFamily = TdayFontFamily,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 28.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = count.toString(),
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Color.White,
+                        fontFamily = TdayFontFamily,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.Black,
+                        lineHeight = 40.sp,
+                    )
+                }
             }
         }
     }
@@ -2170,9 +2184,11 @@ private fun CategoryGrid(
     val completedColor = completedTileColor(colorScheme)
     // The six tiles are the source half of six zooms, and each key comes from the route its
     // click already opens — the one table both ends read, so a tile re-pointed at a
-    // different route cannot end up growing out of a rectangle it never came from. The
-    // modifier is a no-op when there is no tile scope above this grid or when motion is
-    // refused.
+    // different route cannot end up growing out of a rectangle it never came from. The key
+    // is handed to the tile as a value rather than spliced into its modifier chain, because
+    // the rectangle a tile publishes belongs on a bounds-only sibling of the tile's Card
+    // and not on the Card itself; see `CategoryCard`. It is ignored when there is no tile
+    // scope above this grid or when motion is refused.
     val scheduledKey = AppRoute.ScheduledTodos.tileTransitionKey()
     val priorityKey = AppRoute.PriorityTodos.tileTransitionKey()
     val overdueKey = AppRoute.OverdueTodos.tileTransitionKey()
@@ -2183,7 +2199,8 @@ private fun CategoryGrid(
     Column(verticalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
         Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
-                modifier = Modifier.weight(1f).tdayTileSharedElement(scheduledKey),
+                modifier = Modifier.weight(1f),
+                tileTransitionKey = scheduledKey,
                 color = Color(0xFFD98F4B),
                 iconRes = R.drawable.ic_lucide_calendar_clock,
                 watermarkRes = R.drawable.ic_lucide_calendar_clock,
@@ -2192,7 +2209,8 @@ private fun CategoryGrid(
                 onClick = onOpenScheduled,
             )
             CategoryCard(
-                modifier = Modifier.weight(1f).tdayTileSharedElement(priorityKey),
+                modifier = Modifier.weight(1f),
+                tileTransitionKey = priorityKey,
                 color = Color(0xFFC97880),
                 iconRes = R.drawable.ic_lucide_flag,
                 watermarkRes = R.drawable.ic_lucide_flag,
@@ -2203,7 +2221,8 @@ private fun CategoryGrid(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
-                modifier = Modifier.weight(1f).tdayTileSharedElement(overdueKey),
+                modifier = Modifier.weight(1f),
+                tileTransitionKey = overdueKey,
                 color = Color(0xFFE06F66),
                 iconRes = R.drawable.ic_lucide_clock_3,
                 watermarkRes = R.drawable.ic_lucide_clock_3,
@@ -2212,7 +2231,8 @@ private fun CategoryGrid(
                 onClick = onOpenOverdue,
             )
             CategoryCard(
-                modifier = Modifier.weight(1f).tdayTileSharedElement(allKey),
+                modifier = Modifier.weight(1f),
+                tileTransitionKey = allKey,
                 color = Color(0xFF68717A),
                 iconRes = R.drawable.ic_lucide_layers,
                 watermarkRes = R.drawable.ic_lucide_layers,
@@ -2223,7 +2243,8 @@ private fun CategoryGrid(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
             CategoryCard(
-                modifier = Modifier.weight(1f).tdayTileSharedElement(completedKey),
+                modifier = Modifier.weight(1f),
+                tileTransitionKey = completedKey,
                 color = completedColor,
                 iconRes = R.drawable.ic_lucide_circle_check_big,
                 watermarkRes = R.drawable.ic_lucide_circle_check_big,
@@ -2232,7 +2253,8 @@ private fun CategoryGrid(
                 onClick = onOpenCompleted,
             )
             CategoryCard(
-                modifier = Modifier.weight(1f).tdayTileSharedElement(calendarKey),
+                modifier = Modifier.weight(1f),
+                tileTransitionKey = calendarKey,
                 color = calendarTileColor(colorScheme),
                 iconRes = R.drawable.ic_lucide_calendar_1,
                 watermarkRes = R.drawable.ic_lucide_calendar_1,
@@ -2259,6 +2281,7 @@ private fun ListRow(
     count: Int,
     isShared: Boolean = false,
     sharedByLabel: String? = null,
+    tileTransitionKey: String? = null,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -2274,132 +2297,143 @@ private fun ListRow(
     val containerColor = lerp(colorScheme.surfaceVariant, accent, SCHEDULED_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT)
     val displayName = capitalizeFirstListLetter(name)
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(ListRowHeight)
-            .semantics(mergeDescendants = true) {}
-            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
-        onClick = {
-            TdayHaptics.buttonPress(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(TdayDimens.RadiusCard),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = ListRowElevation,
-            pressedElevation = PressedCardElevation,
-        ),
-    ) {
+    // The rectangle this row publishes rides a bounds-only Box beside the Card, not the
+    // Card: what carries the key is what the zoom scales into the destination. See
+    // `CategoryCard`.
+    Box(modifier = modifier) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .drawWithCache {
-                    val iconSideGlow = Brush.radialGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.22f),
-                            Color.White.copy(alpha = 0.08f),
-                            Color.Transparent,
-                        ),
-                        center = Offset(
-                            x = size.width * 0.22f,
-                            y = size.height * 0.2f,
-                        ),
-                        radius = size.maxDimension * 0.9f,
-                    )
-                    val pearlWash = Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.12f),
-                            Color(0xFFE7F3FF).copy(alpha = 0.1f),
-                            Color(0xFFFFF2FA).copy(alpha = 0.08f),
-                            Color.Transparent,
-                        ),
-                        start = Offset(
-                            x = size.width * 0.05f,
-                            y = size.height * 0.04f,
-                        ),
-                        end = Offset(
-                            x = size.width * 0.9f,
-                            y = size.height * 0.75f,
-                        ),
-                    )
-                    onDrawWithContent {
-                        drawRect(iconSideGlow)
-                        drawRect(pearlWash)
-                        drawContent()
-                    }
-                },
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = lerp(containerColor, Color.White, 0.34f).copy(alpha = 0.42f),
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .offset(x = ListRowWatermarkOffsetX, y = ListRowWatermarkOffsetY)
-                    .size(ListRowWatermarkSize),
-            )
+                .matchParentSize()
+                .tdayTileTransitionSource(tileTransitionKey),
+        )
 
-            Row(
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(ListRowHeight)
+                .semantics(mergeDescendants = true) {}
+                .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
+            onClick = {
+                TdayHaptics.buttonPress(view)
+                onClick()
+            },
+            interactionSource = interactionSource,
+            shape = RoundedCornerShape(TdayDimens.RadiusCard),
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = ListRowElevation,
+                pressedElevation = PressedCardElevation,
+            ),
+        ) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = FeedCardHorizontalPadding, vertical = TdayDimens.SpacingLg),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier.size(ListRowIconSlotSize),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(ListRowIconSize),
+                    .drawWithCache {
+                        val iconSideGlow = Brush.radialGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.22f),
+                                Color.White.copy(alpha = 0.08f),
+                                Color.Transparent,
+                            ),
+                            center = Offset(
+                                x = size.width * 0.22f,
+                                y = size.height * 0.2f,
+                            ),
+                            radius = size.maxDimension * 0.9f,
                         )
-                    }
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = displayName,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = Color.White,
-                                fontWeight = FontWeight.ExtraBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                        val pearlWash = Brush.linearGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.12f),
+                                Color(0xFFE7F3FF).copy(alpha = 0.1f),
+                                Color(0xFFFFF2FA).copy(alpha = 0.08f),
+                                Color.Transparent,
+                            ),
+                            start = Offset(
+                                x = size.width * 0.05f,
+                                y = size.height * 0.04f,
+                            ),
+                            end = Offset(
+                                x = size.width * 0.9f,
+                                y = size.height * 0.75f,
+                            ),
+                        )
+                        onDrawWithContent {
+                            drawRect(iconSideGlow)
+                            drawRect(pearlWash)
+                            drawContent()
+                        }
+                    },
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = lerp(containerColor, Color.White, 0.34f).copy(alpha = 0.42f),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(x = ListRowWatermarkOffsetX, y = ListRowWatermarkOffsetY)
+                        .size(ListRowWatermarkSize),
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = FeedCardHorizontalPadding, vertical = TdayDimens.SpacingLg),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier.size(ListRowIconSlotSize),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(ListRowIconSize),
                             )
-                            if (isShared || sharedByLabel != null) {
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
-                                    contentDescription = stringResource(R.string.members_title),
-                                    tint = Color.White.copy(alpha = 0.85f),
-                                    modifier = Modifier
-                                        .padding(start = TdayDimens.SpacingMd)
-                                        .size(ListRowSharedBadgeSize),
+                        }
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = displayName,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                if (isShared || sharedByLabel != null) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
+                                        contentDescription = stringResource(R.string.members_title),
+                                        tint = Color.White.copy(alpha = 0.85f),
+                                        modifier = Modifier
+                                            .padding(start = TdayDimens.SpacingMd)
+                                            .size(ListRowSharedBadgeSize),
+                                    )
+                                }
+                            }
+                            sharedByLabel?.let { label ->
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
-                        sharedByLabel?.let { label ->
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.White.copy(alpha = 0.85f),
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
                     }
-                }
 
-                Text(
-                    text = animatedCount.toString(),
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                )
+                    Text(
+                        text = animatedCount.toString(),
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
             }
         }
     }

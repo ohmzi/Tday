@@ -24,7 +24,12 @@ struct OnboardingWizardOverlay: View {
         static let inputHeight: CGFloat = 54
         static let inputCornerRadius: CGFloat = 22
         static let buttonHeight: CGFloat = 48
-        static let tileCornerRadius: CGFloat = 26
+        // The tile corner, from the shared rung rather than spelled here: Android draws
+        // this wizard's own tiles from `TdayDimens.RadiusCard`, which is this same 26,
+        // and web draws them at the value its board's tiles use. Naming the rung here is
+        // what keeps the wizard's two tiles from being a second answer to the question
+        // `TdayRadius.card` exists to answer once.
+        static let tileCornerRadius: CGFloat = TdayRadius.card
         static let tileHeight: CGFloat = 116
         static let heroHeight: CGFloat = 78
         static let watermarkSize: CGFloat = 130

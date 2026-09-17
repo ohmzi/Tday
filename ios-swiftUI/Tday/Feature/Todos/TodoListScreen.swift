@@ -478,7 +478,7 @@ private struct FloaterTaskHomeListCard: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: TdayRadius.card, style: .continuous)
 
         Button(action: onTap) {
             ZStack {
@@ -599,7 +599,7 @@ private struct FloaterTaskHomeCompletedCard: View {
     )
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: TdayRadius.card, style: .continuous)
 
         // VoiceOver reads the whole button as its one piece of text,
         // "Completed", the way the list cards beside it read as their list
@@ -4146,17 +4146,37 @@ struct TimelineTopBar: View {
         .padding(.top, 2)
         .padding(.bottom, 4)
         .background(colors.background)
-        // Hung off the bar as an overlay that paints outside its own bounds, so
-        // rows dissolve into it instead of being guillotined by its edge. NOT
-        // inside the bar's stack: that would add layout height, push every row
-        // down and shift adjustedContentInset, which every collapse-progress
-        // calculation on these screens is derived from.
+        // Hung off the bar's own box and painted outside its bounds, so rows
+        // dissolve into it instead of being guillotined by its edge. NOT inside
+        // the bar's stack: that would add layout height, push every row down and
+        // shift adjustedContentInset, which every collapse-progress calculation
+        // on these screens is derived from.
+        //
+        // A `background` rather than an `overlay`. The two are the same
+        // rectangle in the same place — this one is still offset a whole
+        // `contentFadeHeight` below the bar — and they differ only in what they
+        // paint over. As an overlay the band covered the bar's OWN content, so
+        // once the collapse had taken the bar down to its docked height every
+        // pinned control's shadow crossed the bar's bottom edge and was cut off
+        // there in a straight horizontal line while the control went on drawing
+        // it. Nothing moves to fix that: the shadows simply fall on top of the
+        // band now and fade out with it.
+        //
+        // The cut is subtler here than on `CalendarElasticTopBar`, which carries
+        // the longer version of this note and the report that found it: this
+        // bar's buttons wear `TdayToolbarButtonStyle` — ambient 10pt radius at a
+        // 4pt drop and 0.045, key 3pt at 2pt — against the calendar's
+        // `TdayPressButtonStyle` at 16pt and a 10pt drop and 0.15, so the shadow
+        // reaching past the 4pt of padding below this row is a pale wash rather
+        // than a hard edge. It is the same defect and the same fix; only the
+        // contrast differs. Android's `TdayHeroTitleHeader` is this fix one
+        // client over.
         //
         // Off until the screen actually moves: painted at rest it would veil the
         // top of whatever sits under the bar — the hero mark on a screen at the
         // top, the first card on one that has settled — and there is nothing
         // passing under the bar for it to dissolve.
-        .overlay(alignment: .bottom) {
+        .background(alignment: .bottom) {
             LinearGradient(
                 colors: [colors.background, colors.background.opacity(0)],
                 startPoint: .top,

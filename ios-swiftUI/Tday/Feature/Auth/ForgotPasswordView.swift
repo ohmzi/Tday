@@ -447,7 +447,7 @@ private struct ForgotPasswordHeroTile: View {
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
+            RoundedRectangle(cornerRadius: TdayRadius.card, style: .continuous)
                 .fill(tint)
                 .overlay(
                     RadialGradient(
@@ -482,7 +482,11 @@ private struct ForgotPasswordHeroTile: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: 78)
-        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        // This tile is the wizard's `WizardHeroTile` one screen over — its own comment
+        // above says so — so it names the same rung rather than spelling the number
+        // again. Web's own reset hero tile draws this same 26, and Android's wizard
+        // hero tile wears `TdayDimens.RadiusCard`.
+        .clipShape(RoundedRectangle(cornerRadius: TdayRadius.card, style: .continuous))
         .shadow(color: tint.opacity(0.16), radius: 9, x: 0, y: 7)
     }
 }

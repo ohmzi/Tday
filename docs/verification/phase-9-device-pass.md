@@ -1840,3 +1840,109 @@ animates.
               but nothing here can see whether Compose finds a source rectangle for a tile inside a
               `LazyColumn` — which is this unit — and the predictive-back slot is scrubbed by a
               `SeekableTransitionState`, the one path a static spec cannot describe.
+
+- [ ] **PR 32e · android · The tile zoom reads like iOS** — a device with animations on, then again
+      with the in-app Reduce motion switch and with the device animator scale at 0. This rebuilds the
+      transition so a surface grows and the content fades, instead of the tile's own icon and label
+      scaling up into the screen; the open is checkable against the list below, and the CLOSE is the
+      item that could not be settled from source at all.
+      Do:     tap a category tile, then the Today card, then a custom list row, then the Anytime
+              feed's Completed tile and one of its list cards. Then close each one, both with the back
+              button and with the gesture. Repeat with Reduce Motion on.
+      Watch:  (a) the SURFACE for the first frames past the tile should be the tile's colour at the
+              tile's radius, squaring off as it reaches the screen — never a stretched picture of the
+              tile's icon or label. (b) NOTHING scales: the tile's icon, label and count fade where
+              they sit at their own size, and the screen's toolbar and back chevron are at final size
+              and position from the first frame they appear. Failure is a toolbar arriving at about
+              half scale and growing — the defect this rebuild exists for.
+      Also:   (c) the corners travel: the shape leaving the tile carries the tile's radius and the
+              shape arriving is square. A hard-edged rectangle over a rounded tile on the first
+              frames, or a rounded rectangle held over the full screen that snaps square at the end,
+              are both failures — the second is the bug this rebuild removed.
+      Also:   **(d) the close, which is the one thing this unit could not check.** Expect the surface
+              to shrink back into the tile while the screen fades out in place and the home feed fades
+              in — the open, reversed. What to watch specifically is whether the SCREEN SLIDES
+              SIDEWAYS as it goes: it is now a plain child of the destination, so it takes the
+              NavHost's pop exit, whose quarter-width travel and recede the shared element used to
+              cover by drawing nothing in place. A sideways slide against a shrinking surface is the
+              failure. The fix would be a per-destination `popExitTransition` on the nine
+              `composable(...)` blocks in `TdayApp.kt`, which trades against the predictive-back
+              argument `route-handover.test.ts` documents — so it wants a decision, not a patch.
+      Also:   (e) with Reduce Motion on: no surface and no zoom at all, the ordinary short fade, and
+              in particular no stray full-screen background left behind the screen.
+      Also:   (f) arrive at a tile route WITHOUT pressing a tile — a deep link, a notification, a
+              widget row, the launcher shortcut. The screen must not grow out of a tile nobody
+              pressed, and no stray background may appear behind it.
+      Why:    `:app:compileDebugKotlin` and `:app:testDebugUnitTest` are green and the guardrails pin
+              the key table and the origin gate, but nothing on this machine can render a frame. The
+              animation's quality — and the close in particular — is only visible on a device.
+
+- [ ] **PR 195 · ios · The calendar's docked title** — a phone, Calendar, scrolled until the bar has
+      collapsed. Run it at the default text size and again at a large Dynamic Type size.
+      Do:     scroll up until the title docks, then scroll back down to the top, slowly.
+      Watch:  (a) the word arrives WHOLE and at full size — "Calendar" keeps all eight letters and is
+              the same 32pt as the block's own copy it is handing off from, never smaller and never
+              "Cale…".
+              (b) over the handoff, roughly the last quarter of the scroll, the docked copy sits
+              about 32pt to the LEFT of the expanded one. That is the accepted cost of the reserve
+              and not a failure: the reserve falls through to per-side rather than shrink the word,
+              and per-side gives up the bar-centring the mirrored branch exists for.
+      Fails:  the title ellipsises at any scroll position; or the docked copy is drawn at a
+              different SIZE from the expanded one while both are on screen — the failure this row
+              exists for, and the one the old `minimumScaleFactor` produced.
+      Also:   open the search field and close it; the title must come back whole rather than arriving
+              mid-reserve. Then rotate to landscape and back.
+      Why:    `TdayBarTitleReserveTests` proves the arithmetic — 93pt before, 157pt after, against a
+              137.5pt word — and proves nothing about how a 32pt lateral shift reads while two copies
+              of the same word cross-fade. That is the half only an eye can settle. iOS 17 and up.
+
+- [ ] **PR 196 · ios · The bar's back-button shadow, and the band under it** — a phone, Calendar and
+      then the Anytime feed. Run once with the bar merely collapsed, and once on iOS 18.
+      Do:     scroll up until the bar has collapsed to its docked height and rows are passing under
+              it, then keep scrolling a little and let it settle.
+      Watch:  (a) the back chevron's shadow fades out UNDER the bar rather than being cut at it —
+              there must be no straight horizontal edge across the shadow at the bar's bottom edge.
+              (b) the rows passing under the bar still dissolve into it; the band still starts at the
+              bar's edge and the gap under the title is unchanged.
+      Fails:  (a) a hard horizontal line across the shadow, right at the bar's bottom edge — the
+              reported defect, and it appears late in the collapse rather than early, which is why
+              it reads as "when the toolbar shrinks". (b) rows visibly guillotined at the bar's edge,
+              or a pale rectangle below the bar where the band no longer paints.
+      Also:   the same check on the Anytime feed's own bar, which shares the band and the argument.
+              And on iOS 18 only: push into Calendar from a home tile and watch the frame the zoom
+              lands on. The bar is inside a matched-transition destination, so a cut seen during or
+              just after the push would be hosted by the transition rather than by the band — the
+              one hypothesis source alone could not separate, and the reason this row says iOS 18.
+      Why:    A paint order is settled by looking. The guardrails are green and nothing in this
+              repository pins which of two layers a gradient is drawn in. Android had this exact
+              defect and fixed it the same way (`TdayHeroTitleHeader`, drawn first and offset below);
+              web's `NativePageHeader` still draws its band after its back button and is exposed the
+              same way — a separate change, not covered here.
+
+- [ ] **PR 197 · ios · The tiles' square edge** — a phone on iOS 18, the Scheduled home board and the
+      Anytime feed. Start with the three-second check, because it decides whether the rest of this row
+      means anything.
+      Do:     look at the floating + button, at rest, on any screen. Then tap a category tile and watch
+              the push, and swipe back from the tile's screen.
+      Watch:  (a) the + button's own shadow is ROUND. That is the discriminator: it is an unshaped
+              `.background` under a `.clipShape(Circle())` wearing the same press shadow the tiles wear,
+              so a square behind it would mean the mechanism is real and app-wide — and if that is what
+              you see, stop here and say so, because the fix belongs in the shared press effect rather
+              than on the ten tiles. (b) with a round + button: each tile leaves the screen as a rounded
+              surface and comes back as one, with no square-cornered rectangle over the fill on the
+              first frame of the push and none on the interactive dismiss either.
+      Fails:  (a) a square shadow behind the + button — an app-wide defect, see above. (b) the travelling
+              source squares off at the moment it leaves, or the returning source squares off as it
+              lands back on the tile. That is the zoom's own rectangle and nothing on the tile can fix
+              it.
+      Also:   the Anytime feed's two cards, which are the only two of the ten drawn as `List` rows, and
+              whose row insets leave the card no vertical room for its own shadow. Watch the shadow at
+              the card's TOP edge in particular: `top: 0` puts SwiftUI's row clip exactly on it, so a
+              straight horizontal cut there is a row clip rather than a shadow shape, and the fix would
+              be vertical room on those two rows. Then the same two cards' bottom edge.
+      Why:    The audit found no chrome on any of the ten that can draw a square at rest, and took back
+              out the flattening step that was added on the opposite assumption. What is left is the
+              zoom source — fixed by clipping it in the `matchedTransitionSource` configuration — and
+              the row clip on the Anytime pair. Nothing on this machine can render a SwiftUI frame, and
+              the one construct added here that no local gate can typecheck is that configuration
+              closure, so a build against an iOS 18 SDK is owed alongside this pass.

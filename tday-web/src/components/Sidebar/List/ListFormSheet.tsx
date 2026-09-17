@@ -240,7 +240,7 @@ export default function ListFormSheet({
       variant="native"
       open={open}
       onOpenChange={onOpenChange}
-      title={isEditing ? appDict("editList") : appDict("newList")}
+      title={isEditing ? appDict("listSettings") : appDict("newList")}
       onClose={() => onOpenChange(false)}
       onConfirm={() => void handleSubmit()}
       confirmDisabled={!canSubmit}
