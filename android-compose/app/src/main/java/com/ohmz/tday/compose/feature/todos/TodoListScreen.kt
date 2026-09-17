@@ -163,6 +163,7 @@ import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.model.supportsTaskReschedule
 import com.ohmz.tday.compose.core.model.timelineRescheduleTargetDate
 import com.ohmz.tday.compose.core.navigation.AppRoute
+import com.ohmz.tday.compose.core.navigation.CompletedScope
 import com.ohmz.tday.compose.core.navigation.tileTransitionKey
 import com.ohmz.tday.compose.core.sound.rememberTaskCompletionSound
 import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
@@ -957,8 +958,11 @@ fun TodoListScreen( // skipcq: KT-R1006
     onOpenMorningSweep: () -> Unit = {},
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?, reusable: Boolean?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
-    onOpenFloaterList: (listId: String, listName: String) -> Unit = { _, _ -> },
-    onOpenCompleted: () -> Unit = {},
+    // Both of the Anytime feed's zoom sources hand their own colour to the push site, for
+    // the reason `TILE_TRANSITION_COLOR` gives: the destination cannot recover it, and a
+    // custom list row's colour is server-side data only this row holds.
+    onOpenFloaterList: (listId: String, listName: String, tileColor: Color) -> Unit = { _, _, _ -> },
+    onOpenCompleted: (Color) -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onCreateList: (name: String, color: String?, iconKey: String?, reusable: Boolean) -> Unit = { _, _, _, _ -> },
     /**
@@ -3893,9 +3897,9 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
     isFloaterTaskHomeScreen: Boolean,
     timelineAnimationsEnabled: Boolean,
     emptyScene: (LazyListScope.() -> Unit)?,
-    onOpenCompleted: () -> Unit,
+    onOpenCompleted: (Color) -> Unit,
     floaterTaskHomeListRows: List<Pair<ListSummary, Int>>,
-    onOpenFloaterList: (listId: String, listName: String) -> Unit,
+    onOpenFloaterList: (listId: String, listName: String, tileColor: Color) -> Unit,
 ) {
     // The Anytime home's empty scene, built by [TodoListScreen] and merely
     // emitted here, so that it stays the FIRST item in this feed.
@@ -3932,9 +3936,12 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
                     .fillMaxWidth()
                     .padding(bottom = FloaterFeedRowSpacing),
                 // The source half of the zoom into the Completed screen — the same
-                // destination the scheduled board's grid tile grows into, and the same
-                // key, because both push the one `completed` route.
-                tileTransitionKey = AppRoute.Completed.tileTransitionKey(),
+                // destination the scheduled board's grid tile grows into, and NOT the same
+                // key: the two tiles push two differently-scoped routes, so this one
+                // publishes the floater feed's id and the board's publishes the scheduled
+                // one. Two ids, because both feeds are composed together for the length of
+                // the root-feed crossfade; see `AppRoute.tileTransitionKey`.
+                tileTransitionKey = AppRoute.Completed.tileTransitionKey(scope = CompletedScope.Floater),
                 color = TdayCompletedTileAccent,
                 iconRes = R.drawable.ic_lucide_circle_check_big,
                 watermarkRes = R.drawable.ic_lucide_circle_check_big,
@@ -3967,10 +3974,11 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
                 colorKey = list.color,
                 iconKey = list.iconKey,
                 count = count,
-                onClick = {
+                onClick = { tileColor ->
                     onOpenFloaterList(
                         list.id,
                         capitalizeFirstListLetter(list.name),
+                        tileColor,
                     )
                 },
             )
@@ -4675,7 +4683,7 @@ private fun FloaterTaskHomeListRow(
     iconKey: String?,
     count: Int,
     tileTransitionKey: String? = null,
-    onClick: () -> Unit,
+    onClick: (Color) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -4704,7 +4712,10 @@ private fun FloaterTaskHomeListRow(
                 .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
             onClick = {
                 TdayHaptics.buttonPress(view)
-                onClick()
+                // The row's container colour, which is the colour the eye reads as the tile:
+                // `lerp(surfaceVariant, accent, weight)` — a value derived from this list's
+                // own server-side colour, which is exactly why it has to be sent from here.
+                onClick(containerColor)
             },
             interactionSource = interactionSource,
             shape = RoundedCornerShape(TdayDimens.RadiusCard),

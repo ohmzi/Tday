@@ -250,7 +250,43 @@ class TodoRepository @Inject constructor(
         syncManager.syncCachedData(force = true, replayPendingMutations = true)
     }
 
+    /**
+     * A save with no due on a task that has one is the sheet's Schedule toggle turned OFF,
+     * and that is a conversion rather than a field write. A scheduled task and a Floater are
+     * two entities in two tables (`todos` has a NOT NULL `due`; `floaters` has no due, no
+     * rrule and its own list type), so the todo row cannot be made dateless in place and
+     * `PATCH /api/todo` has no kind field to carry the intent. The conversion is demote: the
+     * todo row is consumed and a floater takes its place.
+     *
+     * The rest of the save is written first, because `demoteToFloater` copies the todo row's
+     * fields server-side; the replay queue preserves that order (this update is stamped before
+     * the demote it queues). A recurring task is never converted: the backend refuses to
+     * demote one (its series would be silently destroyed), and the sheet does not offer the
+     * toggle for it.
+     */
     suspend fun updateTodo(todo: TodoItem, payload: CreateTaskPayload) {
+        when (taskSaveFor(todo.due, todo.isRecurring, payload.due)) {
+            TaskSave.CONVERT_TO_FLOATER -> {
+                updateScheduledTodo(todo, payload.copy(due = todo.due, rrule = null))
+                demoteTodo(
+                    todo.copy(
+                        title = payload.title.trim(),
+                        description = payload.description?.trim()?.ifBlank { null },
+                        priority = canonicalPriorityValue(payload.priority),
+                    ),
+                )
+            }
+
+            TaskSave.UPDATE_KEEPING_SCHEDULE -> updateScheduledTodo(
+                todo,
+                payload.copy(due = todo.due, rrule = todo.rrule),
+            )
+
+            TaskSave.UPDATE -> updateScheduledTodo(todo, payload)
+        }
+    }
+
+    private suspend fun updateScheduledTodo(todo: TodoItem, payload: CreateTaskPayload) {
         val canonicalId = todo.canonicalId
         if (canonicalId.isBlank()) return
 
@@ -934,22 +970,41 @@ class TodoRepository @Inject constructor(
      * mutation carries the occurrence's `instanceDate`, because
      * `PATCH /api/todo/complete` without one writes a history row and leaves the
      * task standing.
+     *
+     * The un-stage write runs under [OfflineCacheManager.withSyncLock], the same
+     * as the stage, and it is the half that matters more of the two. A sync holds
+     * the lock across its whole read-fetch-merge-save span and its final save is
+     * built from the snapshot it loaded BEFORE the network phase — so a marker
+     * flip landing inside that span is saved back as `staged = true`, the queued
+     * mutation never replays and the completion never reaches the server. iOS's
+     * counterpart (`TodoRepository.unstageMutations`) has always taken the lock
+     * for exactly this reason; Android's did not, which left the two clients
+     * asymmetric on the one write that decides whether a batch is sent at all.
+     * It is most reachable in the "completing too many tasks together" case,
+     * because every commit starts a sync and a batch is what keeps one in flight.
      */
     suspend fun commitStagedTodoCompletions(todos: List<TodoItem>) {
         if (todos.isEmpty()) return
-        cacheManager.updateOfflineState { state ->
-            todos.fold(state) { current, todo -> current.withTodoCompletionCommitted(todo) }
+        cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state ->
+                todos.fold(state) { current, todo -> current.withTodoCompletionCommitted(todo) }
+            }
         }
         refreshWidgetsNow()
         if (syncManager.isLocalMode()) return
         syncManager.syncCachedData(force = true, replayPendingMutations = true)
     }
 
-    /** Floater counterpart of [commitStagedTodoCompletions]. */
+    /**
+     * Floater counterpart of [commitStagedTodoCompletions] — including its
+     * [OfflineCacheManager.withSyncLock], for the same reason.
+     */
     suspend fun commitStagedFloaterCompletions(floaters: List<TodoItem>) {
         if (floaters.isEmpty()) return
-        cacheManager.updateOfflineState { state ->
-            floaters.fold(state) { current, floater -> current.withFloaterCompletionCommitted(floater) }
+        cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state ->
+                floaters.fold(state) { current, floater -> current.withFloaterCompletionCommitted(floater) }
+            }
         }
         refreshWidgetsNow()
         if (syncManager.isLocalMode()) return
@@ -1463,6 +1518,44 @@ internal fun todayEarlierItems(
         .toInstant()
     return overdueTodos.filter { todo -> todo.due?.isBefore(startOfToday) == true }
 }
+
+/** Which write a task-sheet save is. */
+internal enum class TaskSave {
+    /** The ordinary field write through `PATCH /api/todo`. */
+    UPDATE,
+
+    /** Demote: the todo row is consumed and a floater takes its place. */
+    CONVERT_TO_FLOATER,
+
+    /**
+     * The sheet asked for an unscheduled task on a recurring one. The conversion is refused
+     * (a series would be silently destroyed), so the save stays a field write and the
+     * schedule — due and recurrence alike — is carried through unchanged.
+     */
+    UPDATE_KEEPING_SCHEDULE,
+}
+
+/**
+ * A save that drops the due from a task that has one is the sheet's Schedule toggle turned
+ * OFF, and an unscheduled task is a Floater: a todo's `due` is NOT NULL, so the row cannot
+ * be made dateless in place and the intent has nowhere to land in `PATCH /api/todo` (its
+ * request carries no kind). That save is a conversion — demote — not a field write.
+ *
+ * A recurring task is never converted: the backend refuses to demote one, because its
+ * series would be silently destroyed. The sheet does not offer the toggle for it, so this
+ * only answers a stale or restored one — and answers it by not ending the recurrence the
+ * toggle-off could not have been honoured for.
+ */
+internal fun taskSaveFor(
+    todoDue: Instant?,
+    todoIsRecurring: Boolean,
+    payloadDue: Instant?,
+): TaskSave =
+    when {
+        payloadDue != null -> TaskSave.UPDATE
+        !todoIsRecurring && todoDue != null -> TaskSave.CONVERT_TO_FLOATER
+        else -> TaskSave.UPDATE_KEEPING_SCHEDULE
+    }
 
 internal fun OfflineSyncState.withDeletedTodoCached(
     canonicalId: String,

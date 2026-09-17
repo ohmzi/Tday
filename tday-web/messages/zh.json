@@ -513,7 +513,7 @@
     "title": "完成历史",
     "empty": "还没有完成的任务",
     "emptyBody": "完成一个任务，它就会出现在这里。",
-    "tabTasks": "任务",
+    "tabTasks": "已安排",
     "floaterEmpty": "还没有已完成的随手事项",
     "floaterEmptyBody": "在随手事项中勾选一项，它就会显示在这里。",
     "listDeletedSuffix": "列表已删除",
@@ -1371,20 +1371,20 @@
     "brainDump": "想法速记"
   },
   "release": {
-    "subtitle": "查看已部署的版本和最新发布的版本。",
     "loading": "正在加载版本信息…",
     "error": "无法获取版本信息。请检查网络连接后重试。",
     "retry": "重试",
     "statusLatest": "最新版本",
     "statusUpdateAvailable": "有可用更新",
     "messageLatest": "你正在使用最新版本",
-    "messageUpdateAvailable": "版本 {{version}} 已可用。",
+    "messageUpdateReady": "版本 {{version}} 已准备好安装。",
     "installed": "已安装",
     "installedVersion": "已安装版本",
     "latest": "最新",
     "whatsNew": "{{version}} 的新内容",
     "noNotes": "此版本没有可用的发行说明",
     "viewOnGithub": "在 GitHub 上查看",
-    "published": "发布于 {{date}}"
+    "published": "发布于 {{date}}",
+    "serverUnavailable": "不可用"
   }
 }

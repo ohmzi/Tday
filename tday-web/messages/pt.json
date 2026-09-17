@@ -513,7 +513,7 @@
     "title": "Histórico de conclusão",
     "empty": "Nada concluído ainda",
     "emptyBody": "Marque algo como feito e aparecerá aqui.",
-    "tabTasks": "Tarefas",
+    "tabTasks": "Agendado",
     "floaterEmpty": "Ainda não há itens avulsos concluídos",
     "floaterEmptyBody": "Marque algo como concluído em Avulso e ele aparecerá aqui.",
     "listDeletedSuffix": "lista excluída",
@@ -1371,20 +1371,20 @@
     "brainDump": "Despejo mental"
   },
   "release": {
-    "subtitle": "Reveja a versão publicada e a última versão disponível.",
     "loading": "A carregar informações da versão…",
     "error": "Não foi possível obter as informações da versão. Verifique a sua ligação e tente novamente.",
     "retry": "Tentar novamente",
     "statusLatest": "Mais recente",
     "statusUpdateAvailable": "Atualização disponível",
     "messageLatest": "Está a usar a versão mais recente",
-    "messageUpdateAvailable": "A versão {{version}} está disponível.",
+    "messageUpdateReady": "A versão {{version}} está pronta para instalar.",
     "installed": "Instalada",
     "installedVersion": "Versão instalada",
     "latest": "Mais recente",
     "whatsNew": "Novidades da {{version}}",
     "noNotes": "Não há notas de versão disponíveis para esta versão",
     "viewOnGithub": "Ver no GitHub",
-    "published": "Publicada a {{date}}"
+    "published": "Publicada a {{date}}",
+    "serverUnavailable": "Indisponível"
   }
 }

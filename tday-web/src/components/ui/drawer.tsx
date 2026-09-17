@@ -291,6 +291,16 @@ const DrawerContent = React.forwardRef<
 
         const bodyRect = body.getBoundingClientRect();
         const targetRect = target.getBoundingClientRect();
+        // A field taller than the scroller it sits in cannot be centred in it:
+        // the arithmetic below still produces a number, but it is the offset
+        // that puts the field's MIDDLE in the viewport, so obeying it drops the
+        // user into the middle of whatever they just tapped. That is the notes
+        // field as soon as it is long enough to scroll — the note is the target
+        // and the viewport capping it (NotesField) is the scroller — and it was
+        // the sheet's own scroll body before that. Where the caret is, is the
+        // browser's business and it has already dealt with it; leave it there.
+        if (targetRect.height >= body.clientHeight) return;
+
         const delta =
           targetRect.top - bodyRect.top - (body.clientHeight - targetRect.height) / 2;
         scrollBy(body, { top: delta });

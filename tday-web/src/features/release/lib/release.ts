@@ -2,14 +2,24 @@ export type ReleaseMetadata = {
   version: string;
   publishedAt: string | null;
   notes: string[];
-  releaseUrl: string;
+  /**
+   * The release page this metadata actually came from, or null when no source
+   * gave one — the placeholder built by [createFallbackReleaseMetadata] when
+   * every lookup failed, or a payload whose `html_url` was missing.
+   *
+   * Never synthesized from the version number. Both natives hold a
+   * non-optional `htmlUrl` straight off the GitHub API and render their
+   * "View on GitHub" row only when they have it, so a URL guessed here would
+   * have offered a link to a tag that may not exist — a link the natives
+   * deliberately do not show.
+   */
+  releaseUrl: string | null;
   compareUrl: string | null;
 };
 
 const RELEASE_STORAGE_KEY = "tday.release.current.v1";
 
 export const CURRENT_APP_VERSION = normalizeVersion(__APP_VERSION__) ?? "0.0.0";
-export const GITHUB_RELEASES_URL = "https://github.com/ohmzi/Tday/releases";
 export const GITHUB_RELEASES_API_URL = "https://api.github.com/repos/ohmzi/Tday/releases";
 export const CURRENT_RELEASE_PATH = "/release/current-release.json";
 export const LATEST_RELEASE_METADATA_URL =
@@ -88,17 +98,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-/** Normalizes stored release notes and caps them to the top three highlights. */
+/** Normalizes stored release notes. */
 function normalizeNotes(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
 
   return raw
     .map((note) => (typeof note === "string" ? note.trim() : ""))
-    .filter(Boolean)
-    .slice(0, 3);
+    .filter(Boolean);
 }
 
-/** Extracts the top changelog bullets from a GitHub release body. */
+/**
+ * Extracts the changelog bullets from a GitHub release body.
+ *
+ * Every one of them. This used to keep the top three "highlights", which was a
+ * web invention: both natives scan the same body for the same `* ` / `- `
+ * markers and render every line they find (`parseChangelog` in
+ * `LatestReleaseViewModel.kt` and in `SettingsScreen.swift`).
+ */
 export function parseGitHubReleaseNotes(body: string | null | undefined): string[] {
   if (!body) return [];
 
@@ -107,8 +123,7 @@ export function parseGitHubReleaseNotes(body: string | null | undefined): string
     .map((line) => line.trim())
     .filter((line) => line.startsWith("* ") || line.startsWith("- "))
     .map((line) => line.replace(/^[*-]\s+/, "").trim())
-    .filter(Boolean)
-    .slice(0, 3);
+    .filter(Boolean);
 }
 
 /** Builds a safe fallback release payload for offline or first-load states. */
@@ -119,7 +134,11 @@ export function createFallbackReleaseMetadata(version = CURRENT_APP_VERSION): Re
     version: normalizedVersion,
     publishedAt: null,
     notes: [],
-    releaseUrl: `${GITHUB_RELEASES_URL}/tag/v${normalizedVersion}`,
+    // No link, because there is nothing behind it: the natives hold a real
+    // `htmlUrl` from the API and show nothing without it. The page's
+    // "View on GitHub" row is absent for this placeholder rather than pointed
+    // at a tag this build cannot confirm exists.
+    releaseUrl: null,
     compareUrl: null,
   };
 }
@@ -133,11 +152,6 @@ export function parseGitHubReleaseMetadata(raw: unknown): ReleaseMetadata | null
   );
   if (!version) return null;
 
-  const releaseUrl =
-    typeof raw.html_url === "string" && raw.html_url.trim()
-      ? raw.html_url.trim()
-      : `${GITHUB_RELEASES_URL}/tag/v${version}`;
-
   return {
     version,
     publishedAt:
@@ -147,7 +161,10 @@ export function parseGitHubReleaseMetadata(raw: unknown): ReleaseMetadata | null
     notes: parseGitHubReleaseNotes(
       typeof raw.body === "string" ? raw.body : null,
     ),
-    releaseUrl,
+    releaseUrl:
+      typeof raw.html_url === "string" && raw.html_url.trim()
+        ? raw.html_url.trim()
+        : null,
     compareUrl: null,
   };
 }
@@ -161,11 +178,6 @@ export function parseReleaseMetadata(raw: unknown): ReleaseMetadata | null {
   );
   if (!version) return null;
 
-  const releaseUrl =
-    typeof raw.releaseUrl === "string" && raw.releaseUrl.trim()
-      ? raw.releaseUrl.trim()
-      : `${GITHUB_RELEASES_URL}/tag/v${version}`;
-
   const compareUrl =
     typeof raw.compareUrl === "string" && raw.compareUrl.trim()
       ? raw.compareUrl.trim()
@@ -178,7 +190,10 @@ export function parseReleaseMetadata(raw: unknown): ReleaseMetadata | null {
         ? raw.publishedAt.trim()
         : null,
     notes: normalizeNotes(raw.notes),
-    releaseUrl,
+    releaseUrl:
+      typeof raw.releaseUrl === "string" && raw.releaseUrl.trim()
+        ? raw.releaseUrl.trim()
+        : null,
     compareUrl,
   };
 }

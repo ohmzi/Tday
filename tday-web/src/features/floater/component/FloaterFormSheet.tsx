@@ -8,6 +8,7 @@ import {
   SheetDivider,
   SheetSectionTitle,
   SheetSelectorRow,
+  SheetTitleNotesCard,
 } from "@/components/ui/sheet-chrome";
 import {
   CenteredSelectorOverlay,
@@ -143,8 +144,8 @@ export default function FloaterFormSheet({
       bodyClassName="pb-6"
     >
       <div className="flex flex-col gap-3 pb-2">
-        <SheetCard>
-          <div className="px-[18px] pb-2 pt-3">
+        <SheetTitleNotesCard
+          title={
             <textarea
               value={title}
               onChange={(event) => setTitle(event.target.value)}
@@ -161,14 +162,14 @@ export default function FloaterFormSheet({
               placeholder={appDict("floaterTitlePlaceholder")}
               className="min-h-12 w-full resize-none bg-transparent text-lg font-black text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden"
             />
-          </div>
-          <SheetDivider />
+          }
+        >
           <NotesField
             value={description}
             onChange={setDescription}
             placeholder={appDict("notes")}
           />
-        </SheetCard>
+        </SheetTitleNotesCard>
 
         <SheetSectionTitle>{appDict("details")}</SheetSectionTitle>
         <SheetCard>

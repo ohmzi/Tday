@@ -556,7 +556,10 @@ function gatesOf(cond: string, scope: TypeScope): string[] {
 
 /** Rule A — `.transition` sites whose transaction is supplied outside this type. */
 const TRANSITION_DRIVEN_ELSEWHERE: Record<string, string> = {
-  "ios-swiftUI/Tday/UI/Component/CreateTaskSheet.swift:248":
+  // The site's line moves when the Schedule card above it changes (the switch row is
+  // now gated on `canToggleSchedule`, so a recurring task shows the due row without it);
+  // the gate and its transaction are the same one this entry was written for.
+  "ios-swiftUI/Tday/UI/Component/CreateTaskSheet.swift:266":
     "`scheduleEnabled` is written through the Binding handed to " +
     "CreateTaskSheetScheduleToggleRow, which applies `$isOn.animation(.spring(…))` " +
     "on the Toggle (:797). The Binding carries the transaction, so the due row's " +

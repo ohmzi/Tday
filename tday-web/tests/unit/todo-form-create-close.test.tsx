@@ -75,6 +75,15 @@ vi.mock("@/features/todayTodos/query/create-todo", () => ({
   }),
 }));
 
+// The sheet now also reaches for the todo→floater conversion, which needs a
+// QueryClient; this test renders the form bare, so the hook is stubbed out.
+vi.mock("@/features/todayTodos/query/convert-todo-to-floater", () => ({
+  useConvertTodoToFloater: () => ({
+    convertMutateFn: vi.fn(),
+    convertPending: false,
+  }),
+}));
+
 vi.mock("@/components/Sidebar/List/query/get-list-meta", () => ({
   useListMetaData: () => ({
     listMetaData: {},

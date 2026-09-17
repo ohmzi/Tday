@@ -13,12 +13,14 @@ import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
+import com.ohmz.tday.compose.core.navigation.CompletedScope
 import com.ohmz.tday.compose.core.notification.TaskReminderScheduler
 import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.core.ui.userFacingMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,16 +37,27 @@ data class CompletedUiState(
     // everywhere it was copied or nowhere. See [feedAnswer].
     val hasHydratedSnapshot: Boolean = false,
     val firstAnswerLanded: Boolean = false,
-    // Todos and floaters merged into one browsable timeline; CompletedItem.isFloater
-    // tells CompletedScreen which of the two it is rendering/acting on.
-    val items: List<CompletedItem> = emptyList(),
+    // The completion history's two tabs, kept apart rather than merged into one
+    // timeline: the screen renders one of them at a time and each tab's rows, its
+    // count and its empty state all come from its own list. The two are fetched
+    // separately already (they are two fields of the offline cache), so nothing
+    // here costs a second round trip. CompletedItem.isFloater still says which of
+    // the two a row is, and every write path still routes on it.
+    val todoItems: List<CompletedItem> = emptyList(),
+    val floaterItems: List<CompletedItem> = emptyList(),
     val lists: List<ListSummary> = emptyList(),
     // Floater lists are a separate namespace from `lists` (scheduled-task lists) —
     // needed to resolve a completed floater's list icon and to offer the right
     // list choices when editing one.
     val floaterLists: List<ListSummary> = emptyList(),
     val errorMessage: String? = null,
-)
+) {
+    /** One tab's rows. The tab is the only thing that decides which list is drawn. */
+    fun itemsFor(scope: CompletedScope): List<CompletedItem> = when (scope) {
+        CompletedScope.Tasks -> todoItems
+        CompletedScope.Floater -> floaterItems
+    }
+}
 
 @HiltViewModel
 class CompletedViewModel @Inject constructor(
@@ -69,10 +82,8 @@ class CompletedViewModel @Inject constructor(
                 // `hasHydratedSnapshot = true` inside `hydrateFromCache`.
                 hasHydratedSnapshot = true,
                 firstAnswerLanded = firstAnswerSignal.hasLanded(),
-                items = mergedCompletedItems(
-                    completedRepository.fetchCompletedItemsSnapshot(),
-                    completedRepository.fetchCompletedFloaterItemsSnapshot(),
-                ),
+                todoItems = completedRepository.fetchCompletedItemsSnapshot(),
+                floaterItems = completedRepository.fetchCompletedFloaterItemsSnapshot(),
                 lists = listRepository.fetchListsSnapshot(),
                 floaterLists = floaterListRepository.fetchListsSnapshot(),
                 errorMessage = null,
@@ -137,7 +148,7 @@ class CompletedViewModel @Inject constructor(
 
     fun load() {
         hasLoadedScreen = true
-        hydrateFromCache()
+        viewModelScope.launch { hydrateFromCache() }
     }
 
     fun refresh(userInitiated: Boolean = false) {
@@ -145,40 +156,61 @@ class CompletedViewModel @Inject constructor(
         loadInternal(forceSync = true, showLoading = true, userInitiated = userInitiated)
     }
 
-    private fun hydrateFromCache() {
-        runCatching {
-            CompletedHydration(
-                items = mergedCompletedItems(
-                    completedRepository.fetchCompletedItemsSnapshot(),
-                    completedRepository.fetchCompletedFloaterItemsSnapshot(),
-                ),
-                lists = listRepository.fetchListsSnapshot(),
-                floaterLists = floaterListRepository.fetchListsSnapshot(),
-            )
-        }.onSuccess { (items, lists, floaterLists) ->
-            _uiState.update { current ->
-                current.copy(
-                    isLoading = false,
-                    hasHydratedSnapshot = true,
-                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
-                    items = if (current.items == items) current.items else items,
-                    lists = if (current.lists == lists) current.lists else lists,
-                    floaterLists = if (current.floaterLists == floaterLists) current.floaterLists else floaterLists,
-                    errorMessage = null,
+    /**
+     * Re-reads this screen's four lists from the cache.
+     *
+     * Suspending and on [Dispatchers.IO], mirroring [loadInternal]'s own `CompletedHydration`
+     * read, and for a reason this screen found the hard way: this used to run inline on the
+     * caller's dispatcher, and every restore used to call it through `loadInternal` — so the
+     * cost was hidden behind a network round trip that dominated the frame anyway. Once the
+     * restore path stopped syncing (see [uncomplete]) this became the whole of the work, and
+     * four blocking Room reads on the main thread is exactly the jank this change exists to
+     * remove. The two `*Snapshot` accessors are the only pair that can also be reached from a
+     * widget's non-suspending context, which is why they exist at all; nothing here needs them.
+     */
+    private suspend fun hydrateFromCache() {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                CompletedHydration(
+                    todoItems = completedRepository.fetchCompletedItemsSnapshot(),
+                    floaterItems = completedRepository.fetchCompletedFloaterItemsSnapshot(),
+                    lists = listRepository.fetchListsSnapshot(),
+                    floaterLists = floaterListRepository.fetchListsSnapshot(),
                 )
-            }
-        }.onFailure {
-            // The same rule as the initializer above and as
-            // `TodoListViewModel.hydrateFromCache`: a read that threw still
-            // ANSWERED, so the screen stops waiting on it. Without this leg the
-            // `load()` that follows a failed initializer read is a second chance
-            // that changes nothing, and the placeholder stays up for the life of
-            // the process.
-            _uiState.update { current ->
-                current.copy(
-                    hasHydratedSnapshot = true,
-                    firstAnswerLanded = firstAnswerSignal.hasLanded(),
-                )
+            }.onSuccess { (todoItems, floaterItems, lists, floaterLists) ->
+                _uiState.update { current ->
+                    current.copy(
+                        isLoading = false,
+                        hasHydratedSnapshot = true,
+                        firstAnswerLanded = firstAnswerSignal.hasLanded(),
+                        todoItems = if (current.todoItems == todoItems) current.todoItems else todoItems,
+                        floaterItems = if (current.floaterItems == floaterItems) {
+                            current.floaterItems
+                        } else {
+                            floaterItems
+                        },
+                        lists = if (current.lists == lists) current.lists else lists,
+                        floaterLists = if (current.floaterLists == floaterLists) {
+                            current.floaterLists
+                        } else {
+                            floaterLists
+                        },
+                        errorMessage = null,
+                    )
+                }
+            }.onFailure {
+                // The same rule as the initializer above and as
+                // `TodoListViewModel.hydrateFromCache`: a read that threw still
+                // ANSWERED, so the screen stops waiting on it. Without this leg the
+                // `load()` that follows a failed initializer read is a second chance
+                // that changes nothing, and the placeholder stays up for the life of
+                // the process.
+                _uiState.update { current ->
+                    current.copy(
+                        hasHydratedSnapshot = true,
+                        firstAnswerLanded = firstAnswerSignal.hasLanded(),
+                    )
+                }
             }
         }
     }
@@ -206,18 +238,21 @@ class CompletedViewModel @Inject constructor(
                         .onFailure { /* fall back to local cache */ }
                 }
                 CompletedHydration(
-                    items = mergedCompletedItems(
-                        completedRepository.fetchCompletedItems(),
-                        completedRepository.fetchCompletedFloaterItems(),
-                    ),
+                    todoItems = completedRepository.fetchCompletedItems(),
+                    floaterItems = completedRepository.fetchCompletedFloaterItems(),
                     lists = listRepository.fetchLists(),
                     floaterLists = floaterListRepository.fetchLists(),
                 )
-            }.onSuccess { (items, lists, floaterLists) ->
+            }.onSuccess { (todoItems, floaterItems, lists, floaterLists) ->
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
-                        items = if (current.items == items) current.items else items,
+                        todoItems = if (current.todoItems == todoItems) current.todoItems else todoItems,
+                        floaterItems = if (current.floaterItems == floaterItems) {
+                            current.floaterItems
+                        } else {
+                            floaterItems
+                        },
                         lists = if (current.lists == lists) current.lists else lists,
                         floaterLists = if (current.floaterLists == floaterLists) current.floaterLists else floaterLists,
                         errorMessage = null,
@@ -260,6 +295,31 @@ class CompletedViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Restores a completed item.
+     *
+     * Neither branch syncs on the way out, and that is the point. Both repositories
+     * apply the restore to the cache themselves before they touch the network, so by
+     * the time either returns the local answer is already what the screen should draw —
+     * re-reading it is all that is left to do, and it costs no round trip.
+     *
+     * This used to end both branches in `loadInternal(forceSync = false, ...)`, which
+     * runs a full [SyncManager.syncCachedData] — seven parallel GETs per tap, with no
+     * throttle at all on the unforced path. Restoring a handful of rows was therefore a
+     * burst of dozens of requests, enough to trip the backend's own limiter and surface
+     * to the user as a rate-limit error; worse, each of those GETs took its snapshot
+     * before the tap's write had reached the server, so a merge landing afterwards wrote
+     * the restored row straight back over the removal. See `mergeRemoteWithLocal`'s
+     * `pendingUncompletedTodoIds` for the other half of that: the row is now protected
+     * for exactly as long as its mutation is unacknowledged, which is the window a sync
+     * started before the tap can still land in.
+     *
+     * Nothing is lost by dropping the sync. The server's own `completed` event comes
+     * back to this device over the realtime socket and `AppViewModel` coalesces it into
+     * a sync ~400 ms later, so the two clients converge on the same state anyway — and
+     * the write itself is still durable either way: a restore whose PATCH fails leaves
+     * its `UNCOMPLETE_TODO` queued, and the next sync replays it.
+     */
     fun uncomplete(item: CompletedItem) {
         viewModelScope.launch {
             if (item.isFloater) {
@@ -278,23 +338,37 @@ class CompletedViewModel @Inject constructor(
                                 ),
                             )
                         }
-                        loadInternal(forceSync = false, showLoading = false)
+                        hydrateFromCache()
                     }
                     .onFailure { error ->
                         _uiState.update {
                             it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_restore_task_failed))
                         }
+                        // The floater path has no local-only half — the row stays on this
+                        // screen until the server answers — so this re-read changes nothing
+                        // about the row and everything about the message: `hydrateFromCache`
+                        // clears `errorMessage`, which is what makes the set above a notice
+                        // that expires rather than one that sticks and blocks every later
+                        // refresh (see `loadInternal`'s `showLoading = false` branch).
+                        hydrateFromCache()
                     }
             } else {
                 runCatching { completedRepository.uncomplete(item) }
                     .onSuccess {
                         rescheduleReminders()
-                        loadInternal(forceSync = false, showLoading = false)
+                        hydrateFromCache()
                     }
-                    .onFailure { error ->
-                        _uiState.update {
-                            it.copy(errorMessage = error.userFacingMessage(appContext, R.string.error_restore_task_failed))
-                        }
+                    .onFailure {
+                        // Deliberately quiet, and it is the queue that makes that honest
+                        // rather than optimistic. `uncomplete` writes the local half —
+                        // timeline row pending, completion record pruned, UNCOMPLETE_TODO
+                        // queued — BEFORE it calls the server, so a failed call is a
+                        // deferred restore, not a lost one: the next sync replays it. The
+                        // restore that just queued itself will therefore happen, and an
+                        // error here would announce a failure the user is about to be
+                        // wrong about. The re-read is what draws that state; without it
+                        // the screen would keep showing the row the cache already moved.
+                        hydrateFromCache()
                     }
             }
         }
@@ -327,23 +401,8 @@ class CompletedViewModel @Inject constructor(
 
 /** One fetch/hydrate round's worth of [CompletedUiState] source data. */
 private data class CompletedHydration(
-    val items: List<CompletedItem>,
+    val todoItems: List<CompletedItem>,
+    val floaterItems: List<CompletedItem>,
     val lists: List<ListSummary>,
     val floaterLists: List<ListSummary>,
 )
-
-/**
- * Todos and floaters share one browsable timeline (CompletedScreen groups by
- * completed date regardless of type), sorted newest-first so a stable merge
- * order here does not depend on that downstream re-sort.
- */
-private fun mergedCompletedItems(
-    todoItems: List<CompletedItem>,
-    floaterItems: List<CompletedItem>,
-): List<CompletedItem> {
-    if (floaterItems.isEmpty()) return todoItems
-    if (todoItems.isEmpty()) return floaterItems
-    return (todoItems + floaterItems).sortedByDescending {
-        it.completedAt ?: it.due ?: java.time.Instant.EPOCH
-    }
-}

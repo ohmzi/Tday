@@ -34,7 +34,25 @@ sealed class AppRoute(val route: String) {
         }
     }
 
-    data object Completed : AppRoute("completed")
+    data object Completed : AppRoute("completed?scope={scope}") {
+        /**
+         * The route with no tab named — read off the pattern rather than spelled
+         * a second time, so the two cannot drift.
+         */
+        private val unscoped: String = route.substringBefore('?')
+
+        /**
+         * The completion history, optionally opened on one of its two tabs.
+         *
+         * The scope rides as a query parameter for the reason `AllTodos`'s
+         * highlight does: the argument is optional, its `navArgument` declares a
+         * null default, so the bare `"completed"` still matches this pattern and
+         * every arrival that names no tab — the deep link, a shortcut, a
+         * notification — opens the first one.
+         */
+        fun create(scope: CompletedScope? = null): String =
+            if (scope == CompletedScope.Floater) "$unscoped?scope=${CompletedScope.Floater.wire}" else unscoped
+    }
     data object Calendar : AppRoute("calendar")
     data object Car : AppRoute("car")
     data object Settings : AppRoute("settings")

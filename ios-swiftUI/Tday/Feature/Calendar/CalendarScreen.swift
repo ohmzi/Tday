@@ -84,6 +84,19 @@ private enum CalendarTitleHandoff {
     /// The mark leads and is gone before the title reaches the bar, matching
     /// every other titled screen.
     static let markFadeEnd: CGFloat = 0.45
+    /// The Today pill's fold — the last leg on this bar to become a ramp rather
+    /// than a threshold, and the one the reported defect was.
+    ///
+    /// It ends at 0.50, which is exactly where the `showLabel = progress < 0.5`
+    /// it replaced flipped, so the pill is still a circle at `collapsedFadeStart`
+    /// with the same 0.22 of margin it always had — the margin
+    /// `trailingActionReservedWidth` reserves two round buttons on. It starts at
+    /// 0.25 — forty-five points of scroll in, with the next forty-five to fold
+    /// across — so the word stays whole while the bar is at rest and through the
+    /// first stretch of travel, and then the cap has room to close rather than
+    /// resizing in one frame.
+    static let todayLabelFoldStart: CGFloat = 0.25
+    static let todayLabelFoldEnd: CGFloat = 0.50
 }
 
 private enum CalendarPeriodCardMetrics {
@@ -96,6 +109,47 @@ private enum CalendarPeriodCardMetrics {
     static let pageHorizontalGutter: CGFloat = 2
     static let topPadding: CGFloat = 16
     static let bottomPadding: CGFloat = 18
+}
+
+/// The Today pill's own geometry, named once because three pieces of it have to
+/// agree: the cap's width is the sum of them, the word's fade is fitted to where
+/// the cap's tail meets the word's, and the pill's whole job is to read as one
+/// object narrowing rather than a label and a circle swapping places.
+private enum CalendarTodayActionMetrics {
+    /// The cap's leading inset. Fourteen rather than the sixteen the labelled pill
+    /// used to carry, and it is the only number in here whose change anyone can see:
+    /// the glyph has to sit at the centre of the 56pt circle the pill ends as, and
+    /// with a `glyphSlot` of 28 this is what puts it there — 14 + (28 / 2) = 28. The
+    /// cost is two points off the labelled pill's leading end at rest, where the
+    /// glyph used to be inset by sixteen and the word by however wide the symbol
+    /// happened to be; the pill it ends as, a 56pt circle with the glyph centred in
+    /// it, is byte for byte what this control has always drawn.
+    static let leadingPadding: CGFloat = 14
+    /// The glyph's own box, so the word starts at the same x whatever the symbol's
+    /// intrinsic width turns out to be, and so the glyph is centred in the collapsed
+    /// circle by arithmetic rather than by whatever `Image(systemName:)` measures.
+    static let glyphSlot: CGFloat = 28
+    static let labelSpacing: CGFloat = 7
+    /// The air after the word while it is fully out. Also the whole reason the
+    /// pill has to know the word's width at all: the word is drawn at its natural
+    /// size, so the cap has to be told how much room to leave for it.
+    static let trailingPadding: CGFloat = 14
+    /// What the word is drawn in. Held here because the bar's probe measures
+    /// against it and the pill draws it, and two copies that spelled the size
+    /// separately could drift — the reason `dockedTitleFont` is named once.
+    static let labelFont: Font = .tdayRounded(size: 16, weight: .bold)
+
+    /// The cap's width with the word fully out.
+    static func expandedWidth(wordWidth: CGFloat) -> CGFloat {
+        leadingPadding + glyphSlot + labelSpacing + max(0, wordWidth) + trailingPadding
+    }
+
+    /// The width at which the cap's trailing end first reaches the word's tail.
+    /// A width rather than a fraction of the collapse, so it is the same point in
+    /// the fold for every locale's word rather than for English's.
+    static func wordTailWidth(wordWidth: CGFloat) -> CGFloat {
+        leadingPadding + glyphSlot + labelSpacing + max(0, wordWidth)
+    }
 }
 
 private enum CalendarMonthGridMetrics {
@@ -2396,6 +2450,11 @@ private struct CalendarElasticTopBar: View {
     @State private var dockedTitleWidth: CGFloat = 0
     /// The bar's inner width, from the same probe. Zero until the first layout.
     @State private var barWidth: CGFloat = 0
+    /// What the word on the Today pill wants at the size the pill draws it, off
+    /// the same kind of probe and for the same reason: the cap's width is a
+    /// function of the word, so the word's own width is the answer rather than
+    /// the question. Zero until the probe has a box.
+    @State private var todayActionLabelWidth: CGFloat = 0
 
     private var progress: CGFloat {
         min(max(collapseProgress, 0), 1)
@@ -2428,10 +2487,80 @@ private struct CalendarElasticTopBar: View {
         )
     }
 
-    // Show the word "Today" while the title is down (expanded); collapse to an
-    // icon-only button once the title is pulled up.
-    private var showActionLabel: Bool {
-        progress < 0.5
+    /// How much of the word "Today" is still out: 1 while the bar is at rest, 0
+    /// once the pill has closed onto its glyph.
+    ///
+    /// A ramp on `progress`, like every other leg of this collapse and unlike the
+    /// `showLabel = progress < 0.5` it replaces — a boolean is not a frame of a
+    /// collapse, and whatever it swaps between, it swaps in one. This is the leg
+    /// the pill's whole shape reads: its width, and (through the width) the point
+    /// at which the word's fade begins.
+    private var todayActionLabelReveal: CGFloat {
+        1 - linearProgress(
+            progress,
+            from: CalendarTitleHandoff.todayLabelFoldStart,
+            to: CalendarTitleHandoff.todayLabelFoldEnd
+        )
+    }
+
+    /// The pill's cap: `topBarButtonFrame` once the word is gone, and the word's
+    /// own width plus the cap's share while it is out. Lerped on the reveal above,
+    /// so the cap narrows frame by frame with the scroll and a slow drag is a slow
+    /// fold rather than a resize that happened at one scroll position.
+    private var todayActionPillWidth: CGFloat {
+        let collapsed = TodoTimelineMetrics.topBarButtonFrame
+        let expanded = CalendarTodayActionMetrics.expandedWidth(wordWidth: todayActionLabelWidth)
+        return collapsed + ((expanded - collapsed) * todayActionLabelReveal)
+    }
+
+    /// The word leaves with the cap that closes over it: whole while the cap is
+    /// still wider than the word's tail, gone by the time the cap is a circle.
+    ///
+    /// Both ends of the ramp are WIDTHS and not fractions of the collapse, and both
+    /// are read off the cap's own width, so the fade is fitted to whatever word this
+    /// locale drew rather than to English's, and the fade and the clip cannot
+    /// disagree about where the word went — they are one number read twice.
+    /// `RootFeedHeroHeader` fades its search placeholder off its capsule's width for
+    /// the same reason. Zero until the probe has a box: a wordless pill for one frame
+    /// rather than a chopped word, which is the trade the title's own probe makes in
+    /// the other direction (its reserve mirrors for a frame before the title has a
+    /// width). The pill's width leans the same way — `expandedWidth(wordWidth: 0)` is
+    /// the cap's own share — so the first frame is a narrow empty pill and the second
+    /// is the real one, with no third state between them.
+    private var todayActionLabelOpacity: CGFloat {
+        guard todayActionLabelWidth > 0 else { return 0 }
+        return linearProgress(
+            todayActionPillWidth,
+            from: TodoTimelineMetrics.topBarButtonFrame,
+            to: CalendarTodayActionMetrics.wordTailWidth(wordWidth: todayActionLabelWidth)
+        )
+    }
+
+    /// Reports what the word "Today" wants at the size the pill draws it, off a
+    /// hidden copy of it — `tdayMeasuresDockedTitle`'s shape, hung the same way, in
+    /// a background on the row so it can add no width, no height and no layout of
+    /// its own. `fixedSize`, so it answers with the word's natural width rather
+    /// than with the width the cap happens to leave it, and `hidden`, so it is
+    /// drawn nowhere and read by nobody.
+    ///
+    /// It draws in the same font constant the pill draws in, which is the one thing
+    /// here that must not drift: a probe measuring a size nobody draws would have
+    /// the pill sizing its cap from a word that is not on screen.
+    private var todayActionLabelProbe: some View {
+        Text(actionLabel ?? "")
+            .font(CalendarTodayActionMetrics.labelFont)
+            .lineLimit(1)
+            .fixedSize()
+            .hidden()
+            .background {
+                GeometryReader { label in
+                    Color.clear
+                        .preference(
+                            key: TdayTodayActionLabelWidthKey.self,
+                            value: label.size.width
+                        )
+                }
+            }
     }
 
     private var expandedTitleHeight: CGFloat {
@@ -2534,7 +2663,8 @@ private struct CalendarElasticTopBar: View {
                                         systemName: action.systemName,
                                         label: actionLabel,
                                         tint: action.tint,
-                                        showLabel: showActionLabel,
+                                        pillWidth: todayActionPillWidth,
+                                        labelOpacity: todayActionLabelOpacity,
                                         action: action.action
                                     )
                                 } else {
@@ -2614,6 +2744,12 @@ private struct CalendarElasticTopBar: View {
             // answer rather than the question, and the probe is a hidden copy at
             // `fixedSize` for exactly that reason.
             .tdayMeasuresDockedTitle(barTitle: title, font: dockedTitleFont)
+            // And the word the Today pill is about to draw, measured the same way
+            // and for the same reason one level down: the pill's cap is sized from
+            // the word rather than by it, so it has to be told what the word wants.
+            // A background on this row, so it can add no width, no height and no
+            // layout of its own.
+            .background { todayActionLabelProbe }
 
             if markBlockHeight > 0.5 {
                 heroMark
@@ -2705,6 +2841,9 @@ private struct CalendarElasticTopBar: View {
         }
         .onPreferenceChange(TdayDockedTitleWidthKey.self) { width in
             dockedTitleWidth = width
+        }
+        .onPreferenceChange(TdayTodayActionLabelWidthKey.self) { width in
+            todayActionLabelWidth = width
         }
     }
 
@@ -2869,43 +3008,102 @@ private struct CalendarTopBarButton: View {
     }
 }
 
+/// What the Today pill's word wants at the size the pill draws it, reported by a
+/// hidden copy of it — the shape `tdayMeasuresDockedTitle` uses, for the reason
+/// the pill itself exists in this form: the cap's width is a function of the
+/// word, so the word's width is the answer rather than the question.
+///
+/// Its own key rather than the title's, deliberately. The title's is reduced with
+/// `max`, and a pill's word wider than the docked title would quietly become the
+/// reserve's answer — the title would then be reserved room it does not need, on
+/// the strength of a word it never draws.
+private struct TdayTodayActionLabelWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 /// Outlined top-bar action that shows a "Today" label while the calendar title
 /// is expanded and collapses to an icon-only pill once the title is pulled up.
+///
+/// The pill narrows through one width rather than swapping between two of them.
+/// `pillWidth` and `labelOpacity` are the bar's collapse legs, computed there like
+/// every other leg on this bar and handed down, so this view knows nothing about
+/// `progress` and names no animation of its own.
+///
+/// What it replaced, and why each piece of it is here rather than there. The cap's
+/// width was `showLabel ? … : …` on a `progress < 0.5` boolean, so the pill's size
+/// was a threshold on a scroll rather than a function of it, and that one flip
+/// changed three layout facts in the same frame: the word's presence, the row's
+/// spacing (`7` or `0`) and the cap's padding (`16` or `0`). The word itself was
+/// `.fixedSize()` — so it kept its full width through the flip and told the pill
+/// under it how wide to be — while `.transition(.opacity)` gave it no geometry and
+/// nothing clipped it. The result was a word drawn at full size while the cap had
+/// already narrowed, and a spring on this view alone (`.spring(response: 0.32,
+/// dampingFraction: 0.9)`, no rung) finishing the resize after the title hand-off
+/// it was supposed to be part of had settled.
 private struct CalendarTodayActionButton: View {
     let systemName: String
     let label: String
     let tint: Color?
-    let showLabel: Bool
+    /// The cap's width at this frame of the fold, from the bar.
+    let pillWidth: CGFloat
+    /// How much of the word is still out, from the bar. Zero when the word has
+    /// been measured as nothing yet, which draws a wordless pill rather than a
+    /// chopped one for that frame.
+    let labelOpacity: CGFloat
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
+    /// Read for one question only: whether this leg's size change should ride the
+    /// transaction it is drawn inside. See the `.transaction` below.
+    @Environment(\.tdayAnimation) private var tdayAnimation
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: showLabel ? 7 : 0) {
-                Image(systemName: systemName)
-                    .font(.system(size: 28, weight: .semibold))
-
-                if showLabel {
-                    Text(label)
-                        .font(.tdayRounded(size: 16, weight: .bold))
-                        .lineLimit(1)
-                        .fixedSize()
-                        .transition(.opacity)
+            // A clear base fixes the cap's size and both states ride on top of it,
+            // which is `RootFeedHeroHeader.searchField`'s construction and its
+            // reason: an `HStack` whose intrinsic width is the container's width
+            // lets the word set the cap's minimum, and that is this defect exactly
+            // — the cap was whatever the word plus its padding came to, measured
+            // one frame too late to be the thing that moved.
+            Color.clear
+                .frame(width: pillWidth, height: TodoTimelineMetrics.topBarButtonFrame)
+                .overlay(alignment: .leading) { content }
+                // The glyph is pinned to the cap's leading edge and the word simply
+                // runs off the end and is clipped, as the search field's placeholder
+                // is. Nothing the word does can leave the pill, and nothing it does
+                // can widen it: the word's `fixedSize` — the modifier that used to
+                // make it the container's minimum width — can only choose where the
+                // word is cut now that the base's width is its own number.
+                .clipShape(Capsule(style: .continuous))
+                .background {
+                    Capsule(style: .continuous)
+                        .fill(fillColor)
+                        .overlay {
+                            Capsule(style: .continuous)
+                                .stroke(borderColor, lineWidth: 1)
+                        }
                 }
-            }
-            .padding(.horizontal, showLabel ? 16 : 0)
-            .frame(minWidth: TodoTimelineMetrics.topBarButtonFrame, minHeight: TodoTimelineMetrics.topBarButtonFrame)
-            .background {
-                Capsule(style: .continuous)
-                    .fill(fillColor)
-                    .overlay {
-                        Capsule(style: .continuous)
-                            .stroke(borderColor, lineWidth: 1)
-                    }
-            }
-            .contentShape(Capsule(style: .continuous))
-            .animation(.spring(response: 0.32, dampingFraction: 0.9), value: showLabel)
+                .contentShape(Capsule(style: .continuous))
+                .transaction { transaction in
+                    // At full motion this is left exactly as the scroll or the snap
+                    // built it, which is why the pill names no animation: a
+                    // scroll-driven leg that names one trails the finger by its
+                    // duration, and a `.animation(_:value:)` keyed on a value that
+                    // changes every frame is that same lag written shorter.
+                    //
+                    // Under the gate the pill does not ride the bar's snap. This leg
+                    // changes size, and a size change is the thing the gate is for,
+                    // so it arrives at its final width in the frame the state
+                    // changed. It is done here rather than by gating the snap itself
+                    // because that transaction is every other leg's too.
+                    guard !tdayAnimation.isEnabled else { return }
+                    transaction.animation = nil
+                    transaction.disablesAnimations = true
+                }
         }
         .buttonStyle(
             TdayPressButtonStyle(
@@ -2915,6 +3113,26 @@ private struct CalendarTodayActionButton: View {
             )
         )
         .foregroundStyle(tint ?? colors.onSurface)
+    }
+
+    /// The glyph and the word, in the order they are read and both of them the
+    /// cap's passengers. The word is `fixedSize` for the reason it always was —
+    /// it must answer with its natural width, not with the width the cap happens
+    /// to have left it, or the cap would have to be wide enough for a word that
+    /// is on its way out and the pill would never close.
+    private var content: some View {
+        HStack(spacing: CalendarTodayActionMetrics.labelSpacing) {
+            Image(systemName: systemName)
+                .font(.system(size: 28, weight: .semibold))
+                .frame(width: CalendarTodayActionMetrics.glyphSlot)
+
+            Text(label)
+                .font(CalendarTodayActionMetrics.labelFont)
+                .lineLimit(1)
+                .fixedSize()
+                .opacity(Double(labelOpacity))
+        }
+        .padding(.leading, CalendarTodayActionMetrics.leadingPadding)
     }
 
     private var fillColor: Color {

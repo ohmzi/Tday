@@ -404,6 +404,8 @@
     <string name="completed_title">完了済み</string>
     <string name="completed_empty">まだ完了したタスクはありません</string>
     <string name="completed_empty_body">タスクを完了すると、ここに表示されます。</string>
+    <string name="completed_floater_empty">完了したフローターはまだありません</string>
+    <string name="completed_floater_empty_body">フローターで何かにチェックを入れると、ここに表示されます。</string>
     <string name="completed_section_earlier">それ以前</string>
     <string name="completed_section_today">今日</string>
     <string name="completed_section_tomorrow">明日</string>

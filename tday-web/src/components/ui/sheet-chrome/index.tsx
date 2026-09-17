@@ -109,8 +109,90 @@ export function SheetCard({
   );
 }
 
-export function SheetDivider() {
-  return <div className="mx-[18px] h-px bg-muted-foreground/15" />;
+export function SheetDivider({ className }: { className?: string }) {
+  return <div className={cn("mx-[18px] h-px bg-muted-foreground/15", className)} />;
+}
+
+/**
+ * How much of the screen the title-and-notes block may claim before it stops
+ * growing.
+ *
+ * Before this, a long note simply grew the card, and the card grew the sheet,
+ * until the sheet hit its own ceiling — and then everything past the fold,
+ * which by that point was most of the form *and* the rest of the note the user
+ * was still typing, went below it. Reading your own note meant scrolling the
+ * whole sheet, with the schedule and the list sliding up out of the way as you
+ * went. So the pair gets a budget instead: the card stops here and the two
+ * fields scroll inside it.
+ *
+ * Half the screen, because that is the point where the note is worth reading
+ * where it sits — and the other half is what the rest of the form needs to stay
+ * reachable. `dvh` rather than `vh` for the reason AppBottomSheet caps itself in
+ * `dvh`: it is the same "screen", so it has to move with the browser chrome the
+ * same way the sheet above it does.
+ */
+const TITLE_NOTES_MAX = "max-h-[50dvh]";
+
+/**
+ * The title's share of that budget.
+ *
+ * Half of the card's, which is what keeps a long title from starving the note
+ * beside it: neither field can claim more than half the block, so both always have
+ * a window. It is deliberately not a `flex-basis` that reserves this much — a share
+ * would open every task sheet with a quarter-screen of empty title. As a cap, a
+ * one-line title takes the line it needs and leaves the rest of the card to the note,
+ * which is the shape of nearly every real task.
+ *
+ * The two windows do not then measure out pixel-equal, and should not be read as
+ * claiming to: the title's slot is its text and nothing else, while the notes carry
+ * their own padding and, while focused, the format bar below them — roughly 60 px of
+ * chrome the title does not have. Measured at a 390×800 viewport with both fields at
+ * their caps, that lands at 200 px of title against 136 px of notes. Both are several
+ * lines of readable text, which is the point; the alternative is a `calc` subtracting
+ * the format bar's height, which would go stale the day the bar's buttons change size.
+ */
+const TITLE_FIELD_MAX = "max-h-[25dvh]";
+
+/**
+ * The card every task sheet opens with: the title, a divider, and the notes.
+ *
+ * Three surfaces render this pair — the task sheet, the calendar form and the
+ * floater sheet — and they render it identically. The caps above are therefore
+ * spelled once, here, rather than three times at the call sites, where the one
+ * that got missed would be the one nobody looked at. A notes field rendered
+ * outside this card is an uncapped one; `tests/guardrails/notes-growth-cap`
+ * holds the three to it.
+ *
+ * The two fields are `flex` siblings under the card's cap, which is what divides
+ * the budget without either of them knowing the other's height. The title row is
+ * `shrink-0`, so it never gives up the height its own cap allowed it; the notes
+ * take the rest and shrink to it, which is where the scrolling comes from.
+ * `SheetDivider` is pinned for the duller version of the same reason — as a
+ * shrinkable one-pixel item it would be squeezed by the overflow rather than
+ * sitting still between the two fields.
+ */
+export function SheetTitleNotesCard({
+  title,
+  titleAccessory,
+  children,
+}: {
+  title: ReactNode;
+  /** Rendered beside the title, outside its scroller, e.g. the guide help link. */
+  titleAccessory?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <SheetCard className={cn("flex flex-col", TITLE_NOTES_MAX)}>
+      <div className="flex shrink-0 items-start gap-2 px-[18px] pb-2 pt-3">
+        <div className={cn("min-w-0 flex-1 overflow-y-auto", TITLE_FIELD_MAX)}>
+          {title}
+        </div>
+        {titleAccessory}
+      </div>
+      <SheetDivider className="shrink-0" />
+      {children}
+    </SheetCard>
+  );
 }
 
 export function SheetRow({

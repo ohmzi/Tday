@@ -48,6 +48,11 @@ import androidx.compose.ui.unit.dp
  * The Card keeps its own modifier chain and its own sizing, so the wrapper is layout-
  * neutral: the Box takes the same slot the Card used to, and its height is still the
  * Card's.
+ *
+ * [onClick] hands the tile's own colour to the caller, which is the tile press's push site.
+ * The colour cannot be recovered from the route or looked up at the screen this tile opens —
+ * a custom list row's is server-side data — so the tile is where it has to be said, once, at
+ * the moment of the press; see `TILE_TRANSITION_COLOR` in `TileTransitionKey.kt`.
  */
 @Composable
 fun CategoryCard(
@@ -58,7 +63,7 @@ fun CategoryCard(
     title: String,
     count: Int? = null,
     tileTransitionKey: String? = null,
-    onClick: () -> Unit,
+    onClick: (Color) -> Unit,
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -77,7 +82,11 @@ fun CategoryCard(
                 .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
             onClick = {
                 TdayHaptics.buttonPress(view)
-                onClick()
+                // The tile's own colour goes with the press. It is the one thing about this
+                // rectangle that no route carries, and the surface that grows out of it has
+                // to be the tile and not a sheet of the app background — see
+                // `TILE_TRANSITION_COLOR`. The tile is the only place it exists.
+                onClick(color)
             },
             interactionSource = interactionSource,
             colors = CardDefaults.cardColors(containerColor = color),

@@ -158,31 +158,54 @@ export default function NotesField({
   }
 
   return (
-    <div className={cn("relative w-full", className)}>
-      <EditorContent
-        editor={editor}
-        className={cn("w-full px-[18px] py-3", hasFormatting && "pr-11")}
-      />
-      {hasFormatting && (
-        <button
-          type="button"
-          // See the matching comments on FormatButton above — same vaul
-          // drag-gesture false-positive, and the same need to not steal focus
-          // from the editor. Letting focus leave here is what made the whole
-          // sheet lurch: DrawerContent's onFocus (drawer.tsx) smooth-scrolls
-          // its scroll body to centre any refocused contenteditable.
-          data-vaul-no-drag
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={handleClearFormatting}
-          aria-label={appDict("clearFormatting")}
-          title={appDict("clearFormatting")}
-          className="absolute right-2.5 top-2.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted-foreground/10 hover:text-foreground active:scale-95"
-        >
-          <Eraser className="h-4 w-4" />
-        </button>
-      )}
+    // A flex column so the format bar below can be pinned while the editor
+    // above it scrolls — see the viewport's own comment. It is `flex-auto` with
+    // `min-h-0` so that it is the half of the card that gives: the card caps
+    // the title-and-notes block (SheetTitleNotesCard), and the field has to be
+    // able to shrink under that cap rather than overflow it.
+    <div className={cn("flex min-h-0 w-full flex-auto flex-col", className)}>
+      {/* The scroll viewport.
+          Its height is not decided here. The card hands this field whatever the
+          title left of the block's budget, and the note scrolls inside that
+          instead of growing the sheet — which is what a long note used to do,
+          pushing the rest of the form off-screen and leaving the user scrolling
+          the whole sheet to finish reading what they had just typed.
+
+          `flex-auto`, not `flex-1`: a `flex-basis` of zero measures the field as
+          empty, so the card would collapse to the title's height and hand the
+          notes nothing. With `auto` the field's natural height is what the card
+          has to fit, and the shrink below the cap is what makes it scroll.
+
+          The eraser goes inside rather than floating over, so that it stays
+          where it belongs — beside the first line, clear of the `pr-11` gutter
+          reserved for it — instead of hovering over whatever the user has
+          scrolled to. */}
+      <div className="relative min-h-0 flex-auto overflow-y-auto">
+        <EditorContent
+          editor={editor}
+          className={cn("w-full px-[18px] py-3", hasFormatting && "pr-11")}
+        />
+        {hasFormatting && (
+          <button
+            type="button"
+            // See the matching comments on FormatButton above — same vaul
+            // drag-gesture false-positive, and the same need to not steal focus
+            // from the editor. Letting focus leave here is what made the whole
+            // sheet lurch: DrawerContent's onFocus (drawer.tsx) smooth-scrolls
+            // its scroll body to centre any refocused contenteditable.
+            data-vaul-no-drag
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={handleClearFormatting}
+            aria-label={appDict("clearFormatting")}
+            title={appDict("clearFormatting")}
+            className="absolute right-2.5 top-2.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-muted-foreground/10 hover:text-foreground active:scale-95"
+          >
+            <Eraser className="h-4 w-4" />
+          </button>
+        )}
+      </div>
       {editor && isFocused && (
-        <div className="flex items-center gap-0.5 border-t border-border px-2 py-1">
+        <div className="flex shrink-0 items-center gap-0.5 border-t border-border px-2 py-1">
           <FormatButton
             active={editor.isActive("bold")}
             label={appDict("bold")}

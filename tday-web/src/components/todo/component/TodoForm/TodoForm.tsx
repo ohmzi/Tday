@@ -9,6 +9,7 @@ import { useClearInput } from "@/components/todo/hooks/useClearInput";
 import { useTranslation } from "react-i18next";
 import { useTodoMutation } from "@/providers/TodoMutationProvider";
 import { useCreateTodo } from "@/features/todayTodos/query/create-todo";
+import { useConvertTodoToFloater } from "@/features/todayTodos/query/convert-todo-to-floater";
 import { useCreateFloater } from "@/features/floater/query/create-floater";
 import { useFloaterListMetaData } from "@/features/floaterList/query/get-floater-list-meta";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
@@ -19,6 +20,7 @@ import {
   SheetRow,
   SheetSectionTitle,
   SheetSelectorRow,
+  SheetTitleNotesCard,
 } from "@/components/ui/sheet-chrome";
 import {
   CenteredSelectorOverlay,
@@ -84,6 +86,7 @@ const TodoForm = ({
   const { editTodoMutateFn } = useEditTodo();
   const { editTodoInstanceMutateFn } = useEditTodoInstance(setEditInstanceOnly);
   const { createMutateFn, createStatus } = useCreateTodo();
+  const { convertMutateFn } = useConvertTodoToFloater();
   const { createMutateFn: createFloaterMutateFn, createStatus: floaterStatus } =
     useCreateFloater();
   const { floaterListMetaData } = useFloaterListMetaData();
@@ -91,6 +94,13 @@ const TodoForm = ({
 
   const isEditing = Boolean(todo?.id && todo.id !== "-1");
   // Schedule on = normal todo with a due date; off = unscheduled floater (separate entity).
+  // Editing keeps the control: on an existing task the off position is a conversion
+  // (POST /api/todo/{id}/demote consumes the todo row and mints the floater), not a
+  // field write — there is no scheduled/kind field on PATCH /api/todo to carry it.
+  // Two edits cannot convert, so the control is not offered for them: a recurring task
+  // (the backend refuses — demoting would silently destroy the series) and a single
+  // instance of one (the sheet is editing an occurrence, not the task).
+  const canToggleSchedule = !isEditing || (!todo?.rrule && !editInstanceOnly);
   const [scheduled, setScheduled] = useState(true);
   const [floaterListID, setFloaterListID] = useState<string | null>(null);
   const [floaterListOpen, setFloaterListOpen] = useState(false);
@@ -124,10 +134,10 @@ const TodoForm = ({
   return (
     <div className="flex flex-col gap-3 pb-2">
       {/* Title + Notes */}
-      <SheetCard>
-        <div className="flex items-start gap-2 px-[18px] pb-2 pt-3">
+      <SheetTitleNotesCard
+        title={
           <NLPTitleInput
-            className="min-w-0 flex-1 text-lg font-black"
+            className="text-lg font-black"
             title={title}
             setTitle={setTitle}
             titleRef={titleRef}
@@ -136,15 +146,15 @@ const TodoForm = ({
             setRruleOptions={setRruleOptions}
             onSubmit={() => handleForm()}
           />
-          <GuideHelpLink topic="nlp-date-syntax" className="mt-0.5" />
-        </div>
-        <SheetDivider />
+        }
+        titleAccessory={<GuideHelpLink topic="nlp-date-syntax" className="mt-0.5" />}
+      >
         <NotesField
           value={desc}
           onChange={setDesc}
           placeholder={appDict("notes")}
         />
-      </SheetCard>
+      </SheetTitleNotesCard>
 
       <RepeatSuggestionChip
         title={title}
@@ -152,8 +162,8 @@ const TodoForm = ({
         setRruleOptions={setRruleOptions}
       />
 
-      {/* Schedule toggle (create only) — off turns the task into a floater. */}
-      {!isEditing && (
+      {/* Schedule toggle — off turns the task into a floater (create) or converts one (edit). */}
+      {canToggleSchedule && (
         <SheetCard>
           <button
             type="button"
@@ -355,6 +365,17 @@ const TodoForm = ({
             priority,
             due,
             rrule,
+          });
+        } else if (!scheduled) {
+          // Schedule off on an existing task → convert it into a floater. This
+          // is a different entity in a different table, so it cannot ride the
+          // PATCH above; the demote consumes the todo and the edits follow it.
+          convertMutateFn({
+            todo,
+            title,
+            description: desc.trim() ? desc : null,
+            priority,
+            listID: floaterListID ?? null,
           });
         } else {
           editTodoMutateFn({

@@ -19,6 +19,7 @@ import {
   SheetRow,
   SheetSectionTitle,
   SheetSelectorRow,
+  SheetTitleNotesCard,
 } from "@/components/ui/sheet-chrome";
 import ListDot from "@/components/ListDot";
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
@@ -71,8 +72,8 @@ export default function CalendarTaskFormBody({
   return (
     <div className="flex flex-col gap-3">
       {/* Title + Notes */}
-      <SheetCard>
-        <div className="px-[18px] pb-2 pt-3">
+      <SheetTitleNotesCard
+        title={
           <NLPTitleInput
             className="text-lg font-black"
             title={title}
@@ -83,14 +84,14 @@ export default function CalendarTaskFormBody({
             setRruleOptions={setRruleOptions}
             onSubmit={onSubmit}
           />
-        </div>
-        <SheetDivider />
+        }
+      >
         <NotesField
           value={description}
           onChange={setDescription}
           placeholder={appDict("notes")}
         />
-      </SheetCard>
+      </SheetTitleNotesCard>
 
       {/* Schedule */}
       <SheetSectionTitle>{appDict("schedule")}</SheetSectionTitle>

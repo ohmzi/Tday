@@ -54,9 +54,21 @@ const stagedIdsByClient = new WeakMap<QueryClient, Set<string>>();
  * the row back in. So the set is the row-list members of the `todo` and
  * `floater` event families `src/lib/realtime.tsx` invalidates — `["todo"]`,
  * `["todoTimeline"]`, `["overdueTodo"]`, `["calendarTodo"]`, `["list", …]`,
- * `["floater"]`, `["floaterList", …]` — minus the *completed* history caches
- * (`["completedTodo"]`, `["completedFloater"]`), where a completed row belongs,
- * and minus the metadata maps (`["listMetaData"]`, `["floaterListMetaData"]`).
+ * `["floater"]`, `["floaterList", …]`, `["completedTodo"]`,
+ * `["completedFloater"]` — minus the metadata maps (`["listMetaData"]`,
+ * `["floaterListMetaData"]`).
+ *
+ * The two *completed* caches were excluded here until un-complete needed the
+ * same claim from the other direction, and the reason they were is worth keeping
+ * on the record because it is still true: a completed row belongs in them, so
+ * holding one out is wrong for a completion. It is exactly right for a restore.
+ * A restore removes a row from the completed cache and inserts it into the active
+ * ones, and both halves need defending — which is what one claim per todo id
+ * gives, since it withholds the row from every root at once rather than naming a
+ * direction. See `normalizeStagedId` for why the match normalises the id: nearly
+ * every row-list cache here, this one included, keys its rows by
+ * `` `${todo.id}:${instanceDateMillis}` ``, and that suffix differs per cache for
+ * the same task.
  *
  * `["overdueTodo"]` is in the realtime todo-family set but has no reader today
  * (the overdue screen reads `["todoTimeline"]`) and no prune site writes it, so
@@ -74,6 +86,8 @@ export const ROW_LIST_KEY_ROOTS = [
   "list",
   "floater",
   "floaterList",
+  "completedTodo",
+  "completedFloater",
 ] as const;
 
 const ROW_LIST_KEY_ROOT_SET: ReadonlySet<string> = new Set(ROW_LIST_KEY_ROOTS);
@@ -85,10 +99,43 @@ function rowIdOf(row: unknown): string | null {
   return typeof id === "string" ? id : null;
 }
 
+/**
+ * A row id reduced to the todo it names, so two caches that spell the same task
+ * differently still agree about which task it is.
+ *
+ * Nearly every row-list cache keys its rows by
+ * `` `${todo.id}:${instanceDate?.getTime()}` `` — `get-todo`, `get-todo-timeline`,
+ * `get-list-todos`, `get-calendar-todo` and `get-completedTodo` all build it the
+ * same way. For a task with no instance date that suffix is the literal string
+ * `"undefined"` (what `String(undefined)` produces), and the completed list's
+ * suffix is a real timestamp for the same task — so the same todo is spelled
+ * differently depending on which cache is holding it. Both reduce to the bare
+ * todo id, which is also what a mutation body carries, so one claim covers all of
+ * them. An id with no suffix is already normal and passes through untouched.
+ *
+ * This is a comparison key, never a display or wire value. Applied at BOTH ends —
+ * `stageTodoRows`/`releaseTodoRows` normalise what they are handed, and
+ * `isStagedRow` normalises what it finds in a cache — because normalising only
+ * one end would leave a claim on `"todo-1"` unable to match a row cached as
+ * `"todo-1:undefined"`, and the guard would silently stop covering the active
+ * caches it was built for.
+ */
+function normalizeStagedId(id: string): string {
+  const separator = id.indexOf(":");
+  return separator === -1 ? id : id.slice(0, separator);
+}
+
+/** [normalizeStagedId] over a whole set, for the claim and release paths. */
+function normalizeStagedIds(ids: Iterable<string>): Set<string> {
+  const normalized = new Set<string>();
+  for (const id of ids) normalized.add(normalizeStagedId(id));
+  return normalized;
+}
+
 /** Whether this value is one of the rows the guard is holding out of the caches. */
 function isStagedRow(row: unknown, staged: ReadonlySet<string>): boolean {
   const id = rowIdOf(row);
-  return id !== null && staged.has(id);
+  return id !== null && staged.has(normalizeStagedId(id));
 }
 
 /**
@@ -165,7 +212,7 @@ export function stageTodoRows(queryClient: QueryClient, ids: Iterable<string>): 
     stagedIdsByClient.set(queryClient, staged);
     installGuard(queryClient, staged);
   }
-  for (const id of ids) staged.add(id);
+  for (const id of normalizeStagedIds(ids)) staged.add(id);
 }
 
 /**
@@ -178,11 +225,94 @@ export function stageTodoRows(queryClient: QueryClient, ids: Iterable<string>): 
  * settles would let a sibling's refetch flash the row back in the gap between
  * the tap and the PATCH landing, and never releasing would strand a row whose
  * request failed.
+ *
+ * Commit wants `settleTodoRows` rather than a bare call to this, because
+ * releasing is only half of what the commit end of the window owes; see below.
  */
 export function releaseTodoRows(queryClient: QueryClient, ids: Iterable<string>): void {
   const staged = stagedIdsByClient.get(queryClient);
   if (!staged) return;
-  for (const id of ids) staged.delete(id);
+  for (const id of normalizeStagedIds(ids)) staged.delete(id);
+}
+
+/**
+ * Takes the staged rows out of every row-list cache the guard claims, in one
+ * pass, using the same shape test the guard does.
+ *
+ * This is the prune half of the window, and it lives here rather than in each
+ * caller for the reason the two can drift apart — and did. A caller that prunes
+ * a *list of its own* covers only the roots that list names, while the claim
+ * covers `ROW_LIST_KEY_ROOTS`; a root the claim defends but the prune never
+ * writes keeps the row until something else happens to write it. The row then
+ * leaves at a moment the user did not ask for, and later than the toast they are
+ * watching promised. Deriving both ends from one set is what makes "the claim
+ * covers it" and "the tap removed it" the same sentence.
+ *
+ * The root is matched on `queryKey[0]` exactly, the way the guard matches it —
+ * `["list"]` and `["listMetaData"]` are different roots, and a prefix match on
+ * the first would sweep the counts map in with the row lists.
+ */
+export function pruneTodoRowCaches(
+  queryClient: QueryClient,
+  ids: ReadonlySet<string>,
+): void {
+  if (ids.size === 0) return;
+  // Normalised to match `isStagedRow`, which is what actually decides whether a row
+  // in a cache is one of these — a caller handing in `"todo-1:undefined"` and a
+  // completed cache holding `"todo-1:1730000000000"` are the same task.
+  const staged = normalizeStagedIds(ids);
+  for (const root of ROW_LIST_KEY_ROOTS) {
+    queryClient.setQueriesData(
+      { queryKey: [root], predicate: (query) => query.queryKey[0] === root },
+      (data: unknown) => withoutStagedRows(data, staged),
+    );
+  }
+}
+
+/**
+ * Drops every in-flight row-list read, so nothing that was asked while the
+ * server still listed a staged row can answer after the claim comes off.
+ *
+ * The commit end of the window has one hazard the undo end does not, and it is
+ * the one the batch makes visible: a read started *inside* the window was
+ * answered with the pre-commit truth — the server had not been told yet — and if
+ * it is still in flight when the ids are released, it is no longer filtered and
+ * writes every staged row straight back into the caches. The refresh that
+ * follows then removes them for good, which is the user's report exactly: they
+ * come back for a second and then leave again.
+ *
+ * Cancelling is what makes the release safe, and it has to happen *before* it:
+ * a cancelled fetch cannot write, whereas a released row can be written by any
+ * fetch at all. React Query's own `cancelRefetch` covers this for a query that
+ * already holds data, but not for a cold one — with no `revertState` to fall
+ * back on, a second fetch joins the one already in flight instead of
+ * superseding it. So the guard does not rely on that default.
+ */
+export async function cancelTodoRowFetches(queryClient: QueryClient): Promise<void> {
+  await Promise.all(
+    ROW_LIST_KEY_ROOTS.map((root) =>
+      queryClient.cancelQueries({
+        queryKey: [root],
+        predicate: (query) => query.queryKey[0] === root,
+      }),
+    ),
+  );
+}
+
+/**
+ * The commit end of the window, in the order it has to run.
+ *
+ * Quiet first, release second. This is the counterpart to
+ * `releaseAndRestoreTodoRows` and exists for the same reason that one does: the
+ * two halves of the window are one operation, and a caller that spells them out
+ * itself is a caller that can spell them in the wrong order.
+ */
+export async function settleTodoRows(
+  queryClient: QueryClient,
+  ids: Iterable<string>,
+): Promise<void> {
+  await cancelTodoRowFetches(queryClient);
+  releaseTodoRows(queryClient, ids);
 }
 
 /**

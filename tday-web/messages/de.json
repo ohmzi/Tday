@@ -513,7 +513,7 @@
     "title": "Verlauf der Erledigungen",
     "empty": "Noch nichts erledigt",
     "emptyBody": "Hake etwas ab, dann landet es hier.",
-    "tabTasks": "Aufgaben",
+    "tabTasks": "Geplant",
     "floaterEmpty": "Noch keine erledigten Floater",
     "floaterEmptyBody": "Hake etwas in Floater ab und es landet hier.",
     "listDeletedSuffix": "Liste gelöscht",
@@ -1371,20 +1371,20 @@
     "brainDump": "Gedanken-Dump"
   },
   "release": {
-    "subtitle": "Prüfe den bereitgestellten Build und die neueste veröffentlichte Version.",
     "loading": "Versionsinformationen werden geladen…",
     "error": "Versionsinformationen konnten nicht abgerufen werden. Prüfe deine Verbindung und versuche es erneut.",
     "retry": "Erneut versuchen",
     "statusLatest": "Aktuell",
     "statusUpdateAvailable": "Update verfügbar",
     "messageLatest": "Du verwendest die neueste Version",
-    "messageUpdateAvailable": "Version {{version}} ist verfügbar.",
+    "messageUpdateReady": "Version {{version}} ist installationsbereit.",
     "installed": "Installiert",
     "installedVersion": "Installierte Version",
     "latest": "Neueste",
     "whatsNew": "Neu in {{version}}",
     "noNotes": "Für diese Version sind keine Versionshinweise verfügbar",
     "viewOnGithub": "Auf GitHub ansehen",
-    "published": "Veröffentlicht am {{date}}"
+    "published": "Veröffentlicht am {{date}}",
+    "serverUnavailable": "Nicht verfügbar"
   }
 }

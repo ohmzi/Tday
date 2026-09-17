@@ -296,7 +296,18 @@ class ScheduledTaskHomeViewModel @Inject constructor(
     fun createTask(payload: CreateTaskPayload) {
         if (payload.title.isBlank()) return
         viewModelScope.launch {
-            runCatching { todoRepository.createTodo(payload) }
+            // Schedule OFF in the sheet asks for an unscheduled task, and an unscheduled
+            // task is a Floater — a todo's due is not nullable. Creating a todo here let
+            // the repository supply a due an hour out, so the toggle appeared to do nothing.
+            // The list picker offers scheduled lists and the two list types are separate,
+            // so membership stays behind (the server would refuse the id as a floater list).
+            runCatching {
+                if (payload.due == null) {
+                    todoRepository.createFloater(payload.copy(listId = null))
+                } else {
+                    todoRepository.createTodo(payload)
+                }
+            }
                 .onSuccess {
                     rescheduleReminders()
                     runCatching { todoRepository.fetchDashboardSummaryCached() }

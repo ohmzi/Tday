@@ -405,6 +405,8 @@
     <string name="completed_title">Abgeschlossen</string>
     <string name="completed_empty">Noch keine abgeschlossenen Aufgaben</string>
     <string name="completed_empty_body">Hake etwas ab, dann landet es hier.</string>
+    <string name="completed_floater_empty">Noch keine erledigten Floater</string>
+    <string name="completed_floater_empty_body">Hake etwas in Floater ab und es landet hier.</string>
     <string name="completed_section_earlier">Früher</string>
     <string name="completed_section_today">Heute</string>
     <string name="completed_section_tomorrow">Morgen</string>

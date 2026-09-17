@@ -29,17 +29,39 @@ import org.junit.Test
  */
 class TileTransitionKeyTest {
 
-    /** Every surface that has a tile on screen, as (route, listId, key). */
-    private val tileSurfaces: List<Triple<AppRoute, String?, String>> = listOf(
-        Triple(AppRoute.TodayTodos, null, "home-tile.today"),
-        Triple(AppRoute.OverdueTodos, null, "home-tile.overdue"),
-        Triple(AppRoute.ScheduledTodos, null, "home-tile.scheduled"),
-        Triple(AppRoute.PriorityTodos, null, "home-tile.priority"),
-        Triple(AppRoute.AllTodos, null, "home-tile.all"),
-        Triple(AppRoute.Completed, null, "home-tile.completed"),
-        Triple(AppRoute.Calendar, null, "home-tile.calendar"),
-        Triple(AppRoute.ListTodos, "list-1", "home-tile.list.list-1"),
-        Triple(AppRoute.FloaterListTodos, "list-1", "floater-tile.list.list-1"),
+    /**
+     * One tile on screen: the route it opens, the arguments both ends read, and the key.
+     *
+     * A data class rather than a `Triple` because the completion history needs a FOURTH
+     * term — its two tiles differ by scope and by nothing else — and because a named
+     * `scope` at each row says which of the two Completed tiles that row is.
+     */
+    private data class TileSurface(
+        val route: AppRoute,
+        val listId: String? = null,
+        val scope: CompletedScope? = null,
+        val key: String,
+    )
+
+    /**
+     * Every surface that has a tile on screen.
+     *
+     * The completion history is on this list TWICE, once per tile, and that is the point:
+     * this list used to be one row per route, which is how two rectangles pushing one route
+     * could publish one key with the test named "no two tiles publish one key" unable to see
+     * it. The scheduled board's tile keeps the id the pair shared while it was one key.
+     */
+    private val tileSurfaces: List<TileSurface> = listOf(
+        TileSurface(AppRoute.TodayTodos, key = "home-tile.today"),
+        TileSurface(AppRoute.OverdueTodos, key = "home-tile.overdue"),
+        TileSurface(AppRoute.ScheduledTodos, key = "home-tile.scheduled"),
+        TileSurface(AppRoute.PriorityTodos, key = "home-tile.priority"),
+        TileSurface(AppRoute.AllTodos, key = "home-tile.all"),
+        TileSurface(AppRoute.Completed, scope = CompletedScope.Tasks, key = "home-tile.completed"),
+        TileSurface(AppRoute.Completed, scope = CompletedScope.Floater, key = "floater-tile.completed"),
+        TileSurface(AppRoute.Calendar, key = "home-tile.calendar"),
+        TileSurface(AppRoute.ListTodos, listId = "list-1", key = "home-tile.list.list-1"),
+        TileSurface(AppRoute.FloaterListTodos, listId = "list-1", key = "floater-tile.list.list-1"),
     )
 
     /** Every route with no rectangle on screen to grow out of. */
@@ -60,11 +82,11 @@ class TileTransitionKeyTest {
 
     @Test
     fun `every tile surface names the key its route publishes`() {
-        tileSurfaces.forEach { (route, listId, key) ->
+        tileSurfaces.forEach { (route, listId, scope, key) ->
             assertEquals(
                 "${route.route} no longer publishes ${key}",
                 key,
-                route.tileTransitionKey(listId = listId),
+                route.tileTransitionKey(listId = listId, scope = scope),
             )
         }
     }
@@ -75,19 +97,42 @@ class TileTransitionKeyTest {
         // app has to be sorted into one of them here as well as in the table. This is the
         // Android counterpart of iOS's exhaustive `switch`: the table itself fails to compile
         // on a new case, and this fails if the new case was filed as tile-less by accident.
-        val covered = tileSurfaces.map { it.first } + tilelessRoutes
-        assertEquals(
-            "a route is missing from both lists, or present in both",
-            ALL_ROUTES.size,
-            covered.size,
-        )
+        //
+        // Set equality and not a size, now that two entries name one route: a count would
+        // have been satisfied by a route filed twice and another filed nowhere.
+        val covered = tileSurfaces.map { it.route } + tilelessRoutes
         assertEquals(ALL_ROUTES.toSet(), covered.toSet())
     }
 
     @Test
     fun `no two tiles publish one key`() {
-        val keys = tileSurfaces.map { it.third }
+        val keys = tileSurfaces.map { it.key }
         assertEquals("two tiles publish the same key", keys.size, keys.toSet().size)
+    }
+
+    @Test
+    fun `the two Completed tiles name different keys, because both feeds can be composed at once`() {
+        // The defect the route's scope argument and this table's own say in it exist to
+        // prevent. The scheduled board's Completed tile and the Anytime feed's are two
+        // rectangles on one route, and the root feed crossfades the two boards over
+        // `Durations.Enter` with BOTH of them mounted — so one id shared by the pair is two
+        // views publishing one key in one namespace, which the arrival can match to the tile
+        // the user did not press. iOS has split the same pair since it grew a
+        // `HomeTileOrigin`; this is the Android half of that agreement.
+        assertNotEquals(
+            AppRoute.Completed.tileTransitionKey(scope = CompletedScope.Tasks),
+            AppRoute.Completed.tileTransitionKey(scope = CompletedScope.Floater),
+        )
+        // And the unscoped arrival — the deep link, a shortcut — answers with the
+        // scheduled board's id, which is the key the pair shared before the split.
+        assertEquals(
+            "home-tile.completed",
+            AppRoute.Completed.tileTransitionKey(),
+        )
+        assertEquals(
+            AppRoute.Completed.tileTransitionKey(scope = CompletedScope.Tasks),
+            AppRoute.Completed.tileTransitionKey(),
+        )
     }
 
     @Test
@@ -129,16 +174,17 @@ class TileTransitionKeyTest {
         // matches. Every surface has to answer null when the push was not a press — asserted over
         // the same list the keys above are, so a route filed there is covered here by being
         // there, and a new route cannot be added to one without the other.
-        tileSurfaces.forEach { (route, listId, key) ->
+        tileSurfaces.forEach { (route, listId, scope, key) ->
             assertNull(
                 "${route.route} grows out of a tile on a push that was not a press",
-                route.tileTransitionKey(listId = listId, fromHomeTile = false),
+                route.tileTransitionKey(listId = listId, scope = scope, fromHomeTile = false),
             )
             assertNull(
                 "${route.route} grows out of a tile on a push that was not a press",
                 route.tileTransitionKey(
                     listId = listId,
                     highlighted = true,
+                    scope = scope,
                     fromHomeTile = false,
                 ),
             )
@@ -146,7 +192,7 @@ class TileTransitionKeyTest {
             assertEquals(
                 "${route.route} lost ${key} on a real tile press",
                 key,
-                route.tileTransitionKey(listId = listId, fromHomeTile = true),
+                route.tileTransitionKey(listId = listId, scope = scope, fromHomeTile = true),
             )
         }
     }
@@ -157,6 +203,16 @@ class TileTransitionKeyTest {
         // the same reason: both ends default to "no origin", so a rename would not break either
         // end, it would just stop every tile from zooming.
         assertEquals("tday.tileTransitionOrigin", TILE_TRANSITION_ORIGIN)
+    }
+
+    @Test
+    fun `the colour hand-off the push site and the destination agree on is pinned`() {
+        // The second value on the same hand-off, pinned for the same reason and with one
+        // more of its own: its absence is not an error at either end. A push site that
+        // wrote it under a different name and a destination that read a different one would
+        // both compile, and the only symptom would be a surface painted in the app's
+        // background again — the "white box" the device row asks about.
+        assertEquals("tday.tileTransitionColor", TILE_TRANSITION_COLOR)
     }
 
     @Test
@@ -181,7 +237,7 @@ class TileTransitionKeyTest {
         assertEquals("todos/scheduled", AppRoute.ScheduledTodos.route)
         assertEquals("todos/priority", AppRoute.PriorityTodos.route)
         assertEquals("todos/all?highlightTodoId={highlightTodoId}", AppRoute.AllTodos.route)
-        assertEquals("completed", AppRoute.Completed.route)
+        assertEquals("completed?scope={scope}", AppRoute.Completed.route)
         assertEquals("calendar", AppRoute.Calendar.route)
         assertEquals("todos/list/{listId}/{listName}", AppRoute.ListTodos.route)
         assertEquals("floater/list/{listId}/{listName}", AppRoute.FloaterListTodos.route)
@@ -191,6 +247,21 @@ class TileTransitionKeyTest {
         // registers for. This file is about which rectangle a screen came out of, and the
         // empty-highlight `All` case — the one that IS the tile — has no Uri in it at all.
         assertEquals("todos/all", AppRoute.AllTodos.create())
+        // The completed route's two forms, which are also the two spellings the two tiles
+        // navigate with. Both are plain string concatenation — no `Uri` — so unlike the All
+        // screen's they can be read back here.
+        assertEquals("completed", AppRoute.Completed.create())
+        assertEquals("completed", AppRoute.Completed.create(CompletedScope.Tasks))
+        assertEquals("completed?scope=floater", AppRoute.Completed.create(CompletedScope.Floater))
+        // ...and the argument the destination reads back is the one the tile wrote.
+        assertEquals(
+            CompletedScope.Floater,
+            CompletedScope.fromWire("floater"),
+        )
+        assertEquals(CompletedScope.Tasks, CompletedScope.fromWire(null))
+        assertEquals(CompletedScope.Tasks, CompletedScope.fromWire(""))
+        assertEquals(CompletedScope.Tasks, CompletedScope.fromWire("tasks"))
+        assertEquals(CompletedScope.Tasks, CompletedScope.fromWire("something-else"))
     }
 
     private companion object {

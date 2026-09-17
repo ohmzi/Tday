@@ -46,6 +46,18 @@ const ANDROID_FEATURE = path.join(
 );
 const IOS_FEATURE = path.join(MONO, "ios-swiftUI", "Tday", "Feature");
 
+/** Where a burst of server events becomes a refresh, on each client. */
+const WEB_REALTIME = path.join(ROOT, "src", "lib", "realtime.tsx");
+const ANDROID_APP_VM = path.join(
+  MONO, "android-compose", "app", "src", "main", "java", "com", "ohmz", "tday",
+  "compose", "feature", "app", "AppViewModel.kt",
+);
+const IOS_APP_VM = path.join(IOS_FEATURE, "App", "AppViewModel.swift");
+
+/** The delayed-commit site whose window the batch rides, and the claim it rides it on. */
+const WEB_BULK_ACTIONS = path.join(ROOT, "src", "hooks", "use-bulk-todo-actions.ts");
+const WEB_STAGED_ROWS = path.join(ROOT, "src", "lib", "todo", "staged-todo-rows.ts");
+
 /**
  * Every row that stages a check-off, by the file that draws it.
  *
@@ -277,4 +289,174 @@ describe("the check-off plays the same beats on every client", () => {
       for (const block of blocks) expect(block.fadeWait).toBe(iosChangeMs());
     },
   );
+});
+
+// ─── once, not once per row ───────────────────────────────────────────
+
+/**
+ * The other way the same sequence plays twice: not one row playing it twice, but
+ * a row leaving, coming back and leaving again — which the user reads as the
+ * sequence playing a second time, and which is what a *batch* provokes.
+ *
+ * The beats above cannot see it. They pin how long each leg runs, and this is a
+ * count. Nothing in the tree counted before this section, which is why a batch
+ * that re-inserted every staged row a second before the commit could ship with
+ * every guardrail green.
+ *
+ * Two counts are pinned, and they are the two halves of "the row leaves once":
+ *
+ * 1. **A burst is one refresh, on every client.** Every completion emits a realtime
+ *    event back to the actor who caused it, so N completions are N events. A client
+ *    that refreshes per event gives N rows N independent chances to be re-inserted
+ *    mid-window — the amplifier the fix commit names and leaves standing, and the
+ *    reason "too many together" is what surfaces it. iOS already answers a burst
+ *    with one trailing refresh (`scheduleRealtimeSync`); web and Android did not,
+ *    so the three are now read as one contract.
+ * 2. **The claim is taken before the row is written away, and released only once
+ *    the read path is quiet.** A prune that runs before the claim leaves a gap a
+ *    fetch already in flight can write back through; a release that runs before
+ *    the fetch it authorises lets a request that started inside the window — when
+ *    the server still listed the row as pending — answer for it after the commit.
+ *    Both are read as text, because both are ordering.
+ *
+ * These are the assertions that would have caught the reported bug; the beats
+ * section above is untouched by them.
+ */
+
+/** Milliseconds a client collects a burst of server events before it refreshes. */
+function parseWebCoalesceMs(): number {
+  const match = read(WEB_REALTIME).match(
+    /export const REALTIME_COALESCE_MS = (\d+);/,
+  );
+  if (!match) throw new Error("src/lib/realtime.tsx no longer names a coalescing window");
+  return Number(match[1]);
+}
+
+function parseAndroidRealtimeDebounceMs(): number {
+  const match = read(ANDROID_APP_VM).match(
+    /(?:private )?const val REALTIME_SYNC_DEBOUNCE_MS = (\d+)L/,
+  );
+  if (!match) {
+    throw new Error("AppViewModel.kt no longer names a realtime sync debounce window");
+  }
+  return Number(match[1]);
+}
+
+function parseIosRealtimeDebounceMs(): number {
+  const match = read(IOS_APP_VM).match(
+    /realtimeSyncDebounceDelay: Duration = \.milliseconds\((\d+)\)/,
+  );
+  if (!match) {
+    throw new Error("AppViewModel.swift no longer names a realtime sync debounce window");
+  }
+  return Number(match[1]);
+}
+
+/**
+ * The body of the first `{ … }` opened after `opener`, brace-matched so a nested
+ * block does not close it early — the same walk `parseIosBeats` uses.
+ */
+function blockAfter(source: string, opener: RegExp): string | null {
+  const match = opener.exec(source);
+  if (!match) return null;
+  const start = source.indexOf("{", match.index + match[0].length - 1);
+  if (start === -1) return null;
+  let depth = 0;
+  for (let index = start; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    else if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(start, index);
+    }
+  }
+  return null;
+}
+
+describe("a batch of completions refreshes once, not once per row", () => {
+  const windows = [
+    ["web", parseWebCoalesceMs()],
+    ["Android", parseAndroidRealtimeDebounceMs()],
+    ["iOS", parseIosRealtimeDebounceMs()],
+  ] as const;
+
+  it("names a window on every client, and the three agree on the order of magnitude", () => {
+    for (const [, millis] of windows) {
+      expect(millis).toBeGreaterThan(0);
+      expect(millis).toBeLessThanOrEqual(1000);
+    }
+    const values = windows.map(([, millis]) => millis);
+    expect(Math.max(...values) / Math.min(...values)).toBeLessThanOrEqual(4);
+  });
+
+  it("web collects a burst before it invalidates, instead of invalidating in the handler", () => {
+    const handler = blockAfter(read(WEB_REALTIME), /socket\.onmessage = \(message\) => \{/);
+    expect(handler).not.toBeNull();
+    // The socket callback must hand its keys to the coalescer; if it invalidates
+    // itself, every event in a batch is a refresh round.
+    expect(handler).toContain("scheduleCoalescedInvalidation(");
+    expect(handler).not.toContain("invalidateQueries(");
+  });
+
+  it("Android debounces the sync its realtime events start", () => {
+    const source = read(ANDROID_APP_VM);
+    expect(source).toContain("scheduleRealtimeSync()");
+    const handler = blockAfter(source, /realtimeClient\.events\.collect \{ event ->/);
+    expect(handler).not.toBeNull();
+    // The listener must schedule, not sync: `syncAndUpdateOfflineState` awaited
+    // per event is one full sync per completion.
+    expect(handler).toContain("scheduleRealtimeSync()");
+  });
+});
+
+describe("a staged row leaves once: claimed before the write, released after the quiet", () => {
+  it("the batch hooks its rows before it prunes them", () => {
+    const source = read(WEB_BULK_ACTIONS);
+    const complete = blockAfter(source, /const completeSelected = useCallback\(/);
+    expect(complete).not.toBeNull();
+    const claim = complete!.indexOf("stageTodoRows(");
+    const prune = complete!.indexOf("pruneStagedRows(");
+    expect(claim).toBeGreaterThanOrEqual(0);
+    expect(prune).toBeGreaterThanOrEqual(0);
+    // A prune that runs before the claim is a write the guard is not yet watching.
+    expect(claim).toBeLessThan(prune);
+  });
+
+  it("the batch prunes through the module that owns the roots, not a list of its own", () => {
+    const prune = blockAfter(read(WEB_BULK_ACTIONS), /const pruneStagedRows = useCallback\(/);
+    expect(prune).not.toBeNull();
+    // The guard claims `ROW_LIST_KEY_ROOTS` — seven roots. A caller that prunes
+    // three of them leaves the rest holding the row until something writes them,
+    // which is a departure the toast cannot put back. The roots live in one
+    // module; a hand-written `["todo"]` / `["todoTimeline"]` / `["list"]` triple
+    // here is the drift this asserts against.
+    expect(prune).toContain("pruneTodoRowCaches(");
+    expect(prune).not.toMatch(/setQueryData<TodoItemType\[\]>\(\["todo/);
+    expect(prune).not.toMatch(/setQueriesData<TodoItemType\[\]>\(\{ queryKey: \["list"\] \}/);
+  });
+
+  it("the release is settled after the reads it authorises are cancelled", () => {
+    const source = read(WEB_BULK_ACTIONS);
+    const commit = blockAfter(source, /commit: \(\) => \{/);
+    expect(commit).not.toBeNull();
+    const settle = commit!.indexOf("settleTodoRows(");
+    const refresh = commit!.indexOf("refreshTodoViews");
+    expect(settle).toBeGreaterThanOrEqual(0);
+    expect(refresh).toBeGreaterThanOrEqual(0);
+    // `releaseTodoRows` then `refreshTodoViews` is the reported bug: a read the
+    // window started is still in flight, no longer filtered, and writes every row
+    // back at once — and the refresh that follows takes them away again.
+    expect(commit).not.toContain("releaseTodoRows(");
+    expect(settle).toBeLessThan(refresh);
+  });
+
+  it("the claim owns the roots, and settles by cancelling them", () => {
+    const source = read(WEB_STAGED_ROWS);
+    expect(source).toMatch(/export async function settleTodoRows\(/);
+    expect(source).toContain("cancelQueries(");
+    // The prune has to be the same shape as the claim, including the
+    // `{ list, floaters }` container, or a root the claim covers cannot be
+    // cleared at the tap.
+    expect(source).toMatch(/export function pruneTodoRowCaches\(/);
+    expect(source).toContain("withoutStagedRows(");
+  });
 });

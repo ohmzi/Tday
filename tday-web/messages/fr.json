@@ -513,7 +513,7 @@
     "title": "Historique des achèvements",
     "empty": "Rien de terminé pour l'instant",
     "emptyBody": "Cochez une tâche et elle atterrira ici.",
-    "tabTasks": "Tâches",
+    "tabTasks": "Planifié",
     "floaterEmpty": "Aucun élément flottant terminé",
     "floaterEmptyBody": "Cochez un élément dans Flottant et il apparaîtra ici.",
     "listDeletedSuffix": "liste supprimée",
@@ -1371,20 +1371,20 @@
     "brainDump": "Vide-cerveau"
   },
   "release": {
-    "subtitle": "Consultez la version déployée et la dernière version publiée.",
     "loading": "Chargement des informations de version…",
     "error": "Impossible de récupérer les informations de version. Vérifiez votre connexion et réessayez.",
     "retry": "Réessayer",
     "statusLatest": "Dernière",
     "statusUpdateAvailable": "Mise à jour disponible",
     "messageLatest": "Vous utilisez la dernière version",
-    "messageUpdateAvailable": "La version {{version}} est disponible.",
+    "messageUpdateReady": "La version {{version}} est prête à être installée.",
     "installed": "Installée",
     "installedVersion": "Version installée",
     "latest": "Dernière",
     "whatsNew": "Nouveautés de {{version}}",
     "noNotes": "Aucune note de version disponible pour cette version",
     "viewOnGithub": "Voir sur GitHub",
-    "published": "Publiée le {{date}}"
+    "published": "Publiée le {{date}}",
+    "serverUnavailable": "Indisponible"
   }
 }

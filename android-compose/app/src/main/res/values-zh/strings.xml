@@ -404,6 +404,8 @@
     <string name="completed_title">已完成</string>
     <string name="completed_empty">还没有已完成的任务</string>
     <string name="completed_empty_body">完成一个任务，它就会出现在这里。</string>
+    <string name="completed_floater_empty">还没有已完成的随手事项</string>
+    <string name="completed_floater_empty_body">在随手事项中勾选一项，它就会显示在这里。</string>
     <string name="completed_section_earlier">更早</string>
     <string name="completed_section_today">今天</string>
     <string name="completed_section_tomorrow">明天</string>

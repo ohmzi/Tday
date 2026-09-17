@@ -1,6 +1,7 @@
 import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 import clsx from "clsx";
 import { getListIconForList } from "@/lib/listIcons";
+import { resolveRowList } from "@/lib/listMark";
 
 // Map every list color to its accent token. Normalized to uppercase so the icon
 // is tinted regardless of how the API casts the color value.
@@ -22,19 +23,36 @@ const LIST_COLOR_CLASS: Record<string, string> = {
   SLATE: "text-accent-slate",
 };
 
+/**
+ * The list's own glyph, tinted by the list's colour.
+ *
+ * `id` is enough for every row whose list is still there to be looked up. `name` and `color`
+ * are the fallbacks a COMPLETED row needs, and they are not decoration: that row is a
+ * denormalised snapshot, the backend nulls its `listID` when its list is deleted, and the
+ * snapshot still holds the name and the colour. Passing the name as well is what lets a
+ * deleted-list row draw the list it was in — resolved again by name if Undo recreated it —
+ * instead of falling through to the default glyph.
+ */
 export default function ListDot({
   id,
+  name,
+  color,
   className,
 }: {
-  id: string;
+  id?: string | null;
+  name?: string | null;
+  color?: string | null;
   className?: string;
 }) {
   const { listMetaData } = useListMetaData();
+  // The id survives a rename and wins; the name is what is left once the id is gone.
+  const meta = resolveRowList(listMetaData, id, name);
   // The whole meta, not just its key: a list whose owner never picked an icon
-  // takes one from its name, and the name is half of that question.
-  const Icon = getListIconForList(listMetaData[id]);
+  // takes one from its name, and the name is half of that question. With no live
+  // list at all, the row's own snapshot name is what answers it.
+  const Icon = getListIconForList(meta ?? { name });
 
-  const colorKey = String(listMetaData[id]?.color ?? "")
+  const colorKey = String(meta?.color ?? color ?? "")
     .trim()
     .toUpperCase();
   const colorClass = LIST_COLOR_CLASS[colorKey] ?? "text-muted-foreground";

@@ -1,16 +1,19 @@
 package com.ohmz.tday.compose.ui.component
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -39,12 +42,44 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
+import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
+import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 
 private val TdaySegmentedSliderAccent = TdayTodayBlue
+
+/**
+ * The rungs a caller may put this control's thumb on, by name.
+ *
+ * The control's own default is a spring, and it stays that: `SettingsScreen`'s two
+ * switchers and `CalendarScreen`'s view-mode strip have slid on it since they were built,
+ * and re-timing them is a visible change to three screens that this change was not asked
+ * to make.
+ *
+ * [Enter] is here because web's Completed tab strip runs on it as a deliberate, argued
+ * choice (`CompletedContainer.tsx`: "Enter, not Emphasis, and that is a choice rather than
+ * an oversight… it is the same segmented control `SettingsPage` draws twice"), and web
+ * spells that rung `duration-enter ease-out` — 200 ms on `cubic-bezier(0, 0, 0.2, 1)`,
+ * which is [TdayMotionTokens.Durations.Enter] on [TdayMotionTokens.Easings.Enter]. Both
+ * terms come from the token layer; nothing here is a new literal.
+ *
+ * What this leaves is a divergence worth naming rather than hiding: after the completion
+ * history takes this rung, the app has the same two controls web has — the strip on Enter,
+ * the calendar's on the spring — instead of the one control on one clock it had while all
+ * three screens drew the default. Bringing `SettingsScreen`'s two switchers onto Enter, so
+ * that the strip and the switchers match web's own pairing, is the next move and belongs
+ * to whoever makes that argument.
+ */
+object TdaySegmentedSliderMotion {
+    val Enter: AnimationSpec<Dp> = tween(
+        durationMillis = TdayMotionTokens.Durations.Enter,
+        easing = TdayMotionTokens.Easings.Enter,
+    )
+}
 
 @Composable
 fun <T> TdaySegmentedSlider(
@@ -54,6 +89,23 @@ fun <T> TdaySegmentedSlider(
     modifier: Modifier = Modifier,
     accentColor: Color = TdaySegmentedSliderAccent,
     label: (T) -> String,
+    /**
+     * The count drawn beside an option's label, or null for an option that carries none.
+     *
+     * Optional rather than a slot every caller fills: the completion history's two tabs
+     * are the app's only segmented control that counts anything, and on web they are the
+     * only one of the three that draws this badge either (`CompletedContainer.tsx`). A
+     * later caller that wants no count writes nothing, and an option that wants none
+     * answers null.
+     */
+    badge: (T) -> String? = { null },
+    /**
+     * The thumb's travel, or null for the spring this control has always slid on.
+     *
+     * A parameter rather than a change to the default, because the two are different
+     * questions and only one of them was asked here — see [TdaySegmentedSliderMotion].
+     */
+    selectorAnimationSpec: AnimationSpec<Dp>? = null,
 ) {
     if (options.isEmpty()) return
 
@@ -106,10 +158,19 @@ fun <T> TdaySegmentedSlider(
             val pressedOption = pressedIndex?.let { options[it] }
             val selectedOffset by animateDpAsState(
                 targetValue = segmentWidth * selectedIndex,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessLow,
-                ),
+                // The app's Reduce Motion switch, and a switch this control was missing:
+                // every other motion on a screen answers to it, and a thumb that slides
+                // through a device that has asked for less movement is the one thing here
+                // that does not. With the switch on the thumb is placed rather than
+                // travelled, which is the clean cut the rule asks for.
+                animationSpec = if (!rememberTdayMotionEnabled()) {
+                    snap()
+                } else {
+                    selectorAnimationSpec ?: spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessLow,
+                    )
+                },
                 label = "tdaySegmentedSliderSelectorOffset",
             )
             // Not `Modifier.tdayPressable`, and not a retune: `PressScales.Row` is
@@ -255,19 +316,38 @@ fun <T> TdaySegmentedSlider(
                                     shape = selectorShape,
                                 )
                         )
-                        Text(
-                            text = label(option),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = if (selected) FontWeight.Black else FontWeight.ExtraBold,
-                            color = contentColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            softWrap = false,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs),
                             modifier = Modifier.graphicsLayer {
                                 scaleX = contentScale
                                 scaleY = contentScale
                             },
-                        )
+                        ) {
+                            Text(
+                                text = label(option),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = if (selected) FontWeight.Black else FontWeight.ExtraBold,
+                                color = contentColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                softWrap = false,
+                            )
+                            badge(option)?.let { count ->
+                                Text(
+                                    text = count,
+                                    // The same weight and the same stepped-back alpha the
+                                    // option's own label uses when it is not the selected
+                                    // one, so the count reads as an annotation on the label
+                                    // rather than as a second, competing one.
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Black,
+                                    color = contentColor.copy(alpha = 0.6f),
+                                    maxLines = 1,
+                                    softWrap = false,
+                                )
+                            }
+                        }
                     }
                 }
             }

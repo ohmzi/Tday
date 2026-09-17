@@ -15,7 +15,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -26,18 +25,24 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import com.ohmz.tday.compose.core.navigation.AppRoute
+import com.ohmz.tday.compose.core.navigation.CompletedScope
+import com.ohmz.tday.compose.core.navigation.TILE_TRANSITION_COLOR
 import com.ohmz.tday.compose.core.navigation.TILE_TRANSITION_ORIGIN
 import com.ohmz.tday.compose.core.navigation.tileTransitionKey
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -76,7 +81,13 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
  *    the route's own enter. That is deliberate and is the whole difference between this and
  *    a stretched screenshot of the screen — see [TdayTileResizeMode] for how the rectangle is
  *    reconciled with the surface it carries, and [TdayTileCornerClip] for why the corners
- *    need a clip at all when the thing inside it is a solid colour.
+ *    need a clip at all when the thing inside it is a solid colour. It is filled with the
+ *    TILE'S OWN COLOUR — handed to the destination by the push site, because no route
+ *    carries it; see [TILE_TRANSITION_COLOR] — lerped to the app's background as it lands,
+ *    and its opacity hands over to zero as the rectangle arrives, so the screen it grew over
+ *    is never uncovered by a cut. See [TdayTileSurface] for both halves of that argument;
+ *    they are the two things this file got wrong first, and the first generated the "white
+ *    box" and the second the "and then the screen loads again" the user reported.
  *
  * 2. THE SOURCE contributes nothing at all. It publishes the rectangle the push started
  *    from and draws no pixels: the tile's own `Card` already paints exactly that rounded
@@ -131,9 +142,17 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
  * large-amplitude trip, not the destination. The gate is read symmetrically on purpose:
  * a shared element whose source plays and whose destination does not is a transition
  * that silently degrades, which is exactly the failure mode this file exists to avoid.
- * The surface is not painted at all in that case — with no shared node there is no
- * rectangle for it to fill, and painting one would only put a second full-screen
- * background behind the screen.
+ *
+ * The surface is not painted at all in that case, and that is now enforced rather than
+ * merely claimed. It used to read "with no shared node there is no rectangle for it to
+ * fill", which was not true of the composition: the node was skipped, the fill inside it
+ * was not, and what sat behind the route's fade was a full-screen rectangle in
+ * `colorScheme.background` — the colour the destination screen is filled with, so the
+ * claim held in the only way that mattered, by being invisible. The fill is the tile's
+ * colour now, and a tile-coloured rectangle behind a screen that is halfway through its
+ * own fade is a wash nobody asked for on the one path where the user has explicitly asked
+ * for plainness. So the fill is composed behind the same gate the node is, read from the
+ * same function ([rememberTdaySharedScope]) instead of being written out twice.
  */
 val LocalTdaySharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }
 
@@ -261,8 +280,20 @@ private val TdayTileResizeMode: SharedTransitionScope.ResizeMode =
  * hand-over itself runs on (see `navigationEnterTransition` in `TdayApp.kt`), so the
  * surface's copy of the destination and the destination's own arrival are on ONE clock
  * rather than two, which is the difference between a surface opening and two events; and
- * on `Springs.settle` the rectangle is about 95% of the way at exactly that length, so
- * neither half is left visibly waiting on the other.
+ * it is the rung the TILE leaves on, so the tile's own icon, label and count fade out
+ * under a surface that is rising over them at the same rate, and the two blend rather
+ * than cut.
+ *
+ * What this fade is NOT is the whole story of the surface's opacity, and the paragraph
+ * that used to stand here claimed it was: it read "on `Springs.settle` the rectangle is
+ * about 95% of the way at exactly that length, so neither half is left visibly waiting on
+ * the other", which is not what the spring does. Solving the token's own numbers —
+ * stiffness 250, damping 0.86 — gives 19.9% at 50 ms, 51.0% at 100 ms, 89.2% at 200 ms
+ * and 99.4% at 300 ms, so at the length of this fade the rectangle still has about a
+ * tenth of the screen's width and height left to cover, and the four edges settle
+ * independently. The fades below are one clock; the TRAVEL is another, and the surface's
+ * opacity needs both — see [TdayTileSurface], where the second half of the opacity is
+ * the hand-over that closes that gap.
  *
  * No new number: both are existing tokens, and both are named rather than left to the
  * library's `fadeIn()`/`fadeOut()` defaults, which would be a bare Compose spec in a
@@ -340,8 +371,10 @@ fun Modifier.tdayTileTransitionSource(key: String?): Modifier =
 fun AnimatedVisibilityScope.TdayTileDestination(
     route: AppRoute,
     fromHomeTile: Boolean,
+    tileColor: Color?,
     listId: String? = null,
     highlighted: Boolean = false,
+    scope: CompletedScope? = null,
     content: @Composable () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -349,29 +382,72 @@ fun AnimatedVisibilityScope.TdayTileDestination(
             key = route.tileTransitionKey(
                 listId = listId,
                 highlighted = highlighted,
+                scope = scope,
                 fromHomeTile = fromHomeTile,
             ),
             animatedVisibilityScope = this@TdayTileDestination,
+            tileColor = tileColor,
         )
         content()
     }
 }
 
 /**
- * The surface a tile grows into: a full-size filled rectangle, and the whole of what the
- * destination end of a shared element contributes.
+ * The surface a tile grows into: a full-size filled rectangle in the TILE'S OWN COLOUR, and
+ * the whole of what the destination end of a shared element contributes.
  *
  * It carries nothing but the fill. Not one pixel of the screen is inside it, which is the
- * property this file exists to hold — see the file comment. The fill is the app's own
- * background (`colorScheme.background`, the colour every screen's `Scaffold` is filled
- * with), so as the rectangle grows over the tile the eye reads a surface being uncovered
- * rather than a lid being put on one.
+ * property this file exists to hold — see the file comment.
+ *
+ * THE FILL IS THE TILE'S COLOUR. It used to be `colorScheme.background` — the colour every
+ * screen's `Scaffold` is filled with — and that is the one colour the surface must not be.
+ * A rectangle painted in the screen's own background is invisible against the screen it is
+ * travelling over and visible only against the CONTENT it covers, so the eye reads a flat
+ * near-white box appearing over a list rather than a tile growing into one; on a light theme
+ * that box is white. The device row has said so since this transition was rebuilt — item (a)
+ * of `docs/verification/phase-9-device-pass.md`'s PR 32e entry asks for "the SURFACE for the
+ * first frames past the tile should be the tile's colour at the tile's radius, squaring off
+ * as it reaches the screen" — and the colour has to be HANDED here, because it is the only
+ * thing about the tile that no route carries: see [TILE_TRANSITION_COLOR] for why it cannot
+ * be looked up and where it travels.
+ *
+ * It is lerped to the screen's background as the rectangle lands, on the same fraction the
+ * corners ride, so the surface is the tile at the tile and the screen's own background where
+ * it becomes the screen. Both ends of the flight are then invisible against what they sit
+ * on: a solid rectangle in the tile's colour left congruent with the screen would be a lid
+ * over a screen that has already arrived, and on the way back a solid rectangle in the
+ * tile's colour sitting on the tile for the last frames would be a lid over the tile. The
+ * lerp costs one draw-phase `lerp` per frame and is what makes the two ends of one surface
+ * belong to the two things it is standing in for.
+ *
+ * THE OPACITY HAS A DEPARTURE AS WELL AS AN ARRIVAL, AND THE DEPARTURE IS WHAT REMOVES THE
+ * DOUBLE-TAKE. The shared bounds' own enter fade (see [TdayTileEnter]) is a rise, and it has
+ * to be: the tile's icon, its label and its count are not inside this node, so a surface that
+ * was solid on the first frame would flatten them instead of letting them fade where they
+ * sit. But a rise is not enough on its own, because the rectangle's geometry runs longer than
+ * the fades do: `Springs.settle` is 89% of the way at `Durations.Enter` and only lands at
+ * about `Durations.Emphasis`. A surface that is still solid when the rectangle is the screen
+ * is drawn in the overlay ABOVE the screen (that is what `renderInOverlay` buys, and it is
+ * why the surface is visible at all), so the screen it grew over is hidden behind it and then
+ * uncovered in one frame when the entry goes — "the screen loads again". So the opacity gets
+ * a second half: it hands over, falling to zero on `Durations.Emphasis` — the rung whose
+ * length the rectangle's own arrival takes — with `Easings.Exit`, the vocabulary's curve for
+ * something committing rather than drifting off. The surface is then gone by the time the
+ * rectangle is congruent, and the destination is revealed by a dissolve instead of a cut.
+ *
+ * The hand-over is a property of the DIRECTION and not of the rectangle, which is the one
+ * thing about it that reads oddly and is not an accident. A push wants a surface that is
+ * solid near the tile and gone near the screen; a pop wants one that is solid near the screen
+ * and gone near the tile. Same fraction, opposite ends — so no function of the rectangle's
+ * progress can express both, and the way back keeps the plain exit fade it has always had
+ * (the open, reversed) while the way in gets the hand-over on top of its rise.
  *
  * The fill is on an inner box rather than on the shared node itself on purpose: modifiers
  * applied ABOVE `sharedBounds` in the chain draw outside the layer the library records and
- * hands to the overlay, so a background there would be painted in place, under the screen
- * and outside the animation, and the rectangle in the overlay would still be empty.
- * Anything composed INSIDE the node is what travels.
+ * hands to the overlay, so a fill there would be painted in place, under the screen and
+ * outside the animation, and the rectangle in the overlay would still be empty. Anything
+ * composed INSIDE the node is what travels — which is also why the hand-over rides a
+ * `graphicsLayer` on this box rather than a modifier above the node.
  *
  * Composed at all only when [key] is non-null. A destination nobody pressed a tile for — a
  * deep link, a widget row, a shortcut — has no rectangle to grow out of, and a full-screen
@@ -381,6 +457,7 @@ fun AnimatedVisibilityScope.TdayTileDestination(
 private fun TdayTileSurface(
     key: String?,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    tileColor: Color?,
 ) {
     if (key == null) return
     // One fraction for the corners, riding the same `Springs.settle` the rectangle rides so
@@ -401,6 +478,35 @@ private fun TdayTileSurface(
         // square one over a tile is a pop.
         if (state == EnterExitState.Visible) 0f else 1f
     }
+    // The hand-over, and the mirror of the fraction above: one exactly at the tile, zero
+    // exactly at the screen, and a fraction in between. It does NOT share the fraction's
+    // spring, and the reason is the one thing about this value worth knowing. A fall on the
+    // same clock as the rise is the same shape in both directions, so the two cancel: the
+    // surface would be at half opacity exactly where it is at half its size, which is a wash
+    // over the screen rather than a surface growing out of the tile. Held on `Emphasis` with
+    // the accelerate curve instead, it is still at nearly nine tenths when the rectangle is
+    // halfway and reaches zero just before the rectangle lands.
+    val handOver = animatedVisibilityScope.transition.animateFloat(
+        transitionSpec = {
+            tween(
+                durationMillis = TdayMotionTokens.Durations.Emphasis,
+                easing = TdayMotionTokens.Easings.Exit,
+            )
+        },
+        label = "tdayTileSurfaceHandOver",
+    ) { state ->
+        if (state == EnterExitState.Visible) 0f else 1f
+    }
+    // Which half of the flight this is. The destination's own transition is the only thing
+    // that knows: `Visible` as a target is a push (or a screen already settled), `PostExit`
+    // is the way back — and the way back is the one where the surface keeps the exit fade it
+    // was always given instead of handing over.
+    val arriving = animatedVisibilityScope.transition.targetState != EnterExitState.PostExit
+    val screenColor = MaterialTheme.colorScheme.background
+    // The tile's colour where one arrived, and the screen's own background where one did
+    // not: a push site that sent no colour leaves this exactly as the surface was, rather
+    // than leaving no surface at all.
+    val tileFill = tileColor ?: screenColor
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -411,11 +517,28 @@ private fun TdayTileSurface(
                 cornerFraction = cornerFraction,
             ),
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
-        )
+        // Composed only where a shared node was actually installed — the same gate, read
+        // through the same function `tdaySharedBounds` reads it through. A fill with no node
+        // under it is a full-screen rectangle at the destination's own layout position, and
+        // the node is what lifts it into the overlay; without one it sits UNDER the screen
+        // and is hidden only while the screen is opaque. During the route's own fade — and
+        // for the whole of a hand-over with motion refused — the screen is not yet opaque, so
+        // a tile-coloured rectangle there is a wash of the tile over a screen the user asked
+        // to see arrive plainly. It used to be the app's background, which is why nobody
+        // noticed; see the file comment's note on Reduce Motion.
+        if (rememberTdaySharedScope(animatedVisibilityScope) != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    // Both reads are draw-phase and neither recomposes anything per frame:
+                    // the alpha is pulled where the overlay is already drawing the
+                    // rectangle, and the colour is pulled where it is already being painted.
+                    .graphicsLayer { alpha = if (arriving) handOver.value else 1f }
+                    .drawBehind {
+                        drawRect(color = lerp(screenColor, tileFill, cornerFraction.value))
+                    },
+            )
+        }
     }
 }
 
@@ -496,6 +619,58 @@ fun rememberHomeTileOrigin(navController: NavController, entry: NavBackStackEntr
     }
 
 /**
+ * The colour of the tile that opened [entry], read from the value [navigateFromHomeTile] left
+ * beside the origin flag on the screen underneath — or null when the push was not a tile
+ * press at all, or was one from a push site that predates the colour.
+ *
+ * A sibling of [rememberHomeTileOrigin] rather than part of it, and deliberately: the two
+ * answer different questions and the surface treats a missing answer to each differently. A
+ * missing origin means there is no zoom at all (the key comes back null and no surface is
+ * composed); a missing colour means there is a zoom whose surface keeps the colour it used to
+ * have. Folding them into one read would make the second look like a verdict on the first.
+ *
+ * Same `remember(entry)`, same `remove`, same reason: the read consumes the value, so it must
+ * not happen twice, and a re-entry into the same destination is a new arrival and re-reads.
+ * See [TILE_TRANSITION_COLOR] for why the colour cannot be looked up from the route, and
+ * [navigateFromHomeTile] for the push sites that send it.
+ */
+@Composable
+fun rememberHomeTileColor(navController: NavController, entry: NavBackStackEntry): Color? =
+    remember(entry) {
+        navController.previousBackStackEntry
+            ?.savedStateHandle
+            ?.remove<Int>(TILE_TRANSITION_COLOR)
+            ?.let { argb -> Color(argb) }
+    }
+
+/**
+ * The namespace a zoom can be installed in, or null when there is no zoom to be had: no
+ * `TdayTileTransitionLayout` above this point, no visibility scope to participate in, or
+ * motion refused.
+ *
+ * Read by BOTH the modifier that installs the shared node and the surface that fills it, and
+ * that is the whole reason it is a function rather than two copies of an `if`. The two have
+ * to agree, and they are not merely adjacent: `Modifier.tdaySharedBounds` decides whether the
+ * node exists, and [TdayTileSurface] decides whether there is anything inside it — a fill
+ * with no node under it is not a surface at all, it is a full-screen rectangle composed in
+ * place behind the destination, which is invisible only for as long as it happens to match
+ * that screen's own background. It does not match it any more; that is the colour half of
+ * this change.
+ */
+@Composable
+private fun rememberTdaySharedScope(
+    animatedVisibilityScope: AnimatedVisibilityScope?,
+): SharedTransitionScope? {
+    val sharedTransitionScope = LocalTdaySharedTransitionScope.current
+    val motionEnabled = rememberTdayMotionEnabled()
+    return if (animatedVisibilityScope != null && sharedTransitionScope != null && motionEnabled) {
+        sharedTransitionScope
+    } else {
+        null
+    }
+}
+
+/**
  * The one place a shared element is installed, for both ends.
  *
  * Everything that can be missing is checked here once: no key (a route with nothing on
@@ -517,13 +692,14 @@ private fun Modifier.tdaySharedBounds(
     renderInOverlay: Boolean,
     cornerFraction: State<Float>?,
 ): Modifier {
-    val sharedTransitionScope = LocalTdaySharedTransitionScope.current
-    val motionEnabled = rememberTdayMotionEnabled()
+    val sharedTransitionScope = rememberTdaySharedScope(animatedVisibilityScope)
+    // The visibility scope is re-checked for the compiler's sake: `rememberTdaySharedScope`
+    // has already refused a null one, but a smart cast does not reach back out of a function
+    // call, and the check costs nothing beside the call that just made it.
     val bounds = if (
         key != null &&
         animatedVisibilityScope != null &&
-        sharedTransitionScope != null &&
-        motionEnabled
+        sharedTransitionScope != null
     ) {
         with(sharedTransitionScope) {
             this@tdaySharedBounds.sharedBounds(
