@@ -450,13 +450,6 @@ object GuideCatalog {
             helpAnchors = listOf("settings-feature-toggle"),
         ),
         topic(
-            GuideTopicIds.CALENDAR_FEED, GuideSectionId.INTEGRATIONS, "calendar",
-            setOf(WEB), serverOnly = true, sinceVersion = "0.5.0",
-            body = listOf(para(GuideTopicIds.CALENDAR_FEED), steps(GuideTopicIds.CALENDAR_FEED, 3)),
-            deepLink = GuideDeepLink(web = "settings"),
-            helpAnchors = listOf("settings-calendar-feed"),
-        ),
-        topic(
             GuideTopicIds.API_KEY_HOMARR, GuideSectionId.INTEGRATIONS, "key-round",
             setOf(WEB), serverOnly = true,
             body = listOf(para(GuideTopicIds.API_KEY_HOMARR), steps(GuideTopicIds.API_KEY_HOMARR, 3)),

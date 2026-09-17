@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import {
   AtSign,
   BellRing,
-  Calendar,
   Check,
   ChevronDown,
   ChevronRight,
@@ -547,14 +546,6 @@ export default function SettingsPage() {
   const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
   const [generateKeyDialogOpen, setGenerateKeyDialogOpen] = useState(false);
   const [expandedKeyId, setExpandedKeyId] = useState<string | null>(null);
-  const [calendarFeed, setCalendarFeed] = useState<{
-    enabled: boolean;
-    tokenPreview?: string | null;
-    createdAt?: string | null;
-  } | null>(null);
-  const [generatedFeedUrl, setGeneratedFeedUrl] = useState<string | null>(null);
-  const [feedLoading, setFeedLoading] = useState(false);
-  const [showFeedUrl, setShowFeedUrl] = useState(false);
   const [webhooks, setWebhooks] = useState<WebhookInfo[] | null>(null);
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
   const [newWebhookEvents, setNewWebhookEvents] = useState<string[]>([]);
@@ -687,82 +678,6 @@ export default function SettingsPage() {
       });
     } finally {
       setRevokingKeyId(null);
-    }
-  };
-
-  useEffect(() => {
-    if (isLocalMode) return;
-    let cancelled = false;
-    api
-      .GET({ url: "/api/user/calendar-feed" })
-      .then((res) => {
-        if (!cancelled) setCalendarFeed(res?.status ?? { enabled: false });
-      })
-      .catch(() => {
-        if (!cancelled) setCalendarFeed({ enabled: false });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isLocalMode]);
-
-  const handleGenerateFeed = async () => {
-    setFeedLoading(true);
-    try {
-      const res = await api.POST({
-        url: "/api/user/calendar-feed",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      const token = res?.feed?.token as string | undefined;
-      // The subscribe URL is built client-side so the server never needs to know
-      // its own public origin.
-      const url = token
-        ? `${window.location.origin}/calendar/${token}.ics`
-        : null;
-      setGeneratedFeedUrl(url);
-      setShowFeedUrl(true);
-      setCalendarFeed({
-        enabled: true,
-        tokenPreview: res?.feed?.tokenPreview ?? null,
-        createdAt: res?.feed?.createdAt ?? null,
-      });
-      toast({ description: t("toast.calendarFeedGenerated") });
-    } catch (err) {
-      toast({
-        description: getErrorMessage(err, t("toast.calendarFeedGenerateFailed")),
-        variant: "destructive",
-      });
-    } finally {
-      setFeedLoading(false);
-    }
-  };
-
-  const handleRevokeFeed = async () => {
-    setFeedLoading(true);
-    try {
-      await api.DELETE({ url: "/api/user/calendar-feed" });
-      setCalendarFeed({ enabled: false });
-      setGeneratedFeedUrl(null);
-      setShowFeedUrl(false);
-      toast({ description: t("toast.calendarFeedRevoked") });
-    } catch (err) {
-      toast({
-        description: getErrorMessage(err, t("toast.calendarFeedRevokeFailed")),
-        variant: "destructive",
-      });
-    } finally {
-      setFeedLoading(false);
-    }
-  };
-
-  const handleCopyFeedUrl = async () => {
-    if (!generatedFeedUrl) return;
-    try {
-      await navigator.clipboard.writeText(generatedFeedUrl);
-      toast({ description: t("toast.calendarFeedCopied") });
-    } catch {
-      toast({ description: t("toast.calendarFeedCopyFailed"), variant: "destructive" });
     }
   };
 
@@ -1179,11 +1094,9 @@ export default function SettingsPage() {
   // was half-usable there. Hidden outright rather than half-disabled.
   const showDataCard =
     !isLocalMode && cardMatches(t("data.title"), t("data.download"), t("data.import"));
-  // The two blurbs stopped being printed when the "?" took over explaining these
-  // cards, but they are still sentences people half-remember and type at the
-  // search box, so they stay in the term lists.
-  const showCalendarFeedCard =
-    !isLocalMode && cardMatches(t("calendarFeed.title"), t("calendarFeed.blurb"));
+  // The blurb stopped being printed when the "?" took over explaining these
+  // cards, but it is still a sentence people half-remember and type at the
+  // search box, so it stays in the term list.
   const showWebhooksCard =
     !isLocalMode && cardMatches(t("webhooks.title"), t("webhooks.blurb"), t("webhooks.add"));
   const showDashboardCard =
@@ -1218,7 +1131,6 @@ export default function SettingsPage() {
     !showAppearanceCard &&
     !showPreferencesCard &&
     !showDataCard &&
-    !showCalendarFeedCard &&
     !showWebhooksCard &&
     !showDashboardCard &&
     !showAboutCard &&
@@ -1821,78 +1733,8 @@ export default function SettingsPage() {
       </SheetCard>
       )}
 
-      {/* Calendar feed, webhooks and dashboard API keys are all consumed by
-          something outside the browser, so they need a server to serve them. */}
-      {showCalendarFeedCard && (
-      <SettingsSection
-        title={t("calendarFeed.title")}
-        titleAction={<GuideHelpLink topic="calendar-feed" />}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 text-sm">
-            <p className="font-black text-foreground">
-              {calendarFeed?.enabled
-                ? t("calendarFeed.active")
-                : t("calendarFeed.inactive")}
-            </p>
-            {calendarFeed?.enabled && calendarFeed.tokenPreview ? (
-              <p className="text-xs font-extrabold text-muted-foreground">
-                {t("dashboard.activeKeyEnding", { preview: calendarFeed.tokenPreview })}
-              </p>
-            ) : null}
-          </div>
-          <Button
-            type="button"
-            variant={calendarFeed?.enabled ? "destructive" : "default"}
-            disabled={feedLoading || calendarFeed === null}
-            onClick={calendarFeed?.enabled ? handleRevokeFeed : handleGenerateFeed}
-            className="h-11 shrink-0 rounded-lg font-black"
-          >
-            {feedLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {calendarFeed?.enabled
-                  ? t("calendarFeed.revoking")
-                  : t("calendarFeed.generating")}
-              </>
-            ) : calendarFeed?.enabled ? (
-              <>
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t("calendarFeed.revoke")}
-              </>
-            ) : (
-              <>
-                <Calendar className="mr-2 h-4 w-4" />
-                {t("calendarFeed.generate")}
-              </>
-            )}
-          </Button>
-        </div>
-
-        {generatedFeedUrl && (
-          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/40 p-3">
-            <p className="text-xs font-extrabold text-muted-foreground">
-              {t("calendarFeed.copyUrl")}
-            </p>
-            <div className="flex gap-2">
-              <Input
-                type={showFeedUrl ? "text" : "password"}
-                value={generatedFeedUrl}
-                readOnly
-                className="h-10 flex-1 rounded-sm bg-background/50 font-mono text-xs"
-              />
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-sm" onClick={() => setShowFeedUrl(!showFeedUrl)}>
-                {showFeedUrl ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-              <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0 rounded-sm" onClick={handleCopyFeedUrl}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </SettingsSection>
-      )}
-
+      {/* Webhooks and dashboard API keys are both consumed by something outside
+          the browser, so they need a server to serve them. */}
       {showWebhooksCard && (
       <SettingsSection
         title={t("webhooks.title")}

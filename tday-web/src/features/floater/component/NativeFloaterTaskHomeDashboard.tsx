@@ -9,7 +9,7 @@ import { useRowPlacement } from "@/hooks/useRowPlacement";
 import { DELAY_MS } from "@/lib/motion";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
-import { sortFloatersByPriority } from "@/lib/floater/buildFloaterSections";
+import { sortFloatersByPriority } from "@/lib/floater/sortFloaters";
 import { getListIconForList } from "@/lib/listIcons";
 import {
   listColorAccentColors,
@@ -171,49 +171,17 @@ export default function NativeFloaterTaskHomeDashboard() {
           }
         />
 
-        <section
-          className="relative flex h-[70px] items-center justify-between overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(50,90,130,0.62)]"
-          style={{ backgroundColor: floaterAccent }}
-        >
-          {renderTileOverlay()}
-          <span className="relative truncate text-[1.38rem] font-black leading-none tracking-tight">
-            {appDict("floater")}
-          </span>
-          <span className="relative text-[2.1rem] font-black leading-none">
-            {pendingFloaterCount}
-          </span>
-        </section>
-
-        {/* The only nav path from the Floater tab into its own durable
-            completion history — the Todo side reaches the same screen via the
-            sidebar/More sheet, neither of which surfaces here. Opens straight
-            into the Floater tab of that screen. */}
-        <Link
-          href="/app/completed?scope=floater"
-          className={cn(
-            "relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white",
-            "shadow-[0_14px_30px_-20px_rgba(60,70,90,0.55)] transition-transform duration-enter",
-            "hover:-translate-y-0.5 active:translate-y-0.5",
-          )}
-          style={{ backgroundColor: nativeScreenAccentColors.completed }}
-        >
-          {renderTileOverlay()}
-          <CheckCircle className="relative h-6 w-6 shrink-0 stroke-[2.5]" />
-          <span className="relative min-w-0 flex-1 truncate text-[1.1rem] font-black">
-            {appDict("floaterCompletedTile")}
-          </span>
-          <span className="relative text-2xl font-black leading-none">
-            {completedFloaters.length}
-          </span>
-        </Link>
-
         {/* Held one `Quick` past the frame the feed refilled, because the burst
             inside is still fading and this element is what it is painted into —
             an undo that unmounts the scene cuts the fade one layer down, which
             is the same complaint the fade exists to answer. The slot closes its
-            42vh track under that fade too, so the tiles above and the lists
-            below take the space back over the beat rather than in the frame the
-            node goes. */}
+            42vh track under that fade too, so the Completed tile below and the
+            lists under that take the space back over the beat rather than in the
+            frame the node goes.
+
+            The scene sits FIRST in this column: the slot the rows take when the
+            feed holds tasks, and the slot Android's feed builder and iOS's both
+            give it. It is the feed's own contents, not chrome over them. */}
         {showEmpty || sceneLeavingOnCancel ? (
           <EmptyStateSlot leavingOnCancel={sceneLeavingOnCancel}>
             <EmptyState
@@ -227,8 +195,8 @@ export default function NativeFloaterTaskHomeDashboard() {
               // collaborator on a shared list — and it ENDS the moment a task
               // comes back, however it got here.
               celebrate={celebrate}
-              // This scene is drawn INLINE: mounting it is what pushes the tiles
-              // above down, so the travel and the burst would otherwise be the
+              // This scene is drawn INLINE: mounting it is what pushes the tile
+              // below down, so the travel and the burst would otherwise be the
               // same beat. `PlacementLead` is the token for exactly that wait —
               // it is `Emphasis` by construction, so it cannot drift away from
               // the placement it is here to outlast — and holding the whole
@@ -285,6 +253,35 @@ export default function NativeFloaterTaskHomeDashboard() {
             ) : null}
           </div>
         ) : null}
+
+        {/* The only nav path from the Floater tab into its own durable
+            completion history — the Todo side reaches the same screen via the
+            sidebar/More sheet, neither of which surfaces here. Opens straight
+            into the Floater tab of that screen.
+
+            Below the tasks, not above them: the feed's first thing is the work
+            itself, and this is the archive of it. That is the slot Android's
+            feed builder and iOS's `FloaterTaskHomeCompletedCard` both put it in
+            — between the rows and "My Lists" — and it is the one the guardrail
+            in `root-feed-header-actions.test.ts` pins for those two clients. */}
+        <Link
+          href="/app/completed?scope=floater"
+          className={cn(
+            "relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white",
+            "shadow-[0_14px_30px_-20px_rgba(60,70,90,0.55)] transition-transform duration-enter",
+            "hover:-translate-y-0.5 active:translate-y-0.5",
+          )}
+          style={{ backgroundColor: nativeScreenAccentColors.completed }}
+        >
+          {renderTileOverlay()}
+          <CheckCircle className="relative h-6 w-6 shrink-0 stroke-[2.5]" />
+          <span className="relative min-w-0 flex-1 truncate text-[1.1rem] font-black">
+            {appDict("floaterCompletedTile")}
+          </span>
+          <span className="relative text-2xl font-black leading-none">
+            {completedFloaters.length}
+          </span>
+        </Link>
 
         {lists.length > 0 ? (
           <section className="space-y-2 pb-16 pt-6">

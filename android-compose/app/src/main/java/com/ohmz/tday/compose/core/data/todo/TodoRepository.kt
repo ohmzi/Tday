@@ -118,6 +118,21 @@ class TodoRepository @Inject constructor(
         )
     }
 
+    /**
+     * Today's collapsible "Earlier" bucket. See [todayEarlierItems] for why this
+     * is the overdue set clipped to the day boundary instead of the overdue set.
+     */
+    fun fetchTodayEarlierSnapshot(): List<TodoItem> {
+        return todayEarlierItems(
+            overdueTodos = buildTodosForMode(
+                state = cacheManager.loadOfflineStateBlocking(),
+                mode = TodoListMode.OVERDUE,
+                listId = null,
+            ),
+            zoneId = zoneId,
+        )
+    }
+
     /** Completed-today count from the local cache, for the Day Done state. */
     fun completedTodayCount(): Int {
         val zone = zoneId
@@ -1237,6 +1252,39 @@ data class StagedFloaterDeletion(
     val removedCompletedFloaters: List<com.ohmz.tday.compose.core.data.CachedCompletedFloaterRecord> = emptyList(),
     val removedPendingMutations: List<PendingMutationRecord> = emptyList(),
 )
+
+/**
+ * Today's own "Earlier" bucket, given the raw overdue set.
+ *
+ * Deliberately NOT the overdue set itself. That set is `isOverdueTodo` --
+ * `due < now` -- while Today's `items` is `isTodayTodo`, the whole local
+ * calendar day. A task due earlier today and still pending satisfies both: 9am
+ * at 3pm is inside today's day AND before the current instant. Rendering the
+ * raw overdue set under Earlier therefore put one task in two places at once,
+ * its time-of-day bucket and Earlier, which is the duplicate this exists to
+ * prevent.
+ *
+ * Clipping to the day boundary makes the two lists disjoint by construction --
+ * `due < startOfToday` cannot hold for anything `isTodayTodo` accepts -- and
+ * both read the one boundary `isTodayTodo` itself uses, so they cannot drift
+ * apart. iOS (`buildSections`, `.today`: `due < startOfToday`) and web
+ * (`buildTimelineSections`: `dayKey < todayKey`) already build theirs this way.
+ *
+ * A task due earlier today consequently stays in its Morning/Afternoon/Tonight
+ * bucket, which is what "today" means on all three platforms. Dropping it from
+ * Earlier is the fix; moving it there would be the opposite one.
+ */
+internal fun todayEarlierItems(
+    overdueTodos: List<TodoItem>,
+    zoneId: ZoneId,
+    now: Instant = Instant.now(),
+): List<TodoItem> {
+    val startOfToday = ZonedDateTime.ofInstant(now, zoneId)
+        .toLocalDate()
+        .atStartOfDay(zoneId)
+        .toInstant()
+    return overdueTodos.filter { todo -> todo.due?.isBefore(startOfToday) == true }
+}
 
 internal fun OfflineSyncState.withDeletedTodoCached(
     canonicalId: String,

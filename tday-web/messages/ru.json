@@ -248,6 +248,9 @@
     "save": "Сохранить",
     "clear": "Очистить",
     "clearSearch": "Очистить поиск",
+    "versionAvailableTitle": "Доступно обновление",
+    "versionAvailableBody": "Новая версия готова к загрузке.",
+    "versionAvailableReload": "Обновить",
     "today": "Сегодня",
     "yesterday": "Вчера",
     "tomorrow": "Завтра",
@@ -719,12 +722,6 @@
       "securityQuestionsUpdated": "Security questions updated",
       "securityQuestionsUpdateFailed": "Could not update security questions",
       "securityQuestionsLoadFailed": "Could not load security questions",
-      "calendarFeedGenerated": "Календарный фид создан. Скопируйте URL.",
-      "calendarFeedGenerateFailed": "Не удалось создать календарный фид",
-      "calendarFeedRevoked": "Календарный фид отозван",
-      "calendarFeedRevokeFailed": "Не удалось отозвать календарный фид",
-      "calendarFeedCopied": "URL календаря скопирован",
-      "calendarFeedCopyFailed": "Не удалось скопировать URL календаря",
       "webhookCreated": "Вебхук добавлен. Скопируйте секрет подписи.",
       "webhookCreateFailed": "Не удалось добавить вебхук",
       "webhookDeleted": "Вебхук удалён",
@@ -769,17 +766,6 @@
       "confirmCancel": "Отмена",
       "confirmImport": "Импорт",
       "summaryLocal": "{{tasks}} задач · {{lists}} списков · {{completed}} завершено, всё в этом браузере."
-    },
-    "calendarFeed": {
-      "title": "Календарный фид",
-      "blurb": "Приватная ссылка .ics только для чтения для Apple/Google Calendar.",
-      "active": "Фид активен",
-      "inactive": "Нет календарного фида",
-      "generate": "Создать URL фида",
-      "revoke": "Отозвать фид",
-      "generating": "Создание...",
-      "revoking": "Отзыв...",
-      "copyUrl": "Скопируйте этот URL календаря сейчас — храните его как пароль."
     },
     "webhooks": {
       "title": "Вебхуки",
@@ -1280,15 +1266,6 @@
         "kbd": "N",
         "kbd2": "Ctrl / ⌘ + K",
         "kbd3": "?"
-      },
-      "calendar-feed": {
-        "title": "Календарный фид",
-        "summary": "Подпишитесь на задачи с датами в любом календарном приложении.",
-        "keywords": "календарь, ics, подписка, фид, apple calendar, google calendar, ical, webcal",
-        "body": "Опубликуйте календарный фид только для чтения, чтобы задачи с датами появлялись в Apple Calendar, Google Calendar или любом приложении, читающем URL .ics. Ссылка содержит приватный токен — любой, у кого он есть, видит ваши задачи, поэтому храните её при себе и отзывайте при утечке.",
-        "step0": "В Настройках откройте карточку «Календарный фид» и создайте URL.",
-        "step1": "Скопируйте URL — он показывается один раз; при потере создайте заново.",
-        "step2": "Добавьте его как календарь по подписке в вашем приложении."
       },
       "device-calendar-sync": {
         "title": "Задачи в календаре устройства",

@@ -149,7 +149,7 @@ directly.
 | `pr-gate.yml` | PR to `master` | Validates source branch (`develop` only), runs web lint + test, backend test |
 | `android.yml` | PR to `develop` or `master` | Skips when nothing under `android-compose/` or `shared/` (or `version.json`) changed; otherwise runs the Android JVM unit tests and compiles the instrumentation source set |
 | `release.yml` | Push to `master` | Runs lint + tests, resolves the release version (auto-bumping the patch when it is already tagged), builds the signed APK and the Docker image, pushes the release commit, tags, publishes the GitHub release, and only then pushes the image |
-| `ios-testflight.yml` | Push of a `v*` tag (uploads), or `workflow_dispatch` on any ref (build-only) | Diffs the tag against the last release that actually reached TestFlight; when an iOS-relevant file changed, archives the `Tday` scheme on macOS and — on a tag push only — uploads it to TestFlight |
+| `ios-testflight.yml` | Push of a `v*` tag (uploads), or `workflow_dispatch` on any ref (build-only) | Diffs the tag against the last release that actually reached TestFlight; when an iOS-relevant file changed — or the version moved under `exact` + `updateRequired`, since parity is then mandatory — archives the `Tday` scheme on macOS and, on a tag push only, uploads it to TestFlight |
 
 ### Test-Before-Build Policy
 
@@ -231,6 +231,23 @@ from the layer cache rather than rebuilding it.
    - Pushes the Docker image, last — see [Publication Order](#publication-order).
    - Fast-forwards `develop` to `master` so the bump does not conflict on the next PR. This step is
      non-fatal; if it is skipped, merge `master` into `develop` by hand.
+
+**The contract: every `develop` → `master` merge produces three artifacts.** A Git tag and a GitHub
+release, an Android APK attached to that release, and an iOS build uploaded to TestFlight. None of
+the three is optional and none is skipped for a "small" release. A release that ships web and
+Android without iOS is not a smaller release — it leaves every iOS user on `exact` compatibility
+being told to update to a build that does not exist, which is what v0.7.30 did to TestFlight.
+`scripts/ios-release-changed.mjs` forces the iOS build whenever the version moves for that reason;
+see [Trigger and path filter](#trigger-and-path-filter).
+
+**Deploying is the fourth step, and is deliberately not in CI.** The host runs
+`scripts/deploy-release.sh`, which pulls `ghcr.io/ohmzi/tday:v<version>` for the version in
+`version.json`, recreates the backend container, and verifies the running server reports it.
+Publishing a container image is something CI can do; recreating a container on a self-hosted box is
+not, so the deploy stays a deliberate manual action with the database-backup guard in front of it
+(that guard refuses to cross a new Flyway migration without `--backup` or `--skip-backup`). A
+release nobody deployed is a release nobody is running: `latest` moving on GHCR does not move the
+host.
 
 Because the release job bumps the patch version itself, the version climbs one patch per merge. Bump
 `minor`/`major` in a PR when a release deserves it.
@@ -404,8 +421,21 @@ naive "did `ios-swiftUI/` change", because **every** release commit rewrites `In
 `project.yml`, `project.pbxproj` and all ten `guide.*.json` files with new version numbers. So the
 script compares those specific files with the version tokens normalised away: a file whose *only*
 difference is the release bump does not count, while any other edit to that same file does.
-`version.json` is excluded from the relevant set entirely, since `ios.buildNumber` increments on
-every release. A `workflow_dispatch` run with `force` bypasses the filter.
+`version.json`'s `ios.buildNumber` is excluded from the relevant set, since it increments on every
+release. A `workflow_dispatch` run with `force` bypasses the filter — but cannot upload: a manual
+run is always build-only, because App Store Connect spends a `(version, buildNumber)` pair the
+moment it accepts an upload and never accepts it again.
+
+**One exception, and it is load-bearing.** Under `compatibility.mode: "exact"` with
+`compatibility.updateRequired: true` — what this repo sets, and what the server hands the mobile
+clients through the probe — both mobile clients treat *any* version difference as fatal, in either
+direction: the app is told to update when it is older, the server when it is newer. Under that
+policy the iOS build and the server must ship the same version, so the version moving is itself
+iOS-relevant and the filter forces the build. Without that, a release whose only iOS-visible change
+was the version bump skips iOS entirely and points every iOS user at a TestFlight build that does
+not exist — which is exactly what v0.7.30 did, leaving TestFlight on v0.7.29 while the backend
+moved on. The rule is read from `version.json` at the head being evaluated, so relaxing the policy
+is itself the way to have such a release skip iOS again.
 
 #### Two modes: `release` and `verify`
 

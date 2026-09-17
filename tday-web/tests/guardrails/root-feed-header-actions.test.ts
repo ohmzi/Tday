@@ -44,6 +44,10 @@ const WEB_FLOATER_DASHBOARD = resolve(
   MONO,
   "tday-web/src/features/floater/component/NativeFloaterTaskHomeDashboard.tsx",
 );
+const WEB_SCHEDULED_DASHBOARD = resolve(
+  MONO,
+  "tday-web/src/features/scheduledTaskHome/component/NativeScheduledTaskHomeDashboard.tsx",
+);
 
 /**
  * Reads a source file with its comments removed.
@@ -285,6 +289,39 @@ describe("the Anytime feed's Completed entry", () => {
     const androidListsAt = android.indexOf('key = "floater-my-lists-header"');
     expect(androidTileAt).toBeGreaterThan(androidSceneAt);
     expect(androidTileAt).toBeLessThan(androidListsAt);
+  });
+
+  it("sits below the tasks on web, which used to be the odd one out", () => {
+    // Web is the outlier the note on the iOS call site names: this feed drew a
+    // second, non-interactive "Floater" count tile above the Completed tile, and
+    // both of them above the empty scene and the rows — chrome over the content
+    // rather than content. The feed's first thing is the work itself; the tile is
+    // the archive of it. Asserted here because web was the one client whose order
+    // nothing pinned, which is how it drifted while Android and iOS agreed.
+    const web = readCode(WEB_FLOATER_DASHBOARD);
+    const tileAt = web.indexOf('href="/app/completed?scope=floater"');
+    const sceneAt = web.indexOf("showEmpty || sceneLeavingOnCancel");
+    const rowsAt = web.indexOf("showSkeleton || (!floaterLoading && sortedFloaters.length > 0)");
+    const listsAt = web.indexOf("lists.length > 0");
+
+    expect(tileAt).toBeGreaterThan(-1);
+    expect(sceneAt).toBeGreaterThan(-1);
+    expect(rowsAt).toBeGreaterThan(-1);
+    expect(listsAt).toBeGreaterThan(-1);
+
+    // Below the scene (an empty feed's own contents) and below the rows...
+    expect(tileAt).toBeGreaterThan(sceneAt);
+    expect(tileAt).toBeGreaterThan(rowsAt);
+    // ...and still above "My Lists", the slot Android and iOS give it.
+    expect(tileAt).toBeLessThan(listsAt);
+
+    // The redundant title/count tile stays gone. Its label and number were these
+    // two classes; the Scheduled board still carries its own pair for its own,
+    // navigational tile, so their absence here is this screen's and not a
+    // repo-wide deletion that would make the assertions vacuous.
+    expect(web).not.toContain("text-[1.38rem]");
+    expect(web).not.toContain("text-[2.1rem]");
+    expect(readCode(WEB_SCHEDULED_DASHBOARD)).toContain("text-[1.38rem]");
   });
 
   it("is always present on the Anytime home, not gated on anything having been completed", () => {

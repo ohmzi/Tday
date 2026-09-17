@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.todos
 
+import com.ohmz.tday.compose.core.data.todo.todayEarlierItems
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoListMode
 import org.junit.Assert.assertEquals
@@ -121,6 +122,40 @@ class TodoTimelineSectionsTest {
         assertEquals(listOf(morningTask), sections.first { it.key == TODAY_MORNING_KEY }.items)
         assertTrue(sections.first { it.key == TODAY_AFTERNOON_KEY }.items.isEmpty())
         assertEquals(listOf(overdueTask), sections.first { it.key == EARLIER_SECTION_KEY }.items)
+    }
+
+    @Test
+    fun `a task due earlier today renders in one bucket, never in Earlier as well`() {
+        // The duplicate this pins: Today's `items` is the whole local calendar
+        // day, and Earlier shipped sourced from the raw `due < now` overdue set,
+        // so a task due at midnight today was both inside today AND before now.
+        // The same row drew under Morning and again under Earlier.
+        //
+        // Both buckets are derived here the way the ViewModel derives them --
+        // `items` from the calendar day, Earlier through `todayEarlierItems` --
+        // so this fails if Earlier is ever fed the raw overdue set again.
+        // Midnight is the fixture because it is unambiguously part of today and
+        // unambiguously in the past, at any hour the suite runs.
+        val earlierToday = todayAt(hour = 0, id = "earlier-today")
+
+        val sections = buildTimelineSections(
+            mode = TodoListMode.TODAY,
+            items = listOf(earlierToday),
+            isDragActive = false,
+            earlierItems = todayEarlierItems(
+                overdueTodos = listOf(earlierToday),
+                zoneId = zone,
+            ),
+        )
+
+        assertEquals(
+            listOf(TODAY_MORNING_KEY, TODAY_AFTERNOON_KEY, TODAY_TONIGHT_KEY),
+            sections.map { it.key },
+        )
+        assertEquals(
+            1,
+            sections.sumOf { section -> section.items.count { it.id == earlierToday.id } },
+        )
     }
 
     @Test

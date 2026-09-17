@@ -421,16 +421,19 @@ class TodoListViewModel @Inject constructor(
             0
         }
 
-    // Today's collapsible "Earlier" section, sourced the same way the
-    // standalone Overdue screen already is -- `fetchTodosSnapshot` is a
-    // synchronous cache read, so this is cheap to recompute alongside every
-    // `items` refresh below. Every other mode has no Earlier bucket of its
-    // own (ALL/PRIORITY/LIST carve theirs out of their own flat `items`
-    // instead), so this stays empty everywhere but Today.
+    // Today's collapsible "Earlier" section. Sourced from the repository's
+    // day-boundary clip of the overdue set rather than the overdue set itself:
+    // `due < now` overlaps Today's own calendar-day `items` for anything due
+    // earlier today, which rendered the same task in its time-of-day bucket and
+    // under Earlier at the same time. See `todayEarlierItems`. The read is
+    // synchronous, so this is cheap to recompute alongside every `items` refresh
+    // below. Every other mode has no Earlier bucket of its own (ALL/PRIORITY/LIST
+    // carve theirs out of their own flat `items` instead), so this stays empty
+    // everywhere but Today.
     private fun earlierItemsFor(mode: TodoListMode): List<TodoItem> =
         if (mode == TodoListMode.TODAY) {
             runCatching {
-                todoRepository.fetchTodosSnapshot(mode = TodoListMode.OVERDUE)
+                todoRepository.fetchTodayEarlierSnapshot()
             }.getOrDefault(emptyList())
         } else {
             emptyList()
