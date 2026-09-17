@@ -98,7 +98,7 @@ import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySheetMotion
 import com.ohmz.tday.compose.feature.guide.GuideHelpLink
-import com.ohmz.tday.compose.ui.priority.PRIORITY_OPTIONS_LOW_TO_HIGH
+import com.ohmz.tday.compose.ui.priority.PRIORITY_OPTIONS_HIGH_TO_LOW
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
@@ -448,7 +448,7 @@ fun CreateTaskBottomSheet(
     val startDismiss: () -> Unit = { sheetDismiss.start() }
 
     val noListLabel = stringResource(R.string.create_task_no_list)
-    val priorityOptions = remember { PRIORITY_OPTIONS_LOW_TO_HIGH }
+    val priorityOptions = remember { PRIORITY_OPTIONS_HIGH_TO_LOW }
     val priorityLabels = priorityOptions.associateWith { stringResource(priorityDisplayLabelRes(it)) }
     val repeatLabels = mapOf(
         RepeatPreset.NONE to stringResource(RepeatPreset.NONE.labelRes),

@@ -19,7 +19,10 @@ type PriorityDropdownMenuProps = {
   >;
 };
 
-const PRIORITIES = ["Lowest", "Low", "Medium", "High"] as const;
+// High-to-low: the most urgent tier leads, with the newest Lowest tier last, matching
+// iOS's TaskPriorityDisplay.options and Android's PRIORITY_OPTIONS_HIGH_TO_LOW. This is the
+// display order only — the task sort order is a separate concern and already High-first.
+const PRIORITIES = ["High", "Medium", "Low", "Lowest"] as const;
 
 const PriorityDropdownMenu = ({
   priority,

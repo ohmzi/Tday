@@ -78,14 +78,19 @@ enum TaskPriorityDisplay {
     static var importantLabel: String { L("Important") }
     static var urgentLabel: String { L("Urgent") }
 
-    /// Low-to-high urgency — the display order every picker renders in. The new
-    /// tier leads, ahead of Normal.
+    /// High-to-low urgency — the display order every picker renders in, with the most
+    /// urgent tier leading and the newest tier trailing.
+    ///
+    /// This was originally low-to-high (the newest tier leading). It is inverted so the
+    /// most urgent tier sits at the top of every picker and the least urgent at the
+    /// bottom, mirroring Android's `PRIORITY_OPTIONS_HIGH_TO_LOW` and web's picker order.
+    /// The task *sort* order is a separate concern and is unaffected.
     static var options: [(label: String, value: String)] {
         [
-            (lowestLabel, lowestValue),
-            (normalLabel, normalValue),
-            (importantLabel, importantValue),
             (urgentLabel, urgentValue),
+            (importantLabel, importantValue),
+            (normalLabel, normalValue),
+            (lowestLabel, lowestValue),
         ]
     }
 

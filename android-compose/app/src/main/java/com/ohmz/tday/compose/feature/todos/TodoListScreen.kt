@@ -223,7 +223,7 @@ import com.ohmz.tday.compose.ui.component.TdaySheetFullBleedWindow
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
 import com.ohmz.tday.compose.ui.component.ThemedDatePickerDialog
-import com.ohmz.tday.compose.ui.priority.PRIORITY_OPTIONS_LOW_TO_HIGH
+import com.ohmz.tday.compose.ui.priority.PRIORITY_OPTIONS_HIGH_TO_LOW
 import com.ohmz.tday.compose.ui.priority.canonicalPriorityValue
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
 import com.ohmz.tday.compose.ui.priority.isLowestPriority
@@ -3710,7 +3710,7 @@ fun TodoListScreen( // skipcq: KT-R1006
 
     if (showBulkPriorityPicker && bulkNonRecurringTargets.isNotEmpty()) {
         val priorityTargets = bulkNonRecurringTargets
-        val priorityOptions = remember { PRIORITY_OPTIONS_LOW_TO_HIGH }
+        val priorityOptions = remember { PRIORITY_OPTIONS_HIGH_TO_LOW }
         TdayCenteredSelectorDialog(
             title = stringResource(R.string.bulk_action_priority),
             options = priorityOptions,
