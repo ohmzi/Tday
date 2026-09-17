@@ -1,11 +1,11 @@
 {
-  "version": "0.7.33",
-  "publishedAt": "2026-09-17T09:59:31-04:00",
+  "version": "0.7.34",
+  "publishedAt": "2026-09-17T12:54:06-04:00",
   "notes": [
-    "Fix the reusable-list toggle, and bring it to Android and iOS",
-    "Stop completed tasks reappearing mid-bulk, on all three clients",
-    "Make every toast in the web app render as one surface"
+    "Call the web list sheet \"List settings\", as the native apps do",
+    "Name the iOS card corner once, and clip the zoom source with it",
+    "Precache the task cues, and answer the promise `play()` returns"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.33",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.32..v0.7.33"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.34",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.33..v0.7.34"
 }
