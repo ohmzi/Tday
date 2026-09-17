@@ -32,14 +32,53 @@ import androidx.navigation.NavOptionsBuilder
 const val TILE_TRANSITION_ORIGIN: String = "tday.tileTransitionOrigin"
 
 /**
- * Pushes [route] as a home tile press, so the destination may claim the rectangle that
- * route's tile publishes.
+ * The saved-state value that carries the pressed tile's OWN COLOUR to the screen it opens.
  *
- * This is the only thing that sets [TILE_TRANSITION_ORIGIN], and it is called from the ten
- * tile click handlers — the six grid tiles, the Today card, the scheduled board's list rows,
- * the Anytime feed's Completed entry and its list rows — and from nowhere else. Every other
- * way into these routes (a shortcut, a notification, a widget row, the create flow's own
- * push onto today) calls `navigate` directly and therefore arrives with no origin.
+ * The origin flag above says a tile was pressed. It cannot say WHICH, and
+ * `AppRoute.tileTransitionKey` says which rectangle — but neither can say what colour that
+ * rectangle is, because the colour is not on the route and not derivable from it. That is
+ * the whole reason this second value exists: what grows out of a tile is a surface, and a
+ * surface that is not the tile's colour is a sheet of something else (the app background,
+ * which is near-white in light mode) sitting where the tile used to be. The device row has
+ * always asked for the tile's colour in the first frames; see
+ * `docs/verification/phase-9-device-pass.md`'s PR 32e entry, item (a).
+ *
+ * The colour cannot be a lookup at the destination, and the custom-list rows are why. Six
+ * grid tiles, the Today card and the Completed entry are constants — but a list row's
+ * container is `lerp(surfaceVariant, tdayListAccentColor(list.color), weight)`, a value
+ * derived from server-side per-list data the DESTINATION does not have until it has fetched
+ * the list, long after the surface's first frames. It cannot be a route argument either:
+ * `AppRoute` is a plain object list with no place for one, and adding a colour to two route
+ * patterns would put a presentation value in the navigation graph and change every deep
+ * link string. So it travels the way the origin does — a `savedStateHandle` value written
+ * by the push site, which is the only place that knows it, and read-and-removed by the
+ * destination, which is the only place that needs it.
+ *
+ * Packed ARGB, not a `Color`: this is a `Bundle` value, and `savedStateHandle` is a
+ * `Bundle`. `Color.toArgb()` at the push site and `Color(argb)` at the destination is the
+ * whole of the conversion.
+ */
+const val TILE_TRANSITION_COLOR: String = "tday.tileTransitionColor"
+
+/**
+ * Pushes [route] as a home tile press, so the destination may claim the rectangle that
+ * route's tile publishes — and carries [tileColorArgb], the pressed tile's own colour, so
+ * the surface that grows out of that rectangle is the tile and not a sheet of the app
+ * background.
+ *
+ * This is the only thing that sets [TILE_TRANSITION_ORIGIN] or [TILE_TRANSITION_COLOR], and
+ * it is called from the ten tile click handlers — the six grid tiles, the Today card, the
+ * scheduled board's list rows, the Anytime feed's Completed entry and its list rows — and
+ * from nowhere else. Every other way into these routes (a shortcut, a notification, a widget
+ * row, the create flow's own push onto today) calls `navigate` directly and therefore
+ * arrives with no origin and no colour.
+ *
+ * The colour is a parameter with no default, for the reason `fromHomeTile` has none at the
+ * other end: a push site that has not said what colour its tile is has not answered the
+ * question this hand-off exists to carry, and a default would let it answer wrongly (with
+ * the background) instead of failing to compile. The ten call sites are the ten tiles, and a
+ * tile always knows what colour it is — for the list rows it is a value they have already
+ * computed to paint their own `Card`.
  *
  * [builder] is [NavController.navigate]'s own options, so a tile that grows a
  * `launchSingleTop` or a `popUpTo` later does not have to choose between that and its
@@ -47,9 +86,13 @@ const val TILE_TRANSITION_ORIGIN: String = "tday.tileTransitionOrigin"
  */
 fun NavController.navigateFromHomeTile(
     route: String,
+    tileColorArgb: Int,
     builder: NavOptionsBuilder.() -> Unit = {},
 ) {
-    currentBackStackEntry?.savedStateHandle?.set(TILE_TRANSITION_ORIGIN, true)
+    currentBackStackEntry?.savedStateHandle?.apply {
+        set(TILE_TRANSITION_ORIGIN, true)
+        set(TILE_TRANSITION_COLOR, tileColorArgb)
+    }
     navigate(route, builder)
 }
 
@@ -102,20 +145,26 @@ fun NavController.navigateFromHomeTile(
  * argument here and answer `null` without one — a list route with no id is a malformed
  * deep link, not a tile.
  *
- * [AppRoute.Completed] is the one key two tiles share: the scheduled board's Completed
- * tile and the Anytime feed's Completed entry are two rectangles pushing one route, and
- * Android's route objects carry no arguments, so the destination cannot tell which feed
- * pushed it. iOS splits the same pair with a `HomeTileOrigin` carried on the route; here
- * the two feeds are never on screen together except for the length of the tab crossfade,
- * during which no push can start, so only one of the two sources is ever composed when a
- * match is being looked for. That is an argument for today's shape and not a guarantee: if
- * a second source for one route is ever added to a feed that can be on screen at the same
- * time as the first, this is the entry that has to grow a source argument as well as an
- * origin one.
+ * [AppRoute.Completed] WAS the one key two tiles shared: the scheduled board's Completed
+ * tile and the Anytime feed's Completed entry are two rectangles pushing one route. A
+ * destination that cannot tell which feed pushed it cannot answer with the right one of
+ * two keys, and iOS — which has always split this pair with a `HomeTileOrigin` carried on
+ * the route — spells the two `home-tile.completed` and `floater-tile.completed`.
+ *
+ * The second source has now arrived, and this is the entry that grew, exactly as the
+ * paragraph above used to promise it would. The reason it cannot wait any longer is the
+ * route argument this change also adds: the two tiles now push DIFFERENT routes
+ * ([AppRoute.Completed.create] with a [CompletedScope]), so if the key had stayed a
+ * function of the route object alone, the Anytime feed's tile would publish the scheduled
+ * key while the destination answered with the floater one — the two ends would name
+ * different keys and the zoom would simply stop, silently, on a surface that has one
+ * today. [scope] is therefore the argument the tiles and the destination now both pass,
+ * and it is the same value the route carries, read from the same place.
  */
 fun AppRoute.tileTransitionKey(
     listId: String? = null,
     highlighted: Boolean = false,
+    scope: CompletedScope? = null,
     fromHomeTile: Boolean = true,
 ): String? = if (!fromHomeTile) null else when (this) {
     AppRoute.TodayTodos -> "home-tile.today"
@@ -123,7 +172,13 @@ fun AppRoute.tileTransitionKey(
     AppRoute.ScheduledTodos -> "home-tile.scheduled"
     AppRoute.PriorityTodos -> "home-tile.priority"
     AppRoute.AllTodos -> if (highlighted) null else "home-tile.all"
-    AppRoute.Completed -> "home-tile.completed"
+    // Two tiles, two keys, and the scheduled board keeps the id it has always published —
+    // the default arm is not a fallback here, it is the scheduled tile's answer, which is
+    // why an unscoped arrival (`?scope` absent, a deep link, a shortcut) still matches it.
+    AppRoute.Completed -> when (scope) {
+        CompletedScope.Floater -> "floater-tile.completed"
+        else -> "home-tile.completed"
+    }
     AppRoute.Calendar -> "home-tile.calendar"
     AppRoute.ListTodos -> listId?.let { "home-tile.list.$it" }
     AppRoute.FloaterListTodos -> listId?.let { "floater-tile.list.$it" }

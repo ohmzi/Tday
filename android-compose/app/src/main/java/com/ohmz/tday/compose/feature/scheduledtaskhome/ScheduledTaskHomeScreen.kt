@@ -138,6 +138,7 @@ import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.capitalizeFirstListLetter
 import com.ohmz.tday.compose.core.navigation.AppRoute
+import com.ohmz.tday.compose.core.navigation.CompletedScope
 import com.ohmz.tday.compose.core.navigation.tileTransitionKey
 import com.ohmz.tday.compose.core.ui.LazyListHeroTitleSettle
 import com.ohmz.tday.compose.core.ui.CategoryCard
@@ -300,17 +301,20 @@ private fun TodoItem.toTaskSortKey(): TaskSortKey = TaskSortKey(
 fun ScheduledTaskHomeScreen(
     uiState: ScheduledTaskHomeUiState,
     onRefresh: () -> Unit,
-    onOpenToday: () -> Unit,
-    onOpenOverdue: () -> Unit,
-    onOpenScheduled: () -> Unit,
-    onOpenAll: () -> Unit,
-    onOpenPriority: () -> Unit,
-    onOpenCompleted: () -> Unit,
-    onOpenCalendar: () -> Unit,
+    // Each of the seven tile callbacks carries the pressed tile's own colour to the push
+    // site, because the screen this tile opens cannot recover it: the rectangle a tile
+    // publishes is a key and a key is not a colour. See `TILE_TRANSITION_COLOR`.
+    onOpenToday: (Color) -> Unit,
+    onOpenOverdue: (Color) -> Unit,
+    onOpenScheduled: (Color) -> Unit,
+    onOpenAll: (Color) -> Unit,
+    onOpenPriority: (Color) -> Unit,
+    onOpenCompleted: (Color) -> Unit,
+    onOpenCalendar: (Color) -> Unit,
     onOpenFloater: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenTaskFromSearch: (todoId: String) -> Unit,
-    onOpenList: (listId: String, listName: String) -> Unit,
+    onOpenList: (listId: String, listName: String, tileColor: Color) -> Unit,
     onCreateTask: (payload: CreateTaskPayload) -> Unit,
     onParseTaskTitleNlp: suspend (title: String, referenceDueEpochMs: Long) -> TodoTitleNlpResponse?,
     onSuggestRepeat: (suspend (title: String) -> String?)? = null,
@@ -696,9 +700,9 @@ fun ScheduledTaskHomeScreen(
                             ScheduledTaskHomeTodayCard(
                                 count = uiState.summary.todayCount,
                                 tileTransitionKey = AppRoute.TodayTodos.tileTransitionKey(),
-                                onClick = {
+                                onClick = { tileColor ->
                                     closeSearch()
-                                    onOpenToday()
+                                    onOpenToday(tileColor)
                                 },
                             )
                         }
@@ -739,29 +743,29 @@ fun ScheduledTaskHomeScreen(
                                 priorityCount = uiState.summary.priorityCount,
                                 completedCount = uiState.summary.completedCount,
                                 calendarCount = uiState.summary.scheduledCount,
-                                onOpenOverdue = {
+                                onOpenOverdue = { tileColor ->
                                     closeSearch()
-                                    onOpenOverdue()
+                                    onOpenOverdue(tileColor)
                                 },
-                                onOpenScheduled = {
+                                onOpenScheduled = { tileColor ->
                                     closeSearch()
-                                    onOpenScheduled()
+                                    onOpenScheduled(tileColor)
                                 },
-                                onOpenAll = {
+                                onOpenAll = { tileColor ->
                                     closeSearch()
-                                    onOpenAll()
+                                    onOpenAll(tileColor)
                                 },
-                                onOpenPriority = {
+                                onOpenPriority = { tileColor ->
                                     closeSearch()
-                                    onOpenPriority()
+                                    onOpenPriority(tileColor)
                                 },
-                                onOpenCompleted = {
+                                onOpenCompleted = { tileColor ->
                                     closeSearch()
-                                    onOpenCompleted()
+                                    onOpenCompleted(tileColor)
                                 },
-                                onOpenCalendar = {
+                                onOpenCalendar = { tileColor ->
                                     closeSearch()
-                                    onOpenCalendar()
+                                    onOpenCalendar(tileColor)
                                 },
                             )
                         }
@@ -791,9 +795,13 @@ fun ScheduledTaskHomeScreen(
                                 sharedByLabel = list.ownerUsername?.let {
                                     stringResource(R.string.members_shared_by, it)
                                 },
-                                onClick = {
+                                onClick = { tileColor ->
                                     closeSearch()
-                                    onOpenList(list.id, capitalizeFirstListLetter(list.name))
+                                    onOpenList(
+                                        list.id,
+                                        capitalizeFirstListLetter(list.name),
+                                        tileColor,
+                                    )
                                 },
                             )
                         }
@@ -1590,7 +1598,7 @@ private fun ScheduledTaskHomeTodayCard(
     modifier: Modifier = Modifier,
     count: Int,
     tileTransitionKey: String? = null,
-    onClick: () -> Unit,
+    onClick: (Color) -> Unit,
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -1611,7 +1619,7 @@ private fun ScheduledTaskHomeTodayCard(
                 .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
             onClick = {
                 TdayHaptics.buttonPress(view)
-                onClick()
+                onClick(color)
             },
             interactionSource = interactionSource,
             colors = CardDefaults.cardColors(containerColor = color),
@@ -2173,12 +2181,12 @@ private fun CategoryGrid(
     priorityCount: Int,
     completedCount: Int,
     calendarCount: Int,
-    onOpenOverdue: () -> Unit,
-    onOpenScheduled: () -> Unit,
-    onOpenAll: () -> Unit,
-    onOpenPriority: () -> Unit,
-    onOpenCompleted: () -> Unit,
-    onOpenCalendar: () -> Unit,
+    onOpenOverdue: (Color) -> Unit,
+    onOpenScheduled: (Color) -> Unit,
+    onOpenAll: (Color) -> Unit,
+    onOpenPriority: (Color) -> Unit,
+    onOpenCompleted: (Color) -> Unit,
+    onOpenCalendar: (Color) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val completedColor = completedTileColor(colorScheme)
@@ -2193,7 +2201,10 @@ private fun CategoryGrid(
     val priorityKey = AppRoute.PriorityTodos.tileTransitionKey()
     val overdueKey = AppRoute.OverdueTodos.tileTransitionKey()
     val allKey = AppRoute.AllTodos.tileTransitionKey()
-    val completedKey = AppRoute.Completed.tileTransitionKey()
+    // The scheduled board's Completed tile publishes the scheduled scope's id, and the
+    // Anytime feed's publishes the floater one — see `AppRoute.tileTransitionKey` for why
+    // one route can no longer answer with one key.
+    val completedKey = AppRoute.Completed.tileTransitionKey(scope = CompletedScope.Tasks)
     val calendarKey = AppRoute.Calendar.tileTransitionKey()
 
     Column(verticalArrangement = Arrangement.spacedBy(CategoryGridSpacing)) {
@@ -2282,7 +2293,7 @@ private fun ListRow(
     isShared: Boolean = false,
     sharedByLabel: String? = null,
     tileTransitionKey: String? = null,
-    onClick: () -> Unit,
+    onClick: (Color) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -2315,7 +2326,10 @@ private fun ListRow(
                 .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
             onClick = {
                 TdayHaptics.buttonPress(view)
-                onClick()
+                // The row's container colour, which is the colour the eye reads as the tile:
+                // `lerp(surfaceVariant, accent, weight)` — a value derived from this list's
+                // own server-side colour, which is exactly why it has to be sent from here.
+                onClick(containerColor)
             },
             interactionSource = interactionSource,
             shape = RoundedCornerShape(TdayDimens.RadiusCard),
