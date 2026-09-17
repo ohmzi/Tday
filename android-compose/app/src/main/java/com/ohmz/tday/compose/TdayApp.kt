@@ -100,6 +100,7 @@ import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
 import com.ohmz.tday.compose.feature.app.RootDestination
+import com.ohmz.tday.compose.feature.app.SessionResolution
 import com.ohmz.tday.compose.feature.auth.AuthUiState
 import com.ohmz.tday.compose.feature.auth.AuthViewModel
 import com.ohmz.tday.compose.feature.auth.ForgotPasswordScreen
@@ -234,6 +235,10 @@ fun TdayApp(
     // restore, or in-session dock tap all keep whatever rootFeedTab already holds instead of
     // re-applying the default underneath the user.
     var rootFeedTab by rememberSaveable { mutableStateOf(appViewModel.defaultHomeScreenSnapshot()) }
+    // Whether anything other than that seed has put a tab in `rootFeedTab` — a dock tap, a
+    // swipe, a deep link, or a route that implies a feed. Saved, so a config change or a
+    // process-death restore cannot re-arm the reconcile below over a choice already made.
+    var rootFeedTabWasChosen by rememberSaveable { mutableStateOf(false) }
     var rootCreateTaskRequestSerial by rememberSaveable { mutableStateOf(0) }
     var rootCreateTaskRequestKey by rememberSaveable { mutableStateOf(0) }
     var pendingFloaterTaskHomeCreateTask by rememberSaveable { mutableStateOf(false) }
@@ -285,15 +290,45 @@ fun TdayApp(
         appViewModel.reconnectAfterForeground()
     }
 
+    /**
+     * Puts a tab in `rootFeedTab` on the user's behalf — or on behalf of a navigation that
+     * implies one (a deep link into a floater list, a create-floater flow). It is also what
+     * pins the feed for the rest of the session: see [rootFeedTabWasChosen].
+     */
+    fun selectRootFeedTab(tab: RootFeedTab) {
+        rootFeedTabWasChosen = true
+        rootFeedTab = tab
+    }
+
     fun handleRootFeedTabSelection(tab: RootFeedTab) {
         if (rootFeedTab == tab) {
+            // Re-tapping the tab that is already showing scrolls it to the top, and is still
+            // the user saying where they want to be — so it pins the feed too.
+            rootFeedTabWasChosen = true
             when (tab) {
                 RootFeedTab.SCHEDULED_TASK_HOME -> scheduledTaskHomeScrollToTopRequestKey += 1
                 RootFeedTab.FLOATER_TASK_HOME -> floaterTaskHomeScrollToTopRequestKey += 1
             }
         } else {
-            rootFeedTab = tab
+            selectRootFeedTab(tab)
         }
+    }
+
+    // The composition seed above reads the DEVICE cache, and that cache only holds the
+    // account's value once the sync carrying it has run — so on the first launch after the
+    // setting was changed on another device, the seed is still the screen that device left
+    // behind, and the account's real answer arrives a launch late.
+    //
+    // It does not have to: `bootstrap()` primes that sync BEFORE it publishes the resolved
+    // state (`restoreSessionAndPrimeData` runs `syncCachedData`, which mirrors
+    // `defaultHomeScreen` into the cache), so by the time `sessionResolution` reads RESOLVED,
+    // `appUiState.defaultHomeScreen` already carries what the account says. Apply it then —
+    // which is this same launch, not the next one — unless the user has already steered the
+    // root feed themselves, in which case the choice stands for the session.
+    LaunchedEffect(appUiState.sessionResolution, appUiState.defaultHomeScreen) {
+        if (appUiState.sessionResolution != SessionResolution.RESOLVED) return@LaunchedEffect
+        if (rootFeedTabWasChosen) return@LaunchedEffect
+        rootFeedTab = appUiState.defaultHomeScreen
     }
 
     HandleStartupNavigation(
@@ -415,7 +450,7 @@ fun TdayApp(
                             unauthenticatedUiState = unauthenticatedScheduledTaskHomeUiState,
                             rootFeedTab = { rootFeedTab },
                             onSelectRootFeedTab = ::handleRootFeedTabSelection,
-                            onChangeRootFeedTab = { rootFeedTab = it },
+                            onChangeRootFeedTab = ::selectRootFeedTab,
                             rootCreateTaskRequestKey = { rootCreateTaskRequestKey },
                             onCreateTaskRequestHandled = ::consumeRootCreateTaskRequest,
                             onRequestCreateTask = ::requestRootCreateTask,
@@ -429,13 +464,13 @@ fun TdayApp(
                         todoScopeRoutes(
                             navController = navController,
                             isLocalMode = { appUiState.isLocalMode },
-                            onChangeRootFeedTab = { rootFeedTab = it },
+                            onChangeRootFeedTab = ::selectRootFeedTab,
                             onRequestFloaterCreateTask = { pendingFloaterTaskHomeCreateTask = true },
                         )
                         listRoutes(
                             navController = navController,
                             isLocalMode = { appUiState.isLocalMode },
-                            onChangeRootFeedTab = { rootFeedTab = it },
+                            onChangeRootFeedTab = ::selectRootFeedTab,
                         )
                         utilityRoutes(
                             navController = navController,
@@ -1309,73 +1344,149 @@ private fun RootFeedContent(
         // it used to change on the next frame: one gesture running at two speeds, so the
         // body read as a cut rather than as the thing the pill was carrying. Nothing here
         // travels — the arriving feed is drawn in the slot the leaving one had — so by the
-        // geometry rule this is not Emphasis, and a tab handover is the Quick rung the
-        // vocabulary already names for it. Shorter than the selector's spring on purpose:
-        // the body is following a control rather than being one, and a surface that is
-        // still resolving after the control it answers has landed reads as lag. iOS makes
-        // the same swap on the same rung and the same curve.
-        Crossfade(
-            targetState = rootFeedTab,
-            // Crossfade's own wrapper would size to its content; the feeds were direct
-            // children of the box above until now and are measured against the screen.
-            modifier = Modifier.fillMaxSize(),
-            // Both halves run on one clock, so neither the Enter nor the Exit curve
-            // describes it; Standard is the curve for when nothing argues otherwise. With
-            // motion off the swap snaps, which draws the arriving feed finished rather than
-            // holding it half-faded (docs/motion.md's fifth idiom rule).
-            animationSpec = if (motionEnabled) {
-                tween(
-                    durationMillis = TdayMotionTokens.Durations.Quick,
-                    easing = TdayMotionTokens.Easings.Standard,
-                )
-            } else {
-                snap()
-            },
-            label = "rootFeedTabSwap",
-        ) { tab ->
-            // Both feeds are composed for the length of the fade and only one of them is the
-            // tab that was asked for. A create-task request landing inside that window — the
-            // widget's `tday://todos/create?target=floater` switches tab and then asks for
-            // the sheet — belongs to the arriving feed alone: handing the live key to the
-            // copy on its way out would open a sheet nobody asked for and consume the
-            // request the arriving feed is waiting for. 0 is the same "nothing pending"
-            // sentinel `consumeRootCreateTaskRequest` writes back.
-            val createTaskRequestKey = if (tab == rootFeedTab) rootCreateTaskRequestKey else 0
-
-            when (tab) {
-                RootFeedTab.SCHEDULED_TASK_HOME -> ScheduledTaskHomeFeed(
-                    appUiState = appUiState,
-                    appViewModel = appViewModel,
-                    navController = navController,
-                    swipeSlot = rootSwipeSlot,
-                    onChangeRootFeedTab = onChangeRootFeedTab,
-                    rootCreateTaskRequestKey = createTaskRequestKey,
-                    onCreateTaskRequestHandled = onCreateTaskRequestHandled,
-                    scrollToTopRequestKey = scheduledScrollToTopRequestKey,
-                    onRootDockCollapsedChange = onRootDockCollapsedChange,
-                    onRootControlsVisibleChange = onRootControlsVisibleChange,
-                )
-
-                RootFeedTab.FLOATER_TASK_HOME -> FloaterTaskHomeFeed(
-                    appUiState = appUiState,
-                    navController = navController,
-                    swipeSlot = rootSwipeSlot,
-                    onChangeRootFeedTab = onChangeRootFeedTab,
-                    rootCreateTaskRequestKey = createTaskRequestKey,
-                    onCreateTaskRequestHandled = onCreateTaskRequestHandled,
-                    scrollToTopRequestKey = floaterScrollToTopRequestKey,
-                    onRootDockCollapsedChange = onRootDockCollapsedChange,
-                    onRootControlsVisibleChange = onRootControlsVisibleChange,
-                )
-            }
+        // geometry rule this is not Emphasis, and a tab handover is a rung the vocabulary
+        // names for it.
+        //
+        // It is `Enter`, and that is a reversal of what this swap used to say. The Quick
+        // pair it carried argued shorter-than-the-selector so the body would not still be
+        // resolving after the control it answers had landed; `docs/motion.md`'s `Scene`
+        // bullet had already answered that in prose — "Nor is this rung for route or tab
+        // handovers: those are `Enter` on both clients that have them" — and `Enter` keeps
+        // the ordering the argument was about (200 ms of body against the selector's own
+        // spring) while buying the one thing the old shape could not express at all, which
+        // is that web's fade is TWO curves.
+        //
+        // Asymmetric, and it has to be: `tday-web`'s `.tday-route-fade` brings the arriving
+        // screen in on `--tday-ease-enter` while `::view-transition-old(root)` takes the
+        // leaving one out on `--tday-ease-exit`, both over `--tday-duration-enter`. Those
+        // are [TdayMotionTokens.Easings.Enter] ("something arriving, which should settle
+        // rather than stop") and [TdayMotionTokens.Easings.Exit] ("something leaving, which
+        // should commit rather than drift off") — the same split `TdaySheetMotion` already
+        // made for a card and for the same reason. A `Crossfade` cannot say this: it hands
+        // one `animationSpec` to both children, so its two halves share a clock and a curve
+        // by construction. Two `AnimatedVisibility`s are the smallest shape that can hold
+        // two specs, and they keep the property the crossfade had — both feeds stay composed
+        // for the whole handover, so the window really does have two live layers in it.
+        //
+        // The departing feed is drawn ABOVE the arriving one, which is the other half of
+        // web's effect and the reason it is not one symmetric crossfade. `globals.css`'s
+        // comment states the read it is after — "a fade THROUGH the background rather than a
+        // straight crossfade — the new content reaches half opacity a beat after the old has
+        // left half of its own" — and `::view-transition-old(root)` carries `z-index: 1` for
+        // the ordering. A `Box` orders its children by `Modifier.zIndex`, and each feed asks
+        // for it off the one question that answers it: the feed that is NOT [rootFeedTab] is
+        // the one on its way out.
+        //
+        // With motion off neither transition is passed at all, so the leaving feed goes in
+        // the frame the tab changes and the arriving one is drawn finished in its slot
+        // (docs/motion.md's fifth idiom rule). `AnimatedVisibility` also plays no enter for a
+        // `visible` that was already true on the first composition, so a cold start draws the
+        // selected feed in place rather than flying it in — and, the point of the shape here,
+        // nothing is ever held half-faded: an un-animated departing layer would be opaque and
+        // on top, which is the exact trap `globals.css` documents and takes its outgoing
+        // snapshot off outright for rather than merely un-animating it.
+        val scheduledFeedSelected = rootFeedTab == RootFeedTab.SCHEDULED_TASK_HOME
+        val rootFeedEnter = if (motionEnabled) {
+            fadeIn(
+                animationSpec = tween(
+                    durationMillis = TdayMotionTokens.Durations.Enter,
+                    easing = TdayMotionTokens.Easings.Enter,
+                ),
+            )
+        } else {
+            EnterTransition.None
+        }
+        val rootFeedExit = if (motionEnabled) {
+            fadeOut(
+                animationSpec = tween(
+                    durationMillis = TdayMotionTokens.Durations.Enter,
+                    easing = TdayMotionTokens.Easings.Exit,
+                ),
+            )
+        } else {
+            ExitTransition.None
+        }
+        // How far above the arriving feed the DEPARTING one is raised while it leaves, and it
+        // is zero when there is no leaving to do.
+        //
+        // The raise is the whole of what reproduces web's read — its departing screen is
+        // `z-index: 1`, so the new content comes up from underneath it rather than meeting it
+        // halfway — and it is only meaningful while a departure is playing. With motion off
+        // there is no departure: the exiting `AnimatedVisibility` is handed
+        // `ExitTransition.None`, and a raise that is still applied is a live opaque feed
+        // ordered ABOVE the one that just arrived, for however long the empty exit takes to
+        // dispose its content. That is the one frame web's `globals.css` takes its outgoing
+        // snapshot off the screen outright to avoid, and the cheapest way not to have it is
+        // not to raise anything when nothing is animating. The z-order is the only thing in
+        // this block that a refused motion has to switch off as well as shorten.
+        val rootFeedDepartingZ = if (motionEnabled) 1f else 0f
+        // Both feeds are composed for the length of the fade and only one of them is the tab
+        // that was asked for. A create-task request landing inside that window — the widget's
+        // `tday://todos/create?target=floater` switches tab and then asks for the sheet —
+        // belongs to the arriving feed alone: handing the live key to the copy on its way out
+        // would open a sheet nobody asked for and consume the request the arriving feed is
+        // waiting for. 0 is the same "nothing pending" sentinel `consumeRootCreateTaskRequest`
+        // writes back. The departing copy is handed it from the first frame it stops being the
+        // selected tab, which is what makes that guarantee structural rather than a matter of
+        // the fade outlasting a sleep — see the same sentinel on iOS's `createTaskRequestID`.
+        AnimatedVisibility(
+            visible = scheduledFeedSelected,
+            modifier = Modifier
+                .fillMaxSize()
+                // Above the feed it is leaving, for the whole of its departure — and not
+                // at all when there is no departure to be above it for.
+                .zIndex(if (scheduledFeedSelected) 0f else rootFeedDepartingZ),
+            enter = rootFeedEnter,
+            exit = rootFeedExit,
+            label = "rootScheduledFeedSwap",
+        ) {
+            ScheduledTaskHomeFeed(
+                appUiState = appUiState,
+                appViewModel = appViewModel,
+                navController = navController,
+                swipeSlot = rootSwipeSlot,
+                onChangeRootFeedTab = onChangeRootFeedTab,
+                rootCreateTaskRequestKey = if (scheduledFeedSelected) rootCreateTaskRequestKey else 0,
+                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                scrollToTopRequestKey = scheduledScrollToTopRequestKey,
+                onRootDockCollapsedChange = onRootDockCollapsedChange,
+                onRootControlsVisibleChange = onRootControlsVisibleChange,
+            )
+        }
+        AnimatedVisibility(
+            visible = !scheduledFeedSelected,
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(if (scheduledFeedSelected) rootFeedDepartingZ else 0f),
+            enter = rootFeedEnter,
+            exit = rootFeedExit,
+            label = "rootFloaterFeedSwap",
+        ) {
+            FloaterTaskHomeFeed(
+                appUiState = appUiState,
+                navController = navController,
+                swipeSlot = rootSwipeSlot,
+                onChangeRootFeedTab = onChangeRootFeedTab,
+                rootCreateTaskRequestKey = if (scheduledFeedSelected) 0 else rootCreateTaskRequestKey,
+                onCreateTaskRequestHandled = onCreateTaskRequestHandled,
+                scrollToTopRequestKey = floaterScrollToTopRequestKey,
+                onRootDockCollapsedChange = onRootDockCollapsedChange,
+                onRootControlsVisibleChange = onRootControlsVisibleChange,
+            )
         }
 
         // The dock's own tint already crosses between the two accents when the tab
         // changes; the create button was the last surface still cutting, so a swap left a
         // blue-to-green jump in the corner of an otherwise continuous handover. The accent
         // is part of that one handover rather than a second event, so it rides the body's
-        // rung and curve — as does iOS's create button, which is a SwiftUI fill inside the
-        // transaction its tab switch already runs in. Its dock only half agrees: the
+        // rung — [TdayMotionTokens.Durations.Enter], the length the feeds above cross on.
+        // Its curve stays [TdayMotionTokens.Easings.Standard]: the accent is one property
+        // travelling from one colour to another, so it has no arriving half and no departing
+        // half for the pair above to hand it, and Standard is the curve the vocabulary keeps
+        // for when nothing argues otherwise. Longer than the selector's spring on purpose,
+        // exactly as the body is. iOS's create button is a SwiftUI fill inside the
+        // transaction its tab switch already runs in, so it crosses on the same length. Its
+        // dock only half agrees: the
         // collapsed pill's tint is in that transaction too, but the expanded control is a
         // `UISegmentedControl` whose accent is assigned in `updateUIView`, which reads no
         // transaction and so cuts. With motion off it snaps: the button is drawn in the
@@ -1393,7 +1504,7 @@ private fun RootFeedContent(
             },
             animationSpec = if (motionEnabled) {
                 tween(
-                    durationMillis = TdayMotionTokens.Durations.Quick,
+                    durationMillis = TdayMotionTokens.Durations.Enter,
                     easing = TdayMotionTokens.Easings.Standard,
                 )
             } else {

@@ -1,6 +1,48 @@
 import SwiftUI
 import UIKit
 
+/// Raises the root feed it is applied to above the one replacing it, for the whole of its
+/// departure.
+///
+/// This is the native spelling of `z-index: 1` on web's `::view-transition-old(root)`, and
+/// it exists because the root-feed swap is a fade THROUGH the background rather than a
+/// straight crossfade — `globals.css` says so, and says what the ordering is for: the half
+/// that moves is the half on top, so the arriving screen cannot cover the screen the user
+/// is leaving while it is still on its way out. Compose gets the same ordering from
+/// `Modifier.zIndex` on the departing feed, which is a plain question about which child of
+/// a `Box` is which; SwiftUI cannot, because a feed is only ever *built* while it is the
+/// selected tab, so nothing written inside one of the two arms can tell departure from
+/// arrival — the departing view is the one the state change just removed, rendered from the
+/// body it had before, and its `zIndex` would read the same as the arriving one's.
+///
+/// So the phase has to come from the transition itself, which is the only thing that knows
+/// which half it is on. `AnyTransition.asymmetric` already splits insertion from removal;
+/// `AnyTransition.modifier(active:identity:)` is what carries a modifier with it, and this
+/// is applied to the removal half alone, so the arriving feed never sees either state.
+///
+/// The raise orders the two FEEDS against each other and against nothing else. The chrome is
+/// not in that contest: `rootFloatingControls` carries an explicit `.zIndex(8)` — the twin of
+/// Android's `Modifier.zIndex(8f)` on the dock and the create button, against the feeds'
+/// `0f`/`1f` — so both controls stay fully drawn over both feeds in every state, the one this
+/// modifier is live in included. Without that, a sibling left at the `ZStack`'s implicit 0
+/// would be painted UNDER a departing feed (an opaque, full-screen surface) for the whole 200
+/// ms, and the pill the user just tapped would be blotted out and fade back in with the
+/// screen the user just left.
+///
+/// `identity` is `raised: false` and it is the resting answer rather than a formality: a
+/// modifier carried by a transition has to answer both ways, and a feed that is settled
+/// belongs at the `ZStack`'s implicit 0. It is no longer the only thing between the raise and
+/// the chrome — the controls are above both feeds by their own `zIndex` — but the departing
+/// feed is the only child that should ever be at 1, and this state is what keeps that true.
+private struct TdayFeedDeparture: ViewModifier {
+    /// `true` for the half that is leaving, `false` while it is the settled tab.
+    let raised: Bool
+
+    func body(content: Content) -> some View {
+        content.zIndex(raised ? 1 : 0)
+    }
+}
+
 struct AppRootView: View {
     private let container: AppContainer
 
@@ -13,6 +55,10 @@ struct AppRootView: View {
     // a config change or SwiftUI re-rendering the same identity keeps whatever `rootFeedTab`
     // already holds instead of re-applying the default underneath an in-session dock tap.
     @State private var rootFeedTab: RootFeedTab
+    // Whether anything other than that seed has put a tab in `rootFeedTab` — a dock tap, a
+    // swipe, or a deep link. The reconcile in `applyAccountRootFeedTabIfUnchosen` must never
+    // re-default over one of those.
+    @State private var rootFeedTabWasChosen = false
     @State private var rootCreateTaskRequestID = 0
     @State private var pendingRootCreateTask: PendingRootCreateTask?
     // Prefill from a share-extension capture, applied to the next create sheet.
@@ -94,7 +140,30 @@ struct AppRootView: View {
                                     container: container,
                                     onRootFeedTabSelected: handleRootFeedTabSelection,
                                     showsRootControls: false,
-                                    createTaskRequestID: rootCreateTaskRequestID,
+                                    // The live request id reaches the selected feed only, and
+                                    // that "only" is the whole of what this line says. It is
+                                    // NOT the mechanism that protects the hand-over, and it
+                                    // should not be read as one: this is a `switch rootFeedTab`
+                                    // arm, so it is built only while `rootFeedTab` already
+                                    // equals the tab it tests and the `0` branch is
+                                    // unreachable where it is written. What holds is the
+                                    // frozen render — the departing copy is the body it had
+                                    // before the tab changed, the same premise
+                                    // `TdayFeedDeparture` rests its z-order on, so its input
+                                    // never changes and its `.onChange(of:
+                                    // createTaskRequestID)` cannot fire. The sentinel is kept
+                                    // because it costs nothing and it is the right value
+                                    // under the other reading of that premise: both this
+                                    // screen's guard and `TodoListScreen`'s are on `> 0`, so
+                                    // a runtime that did re-render the removing copy would be
+                                    // handed `0` and refuse it. Android's twin really is
+                                    // structural — `AnimatedVisibility` recomposes its
+                                    // departing content with the new argument — so the two
+                                    // clients reach the same guarantee by different routes;
+                                    // see `presentPendingRootCreateTaskIfReady`.
+                                    createTaskRequestID: (rootFeedTab == .scheduledTaskHome
+                                        ? rootCreateTaskRequestID
+                                        : 0),
                                     createTaskPrefill: rootCreateTaskPrefill,
                                     onCreateTaskSheetClosed: { rootCreateTaskPrefill = nil },
                                     scrollToTopRequestID: scheduledTaskHomeScrollToTopRequestID,
@@ -105,7 +174,33 @@ struct AppRootView: View {
                                 ) { route in
                                     handleRoute(route)
                                 }
-                                .transition(.opacity)
+                                // The whole of the hand-over, both halves: this feed fades IN on
+                                // `Enter` when it is the tab that was asked for and OUT on `Exit`
+                                // when it is the tab being left, both over the one `Enter` length
+                                // they share. That is the pairing web makes at a route change —
+                                // `.tday-route-fade` on `--tday-ease-enter`, the outgoing
+                                // `::view-transition-old(root)` on `--tday-ease-exit`, both at
+                                // `--tday-duration-enter` — and it is why this is `.asymmetric`
+                                // rather than the splash's two one-way arms: a root feed arrives
+                                // AND leaves over the app's lifetime, so each direction has to
+                                // carry its own curve on the one view. The departure is raised
+                                // above the arrival by `TdayFeedDeparture`; web carries the same
+                                // requirement as `z-index: 1` on its outgoing snapshot and says
+                                // why there. The transaction these need is the `.animation(_:
+                                // value: rootFeedTab)` below the stack.
+                                .transition(.asymmetric(
+                                    insertion: .opacity.animation(
+                                        tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter))
+                                    ),
+                                    removal: .opacity
+                                        .animation(
+                                            tdayAnimation(TdayMotion.exit(duration: TdayMotion.Durations.enter))
+                                        )
+                                        .combined(with: .modifier(
+                                            active: TdayFeedDeparture(raised: true),
+                                            identity: TdayFeedDeparture(raised: false)
+                                        ))
+                                ))
                             case .floaterTaskHome:
                                 TodoListScreen(
                                     container: container,
@@ -118,7 +213,13 @@ struct AppRootView: View {
                                     showsRootControls: false,
                                     pullRefreshEnabled: !appViewModel.isLocalMode,
                                     usesRootFeedHeader: true,
-                                    createTaskRequestID: rootCreateTaskRequestID,
+                                    // Gated on the selected tab for the reason written on the
+                                    // Scheduled feed's line above — including that the gate is a
+                                    // sentinel kept for the other reading of the frozen-render
+                                    // premise and is not itself the mechanism.
+                                    createTaskRequestID: (rootFeedTab == .floaterTaskHome
+                                        ? rootCreateTaskRequestID
+                                        : 0),
                                     scrollToTopRequestID: floaterTaskHomeScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
@@ -139,11 +240,39 @@ struct AppRootView: View {
                                     },
                                     summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
                                 )
-                                .transition(.opacity)
+                                // The same pairing as the Scheduled feed above, spelled once per
+                                // arm because that is what a two-curve hand-over costs in
+                                // SwiftUI — see the comment on the other arm, and
+                                // `AppRootView`'s own note about the splash.
+                                .transition(.asymmetric(
+                                    insertion: .opacity.animation(
+                                        tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter))
+                                    ),
+                                    removal: .opacity
+                                        .animation(
+                                            tdayAnimation(TdayMotion.exit(duration: TdayMotion.Durations.enter))
+                                        )
+                                        .combined(with: .modifier(
+                                            active: TdayFeedDeparture(raised: true),
+                                            identity: TdayFeedDeparture(raised: false)
+                                        ))
+                                ))
                             }
 
                             if appViewModel.isWorkspaceAvailable, rootControlsVisible {
                                 rootFloatingControls
+                                    // Above the feeds, explicitly rather than by declaration
+                                    // order, because the departing feed raises ITSELF to
+                                    // `zIndex(1)` for the whole of its removal — see
+                                    // `TdayFeedDeparture`. A sibling left at the `ZStack`'s
+                                    // implicit 0 would be painted under an opaque full-screen
+                                    // feed for those 200 ms: the pill the user just tapped and
+                                    // the create button gone at the first frame of every swap
+                                    // and fading back in with the screen the user left.
+                                    // Android carries the twin as `Modifier.zIndex(8f)` on
+                                    // both controls, against `0f`/`1f` on the feeds, and 8 is
+                                    // that number rather than a new one for the same question.
+                                    .zIndex(8)
                                     // Down and out through the bottom edge, and back up the
                                     // same way. The opacity half is load-bearing rather than
                                     // decorative: `.move(edge:)` offsets by the view's own
@@ -163,21 +292,42 @@ struct AppRootView: View {
                         // two transitions above are inert without a transaction, and this is
                         // it. Nothing in the body travels — the arriving feed is drawn in the
                         // slot the leaving one had — so by the geometry rule this is not
-                        // Emphasis, and a tab handover is the Quick rung the vocabulary
-                        // already names for it. Quick also keeps the fade inside the 180 ms
-                        // `presentPendingRootCreateTaskIfReady` waits out, so a deep link that
-                        // switches tab and then asks for a create sheet still finds one feed
-                        // on screen. The floating controls are in the transaction too, which
-                        // crosses their accent over with the body instead of snapping it; the
-                        // pill is a `UISegmentedControl`, so its own indicator stays on
-                        // UIKit's timing rather than this one. Android crossfades the same
-                        // swap on the same rung and curve, and drives its own create button's
-                        // accent across on that rung too so the corner doesn't cut while the
-                        // body fades. Reduce Motion passes no animation at all: the swap
-                        // cuts to the arriving feed finished rather than holding it
-                        // half-faded (`docs/motion.md`'s fifth idiom rule).
+                        // Emphasis, and a tab handover is a rung the vocabulary names for it.
+                        //
+                        // `Enter`, and that is a reversal of what this swap used to say. The
+                        // `Quick`/`standard` pair it carried argued shorter-than-the-selector so
+                        // the body would not still be resolving after the control it answers had
+                        // landed; `docs/motion.md`'s `Scene` bullet had already answered that in
+                        // prose — "Nor is this rung for route or tab handovers: those are
+                        // `Enter` on both clients that have them" — and `Enter` keeps the
+                        // ordering that argument was about (200 ms of body against the
+                        // selector's own spring) while buying the one thing the old shape could
+                        // not express at all, which is that web's fade is TWO curves. The length
+                        // is named here, where the transaction is opened; the curves live
+                        // per-arm on the two `.transition`s above, exactly as this file already
+                        // argues for the splash. Android runs the same pairing.
+                        //
+                        // What used to hold the create-task hand-off together here was the
+                        // length itself: `presentPendingRootCreateTaskIfReady` waits 180 ms and
+                        // a 150 ms fade finished inside that, so a deep link that switched tab
+                        // and then asked for a sheet found one feed on screen. `Enter` is 200
+                        // and is not inside it, so the hand-off no longer leans on a sleep —
+                        // both feeds are handed the same request id only while ONE of them is
+                        // the selected tab, and the departing copy is handed the `0` sentinel
+                        // its own `.onChange` guard already refuses. See the two
+                        // `createTaskRequestID:` lines above.
+                        //
+                        // The floating controls are in the transaction too, which crosses their
+                        // accent over with the body instead of snapping it; the pill is a
+                        // `UISegmentedControl`, so its own indicator stays on UIKit's timing
+                        // rather than this one. Reduce Motion passes no animation at all: the
+                        // swap cuts to the arriving feed finished rather than holding it
+                        // half-faded (`docs/motion.md`'s fifth idiom rule), and because the
+                        // departing copy is only *raised* for the length of a transition that
+                        // does not play, it is gone in the frame the tab changes rather than
+                        // left opaque over the feed the user just asked for.
                         .animation(
-                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)),
+                            tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter)),
                             value: rootFeedTab
                         )
                         // The dock and the create button used to be nothing but the `if`
@@ -376,8 +526,12 @@ struct AppRootView: View {
                     // of this transaction (`.animation(nil, value:)` above) so it cannot
                     // drive that move through an event nothing else moves in. So by the
                     // geometry rule this is not Emphasis, and a whole-screen handover is
-                    // the Quick rung the vocabulary names for it — the rung the tab swap
-                    // above already runs on. Standard is the curve because a crossfade runs
+                    // the Quick rung the vocabulary names for it. It stays on Quick while the
+                    // tab swap above has moved to `Enter`, and the two are different events:
+                    // that swap took up web's route fade, where the two-curve pairing IS the
+                    // read and the length is half of it, while this is a lock resolving over
+                    // a backdrop — one crossfade, no departing half, nothing for a longer
+                    // clock to serve. Standard is the curve because a crossfade runs
                     // both halves off one clock and neither Enter nor Exit describes that,
                     // and one animation covers both directions because the way in and the
                     // way out are the same handover reversed. Android times the same moment
@@ -560,6 +714,10 @@ struct AppRootView: View {
             handlePendingReminderAction()
         }
         .onChange(of: appViewModel.hasCompletedInitialBootstrap) { _, _ in
+            // The launch feed is settled the moment bootstrap answers: `defaultHomeScreen` is
+            // already the account's value by then, and this is the one moment it can be applied
+            // without moving a screen the user is looking at.
+            applyAccountRootFeedTabIfUnchosen()
             drainPendingShareIfReady()
             presentPendingRootCreateTaskIfReady()
             // Cold launch: apply completions tapped on widgets while the app
@@ -568,6 +726,13 @@ struct AppRootView: View {
             Task {
                 await container.todoRepository.drainWidgetCompletions()
             }
+        }
+        // A later arrival of the same preference: the setting was changed on another device
+        // while this one sat idle, or this install was pointed at a server after it had already
+        // bootstrapped. `defaultHomeScreen` is `@Observable`, so this fires for any of them —
+        // and `applyAccountRootFeedTabIfUnchosen` refuses once the user has picked a feed.
+        .onChange(of: appViewModel.defaultHomeScreen) { _, _ in
+            applyAccountRootFeedTabIfUnchosen()
         }
         .onChange(of: appViewModel.isWorkspaceAvailable) { _, _ in
             drainPendingShareIfReady()
@@ -732,6 +897,9 @@ struct AppRootView: View {
 
     private func handleRootFeedTabSelection(_ tab: RootFeedTab) {
         if tab == rootFeedTab {
+            // Re-tapping the tab that is already showing scrolls it to the top, and is still
+            // the user saying where they want to be — so it pins the feed too.
+            rootFeedTabWasChosen = true
             requestRootFeedScrollToTop(for: tab)
             return
         }
@@ -740,8 +908,25 @@ struct AppRootView: View {
     }
 
     private func selectRootFeedTab(_ tab: RootFeedTab) {
+        rootFeedTabWasChosen = true
         rootFeedTab = tab
         appViewModel.navigationPath = []
+    }
+
+    /// Applies the account's "Default home screen" to the launch feed, unless the user has
+    /// already steered the root feed themselves this session.
+    ///
+    /// The seed in `init` reads the DEVICE cache, and that cache only holds the account's value
+    /// once the sync carrying it has run — so on the first launch after the setting was changed
+    /// elsewhere, the seed is still the screen that device left behind and the account's real
+    /// answer would arrive a launch late. It does not have to: `bootstrap()` primes that sync
+    /// (`bootstrapSession` → `syncCachedData`, which mirrors the account value into the cache)
+    /// and only then publishes `defaultHomeScreen` and flips `hasCompletedInitialBootstrap`, so
+    /// the value is known on the launch that learns it. This applies it there.
+    private func applyAccountRootFeedTabIfUnchosen() {
+        guard appViewModel.hasCompletedInitialBootstrap, !rootFeedTabWasChosen else { return }
+        guard rootFeedTab != appViewModel.defaultHomeScreen else { return }
+        rootFeedTab = appViewModel.defaultHomeScreen
     }
 
     private func requestRootFeedScrollToTop(for tab: RootFeedTab) {
@@ -801,6 +986,21 @@ struct AppRootView: View {
         Task { @MainActor in
             selectRootFeedTab(request.tab)
             await Task.yield()
+            // A settle, not a guard. This sleep is left over from a hand-over that finished
+            // inside it and used to be the whole of what kept a deep link that switches tab
+            // and then asks for a create sheet from being answered by BOTH feeds: the fade
+            // was 150 ms, this waits 180. The fade is now `Enter` (200 ms) and no longer fits,
+            // so the protection moved into the wiring — but on this client it did not move
+            // into the `0` sentinel the two `createTaskRequestID:` lines pass on the tab they
+            // are not, which is unreachable where it is written (the note on the Scheduled
+            // feed's line says why). What holds is the frozen render: the departing copy is
+            // the body it had before the tab changed, so its id never changes and its
+            // `.onChange` cannot fire. The sentinel stays in as the right value for the other
+            // reading of that premise, refused by the same `> 0` guard. Android's half is
+            // structural for real, because `AnimatedVisibility` recomposes the departing
+            // content with the new argument. What is left here is the pause the sheet wants
+            // before it appears, so the tab it belongs to is the tab the user sees; it is
+            // timing, not correctness, and nothing depends on it being longer than the fade.
             try? await Task.sleep(for: .milliseconds(180))
             guard appViewModel.hasCompletedInitialBootstrap, appViewModel.isWorkspaceAvailable else {
                 pendingRootCreateTask = request
