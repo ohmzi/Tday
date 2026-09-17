@@ -34,10 +34,13 @@ fun Route.preferencesRoutes() {
                     val direction = validateOptionalEnumValue<Direction>(body.direction, "direction").bind()
                     val defaultHomeScreen =
                         validateOptionalEnumValue<DefaultHomeScreen>(body.defaultHomeScreen, "defaultHomeScreen").bind()
+                    // Answer with the stored preferences (the same payload GET returns), not a
+                    // bare acknowledgement: every client reads the updated fields out of this
+                    // response, so a message-only body left them all to substitute their own
+                    // defaults for `defaultHomeScreen` and spring the control back to Scheduled.
                     preferencesService.update(
                         user.id, sortBy, groupBy, direction, body.aiSummaryEnabled, defaultHomeScreen,
                     ).bind()
-                    mapOf("message" to "preferences updated")
                 }
             }
         }

@@ -94,16 +94,26 @@ final class SettingsRepository {
 
     /// Persists the default-home-screen preference via `/api/preferences` (server mode) or
     /// the offline cache directly (Local Mode), mirroring `setAiSummaryEnabled`'s split.
+    ///
+    /// Server Mode writes the cache SECOND, from what the server accepted. It used to write it
+    /// first, before the PATCH, and never roll it back on a throw — which left a device-local
+    /// value the account never got whenever the write failed (offline, a validation error, a
+    /// 5xx). That value is what `AppRootView.init` reads on the next cold launch, so the app
+    /// opened on a screen the account had not agreed to, and the first successful sync then
+    /// silently reverted it: the choice appeared to take and then un-take itself. Android
+    /// orders it this way too (`SettingsRepository.setDefaultHomeScreen`). Local Mode keeps the
+    /// cache-first write, because there it IS the store — no network to contradict it.
     @discardableResult
     func setDefaultHomeScreen(_ value: String) async throws -> String {
-        _ = try await cacheManager.updateOfflineState { state in
-            var nextState = state
-            nextState.defaultHomeScreen = value
-            return nextState
-        }
         if secureStore.isLocalMode() {
+            _ = try await cacheManager.updateOfflineState { state in
+                var nextState = state
+                nextState.defaultHomeScreen = value
+                return nextState
+            }
             return value
         }
+
         let response = try await api.patchPreferences(payload: PreferencesDTO(
             direction: nil,
             sortBy: nil,
@@ -111,6 +121,16 @@ final class SettingsRepository {
             rrule: nil,
             defaultHomeScreen: value
         ))
-        return response.defaultHomeScreen ?? value
+        // The request is the authority on what was written (a 200 means the value passed
+        // validation and landed); the response is the stored record and normally agrees. A
+        // response carrying no preferences at all still contributes the value we sent rather
+        // than a default, which is what `?? value` is for.
+        let accepted = response.defaultHomeScreen ?? value
+        _ = try await cacheManager.updateOfflineState { state in
+            var nextState = state
+            nextState.defaultHomeScreen = accepted
+            return nextState
+        }
+        return accepted
     }
 }

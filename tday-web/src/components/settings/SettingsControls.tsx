@@ -61,8 +61,9 @@ export function SettingsOptionRow({
   destructive?: boolean;
   destructiveIcon?: boolean;
   showChevron?: boolean;
-  /** Right-hand slot for a row that reports progress (a spinner) rather than
-   * a destination. */
+  /** Right-hand slot, drawn before the chevron: a spinner for a row that reports
+   * progress, or a value for a destination that also has something to tell you
+   * — the App Version row prints the installed version there. */
   trailing?: ReactNode;
 }) {
   const content = (
