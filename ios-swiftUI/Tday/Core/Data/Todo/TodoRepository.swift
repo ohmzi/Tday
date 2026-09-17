@@ -107,6 +107,29 @@ final class TodoRepository {
             return
         }
 
+        // No due means the schedule sheet's Schedule toggle was turned OFF, and an
+        // unscheduled task is a Floater — it is a different entity with its own table
+        // (`todos.due` is NOT NULL; `floaters` has no due, no rrule and its own list
+        // type). Minting a todo here and letting the `due ?? now + 1h` fallback below
+        // supply an hour out is what made the toggle appear to do nothing.
+        //
+        // The list id goes with it: the picker on a dated sheet offers scheduled lists,
+        // and the two list types are separate — the server refuses a scheduled list id on
+        // a floater. Membership stays behind, the same as a demote.
+        guard payload.due != nil else {
+            try await createFloater(
+                payload: CreateTaskPayload(
+                    title: payload.title,
+                    description: payload.description,
+                    priority: payload.priority,
+                    due: nil,
+                    rrule: nil,
+                    listId: nil
+                )
+            )
+            return
+        }
+
         let now = Date().epochMilliseconds
         let localTodoID = LOCAL_TODO_PREFIX + UUID().uuidString.lowercased()
         let normalizedDescription = payload.description.nilIfBlank
@@ -235,7 +258,71 @@ final class TodoRepository {
         }
     }
 
+    /// A save with no due on a task that has one is the schedule sheet's Schedule toggle
+    /// turned OFF, and that is a conversion rather than a field write. A scheduled task and
+    /// a Floater are two entities in two tables (`todos.due` is NOT NULL; `floaters` has no
+    /// due, no rrule and its own list type), so the row cannot be made dateless in place and
+    /// `PATCH /api/todo` has no kind field to carry the intent. The conversion is demote:
+    /// the todo row is consumed and a floater takes its place.
+    ///
+    /// The rest of the save is written first, because `demoteToFloater` copies the todo
+    /// row's fields server-side; the replay queue keeps that order (this update is stamped
+    /// before the demote it queues). A recurring task is never converted — the server
+    /// refuses to demote one (its series would be silently destroyed) and the sheet does
+    /// not offer the toggle for it.
     func updateTodo(_ todo: TodoItem, payload: CreateTaskPayload) async throws {
+        if payload.due == nil && !todo.isRecurring {
+            try await updateScheduledTodo(
+                todo,
+                payload: CreateTaskPayload(
+                    title: payload.title,
+                    description: payload.description,
+                    priority: payload.priority,
+                    due: todo.due,
+                    rrule: nil,
+                    listId: payload.listId
+                )
+            )
+            try await demoteTodo(
+                TodoItem(
+                    id: todo.id,
+                    canonicalId: todo.canonicalId,
+                    title: payload.title.trimmingCharacters(in: .whitespacesAndNewlines),
+                    description: payload.description.nilIfBlank,
+                    priority: normalizedPriority(payload.priority),
+                    due: todo.due,
+                    rrule: todo.rrule,
+                    instanceDate: todo.instanceDate,
+                    pinned: todo.pinned,
+                    completed: todo.completed,
+                    listId: todo.listId,
+                    updatedAt: todo.updatedAt
+                )
+            )
+            return
+        }
+        // A recurring task is never converted (see above), and `payload.rrule` is nil for it
+        // because the toggle-off that asked for the conversion is what cleared it. The
+        // schedule is carried through unchanged instead of ending a recurrence the save
+        // could not have been honoured for.
+        if payload.due == nil {
+            try await updateScheduledTodo(
+                todo,
+                payload: CreateTaskPayload(
+                    title: payload.title,
+                    description: payload.description,
+                    priority: payload.priority,
+                    due: todo.due,
+                    rrule: todo.rrule,
+                    listId: payload.listId
+                )
+            )
+            return
+        }
+        try await updateScheduledTodo(todo, payload: payload)
+    }
+
+    private func updateScheduledTodo(_ todo: TodoItem, payload: CreateTaskPayload) async throws {
         let normalizedTitle = payload.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedTitle.isEmpty else {
             return

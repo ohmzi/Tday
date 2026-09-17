@@ -33,6 +33,15 @@ struct CreateTaskSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var colors
 
+    /// Whether the Schedule switch is offered. It is not, for a recurring task being
+    /// edited: turning it off asks for a conversion into a Floater (demote) and the
+    /// server refuses to demote a recurring todo — its series would be destroyed.
+    private var canToggleSchedule: Bool {
+        guard showScheduleControls else { return false }
+        guard let rrule = initialPayload?.rrule else { return true }
+        return rrule.isEmpty
+    }
+
     @State private var title = ""
     @State private var notes = ""
     @State private var priority = TaskPriorityDisplay.normalValue
@@ -227,18 +236,27 @@ struct CreateTaskSheet: View {
             if showScheduleControls {
                 TdaySheetSectionTitle(text: "Schedule")
                 TdaySheetCard {
-                    CreateTaskSheetScheduleToggleRow(
-                        isOn: Binding(
-                            get: { scheduleEnabled },
-                            set: { newValue in
-                                scheduleEnabled = newValue
-                                userTurnedScheduleOff = !newValue
-                            }
+                    // Turning Schedule off on an existing task converts it into a Floater
+                    // (demote), and a recurring task cannot be demoted — the server refuses,
+                    // because its series would be silently destroyed. So the switch is not
+                    // offered for one: the task stays scheduled, and the Repeat row below is
+                    // the reason why.
+                    if canToggleSchedule {
+                        CreateTaskSheetScheduleToggleRow(
+                            isOn: Binding(
+                                get: { scheduleEnabled },
+                                set: { newValue in
+                                    scheduleEnabled = newValue
+                                    userTurnedScheduleOff = !newValue
+                                }
+                            )
                         )
-                    )
+                    }
 
                     if scheduleEnabled {
-                        TdaySheetDivider()
+                        if canToggleSchedule {
+                            TdaySheetDivider()
+                        }
 
                         CreateTaskSheetDueRow(
                             dueDate: $dueDate,

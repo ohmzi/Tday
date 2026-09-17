@@ -303,6 +303,11 @@ fun CreateTaskBottomSheet(
     val listIdsKey = remember(lists) { lists.joinToString(separator = "|") { it.id } }
 
     val isEditMode = editingTask != null
+    // Turning Schedule off on an existing task converts it into a Floater (demote), and a
+    // recurring task cannot be demoted — the backend refuses, because its series would be
+    // silently destroyed. So the switch is not offered for one. The task still shows as
+    // scheduled; the repeat row below says why it cannot become unscheduled.
+    val canToggleSchedule = showScheduleControls && !(editingTask?.isRecurring == true)
     var title by rememberSaveable(editingTask?.id) {
         mutableStateOf(editingTask?.title ?: initialTitle.orEmpty())
     }
@@ -819,15 +824,17 @@ fun CreateTaskBottomSheet(
                                 if (showScheduleControls) {
                                     SectionHeading(stringResource(R.string.create_task_section_schedule))
                                     GroupCard {
-                                        ScheduleSwitchRow(
-                                            enabled = scheduleEnabled,
-                                            onEnabledChange = { enabled ->
-                                                scheduleEnabled = enabled
-                                            },
-                                        )
+                                        if (canToggleSchedule) {
+                                            ScheduleSwitchRow(
+                                                enabled = scheduleEnabled,
+                                                onEnabledChange = { enabled ->
+                                                    scheduleEnabled = enabled
+                                                },
+                                            )
+                                        }
                                         AnimatedVisibility(visible = scheduleEnabled) {
                                             Column {
-                                                RowDivider()
+                                                if (canToggleSchedule) RowDivider()
                                                 SplitDateTimeRow(
                                                     icon = ImageVector.vectorResource(R.drawable.ic_lucide_calendar_clock),
                                                     title = stringResource(R.string.create_task_due),

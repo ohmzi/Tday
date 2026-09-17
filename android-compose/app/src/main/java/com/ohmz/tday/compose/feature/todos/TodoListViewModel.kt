@@ -584,6 +584,14 @@ class TodoListViewModel @Inject constructor(
             runCatching {
                 if (mode == TodoListMode.FLOATER) {
                     todoRepository.createFloater(payload)
+                } else if (payload.due == null) {
+                    // Schedule OFF on a dated feed asks for an unscheduled task, and a todo
+                    // cannot be undated: this is a Floater. Routing on the screen's mode
+                    // alone used to mint a todo and let the repository fill in a due an hour
+                    // out. The list picker on a dated feed offers *scheduled* lists, and the
+                    // two list types are separate, so membership stays behind — the same as
+                    // a demote, and the server would refuse the id as a floater list.
+                    todoRepository.createFloater(payload.copy(listId = null))
                 } else {
                     todoRepository.createTodo(payload)
                 }

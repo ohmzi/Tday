@@ -9,12 +9,25 @@ type UpdateFloaterContext = {
   oldListFloaters?: FloaterItemType[];
 };
 
-async function patchFloater(floater: FloaterItemType) {
+/** The writable fields of a floater row, as `PATCH /api/floater` takes them. */
+export type FloaterPatchFields = {
+  id: string;
+  title: string;
+  description: string | null | undefined;
+  priority: FloaterItemType["priority"];
+  listID?: string | null;
+};
+
+/**
+ * Writes floater fields. Exported so a caller holding only a floater's id (a
+ * demote response, for instance) can write to it without a full FloaterItemType.
+ */
+export async function patchFloaterFields(fields: FloaterPatchFields) {
   const parsedObj = floaterSchema.safeParse({
-    title: floater.title,
-    description: floater.description,
-    priority: floater.priority,
-    listID: floater.listID ?? null,
+    title: fields.title,
+    description: fields.description,
+    priority: fields.priority,
+    listID: fields.listID ?? null,
   });
 
   if (!parsedObj.success) {
@@ -24,7 +37,17 @@ async function patchFloater(floater: FloaterItemType) {
   await api.PATCH({
     url: "/api/floater",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id: floater.id, ...parsedObj.data }),
+    body: JSON.stringify({ id: fields.id, ...parsedObj.data }),
+  });
+}
+
+async function patchFloater(floater: FloaterItemType) {
+  await patchFloaterFields({
+    id: floater.id,
+    title: floater.title,
+    description: floater.description,
+    priority: floater.priority,
+    listID: floater.listID ?? null,
   });
 }
 
