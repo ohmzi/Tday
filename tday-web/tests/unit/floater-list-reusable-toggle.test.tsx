@@ -136,7 +136,7 @@ function renderContainer() {
 
 /** Opens the owner's edit sheet, which is what seeds the form from the list. */
 const openEditSheet = () =>
-  fireEvent.click(screen.getByLabelText("editFloaterList Packing"));
+  fireEvent.click(screen.getByLabelText("listSettings Packing"));
 const toggle = () => screen.getByRole("switch");
 const confirm = () => fireEvent.click(screen.getByText("confirm"));
 

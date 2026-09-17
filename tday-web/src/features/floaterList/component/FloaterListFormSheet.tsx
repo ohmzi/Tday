@@ -281,7 +281,7 @@ export default function FloaterListFormSheet({
       variant="native"
       open={open}
       onOpenChange={onOpenChange}
-      title={isEditing ? appDict("editFloaterList") : appDict("newFloaterList")}
+      title={isEditing ? appDict("listSettings") : appDict("newFloaterList")}
       onClose={() => onOpenChange(false)}
       onConfirm={() => void handleSubmit()}
       confirmDisabled={!canSubmit}
