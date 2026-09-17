@@ -170,8 +170,17 @@ extension EnvironmentValues {
     /// Read by the Settings row alone, so it can say who decided. Everything else wants
     /// `\.tdayAnimation`, which is the composed answer — see the key above for why this is
     /// published rather than read where it is needed.
+    ///
+    /// The setter is not dead weight even though nothing sets this through the key path:
+    /// `.environment(\.tdaySystemReduceMotion, …)` is how the gate publishes it, and that call
+    /// asks for a `WritableKeyPath`. A get-only declaration compiles as a plain `KeyPath` and the
+    /// publish site fails with "cannot convert value of type 'KeyPath<EnvironmentValues, Bool>' to
+    /// expected argument type 'WritableKeyPath<EnvironmentValues, Bool>'" — which is exactly how
+    /// this was written the first time, and exactly what the iOS CI job caught where nothing in
+    /// this repo could.
     var tdaySystemReduceMotion: Bool {
-        self[TdaySystemReduceMotionKey.self]
+        get { self[TdaySystemReduceMotionKey.self] }
+        set { self[TdaySystemReduceMotionKey.self] = newValue }
     }
 }
 

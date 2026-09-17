@@ -732,7 +732,13 @@ final class AppViewModel {
     /// say which one decided.
     var reduceMotion: Bool {
         get { container.motionPreference.isEnabled }
-        set { container.motionPreference.isEnabled = newValue }
+        set {
+            container.motionPreference.isEnabled = newValue
+            // This is the store's one writer, and persisting is its caller's job rather than the
+            // property's — see `MotionPreferenceStore` for why that is not a `didSet`. A second
+            // writer anywhere would need this line too.
+            container.motionPreference.persist()
+        }
     }
 
     /// Concrete locale identifier to apply (resolves "system" to the device language).
