@@ -38,6 +38,16 @@ vi.mock("@/lib/api-client", () => ({
   api: { PATCH: (...a: unknown[]) => patchMock(...a), DELETE: vi.fn(), POST: vi.fn() },
 }));
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: vi.fn() }) }));
+// Both rows draw their list mark through a `ListDot`, which reads the list metadata store. The
+// mock above has no `GET`, so an unmocked hook would fail its query inside every render here —
+// React Query would swallow it and the assertions below would still pass, which is exactly the
+// kind of accidental pass `staged-completion-unmount` and a dozen others refuse the same way.
+vi.mock("@/components/Sidebar/List/query/get-list-meta", () => ({
+  useListMetaData: () => ({ listMetaData: {} }),
+}));
+vi.mock("@/features/floaterList/query/get-floater-list-meta", () => ({
+  useFloaterListMetaData: () => ({ floaterListMetaData: {} }),
+}));
 
 import { CompletedTodoItemContainer } from "@/features/completed/component/ItemContainer";
 import { CompletedFloaterItemContainer } from "@/features/completed/component/CompletedFloaterItemContainer";

@@ -1,5 +1,6 @@
 import { CompletedFloaterItemType } from "@/types";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
+import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
 import { AlertTriangle, Check } from "lucide-react";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
@@ -12,7 +13,6 @@ import {
 } from "@/lib/taskCompletionTiming";
 import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
 import { useUnCompleteFloater } from "../query/uncomplete-completedFloater";
-import { listColorAccentColors } from "@/components/app/nativeScreenTheme";
 
 // The floater twin of CompletedTodoItemContainer (see ItemContainer.tsx) —
 // same staged un-completing sequence and layout, plus a "list deleted" note
@@ -23,7 +23,7 @@ export const CompletedFloaterItemContainer = ({
 }: {
   completedFloaterItem: CompletedFloaterItemType;
 }) => {
-  const { title, description, listName, listColor, listDeleted } =
+  const { title, description, listID, listName, listColor, listDeleted } =
     completedFloaterItem;
   const { t: completedDict } = useTranslation("completed");
   const { mutateUnComplete } = useUnCompleteFloater();
@@ -54,9 +54,6 @@ export const CompletedFloaterItemContainer = ({
   };
 
   const struck = phase === null || phase === "unchecked";
-  const dotColor = listColor
-    ? listColorAccentColors[listColor] ?? "currentColor"
-    : "currentColor";
 
   return (
     <div
@@ -69,7 +66,9 @@ export const CompletedFloaterItemContainer = ({
             }
           : undefined
       }
-      className="relative grid max-w-full grid-rows-[1fr] overflow-hidden sm:overflow-visible"
+      // Both tracks: the row one is the un-tick collapse and the column one is the wrapping
+      // fix — see `ItemContainer`, which owns the argument for each.
+      className="relative grid max-w-full grid-cols-[minmax(0,1fr)] grid-rows-[1fr] overflow-hidden sm:overflow-visible"
     >
       <div
         style={removing ? { overflow: "hidden", minHeight: 0 } : undefined}
@@ -95,7 +94,9 @@ export const CompletedFloaterItemContainer = ({
           <div className="min-w-0">
             <p
               className={clsx(
-                "select-none truncate text-[0.98rem] font-black leading-5 text-muted-foreground transition-colors duration-emphasis",
+                // Wrapped and clamped to two lines rather than `truncate`d onto one — the
+                // argument for both classes is in `ItemContainer`, and it is the same row.
+                "select-none line-clamp-2 wrap-anywhere text-[0.98rem] font-black leading-5 text-muted-foreground transition-colors duration-emphasis",
                 // Struck at rest, lifted on the beat — see CompletedTodoItemContainer.
                 struck ? "line-through" : "task-unstrike",
               )}
@@ -103,7 +104,7 @@ export const CompletedFloaterItemContainer = ({
               {title}
             </p>
             {description && (
-              <pre className="w-48 whitespace-pre-wrap pt-0.5 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
+              <pre className="w-48 whitespace-pre-wrap wrap-anywhere pt-0.5 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
                 {description}
               </pre>
             )}
@@ -112,19 +113,30 @@ export const CompletedFloaterItemContainer = ({
 
         {listName && (
           // The list mark reads with the title's first line, in the same `h-5` box the
-          // restore circle gets. See `ItemContainer`.
+          // restore circle gets. See `ItemContainer` for why it is the list's glyph rather
+          // than a dot, and why the name is capped at every width.
+          //
+          // `FloaterListDot`, not `ListDot`: the two stores are disjoint, so a completed
+          // Floater has to be resolved against the Floater lists. It resolves by id first and
+          // falls through to `listName` — which this row expects to be the whole answer,
+          // because a deleted list is the one case the backend nulls a completed Floater's
+          // `listID`, and that is exactly the row the `AlertTriangle` below is warning about.
           <div className="flex h-5 shrink-0 items-center gap-1.5 pr-1">
-            {/* Mobile: colored dot only. Desktop: dot + list name pill. */}
-            <span
-              className="inline-block h-3 w-3 shrink-0 rounded-full sm:hidden"
-              style={{ backgroundColor: dotColor }}
+            {/* Mobile: the glyph alone. Desktop: the glyph + list name pill. */}
+            <FloaterListDot
+              id={listID}
+              name={listName}
+              color={listColor}
+              className="h-4 w-4 sm:hidden"
             />
             <span className="hidden items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-xs font-black text-foreground/80 sm:flex">
-              <span
-                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: dotColor }}
+              <FloaterListDot
+                id={listID}
+                name={listName}
+                color={listColor}
+                className="shrink-0 text-sm"
               />
-              <span className="max-w-24 truncate md:max-w-52 lg:max-w-none">
+              <span className="max-w-24 truncate md:max-w-52 lg:max-w-64">
                 {listName}
               </span>
             </span>

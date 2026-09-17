@@ -35,3 +35,45 @@ export function shouldShowListMark(
   if (!scopedListId?.trim()) return true;
   return rowListId !== scopedListId;
 }
+
+/** The two fields a lookup needs of any shape of list meta. */
+type RowListSource = { name?: string | null };
+
+/**
+ * WHICH list a row's mark belongs to, given what the row knows and what the store holds.
+ *
+ * The other half of the question above: that one decides whether a row draws its list's glyph,
+ * this one decides which list's glyph that is. They live together because they are asked by the
+ * same row at the same moment — the same pairing the iOS twin keeps in `TaskRowListMark.swift`,
+ * where `shouldShowListMark` and `tdayResolvedRowList` are neighbours.
+ *
+ * The id is tried first, because an id survives a rename. It is not sufficient on its own: a
+ * COMPLETED row is a denormalised snapshot, and the backend nulls a completed Floater's `listID`
+ * the moment its list is deleted (`ON DELETE SET NULL`, keeping `originalListID`) — so a
+ * deleted-list row falls through to the name, which is what its snapshot still holds, and finds
+ * the list again if Undo recreated it. Handing such a row to a lookup that only takes an id is
+ * what would make it draw the app's `inbox` glyph: a mark that says "Inbox" about a task in any
+ * list at all.
+ *
+ * The name match is case- and whitespace-insensitive and takes the first match, matching
+ * `tdayResolvedRowList` on iOS and `CompletedItem.resolveListSummary` on Android. The namespace
+ * is the caller's: scheduled lists and Floater lists are two disjoint stores, and a row resolved
+ * against the wrong one finds nothing and silently loses its mark.
+ */
+export function resolveRowList<T extends RowListSource>(
+  lists: Record<string, T> | undefined,
+  listID: string | null | undefined,
+  listName: string | null | undefined,
+): T | undefined {
+  const namespace = lists ?? {};
+
+  const byId = listID?.trim();
+  if (byId && namespace[byId]) return namespace[byId];
+
+  const wanted = listName?.trim().toLowerCase();
+  if (!wanted) return undefined;
+
+  return Object.values(namespace).find(
+    (list) => (list.name ?? "").trim().toLowerCase() === wanted,
+  );
+}

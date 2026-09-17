@@ -1,5 +1,6 @@
 import { CompletedTodoItemType } from "@/types";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
+import ListDot from "@/components/ListDot";
 import { Check } from "lucide-react";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
@@ -17,7 +18,7 @@ export const CompletedTodoItemContainer = ({
 }: {
   completedTodoItem: CompletedTodoItemType;
 }) => {
-  const { title, description, listName, listColor } = completedTodoItem;
+  const { title, description, listID, listName, listColor } = completedTodoItem;
   const { mutateUnComplete } = useUnCompleteTodo();
 
   // Un-completing is the check-off played backwards, and it is now played on the check-off's
@@ -70,7 +71,15 @@ export const CompletedTodoItemContainer = ({
       // The 1fr track is the task rows' collapse (TodoItemCard), which argues the trick where
       // it lives: a height cannot be animated away from `auto`, so the box shuts by closing a
       // grid row. Without it this row faded out and left its gap for the list to jump through.
-      className="relative grid max-w-full grid-rows-[1fr] overflow-hidden sm:overflow-visible"
+      //
+      // `grid-cols-[minmax(0,1fr)]` is the other half of the wrapping fix, and it is about
+      // COLUMNS the way the row track is about rows: this grid's only column was implicit, and
+      // an implicit `auto` track is floored at its content's min-content width. A child that
+      // could not shrink therefore grew the TRACK past this box, and the row painted outside
+      // the app's border — `max-w-full` on a child caps the child, never the track it sits in.
+      // Naming the column `minmax(0, 1fr)` drops that floor, so the border is the edge the row
+      // wraps at rather than a line it runs through.
+      className="relative grid max-w-full grid-cols-[minmax(0,1fr)] grid-rows-[1fr] overflow-hidden sm:overflow-visible"
     >
       <div
         // Lets the grid item shrink past its own content while the track closes.
@@ -97,7 +106,25 @@ export const CompletedTodoItemContainer = ({
           <div className="min-w-0">
             <p
               className={clsx(
-                "select-none truncate text-[0.98rem] font-black leading-5 text-muted-foreground transition-colors duration-emphasis",
+                // The row has to wrap INSIDE the app's border, and this is the class that let it
+                // run past it: `truncate` is `white-space: nowrap`, so the title's min-content
+                // width was its entire text on one line, and both the flex row and the grid track
+                // above it grew to honour that instead of letting anything shrink. Removing the
+                // `nowrap` is the fix — measured, the row then fits at 1440, 1024, 768, 640, 390
+                // and 320 — and the two classes that replace it bound the result either way:
+                //
+                //   `line-clamp-2` is how far it may divide. Without a cap a very long title is a
+                //   wall of text (7 lines at 320px); two is what the native clients draw, Android
+                //   by `maxLines = 2` on its completed title and iOS by its own note that
+                //   "its titles wrap to two lines".
+                //   `wrap-anywhere` is `overflow-wrap: anywhere`, and it is load-bearing rather
+                //   than tidy: a title with one unbroken 150-character token still pinned the row
+                //   to 1375px against a 938px column, because `break-words` does not reduce a
+                //   word's min-content width and `anywhere` does.
+                //
+                // The clamp is in the shared half of the clsx on purpose: the struck and
+                // unstruck halves are the same box, so the line count cannot change on the beat.
+                "select-none line-clamp-2 wrap-anywhere text-[0.98rem] font-black leading-5 text-muted-foreground transition-colors duration-emphasis",
                 // Bare `line-through` while the row is struck, because this row is BORN struck —
                 // `.task-strike` is a reveal and would fade a rule in on every row in the list at
                 // mount. `.task-unstrike` is the beat the user actually asked for.
@@ -107,7 +134,13 @@ export const CompletedTodoItemContainer = ({
               {title}
             </p>
             {description && (
-              <pre className="w-48 whitespace-pre-wrap pt-0.5 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
+              // `wrap-anywhere` for the same reason the title has it. A note is a `<pre>` with
+              // `pre-wrap`, so it breaks at spaces and newlines but not inside a word — and one
+              // long URL in a note was enough to push the row past the border on its own, at
+              // every width, with the title already wrapping. `w-48` caps the box on mobile and
+              // `sm:w-full` makes it the text column's width above that, which is exactly the
+              // width the unbroken run then had to be squeezed into.
+              <pre className="w-48 whitespace-pre-wrap wrap-anywhere pt-0.5 text-xs font-extrabold leading-4 text-muted-foreground sm:w-full">
                 {description}
               </pre>
             )}
@@ -118,18 +151,37 @@ export const CompletedTodoItemContainer = ({
           // The list mark is an annotation on the task, so it reads with the title's
           // first line — the `h-5` box is the same one the restore circle gets at the
           // other end of the row.
+          //
+          // It is the list's own GLYPH, not a colour dot with the name beside it. The glyph
+          // carries the colour as its tint, so it replaces the dot rather than sitting next to
+          // it — which is what the pending rows draw, what Android's completed row draws from
+          // `tdayListIconForList`, and what iOS's draws from `TdayListIcon`. The row used to
+          // put the API's raw colour NAME into a CSS declaration, where five of the fifteen
+          // values (DEEP_BLUE, ROSE, LIGHT_RED, BRICK, SLATE) are not CSS colours at all and
+          // the dot rendered with no colour; the tint map has all fifteen.
+          //
+          // `listID` is what the completed record snapshotted, and `listName`/`listColor` go
+          // beside it because the id is not always there to look up — see `ListDot`.
           <div className="flex h-5 shrink-0 items-center gap-2 pr-1">
-            {/* Mobile: colored dot only. Desktop: dot + list name pill. */}
-            <span
-              className="inline-block h-3 w-3 shrink-0 rounded-full sm:hidden"
-              style={{ backgroundColor: listColor || "currentColor" }}
+            {/* Mobile: the glyph alone. Desktop: the glyph + list name pill. */}
+            <ListDot
+              id={listID}
+              name={listName}
+              color={listColor}
+              className="h-4 w-4 sm:hidden"
             />
             <span className="hidden items-center gap-1 rounded-full border border-border/70 bg-muted/70 px-2 py-[0.2rem] text-xs font-black text-foreground/80 sm:flex">
-              <span
-                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: listColor || "currentColor" }}
+              <ListDot
+                id={listID}
+                name={listName}
+                color={listColor}
+                className="shrink-0 text-sm"
               />
-              <span className="max-w-24 truncate md:max-w-52 lg:max-w-none">
+              {/* The name is capped at every width, and the `lg` step is a cap rather than the
+                  `lg:max-w-none` this row used to carry: the pill is `shrink-0` and the backend
+                  column is `varchar(255)`, so an uncapped name is a second way for the row to
+                  run past the border, with nothing above it able to stop it. It ellipsizes. */}
+              <span className="max-w-24 truncate md:max-w-52 lg:max-w-64">
                 {listName}
               </span>
             </span>

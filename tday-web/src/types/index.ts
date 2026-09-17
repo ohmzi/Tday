@@ -135,6 +135,17 @@ export interface CompletedTodoItemType {
   userID: string;
   rrule: string | null;
   instanceDate: Date | null;
+  /**
+   * The list this task was in, as the completed record snapshotted it.
+   *
+   * Already on the wire — `CompletedTodoDto` declares it and the local twin writes it — and
+   * this type was the only place missing it. The row needs it to draw the list's glyph, and it
+   * is `null`-able even though the backend does not currently null it for a completed todo:
+   * the floater twin's `ON DELETE SET NULL` is the shape the whole completed feature resolves
+   * against, and the row's lookup treats a missing id as "ask the name" rather than as "no
+   * list".
+   */
+  listID?: string | null;
   listName?: string;
   listColor?: string;
 }
