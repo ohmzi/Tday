@@ -178,11 +178,90 @@ export function stageTodoRows(queryClient: QueryClient, ids: Iterable<string>): 
  * settles would let a sibling's refetch flash the row back in the gap between
  * the tap and the PATCH landing, and never releasing would strand a row whose
  * request failed.
+ *
+ * Commit wants `settleTodoRows` rather than a bare call to this, because
+ * releasing is only half of what the commit end of the window owes; see below.
  */
 export function releaseTodoRows(queryClient: QueryClient, ids: Iterable<string>): void {
   const staged = stagedIdsByClient.get(queryClient);
   if (!staged) return;
   for (const id of ids) staged.delete(id);
+}
+
+/**
+ * Takes the staged rows out of every row-list cache the guard claims, in one
+ * pass, using the same shape test the guard does.
+ *
+ * This is the prune half of the window, and it lives here rather than in each
+ * caller for the reason the two can drift apart — and did. A caller that prunes
+ * a *list of its own* covers only the roots that list names, while the claim
+ * covers `ROW_LIST_KEY_ROOTS`; a root the claim defends but the prune never
+ * writes keeps the row until something else happens to write it. The row then
+ * leaves at a moment the user did not ask for, and later than the toast they are
+ * watching promised. Deriving both ends from one set is what makes "the claim
+ * covers it" and "the tap removed it" the same sentence.
+ *
+ * The root is matched on `queryKey[0]` exactly, the way the guard matches it —
+ * `["list"]` and `["listMetaData"]` are different roots, and a prefix match on
+ * the first would sweep the counts map in with the row lists.
+ */
+export function pruneTodoRowCaches(
+  queryClient: QueryClient,
+  ids: ReadonlySet<string>,
+): void {
+  if (ids.size === 0) return;
+  for (const root of ROW_LIST_KEY_ROOTS) {
+    queryClient.setQueriesData(
+      { queryKey: [root], predicate: (query) => query.queryKey[0] === root },
+      (data: unknown) => withoutStagedRows(data, ids),
+    );
+  }
+}
+
+/**
+ * Drops every in-flight row-list read, so nothing that was asked while the
+ * server still listed a staged row can answer after the claim comes off.
+ *
+ * The commit end of the window has one hazard the undo end does not, and it is
+ * the one the batch makes visible: a read started *inside* the window was
+ * answered with the pre-commit truth — the server had not been told yet — and if
+ * it is still in flight when the ids are released, it is no longer filtered and
+ * writes every staged row straight back into the caches. The refresh that
+ * follows then removes them for good, which is the user's report exactly: they
+ * come back for a second and then leave again.
+ *
+ * Cancelling is what makes the release safe, and it has to happen *before* it:
+ * a cancelled fetch cannot write, whereas a released row can be written by any
+ * fetch at all. React Query's own `cancelRefetch` covers this for a query that
+ * already holds data, but not for a cold one — with no `revertState` to fall
+ * back on, a second fetch joins the one already in flight instead of
+ * superseding it. So the guard does not rely on that default.
+ */
+export async function cancelTodoRowFetches(queryClient: QueryClient): Promise<void> {
+  await Promise.all(
+    ROW_LIST_KEY_ROOTS.map((root) =>
+      queryClient.cancelQueries({
+        queryKey: [root],
+        predicate: (query) => query.queryKey[0] === root,
+      }),
+    ),
+  );
+}
+
+/**
+ * The commit end of the window, in the order it has to run.
+ *
+ * Quiet first, release second. This is the counterpart to
+ * `releaseAndRestoreTodoRows` and exists for the same reason that one does: the
+ * two halves of the window are one operation, and a caller that spells them out
+ * itself is a caller that can spell them in the wrong order.
+ */
+export async function settleTodoRows(
+  queryClient: QueryClient,
+  ids: Iterable<string>,
+): Promise<void> {
+  await cancelTodoRowFetches(queryClient);
+  releaseTodoRows(queryClient, ids);
 }
 
 /**

@@ -53,9 +53,25 @@ func mergeCompletedRecordsWithPendingOverrides(
     localRecords: [CachedCompletedRecord],
     remoteRecords: [CachedCompletedRecord],
     pendingTodoTargets: Set<String>,
+    pendingUncompletedTodoTargets: Set<String> = [],
     pendingDeletedListIds: Set<String> = []
 ) -> [CachedCompletedRecord] {
     var mergedRecords = remoteRecords.filter { record in
+        // A task the user just restored must not come back from a snapshot taken before
+        // their restore reached the server. The loop below covers the opposite direction
+        // — re-adding a LOCAL completion a remote read is missing — and on its own it
+        // left this half open: `uncomplete` prunes the completion record locally, so
+        // `localRecordsForTodo` is empty for exactly the row that needs protecting and
+        // the loop's `guard` skips it.
+        //
+        // Keyed on the un-complete kind specifically, not on `pendingTodoTargets`: an
+        // update, pin or priority change carries no opinion about where the row belongs,
+        // and letting one hide a genuine completion made on another device would be a
+        // second bug wearing this one's clothes.
+        if let originalTodoId = record.originalTodoId,
+           pendingUncompletedTodoTargets.contains(originalTodoId) {
+            return false
+        }
         guard let listId = record.listId else {
             return true
         }
@@ -564,10 +580,40 @@ final class SyncManager {
             contentsOf: remoteFloaterListsByID.values.filter { !pendingDeletedFloaterListIds.contains($0.id) }
         )
 
+        // Un-completing is optimistic and un-staged: `CompletedRepository.uncomplete`
+        // prunes the completion record locally and queues `.uncompleteTodo`, then drops
+        // that mutation once the server acknowledges. A read that lands inside that
+        // window — the un-complete publishes a `completed` event to the actor itself,
+        // which `AppViewModel` coalesces into a sync — began its round trip while the
+        // server still had the task completed, so without this the restore is undone
+        // under the user and the row returns struck-through. See
+        // `mergeCompletedRecordsWithPendingOverrides`.
+        let pendingUncompletedTodoTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                mutation.kind == .uncompleteTodo ? mutation.targetId : nil
+            }
+        )
+        // …except where the user has since completed it AGAIN. Both mutations can be in
+        // flight at once — the restore stays unacknowledged for as long as its request
+        // takes — and hiding the row then would take a task out of the very list the user
+        // just put it in: the same complaint this guard exists to fix, mirrored. The later
+        // intent is the one they can see themselves having expressed, so the completion
+        // counts and the restore's guard stands down for that row.
+        let pendingCompletedTodoTargets = Set(
+            localState.pendingMutations.compactMap { mutation -> String? in
+                switch mutation.kind {
+                case .completeTodo, .completeTodoInstance:
+                    return mutation.targetId
+                default:
+                    return nil
+                }
+            }
+        )
         let mergedCompleted = mergeCompletedRecordsWithPendingOverrides(
             localRecords: localState.completedItems,
             remoteRecords: remote.completedItems.map(completedToCache),
             pendingTodoTargets: pendingTodoTargets,
+            pendingUncompletedTodoTargets: pendingUncompletedTodoTargets.subtracting(pendingCompletedTodoTargets),
             pendingDeletedListIds: pendingDeletedListIds
         )
         let mergedCompletedFloaters = mergeCompletedFloaterRecordsWithPendingOverrides(

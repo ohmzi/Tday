@@ -75,7 +75,15 @@ internal object AuthErrorCode {
 
 // Public so it can surface in AppUiState (which drives the connectivity toast copy);
 // the classifier functions below stay internal.
-enum class ConnectionFailureKind { CANNOT_REACH, SERVER_UNAVAILABLE, NONE }
+//
+// [RATE_LIMITED] is deliberately its own kind rather than folded into the other two.
+// A 429 means the server is up and answered — it will run the request again shortly,
+// it just will not run it right now. That makes it transient, so a queued mutation has
+// to survive it; but it is not an outage, so it must NOT raise the app-wide offline
+// flag the other kinds drive (see AppViewModel.shouldTreatSyncFailureAsOffline). Folding
+// it in would have told a user whose own burst tripped the limiter that they had lost
+// their connection, which is both wrong and alarming.
+enum class ConnectionFailureKind { CANNOT_REACH, SERVER_UNAVAILABLE, RATE_LIMITED, NONE }
 
 /**
  * Distinguishes "couldn't reach the server at all" (transport: no network, DNS,
@@ -88,6 +96,9 @@ internal fun classifyConnectionFailure(error: Throwable): ConnectionFailureKind 
 
     var current: Throwable? = error
     while (current != null) {
+        if (current is ApiCallException && current.statusCode == 429) {
+            return ConnectionFailureKind.RATE_LIMITED
+        }
         if (current is ApiCallException && isLikelyServerUnavailableStatus(current.statusCode)) {
             return ConnectionFailureKind.SERVER_UNAVAILABLE
         }
@@ -124,8 +135,31 @@ internal fun classifyConnectionFailure(error: Throwable): ConnectionFailureKind 
     return ConnectionFailureKind.NONE
 }
 
+/**
+ * Whether this failure is one the app should RETRY rather than report as final.
+ *
+ * The name is older than [ConnectionFailureKind.RATE_LIMITED] and now reads narrower
+ * than the question it answers, which is why the 429 case is called out here rather
+ * than left to the name: a rate-limited request is not a connectivity problem, but it
+ * is transient, so every caller that asks "should this queued write survive?" wants it
+ * included. The callers that ask the different question — "is the app offline?" — use
+ * [isAppOfflineFailure] instead.
+ */
 internal fun isLikelyConnectivityIssue(error: Throwable): Boolean =
     classifyConnectionFailure(error) != ConnectionFailureKind.NONE
+
+/**
+ * Whether a sync failure should put the app into its offline state.
+ *
+ * Everything [isLikelyConnectivityIssue] answers except [ConnectionFailureKind.RATE_LIMITED]:
+ * the server answered a 429, so the device is demonstrably online and telling the user
+ * otherwise would be a lie they would act on (checking wifi, reconnecting) for a problem
+ * that clears itself.
+ */
+internal fun isAppOfflineFailure(error: Throwable): Boolean =
+    classifyConnectionFailure(error).let {
+        it == ConnectionFailureKind.CANNOT_REACH || it == ConnectionFailureKind.SERVER_UNAVAILABLE
+    }
 
 /** Maps a backend version-gate response (HTTP 426 / `app_update_required` /
  *  `server_update_required`) to the matching [AuthErrorCode], or null. */

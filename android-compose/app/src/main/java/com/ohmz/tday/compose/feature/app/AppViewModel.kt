@@ -14,6 +14,7 @@ import com.ohmz.tday.compose.core.data.auth.AuthRepository
 import com.ohmz.tday.compose.core.data.auth.SystemCredentialServicing
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
 import com.ohmz.tday.compose.core.data.classifyConnectionFailure
+import com.ohmz.tday.compose.core.data.isAppOfflineFailure
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.isSessionAuthenticationIssue
 import com.ohmz.tday.compose.core.data.server.AppVersionManager
@@ -210,6 +211,7 @@ class AppViewModel @Inject constructor(
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
     private var resyncJob: Job? = null
     private var realtimeJob: Job? = null
+    private var realtimeSyncJob: Job? = null
     private var connectivityJob: Job? = null
     private var foregroundReconnectJob: Job? = null
     private val offlineNoticeCooldown = OfflineNoticeCooldown()
@@ -573,7 +575,7 @@ class AppViewModel @Inject constructor(
         }
 
         val syncError = syncResult.exceptionOrNull()
-        val isOffline = syncError != null && isLikelyConnectivityIssue(syncError)
+        val isOffline = syncError != null && isAppOfflineFailure(syncError)
         return SessionBootstrapResult(
             user = user,
             isOffline = isOffline,
@@ -1070,7 +1072,7 @@ class AppViewModel @Inject constructor(
                 suppressAuthenticationExpired = true,
             )
             val syncError = result.exceptionOrNull()
-            if (syncError == null || !isLikelyConnectivityIssue(syncError)) return@launch
+            if (syncError == null || !isAppOfflineFailure(syncError)) return@launch
 
             delay(FOREGROUND_RECONNECT_OFFLINE_GRACE_MS)
             if (!_uiState.value.authenticated) return@launch
@@ -1119,6 +1121,8 @@ class AppViewModel @Inject constructor(
             resyncJob = null
             realtimeJob?.cancel()
             realtimeJob = null
+            realtimeSyncJob?.cancel()
+            realtimeSyncJob = null
             connectivityJob?.cancel()
             connectivityJob = null
             foregroundReconnectJob?.cancel()
@@ -1236,7 +1240,7 @@ class AppViewModel @Inject constructor(
             // A confirmed 401 that silent recovery could not heal, and not a mere
             // connectivity blip, means the session is truly gone — expire it and send
             // the user back to login. Connectivity issues stay in offline mode.
-            if (!isLikelyConnectivityIssue(error) && !_uiState.value.isLocalMode) {
+            if (!isAppOfflineFailure(error) && !_uiState.value.isLocalMode) {
                 expireSession()
             }
             return after
@@ -1271,7 +1275,7 @@ class AppViewModel @Inject constructor(
         error: Throwable,
         suppressAuthenticationExpired: Boolean,
     ): Boolean {
-        return isLikelyConnectivityIssue(error) ||
+        return isAppOfflineFailure(error) ||
                 (suppressAuthenticationExpired && isSessionAuthenticationIssue(error))
     }
 
@@ -1339,10 +1343,10 @@ class AppViewModel @Inject constructor(
                     is RealtimeEvent.ListChanged,
                     is RealtimeEvent.CompletedChanged,
                     -> {
-                        syncAndUpdateOfflineState(
-                            replayPending = false,
-                            suppressAuthenticationExpired = true,
-                        )
+                        // Scheduled, not synced. See [scheduleRealtimeSync]: one event is one
+                        // full read-fetch-merge-save, so awaiting a sync here made a burst cost
+                        // one sync per event.
+                        scheduleRealtimeSync()
                     }
                     is RealtimeEvent.Disconnected -> {
                         delay(REALTIME_RECONNECT_DELAY_MS)
@@ -1351,6 +1355,35 @@ class AppViewModel @Inject constructor(
                     else -> {}
                 }
             }
+        }
+    }
+
+    /**
+     * Coalesces a burst of server change events into one sync, mirroring iOS's
+     * `AppViewModel.scheduleRealtimeSync`.
+     *
+     * This used to be a `syncAndUpdateOfflineState` awaited inline in the event collector, so
+     * every event bought a full sync cycle — and the events this app is most likely to receive in
+     * a burst are its own. Completing N tasks together emits N `todo` events back to the actor who
+     * caused them (`publisher.publishToCollaborators` fires per completion, server-side, with no
+     * coalescing), and the batch is a bounded fan-out over seconds — `BULK_MAX_CONCURRENCY = 4`
+     * over up to `BULK_MAX_SELECTION = 100` — so the events do not arrive together. N syncs means
+     * N full merges, on a cache that is holding a delayed-commit batch whose read path has to keep
+     * those rows hidden until the commit; N merges is N chances for one to put a staged row back.
+     *
+     * Each round pushes the timer back, exactly as iOS does, and that is safe because a sync
+     * fetches the whole current server state rather than a delta — the one cycle that does run
+     * picks up everything the whole burst produced. A single isolated event still syncs, just after
+     * this short delay instead of instantly, which is imperceptible for a background refresh.
+     */
+    private fun scheduleRealtimeSync() {
+        realtimeSyncJob?.cancel()
+        realtimeSyncJob = viewModelScope.launch {
+            delay(REALTIME_SYNC_DEBOUNCE_MS)
+            syncAndUpdateOfflineState(
+                replayPending = false,
+                suppressAuthenticationExpired = true,
+            )
         }
     }
 
@@ -1538,5 +1571,12 @@ class AppViewModel @Inject constructor(
         const val REALTIME_RECONNECT_DELAY_MS = 5_000L
         const val CONNECTIVITY_RESTORED_DEBOUNCE_MS = 1_500L
         const val FOREGROUND_RECONNECT_OFFLINE_GRACE_MS = 3_000L
+
+        /**
+         * How long a burst of realtime change events is collected before it costs one sync. The
+         * same window iOS names (`AppViewModel.realtimeSyncDebounceDelay`), so no client is
+         * N-times more exposed to a batch than its siblings. See [scheduleRealtimeSync].
+         */
+        const val REALTIME_SYNC_DEBOUNCE_MS = 400L
     }
 }

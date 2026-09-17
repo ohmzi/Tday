@@ -553,6 +553,10 @@ class AuthRepository @Inject constructor(
         return when (classifyConnectionFailure(this)) {
             ConnectionFailureKind.CANNOT_REACH -> AuthErrorCode.CANNOT_REACH
             ConnectionFailureKind.SERVER_UNAVAILABLE -> AuthErrorCode.SERVER_UNAVAILABLE
+            // The server answered and said to slow down, so its own message is the
+            // useful one here — it is the only part of this screen that can tell the
+            // user to wait rather than to check a URL or report an outage.
+            ConnectionFailureKind.RATE_LIMITED -> message ?: AuthErrorCode.SERVER_UNAVAILABLE
             ConnectionFailureKind.NONE -> message ?: fallback
         }
     }

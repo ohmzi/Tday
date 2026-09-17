@@ -53,6 +53,42 @@ class ApiResponseUtilsTest {
         assertFalse(isLikelyConnectivityIssue(error))
     }
 
+    /**
+     * A 429 has to answer two different questions differently, and this is the pair
+     * that pins it. The app must RETRY anything it queued — the server will run the
+     * request shortly — but it must not claim the user is offline, because the server
+     * just answered and the problem clears itself. Collapsing the two would tell
+     * someone whose own burst of edits tripped the limiter that they had lost their
+     * connection.
+     */
+    @Test
+    fun `rate limited responses are retryable but are not an offline failure`() {
+        val error = ApiCallException(
+            statusCode = 429,
+            message = "Too many requests",
+            reason = "api_rate_limit",
+            retryAfterSeconds = 12,
+        )
+
+        assertEquals(ConnectionFailureKind.RATE_LIMITED, classifyConnectionFailure(error))
+        assertTrue(
+            "a queued mutation must survive a rate limit rather than be dropped as final",
+            isLikelyConnectivityIssue(error),
+        )
+        assertFalse(
+            "the device is demonstrably online — the server answered",
+            isAppOfflineFailure(error),
+        )
+    }
+
+    @Test
+    fun `genuine outages are still offline failures`() {
+        // The narrower predicate must not have narrowed the offline state itself.
+        assertTrue(isAppOfflineFailure(ApiCallException(statusCode = 503, message = "Unavailable")))
+        assertTrue(isAppOfflineFailure(ApiCallException(statusCode = 500, message = "Server error")))
+        assertFalse(isAppOfflineFailure(ApiCallException(statusCode = 422, message = "Unprocessable")))
+    }
+
     @Test
     fun `api error details preserve field and retry metadata`() {
         val response = Response.error<Unit>(

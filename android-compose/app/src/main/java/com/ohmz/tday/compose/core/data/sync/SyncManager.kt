@@ -36,6 +36,7 @@ import com.ohmz.tday.compose.core.data.ConnectionFailureKind
 import com.ohmz.tday.compose.core.data.classifyConnectionFailure
 import com.ohmz.tday.compose.core.data.isLikelyConnectivityIssue
 import com.ohmz.tday.compose.core.data.isLikelyUnrecoverableMutationError
+import com.ohmz.tday.compose.core.data.ApiCallException
 import com.ohmz.tday.compose.core.data.requireApiBody
 import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateFloaterListRequest
@@ -88,6 +89,15 @@ class SyncManager @Inject constructor(
     val offlineSyncFailures: SharedFlow<Unit> = offlineSyncFailureMutable.asSharedFlow()
     // Connectivity failures from user-initiated syncs (pull-to-refresh) carry the failure
     // kind so the app can force-show the matching toast every time, even when already offline.
+    /**
+     * When the server last told us we were over its rate limit, how long we may not
+     * ask again. In-memory rather than persisted on purpose: a rate-limit window is
+     * seconds, so a process that restarts has outlived it, and a stored deadline would
+     * be a stale guess about a server we have not spoken to since.
+     */
+    @Volatile
+    private var rateLimitedUntilEpochMs: Long = 0L
+
     private val userInitiatedSyncFailureMutable =
         MutableSharedFlow<ConnectionFailureKind>(extraBufferCapacity = 8)
     val userInitiatedSyncFailures: SharedFlow<ConnectionFailureKind> =
@@ -141,21 +151,71 @@ class SyncManager @Inject constructor(
                 )
             }
             refreshTaskWidgets()
+            // A sync that got all the way through means the limiter has let us back in,
+            // so whatever cooldown we were serving is over. Cleared rather than left to
+            // expire on its own: a successful sync is better evidence than the deadline
+            // the server quoted, which is a floor, not a promise.
+            rateLimitedUntilEpochMs = 0L
             if (contactedServer || syncedRemoteData) {
                 offlineSyncSuccessMutable.tryEmit(Unit)
             }
             Unit
         }
         val error = result.exceptionOrNull()
+        if (error != null) recordRateLimitCooldown(error)
         if (error != null && isLikelyConnectivityIssue(error)) {
-            if (userInitiated) {
+            val kind = classifyConnectionFailure(error)
+            if (userInitiated && kind == ConnectionFailureKind.RATE_LIMITED) {
+                // A pull-to-refresh that the server answered with "slow down" gets no
+                // toast at all, rather than the connectivity one the branch below
+                // carries. The device is online, the request was received and answered,
+                // and the cooldown is measured in seconds — there is nothing for the
+                // user to do and nothing they could have done differently, so the honest
+                // message is none. `recordRateLimitCooldown` has already parked the next
+                // sync, which is the part that actually matters.
+            } else if (userInitiated) {
                 // Dedicated channel: force-shows the toast even when already offline.
-                userInitiatedSyncFailureMutable.tryEmit(classifyConnectionFailure(error))
+                userInitiatedSyncFailureMutable.tryEmit(kind)
             } else if (notifyOfflineFailure) {
                 offlineSyncFailureMutable.tryEmit(Unit)
             }
         }
         return result
+    }
+
+    /**
+     * Starts the cooldown a 429 asks for, taking the server's own `Retry-After` when it
+     * sent one.
+     *
+     * The value is CLAMPED to [MAX_RATE_LIMIT_COOLDOWN_MS] rather than trusted. The
+     * backend computes it from `config.apiRateLimitWindowSec` (60 s by default), so a
+     * self-hosted instance that configured a long window would otherwise be able to
+     * park the client for that whole window from one response — and the retry path is
+     * a background listener, so nothing else would be looking to lift it. The floor
+     * covers a 429 with no usable `Retry-After` at all: back off by something
+     * meaningful rather than retrying into the same limiter on the next frame.
+     */
+    private fun recordRateLimitCooldown(error: Throwable) {
+        var current: Throwable? = error
+        while (current != null) {
+            if (current is ApiCallException && current.statusCode == 429) {
+                val seconds = current.retryAfterSeconds
+                    ?.takeIf { it > 0 }
+                    ?.toLong()
+                    ?: (MIN_RATE_LIMIT_COOLDOWN_MS / 1000L)
+                val cooldownMs = (seconds * 1000L).coerceIn(
+                    MIN_RATE_LIMIT_COOLDOWN_MS,
+                    MAX_RATE_LIMIT_COOLDOWN_MS,
+                )
+                rateLimitedUntilEpochMs = System.currentTimeMillis() + cooldownMs
+                TdayTelemetry.addBreadcrumb(
+                    "sync.rate_limited",
+                    data = mapOf("cooldownMs" to cooldownMs),
+                )
+                return
+            }
+            current = current.cause?.takeIf { it !== current }
+        }
     }
 
     private suspend fun verifyServerConnection(timeoutMs: Long) {
@@ -180,6 +240,13 @@ class SyncManager @Inject constructor(
         if (force && (now - state.lastSyncAttemptEpochMs) < MIN_FORCE_SYNC_INTERVAL_MS) {
             return false
         }
+        // A 429 the server just handed us is a standing instruction not to ask again
+        // yet. Honoured for EVERY sync, forced or not — the throttle above is about
+        // not hammering a healthy server, this is about not re-tripping a limiter that
+        // is already tripped, and a forced sync is exactly what the retry path uses.
+        // Without it the retry would be a tight loop: sync → 429 → offline-failure
+        // listener → sync, which is the storm this cooldown exists to end.
+        if (now < rateLimitedUntilEpochMs) return false
 
         val shouldReplayPendingMutations = replayPendingMutations &&
             state.pendingMutations.isNotEmpty()
@@ -1348,6 +1415,50 @@ class SyncManager @Inject constructor(
             .filter { it.kind.affectsFloater() }
             .mapNotNull { it.targetId }
             .toSet()
+        // Un-completing a task from the Completed screen is optimistic and un-staged:
+        // CompletedRepository.uncomplete() prunes the completion record locally and
+        // queues UNCOMPLETE_TODO, then drops that mutation the moment the server
+        // acknowledges. The window between the two is exactly when every other sync
+        // in the app is most likely to look — the un-complete publishes a `completed`
+        // realtime event to the actor itself, which AppViewModel coalesces into a sync
+        // ~400 ms later, and that sync's getCompletedTodos() began its round trip while
+        // the server still had the task completed.
+        //
+        // `remoteCompleted` is assigned to the cache wholesale below, so without this
+        // that stale read put the restored row straight back — the user watched a task
+        // they had just dismissed come back struck-through and then leave again when
+        // the next merge landed. The guard directly below covers the opposite
+        // direction (re-adding a LOCAL completion a remote read is missing); this is
+        // its inverse, and both are needed for the pair to be a rule rather than a
+        // one-way patch.
+        //
+        // Keyed on UNCOMPLETE_TODO specifically, not affectsTodo(): an update, pin or
+        // priority change carries no opinion about where the row belongs, and letting
+        // one hide a genuine completion made on another device would be a second bug
+        // wearing this one's clothes. Deliberately not filtered on `staged` either —
+        // this path has no undo window to wait out, so the marker's absence is the
+        // signal that the local removal is the answer until the server has seen it.
+        val pendingUncompletedTodoIds = localState.pendingMutations
+            .filter { it.kind == MutationKind.UNCOMPLETE_TODO }
+            .mapNotNull { it.targetId }
+            .toSet()
+        // …except when the user has since completed it AGAIN. Both mutations can be in
+        // flight at once — the restore is unacknowledged for as long as its PATCH takes —
+        // and hiding the row then would take a task away from the very list the user just
+        // put it in, which is the same complaint this guard exists to fix, mirrored. The
+        // later intent is the one the user can see themselves having expressed, so the
+        // completion counts and the restore's guard stands down for that row.
+        val pendingCompletedTodoIds = localState.pendingMutations
+            .filter {
+                it.kind == MutationKind.COMPLETE_TODO ||
+                    it.kind == MutationKind.COMPLETE_TODO_INSTANCE
+            }
+            .mapNotNull { it.targetId }
+            .toSet()
+        val restoredTodoIds = pendingUncompletedTodoIds - pendingCompletedTodoIds
+        if (restoredTodoIds.isNotEmpty()) {
+            remoteCompleted.removeAll { completed -> completed.originalTodoId in restoredTodoIds }
+        }
         val pendingListIds = localState.pendingMutations
             .filter {
                 it.kind == MutationKind.CREATE_LIST ||
@@ -2049,5 +2160,12 @@ class SyncManager @Inject constructor(
         private const val LOG_TAG = "SyncManager"
         private const val OFFLINE_RESYNC_INTERVAL_MS = 5 * 60 * 1000L
         private const val MIN_FORCE_SYNC_INTERVAL_MS = 1_200L
+
+        /** Applied when a 429 arrives without a usable `Retry-After`. */
+        private const val MIN_RATE_LIMIT_COOLDOWN_MS = 5_000L
+
+        /** Ceiling on a server-supplied `Retry-After`, so one response cannot park the
+         *  client indefinitely on a self-hosted instance with a long window. */
+        private const val MAX_RATE_LIMIT_COOLDOWN_MS = 5 * 60 * 1000L
     }
 }

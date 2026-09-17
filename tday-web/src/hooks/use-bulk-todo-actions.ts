@@ -7,8 +7,10 @@ import { useUndoableDelete } from "@/hooks/use-undoable-delete";
 import { canonicalTodoId } from "@/lib/todo/todo-id";
 import { patchTodo } from "@/lib/todo/patch-todo";
 import {
+  pruneTodoRowCaches,
   releaseTodoRows,
   restoreTodoRowCaches,
+  settleTodoRows,
   stageTodoRows,
 } from "@/lib/todo/staged-todo-rows";
 import {
@@ -65,19 +67,23 @@ export function useBulkTodoActions({
   /**
    * Drop the staged rows out of every cache that shows them.
    *
-   * Written `(old) => old?.filter(...)`, never `(old: TodoItemType[] = []) => ...`:
-   * a non-optional array annotation hides `undefined` from tsc, throws on a cold
-   * cache, and — inside a mutation's `onMutate` — aborts the mutation silently,
-   * which looks exactly like a network failure. Returning `undefined` here tells
-   * react-query to leave a cache it has never filled alone.
+   * One write per root, derived from the same `ROW_LIST_KEY_ROOTS` set the claim
+   * defends and `restoreTodoRowCaches` refetches, so the three ends of the window
+   * cannot disagree about which caches hold a row. It used to be spelled out
+   * here as `["todo"]` + `["todoTimeline"]` + a `["list"]` prefix, which is three
+   * roots of the seven the claim covers: a batch completed on the calendar left
+   * its rows in `["calendarTodo"]` for the whole window and only lost them when
+   * something else happened to write that cache.
+   *
+   * Written `(old) => old?.filter(...)`-shaped inside
+   * `@/lib/todo/staged-todo-rows`, never with a non-optional array annotation:
+   * that hides `undefined` from tsc, throws on a cold cache, and — inside a
+   * mutation's `onMutate` — aborts the mutation silently, which looks exactly
+   * like a network failure. A cache that has never been filled is left alone.
    */
   const pruneStagedRows = useCallback(
     (rowIds: ReadonlySet<string>) => {
-      const prune = (old?: TodoItemType[]) =>
-        old?.filter((todo) => !rowIds.has(todo.id));
-      queryClient.setQueryData<TodoItemType[]>(["todo"], prune);
-      queryClient.setQueryData<TodoItemType[]>(["todoTimeline"], prune);
-      queryClient.setQueriesData<TodoItemType[]>({ queryKey: ["list"] }, prune);
+      pruneTodoRowCaches(queryClient, rowIds);
     },
     [queryClient],
   );
@@ -155,15 +161,14 @@ export function useBulkTodoActions({
       // The empty state that follows the last row leaving reads this to tell a
       // list the user just finished from one that was never filled.
       markTaskCompleted();
-      cancelActiveTodoQueries();
       const rowIds = new Set(rows.map((row) => row.id));
-      pruneStagedRows(rowIds);
-      // The prune is one write; the window is five seconds of refetching (a
-      // realtime `todo` event per completion, a focus refetch, a sibling's
-      // `onSettled`). Claim the ids at the cache boundary too, so a refetch
-      // cannot restore a row the batch staged away. One marker for the whole
-      // batch, released as a whole below — see `@/lib/todo/staged-todo-rows`.
+      // Claim first, then cancel, then prune — the same order the single-row
+      // complete takes and for the same reason: the claim is what the cache
+      // boundary consults, so a refetch already in flight cannot slip in behind
+      // the prune. Pruning first leaves a gap the guard is not yet watching.
       stageTodoRows(queryClient, rowIds);
+      cancelActiveTodoQueries();
+      pruneStagedRows(rowIds);
 
       // ONE toast for the batch. N toasts would mean N independent commit
       // timers with only the last one visible, so Undo would reach exactly one
@@ -191,11 +196,18 @@ export function useBulkTodoActions({
               result,
               "bulkUpdateFailed",
             );
-            // Released before the refresh, and released even when rows failed:
-            // the batch is over, so whatever the server did not accept is
-            // pending again and the refetch below has to be allowed to say so.
-            releaseTodoRows(queryClient, rowIds);
-            refreshTodoViews();
+            // Settled, not merely released — and settled as a whole, because the
+            // batch is one window with one timer. A read the window started was
+            // answered with the pre-commit truth, so it has to be dropped before
+            // the ids come off the guard, or it writes every staged row back at
+            // once: the reported "come back for a second, then leave again". See
+            // `settleTodoRows`, which cancels those reads first, and the refresh
+            // it authorises after.
+            //
+            // Settled even when rows failed: the batch is over, so whatever the
+            // server did not accept is pending again and the refetch below has to
+            // be allowed to say so.
+            void settleTodoRows(queryClient, rowIds).then(refreshTodoViews);
           });
         },
         undo: () => {
@@ -254,8 +266,9 @@ export function useBulkTodoActions({
               result,
               "bulkDeleteFailed",
             );
-            releaseTodoRows(queryClient, rowIds);
-            refreshTodoViews();
+            // The delete window has the identical commit hazard the complete one
+            // has — see `settleTodoRows` — so it takes the identical settle.
+            void settleTodoRows(queryClient, rowIds).then(refreshTodoViews);
           });
         },
         undo: () => {
