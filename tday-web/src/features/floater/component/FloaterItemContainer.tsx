@@ -333,9 +333,16 @@ export default function FloaterItemContainer({
                 {title}
               </p>
               {description ? (
+                // `wrap-anywhere` (`overflow-wrap: anywhere`) is what keeps a note inside the app
+                // border, and the report is one long URL: `pre-wrap` breaks at spaces and newlines
+                // but never inside a word, so an unbroken run is not squeezed into the note's box —
+                // it paints past it, and past the `max-w-6xl` border with it, however narrow the
+                // column gets. `break-words` will not do: it leaves the run's min-content width
+                // untouched. Same class, same reason and the same measurement as the two Completed
+                // rows — see `features/completed/component/ItemContainer.tsx`.
                 <pre
                   className={clsx(
-                    "w-48 whitespace-pre-wrap pt-1 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
+                    "w-48 whitespace-pre-wrap wrap-anywhere pt-1 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
                     // Same switch as the title above — see TodoItemContainer.
                     (completePhase === "struck" || removing) && "task-strike",
                   )}
