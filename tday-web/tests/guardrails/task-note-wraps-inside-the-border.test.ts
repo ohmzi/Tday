@@ -27,6 +27,20 @@ import { describe, expect, it } from "vitest";
  * So this file pins the DECLARATION that decides it, on every row that draws a note. jsdom lays
  * nothing out, so the arithmetic cannot be asserted here — but the class either is on the `<pre>`
  * or it is not, and that is the whole difference between the report and no report.
+ *
+ * ## What was measured instead
+ *
+ * The Floater row was rendered in headless Chromium against the app's own compiled Tailwind and
+ * this build's `index-*.css`, inside the real shell (`max-w-6xl` in an `overflow-x-hidden`
+ * scroller) with the reported note — a line of prose plus one 350-character unbroken URL. Measured
+ * by a `Range` over the note's text, so it is where the ink lands and not the box, which sits
+ * inside the border in both versions:
+ *
+ *   without `wrap-anywhere`   1119px past the border at 1440 · 1247 at 1024 · 1487 at 768 ·
+ *                             1615 at 640 · 1857 at 390. The note's box did not grow a millimetre:
+ *                             the LINE count stayed at 4 while the run left the app.
+ *   with `wrap-anywhere`      0px past at every one of those widths, the note dividing into 6, 6,
+ *                             7, 8 and 16 lines as the column narrows.
  */
 
 const WEB = resolve(__dirname, "..", "..", "src");
