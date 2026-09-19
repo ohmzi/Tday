@@ -484,9 +484,11 @@ export const TodoItemCard = ({
             </p>
           </div>
           {description && (
+            // `wrap-anywhere` so an unbroken run in a note breaks instead of painting past the
+            // app border — argued in full on the identical `<pre>` in `FloaterItemContainer`.
             <pre
               className={clsx(
-                "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
+                "w-48 whitespace-pre-wrap wrap-anywhere pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
                 // `task-strike`, not Tailwind's `line-through`: the notes are struck on the
                 // same beat as the title an inch above them, and a rule that snaps on under
                 // one that fades in reads as two edits to one task.

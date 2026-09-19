@@ -955,9 +955,12 @@ export function CalendarTaskRow({
                 </p>
               </div>
               {todo.description && (
+                // `wrap-anywhere` so an unbroken run in a note breaks instead of painting past
+                // the app border — argued in full on the identical `<pre>` in
+                // `FloaterItemContainer`.
                 <pre
                   className={cn(
-                    "w-48 whitespace-pre-wrap pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
+                    "w-48 whitespace-pre-wrap wrap-anywhere pb-2 text-xs font-extrabold leading-4 text-muted-foreground transition-colors duration-emphasis sm:w-full",
                     // Same switch as the title above — see TodoItemContainer.
                     (completePhase === "struck" || removing) && "task-strike",
                   )}
