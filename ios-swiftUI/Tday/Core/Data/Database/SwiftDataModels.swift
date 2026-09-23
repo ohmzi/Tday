@@ -106,6 +106,9 @@ final class CachedFloaterListEntity {
     var ownerUsername: String?
     // Optional so SwiftData lightweight migration covers pre-default-priority stores.
     var defaultPriority: String?
+    // Optional so SwiftData lightweight migration covers pre-reusable-list stores;
+    // nil reads back as "not reusable" (see `CachedFloaterListRecord.reusable`).
+    var reusable: Bool?
 
     init(from record: CachedFloaterListRecord) {
         id = record.id
@@ -120,6 +123,7 @@ final class CachedFloaterListEntity {
         memberCount = record.memberCount
         ownerUsername = record.ownerUsername
         defaultPriority = record.defaultPriority
+        reusable = record.reusable
     }
 }
 
