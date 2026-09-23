@@ -459,6 +459,14 @@ fun TdayHeroToolbar(
      * iOS and the web bar both say it outright, so this one does too.
      */
     titleSuppressed: Boolean = false,
+    /**
+     * Gap between action circles. Left at the normal 8dp for every bar; the
+     * floater-list detail screen's toolbar is the one caller that tightens
+     * this, because it is the one screen that can carry five actions in this
+     * row at once instead of the usual four — see the comment on
+     * `HeaderButtonCompactSize` in TodoListScreen.kt.
+     */
+    actionsSpacing: Dp = 8.dp,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val m = TdayHeroTitleMetrics
@@ -668,7 +676,7 @@ fun TdayHeroToolbar(
                     .onSizeChanged { size ->
                         actionsWidth = with(density) { size.width.toDp() }
                     },
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(actionsSpacing),
                 verticalAlignment = Alignment.CenterVertically,
                 content = actions,
             )

@@ -305,6 +305,23 @@ private val FloaterFeedRowSpacing = 10.dp
 
 // The header's circular buttons, and the bar that replaces the FAB while selecting.
 private val HeaderButtonIconSize = 22.dp
+
+/**
+ * The floater-list detail screen's toolbar is the one place through
+ * [TdayHeroToolbar]/[TodayHeaderButton] that can carry five actions at once
+ * (search, summarize, bulk-select, the reuse toggle's Reset, and the
+ * trailing "more") — every other screen tops out at four. At the normal
+ * [TdayDimens.FabSize]/8dp-gap size that comes to 312dp of circles alone on a
+ * ~360dp phone, before the title's own reserve. Shrunk down for that one
+ * crowded row only, mirroring the compromise web makes for the identical
+ * screen (see FloaterListContainer.tsx's `trailingAction` comment: 48px
+ * buttons, 6px gaps) rather than shrinking every screen that reuses this
+ * toolbar. [HeaderButtonCompactSize] lands on [MinTouchTargetSize] rather
+ * than copying web's 48px for its own sake — the two just happen to agree.
+ */
+private val HeaderButtonCompactSize = MinTouchTargetSize
+private val HeaderButtonCompactIconSize = 20.dp
+private val HeaderButtonCompactSpacing = 6.dp
 private val BulkSelectionBarElevation = 14.dp
 private val BulkSelectionBarVerticalPadding = 10.dp
 private val BulkSelectionCountHorizontalPadding = 10.dp
@@ -3257,6 +3274,14 @@ fun TodoListScreen( // skipcq: KT-R1006
                         .padding(padding)
                         .zIndex(6f),
                     titleSuppressed = showScopedSearchField || selectionActive,
+                    // The reuse toggle's Reset action pushes this one screen to
+                    // five buttons in the row, one more than any other screen
+                    // through this same bar — see HeaderButtonCompactSize above.
+                    actionsSpacing = if (topBarActions.size >= 5) {
+                        HeaderButtonCompactSpacing
+                    } else {
+                        8.dp
+                    },
                     actions = {
                         if (selectionActive) {
                             // The same full-row takeover the search field uses:
@@ -3347,12 +3372,22 @@ fun TodoListScreen( // skipcq: KT-R1006
                                 trailingContentDescription = stringResource(R.string.action_close_search),
                             )
                         } else {
+                            val isCrowdedFloaterToolbar = topBarActions.size >= 5
                             topBarActions.forEach { action ->
                                 TodayHeaderButton(
                                     onClick = action.onClick,
                                     icon = action.icon,
                                     contentDescription = action.contentDescription,
-                                    iconSize = HeaderButtonIconSize,
+                                    iconSize = if (isCrowdedFloaterToolbar) {
+                                        HeaderButtonCompactIconSize
+                                    } else {
+                                        HeaderButtonIconSize
+                                    },
+                                    buttonSize = if (isCrowdedFloaterToolbar) {
+                                        HeaderButtonCompactSize
+                                    } else {
+                                        TdayDimens.FabSize
+                                    },
                                 )
                             }
                         }
@@ -4850,6 +4885,10 @@ private fun TodayHeaderButton(
     icon: ImageVector,
     contentDescription: String,
     iconSize: Dp = TdayDimens.IconXl,
+    // Only the floater-list detail screen's crowded five-action row overrides
+    // this, to [HeaderButtonCompactSize]; every other caller keeps the normal
+    // circle.
+    buttonSize: Dp = TdayDimens.FabSize,
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -4858,7 +4897,6 @@ private fun TodayHeaderButton(
     // that colour left them as outlines next to a solid white circle.
     val containerColor = tdayBarButtonContainerColor()
     val iconTint = MaterialTheme.colorScheme.onSurface
-    val buttonSize = TdayDimens.FabSize
 
     Card(
         modifier = Modifier
