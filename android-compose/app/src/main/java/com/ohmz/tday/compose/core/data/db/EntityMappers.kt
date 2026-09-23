@@ -75,6 +75,7 @@ fun CachedListRecord.toEntity() = CachedListEntity(
     isShared = isShared,
     memberCount = memberCount,
     ownerUsername = ownerUsername,
+    defaultPriority = defaultPriority,
 )
 
 fun CachedListEntity.toRecord() = CachedListRecord(
@@ -89,6 +90,7 @@ fun CachedListEntity.toRecord() = CachedListRecord(
     isShared = isShared,
     memberCount = memberCount,
     ownerUsername = ownerUsername,
+    defaultPriority = defaultPriority,
 )
 
 fun CachedFloaterListRecord.toEntity() = CachedFloaterListEntity(
@@ -104,6 +106,7 @@ fun CachedFloaterListRecord.toEntity() = CachedFloaterListEntity(
     memberCount = memberCount,
     ownerUsername = ownerUsername,
     reusable = reusable,
+    defaultPriority = defaultPriority,
 )
 
 fun CachedFloaterListEntity.toRecord() = CachedFloaterListRecord(
@@ -119,6 +122,7 @@ fun CachedFloaterListEntity.toRecord() = CachedFloaterListRecord(
     memberCount = memberCount,
     ownerUsername = ownerUsername,
     reusable = reusable,
+    defaultPriority = defaultPriority,
 )
 
 fun CachedCompletedRecord.toEntity() = CachedCompletedEntity(

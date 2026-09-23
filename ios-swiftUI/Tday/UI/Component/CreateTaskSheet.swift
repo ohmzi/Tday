@@ -23,6 +23,15 @@ struct CreateTaskSheet: View {
     let titleText: String
     let submitText: String
     let initialPayload: CreateTaskPayload?
+    /// Caller-supplied priority override, independent of the list's own default —
+    /// e.g. Priority mode's "new task defaults to Important". Lower precedence than
+    /// the selected list's `defaultPriority` (see `resolvedInitialPriority`), since a
+    /// list's own explicit setting is a more specific signal than a screen-wide one.
+    var defaultPriority: String? = nil
+    /// True only for `editTaskSheetContent`'s sheet (an existing task). This feature —
+    /// a list's default priority pre-filling a NEW task — never touches an edit, so
+    /// `priorityTouchedByUser` starts already "touched" for one; see `hydrateFromInitialPayload`.
+    var isEditingExistingTask: Bool = false
     let defaultScheduled: Bool
     let showScheduleControls: Bool
     let onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?

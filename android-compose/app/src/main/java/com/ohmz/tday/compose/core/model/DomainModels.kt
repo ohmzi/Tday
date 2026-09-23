@@ -166,6 +166,10 @@ data class ListSummary(
     // Drives both the settings toggle and the header's Reset affordance, exactly
     // as `listMeta.reusable` does on web (FloaterListContainer).
     val reusable: Boolean = false,
+    // The priority a new task in this list starts with, unless the create-task
+    // sheet's caller overrides it or the user changes it before saving. Null
+    // means the list has no default.
+    val defaultPriority: String? = null,
 ) {
     val isViewer: Boolean
         get() = myRole.equals("VIEWER", ignoreCase = true)

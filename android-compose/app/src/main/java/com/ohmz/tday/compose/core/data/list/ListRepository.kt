@@ -46,6 +46,7 @@ class ListRepository @Inject constructor(
         name: String,
         color: String? = null,
         iconKey: String? = null,
+        defaultPriority: String? = null,
     ) {
         val normalizedName = capitalizeFirstListLetter(name).trim()
         if (normalizedName.isBlank()) return
@@ -62,6 +63,7 @@ class ListRepository @Inject constructor(
                 todoCount = 0,
                 createdAtEpochMs = timestampMs,
                 updatedAtEpochMs = timestampMs,
+                defaultPriority = defaultPriority,
             )
             state.copy(
                 lists = state.lists + newList,
@@ -73,6 +75,8 @@ class ListRepository @Inject constructor(
                     name = normalizedName,
                     color = color,
                     iconKey = iconKey,
+                    defaultPriority = defaultPriority,
+                    defaultPriorityChanged = true,
                 ),
             )
         }
@@ -95,6 +99,7 @@ class ListRepository @Inject constructor(
                             name = normalizedName,
                             color = color,
                             iconKey = iconKey,
+                            defaultPriority = defaultPriority,
                         ),
                     ),
                     "Could not create list",
@@ -122,6 +127,7 @@ class ListRepository @Inject constructor(
                                     todoCount = todoCount,
                                     updatedAtEpochMs = updatedAt,
                                     createdAtEpochMs = createdAt,
+                                    defaultPriority = createdList.defaultPriority,
                                 )
                             } else {
                                 list
@@ -139,6 +145,8 @@ class ListRepository @Inject constructor(
         name: String,
         color: String? = null,
         iconKey: String? = null,
+        defaultPriority: String? = null,
+        defaultPriorityChanged: Boolean = false,
     ) {
         val trimmedName = capitalizeFirstListLetter(name).trim()
         if (listId.isBlank()) return
@@ -157,6 +165,7 @@ class ListRepository @Inject constructor(
                                 color = color ?: list.color,
                                 iconKey = iconKey ?: list.iconKey,
                                 updatedAtEpochMs = timestampMs,
+                                defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
                             )
                         } else {
                             list
@@ -169,6 +178,7 @@ class ListRepository @Inject constructor(
                                 color = color ?: mutation.color,
                                 iconKey = iconKey ?: mutation.iconKey,
                                 timestampEpochMs = timestampMs,
+                                defaultPriority = if (defaultPriorityChanged) defaultPriority else mutation.defaultPriority,
                             )
                         } else {
                             mutation
@@ -194,6 +204,7 @@ class ListRepository @Inject constructor(
                             color = color ?: list.color,
                             iconKey = iconKey ?: list.iconKey,
                             updatedAtEpochMs = timestampMs,
+                            defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
                         )
                     } else {
                         list
@@ -209,6 +220,8 @@ class ListRepository @Inject constructor(
                         name = trimmedName,
                         color = color,
                         iconKey = iconKey,
+                        defaultPriority = defaultPriority,
+                        defaultPriorityChanged = defaultPriorityChanged,
                     ),
             )
         }
@@ -229,6 +242,8 @@ class ListRepository @Inject constructor(
             name = trimmedName,
             color = color,
             iconKey = iconKey,
+            defaultPriority = defaultPriority,
+            defaultPriorityChanged = defaultPriorityChanged,
         )
         val immediateError = runCatching {
             requireApiBody(
@@ -238,6 +253,8 @@ class ListRepository @Inject constructor(
                         name = trimmedName,
                         color = color,
                         iconKey = iconKey,
+                        defaultPriority = defaultPriority,
+                        defaultPriorityChanged = defaultPriorityChanged,
                     ),
                 ),
                 "Could not update list",

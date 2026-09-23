@@ -12,6 +12,7 @@ data class CreateListRequest(
     val name: String,
     val color: String? = null,
     val iconKey: String? = null,
+    val defaultPriority: String? = null,
 )
 
 @Serializable
@@ -21,6 +22,7 @@ data class ListDto(
     val color: String? = null,
     val todoCount: Int = 0,
     val iconKey: String? = null,
+    val defaultPriority: String? = null,
     val userID: String? = null,
     val updatedAt: String? = null,
     val createdAt: String? = null,
@@ -56,6 +58,8 @@ data class UpdateListRequest(
     val name: String? = null,
     val color: String? = null,
     val iconKey: String? = null,
+    val defaultPriority: String? = null,
+    val defaultPriorityChanged: Boolean? = null,
 )
 
 @Serializable
@@ -104,6 +108,7 @@ data class CreateFloaterListRequest(
     val color: String? = null,
     val iconKey: String? = null,
     val reusable: Boolean = false,
+    val defaultPriority: String? = null,
 )
 
 @Serializable
@@ -118,6 +123,7 @@ data class FloaterListDto(
     val createdAt: String? = null,
     /** A reusable list can be Reset (all its floaters un-completed) to run again. */
     val reusable: Boolean = false,
+    val defaultPriority: String? = null,
     // Sharing metadata. myRole is null on responses from servers that predate
     // sharing; treat null as OWNER.
     val myRole: String? = null,
@@ -145,6 +151,8 @@ data class UpdateFloaterListRequest(
     val color: String? = null,
     val iconKey: String? = null,
     val reusable: Boolean? = null,
+    val defaultPriority: String? = null,
+    val defaultPriorityChanged: Boolean? = null,
 )
 
 @Serializable

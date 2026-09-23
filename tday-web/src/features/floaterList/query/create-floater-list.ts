@@ -15,13 +15,21 @@ export const useCreateFloaterList = () => {
         color,
         iconKey,
         reusable,
+        defaultPriority,
       }: {
         name: string;
         color?: ListColor;
         iconKey?: string;
         reusable?: boolean;
+        defaultPriority?: string | null;
       }): Promise<FloaterListItemMetaType> => {
-        const parsedObj = listCreateSchema.safeParse({ name, color, iconKey, reusable });
+        const parsedObj = listCreateSchema.safeParse({
+          name,
+          color,
+          iconKey,
+          reusable,
+          defaultPriority,
+        });
         if (!parsedObj.success) {
           throw new Error(parsedObj.error.errors[0].message);
         }

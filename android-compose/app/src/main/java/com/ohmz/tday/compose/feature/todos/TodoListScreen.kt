@@ -956,7 +956,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     onBulkSetPriority: (todos: List<TodoItem>, priority: String) -> Unit = { _, _ -> },
     onBulkMoveToList: (todos: List<TodoItem>, listId: String?) -> Unit = { _, _ -> },
     onOpenMorningSweep: () -> Unit = {},
-    onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?, reusable: Boolean?) -> Unit,
+    onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?, reusable: Boolean?, defaultPriority: String?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
     // Both of the Anytime feed's zoom sources hand their own colour to the push site, for
     // the reason `TILE_TRANSITION_COLOR` gives: the destination cannot recover it, and a
@@ -964,7 +964,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     onOpenFloaterList: (listId: String, listName: String, tileColor: Color) -> Unit = { _, _, _ -> },
     onOpenCompleted: (Color) -> Unit = {},
     onOpenSettings: () -> Unit = {},
-    onCreateList: (name: String, color: String?, iconKey: String?, reusable: Boolean) -> Unit = { _, _, _, _ -> },
+    onCreateList: (name: String, color: String?, iconKey: String?, reusable: Boolean, defaultPriority: String?) -> Unit = { _, _, _, _, _ -> },
     /**
      * Reset a reusable floater list (un-check everything so it can be run again).
      * The twin of web's `resetFloaterList` header button in FloaterListContainer.
@@ -2261,10 +2261,14 @@ fun TodoListScreen( // skipcq: KT-R1006
     // Unlike the icon, this is always sent (never a "touched" flag): web's sheet
     // posts `reusable` on every save, so an off-flip must reach the server.
     var listSettingsReusable by rememberSaveable { mutableStateOf(false) }
+    // Seeded from the SAVED list's `defaultPriority`, always sent on save (like
+    // `listSettingsReusable`) since the row is shown for every list.
+    var listSettingsDefaultPriority by rememberSaveable { mutableStateOf<String?>(null) }
     var createListName by rememberSaveable { mutableStateOf("") }
     var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var createListIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var createListReusable by rememberSaveable { mutableStateOf(false) }
+    var createListDefaultPriority by rememberSaveable { mutableStateOf<String?>(null) }
     // Mirrors `listSettingsIconTouched` above, for the sheet that never had it. The
     // picker still shows a glyph the whole time; what changes is that an untouched
     // PREVIEW is no longer posted as a CHOICE. Without this the stored `iconKey` is
@@ -2434,6 +2438,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                         // Seeded from the saved value, like name/color/icon: web's
                         // sheet reads `list.reusable` the same way.
                         listSettingsReusable = selectedList.reusable
+                        listSettingsDefaultPriority = selectedList.defaultPriority
                         showListSettingsSheet = true
                     }
                 },
@@ -3612,6 +3617,8 @@ fun TodoListScreen( // skipcq: KT-R1006
             },
             reusable = createListReusable,
             onReusableChange = { createListReusable = it },
+            defaultPriority = createListDefaultPriority,
+            onDefaultPriorityChange = { createListDefaultPriority = it },
             showDelete = false,
             onDismiss = { showCreateListSheet = false },
             onSave = {
@@ -3622,12 +3629,14 @@ fun TodoListScreen( // skipcq: KT-R1006
                         createListColor,
                         createListIconKey.takeIf { createListIconTouched },
                         createListReusable,
+                        createListDefaultPriority,
                     )
                     createListName = ""
                     createListColor = TDAY_DEFAULT_LIST_COLOR_KEY
                     createListIconKey = TDAY_DEFAULT_LIST_ICON_KEY
                     createListIconTouched = false
                     createListReusable = false
+                    createListDefaultPriority = null
                     showCreateListSheet = false
                 }
             },
@@ -3660,6 +3669,8 @@ fun TodoListScreen( // skipcq: KT-R1006
             // hides the row AND keeps the save from writing the flag on one.
             reusable = if (uiState.mode == TodoListMode.FLOATER) listSettingsReusable else null,
             onReusableChange = { listSettingsReusable = it },
+            defaultPriority = listSettingsDefaultPriority,
+            onDefaultPriorityChange = { listSettingsDefaultPriority = it },
             onShare = {
                 showListSettingsSheet = false
                 listSettingsTargetId = null
@@ -3685,6 +3696,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // Sent on every floater-list save, like web's sheet — an
                     // off-flip has to reach the server or Reset can't be retired.
                     if (uiState.mode == TodoListMode.FLOATER) listSettingsReusable else null,
+                    // The priority row is shown for every list, so this is always sent.
+                    listSettingsDefaultPriority,
                 )
                 showListSettingsSheet = false
                 listSettingsTargetId = null
@@ -5028,6 +5041,10 @@ private fun ListSettingsBottomSheet(
     /** Null hides the Reusable row — a scheduled list has no Reset to reveal. */
     reusable: Boolean? = null,
     onReusableChange: (Boolean) -> Unit = {},
+    /** The priority a new task in this list starts with; null means no default. Shown
+     *  for every list, scheduled or Anytime, unlike the floater-only Reusable row. */
+    defaultPriority: String? = null,
+    onDefaultPriorityChange: (String?) -> Unit = {},
     onDismiss: () -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
@@ -5280,6 +5297,34 @@ private fun ListSettingsBottomSheet(
                         }
                     }
 
+                    TdaySheetSectionTitle(
+                        text = stringResource(R.string.create_task_priority),
+                    )
+                    TdaySheetCard {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
+                        ) {
+                            ListSettingsPriorityChip(
+                                label = stringResource(R.string.list_settings_default_priority_none),
+                                color = colorScheme.outlineVariant,
+                                selected = defaultPriority == null,
+                                onClick = { onDefaultPriorityChange(null) },
+                            )
+                            PRIORITY_OPTIONS_HIGH_TO_LOW.forEach { option ->
+                                ListSettingsPriorityChip(
+                                    label = stringResource(priorityDisplayLabelRes(option)),
+                                    color = tdayPriorityColor(option),
+                                    selected = defaultPriority == option,
+                                    onClick = { onDefaultPriorityChange(option) },
+                                )
+                            }
+                        }
+                    }
+
                     if (reusable != null) {
                         // Web draws this card between the icon picker and the
                         // sharing/delete actions, with the hint under the title.
@@ -5392,6 +5437,59 @@ private fun ListSettingsActionTile(
  * (`FloaterListFormSheet`): title, hint, and a Switch. Its meaning is the same
  * on all three clients: a reusable list can be Reset to run the checklist again.
  */
+@Composable
+@Composable
+private fun ListSettingsPriorityChip(
+    label: String,
+    color: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingSm),
+        modifier = Modifier
+            .clip(RoundedCornerShape(TdayDimens.RadiusRow))
+            .background(
+                if (selected) color.copy(alpha = 0.18f) else TdaySheetDefaults.controlSurfaceColor(),
+            )
+            .then(
+                if (selected) {
+                    Modifier.border(
+                        width = ListIconSwatchSelectedOutline,
+                        color = color.copy(alpha = 0.55f),
+                        shape = RoundedCornerShape(TdayDimens.RadiusRow),
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(bounded = true),
+            ) {
+                TdayHaptics.selection(view)
+                onClick()
+            }
+            .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingLg),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(TdayDimens.SpacingLg)
+                .background(color, CircleShape),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
 @Composable
 private fun ListSettingsReusableToggleRow(
     checked: Boolean,

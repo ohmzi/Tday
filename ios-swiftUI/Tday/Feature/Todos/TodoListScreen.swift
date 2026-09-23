@@ -1926,9 +1926,9 @@ struct TodoListScreen: View {
             createTaskSheetContent
         }
         .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
-            CreateListSheet(showsReusable: viewModel.mode == .floater) { name, color, iconKey, reusable in
+            CreateListSheet(showsReusable: viewModel.mode == .floater) { name, color, iconKey, reusable, defaultPriority in
                 Task {
-                    await viewModel.createList(name: name, color: color, iconKey: iconKey, reusable: reusable ?? false)
+                    await viewModel.createList(name: name, color: color, iconKey: iconKey, reusable: reusable ?? false, defaultPriority: defaultPriority)
                 }
             }
         }
@@ -2660,13 +2660,15 @@ struct TodoListScreen: View {
                 showingListSettings = false
             },
             showsReusable: viewModel.mode == .floater,
-            onSubmit: { name, color, iconKey, reusable in
+            onSubmit: { name, color, iconKey, reusable, defaultPriority in
                 Task {
                     await viewModel.updateListSettings(
                         name: name,
                         color: color,
                         iconKey: iconKey,
-                        reusable: reusable
+                        reusable: reusable,
+                        defaultPriority: defaultPriority,
+                        defaultPriorityChanged: true
                     )
                 }
             },
@@ -5267,7 +5269,7 @@ private struct ListSettingsSheet: View {
     /// scheduled list has no Reset to reveal, so the row is hidden and the save
     /// submits nil (the shared UpdateFloaterListRequest reads that as "leave it").
     var showsReusable: Bool = false
-    let onSubmit: (String, String?, String?, Bool?) -> Void
+    let onSubmit: (String, String?, String?, Bool?, String?) -> Void
     let onDeleteRequest: () -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var tdayColors
@@ -5279,6 +5281,9 @@ private struct ListSettingsSheet: View {
     /// shown — web's sheet posts `reusable` on every save, so an off-flip has to
     /// reach the server or the Reset it reveals can never be retired.
     @State private var reusable = false
+    /// Seeded from the SAVED list on open. Nil means "no default"; always sent on
+    /// save since this row, unlike `showsReusable`, is never hidden.
+    @State private var defaultPriority: String? = nil
     /// Whether the picker below holds a CHOICE or only a PREVIEW.
     ///
     /// Without it this sheet cannot help destroying an unset icon: it seeds `iconKey` from
@@ -5445,6 +5450,32 @@ private struct ListSettingsSheet: View {
                         }
                     }
 
+                    TdaySheetSectionTitle(text: L("Default priority"))
+                    TdaySheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ListSettingsPriorityChip(
+                                    label: L("No default"),
+                                    swatchColor: tdayColors.onSurfaceVariant.opacity(0.35),
+                                    isSelected: defaultPriority == nil
+                                ) {
+                                    defaultPriority = nil
+                                }
+                                ForEach(TaskPriorityDisplay.options, id: \.value) { option in
+                                    ListSettingsPriorityChip(
+                                        label: option.label,
+                                        swatchColor: priorityColor(option.value),
+                                        isSelected: defaultPriority == option.value
+                                    ) {
+                                        defaultPriority = option.value
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
                     if showsReusable {
                         // Web draws this card between the icon picker and the
                         // sharing/delete actions, with the hint under the title.
@@ -5541,6 +5572,7 @@ private struct ListSettingsSheet: View {
             )
             iconTouched = false
             reusable = list?.reusable ?? false
+            defaultPriority = list?.defaultPriority
         }
     }
 
@@ -5556,7 +5588,7 @@ private struct ListSettingsSheet: View {
         //
         // `reusable` is the other way round: it is always sent when the row is
         // shown, so switching it off is a change and not an omission.
-        onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil)
+        onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil, defaultPriority)
         dismiss()
     }
 
@@ -5567,6 +5599,51 @@ private struct ListSettingsSheet: View {
             .split(separator: " ")
             .map { $0.capitalized }
             .joined(separator: " ")
+    }
+}
+
+/// One option in the list settings sheet's "Default priority" row — a color
+/// dot plus label, styled like the sheet's color/icon swatches so the new row
+/// reads as part of the same family instead of a bolted-on control.
+private struct ListSettingsPriorityChip: View {
+    let label: String
+    let swatchColor: Color
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    @Environment(\.tdayColors) private var tdayColors
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(swatchColor)
+                    .frame(width: 12, height: 12)
+
+                Text(label)
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(tdayColors.onSurface)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(isSelected ? swatchColor.opacity(0.16) : tdayColors.bottomSheetControlSurface)
+            )
+            .overlay {
+                Capsule()
+                    .stroke(isSelected ? swatchColor.opacity(0.55) : .clear, lineWidth: 2)
+            }
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.04,
+                normalShadowOpacity: 0.08
+            )
+        )
+        .accessibilityLabel(label)
     }
 }
 

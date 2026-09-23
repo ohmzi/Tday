@@ -45,6 +45,7 @@ class FloaterListRepository @Inject constructor(
         color: String? = null,
         iconKey: String? = null,
         reusable: Boolean = false,
+        defaultPriority: String? = null,
     ) {
         val normalizedName = capitalizeFirstListLetter(name).trim()
         if (normalizedName.isBlank()) return
@@ -62,6 +63,7 @@ class FloaterListRepository @Inject constructor(
                 createdAtEpochMs = timestampMs,
                 updatedAtEpochMs = timestampMs,
                 reusable = reusable,
+                defaultPriority = defaultPriority,
             )
             state.copy(
                 floaterLists = state.floaterLists + newList,
@@ -74,6 +76,8 @@ class FloaterListRepository @Inject constructor(
                     color = color,
                     iconKey = iconKey,
                     reusable = reusable,
+                    defaultPriority = defaultPriority,
+                    defaultPriorityChanged = true,
                 ),
             )
         }
@@ -97,6 +101,7 @@ class FloaterListRepository @Inject constructor(
                             color = color,
                             iconKey = iconKey,
                             reusable = reusable,
+                            defaultPriority = defaultPriority,
                         ),
                     ),
                     "Could not create floater list",
@@ -126,6 +131,7 @@ class FloaterListRepository @Inject constructor(
                                     updatedAtEpochMs = updatedAt,
                                     createdAtEpochMs = createdAt,
                                     reusable = createdList.reusable,
+                                    defaultPriority = createdList.defaultPriority,
                                 )
                             } else {
                                 list
@@ -144,6 +150,8 @@ class FloaterListRepository @Inject constructor(
         color: String? = null,
         iconKey: String? = null,
         reusable: Boolean? = null,
+        defaultPriority: String? = null,
+        defaultPriorityChanged: Boolean = false,
     ) {
         val trimmedName = capitalizeFirstListLetter(name).trim()
         if (listId.isBlank()) return
@@ -162,6 +170,7 @@ class FloaterListRepository @Inject constructor(
                                 iconKey = iconKey ?: list.iconKey,
                                 updatedAtEpochMs = timestampMs,
                                 reusable = reusable ?: list.reusable,
+                                defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
                             )
                         } else {
                             list
@@ -175,6 +184,7 @@ class FloaterListRepository @Inject constructor(
                                 iconKey = iconKey ?: mutation.iconKey,
                                 timestampEpochMs = timestampMs,
                                 reusable = reusable ?: mutation.reusable,
+                                defaultPriority = if (defaultPriorityChanged) defaultPriority else mutation.defaultPriority,
                             )
                         } else {
                             mutation
@@ -199,6 +209,8 @@ class FloaterListRepository @Inject constructor(
             color = color,
             iconKey = iconKey,
             reusable = reusable,
+            defaultPriority = defaultPriority,
+            defaultPriorityChanged = defaultPriorityChanged,
         )
         cacheManager.updateOfflineState { state ->
             state.copy(
@@ -210,6 +222,7 @@ class FloaterListRepository @Inject constructor(
                             iconKey = iconKey ?: list.iconKey,
                             updatedAtEpochMs = timestampMs,
                             reusable = reusable ?: list.reusable,
+                            defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
                         )
                     } else {
                         list
@@ -236,6 +249,8 @@ class FloaterListRepository @Inject constructor(
                         color = color,
                         iconKey = iconKey,
                         reusable = reusable,
+                        defaultPriority = defaultPriority,
+                        defaultPriorityChanged = defaultPriorityChanged,
                     ),
                 ),
                 "Could not update floater list",

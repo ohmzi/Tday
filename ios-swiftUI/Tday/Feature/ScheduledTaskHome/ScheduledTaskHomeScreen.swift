@@ -545,9 +545,9 @@ struct ScheduledTaskHomeScreen: View {
             )
         }
         .tdayBottomSheetPresentation(isPresented: $showingCreateList) {
-            CreateListSheet { name, color, iconKey, _ in
+            CreateListSheet { name, color, iconKey, _, defaultPriority in
                 Task {
-                    await viewModel.createList(name: name, color: color, iconKey: iconKey)
+                    await viewModel.createList(name: name, color: color, iconKey: iconKey, defaultPriority: defaultPriority)
                 }
             }
         }
@@ -1545,7 +1545,7 @@ struct CreateListSheet: View {
     /// trailing closure, and a trailing closure binds to the LAST memberwise
     /// parameter.
     var showsReusable: Bool = false
-    let onSubmit: (String, String?, String?, Bool?) -> Void
+    let onSubmit: (String, String?, String?, Bool?, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var colors
@@ -1554,6 +1554,9 @@ struct CreateListSheet: View {
     @State private var color = "PINK"
     @State private var iconKey = "inbox"
     @State private var reusable = false
+    /// Nil means "no default". Always sent on create — there is no saved list
+    /// to diff against yet, so there is no touched/untouched distinction here.
+    @State private var defaultPriority: String? = nil
     /// Whether the picker holds a CHOICE or only a PREVIEW.
     ///
     /// This sheet seeded the picker with the default and then posted it, so every list any
@@ -1608,7 +1611,7 @@ struct CreateListSheet: View {
                     // (`CreateTaskSheet.submit`), so it gets the same pulse.
                     HapticManager.completion()
                     isSubmitting = true
-                    onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil)
+                    onSubmit(trimmedName, color, iconTouched ? iconKey : nil, showsReusable ? reusable : nil, defaultPriority)
                     dismiss()
                 }
             )
@@ -1733,6 +1736,32 @@ struct CreateListSheet: View {
                         }
                     }
 
+                    TdaySheetSectionTitle(text: L("Default priority"))
+                    TdaySheetCard {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                CreateListSheetPriorityChip(
+                                    label: L("No default"),
+                                    swatchColor: colors.onSurfaceVariant.opacity(0.35),
+                                    isSelected: defaultPriority == nil
+                                ) {
+                                    defaultPriority = nil
+                                }
+                                ForEach(TaskPriorityDisplay.options, id: \.value) { option in
+                                    CreateListSheetPriorityChip(
+                                        label: option.label,
+                                        swatchColor: priorityColor(option.value),
+                                        isSelected: defaultPriority == option.value
+                                    ) {
+                                        defaultPriority = option.value
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                        }
+                    }
+
                     if showsReusable {
                         // Web's create sheet hosts the same switch, in the same
                         // place: after the icon picker, before the footer.
@@ -1781,6 +1810,51 @@ struct CreateListSheet: View {
             .split(separator: " ")
             .map { $0.capitalized }
             .joined(separator: " ")
+    }
+}
+
+/// One option in the create-list sheet's "Default priority" row — mirrors
+/// `ListSettingsPriorityChip` (TodoListScreen.swift's edit-list sheet), kept as a
+/// separate type since that one is private to its own file.
+private struct CreateListSheetPriorityChip: View {
+    let label: String
+    let swatchColor: Color
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(swatchColor)
+                    .frame(width: 12, height: 12)
+
+                Text(label)
+                    .font(.tdayRounded(size: 14, weight: .bold))
+                    .foregroundStyle(colors.onSurface)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(isSelected ? swatchColor.opacity(0.16) : colors.bottomSheetControlSurface)
+            )
+            .overlay {
+                Capsule()
+                    .stroke(isSelected ? swatchColor.opacity(0.55) : .clear, lineWidth: 2)
+            }
+        }
+        .buttonStyle(
+            TdayPressButtonStyle(
+                shadowColor: Color.black,
+                pressedShadowOpacity: 0.04,
+                normalShadowOpacity: 0.08
+            )
+        )
+        .accessibilityLabel(label)
     }
 }
 

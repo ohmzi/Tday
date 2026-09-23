@@ -38,7 +38,13 @@ final class FloaterListRepository {
         buildLists(from: cacheManager.loadOfflineState())
     }
 
-    func createList(name: String, color: String? = nil, iconKey: String? = nil, reusable: Bool = false) async throws {
+    func createList(
+        name: String,
+        color: String? = nil,
+        iconKey: String? = nil,
+        reusable: Bool = false,
+        defaultPriority: String? = nil
+    ) async throws {
         let normalizedName = capitalizeFirstListLetter(name).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedName.isEmpty else {
             return
@@ -58,7 +64,8 @@ final class FloaterListRepository {
                     todoCount: 0,
                     updatedAtEpochMs: now,
                     createdAtEpochMs: now,
-                    reusable: reusable
+                    reusable: reusable,
+                    defaultPriority: defaultPriority
                 )
             )
             nextState.pendingMutations.append(
@@ -79,7 +86,8 @@ final class FloaterListRepository {
                     name: normalizedName,
                     color: color,
                     iconKey: iconKey,
-                    reusable: reusable
+                    reusable: reusable,
+                    defaultPriority: defaultPriority
                 )
             )
             return nextState
@@ -100,7 +108,7 @@ final class FloaterListRepository {
         await cacheManager.withSyncLock {
             do {
                 let response = try await api.createFloaterList(
-                    payload: CreateFloaterListRequest(name: normalizedName, color: color, iconKey: iconKey, reusable: reusable)
+                    payload: CreateFloaterListRequest(name: normalizedName, color: color, iconKey: iconKey, reusable: reusable, defaultPriority: defaultPriority)
                 )
                 guard let createdList = response.list else {
                     return
@@ -126,7 +134,8 @@ final class FloaterListRepository {
                             todoCount: todoCount,
                             updatedAtEpochMs: updatedAt,
                             createdAtEpochMs: createdAt,
-                            reusable: createdList.reusable ?? reusable
+                            reusable: createdList.reusable ?? reusable,
+                            defaultPriority: createdList.defaultPriority ?? defaultPriority
                         )
                     }
                     nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
@@ -138,7 +147,15 @@ final class FloaterListRepository {
         }
     }
 
-    func updateList(listId: String, name: String, color: String? = nil, iconKey: String? = nil, reusable: Bool? = nil) async throws {
+    func updateList(
+        listId: String,
+        name: String,
+        color: String? = nil,
+        iconKey: String? = nil,
+        reusable: Bool? = nil,
+        defaultPriority: String? = nil,
+        defaultPriorityChanged: Bool = false
+    ) async throws {
         let normalizedName = capitalizeFirstListLetter(name).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !listId.isEmpty, !normalizedName.isEmpty else {
             return
@@ -160,7 +177,8 @@ final class FloaterListRepository {
                         todoCount: list.todoCount,
                         updatedAtEpochMs: now,
                         createdAtEpochMs: list.createdAtEpochMs,
-                        reusable: reusable ?? list.reusable
+                        reusable: reusable ?? list.reusable,
+                        defaultPriority: defaultPriorityChanged ? defaultPriority : list.defaultPriority
                     )
                 }
                 nextState.pendingMutations = state.pendingMutations.compactMap { mutation in
@@ -187,7 +205,8 @@ final class FloaterListRepository {
                         name: normalizedName,
                         color: color ?? mutation.color,
                         iconKey: iconKey ?? mutation.iconKey,
-                        reusable: reusable ?? mutation.reusable
+                        reusable: reusable ?? mutation.reusable,
+                        defaultPriority: defaultPriorityChanged ? defaultPriority : mutation.defaultPriority
                     )
                 }
                 return nextState
@@ -211,7 +230,8 @@ final class FloaterListRepository {
                     todoCount: list.todoCount,
                     updatedAtEpochMs: now,
                     createdAtEpochMs: list.createdAtEpochMs,
-                    reusable: reusable ?? list.reusable
+                    reusable: reusable ?? list.reusable,
+                    defaultPriority: defaultPriorityChanged ? defaultPriority : list.defaultPriority
                 )
             }
             nextState.pendingMutations.removeAll { $0.kind == .updateFloaterList && $0.targetId == listId }
@@ -233,7 +253,9 @@ final class FloaterListRepository {
                     name: normalizedName,
                     color: color,
                     iconKey: iconKey,
-                    reusable: reusable
+                    reusable: reusable,
+                    defaultPriority: defaultPriority,
+                    defaultPriorityChanged: defaultPriorityChanged
                 )
             )
             return nextState
@@ -544,7 +566,8 @@ final class FloaterListRepository {
                 todoCount: list.todoCount,
                 updatedAtEpochMs: list.updatedAtEpochMs,
                 createdAtEpochMs: list.createdAtEpochMs,
-                reusable: list.reusable
+                reusable: list.reusable,
+                defaultPriority: list.defaultPriority
             )
         }.dedupedByID()
         nextState.pendingMutations = state.pendingMutations.map { mutation in
@@ -565,7 +588,9 @@ final class FloaterListRepository {
                 name: mutation.name,
                 color: mutation.color,
                 iconKey: mutation.iconKey,
-                reusable: mutation.reusable
+                reusable: mutation.reusable,
+                defaultPriority: mutation.defaultPriority,
+                defaultPriorityChanged: mutation.defaultPriorityChanged
             )
         }
         return nextState

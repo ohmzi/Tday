@@ -23,6 +23,11 @@ interface TodoFormContextType {
   setPriority: React.Dispatch<
     SetStateAction<"Lowest" | "Low" | "Medium" | "High">
   >;
+  // True once the user has picked a priority themselves in this sheet session; while
+  // false, the list's default priority is free to keep re-filling the field. Editing an
+  // existing task starts true — this feature only pre-fills a NEW task's priority.
+  priorityTouchedByUser: boolean;
+  setPriorityTouchedByUser: React.Dispatch<SetStateAction<boolean>>;
   dateRange: FormDateRange;
   setDateRange: React.Dispatch<SetStateAction<FormDateRange>>;
   rruleOptions: Partial<Options> | null;
@@ -64,6 +69,9 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
   const [priority, setPriority] = useState<
     "Lowest" | "Low" | "Medium" | "High"
   >(todoItem?.priority || "Low");
+  const [priorityTouchedByUser, setPriorityTouchedByUser] = useState<boolean>(
+    Boolean(todoItem),
+  );
   const now = new Date();
   now.setHours(now.getHours() + 3);
   now.setSeconds(0, 0);
@@ -97,6 +105,8 @@ const TodoFormProvider = ({ children, todoItem, overrideFields }: TodoFormProvid
     setDesc,
     priority,
     setPriority,
+    priorityTouchedByUser,
+    setPriorityTouchedByUser,
     listID,
     setListID,
     dateRange,

@@ -125,9 +125,9 @@ final class ScheduledTaskHomeViewModel {
         isSummarizing = false
     }
 
-    func createList(name: String, color: String?, iconKey: String?) async {
+    func createList(name: String, color: String?, iconKey: String?, defaultPriority: String? = nil) async {
         do {
-            try await container.listRepository.createList(name: name, color: color, iconKey: iconKey)
+            try await container.listRepository.createList(name: name, color: color, iconKey: iconKey, defaultPriority: defaultPriority)
             refreshFromCache()
         } catch {
             container.snackbarManager.show(

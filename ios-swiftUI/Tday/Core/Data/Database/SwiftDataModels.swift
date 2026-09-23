@@ -71,6 +71,8 @@ final class CachedListEntity {
     var isShared: Bool?
     var memberCount: Int?
     var ownerUsername: String?
+    // Optional so SwiftData lightweight migration covers pre-default-priority stores.
+    var defaultPriority: String?
 
     init(from record: CachedListRecord) {
         id = record.id
@@ -84,6 +86,7 @@ final class CachedListEntity {
         isShared = record.isShared
         memberCount = record.memberCount
         ownerUsername = record.ownerUsername
+        defaultPriority = record.defaultPriority
     }
 }
 
@@ -101,6 +104,8 @@ final class CachedFloaterListEntity {
     var isShared: Bool?
     var memberCount: Int?
     var ownerUsername: String?
+    // Optional so SwiftData lightweight migration covers pre-default-priority stores.
+    var defaultPriority: String?
 
     init(from record: CachedFloaterListRecord) {
         id = record.id
@@ -114,6 +119,7 @@ final class CachedFloaterListEntity {
         isShared = record.isShared
         memberCount = record.memberCount
         ownerUsername = record.ownerUsername
+        defaultPriority = record.defaultPriority
     }
 }
 
@@ -196,6 +202,8 @@ final class PendingMutationEntity {
     // what this guards: dropping it here would silently reset every staged list/floater-list
     // delete marker to "real" on the very next `loadOfflineState()` fetch.
     var staged: Bool = false
+    var defaultPriority: String?
+    var defaultPriorityChanged: Bool?
 
     init(from record: PendingMutationRecord) {
         mutationId = record.mutationId
@@ -215,6 +223,8 @@ final class PendingMutationEntity {
         color = record.color
         iconKey = record.iconKey
         staged = record.staged
+        defaultPriority = record.defaultPriority
+        defaultPriorityChanged = record.defaultPriorityChanged
     }
 }
 

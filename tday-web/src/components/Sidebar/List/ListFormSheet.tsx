@@ -24,13 +24,18 @@ import { inferListIconKey } from "@/lib/listIconInference";
 import { useToast } from "@/hooks/use-toast";
 import { useUndoableListDelete } from "@/hooks/use-undoable-list-delete";
 import { useCreateList } from "@/components/Sidebar/List/query/create-list";
+import { prioritySwatchClass } from "@/components/ui/sheet-chrome/swatches";
+import { priorityLabelKey, type Priority } from "@/components/todo/component/TodoForm/labels";
 import type { ListColor, ListItemMetaType } from "@/types";
+
+const DEFAULT_PRIORITY_OPTIONS: Priority[] = ["High", "Medium", "Low", "Lowest"];
 
 type EditableList = {
   id: string;
   name: string;
   color?: ListColor;
   iconKey?: string | null;
+  defaultPriority?: string | null;
 };
 
 type ListFormSheetProps = {
@@ -55,6 +60,7 @@ async function patchList({
   name,
   color,
   iconKey,
+  defaultPriority,
 }: {
   id: string;
   name: string;
@@ -66,11 +72,21 @@ async function patchList({
    * a sheet the user opened to rename the list.
    */
   iconKey?: string;
+  defaultPriority: string | null;
 }) {
   await api.PATCH({
     url: "/api/list",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, name, color, iconKey }),
+    body: JSON.stringify({
+      id,
+      name,
+      color,
+      iconKey,
+      defaultPriority,
+      // Unlike `iconKey`, this row is always visible with a definite selection, so
+      // there is no "untouched preview" to guard against — every save says so.
+      defaultPriorityChanged: true,
+    }),
   });
 }
 
@@ -112,6 +128,9 @@ export default function ListFormSheet({
   // thing that means "never chosen", and it stays null until this goes true.
   const [iconTouched, setIconTouched] = useState(false);
   const [iconKey, setIconKey] = useState(() => seedIconKey());
+  const [defaultPriority, setDefaultPriority] = useState<Priority | null>(
+    (list?.defaultPriority as Priority | null | undefined) ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -121,6 +140,7 @@ export default function ListFormSheet({
     setColor(list?.color ?? initialColor);
     setIconKey(seedIconKey());
     setIconTouched(false);
+    setDefaultPriority((list?.defaultPriority as Priority | null | undefined) ?? null);
     setError(null);
     setConfirmingDelete(false);
     // `seedIconKey` closes over exactly these, and is re-made every render.
@@ -198,7 +218,8 @@ export default function ListFormSheet({
       if (
         normalizedName === normalizeListName(list.name) &&
         color === (list.color ?? "BLUE") &&
-        !iconChanged
+        !iconChanged &&
+        defaultPriority === (list.defaultPriority ?? null)
       ) {
         onOpenChange(false);
         return;
@@ -208,6 +229,7 @@ export default function ListFormSheet({
         name: normalizedName,
         color,
         iconKey: iconTouched ? iconKey : undefined,
+        defaultPriority,
       });
       return;
     }
@@ -221,6 +243,7 @@ export default function ListFormSheet({
         // client used to do — is what made `iconKey` "inbox" on every list ever made and
         // left nothing in the model able to say "the user has not chosen".
         iconKey: iconTouched ? iconKey : undefined,
+        defaultPriority,
       });
       onSaved?.(created);
       onOpenChange(false);
@@ -228,6 +251,7 @@ export default function ListFormSheet({
       setColor(initialColor);
       setIconKey(previewIconKeyFor(""));
       setIconTouched(false);
+      setDefaultPriority(null);
     } catch (createError) {
       const message =
         createError instanceof Error ? createError.message : "Failed to create list";
@@ -328,6 +352,47 @@ export default function ListFormSheet({
                   aria-pressed={selected}
                 >
                   <Icon className="h-5 w-5 stroke-[2.4]" />
+                </button>
+              );
+            })}
+          </div>
+        </SheetCard>
+
+        {/* Default priority — pre-fills new tasks created in this list; a save always
+            carries a definite value, so there is no "preview" state to guard. */}
+        <SheetSectionTitle>{appDict("defaultPriority")}</SheetSectionTitle>
+        <SheetCard className="p-3.5">
+          <div className="flex gap-2.5 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => { hapticTick(); setDefaultPriority(null); }}
+              className={cn(
+                "flex h-9 shrink-0 items-center rounded-full px-4 text-sm font-black transition-transform active:scale-95",
+                defaultPriority === null
+                  ? "bg-accent/15 text-accent ring-[2px] ring-accent/55"
+                  : "bg-muted/60 text-muted-foreground hover:text-foreground",
+              )}
+              aria-pressed={defaultPriority === null}
+            >
+              {appDict("noDefaultPriority")}
+            </button>
+            {DEFAULT_PRIORITY_OPTIONS.map((option) => {
+              const selected = defaultPriority === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => { hapticTick(); setDefaultPriority(option); }}
+                  className={cn(
+                    "flex h-9 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-black transition-transform active:scale-95",
+                    selected
+                      ? "bg-accent/15 text-accent ring-[2px] ring-accent/55"
+                      : "bg-muted/60 text-muted-foreground hover:text-foreground",
+                  )}
+                  aria-pressed={selected}
+                >
+                  <span className={cn("h-2.5 w-2.5 rounded-full", prioritySwatchClass(option))} />
+                  {appDict(priorityLabelKey[option])}
                 </button>
               );
             })}

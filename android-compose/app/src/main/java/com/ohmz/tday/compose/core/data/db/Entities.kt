@@ -60,6 +60,7 @@ data class CachedListEntity(
     @ColumnInfo(defaultValue = "0") val isShared: Boolean = false,
     @ColumnInfo(defaultValue = "0") val memberCount: Int = 0,
     val ownerUsername: String? = null,
+    val defaultPriority: String? = null,
 )
 
 @Entity(tableName = "cached_floater_lists")
@@ -76,6 +77,7 @@ data class CachedFloaterListEntity(
     @ColumnInfo(defaultValue = "0") val memberCount: Int = 0,
     val ownerUsername: String? = null,
     @ColumnInfo(defaultValue = "0") val reusable: Boolean = false,
+    val defaultPriority: String? = null,
 )
 
 @Entity(
