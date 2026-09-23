@@ -35,7 +35,7 @@ import NotesField from "@/components/todo/component/NotesField/NotesField";
 import RepeatSuggestionChip from "./RepeatSuggestionChip";
 import TaskStepsSection from "./TaskStepsSection";
 import TaskSelectorOverlays, { type TaskSelector } from "./TodoFormSelectors";
-import { priorityLabelKey, repeatLabelKey } from "./labels";
+import { priorityLabelKey, repeatLabelKey, type Priority } from "./labels";
 import { getPriorityFlag } from "@/lib/priority";
 
 interface TodoFormProps {
@@ -63,6 +63,8 @@ const TodoForm = ({
     setTitle,
     priority,
     setPriority,
+    priorityTouchedByUser,
+    setPriorityTouchedByUser,
     desc,
     setDesc,
     dateRange,
@@ -118,6 +120,27 @@ const TodoForm = ({
     }
   }, [createStatus, floaterStatus, persistent, setDisplayForm]);
 
+  // Pre-fill from the active list's default priority — scheduled uses `listID`,
+  // unscheduled uses `floaterListID` — for as long as the user hasn't picked a
+  // priority themselves in this sheet session. Re-runs when the list changes so
+  // switching lists keeps following the new list's default.
+  useEffect(() => {
+    if (priorityTouchedByUser) return;
+    const activeListId = scheduled ? listID : floaterListID;
+    const activeListMeta = activeListId
+      ? listMetaData[activeListId] ?? floaterListMetaData[activeListId]
+      : undefined;
+    setPriority(activeListMeta?.defaultPriority ?? "Low");
+  }, [
+    scheduled,
+    listID,
+    floaterListID,
+    listMetaData,
+    floaterListMetaData,
+    priorityTouchedByUser,
+    setPriority,
+  ]);
+
   // Bridge submit + title-empty state up to the native sheet header.
   useEffect(() => {
     registerSubmit?.(handleForm);
@@ -125,6 +148,13 @@ const TodoForm = ({
   useEffect(() => {
     onCanSubmitChange?.(title.trim().length > 0);
   }, [title, onCanSubmitChange]);
+
+  // Wraps the raw setter so the touch-tracking above sees a user's own pick without
+  // TodoFormSelectors needing to know anything about it — its prop stays a plain setter.
+  const handlePrioritySelect: React.Dispatch<React.SetStateAction<Priority>> = (value) => {
+    setPriority(value);
+    setPriorityTouchedByUser(true);
+  };
 
   const repeatValueLabel = derivedRepeatType
     ? appDict(repeatLabelKey[derivedRepeatType])
@@ -338,7 +368,7 @@ const TodoForm = ({
         dateRange={dateRange}
         setDateRange={setDateRange}
         priority={priority}
-        setPriority={setPriority}
+        setPriority={handlePrioritySelect}
         listID={listID}
         setListID={setListID}
         setRruleOptions={setRruleOptions}

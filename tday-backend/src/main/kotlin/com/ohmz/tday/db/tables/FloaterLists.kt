@@ -9,6 +9,7 @@ object FloaterLists : Table("FloaterProject") {
     val name = text("name")
     val color = pgEnum<ListColor>("color", "\"ProjectColor\"").nullable()
     val iconKey = varchar("iconKey", 64).nullable()
+    val defaultPriority = pgEnum<Priority>("defaultPriority", "\"Priority\"").nullable()
     val userID = varchar("userID", 30).references(Users.id).index()
     val reusable = bool("reusable").default(false)
     val createdAt = datetime("createdAt")

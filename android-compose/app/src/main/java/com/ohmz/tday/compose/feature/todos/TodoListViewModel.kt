@@ -1282,6 +1282,8 @@ class TodoListViewModel @Inject constructor(
         color: String? = null,
         iconKey: String? = null,
         reusable: Boolean? = null,
+        defaultPriority: String? = null,
+        defaultPriorityChanged: Boolean = false,
     ) {
         val trimmedName = capitalizeFirstListLetter(name).trim()
         if (trimmedName.isBlank()) return
@@ -1321,6 +1323,7 @@ class TodoListViewModel @Inject constructor(
                             color = color ?: list.color,
                             iconKey = iconKey ?: list.iconKey,
                             reusable = reusable ?: list.reusable,
+                            defaultPriority = if (defaultPriorityChanged) defaultPriority else list.defaultPriority,
                         )
                     } else {
                         list
@@ -1339,6 +1342,8 @@ class TodoListViewModel @Inject constructor(
                         color = color,
                         iconKey = iconKey,
                         reusable = reusable,
+                        defaultPriority = defaultPriority,
+                        defaultPriorityChanged = defaultPriorityChanged,
                     )
                 } else {
                     listRepository.updateList(
@@ -1346,6 +1351,8 @@ class TodoListViewModel @Inject constructor(
                         name = trimmedName,
                         color = color,
                         iconKey = iconKey,
+                        defaultPriority = defaultPriority,
+                        defaultPriorityChanged = defaultPriorityChanged,
                     )
             }
             }.onSuccess {
@@ -1399,6 +1406,7 @@ class TodoListViewModel @Inject constructor(
         color: String? = null,
         iconKey: String? = null,
         reusable: Boolean = false,
+        defaultPriority: String? = null,
     ) {
         val trimmedName = capitalizeFirstListLetter(name).trim()
         if (trimmedName.isBlank()) return
@@ -1416,12 +1424,14 @@ class TodoListViewModel @Inject constructor(
                         color = color,
                         iconKey = iconKey,
                         reusable = reusable,
+                        defaultPriority = defaultPriority,
                     )
                 } else {
                     listRepository.createList(
                         name = trimmedName,
                         color = color,
                         iconKey = iconKey,
+                        defaultPriority = defaultPriority,
                     )
                 }
             }.onSuccess {

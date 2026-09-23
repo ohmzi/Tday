@@ -267,6 +267,7 @@ import com.ohmz.tday.shared.floater.FloaterRestingTier
 import com.ohmz.tday.shared.listicon.ListIconInference
 import com.ohmz.tday.shared.sort.TaskSortEngine
 import com.ohmz.tday.shared.sort.TaskSortKey
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -305,6 +306,23 @@ private val FloaterFeedRowSpacing = 10.dp
 
 // The header's circular buttons, and the bar that replaces the FAB while selecting.
 private val HeaderButtonIconSize = 22.dp
+
+/**
+ * The floater-list detail screen's toolbar is the one place through
+ * [TdayHeroToolbar]/[TodayHeaderButton] that can carry five actions at once
+ * (search, summarize, bulk-select, the reuse toggle's Reset, and the
+ * trailing "more") — every other screen tops out at four. At the normal
+ * [TdayDimens.FabSize]/8dp-gap size that comes to 312dp of circles alone on a
+ * ~360dp phone, before the title's own reserve. Shrunk down for that one
+ * crowded row only, mirroring the compromise web makes for the identical
+ * screen (see FloaterListContainer.tsx's `trailingAction` comment: 48px
+ * buttons, 6px gaps) rather than shrinking every screen that reuses this
+ * toolbar. [HeaderButtonCompactSize] lands on [MinTouchTargetSize] rather
+ * than copying web's 48px for its own sake — the two just happen to agree.
+ */
+private val HeaderButtonCompactSize = MinTouchTargetSize
+private val HeaderButtonCompactIconSize = 20.dp
+private val HeaderButtonCompactSpacing = 6.dp
 private val BulkSelectionBarElevation = 14.dp
 private val BulkSelectionBarVerticalPadding = 10.dp
 private val BulkSelectionCountHorizontalPadding = 10.dp
@@ -956,7 +974,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     onBulkSetPriority: (todos: List<TodoItem>, priority: String) -> Unit = { _, _ -> },
     onBulkMoveToList: (todos: List<TodoItem>, listId: String?) -> Unit = { _, _ -> },
     onOpenMorningSweep: () -> Unit = {},
-    onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?, reusable: Boolean?) -> Unit,
+    onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?, reusable: Boolean?, defaultPriority: String?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
     // Both of the Anytime feed's zoom sources hand their own colour to the push site, for
     // the reason `TILE_TRANSITION_COLOR` gives: the destination cannot recover it, and a
@@ -964,7 +982,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     onOpenFloaterList: (listId: String, listName: String, tileColor: Color) -> Unit = { _, _, _ -> },
     onOpenCompleted: (Color) -> Unit = {},
     onOpenSettings: () -> Unit = {},
-    onCreateList: (name: String, color: String?, iconKey: String?, reusable: Boolean) -> Unit = { _, _, _, _ -> },
+    onCreateList: (name: String, color: String?, iconKey: String?, reusable: Boolean, defaultPriority: String?) -> Unit = { _, _, _, _, _ -> },
     /**
      * Reset a reusable floater list (un-check everything so it can be run again).
      * The twin of web's `resetFloaterList` header button in FloaterListContainer.
@@ -1419,6 +1437,14 @@ fun TodoListScreen( // skipcq: KT-R1006
     // the two root tabs are one mode each and never change what they are a list
     // of.
     val swipeSlot = hostSwipeSlot ?: remember(uiState.mode, uiState.listId) { TaskSwipeSlot() }
+    // The completing-row "checked → struck → fading" linger, hoisted to this
+    // screen for the same reason `swipeSlot` above is hoisted rather than
+    // owned by a row: unlike `swipeSlot` this is NOT keyed on mode/listId,
+    // because the whole point is surviving exactly the kind of reflow a
+    // sibling completion inside the same scope can cause. See
+    // [TaskCompletionStaging].
+    val completionCoroutineScope = rememberCoroutineScope()
+    val completionStaging = remember { TaskCompletionStaging(completionCoroutineScope) }
     // --- Bulk selection ---------------------------------------------------
     // Screen-local, hoisted exactly the way `swipeSlot` above is, and
     // keyed on mode + scoped list so leaving the screen drops it for free. It
@@ -2261,10 +2287,14 @@ fun TodoListScreen( // skipcq: KT-R1006
     // Unlike the icon, this is always sent (never a "touched" flag): web's sheet
     // posts `reusable` on every save, so an off-flip must reach the server.
     var listSettingsReusable by rememberSaveable { mutableStateOf(false) }
+    // Seeded from the SAVED list's `defaultPriority`, always sent on save (like
+    // `listSettingsReusable`) since the row is shown for every list.
+    var listSettingsDefaultPriority by rememberSaveable { mutableStateOf<String?>(null) }
     var createListName by rememberSaveable { mutableStateOf("") }
     var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
     var createListIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var createListReusable by rememberSaveable { mutableStateOf(false) }
+    var createListDefaultPriority by rememberSaveable { mutableStateOf<String?>(null) }
     // Mirrors `listSettingsIconTouched` above, for the sheet that never had it. The
     // picker still shows a glyph the whole time; what changes is that an untouched
     // PREVIEW is no longer posted as a CHOICE. Without this the stored `iconKey` is
@@ -2434,6 +2464,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                         // Seeded from the saved value, like name/color/icon: web's
                         // sheet reads `list.reusable` the same way.
                         listSettingsReusable = selectedList.reusable
+                        listSettingsDefaultPriority = selectedList.defaultPriority
                         showListSettingsSheet = true
                     }
                 },
@@ -3007,6 +3038,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                             selectedTodoIds = selectedTodoIds,
                             flashTodoId = flashTodoId,
                             swipeSlot = swipeSlot,
+                            completionStaging = completionStaging,
                             collapsedSectionKeys = collapsedSectionKeys,
                             activeDropSectionKey = activeDropSectionKey,
                             draggedScheduledTodo = draggedScheduledTodo,
@@ -3252,6 +3284,14 @@ fun TodoListScreen( // skipcq: KT-R1006
                         .padding(padding)
                         .zIndex(6f),
                     titleSuppressed = showScopedSearchField || selectionActive,
+                    // The reuse toggle's Reset action pushes this one screen to
+                    // five buttons in the row, one more than any other screen
+                    // through this same bar — see HeaderButtonCompactSize above.
+                    actionsSpacing = if (topBarActions.size >= 5) {
+                        HeaderButtonCompactSpacing
+                    } else {
+                        TdayDimens.SpacingMd
+                    },
                     actions = {
                         if (selectionActive) {
                             // The same full-row takeover the search field uses:
@@ -3342,12 +3382,22 @@ fun TodoListScreen( // skipcq: KT-R1006
                                 trailingContentDescription = stringResource(R.string.action_close_search),
                             )
                         } else {
+                            val isCrowdedFloaterToolbar = topBarActions.size >= 5
                             topBarActions.forEach { action ->
                                 TodayHeaderButton(
                                     onClick = action.onClick,
                                     icon = action.icon,
                                     contentDescription = action.contentDescription,
-                                    iconSize = HeaderButtonIconSize,
+                                    iconSize = if (isCrowdedFloaterToolbar) {
+                                        HeaderButtonCompactIconSize
+                                    } else {
+                                        HeaderButtonIconSize
+                                    },
+                                    buttonSize = if (isCrowdedFloaterToolbar) {
+                                        HeaderButtonCompactSize
+                                    } else {
+                                        TdayDimens.FabSize
+                                    },
                                 )
                             }
                         }
@@ -3612,6 +3662,8 @@ fun TodoListScreen( // skipcq: KT-R1006
             },
             reusable = createListReusable,
             onReusableChange = { createListReusable = it },
+            defaultPriority = createListDefaultPriority,
+            onDefaultPriorityChange = { createListDefaultPriority = it },
             showDelete = false,
             onDismiss = { showCreateListSheet = false },
             onSave = {
@@ -3622,12 +3674,14 @@ fun TodoListScreen( // skipcq: KT-R1006
                         createListColor,
                         createListIconKey.takeIf { createListIconTouched },
                         createListReusable,
+                        createListDefaultPriority,
                     )
                     createListName = ""
                     createListColor = TDAY_DEFAULT_LIST_COLOR_KEY
                     createListIconKey = TDAY_DEFAULT_LIST_ICON_KEY
                     createListIconTouched = false
                     createListReusable = false
+                    createListDefaultPriority = null
                     showCreateListSheet = false
                 }
             },
@@ -3660,6 +3714,8 @@ fun TodoListScreen( // skipcq: KT-R1006
             // hides the row AND keeps the save from writing the flag on one.
             reusable = if (uiState.mode == TodoListMode.FLOATER) listSettingsReusable else null,
             onReusableChange = { listSettingsReusable = it },
+            defaultPriority = listSettingsDefaultPriority,
+            onDefaultPriorityChange = { listSettingsDefaultPriority = it },
             onShare = {
                 showListSettingsSheet = false
                 listSettingsTargetId = null
@@ -3685,6 +3741,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // Sent on every floater-list save, like web's sheet — an
                     // off-flip has to reach the server or Reset can't be retired.
                     if (uiState.mode == TodoListMode.FLOATER) listSettingsReusable else null,
+                    // The priority row is shown for every list, so this is always sent.
+                    listSettingsDefaultPriority,
                 )
                 showListSettingsSheet = false
                 listSettingsTargetId = null
@@ -4060,6 +4118,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
     selectedTodoIds: Set<String>,
     flashTodoId: String?,
     swipeSlot: TaskSwipeSlot,
+    completionStaging: TaskCompletionStaging,
     collapsedSectionKeys: Set<String>,
     activeDropSectionKey: String?,
     draggedScheduledTodo: TodoItem?,
@@ -4288,6 +4347,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                         onDefer = { onDeferRequested(todo.id) },
                         draggedTodo = sectionDraggedTodo,
                         swipeSlot = swipeSlot,
+                        completionStaging = completionStaging,
                         // Long-press drag-to-reschedule stands
                         // down while selecting: a null start
                         // handler is what turns `dragEnabled`
@@ -4837,6 +4897,10 @@ private fun TodayHeaderButton(
     icon: ImageVector,
     contentDescription: String,
     iconSize: Dp = TdayDimens.IconXl,
+    // Only the floater-list detail screen's crowded five-action row overrides
+    // this, to [HeaderButtonCompactSize]; every other caller keeps the normal
+    // circle.
+    buttonSize: Dp = TdayDimens.FabSize,
 ) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -4845,7 +4909,6 @@ private fun TodayHeaderButton(
     // that colour left them as outlines next to a solid white circle.
     val containerColor = tdayBarButtonContainerColor()
     val iconTint = MaterialTheme.colorScheme.onSurface
-    val buttonSize = TdayDimens.FabSize
 
     Card(
         modifier = Modifier
@@ -5028,6 +5091,10 @@ private fun ListSettingsBottomSheet(
     /** Null hides the Reusable row — a scheduled list has no Reset to reveal. */
     reusable: Boolean? = null,
     onReusableChange: (Boolean) -> Unit = {},
+    /** The priority a new task in this list starts with; null means no default. Shown
+     *  for every list, scheduled or Anytime, unlike the floater-only Reusable row. */
+    defaultPriority: String? = null,
+    onDefaultPriorityChange: (String?) -> Unit = {},
     onDismiss: () -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
@@ -5280,6 +5347,34 @@ private fun ListSettingsBottomSheet(
                         }
                     }
 
+                    TdaySheetSectionTitle(
+                        text = stringResource(R.string.create_task_priority),
+                    )
+                    TdaySheetCard {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+                            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
+                        ) {
+                            ListSettingsPriorityChip(
+                                label = stringResource(R.string.list_settings_default_priority_none),
+                                color = colorScheme.outlineVariant,
+                                selected = defaultPriority == null,
+                                onClick = { onDefaultPriorityChange(null) },
+                            )
+                            PRIORITY_OPTIONS_HIGH_TO_LOW.forEach { option ->
+                                ListSettingsPriorityChip(
+                                    label = stringResource(priorityDisplayLabelRes(option)),
+                                    color = tdayPriorityColor(option),
+                                    selected = defaultPriority == option,
+                                    onClick = { onDefaultPriorityChange(option) },
+                                )
+                            }
+                        }
+                    }
+
                     if (reusable != null) {
                         // Web draws this card between the icon picker and the
                         // sharing/delete actions, with the hint under the title.
@@ -5392,6 +5487,58 @@ private fun ListSettingsActionTile(
  * (`FloaterListFormSheet`): title, hint, and a Switch. Its meaning is the same
  * on all three clients: a reusable list can be Reset to run the checklist again.
  */
+@Composable
+private fun ListSettingsPriorityChip(
+    label: String,
+    color: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingSm),
+        modifier = Modifier
+            .clip(RoundedCornerShape(TdayDimens.RadiusRow))
+            .background(
+                if (selected) color.copy(alpha = 0.18f) else TdaySheetDefaults.controlSurfaceColor(),
+            )
+            .then(
+                if (selected) {
+                    Modifier.border(
+                        width = ListIconSwatchSelectedOutline,
+                        color = color.copy(alpha = 0.55f),
+                        shape = RoundedCornerShape(TdayDimens.RadiusRow),
+                    )
+                } else {
+                    Modifier
+                },
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(bounded = true),
+            ) {
+                TdayHaptics.selection(view)
+                onClick()
+            }
+            .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingLg),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(TdayDimens.SpacingLg)
+                .background(color, CircleShape),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
 @Composable
 private fun ListSettingsReusableToggleRow(
     checked: Boolean,
@@ -5783,6 +5930,7 @@ private fun TimelineTaskRow(
     onDefer: (() -> Unit)? = null,
     draggedTodo: TodoItem? = null,
     swipeSlot: TaskSwipeSlot,
+    completionStaging: TaskCompletionStaging,
     onDragTodoStart: ((Offset) -> Unit)? = null,
     onDragTodoMove: (Offset) -> Unit = {},
     onDragTodoEnd: (Offset?) -> Unit = {},
@@ -5813,6 +5961,7 @@ private fun TimelineTaskRow(
                 onDragEnd = onDragTodoEnd,
                 onDragCancel = onDragTodoCancel,
                 swipeSlot = swipeSlot,
+                completionStaging = completionStaging,
             )
         } else if (
             useMinimalStyle &&
@@ -5851,6 +6000,7 @@ private fun TimelineTaskRow(
                 onDragEnd = onDragTodoEnd,
                 onDragCancel = onDragTodoCancel,
                 swipeSlot = swipeSlot,
+                completionStaging = completionStaging,
             )
         } else if (useMinimalStyle) {
             TodayTodoRow(
@@ -6724,6 +6874,72 @@ private val TODO_DUE_DATE_TIME_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.getDefault())
         .withZone(ZoneId.systemDefault())
 
+/**
+ * The three beats a completing row plays before [TaskCompletionStaging.begin]
+ * fires its `onComplete` — see [TASK_COMPLETION_CHECK_TO_STRIKE_MS] and its
+ * neighbours for what each gap covers.
+ */
+private enum class TaskCompletionPhase { CHECKED, STRUCK, FADING }
+
+/**
+ * Hoists the completing-row "checked → struck → fading" linger OUT of any
+ * one row's own composition, keyed by todo id and driven by a coroutine
+ * scope that outlives a single row.
+ *
+ * [SwipeTaskRow] used to keep this sequence in `remember(todo.id)` state
+ * driven by its own `rememberCoroutineScope()` — both scoped to that row's
+ * own composition. A resort/reclassification right after several
+ * near-simultaneous completions (exactly what completing "too many tasks
+ * together" can trigger) can move a still-lingering sibling row into a
+ * different section, which changes that row's `item(key = ...)` in the
+ * LazyColumn and makes Compose tear the old composition down and stand up a
+ * new one for it. That drops the in-flight coroutine — including its
+ * terminal `onComplete()` call — along with the `remember`-scoped phase
+ * flags, which is the reported "comes back, then leaves again": the
+ * completion itself is lost, not merely mis-rendered, and any
+ * partially-elapsed strike/fade resets before a fresh instance of the row
+ * plays it again.
+ *
+ * Hoisting the phase map and the timer coroutine here, above any row's own
+ * lifecycle, is what keeps both alive across that reclassification. It
+ * mirrors iOS's screen-level `completionPhases: [String: TodoCompletionPhase]`
+ * (`TodoListScreen.swift`) and web's module-level `taskCompletionStaging.ts`
+ * map — neither is scoped to a row's own component identity either. Backed
+ * by a `SnapshotStateMap` ([mutableStateMapOf]) so a row observes its own
+ * phase and recomposes when it changes, exactly as the old `localChecked`/
+ * `localStruck`/`completionFading` `remember`s used to.
+ */
+private class TaskCompletionStaging(private val scope: CoroutineScope) {
+    private val phases = mutableStateMapOf<String, TaskCompletionPhase>()
+
+    fun phaseFor(todoId: String): TaskCompletionPhase? = phases[todoId]
+
+    /**
+     * Starts the linger for [todoId] unless it is already running — a second
+     * tap on a row already mid-sequence, or a recomposition replaying the
+     * same click, must not restart or double-fire it. [motionScale] is read
+     * by the caller inside composition and handed in as a plain value
+     * because this coroutine runs detached from any composition, on
+     * [scope] rather than on any one row's `rememberCoroutineScope()`.
+     */
+    fun begin(todoId: String, motionScale: Float, onComplete: () -> Unit) {
+        if (phases.containsKey(todoId)) return
+        phases[todoId] = TaskCompletionPhase.CHECKED
+        scope.launch {
+            // Three gaps, three animations they are covering, so all three
+            // are on the animator's clock. See
+            // [TASK_COMPLETION_CHECK_TO_STRIKE_MS].
+            scaledDelay(TASK_COMPLETION_CHECK_TO_STRIKE_MS, motionScale)
+            phases[todoId] = TaskCompletionPhase.STRUCK
+            scaledDelay(TASK_COMPLETION_STRIKE_TO_FADE_MS, motionScale)
+            phases[todoId] = TaskCompletionPhase.FADING
+            scaledDelay(TASK_COMPLETION_FADE_MS, motionScale)
+            phases.remove(todoId)
+            onComplete()
+        }
+    }
+}
+
 @Composable
 private fun AllTaskSwipeRow(
     todo: TodoItem,
@@ -6746,6 +6962,7 @@ private fun AllTaskSwipeRow(
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
     swipeSlot: TaskSwipeSlot,
+    completionStaging: TaskCompletionStaging,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -6772,6 +6989,7 @@ private fun AllTaskSwipeRow(
         onDragEnd = onDragEnd,
         onDragCancel = onDragCancel,
         swipeSlot = swipeSlot,
+        completionStaging = completionStaging,
     )
 }
 
@@ -6802,6 +7020,7 @@ private fun TodayTaskSwipeRow(
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
     swipeSlot: TaskSwipeSlot,
+    completionStaging: TaskCompletionStaging,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -6832,6 +7051,7 @@ private fun TodayTaskSwipeRow(
         onDragEnd = onDragEnd,
         onDragCancel = onDragCancel,
         swipeSlot = swipeSlot,
+        completionStaging = completionStaging,
     )
 }
 
@@ -6871,6 +7091,7 @@ private fun SwipeTaskRow(
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
     swipeSlot: TaskSwipeSlot,
+    completionStaging: TaskCompletionStaging,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -6904,10 +7125,15 @@ private fun SwipeTaskRow(
     val copyContext = LocalContext.current
     val copiedMessage = stringResource(R.string.task_copied_toast)
     val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
-    var localChecked by remember(todo.id) { mutableStateOf(false) }
-    var localStruck by remember(todo.id) { mutableStateOf(false) }
-    var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
-    var completionFading by remember(todo.id) { mutableStateOf(false) }
+    // Read from the hoisted [TaskCompletionStaging] rather than owned here —
+    // see its doc comment for why a row's own `remember(todo.id)` cannot be
+    // trusted to survive a sibling completion's resort/reclassification.
+    val completionPhase = completionStaging.phaseFor(todo.id)
+    val localChecked = completionPhase != null
+    val localStruck = completionPhase == TaskCompletionPhase.STRUCK ||
+            completionPhase == TaskCompletionPhase.FADING
+    val pendingCompletion = completionPhase != null
+    val completionFading = completionPhase == TaskCompletionPhase.FADING
     var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
     var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
     fun claimSwipeSlot() {
@@ -7454,27 +7680,15 @@ private fun SwipeTaskRow(
                                         TdayHaptics.completion(view)
                                         taskCompletionSound.play()
                                         closeSwipeSlot()
-                                        localChecked = true
-                                        pendingCompletion = true
-                                        coroutineScope.launch {
-                                            // Three gaps, three animations they
-                                            // are covering, so all three are on
-                                            // the animator's clock. See
-                                            // [TASK_COMPLETION_CHECK_TO_STRIKE_MS].
-                                            scaledDelay(
-                                                TASK_COMPLETION_CHECK_TO_STRIKE_MS,
-                                                rowMotionScale,
-                                            )
-                                            localStruck = true
-                                            scaledDelay(
-                                                TASK_COMPLETION_STRIKE_TO_FADE_MS,
-                                                rowMotionScale,
-                                            )
-                                            completionFading = true
-                                            scaledDelay(
-                                                TASK_COMPLETION_FADE_MS,
-                                                rowMotionScale,
-                                            )
+                                        // Hoisted above this row's own
+                                        // composition — see
+                                        // [TaskCompletionStaging] for why a
+                                        // sibling's resort must not be able
+                                        // to tear this sequence down.
+                                        completionStaging.begin(
+                                            todo.id,
+                                            rowMotionScale,
+                                        ) {
                                             onComplete()
                                         }
                                     }

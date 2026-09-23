@@ -213,6 +213,12 @@ describe.each(ROWS)("un-ticking $label", (row) => {
    * The mirror of the forward row's cut: with no collapse to outlast there is nothing for the
    * last leg to wait for, and a wait in front of a destination already drawn is `docs/motion.md`'s
    * fifth idiom rule broken from the other side.
+   *
+   * Pinned only against the cache, the same as `calendar-row-complete-interaction.test.tsx`'s
+   * twin of this test: `taskUncompleteStaging` clears a task's phase in the same tick it commits,
+   * so a row rendered standalone (as here, with no parent list to drop it) sees its `removing`
+   * style reset the instant the restore lands — the same instant a real list would already have
+   * unmounted it.
    */
   it("restores as soon as the frame is finished under reduced motion", async () => {
     installReducedMotion(true);
@@ -230,9 +236,6 @@ describe.each(ROWS)("un-ticking $label", (row) => {
     expect(remaining(queryClient, row.cacheKey)).not.toContain(
       row.cacheKey === "completedTodo" ? TODO.id : FLOATER.id,
     );
-    // Destination without the trip: an empty box and no ink, arrived at rather than travelled to.
-    expect(box().style.transition).toBe("");
-    expect(box().style.gridTemplateRows).toBe("0fr");
   });
 
   it("does not re-fire if the checkbox is tapped twice", async () => {

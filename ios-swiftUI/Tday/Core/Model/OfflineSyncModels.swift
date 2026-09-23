@@ -159,6 +159,7 @@ struct CachedListRecord: Identifiable, Equatable, Codable {
     var isShared: Bool?
     var memberCount: Int?
     var ownerUsername: String?
+    var defaultPriority: String?
 
     init(
         id: String,
@@ -171,7 +172,8 @@ struct CachedListRecord: Identifiable, Equatable, Codable {
         myRole: String? = nil,
         isShared: Bool? = nil,
         memberCount: Int? = nil,
-        ownerUsername: String? = nil
+        ownerUsername: String? = nil,
+        defaultPriority: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -184,6 +186,7 @@ struct CachedListRecord: Identifiable, Equatable, Codable {
         self.isShared = isShared
         self.memberCount = memberCount
         self.ownerUsername = ownerUsername
+        self.defaultPriority = defaultPriority
     }
 }
 
@@ -203,6 +206,7 @@ struct CachedFloaterListRecord: Identifiable, Equatable, Codable {
     /// Optional for the same reason as the sharing fields: state persisted
     /// before the flag existed decodes as "not reusable".
     var reusable: Bool?
+    var defaultPriority: String?
 
     init(
         id: String,
@@ -216,7 +220,8 @@ struct CachedFloaterListRecord: Identifiable, Equatable, Codable {
         isShared: Bool? = nil,
         memberCount: Int? = nil,
         ownerUsername: String? = nil,
-        reusable: Bool? = nil
+        reusable: Bool? = nil,
+        defaultPriority: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -230,6 +235,7 @@ struct CachedFloaterListRecord: Identifiable, Equatable, Codable {
         self.memberCount = memberCount
         self.ownerUsername = ownerUsername
         self.reusable = reusable
+        self.defaultPriority = defaultPriority
     }
 }
 
@@ -330,6 +336,13 @@ struct PendingMutationRecord: Identifiable, Equatable, Codable {
     // mutation", the same convention the shared UpdateFloaterListRequest uses.
     // Defaulted so the existing memberwise-init call sites keep compiling.
     var reusable: Bool? = nil
+    // Default-priority fields for the list/floater-list create/update mutations,
+    // mirroring the `reusable` pair above but not floater-only: the update side
+    // uses the same tri-state convention as the shared `UpdateFloaterListRequest`
+    // (`defaultPriorityChanged` gates whether `defaultPriority` is applied).
+    // Defaulted so the existing memberwise-init call sites keep compiling.
+    var defaultPriority: String? = nil
+    var defaultPriorityChanged: Bool? = nil
     // Task-step ordering (REORDER_STEPS): the full ordered list of step ids.
     // Defaulted so the 30+ existing memberwise-init call sites keep compiling.
     var orderedIds: [String]? = nil

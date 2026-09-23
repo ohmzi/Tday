@@ -327,17 +327,15 @@ fun CompletedScreen(
     val showEmptyState = completedAnswer == FeedAnswer.Empty
     val heroCollapse = rememberLazyListHeroTitleCollapse(listState = listState)
     val completedTitle = stringResource(R.string.completed_title)
-    // Each tab's own accent, which is what web gives them: `nativeScreenAccentColors`
-    // pairs the completed history's green (#719F84) with the Floater board's teal
-    // (#4D8F83), and `CompletedFloaterContainer` hands the teal to its own header,
-    // watermark and empty state. Android already carries both — `TdayCompletedTileAccent`
-    // and `TdayFloaterAccent`, the same two values — so the pair costs nothing here.
+    // One accent for both tabs: [TdayCompletedTileAccent], the same green the
+    // dashboard entry tile's "Completed" row already uses for both the scheduled
+    // and Floater scopes (see `ScheduledTaskHomeScreen`'s and `TodoListScreen`'s
+    // own completed-entry tiles). This page used to give the Floater tab a
+    // separate, darker teal ([TdayFloaterAccent]) here, which put this screen's
+    // Floater mark in a different colour than the tile the user arrived through.
     //
     // It tints the mark and everything the mark is drawn in — the hero's front glyph, its
-    // echo, the page watermark, the empty state's badge — and the tab strip. Those are the
-    // four sites web's one accent reaches on this page, and before this it reached only the
-    // first two on the natives, so the page drew its own mark in two colours at once (a
-    // green or teal hero over a slate watermark and a slate badge).
+    // echo, the page watermark, the empty state's badge — and the tab strip.
     //
     // The disc's wash, the hero title and the toolbar keep [COMPLETED_TITLE_COLOR], the
     // page's own slate chrome. The wash is the one of those that touches the mark, and it
@@ -345,10 +343,7 @@ fun CompletedScreen(
     // and re-tinting it alone would put a green disc over a slate title where web has the
     // two the same colour. Re-colouring the chrome is a change to a shape this did not
     // come to make.
-    val activeScopeAccent = when (scope) {
-        CompletedScope.Tasks -> TdayCompletedTileAccent
-        CompletedScope.Floater -> TdayFloaterAccent
-    }
+    val activeScopeAccent = TdayCompletedTileAccent
     // The tab switch scrolls the new tab to its own top — web's `scrollCompletedToTop()`.
     val scrollScope = rememberCoroutineScope()
     // The hero disc's echo, and nothing else — the mark's front glyph is the
@@ -464,6 +459,7 @@ fun CompletedScreen(
                         frontMark = {
                             CompletedMark(
                                 size = TdayHeroTitleMetrics.MarkGlyph,
+                                scope = scope,
                                 tint = activeScopeAccent,
                             )
                         },
@@ -694,7 +690,7 @@ fun CompletedScreen(
                                     markContent = {
                                         CompletedMark(
                                             size = COMPLETED_MARK_BADGE_SIZE,
-                                            rearAlpha = COMPLETED_MARK_BADGE_REAR_ALPHA,
+                                            scope = scope,
                                         )
                                     },
                                 )
@@ -748,7 +744,7 @@ fun CompletedScreen(
                     markContent = {
                         CompletedMark(
                             size = WatermarkGlyphSize,
-                            rearAlpha = COMPLETED_MARK_WATERMARK_REAR_ALPHA,
+                            scope = scope,
                         )
                     },
                 )
@@ -1632,74 +1628,90 @@ private fun CompletedScopeTabs(
 private val COMPLETED_TITLE_COLOR = TdayCompletedTitleAccent
 
 /**
- * The Completion-history page's mark: one green check, with the Floater's leaf
- * and the Scheduled board's `calendar-check` stacked behind it as a single faint
- * plate. The two behind read as depth under the check rather than as two more
- * icons, which is the arrangement the page was asked for.
+ * The Completion-history page's mark: one coherent, fully-opaque glyph per
+ * scope rather than a fixed three-layer stack. Scheduled draws a bare
+ * calendar-check; Floater draws a leaf with a small check badge over its
+ * bottom-right — see [CompletedScope] for which is which. Earlier this drew
+ * the same calendar-check-plus-leaf-plus-check stack for both scopes (only the
+ * surrounding accent colour differed), so the icon never actually told the two
+ * scopes apart despite the visual complexity.
  *
- * A drawing and not an asset, because there is no compositing primitive to reach
- * for: three `Icon`s in one `Box` is the whole thing. But there is no compositing
- * primitive to reach for, so it is built once — here — and handed to all three of
- * the page's own mark sites (the hero disc, the page watermark, the empty state's
- * badge) through the mark slot each shared component carries. A composite that
- * reached only the hero would leave the page drawing two different marks.
- *
- * The three glyphs are concentric but NOT the same size — [COMPLETED_MARK_LEAF_SCALE]
- * and [COMPLETED_MARK_CALENDAR_SCALE] say why, and what it costs at the one pair
- * of contours no pair of scales can separate.
+ * A drawing and not an asset, because there is no compositing primitive to
+ * reach for: one or two `Icon`s in one `Box` is the whole thing. Built once —
+ * here — and handed to all three of the page's own mark sites (the hero disc,
+ * the page watermark, the empty state's badge) through the mark slot each
+ * shared component carries, so the page never draws two different marks for
+ * the same scope.
  *
  * The check takes [TdayCompletedTileAccent] — the same green the Scheduled and
- * Floater boards' Completed tile is, and the tile the user arrives through. The
- * page's own chrome (its title, its toolbar) wears
+ * Floater boards' Completed tile is, and the tile the user arrives through.
+ * The page's own chrome (its title, its toolbar) wears
  * [TdayCompletedTitleAccent], a slate; the mark is green on purpose, because a
- * check is what the page is *about* rather than a piece of its chrome. The two
- * behind it are that one green at [rearAlpha] and never a second colour.
+ * check is what the page is *about* rather than a piece of its chrome.
  *
- * @param size the box all three glyphs are drawn in.
- * @param tint the check's colour; each glyph behind it is the same colour at
- *   [rearAlpha]. `Color.Unspecified` means "the colour my host is standing in",
- *   which is how a host whose own tint is computed somewhere the caller cannot
- *   see — the page watermark's blend, the empty state's white — says what colour
- *   to draw in without a call site re-deriving it. It is resolved to
- *   `LocalContentColor` here, in [CompletedMark], and never handed on as
- *   unspecified: Material3's `Icon(painter, …)` reads `Color.Unspecified` as
- *   *no colour filter*, not as "inherit", and these three vendored drawables are
- *   white — so an unspecified tint draws white, at whatever alpha the host asked
- *   for, which on a light background is nothing at all.
- * @param rearAlpha the pair behind the check, as a fraction of the front one, so
- *   it survives an opacity the host puts on the whole mark.
+ * There is no internal opacity knob any more: both scopes are drawn at full
+ * strength, and the three call sites that need the mark dimmed already get it
+ * from an outer wrapper — the page watermark blends and fades its own tint
+ * before handing it down through `LocalContentColor` (see
+ * `EmptyTaskWatermark`'s `WatermarkSlot`), and the hero disc and the empty
+ * state's badge are never dimmed at all. A per-layer fade had a job only while
+ * a faint pair sat behind a bold front glyph; now each scope is one glyph (or
+ * one glyph plus one badge, both opaque), so there is nothing left for a rear
+ * alpha to apply to.
+ *
+ * @param size the box the glyph (or glyphs) are drawn in.
+ * @param scope which scope's icon to draw — see [CompletedScope].
+ * @param tint the glyphs' colour. `Color.Unspecified` means "the colour my
+ *   host is standing in", which is how a host whose own tint is computed
+ *   somewhere the caller cannot see — the page watermark's blend, the empty
+ *   state's white — says what colour to draw in without a call site
+ *   re-deriving it. It is resolved to `LocalContentColor` here, in
+ *   [CompletedMark], and never handed on as unspecified: Material3's
+ *   `Icon(painter, …)` reads `Color.Unspecified` as *no colour filter*, not as
+ *   "inherit", and these vendored drawables are white — so an unspecified
+ *   tint draws white, at whatever alpha the host asked for, which on a light
+ *   background is nothing at all.
  */
 @Composable
 private fun CompletedMark(
     size: Dp,
+    scope: CompletedScope,
     tint: Color = Color.Unspecified,
-    rearAlpha: Float = COMPLETED_MARK_REAR_ALPHA,
 ) {
     val resolvedTint = tint.takeOrElse { LocalContentColor.current }
     Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
-        CompletedMarkLayer(
-            iconRes = R.drawable.ic_lucide_calendar_check,
-            size = size,
-            scale = COMPLETED_MARK_CALENDAR_SCALE,
-            tint = resolvedTint,
-            alpha = rearAlpha,
-        )
-        CompletedMarkLayer(
-            iconRes = R.drawable.ic_lucide_leaf,
-            size = size,
-            scale = COMPLETED_MARK_LEAF_SCALE,
-            offsetX = COMPLETED_MARK_LEAF_OFFSET_X,
-            offsetY = COMPLETED_MARK_LEAF_OFFSET_Y,
-            tint = resolvedTint,
-            alpha = rearAlpha,
-        )
-        CompletedMarkLayer(
-            iconRes = R.drawable.ic_lucide_check,
-            size = size,
-            scale = 1f,
-            tint = resolvedTint,
-            alpha = 1f,
-        )
+        when (scope) {
+            CompletedScope.Tasks -> {
+                // A bare calendar-check, at the box's full size — already
+                // "calendar with checkmark" on its own, so nothing else is
+                // layered with it.
+                CompletedMarkLayer(
+                    iconRes = R.drawable.ic_lucide_calendar_check,
+                    size = size,
+                    scale = 1f,
+                    tint = resolvedTint,
+                )
+            }
+            CompletedScope.Floater -> {
+                // A plain leaf, undecorated, at the box's full size…
+                CompletedMarkLayer(
+                    iconRes = R.drawable.ic_lucide_leaf,
+                    size = size,
+                    scale = 1f,
+                    tint = resolvedTint,
+                )
+                // …with a small, fully-opaque check badge over its
+                // bottom-right, in the same colour — no separate tint.
+                CompletedMarkLayer(
+                    iconRes = R.drawable.ic_lucide_circle_check_big,
+                    size = size,
+                    scale = COMPLETED_MARK_FLOATER_BADGE_SCALE,
+                    offsetX = COMPLETED_MARK_FLOATER_BADGE_OFFSET,
+                    offsetY = COMPLETED_MARK_FLOATER_BADGE_OFFSET,
+                    tint = resolvedTint,
+                )
+            }
+        }
     }
 }
 
@@ -1709,7 +1721,6 @@ private fun CompletedMarkLayer(
     size: Dp,
     scale: Float,
     tint: Color,
-    alpha: Float,
     offsetX: Float = 0f,
     offsetY: Float = 0f,
 ) {
@@ -1721,90 +1732,27 @@ private fun CompletedMarkLayer(
             .size(size * scale)
             // Displacement from the box's centre as a fraction of the box, so the
             // drawing is the same proportion at every size the mark is drawn.
-            .offset(x = size * offsetX, y = size * offsetY)
-            .graphicsLayer { this.alpha = alpha },
+            .offset(x = size * offsetX, y = size * offsetY),
     )
 }
 
 /**
- * The pair behind the check on the hero mark, matching
- * `TdayHeroTitleMetrics`'s own echo alpha — the back plate and the bleed out of
- * the disc's bottom-right are one depth plane, not two.
- */
-private const val COMPLETED_MARK_REAR_ALPHA = 0.17f
-
-/**
- * The same pair on the page watermark. Stronger, because nothing in that drawing
- * is strong: the whole mark sits under the watermark's own 0.10 fade, and at the
- * hero's ratio the back plate would not survive it — the watermark would show the
- * check alone, and the page would be drawing two different marks.
- */
-private const val COMPLETED_MARK_WATERMARK_REAR_ALPHA = 0.45f
-
-/**
- * The same pair on the empty state's badge, which is a white glyph on the accent
- * disc and is drawn at 32dp rather than the hero's 44 — a 0.17 ghost goes missing
- * at that size and contrast.
- */
-private const val COMPLETED_MARK_BADGE_REAR_ALPHA = 0.25f
-
-/**
  * The badge's glyph box. The badge's circle is 52dp and every other screen draws
- * its single glyph at 24dp inside it; three glyphs stacked need the room, and at
- * 24 the calendar's inner tick lands at ~2pt where the three cannot be told
- * apart. Raised here rather than in `TdayEmptyState`, so the eight other screens
- * that draw a badge keep the drawing they have.
+ * its single glyph at 24dp inside it; the Floater variant's two-glyph mark needs
+ * a touch more room for the leaf-plus-badge composition to read cleanly. Raised
+ * here rather than in `TdayEmptyState`, so the eight other screens that draw a
+ * badge keep the drawing they have.
  */
 private val COMPLETED_MARK_BADGE_SIZE = 32.dp
 
 /**
- * How much of [CompletedMark]'s box each glyph behind the check is drawn in, and
- * where the leaf sits inside it.
- *
- * Two things had to be true of the back plate at once: the two rear glyphs have to
- * read as two rather than fuse into one fringe, and each has to be nameable at the
- * size the mark is actually drawn. Drawn concentric at one size the three fused;
- * graduated by scale alone — leaf 0.62, calendar 0.88, the first arrangement — the
- * leaf still did not name, because at 0.62 its contour runs through the calendar's
- * header rule and *within* both frame walls, so the calendar's own straight lines
- * cut its silhouette at every crossing. Rasterised, that leaf kept 59.3% of its
- * ink, in six disconnected pieces: the "scratch" the mark was reported as, and the
- * one glyph of the three that was present, paid for and not nameable.
- *
- * So the leaf is drawn small enough to sit *inside* the calendar's body — under
- * the header rule, above the frame's foot, and inside both walls — and shifted
- * right, out from under the front check's own lower arm. At 0.335 of the box its
- * outline clears the calendar's frame by 0.88 of a unit on every side, against the
- * 0.84 the first arrangement recorded: 1.61pt of the hero's 44dp, 1.17 at the
- * badge's 32, 7.77dp at [WatermarkGlyphSize]. Rasterised, the same leaf now keeps
- * 88.6% of its ink, in a single piece.
- *
- * The one contour it cannot avoid is the calendar's own inner tick, which sits in
- * the middle of the body the leaf now occupies: the leaf is drawn *over* it, so
- * the tick is covered rather than cut. That tick was already unreadable behind the
- * front check — its arms pass within the strokes' half-widths of the check's arms
- * at every pair of scales these two glyphs allow — so nothing legible is lost, and
- * the leaf's silhouette survives whole.
- *
- * The binding pair is now the leaf's topmost point against the header rule and its
- * foot against the frame's, both 0.88 of a unit. A scaled glyph scales its stroke
- * with it, so the leaf carries 0.67 of a unit of stroke against the calendar's
- * 1.76: the pair behind reads as *behind* partly by being drawn in a finer line
- * than the check's 2.
+ * The Floater mark's check badge, sized and placed against the leaf behind it.
+ * 0.42 of the box, centred at 80% across and 80% down — i.e. offset from the
+ * box's centre by +0.30 on both axes, in the same fractional-offset convention
+ * [CompletedMarkLayer] already draws every glyph in.
  */
-private const val COMPLETED_MARK_LEAF_SCALE = 0.335f
-private const val COMPLETED_MARK_CALENDAR_SCALE = 0.88f
-
-/**
- * Where the leaf sits inside [CompletedMark]'s box, as a fraction of it — lucide
- * draws in a 24-unit box, so these are 2.5 and 3.69 of those units. Down and to
- * the right: down is what puts the leaf under the calendar's header rule, and
- * right is what takes it out from under the front check's lower arm. The
- * rightward half is worth a third of the leaf's ink — at the box's centre, at this
- * scale, the same leaf keeps 60.1% where it keeps 88.6% here.
- */
-private const val COMPLETED_MARK_LEAF_OFFSET_X = 2.5f / 24f
-private const val COMPLETED_MARK_LEAF_OFFSET_Y = 3.69f / 24f
+private const val COMPLETED_MARK_FLOATER_BADGE_SCALE = 0.42f
+private const val COMPLETED_MARK_FLOATER_BADGE_OFFSET = 0.30f
 
 private val COMPLETED_SECTION_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())

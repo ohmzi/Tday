@@ -8,17 +8,19 @@ type CreateListParams = {
   name: string;
   color?: ListColor;
   iconKey?: string;
+  defaultPriority?: ListItemMetaType["defaultPriority"];
 };
 
 async function postList({
   name,
   color,
   iconKey,
+  defaultPriority,
 }: CreateListParams) {
   const response: { list?: ListItemMetaType } = await api.POST({
     url: "/api/list",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name, color, iconKey }),
+    body: JSON.stringify({ name, color, iconKey, defaultPriority }),
   });
 
   return response.list;

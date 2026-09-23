@@ -1,7 +1,8 @@
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { RRule, type Options } from "rrule";
 import type { TodoItemType } from "@/types";
 import deriveRepeatType, { type RepeatType } from "@/lib/deriveRepeatType";
+import { useListMetaData } from "@/components/Sidebar/List/query/get-list-meta";
 
 export type CalendarFormDateRange = { from: Date; to: Date };
 
@@ -17,6 +18,11 @@ export type CalendarTaskFormState = {
   setDescription: Dispatch<SetStateAction<string>>;
   priority: TodoItemType["priority"];
   setPriority: Dispatch<SetStateAction<TodoItemType["priority"]>>;
+  // True once the user has picked a priority themselves for this draft; while false,
+  // the selected list's default priority is free to keep re-filling the field. Seeded
+  // true for an edit (a seed priority arrives) — this feature is create-only.
+  priorityTouchedByUser: boolean;
+  setPriorityTouchedByUser: Dispatch<SetStateAction<boolean>>;
   dateRange: CalendarFormDateRange;
   setDateRange: Dispatch<SetStateAction<CalendarFormDateRange>>;
   rruleOptions: Partial<Options> | null;
@@ -55,6 +61,9 @@ export function useCalendarTaskFormState(seed: CalendarTaskFormSeed): CalendarTa
   const [title, setTitle] = useState(seed.title ?? "");
   const [description, setDescription] = useState(seed.description ?? "");
   const [priority, setPriority] = useState<TodoItemType["priority"]>(seed.priority ?? "Low");
+  const [priorityTouchedByUser, setPriorityTouchedByUser] = useState<boolean>(
+    Boolean(seed.priority),
+  );
   const [dateRange, setDateRange] = useState<CalendarFormDateRange>(() => ({
     from: seed.due,
     to: seed.due,
@@ -63,6 +72,15 @@ export function useCalendarTaskFormState(seed: CalendarTaskFormSeed): CalendarTa
     seed.rrule ? RRule.parseString(seed.rrule) : null,
   );
   const [listID, setListID] = useState<string | null>(seed.listID ?? null);
+  const { listMetaData } = useListMetaData();
+
+  // This flow is calendar/scheduled-only (no floater-task branch), so the list's
+  // default is always read off `listMetaData` — see TodoForm.tsx for the dual-branch
+  // (scheduled vs. floater) version of the same re-resolution.
+  useEffect(() => {
+    if (priorityTouchedByUser) return;
+    setPriority(listID ? listMetaData[listID]?.defaultPriority ?? "Low" : "Low");
+  }, [listID, listMetaData, priorityTouchedByUser]);
 
   return {
     title,
@@ -71,6 +89,8 @@ export function useCalendarTaskFormState(seed: CalendarTaskFormSeed): CalendarTa
     setDescription,
     priority,
     setPriority,
+    priorityTouchedByUser,
+    setPriorityTouchedByUser,
     dateRange,
     setDateRange,
     rruleOptions,

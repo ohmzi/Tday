@@ -115,6 +115,7 @@ internal fun listToCache(list: ListSummary): CachedListRecord {
         isShared = list.isShared,
         memberCount = list.memberCount,
         ownerUsername = list.ownerUsername,
+        defaultPriority = list.defaultPriority,
     )
 }
 
@@ -226,6 +227,7 @@ internal fun listFromCache(
         isShared = cache.isShared,
         memberCount = cache.memberCount,
         ownerUsername = cache.ownerUsername,
+        defaultPriority = cache.defaultPriority,
     )
 }
 
@@ -243,6 +245,7 @@ internal fun floaterListToCache(list: ListSummary): CachedFloaterListRecord {
         memberCount = list.memberCount,
         ownerUsername = list.ownerUsername,
         reusable = list.reusable,
+        defaultPriority = list.defaultPriority,
     )
 }
 
@@ -263,6 +266,7 @@ internal fun floaterListFromCache(
         memberCount = cache.memberCount,
         ownerUsername = cache.ownerUsername,
         reusable = cache.reusable,
+        defaultPriority = cache.defaultPriority,
     )
 }
 
@@ -431,6 +435,7 @@ internal fun mapListDto(dto: ListDto, iconFallback: String? = null): ListSummary
         isShared = dto.isShared,
         memberCount = dto.memberCount,
         ownerUsername = dto.ownerUsername,
+        defaultPriority = dto.defaultPriority,
     )
 }
 
@@ -448,6 +453,7 @@ internal fun mapFloaterListDto(dto: FloaterListDto, iconFallback: String? = null
         memberCount = dto.memberCount,
         ownerUsername = dto.ownerUsername,
         reusable = dto.reusable,
+        defaultPriority = dto.defaultPriority,
     )
 }
 

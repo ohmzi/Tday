@@ -18,6 +18,7 @@ export interface ListItemMetaType {
   name: string;
   color?: ListColor;
   iconKey?: string | null;
+  defaultPriority?: "Lowest" | "Low" | "Medium" | "High" | null;
   todoCount?: number;
   myRole?: ShareRoleType | null;
   isShared?: boolean;
@@ -34,6 +35,7 @@ export interface FloaterListItemMetaType {
   name: string;
   color?: ListColor;
   iconKey?: string | null;
+  defaultPriority?: "Lowest" | "Low" | "Medium" | "High" | null;
   reusable?: boolean;
   todoCount?: number;
   userID?: string | null;

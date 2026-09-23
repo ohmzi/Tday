@@ -325,6 +325,8 @@
     "noRepeat": "Без повтора",
     "color": "Цвет",
     "icon": "Значок",
+    "defaultPriority": "Приоритет по умолчанию",
+    "noDefaultPriority": "Не задано",
     "listName": "Название списка",
     "newTask": "Новая задача",
     "editTask": "Изменить задачу",

@@ -17,6 +17,7 @@ import com.ohmz.tday.models.response.DeleteFloaterListResponse
 import com.ohmz.tday.models.response.FloaterListDetailResponse
 import com.ohmz.tday.services.FloaterListService
 import com.ohmz.tday.shared.model.ListColor
+import com.ohmz.tday.shared.model.Priority
 import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
@@ -41,7 +42,8 @@ fun Route.floaterListRoutes() {
                     val body = call.receive<FloaterListCreateRequest>()
                     validateCreateFloaterList.validateOrFail(body).bind()
                     val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
-                    val list = floaterListService.create(user.id, body.name, color, body.iconKey, body.reusable).bind()
+                    val defaultPriority = validateOptionalEnumValue<Priority>(body.defaultPriority, "defaultPriority").bind()
+                    val list = floaterListService.create(user.id, body.name, color, body.iconKey, body.reusable, defaultPriority).bind()
                     CreateFloaterListResponse(message = "floater list created", list = list)
                 }
             }
@@ -53,7 +55,8 @@ fun Route.floaterListRoutes() {
                     val body = call.receive<FloaterListPatchRequest>()
                     validatePatchFloaterList.validateOrFail(body).bind()
                     val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
-                    floaterListService.update(user.id, body.id, body.name, color, body.iconKey, body.reusable).bind()
+                    val defaultPriority = validateOptionalEnumValue<Priority>(body.defaultPriority, "defaultPriority").bind()
+                    floaterListService.update(user.id, body.id, body.name, color, body.iconKey, body.reusable, defaultPriority, body.defaultPriorityChanged).bind()
                     mapOf("message" to "floater list updated")
                 }
             }

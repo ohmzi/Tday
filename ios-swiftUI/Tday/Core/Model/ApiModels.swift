@@ -457,6 +457,7 @@ struct CreateListRequest: Codable {
     let name: String
     let color: String?
     let iconKey: String?
+    var defaultPriority: String? = nil
 }
 
 struct CreateFloaterListRequest: Codable {
@@ -466,6 +467,7 @@ struct CreateFloaterListRequest: Codable {
     /// Defaults false, matching the shared `CreateFloaterListRequest` and the
     /// backend column default.
     var reusable: Bool = false
+    var defaultPriority: String? = nil
 }
 
 struct ListDTO: Codable, Equatable {
@@ -481,6 +483,7 @@ struct ListDTO: Codable, Equatable {
     var isShared: Bool?
     var memberCount: Int?
     var ownerUsername: String?
+    var defaultPriority: String?
 }
 
 struct FloaterListDTO: Codable, Equatable {
@@ -499,6 +502,7 @@ struct FloaterListDTO: Codable, Equatable {
     var isShared: Bool?
     var memberCount: Int?
     var ownerUsername: String?
+    var defaultPriority: String?
 }
 
 struct ListMemberDTO: Codable, Equatable, Identifiable {
@@ -580,6 +584,8 @@ struct UpdateListRequest: Codable {
     let name: String?
     let color: String?
     let iconKey: String?
+    var defaultPriority: String? = nil
+    var defaultPriorityChanged: Bool? = nil
 }
 
 struct UpdateFloaterListRequest: Codable {
@@ -591,6 +597,8 @@ struct UpdateFloaterListRequest: Codable {
     /// `UpdateFloaterListRequest` uses. The settings sheet always sends a value
     /// for a floater list, so an off-flip reaches the server.
     var reusable: Bool? = nil
+    var defaultPriority: String? = nil
+    var defaultPriorityChanged: Bool? = nil
 }
 
 struct DeleteListRequest: Codable {

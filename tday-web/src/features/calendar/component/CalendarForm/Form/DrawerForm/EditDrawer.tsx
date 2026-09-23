@@ -42,6 +42,8 @@ export default function EditCalendarDrawer({
     setDescription,
     priority,
     setPriority,
+    priorityTouchedByUser,
+    setPriorityTouchedByUser,
     dateRange,
     setDateRange,
     rruleOptions,
@@ -148,6 +150,8 @@ export default function EditCalendarDrawer({
               setDescription={setDescription}
               priority={priority}
               setPriority={setPriority}
+              priorityTouchedByUser={priorityTouchedByUser}
+              setPriorityTouchedByUser={setPriorityTouchedByUser}
               dateRange={dateRange}
               setDateRange={setDateRange}
               listID={listID}

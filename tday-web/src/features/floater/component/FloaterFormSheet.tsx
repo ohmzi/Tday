@@ -63,15 +63,35 @@ export default function FloaterFormSheet({
   const [activeSelector, setActiveSelector] = useState<"priority" | "list" | null>(
     null,
   );
+  // True once the user has picked a priority themselves in this sheet session; while
+  // false, the list's default priority is free to keep re-filling the field. Editing
+  // an existing floater starts true — this only pre-fills a NEW floater's priority.
+  const [priorityTouchedByUser, setPriorityTouchedByUser] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    const initialListID = overrideFields?.listID ?? floater?.listID ?? null;
     setTitle(floater?.title ?? "");
     setDescription(floater?.description ?? "");
-    setPriority(floater?.priority ?? "Low");
-    setListID(overrideFields?.listID ?? floater?.listID ?? null);
+    setPriority(
+      floater?.priority ??
+        (initialListID ? floaterListMetaData[initialListID]?.defaultPriority : undefined) ??
+        "Low",
+    );
+    setListID(initialListID);
     setActiveSelector(null);
+    setPriorityTouchedByUser(Boolean(floater));
+    // floaterListMetaData deliberately excluded: this only re-seeds when the sheet
+    // opens for a different floater/overrideFields, not on every list-data refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [floater, open, overrideFields?.listID]);
+
+  // Keeps priority following the picked list's default for as long as the user
+  // hasn't chosen one themselves in this sheet — mirrors TodoForm's create flow.
+  useEffect(() => {
+    if (!open || priorityTouchedByUser) return;
+    setPriority(listID ? floaterListMetaData[listID]?.defaultPriority ?? "Low" : "Low");
+  }, [listID, floaterListMetaData, priorityTouchedByUser, open]);
 
   useEffect(() => {
     if (!floater && createStatus === "success") {
@@ -261,6 +281,7 @@ export default function FloaterFormSheet({
                 selected={priority === option.value}
                 onClick={() => {
                   setPriority(option.value);
+                  setPriorityTouchedByUser(true);
                   setActiveSelector(null);
                 }}
               />

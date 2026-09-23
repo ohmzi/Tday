@@ -37,6 +37,8 @@ const CalendarForm = ({ todo, displayForm, setDisplayForm, form }: CalendarFormP
     setDescription,
     priority,
     setPriority,
+    priorityTouchedByUser,
+    setPriorityTouchedByUser,
     dateRange,
     setDateRange,
     rruleOptions,
@@ -140,6 +142,8 @@ const CalendarForm = ({ todo, displayForm, setDisplayForm, form }: CalendarFormP
                 setDescription={setDescription}
                 priority={priority}
                 setPriority={setPriority}
+                priorityTouchedByUser={priorityTouchedByUser}
+                setPriorityTouchedByUser={setPriorityTouchedByUser}
                 dateRange={dateRange}
                 setDateRange={setDateRange}
                 listID={listID}

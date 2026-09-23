@@ -153,7 +153,8 @@ final class OfflineCacheManager {
                 myRole: $0.myRole,
                 isShared: $0.isShared,
                 memberCount: $0.memberCount,
-                ownerUsername: $0.ownerUsername
+                ownerUsername: $0.ownerUsername,
+                defaultPriority: $0.defaultPriority
             )
         }
 
@@ -169,7 +170,9 @@ final class OfflineCacheManager {
                 myRole: $0.myRole,
                 isShared: $0.isShared,
                 memberCount: $0.memberCount,
-                ownerUsername: $0.ownerUsername
+                ownerUsername: $0.ownerUsername,
+                reusable: $0.reusable,
+                defaultPriority: $0.defaultPriority
             )
         }
 
@@ -254,6 +257,8 @@ final class OfflineCacheManager {
                     name: $0.name,
                     color: $0.color,
                     iconKey: $0.iconKey,
+                    defaultPriority: $0.defaultPriority,
+                    defaultPriorityChanged: $0.defaultPriorityChanged,
                     staged: $0.staged
                 )
             },

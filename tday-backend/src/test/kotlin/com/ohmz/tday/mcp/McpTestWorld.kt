@@ -268,10 +268,14 @@ class McpTestWorld(
 
         override suspend fun getTodosForList(userId: String, listId: String) = emptyList<ListTodoResponse>().right()
 
-        override suspend fun create(userId: String, name: String, color: String?, iconKey: String?) =
-            addList(name).copy(color = color, iconKey = iconKey).also { lists[it.id] = it }.right()
+        override suspend fun create(userId: String, name: String, color: String?, iconKey: String?, defaultPriority: String?) =
+            addList(name).copy(color = color, iconKey = iconKey, defaultPriority = defaultPriority)
+                .also { lists[it.id] = it }.right()
 
-        override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?) = Unit.right()
+        override suspend fun update(
+            userId: String, id: String, name: String?, color: String?, iconKey: String?,
+            defaultPriority: String?, defaultPriorityChanged: Boolean?,
+        ) = Unit.right()
 
         override suspend fun delete(userId: String, id: String): Either<AppError, Int> =
             (if (lists.remove(id) != null) 1 else 0).right()
@@ -286,12 +290,16 @@ class McpTestWorld(
         override suspend fun getFloatersForList(userId: String, listId: String) =
             emptyList<FloaterListTodoResponse>().right()
 
-        override suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean) =
-            addFloaterList(name).copy(color = color, iconKey = iconKey, reusable = reusable)
+        override suspend fun create(
+            userId: String, name: String, color: String?, iconKey: String?,
+            reusable: Boolean, defaultPriority: String?,
+        ) =
+            addFloaterList(name).copy(color = color, iconKey = iconKey, reusable = reusable, defaultPriority = defaultPriority)
                 .also { floaterLists[it.id] = it }.right()
 
         override suspend fun update(
             userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean?,
+            defaultPriority: String?, defaultPriorityChanged: Boolean?,
         ) = Unit.right()
 
         override suspend fun resetFloaters(userId: String, listId: String) = 0.right()

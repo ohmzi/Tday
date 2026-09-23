@@ -279,7 +279,8 @@ func mapListDTO(_ dto: ListDTO, iconFallback: String? = nil) -> ListSummary {
         myRole: dto.myRole ?? "OWNER",
         isShared: dto.isShared ?? false,
         memberCount: dto.memberCount ?? 0,
-        ownerUsername: dto.ownerUsername
+        ownerUsername: dto.ownerUsername,
+        defaultPriority: dto.defaultPriority
     )
 }
 
@@ -296,7 +297,8 @@ func mapFloaterListDTO(_ dto: FloaterListDTO, iconFallback: String? = nil) -> Li
         isShared: dto.isShared ?? false,
         memberCount: dto.memberCount ?? 0,
         ownerUsername: dto.ownerUsername,
-        reusable: dto.reusable ?? false
+        reusable: dto.reusable ?? false,
+        defaultPriority: dto.defaultPriority
     )
 }
 
@@ -312,7 +314,8 @@ func listToCache(_ list: ListSummary) -> CachedListRecord {
         myRole: list.myRole,
         isShared: list.isShared,
         memberCount: list.memberCount,
-        ownerUsername: list.ownerUsername
+        ownerUsername: list.ownerUsername,
+        defaultPriority: list.defaultPriority
     )
 }
 
@@ -329,7 +332,8 @@ func floaterListToCache(_ list: ListSummary) -> CachedFloaterListRecord {
         isShared: list.isShared,
         memberCount: list.memberCount,
         ownerUsername: list.ownerUsername,
-        reusable: list.reusable
+        reusable: list.reusable,
+        defaultPriority: list.defaultPriority
     )
 }
 
@@ -373,7 +377,8 @@ func listFromCache(_ record: CachedListRecord, todoCountOverride: Int? = nil) ->
         myRole: record.myRole ?? "OWNER",
         isShared: record.isShared ?? false,
         memberCount: record.memberCount ?? 0,
-        ownerUsername: record.ownerUsername
+        ownerUsername: record.ownerUsername,
+        defaultPriority: record.defaultPriority
     )
 }
 
@@ -390,7 +395,8 @@ func floaterListFromCache(_ record: CachedFloaterListRecord, todoCountOverride: 
         isShared: record.isShared ?? false,
         memberCount: record.memberCount ?? 0,
         ownerUsername: record.ownerUsername,
-        reusable: record.reusable ?? false
+        reusable: record.reusable ?? false,
+        defaultPriority: record.defaultPriority
     )
 }
 

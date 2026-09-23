@@ -60,6 +60,9 @@ export default function FloaterListContainer({ id }: { id: string }) {
         // OFF on every open AND made turning it back off look like a no-op, so
         // `reusable` stayed true on the server and Reset could never be retired.
         reusable: listMeta.reusable,
+        // Same story as reusable: omitted here, the sheet always seeded "No
+        // default" regardless of what was actually saved.
+        defaultPriority: listMeta.defaultPriority,
       }
     : null;
   const myRole = listMeta && "myRole" in listMeta ? (listMeta.myRole ?? "OWNER") : "OWNER";

@@ -38,6 +38,8 @@ const CreateCalendarForm = ({
     setDescription,
     priority,
     setPriority,
+    priorityTouchedByUser,
+    setPriorityTouchedByUser,
     dateRange,
     setDateRange,
     rruleOptions,
@@ -119,6 +121,8 @@ const CreateCalendarForm = ({
                 setDescription={setDescription}
                 priority={priority}
                 setPriority={setPriority}
+                priorityTouchedByUser={priorityTouchedByUser}
+                setPriorityTouchedByUser={setPriorityTouchedByUser}
                 dateRange={dateRange}
                 setDateRange={setDateRange}
                 listID={listID}

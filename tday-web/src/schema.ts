@@ -114,6 +114,7 @@ export const listCreateSchema = listBaseSchema.pick({
   color: z.enum(listColorValues).optional(),
   iconKey: z.string().trim().min(1).max(64).optional(),
   reusable: z.boolean().optional(),
+  defaultPriority: z.enum(["Lowest", "Low", "Medium", "High"]).nullable().optional(),
 });
 
 export type ListColorType = (typeof listColorValues)[number];

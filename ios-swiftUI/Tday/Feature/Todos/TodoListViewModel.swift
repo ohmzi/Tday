@@ -371,7 +371,7 @@ final class TodoListViewModel {
                 message: L("Task completed"),
                 restore: { [weak self] in
                     self?.celebrationCancelledAt = Date()
-                    container.todoRepository.undoStagedFloaterCompletion(staged)
+                    await container.todoRepository.undoStagedFloaterCompletion(staged)
                 },
                 commit: {
                     do {
@@ -391,7 +391,7 @@ final class TodoListViewModel {
                 message: L("Task completed"),
                 restore: { [weak self] in
                     self?.celebrationCancelledAt = Date()
-                    container.todoRepository.undoStagedCompletion(staged)
+                    await container.todoRepository.undoStagedCompletion(staged)
                 },
                 commit: {
                     do {
@@ -488,7 +488,7 @@ final class TodoListViewModel {
                 message: BulkSelectionCopy.completedToast(count),
                 restore: { [weak self] in
                     self?.celebrationCancelledAt = Date()
-                    container.todoRepository.undoStagedFloaterCompletion(staged)
+                    await container.todoRepository.undoStagedFloaterCompletion(staged)
                 },
                 commit: {
                     do {
@@ -505,7 +505,7 @@ final class TodoListViewModel {
                 message: BulkSelectionCopy.completedToast(count),
                 restore: { [weak self] in
                     self?.celebrationCancelledAt = Date()
-                    container.todoRepository.undoStagedCompletion(staged)
+                    await container.todoRepository.undoStagedCompletion(staged)
                 },
                 commit: {
                     do {
@@ -602,14 +602,36 @@ final class TodoListViewModel {
         hydrateFromCache()
     }
 
-    func updateListSettings(name: String, color: String?, iconKey: String?, reusable: Bool? = nil) async {
+    func updateListSettings(
+        name: String,
+        color: String?,
+        iconKey: String?,
+        reusable: Bool? = nil,
+        defaultPriority: String? = nil,
+        defaultPriorityChanged: Bool = false
+    ) async {
         guard let listId else { return }
         TdayTelemetry.addBreadcrumb("list.update", data: listTelemetryData(color: color, iconKey: iconKey))
         do {
             if mode == .floater {
-                try await container.floaterListRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey, reusable: reusable)
+                try await container.floaterListRepository.updateList(
+                    listId: listId,
+                    name: name,
+                    color: color,
+                    iconKey: iconKey,
+                    reusable: reusable,
+                    defaultPriority: defaultPriority,
+                    defaultPriorityChanged: defaultPriorityChanged
+                )
             } else {
-                try await container.listRepository.updateList(listId: listId, name: name, color: color, iconKey: iconKey)
+                try await container.listRepository.updateList(
+                    listId: listId,
+                    name: name,
+                    color: color,
+                    iconKey: iconKey,
+                    defaultPriority: defaultPriority,
+                    defaultPriorityChanged: defaultPriorityChanged
+                )
             }
             hydrateFromCache()
             title = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? (listName ?? mode.title) : name
@@ -640,13 +662,13 @@ final class TodoListViewModel {
         }
     }
 
-    func createList(name: String, color: String?, iconKey: String?, reusable: Bool = false) async {
+    func createList(name: String, color: String?, iconKey: String?, reusable: Bool = false, defaultPriority: String? = nil) async {
         TdayTelemetry.addBreadcrumb("list.create", data: listTelemetryData(color: color, iconKey: iconKey))
         do {
             if mode == .floater {
-                try await container.floaterListRepository.createList(name: name, color: color, iconKey: iconKey, reusable: reusable)
+                try await container.floaterListRepository.createList(name: name, color: color, iconKey: iconKey, reusable: reusable, defaultPriority: defaultPriority)
             } else {
-                try await container.listRepository.createList(name: name, color: color, iconKey: iconKey)
+                try await container.listRepository.createList(name: name, color: color, iconKey: iconKey, defaultPriority: defaultPriority)
             }
             hydrateFromCache()
         } catch {

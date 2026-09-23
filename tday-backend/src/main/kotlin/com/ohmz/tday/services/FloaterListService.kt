@@ -5,6 +5,7 @@ import arrow.core.left
 import arrow.core.right
 import arrow.core.raise.either
 import com.ohmz.tday.db.enums.ListColor
+import com.ohmz.tday.db.enums.Priority
 import com.ohmz.tday.db.tables.CompletedFloaters
 import com.ohmz.tday.db.tables.FloaterListShares
 import com.ohmz.tday.db.tables.FloaterLists
@@ -29,8 +30,8 @@ interface FloaterListService {
     suspend fun getAll(userId: String): Either<AppError, List<FloaterListResponse>>
     suspend fun getById(userId: String, listId: String): Either<AppError, FloaterListResponse>
     suspend fun getFloatersForList(userId: String, listId: String): Either<AppError, List<FloaterListTodoResponse>>
-    suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean = false): Either<AppError, FloaterListResponse>
-    suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean? = null): Either<AppError, Unit>
+    suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean = false, defaultPriority: String? = null): Either<AppError, FloaterListResponse>
+    suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean? = null, defaultPriority: String? = null, defaultPriorityChanged: Boolean? = null): Either<AppError, Unit>
     suspend fun resetFloaters(userId: String, listId: String): Either<AppError, Int>
     suspend fun delete(userId: String, id: String): Either<AppError, Int>
     suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>> = either {
@@ -154,7 +155,7 @@ class FloaterListServiceImpl(
         return floaters.right()
     }
 
-    override suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean): Either<AppError, FloaterListResponse> {
+    override suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean, defaultPriority: String?): Either<AppError, FloaterListResponse> {
         val id = CuidGenerator.newCuid()
         val now = LocalDateTime.now(ZoneOffset.UTC)
         newSuspendedTransaction(Dispatchers.IO) {
@@ -163,6 +164,7 @@ class FloaterListServiceImpl(
                 it[FloaterLists.name] = name
                 it[FloaterLists.color] = color?.let { c -> ListColor.valueOf(c) }
                 it[FloaterLists.iconKey] = iconKey
+                it[FloaterLists.defaultPriority] = defaultPriority?.let { p -> Priority.valueOf(p) }
                 it[FloaterLists.userID] = userId
                 it[FloaterLists.reusable] = reusable
                 it[FloaterLists.createdAt] = now
@@ -176,6 +178,7 @@ class FloaterListServiceImpl(
             name = name,
             color = color,
             iconKey = iconKey,
+            defaultPriority = defaultPriority,
             userID = userId,
             reusable = reusable,
             createdAt = now.toString(),
@@ -184,7 +187,7 @@ class FloaterListServiceImpl(
         ).right()
     }
 
-    override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean?): Either<AppError, Unit> {
+    override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean?, defaultPriority: String?, defaultPriorityChanged: Boolean?): Either<AppError, Unit> {
         when (shareService.accessFor(userId, id, ListType.FLOATER)) {
             null -> return AppError.NotFound("floater list not found").left()
             ShareRole.OWNER -> Unit
@@ -196,6 +199,9 @@ class FloaterListServiceImpl(
                 color?.let { c -> it[FloaterLists.color] = ListColor.valueOf(c) }
                 iconKey?.let { k -> it[FloaterLists.iconKey] = k }
                 reusable?.let { r -> it[FloaterLists.reusable] = r }
+                if (defaultPriorityChanged == true) {
+                    it[FloaterLists.defaultPriority] = defaultPriority?.let { p -> Priority.valueOf(p) }
+                }
                 it[FloaterLists.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
@@ -306,6 +312,7 @@ class FloaterListServiceImpl(
         name = this[FloaterLists.name],
         color = this[FloaterLists.color]?.name,
         iconKey = this[FloaterLists.iconKey],
+        defaultPriority = this[FloaterLists.defaultPriority]?.name,
         userID = this[FloaterLists.userID],
         todoCount = todoCountOverride,
         reusable = this[FloaterLists.reusable],

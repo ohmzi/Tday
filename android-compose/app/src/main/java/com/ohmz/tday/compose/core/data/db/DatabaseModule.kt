@@ -52,6 +52,15 @@ private class Migration10To11 : Migration(10, 11) {
     }
 }
 
+// v12: per-list default priority, applied to a newly created task's priority field. Both
+// scheduled and Anytime lists carry it (unlike reusable, which is floater-only).
+private class Migration11To12 : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE cached_lists ADD COLUMN defaultPriority TEXT")
+        db.execSQL("ALTER TABLE cached_floater_lists ADD COLUMN defaultPriority TEXT")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -92,7 +101,7 @@ object DatabaseModule {
             // The DB holds unsynced pending mutations, not just re-fetchable
             // cache, so schema bumps must ship a real Migration. Pre-v7 schemas
             // (no exported history) still fall back destructively.
-            .addMigrations(Migration7To8(), Migration8To9(), Migration9To10(), Migration10To11())
+            .addMigrations(Migration7To8(), Migration8To9(), Migration9To10(), Migration10To11(), Migration11To12())
             .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6)
             // Safety net: callers should run DAO access off the main thread (see
             // OfflineCacheManager / repositories using Dispatchers.IO). Kept so a missed

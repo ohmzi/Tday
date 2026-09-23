@@ -322,13 +322,15 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
     /// Drives both the settings toggle and the header's Reset, exactly as
     /// `listMeta.reusable` does on web. False for scheduled lists.
     var reusable: Bool = false
+    /// Pre-fills a new task's priority when created in this list. Nil means no default.
+    var defaultPriority: String? = nil
 
     var isViewer: Bool { myRole.caseInsensitiveCompare("VIEWER") == .orderedSame }
     var isOwner: Bool { myRole.caseInsensitiveCompare("OWNER") == .orderedSame }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, color, iconKey, todoCount, updatedAt, createdAt
-        case myRole, isShared, memberCount, ownerUsername, reusable
+        case myRole, isShared, memberCount, ownerUsername, reusable, defaultPriority
     }
 
     init(
@@ -343,7 +345,8 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         isShared: Bool = false,
         memberCount: Int = 0,
         ownerUsername: String? = nil,
-        reusable: Bool = false
+        reusable: Bool = false,
+        defaultPriority: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -357,6 +360,7 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         self.memberCount = memberCount
         self.ownerUsername = ownerUsername
         self.reusable = reusable
+        self.defaultPriority = defaultPriority
     }
 
     // Tolerates payloads persisted before sharing existed (widget snapshots).
@@ -374,6 +378,7 @@ struct ListSummary: Identifiable, Equatable, Hashable, Codable {
         memberCount = try container.decodeIfPresent(Int.self, forKey: .memberCount) ?? 0
         ownerUsername = try container.decodeIfPresent(String.self, forKey: .ownerUsername)
         reusable = try container.decodeIfPresent(Bool.self, forKey: .reusable) ?? false
+        defaultPriority = try container.decodeIfPresent(String.self, forKey: .defaultPriority)
     }
 }
 
