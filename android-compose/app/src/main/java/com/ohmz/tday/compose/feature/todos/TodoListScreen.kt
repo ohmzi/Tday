@@ -976,11 +976,8 @@ fun TodoListScreen( // skipcq: KT-R1006
     onOpenMorningSweep: () -> Unit = {},
     onUpdateListSettings: (listId: String, name: String, color: String?, iconKey: String?, reusable: Boolean?, defaultPriority: String?) -> Unit,
     onDeleteList: (listId: String) -> Unit,
-    // Both of the Anytime feed's zoom sources hand their own colour to the push site, for
-    // the reason `TILE_TRANSITION_COLOR` gives: the destination cannot recover it, and a
-    // custom list row's colour is server-side data only this row holds.
-    onOpenFloaterList: (listId: String, listName: String, tileColor: Color) -> Unit = { _, _, _ -> },
-    onOpenCompleted: (Color) -> Unit = {},
+    onOpenFloaterList: (listId: String, listName: String) -> Unit = { _, _ -> },
+    onOpenCompleted: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onCreateList: (name: String, color: String?, iconKey: String?, reusable: Boolean, defaultPriority: String?) -> Unit = { _, _, _, _, _ -> },
     /**
@@ -3955,9 +3952,9 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
     isFloaterTaskHomeScreen: Boolean,
     timelineAnimationsEnabled: Boolean,
     emptyScene: (LazyListScope.() -> Unit)?,
-    onOpenCompleted: (Color) -> Unit,
+    onOpenCompleted: () -> Unit,
     floaterTaskHomeListRows: List<Pair<ListSummary, Int>>,
-    onOpenFloaterList: (listId: String, listName: String, tileColor: Color) -> Unit,
+    onOpenFloaterList: (listId: String, listName: String) -> Unit,
 ) {
     // The Anytime home's empty scene, built by [TodoListScreen] and merely
     // emitted here, so that it stays the FIRST item in this feed.
@@ -4032,11 +4029,10 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
                 colorKey = list.color,
                 iconKey = list.iconKey,
                 count = count,
-                onClick = { tileColor ->
+                onClick = {
                     onOpenFloaterList(
                         list.id,
                         capitalizeFirstListLetter(list.name),
-                        tileColor,
                     )
                 },
             )
@@ -4743,7 +4739,7 @@ private fun FloaterTaskHomeListRow(
     iconKey: String?,
     count: Int,
     tileTransitionKey: String? = null,
-    onClick: (Color) -> Unit,
+    onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -4772,10 +4768,7 @@ private fun FloaterTaskHomeListRow(
                 .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
             onClick = {
                 TdayHaptics.buttonPress(view)
-                // The row's container colour, which is the colour the eye reads as the tile:
-                // `lerp(surfaceVariant, accent, weight)` — a value derived from this list's
-                // own server-side colour, which is exactly why it has to be sent from here.
-                onClick(containerColor)
+                onClick()
             },
             interactionSource = interactionSource,
             shape = RoundedCornerShape(TdayDimens.RadiusCard),

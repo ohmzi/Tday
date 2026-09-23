@@ -48,7 +48,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -81,6 +80,7 @@ import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.core.navigation.CompletedScope
+import com.ohmz.tday.compose.core.navigation.isHomeTileArrival
 import com.ohmz.tday.compose.core.navigation.navigateFromHomeTile
 import com.ohmz.tday.compose.core.navigation.tileTransitionKey
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
@@ -91,12 +91,12 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdayTileDestination
 import com.ohmz.tday.compose.core.ui.TdayTileTransitionLayout
+import com.ohmz.tday.compose.core.ui.TdayTileZoomHold
 import com.ohmz.tday.compose.core.ui.TdayToastData
 import com.ohmz.tday.compose.core.ui.TdayToastHost
 import com.ohmz.tday.compose.core.ui.TdayToastKind
 import com.ohmz.tday.compose.core.ui.actionToastTimeoutMillis
 import com.ohmz.tday.compose.core.ui.informationalToastTimeoutMillis
-import com.ohmz.tday.compose.core.ui.rememberHomeTileColor
 import com.ohmz.tday.compose.core.ui.rememberHomeTileOrigin
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
@@ -430,9 +430,27 @@ fun TdayApp(
                         // The screen being dragged off is the only thing that moves, and the
                         // arriving screen still fades in place, so the hand-over argument above
                         // survives in the half it was written about.
+                        //
+                        // The one exception is a tile zoom, and it is the screen UNDER the zoom
+                        // that differs: held still while a tile's screen grows over it, and shown
+                        // at once while that screen shrinks back into it, instead of crossfading —
+                        // see `TdayTileZoomHold`. The arriving and departing screens keep their
+                        // own slots, which matter only when the tile is no longer there to match.
                         enterTransition = { navigationEnterTransition(motionEnabled) },
-                        exitTransition = { navigationExitTransition(motionEnabled) },
-                        popEnterTransition = { navigationEnterTransition(motionEnabled) },
+                        exitTransition = {
+                            if (motionEnabled && targetState.isHomeTileArrival()) {
+                                TdayTileZoomHold
+                            } else {
+                                navigationExitTransition(motionEnabled)
+                            }
+                        },
+                        popEnterTransition = {
+                            if (motionEnabled && initialState.isHomeTileArrival()) {
+                                EnterTransition.None
+                            } else {
+                                navigationEnterTransition(motionEnabled)
+                            }
+                        },
                         popExitTransition = { navigationPopExitTransition(motionEnabled) },
                     ) {
                         splashAndAuthRoutes(
@@ -633,25 +651,16 @@ private fun NavGraphBuilder.todoScopeRoutes(
         route = AppRoute.TodayTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/today" }),
     ) { entry ->
-        // The arriving half of a tile's zoom. The screen is wrapped in a full-size anchor
-        // whose shared-element key comes from this route, so the tile that pushed it and
-        // this destination cannot be handed different answers; the block's own receiver is
-        // the `AnimatedVisibilityScope` this screen is transitioning in, which is what
-        // `Modifier.sharedElement` needs from the destination end. The route says which
-        // tile, and `rememberHomeTileOrigin` says whether a tile was pressed at all — the
-        // two questions this screen's arrival has to answer before it may grow out of a
-        // rectangle. Where either answer is no, or where motion is refused, this is an
-        // ordinary box around the screen and the route change plays as it always did.
-        // `rememberHomeTileColor` is the third answer, and the one no route can give: what
-        // colour the rectangle was painted in. See `TILE_TRANSITION_COLOR`.
+        // The arriving half of a tile's zoom: the screen itself grows out of the tile it was
+        // pressed on. Its shared-element key comes from this route, so the tile that pushed it
+        // and this destination cannot be handed different answers, and the block's own
+        // receiver is the `AnimatedVisibilityScope` the screen is transitioning in. The route
+        // says which tile; `rememberHomeTileOrigin` says whether a tile was pressed at all.
+        // Where either answer is no, or where motion is refused, this is an ordinary box
+        // around the screen and the route change plays as it always did.
         TdayTileDestination(
             route = AppRoute.TodayTodos,
-            fromHomeTile = rememberHomeTileOrigin(navController, entry),
-            // What the tile that pushed this screen was painted in, read off the same
-            // hand-off and consumed the same way. A route cannot carry it — see
-            // `TILE_TRANSITION_COLOR` — and the surface that grows out of the rectangle is
-            // the tile's colour or it is a sheet of the app's background.
-            tileColor = rememberHomeTileColor(navController, entry),
+            fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             TodosRoute(
                 mode = TodoListMode.TODAY,
@@ -675,12 +684,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
     ) { entry ->
         TdayTileDestination(
             route = AppRoute.OverdueTodos,
-            fromHomeTile = rememberHomeTileOrigin(navController, entry),
-            // What the tile that pushed this screen was painted in, read off the same
-            // hand-off and consumed the same way. A route cannot carry it — see
-            // `TILE_TRANSITION_COLOR` — and the surface that grows out of the rectangle is
-            // the tile's colour or it is a sheet of the app's background.
-            tileColor = rememberHomeTileColor(navController, entry),
+            fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             TodosRoute(
                 mode = TodoListMode.OVERDUE,
@@ -702,12 +706,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
     ) { entry ->
         TdayTileDestination(
             route = AppRoute.ScheduledTodos,
-            fromHomeTile = rememberHomeTileOrigin(navController, entry),
-            // What the tile that pushed this screen was painted in, read off the same
-            // hand-off and consumed the same way. A route cannot carry it — see
-            // `TILE_TRANSITION_COLOR` — and the surface that grows out of the rectangle is
-            // the tile's colour or it is a sheet of the app's background.
-            tileColor = rememberHomeTileColor(navController, entry),
+            fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             TodosRoute(
                 mode = TodoListMode.SCHEDULED,
@@ -746,12 +745,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
         // the screen does not grow out of a tile the user did not press.
         TdayTileDestination(
             route = AppRoute.AllTodos,
-            fromHomeTile = rememberHomeTileOrigin(navController, entry),
-            // What the tile that pushed this screen was painted in, read off the same
-            // hand-off and consumed the same way. A route cannot carry it — see
-            // `TILE_TRANSITION_COLOR` — and the surface that grows out of the rectangle is
-            // the tile's colour or it is a sheet of the app's background.
-            tileColor = rememberHomeTileColor(navController, entry),
+            fromHomeTile = rememberHomeTileOrigin(entry),
             highlighted = highlightTodoId != null,
         ) {
             TodosRoute(
@@ -770,12 +764,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
     ) { entry ->
         TdayTileDestination(
             route = AppRoute.PriorityTodos,
-            fromHomeTile = rememberHomeTileOrigin(navController, entry),
-            // What the tile that pushed this screen was painted in, read off the same
-            // hand-off and consumed the same way. A route cannot carry it — see
-            // `TILE_TRANSITION_COLOR` — and the surface that grows out of the rectangle is
-            // the tile's colour or it is a sheet of the app's background.
-            tileColor = rememberHomeTileColor(navController, entry),
+            fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             TodosRoute(
                 mode = TodoListMode.PRIORITY,
@@ -873,12 +862,7 @@ private fun NavGraphBuilder.listRoutes(
         // tile from the list it is drawn for.
         TdayTileDestination(
             route = AppRoute.ListTodos,
-            fromHomeTile = rememberHomeTileOrigin(navController, entry),
-            // What the tile that pushed this screen was painted in, read off the same
-            // hand-off and consumed the same way. A route cannot carry it — see
-            // `TILE_TRANSITION_COLOR` — and the surface that grows out of the rectangle is
-            // the tile's colour or it is a sheet of the app's background.
-            tileColor = rememberHomeTileColor(navController, entry),
+            fromHomeTile = rememberHomeTileOrigin(entry),
             listId = listId,
         ) {
             TodosRoute(
@@ -912,12 +896,7 @@ private fun NavGraphBuilder.listRoutes(
         val listName = Uri.decode(entry.arguments?.getString(ARG_LIST_NAME).orEmpty())
         TdayTileDestination(
             route = AppRoute.FloaterListTodos,
-            fromHomeTile = rememberHomeTileOrigin(navController, entry),
-            // What the tile that pushed this screen was painted in, read off the same
-            // hand-off and consumed the same way. A route cannot carry it — see
-            // `TILE_TRANSITION_COLOR` — and the surface that grows out of the rectangle is
-            // the tile's colour or it is a sheet of the app's background.
-            tileColor = rememberHomeTileColor(navController, entry),
+            fromHomeTile = rememberHomeTileOrigin(entry),
             listId = listId,
         ) {
             TodosRoute(
@@ -975,12 +954,7 @@ private fun NavGraphBuilder.utilityRoutes(
         TdayTileDestination(
             route = AppRoute.Completed,
             scope = completedScope,
-            fromHomeTile = rememberHomeTileOrigin(navController, entry),
-            // What the tile that pushed this screen was painted in, read off the same
-            // hand-off and consumed the same way. A route cannot carry it — see
-            // `TILE_TRANSITION_COLOR` — and the surface that grows out of the rectangle is
-            // the tile's colour or it is a sheet of the app's background.
-            tileColor = rememberHomeTileColor(navController, entry),
+            fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             CompletedScreen(
                 uiState = uiState,
@@ -1003,12 +977,7 @@ private fun NavGraphBuilder.utilityRoutes(
         OnRouteResume { viewModel.load() }
         TdayTileDestination(
             route = AppRoute.Calendar,
-            fromHomeTile = rememberHomeTileOrigin(navController, entry),
-            // What the tile that pushed this screen was painted in, read off the same
-            // hand-off and consumed the same way. A route cannot carry it — see
-            // `TILE_TRANSITION_COLOR` — and the surface that grows out of the rectangle is
-            // the tile's colour or it is a sheet of the app's background.
-            tileColor = rememberHomeTileColor(navController, entry),
+            fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             CalendarScreen(
                 uiState = uiState,
@@ -1694,36 +1663,30 @@ private fun ScheduledTaskHomeFeed(
         onRefresh = { scheduledTaskHomeViewModel.refresh(userInitiated = true) },
         pullRefreshEnabled = !appUiState.isLocalMode,
         // Every one of these is a tile press, so every one of them says so: the destination
-        // may only grow out of the rectangle that was actually pressed, and the rectangle
-        // may only be painted in the colour the user pressed it in.
-        // `navigateFromHomeTile(route, tileColorArgb)` is the whole of that statement — see
-        // `TILE_TRANSITION_ORIGIN` and `TILE_TRANSITION_COLOR`, and note the colour is a
-        // parameter with no default: the tile is where it exists, and the tile hands it to
-        // this lambda. The pushes that are NOT presses (the shortcut, the notification, the
-        // widget row) call `navigate` and therefore leave both unset.
-        onOpenToday = { tileColor ->
-            navController.navigateFromHomeTile(AppRoute.TodayTodos.route, tileColor.toArgb())
+        // may only grow out of the rectangle that was actually pressed, and
+        // `navigateFromHomeTile` is the whole of that statement — see
+        // `TILE_TRANSITION_ORIGIN`. The pushes that are NOT presses (the shortcut, the
+        // notification, the widget row) call `navigate` and therefore leave it unset.
+        onOpenToday = {
+            navController.navigateFromHomeTile(AppRoute.TodayTodos.route)
         },
-        onOpenOverdue = { tileColor ->
-            navController.navigateFromHomeTile(AppRoute.OverdueTodos.route, tileColor.toArgb())
+        onOpenOverdue = {
+            navController.navigateFromHomeTile(AppRoute.OverdueTodos.route)
         },
-        onOpenScheduled = { tileColor ->
-            navController.navigateFromHomeTile(AppRoute.ScheduledTodos.route, tileColor.toArgb())
+        onOpenScheduled = {
+            navController.navigateFromHomeTile(AppRoute.ScheduledTodos.route)
         },
-        onOpenAll = { tileColor ->
-            navController.navigateFromHomeTile(AppRoute.AllTodos.create(), tileColor.toArgb())
+        onOpenAll = {
+            navController.navigateFromHomeTile(AppRoute.AllTodos.create())
         },
-        onOpenPriority = { tileColor ->
-            navController.navigateFromHomeTile(AppRoute.PriorityTodos.route, tileColor.toArgb())
+        onOpenPriority = {
+            navController.navigateFromHomeTile(AppRoute.PriorityTodos.route)
         },
-        onOpenCompleted = { tileColor ->
-            navController.navigateFromHomeTile(
-                AppRoute.Completed.create(CompletedScope.Tasks),
-                tileColor.toArgb(),
-            )
+        onOpenCompleted = {
+            navController.navigateFromHomeTile(AppRoute.Completed.create(CompletedScope.Tasks))
         },
-        onOpenCalendar = { tileColor ->
-            navController.navigateFromHomeTile(AppRoute.Calendar.route, tileColor.toArgb())
+        onOpenCalendar = {
+            navController.navigateFromHomeTile(AppRoute.Calendar.route)
         },
         onOpenFloater = {
             onChangeRootFeedTab(RootFeedTab.FLOATER_TASK_HOME)
@@ -1738,14 +1701,8 @@ private fun ScheduledTaskHomeFeed(
                 )
             navController.navigate(AppRoute.AllTodos.create())
         },
-        onOpenList = { id, name, tileColor ->
-            navController.navigateFromHomeTile(
-                AppRoute.ListTodos.create(
-                    id,
-                    name
-                ),
-                tileColor.toArgb(),
-            )
+        onOpenList = { id, name ->
+            navController.navigateFromHomeTile(AppRoute.ListTodos.create(id, name))
         },
         onCreateTask = { payload ->
             scheduledTaskHomeViewModel.createTask(payload)
@@ -1805,20 +1762,11 @@ private fun FloaterTaskHomeFeed(
         onBack = { onChangeRootFeedTab(RootFeedTab.SCHEDULED_TASK_HOME) },
         pullRefreshEnabled = !appUiState.isLocalMode,
         summaryAvailable = !appUiState.isLocalMode,
-        onOpenFloaterList = { id, name, tileColor ->
-            navController.navigateFromHomeTile(
-                AppRoute.FloaterListTodos.create(
-                    id,
-                    name
-                ),
-                tileColor.toArgb(),
-            )
+        onOpenFloaterList = { id, name ->
+            navController.navigateFromHomeTile(AppRoute.FloaterListTodos.create(id, name))
         },
-        onOpenCompleted = { tileColor ->
-            navController.navigateFromHomeTile(
-                AppRoute.Completed.create(CompletedScope.Floater),
-                tileColor.toArgb(),
-            )
+        onOpenCompleted = {
+            navController.navigateFromHomeTile(AppRoute.Completed.create(CompletedScope.Floater))
         },
         onOpenSettings = {
             navController.navigate(AppRoute.Settings.route)
@@ -1855,7 +1803,7 @@ private fun LockedRootFeed(uiState: ScheduledTaskHomeUiState) {
             onOpenFloater = {},
             onOpenSettings = {},
             onOpenTaskFromSearch = {},
-            onOpenList = { _, _, _ -> },
+            onOpenList = { _, _ -> },
             onCreateTask = { _ -> },
             onParseTaskTitleNlp = { _, _ -> null },
             onCreateList = { _, _, _ -> },
@@ -2365,8 +2313,8 @@ private fun TodosRoute(
     mode: TodoListMode,
     onBack: () -> Unit,
     onListDeleted: () -> Unit = {},
-    onOpenFloaterList: (String, String, Color) -> Unit = { _, _, _ -> },
-    onOpenCompleted: (Color) -> Unit = {},
+    onOpenFloaterList: (String, String) -> Unit = { _, _ -> },
+    onOpenCompleted: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     onOpenMorningSweep: () -> Unit = {},
     highlightTodoId: String? = null,
