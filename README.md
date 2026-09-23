@@ -14,7 +14,7 @@ entirely on your phone.**
 [![iOS beta](https://img.shields.io/badge/iOS-TestFlight%20beta-0D96F6?style=for-the-badge&logo=apple&logoColor=white)](https://testflight.apple.com/join/paKSyGAG)
 [![License](https://img.shields.io/badge/license-source--available-555555?style=for-the-badge)](LICENSE)
 
-[Features](#-features) · [Get the apps](#-get-the-apps) · [Self-host](#-self-host-it) · [Security](#-security-and-privacy) · [Docs](#-documentation) · [Report a bug](https://github.com/ohmzi/Tday/issues/new/choose)
+[Features](#-features) · [Screenshots](#-screenshots) · [Get the apps](#-get-the-apps) · [Self-host](#-self-host-it) · [Security](#-security-and-privacy) · [Docs](#-documentation) · [Report a bug](https://github.com/ohmzi/Tday/issues/new/choose)
 
 </div>
 
@@ -42,6 +42,47 @@ with no date a place of their own, and doesn't try to turn your to-do list into 
 
 You can start in Local Mode and move to a server later. The move happens only when you choose to
 make it.
+
+---
+
+## 📸 Screenshots
+
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/desktop-home-dark.png">
+  <img src="docs/assets/readme/desktop-home-light.png" alt="The T'Day home screen on the web: today's tasks with lists and priorities, and tiles for Scheduled, Priority, Overdue, All, Completed, and Calendar" width="900">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/mobile-today-dark.png">
+  <img src="docs/assets/readme/mobile-today-light.png" alt="The Today view on a phone, grouped into Morning, Afternoon, and Tonight" width="250">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/mobile-calendar-dark.png">
+  <img src="docs/assets/readme/mobile-calendar-light.png" alt="The month calendar on a phone, with a task count under each day" width="250">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/mobile-floater-dark.png">
+  <img src="docs/assets/readme/mobile-floater-light.png" alt="The Floater feed on a phone: Anytime tasks with no due date" width="250">
+</picture>
+
+</div>
+
+<details>
+<summary><b>The calendar on desktop</b></summary>
+<br/>
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/desktop-calendar-dark.png">
+  <img src="docs/assets/readme/desktop-calendar-light.png" alt="The T'Day month calendar on the web, with task counts and the selected day's tasks below" width="900">
+</picture>
+
+</div>
+</details>
+
+<sub>Shown with demo data. Screenshots follow your GitHub light or dark theme.</sub>
 
 ---
 
