@@ -1,11 +1,9 @@
 {
-  "version": "0.7.38",
-  "publishedAt": "2026-09-23T04:37:41-04:00",
+  "version": "0.7.39",
+  "publishedAt": "2026-09-23T07:11:36-04:00",
   "notes": [
-    "Fix backend test fixtures broken by the defaultPriority service signature",
-    "Fix web tests broken by the new list-default-priority effects",
-    "Fix iOS floater-list reusable toggle not persisting"
+    "Grow the Android tile's screen out of the tile, the way iOS zooms"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.38",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.37..v0.7.38"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.39",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.38..v0.7.39"
 }
