@@ -7,20 +7,14 @@
 **A calm, private task planner for web, Android, and iOS. Run it on a server you own, or keep it
 entirely on your phone.**
 
+<sub>Self-hosted · works offline · native Android and iOS apps · no T'Day cloud, no ads, no analytics</sub>
+
 [![Latest release](https://img.shields.io/github/v/release/ohmzi/Tday?style=for-the-badge&color=2D6B6B&label=release)](https://github.com/ohmzi/Tday/releases/latest)
 [![Platforms](https://img.shields.io/badge/platforms-Web%20·%20Android%20·%20iOS-90D5D2?style=for-the-badge)](#-get-the-apps)
 [![iOS beta](https://img.shields.io/badge/iOS-TestFlight%20beta-0D96F6?style=for-the-badge&logo=apple&logoColor=white)](https://testflight.apple.com/join/paKSyGAG)
 [![License](https://img.shields.io/badge/license-source--available-555555?style=for-the-badge)](LICENSE)
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](tday-backend)
-[![Ktor](https://img.shields.io/badge/Ktor-087CFA?style=for-the-badge&logo=ktor&logoColor=white)](tday-backend)
-[![Swift](https://img.shields.io/badge/Swift-F05138?style=for-the-badge&logo=swift&logoColor=white)](ios-swiftUI)
-[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](tday-web)
-[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](tday-web)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](docs/DATA_MODEL.md)
-[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](docker-compose.yaml)
-
-[Features](#-features) · [Get the apps](#-get-the-apps) · [Self-host](#-self-host-it) · [Security](#-security-and-privacy) · [Docs](#-documentation) · [Report a bug](https://github.com/ohmzi/Tday/issues/new/choose)
+[Features](#-features) · [Screenshots](#-screenshots) · [Get the apps](#-get-the-apps) · [Self-host](#-self-host-it) · [Security](#-security-and-privacy) · [Docs](#-documentation) · [Report a bug](https://github.com/ohmzi/Tday/issues/new/choose)
 
 </div>
 
@@ -40,16 +34,55 @@ with no date a place of their own, and doesn't try to turn your to-do list into 
 - **🌊 Two kinds of tasks.** *Scheduled* tasks have a date and show up in Today and the calendar.
   *Floaters* have no date, so they never go overdue.
 
-There are two ways to use it:
-
-|                       | 📱 Local Mode                         | ☁️ Server Mode                                 |
-|-----------------------|---------------------------------------|-----------------------------------------------|
-| **Where tasks live**  | On this device only                   | Your own T'Day server, synced to every device |
-| **Needs**             | Nothing: pick it on first launch      | A server running Docker ([setup](docs/SETUP.md)) |
+|                       | 📱 Local Mode                           | ☁️ Server Mode                                           |
+|-----------------------|-----------------------------------------|---------------------------------------------------------|
+| **Where tasks live**  | On this device only                     | Your own T'Day server, synced to every device           |
+| **Needs**             | Nothing: pick it on first launch        | A server running Docker ([setup](docs/SETUP.md))        |
 | **Good for**          | Trying it out, or staying fully offline | Several devices, the web app, shared lists, integrations |
 
 You can start in Local Mode and move to a server later. The move happens only when you choose to
 make it.
+
+---
+
+## 📸 Screenshots
+
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/desktop-home-dark.png">
+  <img src="docs/assets/readme/desktop-home-light.png" alt="The T'Day home screen on the web: today's tasks with lists and priorities, and tiles for Scheduled, Priority, Overdue, All, Completed, and Calendar" width="900">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/mobile-today-dark.png">
+  <img src="docs/assets/readme/mobile-today-light.png" alt="The Today view on a phone, grouped into Morning, Afternoon, and Tonight" width="250">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/mobile-calendar-dark.png">
+  <img src="docs/assets/readme/mobile-calendar-light.png" alt="The month calendar on a phone, with a task count under each day" width="250">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/mobile-floater-dark.png">
+  <img src="docs/assets/readme/mobile-floater-light.png" alt="The Floater feed on a phone: Anytime tasks with no due date" width="250">
+</picture>
+
+</div>
+
+<details>
+<summary><b>The calendar on desktop</b></summary>
+<br/>
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/desktop-calendar-dark.png">
+  <img src="docs/assets/readme/desktop-calendar-light.png" alt="The T'Day month calendar on the web, with task counts and the selected day's tasks below" width="900">
+</picture>
+
+</div>
+</details>
+
+<sub>Shown with demo data. Screenshots follow your GitHub light or dark theme.</sub>
 
 ---
 
@@ -59,8 +92,8 @@ make it.
 
 - **Just type the date.** "Call mom tomorrow 6pm" fills in the due date and cleans up the title.
   The parsing happens on your device, with no AI and no network.
-- **Today, Scheduled, and Anytime** feeds, one tap apart.
-- **Calendar** with month, week, and day views.
+- **Today, Scheduled, and Anytime** feeds, one tap apart, plus a **calendar** with month, week, and
+  day views.
 - **Repeating tasks** (daily, weekly, or custom). T'Day offers to make a task repeat when you keep
   finishing it on a rhythm.
 - **Overdue help.** Morning Sweep walks you through late tasks one card at a time, and Quick Defer
@@ -68,54 +101,46 @@ make it.
 
 ### 🗂️ Stay organized
 
-- **Lists** for scheduled tasks and for floaters, with colors and automatic icons.
-- **Shared lists.** Invite someone on your server as an Editor or a Viewer.
+- **Lists** for scheduled tasks and for floaters, with colors and automatic icons, and **shared
+  lists** with Editor or Viewer access.
 - **Priorities, pinning, drag to reorder, bulk actions, and search.**
-- **Reusable checklists** for packing, chores, and groceries, plus a completed history to look back
-  on.
-- **Resting floaters.** Anytime tasks you haven't touched in a while fade quietly instead of piling
-  up.
+- **Reusable checklists**, a completed history, and **resting floaters** that fade quietly instead
+  of piling up.
 
-### 🔔 Reminders
+### 🔔 Reminders and surfaces
 
-- Reminders with **Snooze** and **Tonight** actions, **quiet hours**, and a **Day Ahead** morning
-  digest on Android and iOS.
-- **Web push** for the browser, and **UnifiedPush** on Android if you want push without Google.
-
-### 📱 Beyond the app
-
-- **Home-screen widgets** on Android and iOS. Complete and add tasks from the widget, or point it at
-  a single list.
-- **Apple Watch** app and complication, **iOS Focus filters**, **CarPlay**, and an **Android car
-  screen**.
+- Reminders with **Snooze** and **Tonight** actions, **quiet hours**, and a **Day Ahead** digest.
+  **Web push** and **UnifiedPush** are also available.
+- **Home-screen widgets**, **Apple Watch**, **iOS Focus filters**, **CarPlay**, and an **Android
+  car screen**.
 - **Share into T'Day** from any app, and **mirror dated tasks** into your phone's calendar.
 - An **installable web app** with keyboard shortcuts and a command palette, in **10 languages**.
 
 ### 🔌 Integrations
 
 - **AI assistants.** Claude, Cursor, or any other [MCP](https://modelcontextprotocol.io) client can
-  read and manage your tasks through the endpoint built into your server.
-- **Personal API keys**, a **[Homarr](https://homarr.dev) dashboard widget**, and a read-only
-  **calendar feed** (ICS).
+  read and manage your tasks through an endpoint built into your server.
+- **API keys**, a **[Homarr](https://homarr.dev) dashboard widget**, and a read-only **calendar
+  feed** (ICS).
 - **Daily summaries**, optionally written by a local [Ollama](https://ollama.com) model. Nothing is
   sent to a cloud AI.
 
-> 📘 **The full feature tour**, with which platform supports what, is in
+> [!TIP]
+> The full feature tour, with which platform supports what, is in
 > **[docs/FEATURES.md](docs/FEATURES.md)**.
 
 ---
 
 ## 📲 Get the apps
 
-| Platform       | Get it                                                                                      | Requires                         |
-|----------------|---------------------------------------------------------------------------------------------|----------------------------------|
-| 🌐 **Web**     | Open your T'Day server in a browser. It can be installed as an app (PWA).                  | A T'Day server                   |
-| 🤖 **Android** | Download the signed APK from the [latest release](https://github.com/ohmzi/Tday/releases/latest). Later updates install from inside the app. | Android 8.0+ |
-| 🍎 **iOS**     | Join the open beta on [TestFlight](https://testflight.apple.com/join/paKSyGAG).            | iOS 17+ and Apple's TestFlight app |
+| Platform       | Get it                                                                             | Requires                           |
+|----------------|------------------------------------------------------------------------------------|------------------------------------|
+| 🌐 **Web**     | Open your T'Day server in a browser. It can be installed as an app (PWA).         | A T'Day server                     |
+| 🤖 **Android** | The signed APK from the [latest release](https://github.com/ohmzi/Tday/releases/latest). It updates itself. | Android 8.0+ |
+| 🍎 **iOS**     | The open beta on [TestFlight](https://testflight.apple.com/join/paKSyGAG).        | iOS 17+ and Apple's TestFlight app |
 
 On first launch, both mobile apps ask whether to use **Local** (this device only) or a
-**Self-hosted server**. The apps aren't in the App Store or Play Store yet. TestFlight builds expire
-90 days after upload, so keep the app updated from TestFlight.
+**Self-hosted server**. The apps aren't in the App Store or Play Store yet.
 
 ---
 
@@ -142,15 +167,12 @@ flowchart LR
 
 In **Server Mode**, the mobile apps write to an on-device cache first (Room on Android, SwiftData on
 iOS) and replay the changes to your server in the background. That keeps them fast on a weak
-connection. In **Local Mode**, nothing leaves the device.
-
-More detail: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+connection. In **Local Mode**, nothing leaves the device. More detail:
+[ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
 ## 🚀 Self-host it
-
-You need Docker with the Compose plugin.
 
 ```bash
 git clone https://github.com/ohmzi/Tday.git && cd Tday
@@ -162,40 +184,47 @@ docker compose up -d
 Open <http://localhost:2525> and register. **The first account becomes the admin.** Anyone who
 signs up after that waits for your approval.
 
-Things to know before you rely on it:
-
-- **The server only listens on localhost by default.** To use it from your phone, put a tunnel or VPN
-  in front, such as Cloudflare Tunnel or Tailscale. [REMOTE_ACCESS.md](docs/REMOTE_ACCESS.md) walks
-  through each option.
+- **The server only listens on localhost by default.** To reach it from your phone, put a tunnel or
+  VPN in front, such as Cloudflare Tunnel or Tailscale ([REMOTE_ACCESS.md](docs/REMOTE_ACCESS.md)).
 - **Keep the server and the apps on the same release.** Server Mode checks the versions and asks you
   to update whichever side is behind.
 - **AI summaries are optional.** Set `OLLAMA_URL=http://ollama:11434` in `.env.docker` and start
   with `docker compose --profile ai up -d`.
 
-> 📘 **The full setup guide** covers configuration, remote access, AI, web push, updating, backups,
-> and troubleshooting: **[docs/SETUP.md](docs/SETUP.md)**.
+> [!IMPORTANT]
+> **[docs/SETUP.md](docs/SETUP.md)** is the full guide: configuration, remote access, AI, web push,
+> updating, backups, and troubleshooting.
 
 ---
 
 ## 🛠️ Built with
 
-| Layer         | Technology                                                                               |
-|---------------|------------------------------------------------------------------------------------------|
-| **Web**       | React 18, TypeScript, Vite, Tailwind CSS 4, TanStack Query, i18next                      |
-| **Backend**   | Kotlin, Ktor, Exposed, Flyway, Koin                                                      |
-| **Database**  | PostgreSQL 15                                                                            |
-| **Shared**    | Kotlin Multiplatform DTOs, validators, and route constants                               |
-| **Android**   | Jetpack Compose, Material 3, Hilt, Room, Retrofit, WorkManager, Glance widgets           |
-| **iOS**       | SwiftUI, SwiftData, Observation, WidgetKit, App Intents, CarPlay, watchOS                |
-| **Auth**      | Encrypted JWE session cookies (Nimbus JOSE), PBKDF2 password hashing                     |
-| **AI**        | Optional local Ollama model, with a built-in fallback                                    |
-| **Infra**     | Docker Compose, GitHub Actions, GitHub Container Registry                                |
+<div align="center">
+
+<img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" />
+<img alt="Ktor" src="https://img.shields.io/badge/Ktor-087CFA?style=for-the-badge&logo=ktor&logoColor=white" />
+<img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" />
+<img alt="Kotlin Multiplatform" src="https://img.shields.io/badge/Kotlin%20Multiplatform-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" />
+<br/>
+<img alt="React" src="https://img.shields.io/badge/React%2018-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
+<img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+<img alt="Vite" src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
+<img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind%20CSS%204-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" />
+<br/>
+<img alt="Jetpack Compose" src="https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" />
+<img alt="Swift" src="https://img.shields.io/badge/SwiftUI-F05138?style=for-the-badge&logo=swift&logoColor=white" />
+<img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+<img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" />
+
+</div>
+
+Android uses Hilt, Room, Retrofit, WorkManager, and Glance widgets. iOS uses SwiftData, Observation,
+WidgetKit, App Intents, and CarPlay. The layout of each platform is in
+[ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
 ## 🔐 Security and privacy
-
-T'Day holds your personal plans, so it's built to be safe to self-host:
 
 - **Passwords** are hashed with PBKDF2-HMAC-SHA256 (310,000 iterations). **Sessions** are encrypted
   JWE cookies, and changing your password or signing out revokes them on every device.
@@ -207,28 +236,59 @@ T'Day holds your personal plans, so it's built to be safe to self-host:
 - **Mobile credentials** are stored in the iOS Keychain and in Android's encrypted storage. Local
   Mode data never leaves the device.
 - **No analytics or ad tracking.** Crash reports (Sentry) contain only diagnostics, never task
-  content, emails, or IP addresses. A self-hosted server sends nothing unless you configure a DSN.
-  See [TELEMETRY.md](docs/TELEMETRY.md).
+  content, emails, or IP addresses. A self-hosted server sends nothing unless you configure a DSN
+  ([TELEMETRY.md](docs/TELEMETRY.md)).
 
-> ⚠️ **Found a vulnerability?** Please report it privately as described in
-> **[SECURITY.md](SECURITY.md)**. Don't open a public issue. The full picture is in
-> [SECURITY_POSTURE.md](docs/security/SECURITY_POSTURE.md) (threat model and known gaps) and
-> [SECURITY_CONTROLS.md](docs/security/SECURITY_CONTROLS.md) (every control, with where it's
-> enforced).
+> [!CAUTION]
+> Found a vulnerability? Report it privately as described in **[SECURITY.md](SECURITY.md)**, not in
+> a public issue. The threat model and known gaps are in
+> [SECURITY_POSTURE.md](docs/security/SECURITY_POSTURE.md), and every control, with where it's
+> enforced, is in [SECURITY_CONTROLS.md](docs/security/SECURITY_CONTROLS.md).
+
+---
+
+## ❓ FAQ
+
+<details>
+<summary><b>Do I need a server?</b></summary>
+<br/>
+
+No. The Android and iOS apps work fully in Local Mode, with no account and no network. A server
+adds sync across devices, the web app, shared lists, and integrations. You can move your Local Mode
+data to a server later with export and import.
+
+</details>
+
+<details>
+<summary><b>Does T'Day send my tasks anywhere?</b></summary>
+<br/>
+
+Only to the server you choose. Date parsing runs on the device. AI summaries use a local Ollama
+model or a built-in fallback, never a cloud AI. Crash reports never include task content.
+
+</details>
+
+<details>
+<summary><b>Why isn't it in the App Store or Play Store?</b></summary>
+<br/>
+
+It's still in beta. iOS builds ship through TestFlight, which expires each build 90 days after
+upload, so keep it updated there. Android builds are signed APKs on the Releases page, and the app
+installs later releases itself.
+
+</details>
 
 ---
 
 ## 🧑‍💻 Development
 
-T'Day is a monorepo:
-
-| Folder                                   | What's inside                                                 |
-|------------------------------------------|---------------------------------------------------------------|
-| [`tday-web/`](tday-web)                  | Web app (Vite + React)                                        |
-| [`tday-backend/`](tday-backend)          | API server (Ktor), which also serves the built web app        |
-| [`shared/`](shared)                      | Kotlin Multiplatform contracts shared by backend and Android  |
-| [`android-compose/`](android-compose)    | Native Android app                                            |
-| [`ios-swiftUI/`](ios-swiftUI)            | Native iOS, widget, share, and Apple Watch targets            |
+| Folder                                   | What's inside                                                |
+|------------------------------------------|--------------------------------------------------------------|
+| [`tday-web/`](tday-web)                  | Web app (Vite + React)                                       |
+| [`tday-backend/`](tday-backend)          | API server (Ktor), which also serves the built web app       |
+| [`shared/`](shared)                      | Kotlin Multiplatform contracts shared by backend and Android |
+| [`android-compose/`](android-compose)    | Native Android app                                           |
+| [`ios-swiftUI/`](ios-swiftUI)            | Native iOS, widget, share, and Apple Watch targets           |
 
 ```bash
 bash scripts/install-hooks.sh                   # one-time, after cloning
@@ -236,27 +296,26 @@ cd tday-web && npm install && npm run dev       # web app on http://localhost:51
 ./gradlew :tday-backend:run                     # API on http://localhost:8080 (needs PostgreSQL)
 ```
 
-[CONTRIBUTING.md](CONTRIBUTING.md) covers the full development setup and conventions, and
-[TESTING.md](docs/TESTING.md) covers the checks for each platform. The whole repository tree is in
-[ARCHITECTURE.md → Repository Layout](docs/ARCHITECTURE.md#repository-layout).
+[CONTRIBUTING.md](CONTRIBUTING.md) covers the full setup and conventions, and
+[TESTING.md](docs/TESTING.md) covers the checks for each platform.
 
 ---
 
 ## 📚 Documentation
 
-**Using and running T'Day**
+| Document                                              | What's in it                                                               |
+|-------------------------------------------------------|----------------------------------------------------------------------------|
+| 🚀 [SETUP.md](docs/SETUP.md)                          | Self-hosting: install, configure, connect apps, AI, push, update, back up  |
+| ✨ [FEATURES.md](docs/FEATURES.md)                    | Feature tour, platform availability, widgets, car surfaces, integrations   |
+| 🌐 [REMOTE_ACCESS.md](docs/REMOTE_ACCESS.md)          | Cloudflare Tunnel, Tailscale, WireGuard, ZeroTier, SSH, ngrok, frp         |
+| 🔌 [API_INTEGRATION.md](docs/API_INTEGRATION.md)      | API keys, endpoints, calendar feed, export/import, the Homarr widget       |
+| 🤖 [MCP.md](docs/MCP.md)                              | Connecting an AI assistant: clients, key scopes, tool reference            |
+| 🔐 [SECURITY.md](SECURITY.md)                         | Reporting vulnerabilities, auth, sessions, data protection                 |
+| 📡 [TELEMETRY.md](docs/TELEMETRY.md)                  | What crash reporting collects, and what it never does                      |
 
-| Document                                              | What's in it                                                                 |
-|-------------------------------------------------------|------------------------------------------------------------------------------|
-| 🚀 [SETUP.md](docs/SETUP.md)                          | Self-hosting: install, configure, connect apps, AI, push, update, back up    |
-| ✨ [FEATURES.md](docs/FEATURES.md)                    | Feature tour, platform availability, widgets, car surfaces, integrations     |
-| 🌐 [REMOTE_ACCESS.md](docs/REMOTE_ACCESS.md)          | Cloudflare Tunnel, Tailscale, WireGuard, ZeroTier, SSH, ngrok, frp           |
-| 🔌 [API_INTEGRATION.md](docs/API_INTEGRATION.md)      | API keys, endpoints, calendar feed, export/import, the Homarr widget         |
-| 🤖 [MCP.md](docs/MCP.md)                              | Connecting an AI assistant: clients, key scopes, tool reference              |
-| 🔐 [SECURITY.md](SECURITY.md)                         | Reporting vulnerabilities, auth, sessions, data protection                   |
-| 📡 [TELEMETRY.md](docs/TELEMETRY.md)                  | What crash reporting collects, and what it never does                        |
-
-**Building T'Day**
+<details>
+<summary><b>For developers: architecture, data, testing, and more</b></summary>
+<br/>
 
 | Document                                                   | What's in it                                                            |
 |------------------------------------------------------------|-------------------------------------------------------------------------|
@@ -277,13 +336,15 @@ cd tday-web && npm install && npm run dev       # web app on http://localhost:51
 
 Platform guides: [Android](android-compose/README.md) · [iOS](ios-swiftUI/README.md)
 
+</details>
+
 ---
 
 ## 🤝 Contributing
 
-Bug reports, feature ideas, and security reports are welcome. Please
-[open an issue](https://github.com/ohmzi/Tday/issues/new/choose) and the maintainer will take it
-from there.
+- 🐞 **Found a bug?** [Open an issue](https://github.com/ohmzi/Tday/issues/new/choose).
+- 💡 **Have an idea?** [Suggest a feature](https://github.com/ohmzi/Tday/issues/new/choose).
+- 🔒 **Security concern?** Follow [SECURITY.md](SECURITY.md) and report it privately.
 
 **Pull requests are not accepted at this time.** T'Day is published so it can be audited and
 self-hosted, not to collect code contributions. See [CONTRIBUTING.md](CONTRIBUTING.md).
