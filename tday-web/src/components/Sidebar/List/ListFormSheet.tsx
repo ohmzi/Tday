@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Share2, Trash2, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -134,8 +134,22 @@ export default function ListFormSheet({
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+  // This sheet is rendered unconditionally by its host (only the Drawer's own
+  // content unmounts on close), so it must seed exactly once per open — not on
+  // every render where `list` merely has a new object identity. `list` is a
+  // fresh literal recomputed on every parent render (see ListContainer), so
+  // keying this effect on it re-seeds on ANY incidental parent re-render while
+  // the sheet is still open — including the moment right after Save, when the
+  // mutation's own cache invalidation triggers a re-render with the still-stale
+  // pre-save data before the fresh response has landed. That silently
+  // overwrote the user's just-picked color/priority back to the old value for
+  // a frame, right as the sheet closed. Tracking the open transition with a
+  // ref decouples "seed" from "list object changed".
+  const wasOpenRef = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    const justOpened = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (!justOpened) return;
     setName(list?.name ?? initialName);
     setColor(list?.color ?? initialColor);
     setIconKey(seedIconKey());
@@ -143,9 +157,9 @@ export default function ListFormSheet({
     setDefaultPriority((list?.defaultPriority as Priority | null | undefined) ?? null);
     setError(null);
     setConfirmingDelete(false);
-    // `seedIconKey` closes over exactly these, and is re-made every render.
+    // Deliberately keyed on `open` alone — see the comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialColor, initialIconKey, initialName, list, open]);
+  }, [open]);
 
   // The detective, made visible: while the picker is a preview, it follows the name
   // being typed. Editing is deliberately excluded — a list being renamed may have had
