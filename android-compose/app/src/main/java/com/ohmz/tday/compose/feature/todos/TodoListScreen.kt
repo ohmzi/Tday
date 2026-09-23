@@ -3290,7 +3290,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                     actionsSpacing = if (topBarActions.size >= 5) {
                         HeaderButtonCompactSpacing
                     } else {
-                        8.dp
+                        TdayDimens.SpacingMd
                     },
                     actions = {
                         if (selectionActive) {
