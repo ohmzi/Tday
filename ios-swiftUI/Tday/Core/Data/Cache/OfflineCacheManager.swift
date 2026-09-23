@@ -171,8 +171,8 @@ final class OfflineCacheManager {
                 isShared: $0.isShared,
                 memberCount: $0.memberCount,
                 ownerUsername: $0.ownerUsername,
-                defaultPriority: $0.defaultPriority,
-                reusable: $0.reusable
+                reusable: $0.reusable,
+                defaultPriority: $0.defaultPriority
             )
         }
 
