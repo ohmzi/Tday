@@ -70,7 +70,7 @@ final class CalendarViewModel {
         container.undoableDeleteScheduler.schedule(
             message: L("Task completed"),
             restore: { [weak self] in
-                container.todoRepository.undoStagedCompletion(staged)
+                await container.todoRepository.undoStagedCompletion(staged)
                 self?.hydrateFromCache()
             },
             commit: { [weak self] in

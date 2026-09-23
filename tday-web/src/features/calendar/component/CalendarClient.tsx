@@ -88,13 +88,12 @@ import { getPriorityFlag } from "@/lib/priority";
 import i18n from "@/i18n";
 import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
-import {
-  TASK_COMPLETION_CHECK_TO_STRIKE_MS,
-  TASK_COMPLETION_REMOVING_TRANSITION,
-  TASK_COMPLETION_STRIKE_TO_FADE_MS,
-  TASK_COMPLETION_TOTAL_MS,
-} from "@/lib/taskCompletionTiming";
+import { TASK_COMPLETION_REMOVING_TRANSITION } from "@/lib/taskCompletionTiming";
 import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
+import {
+  stageTaskCompletion,
+  useTaskCompletionPhase,
+} from "@/lib/taskCompletionStaging";
 import { buildTaskShareText } from "@/lib/listShareText";
 import { useToast } from "@/hooks/use-toast";
 import { SWIPE_COPY_COLOR, SWIPE_DELETE_COLOR, SWIPE_EDIT_COLOR } from "@/lib/swipeActionColors";
@@ -661,10 +660,13 @@ export function CalendarTaskRow({
   // same clock as well. It used to run 280 / 620 / 960 against that row's 160 / 360 / 260,
   // which is the same four beats a third slower: the same task, ticked off on two screens,
   // finishing at two different speeds.
-  const [completePhase, setCompletePhase] = useState<
-    "checked" | "struck" | "removing" | null
-  >(null);
-  const completeTimers = useRef<number[]>([]);
+  //
+  // The phase is read from `taskCompletionStaging`, not held here, for the same reason as the
+  // scheduled row: this row has no right to the window between the tap and the commit — a
+  // month-grid re-render or a drag context update unmounts it mid-sequence, and component-owned
+  // timers would drop the commit along with the row. Keyed by task id, so a row that leaves and
+  // comes back rejoins its own sequence.
+  const completePhase = useTaskCompletionPhase(todo.id);
   const completing = completePhase !== null;
   const removing = completePhase === "removing";
   // Subscribed rather than read once: this decides what the row renders, so it has to follow a
@@ -715,13 +717,6 @@ export function CalendarTaskRow({
     rowRef.current = node;
   };
 
-  useEffect(() => {
-    const timers = completeTimers.current;
-    return () => {
-      timers.forEach((id) => window.clearTimeout(id));
-    };
-  }, []);
-
   // Close this row's swipe actions when another calendar row is swiped open —
   // one row open at a time, claimed at the other row's axis lock rather than at
   // its commit. `dismissSwipe` because this close comes from somewhere else and
@@ -757,15 +752,9 @@ export function CalendarTaskRow({
       return;
     }
     if (completing) return;
-    const removeAt = TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS;
-    setCompletePhase("checked"); // 1. green tick + pop
-    completeTimers.current.push(
-      window.setTimeout(() => setCompletePhase("struck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS), // 2. strike
-      window.setTimeout(() => setCompletePhase("removing"), removeAt), // 3. the ink leaves
-      // 4. gone. The last leg waits for the box to shut, and with reduce-motion on there is no
-      // box shutting — the same cut the other two task rows make, argued in `taskCompletionTiming`.
-      window.setTimeout(() => completeTask(), reduceMotion ? removeAt : TASK_COMPLETION_TOTAL_MS),
-    );
+    // Green tick + pop now; strike, fade and the actual completion are scheduled by the staging
+    // module so that none of them depend on this row still being on screen when they come due.
+    stageTaskCompletion(todo.id, () => completeTask());
   };
 
   const requestDelete = () => {

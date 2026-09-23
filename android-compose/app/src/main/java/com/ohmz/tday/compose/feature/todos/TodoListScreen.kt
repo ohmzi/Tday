@@ -267,6 +267,7 @@ import com.ohmz.tday.shared.floater.FloaterRestingTier
 import com.ohmz.tday.shared.listicon.ListIconInference
 import com.ohmz.tday.shared.sort.TaskSortEngine
 import com.ohmz.tday.shared.sort.TaskSortKey
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -1436,6 +1437,14 @@ fun TodoListScreen( // skipcq: KT-R1006
     // the two root tabs are one mode each and never change what they are a list
     // of.
     val swipeSlot = hostSwipeSlot ?: remember(uiState.mode, uiState.listId) { TaskSwipeSlot() }
+    // The completing-row "checked → struck → fading" linger, hoisted to this
+    // screen for the same reason `swipeSlot` above is hoisted rather than
+    // owned by a row: unlike `swipeSlot` this is NOT keyed on mode/listId,
+    // because the whole point is surviving exactly the kind of reflow a
+    // sibling completion inside the same scope can cause. See
+    // [TaskCompletionStaging].
+    val completionCoroutineScope = rememberCoroutineScope()
+    val completionStaging = remember { TaskCompletionStaging(completionCoroutineScope) }
     // --- Bulk selection ---------------------------------------------------
     // Screen-local, hoisted exactly the way `swipeSlot` above is, and
     // keyed on mode + scoped list so leaving the screen drops it for free. It
@@ -3029,6 +3038,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                             selectedTodoIds = selectedTodoIds,
                             flashTodoId = flashTodoId,
                             swipeSlot = swipeSlot,
+                            completionStaging = completionStaging,
                             collapsedSectionKeys = collapsedSectionKeys,
                             activeDropSectionKey = activeDropSectionKey,
                             draggedScheduledTodo = draggedScheduledTodo,
@@ -4108,6 +4118,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
     selectedTodoIds: Set<String>,
     flashTodoId: String?,
     swipeSlot: TaskSwipeSlot,
+    completionStaging: TaskCompletionStaging,
     collapsedSectionKeys: Set<String>,
     activeDropSectionKey: String?,
     draggedScheduledTodo: TodoItem?,
@@ -4336,6 +4347,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                         onDefer = { onDeferRequested(todo.id) },
                         draggedTodo = sectionDraggedTodo,
                         swipeSlot = swipeSlot,
+                        completionStaging = completionStaging,
                         // Long-press drag-to-reschedule stands
                         // down while selecting: a null start
                         // handler is what turns `dragEnabled`
@@ -5919,6 +5931,7 @@ private fun TimelineTaskRow(
     onDefer: (() -> Unit)? = null,
     draggedTodo: TodoItem? = null,
     swipeSlot: TaskSwipeSlot,
+    completionStaging: TaskCompletionStaging,
     onDragTodoStart: ((Offset) -> Unit)? = null,
     onDragTodoMove: (Offset) -> Unit = {},
     onDragTodoEnd: (Offset?) -> Unit = {},
@@ -5949,6 +5962,7 @@ private fun TimelineTaskRow(
                 onDragEnd = onDragTodoEnd,
                 onDragCancel = onDragTodoCancel,
                 swipeSlot = swipeSlot,
+                completionStaging = completionStaging,
             )
         } else if (
             useMinimalStyle &&
@@ -5987,6 +6001,7 @@ private fun TimelineTaskRow(
                 onDragEnd = onDragTodoEnd,
                 onDragCancel = onDragTodoCancel,
                 swipeSlot = swipeSlot,
+                completionStaging = completionStaging,
             )
         } else if (useMinimalStyle) {
             TodayTodoRow(
@@ -6860,6 +6875,72 @@ private val TODO_DUE_DATE_TIME_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("MMM d, h:mm a", Locale.getDefault())
         .withZone(ZoneId.systemDefault())
 
+/**
+ * The three beats a completing row plays before [TaskCompletionStaging.begin]
+ * fires its `onComplete` — see [TASK_COMPLETION_CHECK_TO_STRIKE_MS] and its
+ * neighbours for what each gap covers.
+ */
+private enum class TaskCompletionPhase { CHECKED, STRUCK, FADING }
+
+/**
+ * Hoists the completing-row "checked → struck → fading" linger OUT of any
+ * one row's own composition, keyed by todo id and driven by a coroutine
+ * scope that outlives a single row.
+ *
+ * [SwipeTaskRow] used to keep this sequence in `remember(todo.id)` state
+ * driven by its own `rememberCoroutineScope()` — both scoped to that row's
+ * own composition. A resort/reclassification right after several
+ * near-simultaneous completions (exactly what completing "too many tasks
+ * together" can trigger) can move a still-lingering sibling row into a
+ * different section, which changes that row's `item(key = ...)` in the
+ * LazyColumn and makes Compose tear the old composition down and stand up a
+ * new one for it. That drops the in-flight coroutine — including its
+ * terminal `onComplete()` call — along with the `remember`-scoped phase
+ * flags, which is the reported "comes back, then leaves again": the
+ * completion itself is lost, not merely mis-rendered, and any
+ * partially-elapsed strike/fade resets before a fresh instance of the row
+ * plays it again.
+ *
+ * Hoisting the phase map and the timer coroutine here, above any row's own
+ * lifecycle, is what keeps both alive across that reclassification. It
+ * mirrors iOS's screen-level `completionPhases: [String: TodoCompletionPhase]`
+ * (`TodoListScreen.swift`) and web's module-level `taskCompletionStaging.ts`
+ * map — neither is scoped to a row's own component identity either. Backed
+ * by a `SnapshotStateMap` ([mutableStateMapOf]) so a row observes its own
+ * phase and recomposes when it changes, exactly as the old `localChecked`/
+ * `localStruck`/`completionFading` `remember`s used to.
+ */
+private class TaskCompletionStaging(private val scope: CoroutineScope) {
+    private val phases = mutableStateMapOf<String, TaskCompletionPhase>()
+
+    fun phaseFor(todoId: String): TaskCompletionPhase? = phases[todoId]
+
+    /**
+     * Starts the linger for [todoId] unless it is already running — a second
+     * tap on a row already mid-sequence, or a recomposition replaying the
+     * same click, must not restart or double-fire it. [motionScale] is read
+     * by the caller inside composition and handed in as a plain value
+     * because this coroutine runs detached from any composition, on
+     * [scope] rather than on any one row's `rememberCoroutineScope()`.
+     */
+    fun begin(todoId: String, motionScale: Float, onComplete: () -> Unit) {
+        if (phases.containsKey(todoId)) return
+        phases[todoId] = TaskCompletionPhase.CHECKED
+        scope.launch {
+            // Three gaps, three animations they are covering, so all three
+            // are on the animator's clock. See
+            // [TASK_COMPLETION_CHECK_TO_STRIKE_MS].
+            scaledDelay(TASK_COMPLETION_CHECK_TO_STRIKE_MS, motionScale)
+            phases[todoId] = TaskCompletionPhase.STRUCK
+            scaledDelay(TASK_COMPLETION_STRIKE_TO_FADE_MS, motionScale)
+            phases[todoId] = TaskCompletionPhase.FADING
+            scaledDelay(TASK_COMPLETION_FADE_MS, motionScale)
+            phases.remove(todoId)
+            onComplete()
+        }
+    }
+}
+
 @Composable
 private fun AllTaskSwipeRow(
     todo: TodoItem,
@@ -6882,6 +6963,7 @@ private fun AllTaskSwipeRow(
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
     swipeSlot: TaskSwipeSlot,
+    completionStaging: TaskCompletionStaging,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -6908,6 +6990,7 @@ private fun AllTaskSwipeRow(
         onDragEnd = onDragEnd,
         onDragCancel = onDragCancel,
         swipeSlot = swipeSlot,
+        completionStaging = completionStaging,
     )
 }
 
@@ -6938,6 +7021,7 @@ private fun TodayTaskSwipeRow(
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
     swipeSlot: TaskSwipeSlot,
+    completionStaging: TaskCompletionStaging,
 ) {
     SwipeTaskRow(
         todo = todo,
@@ -6968,6 +7052,7 @@ private fun TodayTaskSwipeRow(
         onDragEnd = onDragEnd,
         onDragCancel = onDragCancel,
         swipeSlot = swipeSlot,
+        completionStaging = completionStaging,
     )
 }
 
@@ -7007,6 +7092,7 @@ private fun SwipeTaskRow(
     onDragEnd: (Offset?) -> Unit = {},
     onDragCancel: () -> Unit = {},
     swipeSlot: TaskSwipeSlot,
+    completionStaging: TaskCompletionStaging,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
@@ -7040,10 +7126,15 @@ private fun SwipeTaskRow(
     val copyContext = LocalContext.current
     val copiedMessage = stringResource(R.string.task_copied_toast)
     val copyFailedMessage = stringResource(R.string.task_copy_failed_toast)
-    var localChecked by remember(todo.id) { mutableStateOf(false) }
-    var localStruck by remember(todo.id) { mutableStateOf(false) }
-    var pendingCompletion by remember(todo.id) { mutableStateOf(false) }
-    var completionFading by remember(todo.id) { mutableStateOf(false) }
+    // Read from the hoisted [TaskCompletionStaging] rather than owned here —
+    // see its doc comment for why a row's own `remember(todo.id)` cannot be
+    // trusted to survive a sibling completion's resort/reclassification.
+    val completionPhase = completionStaging.phaseFor(todo.id)
+    val localChecked = completionPhase != null
+    val localStruck = completionPhase == TaskCompletionPhase.STRUCK ||
+            completionPhase == TaskCompletionPhase.FADING
+    val pendingCompletion = completionPhase != null
+    val completionFading = completionPhase == TaskCompletionPhase.FADING
     var rowOriginInRoot by remember(todo.id) { mutableStateOf(Offset.Zero) }
     var dragPointerPosition by remember(todo.id) { mutableStateOf<Offset?>(null) }
     fun claimSwipeSlot() {
@@ -7590,27 +7681,15 @@ private fun SwipeTaskRow(
                                         TdayHaptics.completion(view)
                                         taskCompletionSound.play()
                                         closeSwipeSlot()
-                                        localChecked = true
-                                        pendingCompletion = true
-                                        coroutineScope.launch {
-                                            // Three gaps, three animations they
-                                            // are covering, so all three are on
-                                            // the animator's clock. See
-                                            // [TASK_COMPLETION_CHECK_TO_STRIKE_MS].
-                                            scaledDelay(
-                                                TASK_COMPLETION_CHECK_TO_STRIKE_MS,
-                                                rowMotionScale,
-                                            )
-                                            localStruck = true
-                                            scaledDelay(
-                                                TASK_COMPLETION_STRIKE_TO_FADE_MS,
-                                                rowMotionScale,
-                                            )
-                                            completionFading = true
-                                            scaledDelay(
-                                                TASK_COMPLETION_FADE_MS,
-                                                rowMotionScale,
-                                            )
+                                        // Hoisted above this row's own
+                                        // composition — see
+                                        // [TaskCompletionStaging] for why a
+                                        // sibling's resort must not be able
+                                        // to tear this sequence down.
+                                        completionStaging.begin(
+                                            todo.id,
+                                            rowMotionScale,
+                                        ) {
                                             onComplete()
                                         }
                                     }

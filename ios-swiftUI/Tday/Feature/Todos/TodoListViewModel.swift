@@ -371,7 +371,7 @@ final class TodoListViewModel {
                 message: L("Task completed"),
                 restore: { [weak self] in
                     self?.celebrationCancelledAt = Date()
-                    container.todoRepository.undoStagedFloaterCompletion(staged)
+                    await container.todoRepository.undoStagedFloaterCompletion(staged)
                 },
                 commit: {
                     do {
@@ -391,7 +391,7 @@ final class TodoListViewModel {
                 message: L("Task completed"),
                 restore: { [weak self] in
                     self?.celebrationCancelledAt = Date()
-                    container.todoRepository.undoStagedCompletion(staged)
+                    await container.todoRepository.undoStagedCompletion(staged)
                 },
                 commit: {
                     do {
@@ -488,7 +488,7 @@ final class TodoListViewModel {
                 message: BulkSelectionCopy.completedToast(count),
                 restore: { [weak self] in
                     self?.celebrationCancelledAt = Date()
-                    container.todoRepository.undoStagedFloaterCompletion(staged)
+                    await container.todoRepository.undoStagedFloaterCompletion(staged)
                 },
                 commit: {
                     do {
@@ -505,7 +505,7 @@ final class TodoListViewModel {
                 message: BulkSelectionCopy.completedToast(count),
                 restore: { [weak self] in
                     self?.celebrationCancelledAt = Date()
-                    container.todoRepository.undoStagedCompletion(staged)
+                    await container.todoRepository.undoStagedCompletion(staged)
                 },
                 commit: {
                     do {

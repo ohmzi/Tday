@@ -157,7 +157,14 @@ describe("ticking a calendar task row's checkbox", () => {
     expect(remaining(queryClient)).toEqual(["todo-2"]);
   });
 
-  /** The cut the other four rows make, for the reason `taskCompletionTiming` argues. */
+  /**
+   * The cut the other four rows make, for the reason `taskCompletionTiming` argues. Pinned only
+   * against the query cache, the same as `todo-row-complete-interaction.test.tsx`'s twin of this
+   * test: the staging module clears a task's phase in the same tick it commits, so a row that (as
+   * here) is rendered standalone rather than dropped from a real list sees its `removing` style
+   * reset back to nothing the instant the prune lands — the same instant a real list would have
+   * already unmounted it, which is what the row's own reduced-motion test above covers.
+   */
   it("prunes as soon as the frame is finished under reduced motion", async () => {
     installReducedMotion(true);
     const queryClient = renderRow();
@@ -172,7 +179,5 @@ describe("ticking a calendar task row's checkbox", () => {
     });
 
     expect(remaining(queryClient)).toEqual(["todo-2"]);
-    expect(box().style.transition).toBe("");
-    expect(box().style.gridTemplateRows).toBe("0fr");
   });
 });

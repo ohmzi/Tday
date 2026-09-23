@@ -167,7 +167,7 @@ final class ScheduledTaskHomeViewModel {
         container.undoableDeleteScheduler.schedule(
             message: L("Task completed"),
             restore: { [weak self] in
-                container.todoRepository.undoStagedCompletion(staged)
+                await container.todoRepository.undoStagedCompletion(staged)
                 self?.refreshFromCache()
             },
             commit: { [weak self] in
