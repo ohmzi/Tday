@@ -325,6 +325,8 @@
     "noRepeat": "Sem repetição",
     "color": "Cor",
     "icon": "Ícone",
+    "defaultPriority": "Prioridade padrão",
+    "noDefaultPriority": "Sem padrão",
     "listName": "Nome da lista",
     "newTask": "Nova tarefa",
     "editTask": "Editar tarefa",

@@ -325,6 +325,8 @@
     "noRepeat": "Keine Wiederholung",
     "color": "Farbe",
     "icon": "Symbol",
+    "defaultPriority": "Standardpriorität",
+    "noDefaultPriority": "Kein Standard",
     "listName": "Listenname",
     "newTask": "Neue Aufgabe",
     "editTask": "Aufgabe bearbeiten",
