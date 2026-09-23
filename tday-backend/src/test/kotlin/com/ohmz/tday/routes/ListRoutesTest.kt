@@ -232,12 +232,14 @@ class ListRoutesTest {
             name: String,
             color: String?,
             iconKey: String?,
+            defaultPriority: String?,
         ): Either<com.ohmz.tday.domain.AppError, ListResponse> =
             ListResponse(
                 id = "list_123",
                 name = name,
                 color = color,
                 iconKey = iconKey,
+                defaultPriority = defaultPriority,
                 userID = userId,
                 createdAt = "2026-04-24T18:00:00",
                 updatedAt = "2026-04-24T18:00:00",
@@ -249,6 +251,8 @@ class ListRoutesTest {
             name: String?,
             color: String?,
             iconKey: String?,
+            defaultPriority: String?,
+            defaultPriorityChanged: Boolean?,
         ): Either<com.ohmz.tday.domain.AppError, Unit> = Unit.right()
 
         override suspend fun delete(
