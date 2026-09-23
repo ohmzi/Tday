@@ -23,6 +23,15 @@ struct CreateTaskSheet: View {
     let titleText: String
     let submitText: String
     let initialPayload: CreateTaskPayload?
+    /// Caller-supplied priority override, independent of the list's own default —
+    /// e.g. Priority mode's "new task defaults to Important". Lower precedence than
+    /// the selected list's `defaultPriority` (see `resolvedInitialPriority`), since a
+    /// list's own explicit setting is a more specific signal than a screen-wide one.
+    var defaultPriority: String? = nil
+    /// True only for `editTaskSheetContent`'s sheet (an existing task). This feature —
+    /// a list's default priority pre-filling a NEW task — never touches an edit, so
+    /// `priorityTouchedByUser` starts already "touched" for one; see `hydrateFromInitialPayload`.
+    var isEditingExistingTask: Bool = false
     let defaultScheduled: Bool
     let showScheduleControls: Bool
     let onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?
@@ -67,6 +76,11 @@ struct CreateTaskSheet: View {
     @State private var userPickedDueDate = false
     @State private var activeSelector: CreateTaskSheetSelector?
     @FocusState private var focusedInputField: CreateTaskSheetInputField?
+    /// Sticky once the user has explicitly picked a priority (or is editing an existing
+    /// task — see `isEditingExistingTask`): once true, a list change no longer overwrites
+    /// `priority` with that list's `defaultPriority`. See `hydrateFromInitialPayload` and
+    /// the `.list` case of `selectorOverlay(for:)`.
+    @State private var priorityTouchedByUser = false
 
     private let priorityOptions = TaskPriorityDisplay.options
     private var repeatOptions: [(label: String, value: String?)] {
@@ -114,6 +128,8 @@ struct CreateTaskSheet: View {
         titleText: String,
         submitText: String,
         initialPayload: CreateTaskPayload?,
+        defaultPriority: String? = nil,
+        isEditingExistingTask: Bool = false,
         defaultScheduled: Bool = true,
         showScheduleControls: Bool = true,
         onParseTaskTitleNlp: ((String, Int64) async -> TodoTitleNlpResponse?)?,
@@ -125,6 +141,8 @@ struct CreateTaskSheet: View {
         self.titleText = titleText
         self.submitText = submitText
         self.initialPayload = initialPayload
+        self.defaultPriority = defaultPriority
+        self.isEditingExistingTask = isEditingExistingTask
         self.defaultScheduled = defaultScheduled
         self.showScheduleControls = showScheduleControls
         self.onParseTaskTitleNlp = onParseTaskTitleNlp
@@ -324,15 +342,19 @@ struct CreateTaskSheet: View {
     }
 
     private func hydrateFromInitialPayload() {
+        priorityTouchedByUser = isEditingExistingTask
         guard let initialPayload else {
             scheduleEnabled = showScheduleControls && defaultScheduled
             repeatRule = scheduleEnabled ? repeatRule : nil
+            priority = resolvedInitialPriority(fallback: nil)
             return
         }
         title = initialPayload.title
         notes = initialPayload.description ?? ""
-        priority = TaskPriorityDisplay.canonicalValue(initialPayload.priority)
         selectedListID = initialPayload.listId
+        priority = isEditingExistingTask
+            ? TaskPriorityDisplay.canonicalValue(initialPayload.priority)
+            : resolvedInitialPriority(fallback: initialPayload.priority)
         if showScheduleControls, let due = initialPayload.due {
             dueDate = due
             scheduleEnabled = true
@@ -341,6 +363,32 @@ struct CreateTaskSheet: View {
             scheduleEnabled = false
             repeatRule = nil
         }
+    }
+
+    /// A new task's priority: an explicit caller override wins, then the selected
+    /// list's own `defaultPriority`, then whatever the caller pre-computed (e.g.
+    /// Priority mode's "defaults to Important"), then the app-wide default. The
+    /// list's own setting outranks the caller's generic fallback because it is the
+    /// more specific, more intentional signal — see `CreateTaskSheet.defaultPriority`.
+    /// Never used once `isEditingExistingTask` is true.
+    private func resolvedInitialPriority(fallback: String?) -> String {
+        TaskPriorityDisplay.canonicalValue(
+            defaultPriority ?? lists.first(where: { $0.id == selectedListID })?.defaultPriority ?? fallback
+        )
+    }
+
+    /// Live twin of `resolvedInitialPriority`, run when the list changes INSIDE the
+    /// open sheet (`.list` case of `selectorOverlay(for:)`) rather than at hydrate
+    /// time. Skipped once the user has touched the priority picker — see
+    /// `priorityTouchedByUser` — so this never clobbers an explicit choice. Falls
+    /// back to the same `initialPayload?.priority` the sheet opened with (rather
+    /// than straight to the app-wide default) so switching to a list with no
+    /// default of its own restores the sheet's original suggestion instead of
+    /// resetting it. `isEditingExistingTask` gates `.list`'s call to this, not a
+    /// check here, since the row that calls it must never run for an edit anyway.
+    private func applyListDefaultPriorityIfUntouched() {
+        guard !priorityTouchedByUser else { return }
+        priority = resolvedInitialPriority(fallback: initialPayload?.priority)
     }
 
     private func scheduleNlpParse() {
@@ -572,6 +620,7 @@ struct CreateTaskSheet: View {
                         selected: selectedListID == nil
                     ) {
                         selectedListID = nil
+                        applyListDefaultPriorityIfUntouched()
                         setActiveSelector(nil)
                     }
 
@@ -583,6 +632,7 @@ struct CreateTaskSheet: View {
                             selected: selectedListID == list.id
                         ) {
                             selectedListID = list.id
+                            applyListDefaultPriorityIfUntouched()
                             setActiveSelector(nil)
                         }
                     }
@@ -598,6 +648,7 @@ struct CreateTaskSheet: View {
                             selected: TaskPriorityDisplay.canonicalValue(priority) == option.value
                         ) {
                             priority = option.value
+                            priorityTouchedByUser = true
                             setActiveSelector(nil)
                         }
                     }

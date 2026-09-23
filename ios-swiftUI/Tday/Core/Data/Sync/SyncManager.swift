@@ -646,7 +646,8 @@ final class SyncManager {
                         iconKey: list.iconKey,
                         todoCount: todoCountsByList[list.id] ?? 0,
                         updatedAtEpochMs: list.updatedAtEpochMs,
-                        createdAtEpochMs: list.createdAtEpochMs
+                        createdAtEpochMs: list.createdAtEpochMs,
+                        defaultPriority: list.defaultPriority
                     )
                 }
             ),
@@ -660,7 +661,8 @@ final class SyncManager {
                         todoCount: floaterCountsByList[list.id] ?? 0,
                         updatedAtEpochMs: list.updatedAtEpochMs,
                         createdAtEpochMs: list.createdAtEpochMs,
-                        reusable: list.reusable
+                        reusable: list.reusable,
+                        defaultPriority: list.defaultPriority
                     )
                 }
             ),
@@ -785,7 +787,9 @@ final class SyncManager {
                 instanceDateEpochMs: nil,
                 name: list.name,
                 color: list.color,
-                iconKey: list.iconKey
+                iconKey: list.iconKey,
+                defaultPriority: list.defaultPriority,
+                defaultPriorityChanged: true
             )
             if !existingKeys.contains(mutationKey(for: mutation)) {
                 generated.append(mutation)
@@ -813,7 +817,9 @@ final class SyncManager {
                 name: list.name,
                 color: list.color,
                 iconKey: list.iconKey,
-                reusable: list.reusable
+                reusable: list.reusable,
+                defaultPriority: list.defaultPriority,
+                defaultPriorityChanged: true
             )
             if !existingKeys.contains(mutationKey(for: mutation)) {
                 generated.append(mutation)
@@ -883,7 +889,7 @@ final class SyncManager {
                 return
             }
             let response = try await api.createList(
-                payload: CreateListRequest(name: mutation.name ?? "Untitled", color: mutation.color, iconKey: mutation.iconKey)
+                payload: CreateListRequest(name: mutation.name ?? "Untitled", color: mutation.color, iconKey: mutation.iconKey, defaultPriority: mutation.defaultPriority)
             )
             guard let createdList = response.list else { return }
             resolvedListIDs[localListID] = createdList.id
@@ -894,7 +900,14 @@ final class SyncManager {
             let remoteUpdatedAt = remoteSnapshot.listUpdatedAtByID[targetID] ?? 0
             guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
             _ = try await api.patchListByBody(
-                payload: UpdateListRequest(id: targetID, name: mutation.name, color: mutation.color, iconKey: mutation.iconKey)
+                payload: UpdateListRequest(
+                    id: targetID,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey,
+                    defaultPriority: mutation.defaultPriority,
+                    defaultPriorityChanged: mutation.defaultPriorityChanged
+                )
             )
 
         case .deleteList:
@@ -910,7 +923,7 @@ final class SyncManager {
                 return
             }
             let response = try await api.createFloaterList(
-                payload: CreateFloaterListRequest(name: mutation.name ?? "Untitled", color: mutation.color, iconKey: mutation.iconKey, reusable: mutation.reusable ?? false)
+                payload: CreateFloaterListRequest(name: mutation.name ?? "Untitled", color: mutation.color, iconKey: mutation.iconKey, reusable: mutation.reusable ?? false, defaultPriority: mutation.defaultPriority)
             )
             guard let createdList = response.list else { return }
             resolvedFloaterListIDs[localListID] = createdList.id
@@ -921,7 +934,15 @@ final class SyncManager {
             let remoteUpdatedAt = remoteSnapshot.floaterListUpdatedAtByID[targetID] ?? 0
             guard remoteUpdatedAt <= mutation.timestampEpochMs else { return }
             _ = try await api.patchFloaterListByBody(
-                payload: UpdateFloaterListRequest(id: targetID, name: mutation.name, color: mutation.color, iconKey: mutation.iconKey, reusable: mutation.reusable)
+                payload: UpdateFloaterListRequest(
+                    id: targetID,
+                    name: mutation.name,
+                    color: mutation.color,
+                    iconKey: mutation.iconKey,
+                    reusable: mutation.reusable,
+                    defaultPriority: mutation.defaultPriority,
+                    defaultPriorityChanged: mutation.defaultPriorityChanged
+                )
             )
 
         case .deleteFloaterList:
@@ -1385,7 +1406,8 @@ final class SyncManager {
                         iconKey: list.iconKey,
                         todoCount: list.todoCount,
                         updatedAtEpochMs: list.updatedAtEpochMs,
-                        createdAtEpochMs: list.createdAtEpochMs
+                        createdAtEpochMs: list.createdAtEpochMs,
+                        defaultPriority: list.defaultPriority
                     )
                 }
                 return list
@@ -1408,7 +1430,9 @@ final class SyncManager {
                     instanceDateEpochMs: mutation.instanceDateEpochMs,
                     name: mutation.name,
                     color: mutation.color,
-                    iconKey: mutation.iconKey
+                    iconKey: mutation.iconKey,
+                    defaultPriority: mutation.defaultPriority,
+                    defaultPriorityChanged: mutation.defaultPriorityChanged
                 )
             },
             aiSummaryEnabled: state.aiSummaryEnabled
@@ -1466,7 +1490,8 @@ final class SyncManager {
                     todoCount: list.todoCount,
                     updatedAtEpochMs: list.updatedAtEpochMs,
                     createdAtEpochMs: list.createdAtEpochMs,
-                    reusable: list.reusable
+                    reusable: list.reusable,
+                    defaultPriority: list.defaultPriority
                 )
             }.dedupedByID(),
             pendingMutations: state.pendingMutations.map { mutation in
@@ -1486,7 +1511,9 @@ final class SyncManager {
                     instanceDateEpochMs: mutation.instanceDateEpochMs,
                     name: mutation.name,
                     color: mutation.color,
-                    iconKey: mutation.iconKey
+                    iconKey: mutation.iconKey,
+                    defaultPriority: mutation.defaultPriority,
+                    defaultPriorityChanged: mutation.defaultPriorityChanged
                 )
             },
             aiSummaryEnabled: state.aiSummaryEnabled

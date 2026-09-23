@@ -15,6 +15,7 @@ import com.ohmz.tday.models.response.ListDetailResponse
 import com.ohmz.tday.services.ListService
 import com.ohmz.tday.shared.model.DeleteListRequest
 import com.ohmz.tday.shared.model.ListColor
+import com.ohmz.tday.shared.model.Priority
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import com.ohmz.tday.di.inject
@@ -35,7 +36,8 @@ fun Route.listRoutes() {
                     val body = call.receive<ListCreateRequest>()
                     validateCreateList.validateOrFail(body).bind()
                     val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
-                    val list = listService.create(user.id, body.name, color, body.iconKey).bind()
+                    val defaultPriority = validateOptionalEnumValue<Priority>(body.defaultPriority, "defaultPriority").bind()
+                    val list = listService.create(user.id, body.name, color, body.iconKey, defaultPriority).bind()
                     CreateListResponse(message = "list created", list = list)
                 }
             }
@@ -47,7 +49,8 @@ fun Route.listRoutes() {
                     val body = call.receive<ListPatchRequest>()
                     validatePatchList.validateOrFail(body).bind()
                     val color = validateOptionalEnumValue<ListColor>(body.color, "color").bind()
-                    listService.update(user.id, body.id, body.name, color, body.iconKey).bind()
+                    val defaultPriority = validateOptionalEnumValue<Priority>(body.defaultPriority, "defaultPriority").bind()
+                    listService.update(user.id, body.id, body.name, color, body.iconKey, defaultPriority, body.defaultPriorityChanged).bind()
                     mapOf("message" to "list updated")
                 }
             }

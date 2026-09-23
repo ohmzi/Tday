@@ -822,23 +822,32 @@ final class TodoRepository {
     /// drains the queued mutation before Undo is tapped, the completion has
     /// already reached the server and this only reverts the local copy — the
     /// same trade-off `undoStagedTodo(_:)` already makes for delete.
-    func undoStagedCompletion(_ staged: StagedTodoCompletion) {
+    ///
+    /// Wrapped in `cacheManager.withSyncLock`, for the same reason
+    /// `stageCompleteTodo(s)` is: an in-flight sync's read-fetch-merge-save span
+    /// is built from a snapshot taken before this write, so an Undo landing
+    /// inside that span would be invisible to the merge and get overwritten —
+    /// the row would come back only to leave again, the same failure mode
+    /// staging already guards against on the other side of the toast.
+    func undoStagedCompletion(_ staged: StagedTodoCompletion) async {
         guard !staged.todos.isEmpty || !staged.completedItems.isEmpty || !staged.pendingMutations.isEmpty else {
             return
         }
-        cacheManager.updateOfflineState { state in
-            var nextState = state
-            for record in staged.todos {
-                nextState.todos.removeAll {
-                    $0.canonicalId == record.canonicalId && $0.instanceDateEpochMs == record.instanceDateEpochMs
+        await cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state in
+                var nextState = state
+                for record in staged.todos {
+                    nextState.todos.removeAll {
+                        $0.canonicalId == record.canonicalId && $0.instanceDateEpochMs == record.instanceDateEpochMs
+                    }
+                    nextState.todos.append(record)
                 }
-                nextState.todos.append(record)
+                let completedIdsToRemove = Set(staged.completedItems.map(\.id))
+                nextState.completedItems.removeAll { completedIdsToRemove.contains($0.id) }
+                let mutationIdsToRemove = Set(staged.pendingMutations.map(\.mutationId))
+                nextState.pendingMutations.removeAll { mutationIdsToRemove.contains($0.mutationId) }
+                return nextState
             }
-            let completedIdsToRemove = Set(staged.completedItems.map(\.id))
-            nextState.completedItems.removeAll { completedIdsToRemove.contains($0.id) }
-            let mutationIdsToRemove = Set(staged.pendingMutations.map(\.mutationId))
-            nextState.pendingMutations.removeAll { mutationIdsToRemove.contains($0.mutationId) }
-            return nextState
         }
     }
 
@@ -880,22 +889,25 @@ final class TodoRepository {
         return staged
     }
 
-    /// Floater sibling of `undoStagedCompletion(_:)`.
-    func undoStagedFloaterCompletion(_ staged: StagedFloaterCompletion) {
+    /// Floater sibling of `undoStagedCompletion(_:)` — including its
+    /// `withSyncLock`, for the same reason.
+    func undoStagedFloaterCompletion(_ staged: StagedFloaterCompletion) async {
         guard !staged.floaters.isEmpty || !staged.completedFloaters.isEmpty || !staged.pendingMutations.isEmpty else {
             return
         }
-        cacheManager.updateOfflineState { state in
-            var nextState = state
-            for record in staged.floaters {
-                nextState.floaters.removeAll { $0.canonicalId == record.canonicalId }
-                nextState.floaters.append(record)
+        await cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { state in
+                var nextState = state
+                for record in staged.floaters {
+                    nextState.floaters.removeAll { $0.canonicalId == record.canonicalId }
+                    nextState.floaters.append(record)
+                }
+                let completedIdsToRemove = Set(staged.completedFloaters.map(\.id))
+                nextState.completedFloaters.removeAll { completedIdsToRemove.contains($0.id) }
+                let mutationIdsToRemove = Set(staged.pendingMutations.map(\.mutationId))
+                nextState.pendingMutations.removeAll { mutationIdsToRemove.contains($0.mutationId) }
+                return nextState
             }
-            let completedIdsToRemove = Set(staged.completedFloaters.map(\.id))
-            nextState.completedFloaters.removeAll { completedIdsToRemove.contains($0.id) }
-            let mutationIdsToRemove = Set(staged.pendingMutations.map(\.mutationId))
-            nextState.pendingMutations.removeAll { mutationIdsToRemove.contains($0.mutationId) }
-            return nextState
         }
     }
 

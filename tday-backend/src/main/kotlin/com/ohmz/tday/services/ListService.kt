@@ -6,6 +6,7 @@ import arrow.core.right
 import arrow.core.raise.either
 import com.ohmz.tday.db.tables.CompletedTodos
 import com.ohmz.tday.db.enums.ListColor
+import com.ohmz.tday.db.enums.Priority
 import com.ohmz.tday.db.tables.ListShares
 import com.ohmz.tday.db.tables.Lists
 import com.ohmz.tday.db.tables.TodoInstances
@@ -30,8 +31,8 @@ interface ListService {
     suspend fun getAll(userId: String): Either<AppError, List<ListResponse>>
     suspend fun getById(userId: String, listId: String): Either<AppError, ListResponse>
     suspend fun getTodosForList(userId: String, listId: String): Either<AppError, List<ListTodoResponse>>
-    suspend fun create(userId: String, name: String, color: String?, iconKey: String?): Either<AppError, ListResponse>
-    suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?): Either<AppError, Unit>
+    suspend fun create(userId: String, name: String, color: String?, iconKey: String?, defaultPriority: String? = null): Either<AppError, ListResponse>
+    suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, defaultPriority: String? = null, defaultPriorityChanged: Boolean? = null): Either<AppError, Unit>
     suspend fun delete(userId: String, id: String): Either<AppError, Int>
     suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>> = either {
         ids.distinct().filter { it.isNotBlank() }.mapNotNull { id ->
@@ -144,7 +145,7 @@ class ListServiceImpl(
         return todos.right()
     }
 
-    override suspend fun create(userId: String, name: String, color: String?, iconKey: String?): Either<AppError, ListResponse> {
+    override suspend fun create(userId: String, name: String, color: String?, iconKey: String?, defaultPriority: String?): Either<AppError, ListResponse> {
         val id = CuidGenerator.newCuid()
         val now = LocalDateTime.now(ZoneOffset.UTC)
         newSuspendedTransaction(Dispatchers.IO) {
@@ -153,6 +154,7 @@ class ListServiceImpl(
                 it[Lists.name] = name
                 it[Lists.color] = color?.let { c -> ListColor.valueOf(c) }
                 it[Lists.iconKey] = iconKey
+                it[Lists.defaultPriority] = defaultPriority?.let { p -> Priority.valueOf(p) }
                 it[Lists.userID] = userId
                 it[Lists.createdAt] = now
                 it[Lists.updatedAt] = now
@@ -161,13 +163,13 @@ class ListServiceImpl(
         cache.invalidateListCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.ListChanged(id))
         return ListResponse(
-            id = id, name = name, color = color, iconKey = iconKey,
+            id = id, name = name, color = color, iconKey = iconKey, defaultPriority = defaultPriority,
             userID = userId, createdAt = now.toString(), updatedAt = now.toString(),
             myRole = ShareRole.OWNER.name,
         ).right()
     }
 
-    override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?): Either<AppError, Unit> {
+    override suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, defaultPriority: String?, defaultPriorityChanged: Boolean?): Either<AppError, Unit> {
         when (shareService.accessFor(userId, id, ListType.SCHEDULED)) {
             null -> return AppError.NotFound("list not found").left()
             ShareRole.OWNER -> Unit
@@ -178,6 +180,9 @@ class ListServiceImpl(
                 name?.let { n -> it[Lists.name] = n }
                 color?.let { c -> it[Lists.color] = ListColor.valueOf(c) }
                 iconKey?.let { k -> it[Lists.iconKey] = k }
+                if (defaultPriorityChanged == true) {
+                    it[Lists.defaultPriority] = defaultPriority?.let { p -> Priority.valueOf(p) }
+                }
                 it[Lists.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
@@ -273,6 +278,7 @@ class ListServiceImpl(
         name = this[Lists.name],
         color = this[Lists.color]?.name,
         iconKey = this[Lists.iconKey],
+        defaultPriority = this[Lists.defaultPriority]?.name,
         userID = this[Lists.userID],
         createdAt = this[Lists.createdAt].toString(),
         updatedAt = this[Lists.updatedAt].toString(),

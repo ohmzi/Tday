@@ -3,14 +3,12 @@ import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import ListDot from "@/components/ListDot";
 import { Check } from "lucide-react";
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
-import {
-  TASK_COMPLETION_CHECK_TO_STRIKE_MS,
-  TASK_COMPLETION_REMOVING_TRANSITION,
-  TASK_COMPLETION_STRIKE_TO_FADE_MS,
-  TASK_COMPLETION_TOTAL_MS,
-} from "@/lib/taskCompletionTiming";
+import { TASK_COMPLETION_REMOVING_TRANSITION } from "@/lib/taskCompletionTiming";
 import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
+import {
+  stageTaskUncompletion,
+  useTaskUncompletePhase,
+} from "@/lib/taskUncompleteStaging";
 import { useUnCompleteTodo } from "../query/uncomplete-completedTodo";
 
 export const CompletedTodoItemContainer = ({
@@ -21,38 +19,29 @@ export const CompletedTodoItemContainer = ({
   const { title, description, listID, listName, listColor } = completedTodoItem;
   const { mutateUnComplete } = useUnCompleteTodo();
 
-  // Un-completing is the check-off played backwards, and it is now played on the check-off's
-  // own beats rather than on a third of its own:
+  // Un-completing is the check-off played backwards, on the check-off's own beats:
   //   unchecked (empty circle) → unstruck (the rule lifts) → removing (ink out, box shut) → gone.
   // The constants are the task rows' — one task leaving one list is one motion, and which
   // direction it went is not a reason for it to take a different length of time.
-  const [phase, setPhase] = useState<
-    "unchecked" | "unstruck" | "removing" | null
-  >(null);
-  const timers = useRef<number[]>([]);
+  //
+  // The phase is read from `taskUncompleteStaging`, not held here, for the same reason the
+  // scheduled row reads its own phase from `taskCompletionStaging`: this row has no right to
+  // that window — the history screen's search filter narrows the list mid-restore, and the
+  // row's own timers would be cleared with it, dropping the commit along with the row. Keyed
+  // by task id, so a row that leaves and comes back (the search clears again) rejoins its own
+  // sequence.
+  const phase = useTaskUncompletePhase(completedTodoItem.id);
   const removing = phase === "removing";
   // Subscribed rather than read once: this decides what the row renders, so it has to follow a
   // preference that flips mid-session.
   const reduceMotion = usePrefersReducedMotion();
 
-  useEffect(() => {
-    return () => timers.current.forEach((id) => window.clearTimeout(id));
-  }, []);
-
   const handleUncomplete = () => {
     if (phase) return;
-    const removeAt = TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS;
-    setPhase("unchecked"); // 1. empty the circle + pop
-    timers.current.push(
-      window.setTimeout(() => setPhase("unstruck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS), // 2.
-      window.setTimeout(() => setPhase("removing"), removeAt), // 3. the ink leaves
-      // 4. gone. The last leg waits for the box to shut, and with reduce-motion on there is no
-      // box shutting — the cut the task rows make, argued in `taskCompletionTiming`.
-      window.setTimeout(
-        () => mutateUnComplete(completedTodoItem),
-        reduceMotion ? removeAt : TASK_COMPLETION_TOTAL_MS,
-      ),
-    );
+    // Empty circle + pop now; the strike lifting, the fade and the actual restore are scheduled
+    // by the staging module so none of them depend on this row still being on screen when they
+    // come due.
+    stageTaskUncompletion(completedTodoItem.id, () => mutateUnComplete(completedTodoItem));
   };
 
   const struck = phase === null || phase === "unchecked";

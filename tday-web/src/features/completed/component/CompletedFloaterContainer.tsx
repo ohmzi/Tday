@@ -9,15 +9,16 @@ import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
-import CompletedMark, {
-  CompletedBadgeMark,
-  CompletedWatermarkMark,
-} from "@/components/app/CompletedMark";
+import { FloaterCompletedMark } from "@/components/app/CompletedMark";
 import { Check, Search } from "lucide-react";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 import type { CompletedFloaterItemType } from "@/types";
 
-const floaterAccent = nativeScreenAccentColors.floater;
+// Same accent the Scheduled board's Completed screen uses, and the one the
+// dashboard's own Completed tile is drawn in for both boards — this screen
+// used to run a darker, floater-only green instead, the one visible mismatch
+// between the two boards' otherwise identical Completed screens.
+const completedAccent = nativeScreenAccentColors.completed;
 
 // The floater twin of CompletedTodoContainer.tsx — same shell (header, search,
 // date-grouped rows), reading the durable completed-floater history instead of
@@ -62,7 +63,7 @@ const CompletedFloaterContainer = ({
 
   return (
     <div className="mb-20">
-      <ScreenWatermark icon={CompletedWatermarkMark} color={floaterAccent} />
+      <ScreenWatermark icon={FloaterCompletedMark} color={completedAccent} />
 
       <MobileSearchHeader
         searchQuery={searchQuery}
@@ -72,14 +73,14 @@ const CompletedFloaterContainer = ({
         pageCollapse={{
           ...barSlots,
           title: completedDict("title"),
-          accentColor: floaterAccent,
+          accentColor: completedAccent,
         }}
       />
 
       <NativePageHeader
         title={completedDict("title")}
-        accentColor={floaterAccent}
-        icon={CompletedMark}
+        accentColor={completedAccent}
+        icon={FloaterCompletedMark}
         // The echo is the check alone — see `echoIcon`.
         echoIcon={Check}
         barSlots={barSlots}
@@ -90,9 +91,9 @@ const CompletedFloaterContainer = ({
 
       {!floaterLoading && !isSearching && completedFloaters.length === 0 && (
         <EmptyState
-          icon={CompletedBadgeMark}
+          icon={FloaterCompletedMark}
           iconClassName="h-8 w-8"
-          accentColor={floaterAccent}
+          accentColor={completedAccent}
           title={completedDict("floaterEmpty")}
           description={completedDict("floaterEmptyBody")}
         />
@@ -101,7 +102,7 @@ const CompletedFloaterContainer = ({
       {!floaterLoading && isSearching && filteredFloaters.length === 0 && (
         <EmptyState
           icon={Search}
-          accentColor={floaterAccent}
+          accentColor={completedAccent}
           title={appDict("noMatchingTasks")}
           description={appDict("searchEmptyBody")}
           action={

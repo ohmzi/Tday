@@ -2431,13 +2431,15 @@ private fun TodosRoute(
         onBulkSetPriority = viewModel::setPriorityForSelected,
         onBulkMoveToList = viewModel::moveSelectedToList,
         onOpenMorningSweep = onOpenMorningSweep,
-        onUpdateListSettings = { targetListId, name, color, iconKey, reusable ->
+        onUpdateListSettings = { targetListId, name, color, iconKey, reusable, defaultPriority ->
             viewModel.updateListSettings(
                 listId = targetListId,
                 name = name,
                 color = color,
                 iconKey = iconKey,
                 reusable = reusable,
+                defaultPriority = defaultPriority,
+                defaultPriorityChanged = true,
             )
         },
         onDeleteList = { targetListId ->

@@ -546,6 +546,7 @@ struct CalendarScreen: View {
                 titleText: L("Edit task"),
                 submitText: L("Save"),
                 initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
+                isEditingExistingTask: true,
                 onParseTaskTitleNlp: { title, dueRef in
                     await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
                 },

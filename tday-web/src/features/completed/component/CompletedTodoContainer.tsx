@@ -9,10 +9,7 @@ import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
 import EmptyState from "@/components/app/EmptyState";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
-import CompletedMark, {
-  CompletedBadgeMark,
-  CompletedWatermarkMark,
-} from "@/components/app/CompletedMark";
+import { ScheduledCompletedMark } from "@/components/app/CompletedMark";
 import { Check, Search } from "lucide-react";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
 
@@ -56,7 +53,7 @@ const CompletedTodoContainer = ({
           while the other two marks on it — and the whole of the Floater tab's —
           were the accent. */}
       <ScreenWatermark
-        icon={CompletedWatermarkMark}
+        icon={ScheduledCompletedMark}
         color={nativeScreenAccentColors.completed}
       />
 
@@ -77,7 +74,7 @@ const CompletedTodoContainer = ({
       <NativePageHeader
         title={completedDict("title")}
         accentColor={nativeScreenAccentColors.completed}
-        icon={CompletedMark}
+        icon={ScheduledCompletedMark}
         // The echo is the check alone — see `echoIcon`.
         echoIcon={Check}
         barSlots={barSlots}
@@ -89,7 +86,7 @@ const CompletedTodoContainer = ({
       {/* Empty state — nothing has been ticked off yet */}
       {!todoLoading && !isSearching && completedTodos.length === 0 && (
         <EmptyState
-          icon={CompletedBadgeMark}
+          icon={ScheduledCompletedMark}
           iconClassName="h-8 w-8"
           accentColor={nativeScreenAccentColors.completed}
           title={completedDict("empty")}

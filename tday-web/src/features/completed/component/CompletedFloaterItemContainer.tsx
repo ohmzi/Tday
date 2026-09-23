@@ -3,15 +3,13 @@ import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
 import { AlertTriangle, Check } from "lucide-react";
 import clsx from "clsx";
-import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  TASK_COMPLETION_CHECK_TO_STRIKE_MS,
-  TASK_COMPLETION_REMOVING_TRANSITION,
-  TASK_COMPLETION_STRIKE_TO_FADE_MS,
-  TASK_COMPLETION_TOTAL_MS,
-} from "@/lib/taskCompletionTiming";
+import { TASK_COMPLETION_REMOVING_TRANSITION } from "@/lib/taskCompletionTiming";
 import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
+import {
+  stageTaskUncompletion,
+  useTaskUncompletePhase,
+} from "@/lib/taskUncompleteStaging";
 import { useUnCompleteFloater } from "../query/uncomplete-completedFloater";
 
 // The floater twin of CompletedTodoItemContainer (see ItemContainer.tsx) —
@@ -28,28 +26,17 @@ export const CompletedFloaterItemContainer = ({
   const { t: completedDict } = useTranslation("completed");
   const { mutateUnComplete } = useUnCompleteFloater();
 
-  const [phase, setPhase] = useState<
-    "unchecked" | "unstruck" | "removing" | null
-  >(null);
-  const timers = useRef<number[]>([]);
+  // Read from `taskUncompleteStaging`, not held locally — see `ItemContainer.tsx` for why: the
+  // history screen's search filter can unmount this row mid-restore, and component-owned timers
+  // would drop the commit along with it.
+  const phase = useTaskUncompletePhase(completedFloaterItem.id);
   const removing = phase === "removing";
   const reduceMotion = usePrefersReducedMotion();
 
-  useEffect(() => {
-    return () => timers.current.forEach((id) => window.clearTimeout(id));
-  }, []);
-
   const handleUncomplete = () => {
     if (phase) return;
-    const removeAt = TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS;
-    setPhase("unchecked");
-    timers.current.push(
-      window.setTimeout(() => setPhase("unstruck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS),
-      window.setTimeout(() => setPhase("removing"), removeAt),
-      window.setTimeout(
-        () => mutateUnComplete(completedFloaterItem),
-        reduceMotion ? removeAt : TASK_COMPLETION_TOTAL_MS,
-      ),
+    stageTaskUncompletion(completedFloaterItem.id, () =>
+      mutateUnComplete(completedFloaterItem),
     );
   };
 

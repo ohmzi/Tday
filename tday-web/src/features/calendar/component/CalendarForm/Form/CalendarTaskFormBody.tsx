@@ -35,6 +35,8 @@ export type CalendarTaskFormBodyProps = {
   setDescription: Dispatch<SetStateAction<string>>;
   priority: Priority;
   setPriority: Dispatch<SetStateAction<Priority>>;
+  priorityTouchedByUser: boolean;
+  setPriorityTouchedByUser: Dispatch<SetStateAction<boolean>>;
   dateRange: DateRange;
   setDateRange: Dispatch<SetStateAction<DateRange>>;
   listID: string | null;
@@ -52,6 +54,9 @@ export default function CalendarTaskFormBody({
   setDescription,
   priority,
   setPriority,
+  // Only the setter is called here; the hook itself reads the flag to decide whether
+  // to keep re-deriving priority from the list's default.
+  setPriorityTouchedByUser,
   dateRange,
   setDateRange,
   listID,
@@ -63,6 +68,13 @@ export default function CalendarTaskFormBody({
   const { t: appDict } = useTranslation("app");
   const { listMetaData } = useListMetaData();
   const [active, setActive] = useState<TaskSelector>(null);
+
+  // Wraps the raw setter so the hook's touch-tracking sees a user's own pick without
+  // TodoFormSelectors needing to know anything about it — see TodoForm.tsx.
+  const handlePrioritySelect: Dispatch<SetStateAction<Priority>> = (value) => {
+    setPriority(value);
+    setPriorityTouchedByUser(true);
+  };
 
   const repeatValueLabel = derivedRepeatType
     ? appDict(repeatLabelKey[derivedRepeatType])
@@ -148,7 +160,7 @@ export default function CalendarTaskFormBody({
         dateRange={dateRange}
         setDateRange={setDateRange}
         priority={priority}
-        setPriority={setPriority}
+        setPriority={handlePrioritySelect}
         listID={listID}
         setListID={setListID}
         setRruleOptions={setRruleOptions}

@@ -21,6 +21,8 @@ vi.mock("@/providers/TodoFormProvider", () => ({
     title: "Ship web fix",
     setTitle: vi.fn(),
     priority: "Low",
+    setPriority: vi.fn(),
+    priorityTouchedByUser: false,
     desc: "",
     setDesc: vi.fn(),
     dateRange: {

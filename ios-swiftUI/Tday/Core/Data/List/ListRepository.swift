@@ -35,7 +35,7 @@ final class ListRepository {
         buildLists(from: cacheManager.loadOfflineState())
     }
 
-    func createList(name: String, color: String? = nil, iconKey: String? = nil) async throws {
+    func createList(name: String, color: String? = nil, iconKey: String? = nil, defaultPriority: String? = nil) async throws {
         let normalizedName = capitalizeFirstListLetter(name).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedName.isEmpty else {
             return
@@ -53,7 +53,8 @@ final class ListRepository {
                     iconKey: iconKey,
                     todoCount: 0,
                     updatedAtEpochMs: now,
-                    createdAtEpochMs: now
+                    createdAtEpochMs: now,
+                    defaultPriority: defaultPriority
                 )
             )
             nextState.pendingMutations.append(
@@ -73,7 +74,8 @@ final class ListRepository {
                     instanceDateEpochMs: nil,
                     name: normalizedName,
                     color: color,
-                    iconKey: iconKey
+                    iconKey: iconKey,
+                    defaultPriority: defaultPriority
                 )
             )
             return nextState
@@ -94,7 +96,7 @@ final class ListRepository {
         await cacheManager.withSyncLock {
             do {
                 let response = try await api.createList(
-                    payload: CreateListRequest(name: normalizedName, color: color, iconKey: iconKey)
+                    payload: CreateListRequest(name: normalizedName, color: color, iconKey: iconKey, defaultPriority: defaultPriority)
                 )
                 guard let createdList = response.list else {
                     return
@@ -115,7 +117,8 @@ final class ListRepository {
                             iconKey: createdList.iconKey ?? list.iconKey,
                             todoCount: todoCount,
                             updatedAtEpochMs: updatedAt,
-                            createdAtEpochMs: createdAt
+                            createdAtEpochMs: createdAt,
+                            defaultPriority: createdList.defaultPriority ?? defaultPriority
                         )
                     }
                     nextState.pendingMutations.removeAll { $0.mutationId == mutationID }
@@ -127,7 +130,14 @@ final class ListRepository {
         }
     }
 
-    func updateList(listId: String, name: String, color: String? = nil, iconKey: String? = nil) async throws {
+    func updateList(
+        listId: String,
+        name: String,
+        color: String? = nil,
+        iconKey: String? = nil,
+        defaultPriority: String? = nil,
+        defaultPriorityChanged: Bool = false
+    ) async throws {
         let normalizedName = capitalizeFirstListLetter(name).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !listId.isEmpty, !normalizedName.isEmpty else {
             return
@@ -147,7 +157,8 @@ final class ListRepository {
                         iconKey: iconKey ?? list.iconKey,
                         todoCount: list.todoCount,
                         updatedAtEpochMs: now,
-                        createdAtEpochMs: list.createdAtEpochMs
+                        createdAtEpochMs: list.createdAtEpochMs,
+                        defaultPriority: defaultPriorityChanged ? defaultPriority : list.defaultPriority
                     )
                 }
                 nextState.pendingMutations = state.pendingMutations.compactMap { mutation in
@@ -173,7 +184,8 @@ final class ListRepository {
                         instanceDateEpochMs: mutation.instanceDateEpochMs,
                         name: normalizedName,
                         color: color ?? mutation.color,
-                        iconKey: iconKey ?? mutation.iconKey
+                        iconKey: iconKey ?? mutation.iconKey,
+                        defaultPriority: defaultPriorityChanged ? defaultPriority : mutation.defaultPriority
                     )
                 }
                 return nextState
@@ -196,7 +208,8 @@ final class ListRepository {
                     iconKey: iconKey ?? list.iconKey,
                     todoCount: list.todoCount,
                     updatedAtEpochMs: now,
-                    createdAtEpochMs: list.createdAtEpochMs
+                    createdAtEpochMs: list.createdAtEpochMs,
+                    defaultPriority: defaultPriorityChanged ? defaultPriority : list.defaultPriority
                 )
             }
             nextState.pendingMutations.removeAll { $0.kind == .updateList && $0.targetId == listId }
@@ -217,7 +230,9 @@ final class ListRepository {
                     instanceDateEpochMs: nil,
                     name: normalizedName,
                     color: color,
-                    iconKey: iconKey
+                    iconKey: iconKey,
+                    defaultPriority: defaultPriority,
+                    defaultPriorityChanged: defaultPriorityChanged
                 )
             )
             return nextState
@@ -464,7 +479,8 @@ final class ListRepository {
                     iconKey: list.iconKey,
                     todoCount: list.todoCount,
                     updatedAtEpochMs: list.updatedAtEpochMs,
-                    createdAtEpochMs: list.createdAtEpochMs
+                    createdAtEpochMs: list.createdAtEpochMs,
+                    defaultPriority: list.defaultPriority
                 )
             }.dedupedByID(),
             floaterLists: state.floaterLists,
@@ -485,7 +501,9 @@ final class ListRepository {
                     instanceDateEpochMs: mutation.instanceDateEpochMs,
                     name: mutation.name,
                     color: mutation.color,
-                    iconKey: mutation.iconKey
+                    iconKey: mutation.iconKey,
+                    defaultPriority: mutation.defaultPriority,
+                    defaultPriorityChanged: mutation.defaultPriorityChanged
                 )
             },
             aiSummaryEnabled: state.aiSummaryEnabled

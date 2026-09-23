@@ -325,6 +325,8 @@
     "noRepeat": "Tiada ulangan",
     "color": "Warna",
     "icon": "Ikon",
+    "defaultPriority": "Keutamaan lalai",
+    "noDefaultPriority": "Tiada lalai",
     "listName": "Nama senarai",
     "newTask": "Tugas baharu",
     "editTask": "Edit tugas",

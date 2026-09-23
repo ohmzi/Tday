@@ -56,6 +56,7 @@ type SidebarListItem = {
   color?: ListColor;
   iconKey?: string | null;
   todoCount: number;
+  defaultPriority?: string | null;
 };
 
 export default function ListSidebarSection({
@@ -82,6 +83,7 @@ export default function ListSidebarSection({
         color: value.color,
         iconKey: value.iconKey,
         todoCount: value.todoCount ?? 0,
+        defaultPriority: value.defaultPriority,
       }));
   }, [listMetaData]);
 

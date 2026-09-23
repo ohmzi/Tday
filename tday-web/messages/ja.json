@@ -325,6 +325,8 @@
     "noRepeat": "繰り返しなし",
     "color": "色",
     "icon": "アイコン",
+    "defaultPriority": "デフォルトの優先度",
+    "noDefaultPriority": "デフォルトなし",
     "listName": "リスト名",
     "newTask": "新しいタスク",
     "editTask": "タスクを編集",

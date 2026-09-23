@@ -1011,17 +1011,36 @@ class TodoRepository @Inject constructor(
         syncManager.syncCachedData(force = true, replayPendingMutations = true)
     }
 
-    /** Undo step: reverses [stageTodoCompletions] exactly. Idempotent. */
+    /**
+     * Undo step: reverses [stageTodoCompletions] exactly. Idempotent.
+     *
+     * Runs inside [OfflineCacheManager.withSyncLock] for the same reason
+     * [stageTodoCompletions] and [commitStagedTodoCompletions] do: a sync's
+     * final save is built from the snapshot it loaded before its network
+     * phase, so an unlocked write landing inside that span is invisible to
+     * the merge and gets silently overwritten by the sync's own stale save —
+     * the same "comes back, then leaves again" failure mode, just reached
+     * from Undo instead of stage/commit.
+     */
     suspend fun undoStagedTodoCompletion(staged: StagedTodoCompletion) {
         if (staged.isEmpty) return
-        cacheManager.updateOfflineState { it.withTodoCompletionUndone(staged) }
+        cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { it.withTodoCompletionUndone(staged) }
+        }
         refreshWidgetsNow()
     }
 
-    /** Undo step: reverses [stageFloaterCompletions] exactly. Idempotent. */
+    /**
+     * Undo step: reverses [stageFloaterCompletions] exactly. Idempotent.
+     *
+     * Runs inside [OfflineCacheManager.withSyncLock] — see
+     * [undoStagedTodoCompletion] for why.
+     */
     suspend fun undoStagedFloaterCompletion(staged: StagedFloaterCompletion) {
         if (staged.isEmpty) return
-        cacheManager.updateOfflineState { it.withFloaterCompletionUndone(staged) }
+        cacheManager.withSyncLock {
+            cacheManager.updateOfflineState { it.withFloaterCompletionUndone(staged) }
+        }
         refreshWidgetsNow()
     }
 

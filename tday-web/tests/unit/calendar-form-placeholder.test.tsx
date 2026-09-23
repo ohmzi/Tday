@@ -69,6 +69,17 @@ vi.mock("@/features/calendar/query/update-calendar-todo", () => ({
   }),
 }));
 
+// useCalendarTaskFormState reads the selected list's default priority off this —
+// a real `useQuery` that throws without a QueryClientProvider this file never sets up.
+vi.mock("@/components/Sidebar/List/query/get-list-meta", () => ({
+  useListMetaData: () => ({
+    listMetaData: {},
+    listMetaLoading: false,
+    isFetching: false,
+    isPending: false,
+  }),
+}));
+
 vi.mock(
   "@/features/calendar/component/ConfirmationModals/ConfirmCancelEditDrawer",
   () => ({ default: () => null }),

@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
-import {
-  TASK_COMPLETION_CHECK_TO_STRIKE_MS,
-  TASK_COMPLETION_REMOVING_TRANSITION,
-  TASK_COMPLETION_STRIKE_TO_FADE_MS,
-  TASK_COMPLETION_TOTAL_MS,
-} from "@/lib/taskCompletionTiming";
+import { TASK_COMPLETION_REMOVING_TRANSITION } from "@/lib/taskCompletionTiming";
 import { usePrefersReducedMotion } from "@/lib/prefersReducedMotion";
+import {
+  stageTaskCompletion,
+  useTaskCompletionPhase,
+} from "@/lib/taskCompletionStaging";
 import { Check, Copy, Flag, SquarePen, Trash } from "lucide-react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { TaskActionButtons } from "@/components/ui/TaskActionButtons";
@@ -76,10 +75,12 @@ export default function FloaterItemContainer({
   const priorityFlag = getPriorityFlag(priority);
   const [displayForm, setDisplayForm] = useState(false);
   const [showHandle, setShowHandle] = useState(false);
-  const [completePhase, setCompletePhase] = useState<
-    "checked" | "struck" | "removing" | null
-  >(null);
-  const completeTimers = useRef<number[]>([]);
+  // Staged completion is read from `taskCompletionStaging`, not held in local state, for the
+  // same reason the scheduled row reads it that way: this row has no right to the window
+  // between the tap and the commit — an Anytime re-sort or a filter change unmounts it
+  // mid-sequence, and component-owned timers would drop the commit along with the row. Keyed
+  // by task id, so a row that leaves and comes back rejoins its own sequence.
+  const completePhase = useTaskCompletionPhase(floater.id);
   const completing = completePhase !== null;
   const removing = completePhase === "removing";
   // Subscribed rather than read once, for the same reason as the scheduled row: this decides
@@ -128,28 +129,10 @@ export default function FloaterItemContainer({
       return;
     }
     if (completing) return;
-    const removeAt = TASK_COMPLETION_CHECK_TO_STRIKE_MS + TASK_COMPLETION_STRIKE_TO_FADE_MS;
-    setCompletePhase("checked");
-    completeTimers.current.push(
-      window.setTimeout(() => setCompletePhase("struck"), TASK_COMPLETION_CHECK_TO_STRIKE_MS),
-      window.setTimeout(() => setCompletePhase("removing"), removeAt),
-      // The scheduled row's staging module makes the same cut and argues it there: the last leg
-      // waits for the collapse, so with reduce-motion on there is nothing left to wait for.
-      // `reduceMotion` is this render's value, which is the answer at the instant a tap arms these
-      // timers — the same question `prefersReducedMotion()` asks on the other row.
-      window.setTimeout(
-        () => completeMutateFn(floater),
-        reduceMotion ? removeAt : TASK_COMPLETION_TOTAL_MS,
-      ),
-    );
+    // Green tick + pop now; strike, fade and the actual completion are scheduled by the staging
+    // module so that none of them depend on this row still being on screen when they come due.
+    stageTaskCompletion(floater.id, () => completeMutateFn(floater));
   };
-
-  useEffect(() => {
-    const timers = completeTimers.current;
-    return () => {
-      timers.forEach((id) => window.clearTimeout(id));
-    };
-  }, []);
 
   // One row open at a time, claimed at the other row's axis lock. `dismissSwipe`
   // rather than `closeSwipe` because this close arrives from somewhere else and

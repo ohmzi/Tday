@@ -325,6 +325,8 @@
     "noRepeat": "不重复",
     "color": "颜色",
     "icon": "图标",
+    "defaultPriority": "默认优先级",
+    "noDefaultPriority": "无默认",
     "listName": "列表名称",
     "newTask": "新建任务",
     "editTask": "编辑任务",

@@ -61,6 +61,7 @@ data class CachedListRecord(
     val isShared: Boolean = false,
     val memberCount: Int = 0,
     val ownerUsername: String? = null,
+    val defaultPriority: String? = null,
 )
 
 @Serializable
@@ -81,6 +82,7 @@ data class CachedFloaterListRecord(
     // `floaterList-utils.ts` normalization. Defaulted so state persisted before
     // the flag existed still decodes as "not reusable".
     val reusable: Boolean = false,
+    val defaultPriority: String? = null,
 )
 
 @Serializable
@@ -141,6 +143,11 @@ data class PendingMutationRecord(
     // CREATE_FLOATER_LIST). Null means "not part of this mutation", the same
     // convention the shared UpdateFloaterListRequest uses for `reusable`.
     val reusable: Boolean? = null,
+    // Default priority for the list create/update mutations (CREATE_LIST, UPDATE_LIST,
+    // CREATE_FLOATER_LIST, UPDATE_FLOATER_LIST). `defaultPriorityChanged` disambiguates
+    // "leave unchanged" from "clear the default", the same tri-state UpdateListRequest uses.
+    val defaultPriority: String? = null,
+    val defaultPriorityChanged: Boolean? = null,
     // Task-step ordering (REORDER_STEPS): the full ordered list of step ids.
     val orderedIds: List<String>? = null,
     // True only for the marker a delayed-commit list/floater-list delete writes while

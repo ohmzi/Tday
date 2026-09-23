@@ -443,6 +443,7 @@
     <string name="create_task_priority_normal">Normal</string>
     <string name="create_task_priority_important">Important</string>
     <string name="create_task_priority_urgent">Urgent</string>
+    <string name="list_settings_default_priority_none">No default</string>
     <string name="create_task_repeat">Repeat</string>
     <string name="create_task_repeat_none">No repeat</string>
     <string name="create_task_repeat_daily">Daily</string>

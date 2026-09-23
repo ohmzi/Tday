@@ -325,6 +325,8 @@
     "noRepeat": "Nessuna ripetizione",
     "color": "Colore",
     "icon": "Icona",
+    "defaultPriority": "Priorità predefinita",
+    "noDefaultPriority": "Nessuna predefinita",
     "listName": "Nome dell'elenco",
     "newTask": "Nuova attività",
     "editTask": "Modifica attività",
