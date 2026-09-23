@@ -2497,6 +2497,7 @@ struct TodoListScreen: View {
             titleText: L("Edit task"),
             submitText: L("Save"),
             initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
+            isEditingExistingTask: true,
             defaultScheduled: viewModel.mode != .floater,
             showScheduleControls: viewModel.mode != .floater,
             onParseTaskTitleNlp: viewModel.mode == .floater ? nil : { title, dueRef in
@@ -5461,7 +5462,7 @@ private struct ListSettingsSheet: View {
                                 ) {
                                     defaultPriority = nil
                                 }
-                                ForEach(TaskPriorityDisplay.options, id: \.value) { option in
+                                ForEach(Array(TaskPriorityDisplay.options.enumerated()), id: \.element.value) { _, option in
                                     ListSettingsPriorityChip(
                                         label: option.label,
                                         swatchColor: priorityColor(option.value),

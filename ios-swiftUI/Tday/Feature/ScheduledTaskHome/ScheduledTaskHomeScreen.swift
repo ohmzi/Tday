@@ -562,6 +562,7 @@ struct ScheduledTaskHomeScreen: View {
                 titleText: L("Edit task"),
                 submitText: L("Save"),
                 initialPayload: CreateTaskPayload(title: todo.title, description: todo.description, priority: todo.priority, due: todo.due, rrule: todo.rrule, listId: todo.listId),
+                isEditingExistingTask: true,
                 onParseTaskTitleNlp: { title, dueRef in
                     await viewModel.parseTaskTitleNlp(text: title, referenceDueEpochMs: dueRef)
                 },
@@ -1747,7 +1748,7 @@ struct CreateListSheet: View {
                                 ) {
                                     defaultPriority = nil
                                 }
-                                ForEach(TaskPriorityDisplay.options, id: \.value) { option in
+                                ForEach(Array(TaskPriorityDisplay.options.enumerated()), id: \.element.value) { _, option in
                                     CreateListSheetPriorityChip(
                                         label: option.label,
                                         swatchColor: priorityColor(option.value),
