@@ -123,6 +123,7 @@ const ListContainer = ({ id }: { id: string }) => {
             name: listMetaData[id].name,
             color: listMetaData[id].color,
             iconKey: listMetaData[id].iconKey,
+            defaultPriority: listMetaData[id].defaultPriority,
         }
         : null;
     const myRole = listMetaData[id]?.myRole ?? "OWNER";
