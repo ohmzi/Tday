@@ -1924,6 +1924,55 @@ animates.
       Why:    `:app:compileDebugKotlin` and `:app:testDebugUnitTest` are green and the guardrails pin
               the key table and the origin gate, but nothing on this machine can render a frame. The
               animation's quality — and the close in particular — is only visible on a device.
+      Superseded: by **PR 32f · android** directly below. Run on an emulator before that unit, (a)
+              and (d) failed as written: the tile-coloured surface grew over a screen already
+              fading in at full size, and the close washed the whole screen in the tile's colour
+              and slid it sideways — (d)'s own failure, observed. The surface is gone, so (a) no
+              longer describes anything, and (b)'s "nothing scales" is reversed on purpose: the
+              screen is now drawn as a scaled picture of its finished layout, the way iOS's zoom
+              draws it, so a toolbar small inside the tile and growing with it is the intended
+              read. What (b) protected — nothing LAID OUT at full size inside a small window —
+              still holds by construction. (c), (e) and (f) carry into PR 32f's row. Run that row
+              instead; this one is kept as the record of what was asked at the time.
+
+- [ ] **PR 32f · android · The screen grows out of the tile, the way iOS's zoom does** — a device
+      with animations on, then again with the in-app **Reduce motion** switch on; one custom list
+      on each feed, so a scheduled list row and a floater list row both exist.
+      Do:     tap a category tile, the **Today** card, a scheduled list row, the Anytime feed's
+              **Completed** entry and a floater list row, closing each with the back button; then
+              open one again and close it with a slow back swipe from the screen's edge.
+      Watch:  the SCREEN comes out of the pressed tile — a small picture of it, top edge first,
+              inside the tile's rounded rectangle, springing open to full screen in about 300 ms
+              while the tile's icon and label dissolve into the screen's toolbar and title. Home
+              does not move or fade underneath. On back the screen shrinks into the same tile in
+              about 320 ms with home already fully drawn around it, and dissolves into the tile as
+              it lands.
+      Fails:  a tile-coloured box growing over the screen, or the screen visible at full size
+              before the rectangle reaches it — PR 32e's surface, back. Home fading while the
+              rectangle grows, or a strip of home fading along the top or bottom edge just before
+              the rectangle reaches it (the hold ending early). On back: the screen sliding
+              sideways, a flash of colour across the whole screen, or home fading in after the
+              rectangle has already shrunk.
+      Also:   the swipe, held partway: the screen sits part of the way back toward the tile in
+              proportion to the thumb — not already inside the tile a third of the way into the
+              swipe, which is what this unit's own first build did. Released, it finishes into the
+              tile the way the button does; dragged back to the edge instead, it grows back to full
+              screen and stays there.
+      Also:   (c) from PR 32e — the corners travel: the tile's radius at the tile and square at the
+              screen, both ways. A rounded screen that snaps square at the end is a failure.
+      Also:   **Reduce motion ON**: no rectangle and no zoom at all — the short fade in place both
+              ways, home not held under the new screen, and no stray background behind it.
+      Also:   arrive at a tile route WITHOUT pressing a tile — a deep link, a notification, a widget
+              row, the launcher shortcut, or the create flow's push onto Today: nothing grows and
+              home is not held. And a list row far enough down its feed that it scrolls away while
+              its screen is open (a sync adding lists above it will do it): the close may fall back
+              to the ordinary hand-over, the limit PR 32d named, but must never shrink into the
+              wrong rectangle.
+      Why:    recorded frame by frame at 10x on a swiftshader emulator — all five kinds of tile,
+              both directions, a held and a cancelled swipe, and Reduce motion on — which settles
+              the shape and not the feel: frame pacing on real hardware, and whether the close's
+              tween and the open's spring read as one motion at full speed, are only visible on a
+              device.
 
 - [ ] **PR 195 · ios · The calendar's docked title** — a phone, Calendar, scrolled until the bar has
       collapsed. Run it at the default text size and again at a large Dynamic Type size.

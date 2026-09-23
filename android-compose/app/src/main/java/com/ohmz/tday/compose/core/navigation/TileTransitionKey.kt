@@ -1,100 +1,71 @@
 package com.ohmz.tday.compose.core.navigation
 
+import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavOptionsBuilder
 
 /**
- * The saved-state flag that says the push now in flight is a home tile press.
+ * The saved-state flag that marks a back-stack entry as pushed by a home tile press.
  *
  * The key table below answers "which rectangle does this route's tile publish", and both
  * ends read it, so the two halves of a zoom cannot disagree about the key. They can still
- * both be wrong in the same way, and they were. A tile route is reachable without a press —
- * a launcher shortcut, a notification, a widget row — and on a warm app every one of those
- * is an in-place push on the running activity, so the home screen is still the entry
- * underneath, its tiles are still composed, and the route's key matches a rectangle the
- * user never touched. The screen then grows out of a tile nobody pressed, which is the
- * animation claiming a press that did not happen.
+ * both be wrong in the same way. A tile route is reachable without a press — a launcher
+ * shortcut, a notification, a widget row — and on a warm app every one of those is an
+ * in-place push on the running activity, so the home screen is still the entry underneath,
+ * its tiles are still composed, and the route's key matches a rectangle the user never
+ * touched. The screen would then grow out of a tile nobody pressed.
  *
- * What is missing at the destination is not the key, it is the ORIGIN. Home is the entry
- * below a tile press and the entry below a warm deep link alike, so the back stack cannot
- * tell them apart; only the push site knows, and [navigateFromHomeTile] is the push site
- * saying so. It writes this flag on the entry it is leaving — the same `savedStateHandle`
- * hand-off the All screen's search highlight already uses — and
- * `rememberHomeTileOrigin` reads it back at the destination and takes it away again, so
- * one flag can describe one push and never a later one.
+ * What is missing at the destination is not the key, it is the ORIGIN, and only the push site
+ * knows it. [navigateFromHomeTile] writes this flag on the entry it PUSHES — the arrival's own
+ * `savedStateHandle` — so it describes that one arrival for as long as the entry lives, and
+ * nothing it pushes later. Two readers need it: the destination, through
+ * `rememberHomeTileOrigin`, to decide whether to grow out of a tile at all; and the NavHost,
+ * through [isHomeTileArrival], to hold the screen underneath still while the tile's screen
+ * grows over it and to show it again at once while that screen shrinks back into it. Keeping
+ * the flag on the arrival (rather than consuming it from the screen being left) is what lets
+ * the pop read the same answer the push did.
  *
  * The polarity is the safe one. A tile press SETS the flag and every other push leaves it
- * unset, so a push site nobody wired, or a route wired later by somebody who did not know
- * this contract existed, falls back to the ordinary route hand-over rather than to a zoom
- * out of the wrong rectangle. A flag meaning "this was not a tile" would fail open instead,
- * and every push site that forgot it would zoom.
+ * unset, so a push site nobody wired falls back to the ordinary route hand-over rather than to
+ * a zoom out of the wrong rectangle.
  */
 const val TILE_TRANSITION_ORIGIN: String = "tday.tileTransitionOrigin"
 
 /**
- * The saved-state value that carries the pressed tile's OWN COLOUR to the screen it opens.
+ * Pushes [route] as a home tile press, so the destination may grow out of the rectangle that
+ * route's tile publishes.
  *
- * The origin flag above says a tile was pressed. It cannot say WHICH, and
- * `AppRoute.tileTransitionKey` says which rectangle — but neither can say what colour that
- * rectangle is, because the colour is not on the route and not derivable from it. That is
- * the whole reason this second value exists: what grows out of a tile is a surface, and a
- * surface that is not the tile's colour is a sheet of something else (the app background,
- * which is near-white in light mode) sitting where the tile used to be. The device row has
- * always asked for the tile's colour in the first frames; see
- * `docs/verification/phase-9-device-pass.md`'s PR 32e entry, item (a).
+ * This is the only thing that sets [TILE_TRANSITION_ORIGIN], and it is called from the ten
+ * tile click handlers — the six grid tiles, the Today card, the scheduled board's list rows,
+ * the Anytime feed's Completed entry and its list rows — and from nowhere else. Every other
+ * way into these routes calls `navigate` directly and therefore arrives with no origin.
  *
- * The colour cannot be a lookup at the destination, and the custom-list rows are why. Six
- * grid tiles, the Today card and the Completed entry are constants — but a list row's
- * container is `lerp(surfaceVariant, tdayListAccentColor(list.color), weight)`, a value
- * derived from server-side per-list data the DESTINATION does not have until it has fetched
- * the list, long after the surface's first frames. It cannot be a route argument either:
- * `AppRoute` is a plain object list with no place for one, and adding a colour to two route
- * patterns would put a presentation value in the navigation graph and change every deep
- * link string. So it travels the way the origin does — a `savedStateHandle` value written
- * by the push site, which is the only place that knows it, and read-and-removed by the
- * destination, which is the only place that needs it.
- *
- * Packed ARGB, not a `Color`: this is a `Bundle` value, and `savedStateHandle` is a
- * `Bundle`. `Color.toArgb()` at the push site and `Color(argb)` at the destination is the
- * whole of the conversion.
- */
-const val TILE_TRANSITION_COLOR: String = "tday.tileTransitionColor"
-
-/**
- * Pushes [route] as a home tile press, so the destination may claim the rectangle that
- * route's tile publishes — and carries [tileColorArgb], the pressed tile's own colour, so
- * the surface that grows out of that rectangle is the tile and not a sheet of the app
- * background.
- *
- * This is the only thing that sets [TILE_TRANSITION_ORIGIN] or [TILE_TRANSITION_COLOR], and
- * it is called from the ten tile click handlers — the six grid tiles, the Today card, the
- * scheduled board's list rows, the Anytime feed's Completed entry and its list rows — and
- * from nowhere else. Every other way into these routes (a shortcut, a notification, a widget
- * row, the create flow's own push onto today) calls `navigate` directly and therefore
- * arrives with no origin and no colour.
- *
- * The colour is a parameter with no default, for the reason `fromHomeTile` has none at the
- * other end: a push site that has not said what colour its tile is has not answered the
- * question this hand-off exists to carry, and a default would let it answer wrongly (with
- * the background) instead of failing to compile. The ten call sites are the ten tiles, and a
- * tile always knows what colour it is — for the list rows it is a value they have already
- * computed to paint their own `Card`.
+ * The flag is written after [navigate] returns, onto what is then the current entry: the
+ * back stack is updated synchronously, and the NavHost does not compose the new entry — or
+ * ask for its transitions — until the next frame.
  *
  * [builder] is [NavController.navigate]'s own options, so a tile that grows a
- * `launchSingleTop` or a `popUpTo` later does not have to choose between that and its
- * origin.
+ * `launchSingleTop` or a `popUpTo` later does not have to choose between that and its origin.
  */
 fun NavController.navigateFromHomeTile(
     route: String,
-    tileColorArgb: Int,
     builder: NavOptionsBuilder.() -> Unit = {},
 ) {
-    currentBackStackEntry?.savedStateHandle?.apply {
-        set(TILE_TRANSITION_ORIGIN, true)
-        set(TILE_TRANSITION_COLOR, tileColorArgb)
-    }
     navigate(route, builder)
+    currentBackStackEntry?.savedStateHandle?.set(TILE_TRANSITION_ORIGIN, true)
 }
+
+/**
+ * Whether this entry was pushed by a home tile press — see [TILE_TRANSITION_ORIGIN].
+ *
+ * Guarded on the lifecycle because the NavHost asks this of entries that are mid-transition,
+ * and `savedStateHandle` throws on an entry that has not reached `CREATED` or has already been
+ * destroyed; either is an entry with no zoom to play.
+ */
+fun NavBackStackEntry.isHomeTileArrival(): Boolean =
+    lifecycle.currentState.isAtLeast(Lifecycle.State.CREATED) &&
+        savedStateHandle.get<Boolean>(TILE_TRANSITION_ORIGIN) == true
 
 /**
  * The shared-element key a home tile publishes, and the screen it opens answers with.

@@ -206,16 +206,6 @@ class TileTransitionKeyTest {
     }
 
     @Test
-    fun `the colour hand-off the push site and the destination agree on is pinned`() {
-        // The second value on the same hand-off, pinned for the same reason and with one
-        // more of its own: its absence is not an error at either end. A push site that
-        // wrote it under a different name and a destination that read a different one would
-        // both compile, and the only symptom would be a surface painted in the app's
-        // background again — the "white box" the device row asks about.
-        assertEquals("tday.tileTransitionColor", TILE_TRANSITION_COLOR)
-    }
-
-    @Test
     fun `a route with nothing on screen to grow out of names no key`() {
         tilelessRoutes.forEach { route ->
             assertNull(

@@ -282,6 +282,14 @@ describe("the Android half of the same hand-over", () => {
     throw new Error("TdayApp.kt: an arm is never closed");
   }
 
+  /** One of the NavHost's four transition lambdas, by balancing its braces. */
+  function slot(name: string): string {
+    const args = callArguments("NavHost");
+    const at = args.search(new RegExp(`\\b${name}\\s*=\\s*\\{`));
+    expect(at, `NavHost does not wire ${name} at all`).toBeGreaterThan(-1);
+    return balancedBraces(args, args.indexOf("{", at));
+  }
+
   it("has no constant left holding a route fade's own length", () => {
     // Searched in the RAW text on purpose. These two are the numbers the unit retired, and a
     // comment that still names one of them as something the app does would be a doc rotting
@@ -314,16 +322,27 @@ describe("the Android half of the same hand-over", () => {
     // lose the gate is to keep all four wirings and hand one of them a literal `true`. That
     // reads as deliberate in a diff and animates for everybody, including the users who
     // turned the switch on.
-    const args = callArguments("NavHost");
-    for (const [slot, transition] of [
+    //
+    // Read per lambda rather than as one exact line, because two of the four now carry the
+    // tile zoom's exception (pinned further down). The rule is unchanged inside each: the
+    // ordinary arm still hands the gate on, and an arm that departs from it asks the same
+    // gate first — an exception that does not is a zoom hold played at the users who asked
+    // for no motion, under a screen that no longer zooms for them.
+    for (const [name, transition] of [
       ["enterTransition", "navigationEnterTransition"],
       ["exitTransition", "navigationExitTransition"],
       ["popEnterTransition", "navigationEnterTransition"],
       ["popExitTransition", "navigationPopExitTransition"],
     ]) {
-      expect(args, `NavHost does not wire ${slot} through the preference`).toContain(
-        `${slot} = { ${transition}(motionEnabled) }`,
+      const lambda = slot(name);
+      expect(lambda, `NavHost does not wire ${name} through the preference`).toContain(
+        `${transition}(motionEnabled)`,
       );
+      for (const condition of lambda.split(/\bif\s*\(/).slice(1)) {
+        expect(condition, `${name} departs from the hand-over without asking the gate`).toMatch(
+          /^motionEnabled &&/,
+        );
+      }
     }
   });
 
@@ -435,9 +454,24 @@ describe("the Android half of the same hand-over", () => {
     // would be a one-line diff away from looking symmetric.
     const exit = declaration("private fun navigationExitTransition(");
     expect(exit).not.toMatch(/slideOut|scaleOut/);
-    expect(callArguments("NavHost")).toContain(
-      "popEnterTransition = { navigationEnterTransition(motionEnabled) }",
-    );
+    const popEnter = slot("popEnterTransition");
+    expect(popEnter).toContain("navigationEnterTransition(motionEnabled)");
+    expect(popEnter, "the screen a pop lands on travels").not.toMatch(/slideIn|scaleIn/);
+  });
+
+  it("holds the screen under a tile zoom still, reading the flag off the screen that zoomed", () => {
+    // A tile's screen grows out of its tile over home and shrinks back into it, the way iOS's
+    // zoom does. Home is what the zoom grows out of and lands on, so it is the one screen that
+    // must not crossfade: held while the zoom covers it, and already there when the zoom
+    // shrinks off it. The flag lives on the PUSHED entry — `targetState` on the way in,
+    // `initialState` on the way back — and a check read off the other side is never true, so
+    // home would quietly go back to crossfading under every zoom with nothing else failing.
+    const exit = slot("exitTransition");
+    expect(exit).toContain("if (motionEnabled && targetState.isHomeTileArrival())");
+    expect(exit).toContain("TdayTileZoomHold");
+    const popEnter = slot("popEnterTransition");
+    expect(popEnter).toContain("if (motionEnabled && initialState.isHomeTileArrival())");
+    expect(popEnter).toContain("EnterTransition.None");
   });
 
   it("takes the dragged screen away rather than parking it mid-recede when motion is refused", () => {
