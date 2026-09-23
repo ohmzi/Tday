@@ -332,27 +332,20 @@ fun CreateTaskBottomSheet(
                 ?: defaultListId?.takeIf { id -> lists.any { it.id == id } },
         )
     }
-    var selectedPriority by rememberSaveable(editingTask?.id, defaultPriority) {
-        mutableStateOf(
-            canonicalPriorityValue(
-                editingTask?.priority
-                    ?: defaultPriority
-                    ?: lists.firstOrNull { it.id == selectedListId }?.defaultPriority,
-            ),
-        )
+    // Priority is derived, not stored: recomputed from the live list default on every
+    // recomposition unless the user has picked one explicitly in THIS sheet. A stored
+    // "touched" flag plus a LaunchedEffect(selectedListId) used to do this reactively,
+    // but rememberSaveable's slot for a brand-new task is keyed on (editingTask?.id,
+    // ...) = (null, ...) for every new-task sheet, so Compose restored the PRIOR
+    // sheet's remembered value/flag across dismiss-and-reopen instead of recomputing —
+    // a task created minutes after a list's default priority changed still got the
+    // stale value. Deriving it fresh every recomposition can't go stale like that.
+    var priorityOverride by rememberSaveable(editingTask?.id) {
+        mutableStateOf(editingTask?.priority?.let(::canonicalPriorityValue))
     }
-    // Only a NEW task's priority tracks its list's default; an edit always starts
-    // "touched" so opening the sheet on an existing task never rewrites its priority.
-    var priorityTouchedByUser by rememberSaveable(editingTask?.id) {
-        mutableStateOf(editingTask != null)
-    }
-    LaunchedEffect(selectedListId) {
-        if (editingTask == null && !priorityTouchedByUser) {
-            selectedPriority = canonicalPriorityValue(
-                defaultPriority ?: lists.firstOrNull { it.id == selectedListId }?.defaultPriority,
-            )
-        }
-    }
+    val selectedPriority = priorityOverride ?: canonicalPriorityValue(
+        defaultPriority ?: lists.firstOrNull { it.id == selectedListId }?.defaultPriority,
+    )
     val nowEpochMs = remember { val ms = System.currentTimeMillis(); ms - (ms % 60_000L) }
     val resolvedDueEpochMs = editingTask?.due?.toEpochMilli()
         ?: (initialDueEpochMs ?: (nowEpochMs + DEFAULT_TASK_DURATION_MS))
@@ -411,7 +404,7 @@ fun CreateTaskBottomSheet(
                 selectedRepeat = repeatPresetFromRrule(rrule).name
             }
         }
-        parseResult.priority?.let { selectedPriority = canonicalPriorityValue(it) }
+        parseResult.priority?.let { priorityOverride = canonicalPriorityValue(it) }
     }
 
     // "Make this repeat?" suggestion from the completed-history cadence.
@@ -917,10 +910,7 @@ fun CreateTaskBottomSheet(
                                         optionLabel = { option -> priorityLabels.getValue(option) },
                                         optionSwatchColor = { option -> tdayPriorityColor(option) },
                                         isSelected = { option -> selectedPriority == option },
-                                        onOptionSelected = { option ->
-                                            selectedPriority = option
-                                            priorityTouchedByUser = true
-                                        },
+                                        onOptionSelected = { option -> priorityOverride = option },
                                         valueLeading = {
                                             Icon(
                                                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_flag_filled),
