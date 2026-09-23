@@ -5488,7 +5488,6 @@ private fun ListSettingsActionTile(
  * on all three clients: a reusable list can be Reset to run the checklist again.
  */
 @Composable
-@Composable
 private fun ListSettingsPriorityChip(
     label: String,
     color: Color,
