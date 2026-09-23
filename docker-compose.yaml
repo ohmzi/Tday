@@ -56,7 +56,7 @@ services:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:0.8b}
     # Pull the configured model, then drop the previous default — but never delete
     # the model we just pulled (guard against OLLAMA_MODEL == the old default).
     command: >
@@ -89,7 +89,7 @@ services:
       TZ: ${TZ:-UTC}
       APPLE_TEAM_ID: ${APPLE_TEAM_ID:-JUFACN2FS3}
       IOS_BUNDLE_ID: ${IOS_BUNDLE_ID:-com.ohmz.tday.ios}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:0.5b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:0.8b}
     # Report real readiness so restart:always and any orchestration can tell a
     # booted-but-broken backend (DB down, migration failed) from a healthy one.
     healthcheck:

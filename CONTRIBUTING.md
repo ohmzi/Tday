@@ -86,7 +86,7 @@ replaces a deployment with a working-tree build. For development you want the lo
 
 ```bash
 docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build
-docker exec -it tday_ollama ollama pull qwen2.5:0.5b
+docker exec -it tday_ollama ollama pull qwen3.5:0.8b
 ```
 
 Set `COMPOSE_FILE=docker-compose.yaml:docker-compose.build.yaml` in your shell if you'd rather type
