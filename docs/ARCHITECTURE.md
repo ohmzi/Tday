@@ -69,6 +69,53 @@ The `shared/` module is a Kotlin Multiplatform (KMP) library targeting JVM, Andr
 | Android (`android-compose`) | Android | Gradle `project(":shared")` |
 | iOS (`ios-swiftUI`) | Swift models | Mirrored manually in `Core/Model/ApiModels.swift` and checked with contract tests |
 
+## Repository Layout
+
+```
+Tday/
+├── tday-web/                  # Vite SPA (React + TypeScript + Tailwind)
+│   ├── src/
+│   │   ├── components/        # Shared React components
+│   │   ├── features/          # Feature modules (calendar, completed, list, release, today)
+│   │   ├── hooks/             # Shared React hooks
+│   │   ├── lib/               # Client utilities (security, dates, API, todo helpers)
+│   │   ├── pages/             # Route pages
+│   │   ├── providers/         # React context providers
+│   │   └── types/             # Web-only TypeScript domain/UI types
+│   ├── messages/              # Locale files, bundled into the build
+│   ├── public/                # Static assets, PWA manifest, and release metadata
+│   └── tests/                 # Vitest guardrail and unit suites
+├── tday-backend/              # Ktor backend (Kotlin)
+│   └── src/main/kotlin/
+│       └── com/ohmz/tday/
+│           ├── config/        # App configuration
+│           ├── db/            # Exposed tables and migrations
+│           ├── di/            # Koin dependency injection
+│           ├── domain/        # Domain types and validation
+│           ├── models/        # Request/response DTOs
+│           ├── plugins/       # Ktor plugins (routing, auth, headers)
+│           ├── routes/        # API route handlers
+│           ├── security/      # Auth, encryption, throttling
+│           └── services/      # Business logic
+├── shared/                    # KMP DTOs, enums, validators, route constants, guide and motion tokens
+├── android-compose/           # Native Android client (Compose, Room, Hilt, Glance widgets)
+├── ios-swiftUI/               # Native iOS client (SwiftUI, SwiftData, Observation)
+│   ├── Tday/                  # Main iOS app
+│   ├── TdayWidget/            # WidgetKit extension and snapshots
+│   ├── TdayShareExtension/    # Share sheet extension
+│   ├── TdayWatch/             # Apple Watch app
+│   ├── TdayWatchWidget/       # Watch complication
+│   └── Tests/                 # iOS test target
+├── scripts/                   # Git hooks, version sync, deploy, backup/restore helpers
+├── version.json               # Global app/server version and compatibility manifest
+├── docker/                    # Container runtime helper config
+├── docs/                      # Product, architecture, data, coding, testing, deployment
+├── Dockerfile.backend         # Multi-stage Docker build (Vite + Ktor)
+├── docker-compose.yaml        # Full stack orchestration (pulls the released backend image)
+├── docker-compose.build.yaml  # Opt-in override: build the backend image from this checkout
+└── docker-compose.gpu.yaml    # Opt-in override: NVIDIA-accelerated Ollama
+```
+
 ## Domain Model
 
 The application is organized around these core domains:
