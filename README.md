@@ -132,9 +132,8 @@ team projects or Kanban boards, T'Day isn't built for that.
 - **Daily summaries**, optionally written by a local [Ollama](https://ollama.com) model. Nothing is
   sent to a cloud AI.
 
-> [!TIP]
-> The full feature tour, with which platform supports what, is in
-> **[docs/FEATURES.md](docs/FEATURES.md)**.
+The full feature tour, with which platform supports what, is in
+**[docs/FEATURES.md](docs/FEATURES.md)**.
 
 ---
 
@@ -198,9 +197,8 @@ signs up after that waits for your approval.
 - **AI summaries are optional.** Set `OLLAMA_URL=http://ollama:11434` in `.env.docker` and start
   with `docker compose --profile ai up -d`.
 
-> [!IMPORTANT]
-> **[docs/SETUP.md](docs/SETUP.md)** is the full guide: configuration, remote access, AI, web push,
-> updating, backups, and troubleshooting.
+**[docs/SETUP.md](docs/SETUP.md)** is the full guide: configuration, remote access, AI, web push,
+updating, backups, and troubleshooting.
 
 ---
 
@@ -278,11 +276,10 @@ listed in [SECURITY_POSTURE.md](docs/security/SECURITY_POSTURE.md).
   These requests carry no account or task data, but GitHub sees your IP address. They also run in
   Local Mode.
 
-> [!CAUTION]
-> Found a vulnerability? Report it privately as described in **[SECURITY.md](SECURITY.md)**, not in
-> a public issue. The threat model and known gaps are in
-> [SECURITY_POSTURE.md](docs/security/SECURITY_POSTURE.md), and every control, with where it's
-> enforced, is in [SECURITY_CONTROLS.md](docs/security/SECURITY_CONTROLS.md).
+**Found a vulnerability?** Report it privately as described in **[SECURITY.md](SECURITY.md)**, not in
+a public issue. The threat model and known gaps are in
+[SECURITY_POSTURE.md](docs/security/SECURITY_POSTURE.md), and every control, with where it's
+enforced, is in [SECURITY_CONTROLS.md](docs/security/SECURITY_CONTROLS.md).
 
 ---
 
@@ -413,6 +410,6 @@ The T'Day name and logo aren't covered by the license, so a fork should use its 
 
 <div align="center">
 
-<sub>Made for calm, focused days · <a href="#top">Back to top ↑</a></sub>
+<sub>Made for calm, focused days · <a href="#top">Back to top</a></sub>
 
 </div>
