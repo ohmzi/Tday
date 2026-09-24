@@ -36,23 +36,23 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
 
-    implementation("org.postgresql:postgresql:42.7.4")
+    implementation("org.postgresql:postgresql:42.7.13")
     implementation("com.zaxxer:HikariCP:6.2.1")
-    implementation("com.nimbusds:nimbus-jose-jwt:10.0.1")
-    implementation("org.bouncycastle:bcprov-jdk18on:1.79")
-    implementation("org.dmfs:lib-recur:0.16.0")
+    implementation("com.nimbusds:nimbus-jose-jwt:10.10")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.86")
+    implementation("org.dmfs:lib-recur:0.17.1")
     implementation("com.joestelmach:natty:0.13")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-    implementation("ch.qos.logback:logback-classic:1.5.12")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("ch.qos.logback:logback-classic:1.6.3")
 
-    implementation("io.sentry:sentry:8.13.0")
-    implementation("io.sentry:sentry-logback:8.13.0")
+    implementation("io.sentry:sentry:8.57.0")
+    implementation("io.sentry:sentry-logback:8.57.0")
 
-    implementation("io.insert-koin:koin-ktor:4.0.4")
-    implementation("io.insert-koin:koin-logger-slf4j:4.0.4")
+    implementation("io.insert-koin:koin-ktor:4.2.2")
+    implementation("io.insert-koin:koin-logger-slf4j:4.2.2")
 
-    implementation("io.arrow-kt:arrow-core:2.1.2")
-    implementation("io.arrow-kt:arrow-fx-coroutines:2.1.2")
+    implementation("io.arrow-kt:arrow-core:2.2.3")
+    implementation("io.arrow-kt:arrow-fx-coroutines:2.2.3")
 
     implementation("io.konform:konform-jvm:0.11.1")
 
@@ -61,16 +61,16 @@ dependencies {
     implementation("org.flywaydb:flyway-core:10.22.0")
     implementation("org.flywaydb:flyway-database-postgresql:10.22.0")
 
-    implementation("nl.martijndwars:web-push:5.1.1")
+    implementation("nl.martijndwars:web-push:5.1.2")
 
-    testImplementation("com.h2database:h2:2.3.232")
+    testImplementation("com.h2database:h2:2.5.250")
     testImplementation("io.ktor:ktor-client-websockets-jvm")
     testImplementation("io.ktor:ktor-server-test-host-jvm")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     // Real Postgres for the one property H2 cannot stand in for: partial
     // (filtered) unique indexes. See CompletedFloaterConcurrencyTest.
-    testImplementation("org.testcontainers:postgresql:1.21.3")
-    testImplementation("org.testcontainers:junit-jupiter:1.21.3")
+    testImplementation("org.testcontainers:postgresql:1.21.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.21.4")
 }
 
 tasks.withType<Test> {
