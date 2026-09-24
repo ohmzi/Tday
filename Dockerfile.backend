@@ -1,4 +1,4 @@
-FROM node:20-alpine AS frontend
+FROM node:25-alpine AS frontend
 WORKDIR /web
 # Optional: pass --build-arg GIT_SHA=$(git rev-parse --short HEAD) for build-id
 # traceability (the .git dir isn't copied into this stage). Falls back to a
