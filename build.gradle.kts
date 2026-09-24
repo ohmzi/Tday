@@ -10,7 +10,7 @@ plugins {
     id("com.google.dagger.hilt.android") version "2.57.2" apply false
     id("io.ktor.plugin") version "3.0.3" apply false
     id("io.sentry.jvm.gradle") version "5.7.0" apply false
-    id("io.sentry.android.gradle") version "5.7.0" apply false
+    id("io.sentry.android.gradle") version "6.22.0" apply false
 }
 
 allprojects {
