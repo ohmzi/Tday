@@ -6,7 +6,7 @@ For product/data context, see [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTI
 
 If you discover a security vulnerability, please report it privately. Do **not** open a public issue.
 
-**Contact:** Open a private security advisory via GitHub's "Security" tab, or email the repository owner directly.
+**Contact:** [Report a vulnerability privately](https://github.com/ohmzi/Tday/security/advisories/new) through GitHub's private vulnerability reporting (the repository's "Security" tab), or email the repository owner directly.
 
 Include:
 - Description of the vulnerability.

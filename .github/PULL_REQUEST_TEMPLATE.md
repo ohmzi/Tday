@@ -32,7 +32,6 @@
 - [ ] `npm run lint` passes with no warnings
 - [ ] `npm run test` passes with no failures
 - [ ] No secrets or credentials in the diff
-- [ ] No AI tool attribution in commits or PR description — no `Co-authored-by`, `Made-with`, or any trailer/text referencing Cursor, Codex, Copilot, ChatGPT, Claude, etc.
 - [ ] Backward compatibility maintained (or migration provided)
 - [ ] Flyway migration reviewed (if schema changed)
 - [ ] Shared DTOs / Android Room / iOS SwiftData / sync mappers reviewed (if data shape changed)
