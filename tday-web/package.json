@@ -69,7 +69,7 @@
     "@typescript-eslint/eslint-plugin": "^8.57.2",
     "@typescript-eslint/parser": "^8.57.2",
     "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.39.4",
+    "eslint": "^10.11.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "jsdom": "^29.0.1",
     "playwright": "^1.49.1",
