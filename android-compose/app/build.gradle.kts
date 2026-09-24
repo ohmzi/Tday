@@ -282,7 +282,7 @@ dependencies {
 
     // UnifiedPush: lets Server-Mode self-hosters receive server pushes through their
     // own distributor (e.g. ntfy) instead of FCM. Local reminders remain the default.
-    implementation("org.unifiedpush.android:connector:2.5.0")
+    implementation("org.unifiedpush.android:connector:3.3.5")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
