@@ -1,0 +1,65 @@
+# Weekly version updates. PRs target `develop`, like every other change; `master` only
+# takes develop merges (see pr-gate.yml). Minor and patch bumps are grouped per
+# ecosystem so a normal week is a handful of PRs, not dozens. Major bumps arrive one
+# PR each, because those are the ones that need reading.
+#
+# Security alerts are enabled in the repository settings. Dependabot's automatic
+# security-fix PRs are left off on purpose: GitHub always opens those against the
+# default branch, and pr-gate.yml rejects any PR into master that isn't from develop.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /tday-web
+    target-branch: develop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      web-minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: gradle
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      backend-minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: gradle
+    directory: /android-compose
+    target-branch: develop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      android-minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Base images in Dockerfile.backend.
+  - package-ecosystem: docker
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
