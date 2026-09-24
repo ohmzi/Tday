@@ -36,8 +36,6 @@ This document covers everything a developer needs to know before writing code, o
 bash scripts/install-hooks.sh   # required, one-time after cloning
 ```
 
-This installs the `commit-msg` hook that strips tool-attribution trailers such as `Made-with:` (see [Commit Messages](#commit-messages)); AI use is disclosed in the README instead. The hook works on both macOS (BSD userland) and Linux (GNU), and CI verifies it on macOS.
-
 ### Frontend (Vite SPA)
 
 ```bash
@@ -155,7 +153,6 @@ docs: add architecture decision record for offline sync
 - First line: imperative mood, max 72 characters.
 - Body: explain *why*, not *what* (the diff shows what changed).
 - Reference issue numbers when applicable: `Closes #42`.
-- **No AI attribution trailers — including auto-injected ones.** Commit messages and PR descriptions don't carry `Co-authored-by`, `Made-with`, `Generated-by` or similar tool trailers and footers. How T'Day is built, including the AI tools used, is stated once in the README's [How T'Day is built](README.md#how-tday-is-built) section rather than on every commit. Some editors (e.g. Cursor) silently append `Made-with: Cursor` trailers to commits. This project installs a `commit-msg` git hook that strips these automatically — **do not remove or bypass it** (`--no-verify` is prohibited). The human who commits the code owns it and is responsible for it.
 
 ## Pull Request Process
 
@@ -306,7 +303,6 @@ Every PR must satisfy these before merge:
 - [ ] iOS build/tests run for iOS changes, or the skip reason is documented.
 - [ ] CI pipeline passes (lint + tests are enforced automatically on PRs to `master`).
 - [ ] No secrets or credentials in the diff.
-- [ ] No AI tool attribution trailers or footers in commits or the PR description (`Co-authored-by`, `Made-with`, "Generated with …"); AI use is disclosed in the README.
 - [ ] Backward compatibility maintained (or migration provided).
 - [ ] Flyway migration SQL and corresponding Exposed table changes reviewed if schema changed.
 - [ ] Shared DTOs, Android Room, iOS SwiftData, and sync mappers reviewed if data shape changed.
