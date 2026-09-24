@@ -32,7 +32,6 @@
 - [ ] `npm run lint` passes with no warnings
 - [ ] `npm run test` passes with no failures
 - [ ] No secrets or credentials in the diff
-- [ ] No AI tool attribution trailers or footers in commits or the PR description (`Co-authored-by`, `Made-with`, "Generated with …"); AI use is disclosed in the README.
 - [ ] Backward compatibility maintained (or migration provided)
 - [ ] Flyway migration reviewed (if schema changed)
 - [ ] Shared DTOs / Android Room / iOS SwiftData / sync mappers reviewed (if data shape changed)
