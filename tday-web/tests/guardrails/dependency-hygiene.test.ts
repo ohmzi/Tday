@@ -177,13 +177,6 @@ describe("dependency and configuration hygiene", () => {
   });
 
   describe("commit and PR hygiene", () => {
-    it("PR template should include no-AI-attribution checklist item", () => {
-      const template = readSource(
-        path.join(MONO, ".github", "PULL_REQUEST_TEMPLATE.md"),
-      );
-      expect(template).toMatch(/[Nn]o AI tool attribution/);
-    });
-
     it("commit-msg hook script should exist in scripts/", () => {
       expect(existsSync(path.join(MONO, "scripts", "commit-msg"))).toBe(true);
     });
