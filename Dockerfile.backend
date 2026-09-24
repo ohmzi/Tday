@@ -16,7 +16,7 @@ RUN npm ci
 COPY tday-web/ .
 RUN npm run build
 
-FROM eclipse-temurin:21-jdk-alpine AS backend
+FROM eclipse-temurin:25-jdk-alpine AS backend
 WORKDIR /project
 COPY gradlew ./
 COPY gradle/wrapper ./gradle/wrapper
@@ -33,7 +33,7 @@ COPY shared/src shared/src
 COPY tday-backend/src tday-backend/src
 RUN ./gradlew :tday-backend:buildFatJar --no-daemon -x test
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 RUN addgroup -S tday && adduser -S tday -G tday
 WORKDIR /app
 COPY --from=backend /project/tday-backend/build/libs/tday-backend-all.jar app.jar
