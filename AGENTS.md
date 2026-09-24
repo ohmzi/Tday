@@ -1,6 +1,6 @@
 # T'Day Agent Guide
 
-This file is the working agreement for AI agents contributing to T'Day. Read it with `README.md`, `docs/PRODUCT_DIRECTION.md`, `docs/DATA_MODEL.md`, `docs/ARCHITECTURE.md`, `docs/CODING_STANDARDS.md`, `docs/TESTING.md`, and `docs/REPO_HOUSEKEEPING.md`.
+This file is the working agreement for contributing to T'Day. Read it with `README.md`, `docs/PRODUCT_DIRECTION.md`, `docs/DATA_MODEL.md`, `docs/ARCHITECTURE.md`, `docs/CODING_STANDARDS.md`, `docs/TESTING.md`, and `docs/REPO_HOUSEKEEPING.md`.
 
 ## Project Shape
 
@@ -39,7 +39,6 @@ Current product direction:
   - `user.name=ohmzi`
   - `user.email=6551272+ohmzi@users.noreply.github.com`
 - Check the local git config before committing if attribution matters.
-- Do not add AI trailers or tool attribution to commit messages or PR descriptions. AI use is disclosed once, in the README's [How T'Day is built](README.md#how-tday-is-built) section, so commits stay about the change.
 - Do not use `--no-verify` to bypass hooks. Fix the hook or the commit message instead.
 - Keep commit messages short and human, for example `Refine Android calendar paging polish`.
 
