@@ -13,7 +13,7 @@ application {
     mainClass.set("com.ohmz.tday.ApplicationKt")
 }
 
-val exposedVersion = "0.57.0"
+val exposedVersion = "1.5.0"
 
 dependencies {
     implementation(project(":shared"))
