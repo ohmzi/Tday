@@ -3,7 +3,6 @@ package com.ohmz.tday.compose.feature.widget.snapshot
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -73,10 +72,9 @@ class TodayWidgetUpcomingDaysTest {
             zoneId = zoneId,
         )
 
-        val day = snapshot.todayAt(nowEpochMs = noonOf(today))
+        val day = requireNotNull(snapshot.todayAt(nowEpochMs = noonOf(today)))
 
-        assertNotNull(day)
-        assertEquals(WidgetSnapshotStatus.TASKS, day!!.status)
+        assertEquals(WidgetSnapshotStatus.TASKS, day.status)
         assertEquals(1, day.taskCount)
         assertEquals(listOf("due-today"), day.rows.map { it.id })
     }
