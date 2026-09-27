@@ -17,6 +17,7 @@ fallback for when the app process isn't running to make that write.
 | Widget doesn't update when app is closed           | No lifecycle hook on app background                                                            | Not needed: the repaint already happened at write time, not on close. Android's `MainActivity.onStart()` still re-requests a refresh on the *next* foreground return as belt-and-braces; iOS re-arms its background fallback task |
 | Pressing + and adding a task doesn't update widget | No call to update the widget from the save path                                                | `OfflineCacheManager` is the single chokepoint every write goes through, on both platforms, and it writes the widget snapshot + requests a repaint itself |
 | Widget updates are irregular / unreliable          | No background worker as fallback                                                               | `WidgetSyncWorker` (Android, WorkManager `PeriodicWorkRequest`) / `BGAppRefreshTask` (iOS) both run on a **30-minute** earliest-begin fallback |
+| (Android) Today widget says "No tasks due today" (or shows yesterday's tasks) after midnight while offline | The Today snapshot bakes its local-day window at write time, and only a cache write with UI changes rebuilds it. Offline nothing syncs, so nothing writes — the snapshot kept describing yesterday while Room already held today's tasks | A snapshot built for an earlier day (`isOutsideTodayWindow`) renders as LOADING and enqueues `WidgetHydrateWorker`, which rebuilds it from the local cache with no network. `BaseTodayTasksWidgetReceiver.onUpdate` runs the same check (a file-mtime stat) on every 30-min `updatePeriodMillis` broadcast, so the rollover does not depend on Glance recomposing a live session. Worst case it lags midnight by one `updatePeriodMillis` period (~30 min, longer under Doze). If every snapshot write fails, the worker skips its repaint rather than re-enqueue itself |
 | (Android) Widget text unreadable after toggling system dark/light mode | Every widget color resolves correctly on a repaint, but nothing ever asked for one when the system theme itself changed — `ACTION_CONFIGURATION_CHANGED` is undeliverable to a manifest receiver, and no other trigger covered "app not foregrounded, theme flipped" | `TdayApplication.onConfigurationChanged` compares the system `uiMode`'s night bits against the last-seen value and calls `WidgetRefresher.requestRefresh()` on an actual flip — `Application` is notified in any live process, including a widget-only one that never opened `MainActivity` |
 
 ## Files — where they go
@@ -43,7 +44,7 @@ app/src/main/java/com/ohmz/tday/compose/feature/widget/
 ├── WidgetListSelectionStore.kt         ← per-appWidgetId list selection (plain SharedPreferences)
 ├── WidgetEntryPoint.kt                 ← Hilt @EntryPoint exposing only the completion/refresh singletons to the render path
 ├── WidgetFastPaint.kt                  ← paints from the cold-boot broadcast before Glance's managed session starts (~2.4-3.0s saved)
-├── WidgetHydrateWorker.kt              ← the only widget-flow class allowed to open the encrypted cache; seeds a missing snapshot
+├── WidgetHydrateWorker.kt              ← the only widget-flow class allowed to open the encrypted cache; seeds a missing snapshot, rebuilds a Today snapshot from an earlier day
 ├── WidgetSyncWorker.kt                 ← WorkManager periodic (30 min, network sync) + expedited one-shot
 ├── WidgetLog.kt                        ← shared "TdayWidget" Logcat tag
 ├── TaskWidgetDesign.kt                 ← shared Glance UI (rows, states) both widgets render through
@@ -62,6 +63,8 @@ and then `WidgetRefresher.requestRefresh()`.
 
 **res/xml/{today,floater}_tasks_widget_{,small_,large}_info.xml** — `android:updatePeriodMillis="1800000"`
 (30 min). This is only the OS-level fallback; the app still refreshes explicitly on every cache write.
+The Today receivers also use this broadcast as their day-rollover clock (see the table above) — it
+fires offline, unlike the network-constrained `WidgetSyncWorker`.
 
 ### iOS (`ios-swiftUI/`)
 

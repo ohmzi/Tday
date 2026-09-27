@@ -295,6 +295,10 @@ fun TdayApp(
     OnAppForegroundResume {
         appViewModel.reconnectAfterForeground()
     }
+    OnAppVisibilityChange(
+        onBackground = appViewModel::onAppBackgrounded,
+        onForeground = appViewModel::onAppForegrounded,
+    )
 
     /**
      * Puts a tab in `rootFeedTab` on the user's behalf — or on behalf of a navigation that
@@ -2461,6 +2465,33 @@ private fun OnAppForegroundResume(
                     }
                 }
 
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+}
+
+/**
+ * ON_STOP / ON_START rather than pause/resume: a dialog or split-screen pauses the activity
+ * without it leaving the screen, and only leaving the screen should stop the sync retries.
+ */
+@Composable
+private fun OnAppVisibilityChange(
+    onBackground: () -> Unit,
+    onForeground: () -> Unit,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentOnBackground by rememberUpdatedState(onBackground)
+    val currentOnForeground by rememberUpdatedState(onForeground)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> currentOnBackground()
+                Lifecycle.Event.ON_START -> currentOnForeground()
                 else -> Unit
             }
         }
