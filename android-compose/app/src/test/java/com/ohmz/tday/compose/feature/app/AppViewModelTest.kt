@@ -32,6 +32,7 @@ import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.SnackbarManager
 import com.ohmz.tday.compose.feature.auth.MainDispatcherRule
 import com.ohmz.tday.compose.ui.theme.AppThemeMode
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
@@ -46,6 +47,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -53,6 +55,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.net.UnknownHostException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppViewModelTest {
@@ -662,6 +665,186 @@ class AppViewModelTest {
     }
 
     @Test
+    fun `should back off resync attempts when the server stays unreachable`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel {
+            // Healthy cadence first: the loop's first attempt lands 5 minutes after bootstrap.
+            advanceTimeBy(5 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+
+            // It failed, so the next one waits twice as long, not another 5 minutes...
+            advanceTimeBy(10 * MINUTE_MS - 1)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+            advanceTimeBy(1)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+
+            // ...and the wait stops growing at 15 minutes.
+            advanceTimeBy(15 * MINUTE_MS - 1)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+            advanceTimeBy(1)
+            runCurrent()
+            assertLoopSyncAttempts(3)
+        }
+    }
+
+    @Test
+    fun `should stop retrying an unreachable server when backgrounded`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel { viewModel ->
+            viewModel.onAppBackgrounded()
+
+            // The healthy loop still makes its scheduled attempt in the background; it fails...
+            advanceTimeBy(5 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+
+            // ...and from then on nothing is retried until the app comes back.
+            advanceTimeBy(6 * 60 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+
+            // Coming back restarts the backoff: the normal 5-minute cadence, not the 10 it was on.
+            viewModel.onAppForegrounded()
+            advanceTimeBy(5 * MINUTE_MS - 1)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+            advanceTimeBy(1)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+        }
+    }
+
+    @Test
+    fun `should reset the backoff when any sync reaches the server`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel {
+            advanceTimeBy(5 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+
+            // A manual refresh (which goes around the loop) got through during the 10-minute wait.
+            offlineSyncSuccesses.emit(Unit)
+            runCurrent()
+
+            // The wait already under way runs out as scheduled...
+            advanceTimeBy(10 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+
+            // ...but that failure is the first in a row again: 10 minutes to the next attempt,
+            // not the 15-minute cap a third consecutive failure would have earned.
+            advanceTimeBy(10 * MINUTE_MS - 1)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+            advanceTimeBy(1)
+            runCurrent()
+            assertLoopSyncAttempts(3)
+        }
+    }
+
+    @Test
+    fun `should resume background resync when a sync gets through while parked`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel { viewModel ->
+            viewModel.onAppBackgrounded()
+            advanceTimeBy(15 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(1)
+
+            // Parked; then a network change let a sync through, so the server is back.
+            offlineSyncSuccesses.emit(Unit)
+            runCurrent()
+
+            advanceTimeBy(5 * MINUTE_MS)
+            runCurrent()
+            assertLoopSyncAttempts(2)
+        }
+    }
+
+    @Test
+    fun `should reconnect a dropped realtime socket when in the foreground`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel {
+            clearMocks(realtimeClient, answers = false)
+
+            realtimeEvents.emit(RealtimeEvent.Disconnected)
+            advanceTimeBy(5_000)
+            runCurrent()
+
+            verify(exactly = 1) { realtimeClient.connect() }
+        }
+    }
+
+    @Test
+    fun `should not reconnect a dropped realtime socket when backgrounded`() = runTest {
+        bootstrapAuthenticatedWithUnreachableResync()
+        withSignedInViewModel { viewModel ->
+            viewModel.onAppBackgrounded()
+            clearMocks(realtimeClient, answers = false)
+
+            realtimeEvents.emit(RealtimeEvent.Disconnected)
+            advanceTimeBy(5_000)
+            runCurrent()
+
+            verify(exactly = 0) { realtimeClient.connect() }
+        }
+    }
+
+    /**
+     * Signs out in `finally`: the resync loop never ends on its own, and a failed assertion that
+     * skipped the sign-out left runTest's end-of-test drain advancing it forever in virtual time.
+     */
+    private suspend fun TestScope.withSignedInViewModel(block: suspend (AppViewModel) -> Unit) {
+        val viewModel = makeViewModel()
+        runCurrent()
+        try {
+            block(viewModel)
+        } finally {
+            viewModel.logout()
+            runCurrent()
+        }
+    }
+
+    /** Bootstrap succeeds; every later resync-loop attempt (no pending mutations) cannot reach it. */
+    private fun bootstrapAuthenticatedWithUnreachableResync() {
+        coEvery { authRepository.restoreSessionForBootstrap() } returns AuthRepository.RestoredSession(
+            user = restoredUser,
+            usedCachedSession = false,
+        )
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = true,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.success(Unit)
+        coEvery {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = false,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        } returns Result.failure(UnknownHostException("Unable to resolve host \"tday.example.com\""))
+    }
+
+    private fun assertLoopSyncAttempts(expected: Int) {
+        coVerify(exactly = expected) {
+            syncManager.syncCachedData(
+                force = true,
+                replayPendingMutations = false,
+                notifyOfflineFailure = false,
+                connectionProbeTimeoutMs = null,
+            )
+        }
+    }
+
+    @Test
     fun `offline notice cooldown suppresses repeat notices for ten minutes`() {
         var now = 1_000L
         val cooldown = OfflineNoticeCooldown { now }
@@ -708,4 +891,8 @@ class AppViewModelTest {
             // racing the assertions here.
             backgroundDispatcher = mainDispatcherRule.dispatcher,
         )
+
+    private companion object {
+        const val MINUTE_MS = 60_000L
+    }
 }
