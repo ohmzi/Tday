@@ -205,11 +205,9 @@ class OfflineCacheManager @Inject constructor(
             )
         }
         if (previous == normalizedState) {
-            // Nothing changed from what's already persisted — but on the very first save call
-            // this process makes, nothing else has written a snapshot to disk yet either. Without
-            // this, a first run with no changes never seeds the file and the widget sits in
-            // LOADING until an unrelated write happens to land.
-            widgetSnapshotWriter.ensureSeeded(normalizedState)
+            // Nothing changed from what's already persisted — but the widget snapshot may still be
+            // missing (the first save this process makes) or from an earlier day. See ensureCurrent.
+            if (widgetSnapshotWriter.ensureCurrent(normalizedState)) widgetRefresher.requestRefresh()
             return
         }
 
@@ -223,6 +221,10 @@ class OfflineCacheManager @Inject constructor(
             // write and paints the previous snapshot.
             widgetSnapshotWriter.write(normalizedState)
             cacheDataVersionMutable.value = cacheDataVersionMutable.value + 1L
+            widgetRefresher.requestRefresh()
+        } else if (widgetSnapshotWriter.ensureCurrent(normalizedState)) {
+            // A sync on a quiet day changes only its timestamps, and would otherwise leave the
+            // snapshot from whatever day the task data last changed.
             widgetRefresher.requestRefresh()
         }
         if (hasSyncMetadataChanges) {

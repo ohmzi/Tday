@@ -5,9 +5,9 @@ import android.content.Context
 import android.util.Log
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotKind
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotSignal
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStore
 import com.ohmz.tday.compose.feature.widget.snapshot.wasWrittenBeforeLocalDay
 import java.time.ZoneId
@@ -31,29 +31,29 @@ abstract class BaseTodayTasksWidgetReceiver : GlanceAppWidgetReceiver() {
         appWidgetIds: IntArray,
     ) {
         WidgetFastPaint.publish(context, glanceAppWidget, WidgetSnapshotKind.TODAY, appWidgetIds)
-        hydrateIfFromEarlierDay(context)
+        recomposeIfFromEarlierDay(context)
         super.onUpdate(context, appWidgetManager, appWidgetIds)
     }
 
     /**
      * `updatePeriodMillis` delivers this broadcast every 30 minutes whether or not the device is
-     * online, which makes it the one clock the widget gets for free. Nothing else rebuilds the
-     * Today snapshot at midnight — only a cache write with UI changes does, and offline there are
-     * none — so check here, where it does not depend on Glance recomposing a live session. The
-     * composition's own check (see `TodayTasksWidget`) covers a fresh session.
+     * online, which makes it the one clock the widget gets for free. After midnight the snapshot on
+     * disk already carries today (see `WidgetSnapshot.todayAt`), but a live Glance session only
+     * re-reads the day when something recomposes it, and `update()` alone is not guaranteed to. So
+     * when the snapshot was written on an earlier day, bump the repaint signal the composition
+     * collects: it recomposes and picks today's day. A stat and a counter — no decrypt, no cache
+     * open, no WorkManager. A fresh session composes from scratch and needs none of this.
      */
-    private fun hydrateIfFromEarlierDay(context: Context) {
+    private fun recomposeIfFromEarlierDay(context: Context) {
         runCatching {
             val appContext = context.applicationContext
-            // Same order as provideGlance: a locked device never reads or rebuilds task content.
-            if (AppSecurityPreferenceStore(appContext).appLockEnabled.value) return
             val lastWritten = WidgetSnapshotStore(appContext).lastWrittenEpochMs(WidgetSnapshotKind.TODAY)
                 ?: return
             if (wasWrittenBeforeLocalDay(lastWritten, System.currentTimeMillis(), ZoneId.systemDefault())) {
-                WidgetHydrateWorker.runOnce(appContext)
+                WidgetSnapshotSignal.bump()
             }
         }.onFailure {
-            Log.w(WIDGET_LOG_TAG, "today: day-rollover check skipped", it)
+            Log.w(WIDGET_LOG_TAG, "today: day-rollover recompose skipped", it)
             TdayTelemetry.capture(it, operation = "widget_today.day_rollover_check")
         }
     }
