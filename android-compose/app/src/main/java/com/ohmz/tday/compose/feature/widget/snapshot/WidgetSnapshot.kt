@@ -1,6 +1,8 @@
 package com.ohmz.tday.compose.feature.widget.snapshot
 
 import kotlinx.serialization.Serializable
+import java.time.Instant
+import java.time.ZoneId
 
 internal const val TODAY_TASKS_WIDGET_TASK_LIMIT = 50
 internal const val FLOATER_TASKS_WIDGET_TASK_LIMIT = 50
@@ -68,3 +70,32 @@ internal data class WidgetSnapshotRow(
      */
     val overdue: Boolean = false,
 )
+
+/**
+ * True when [nowEpochMs] falls outside the local day this Today snapshot was built for.
+ *
+ * The window is baked at write time and only a cache write with UI changes rebuilds it, so after
+ * midnight with no such write — always the case offline, where nothing syncs — the snapshot still
+ * describes yesterday. Rendering it would show yesterday's leftovers, or "No tasks due today",
+ * while the local cache holds today's tasks. A snapshot with no window (SETUP, Floater) never is.
+ */
+internal fun WidgetSnapshot.isOutsideTodayWindow(nowEpochMs: Long): Boolean {
+    val start = dayStartEpochMs ?: return false
+    val end = dayEndEpochMs ?: return false
+    return nowEpochMs < start || nowEpochMs >= end
+}
+
+/**
+ * The broadcast-side twin of [isOutsideTodayWindow]: a file stat instead of a decrypt, cheap
+ * enough for every `onUpdate`. A Today snapshot is built for the local day it is written on, so a
+ * file last written before today's local midnight describes an earlier day.
+ */
+internal fun wasWrittenBeforeLocalDay(
+    lastModifiedEpochMs: Long,
+    nowEpochMs: Long,
+    zoneId: ZoneId,
+): Boolean {
+    val todayStart = Instant.ofEpochMilli(nowEpochMs).atZone(zoneId).toLocalDate()
+        .atStartOfDay(zoneId).toInstant().toEpochMilli()
+    return lastModifiedEpochMs < todayStart
+}

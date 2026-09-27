@@ -18,9 +18,11 @@ import dagger.assisted.AssistedInject
  * The only widget-flow component allowed to open the encrypted cache — and never on a render
  * path. A widget's `provideGlance` enqueues this when it finds no snapshot on disk (the LOADING
  * state): a fresh install, or an upgrade that rebooted before the app was ever opened for the
- * first time. Writes both snapshots from the current cache, then repaints — exactly what the app
- * process's own first cache load would have done anyway, just triggered from the widget side
- * instead of waiting for the user to open the app.
+ * first time. The Today widget also enqueues it when its snapshot was built for an earlier local
+ * day (see `isOutsideTodayWindow`) — nothing else rebuilds it at midnight while offline. Writes
+ * every snapshot from the current cache, then repaints — exactly what the app process's own first
+ * cache load would have done anyway, just triggered from the widget side instead of waiting for
+ * the user to open the app. Deliberately not network-constrained: it only reads the local cache.
  */
 @HiltWorker
 class WidgetHydrateWorker @AssistedInject constructor(
@@ -34,7 +36,13 @@ class WidgetHydrateWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         return runCatching {
             val state = cacheManager.loadOfflineState()
-            snapshotWriter.write(state)
+            if (!snapshotWriter.write(state)) {
+                // Every write failed (the store already logged why). Repainting now would compose
+                // the same missing or earlier-day snapshot, which enqueues this worker again — a
+                // loop of encrypted-cache opens. Stop here; the next onUpdate or app open retries.
+                Log.w(TAG, "Widget hydrate wrote no snapshot; skipping the repaint")
+                return Result.failure()
+            }
             widgetRefresher.refreshNow()
             Result.success()
         }.getOrElse { e ->

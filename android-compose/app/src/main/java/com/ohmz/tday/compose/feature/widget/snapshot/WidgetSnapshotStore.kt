@@ -84,6 +84,10 @@ internal class WidgetSnapshotStore(
 
     fun exists(kind: WidgetSnapshotKind): Boolean = fileFor(kind.fileName).exists()
 
+    /** When [kind]'s file was last written, or null when there is none. A stat, not a decrypt. */
+    fun lastWrittenEpochMs(kind: WidgetSnapshotKind): Long? =
+        fileFor(kind.fileName).takeIf { it.exists() }?.lastModified()
+
     /** Returns true when the encrypted file was actually written. */
     fun write(kind: WidgetSnapshotKind, snapshot: WidgetSnapshot): Boolean = write(kind.fileName, snapshot)
 

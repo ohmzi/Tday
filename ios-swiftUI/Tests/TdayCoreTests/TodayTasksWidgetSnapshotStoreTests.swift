@@ -204,7 +204,7 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         // hardcodes the same name, so a rename here has to be mirrored there.
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotFileName, "widget-today-snapshot.json")
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.legacySnapshotKey, "tday.widget.todayTasksSnapshot")
-        XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotSchemaVersion, 2)
+        XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotSchemaVersion, 3)
         // R7 configuration picker catalog (WidgetConfigurableListsStore's writer /
         // TdayWidgetListEntityQuery's reader): the extension hand-duplicates this same file
         // name with no shared source of truth, so pin it here too or a rename on one side
@@ -523,6 +523,7 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         dueEpochMs: Int64,
         completed: Bool = false,
         description: String? = nil,
+        pinned: Bool = false,
         listId: String? = nil
     ) -> CachedTodoRecord {
         CachedTodoRecord(
@@ -534,7 +535,7 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
             dueEpochMs: dueEpochMs,
             rrule: nil,
             instanceDateEpochMs: nil,
-            pinned: false,
+            pinned: pinned,
             completed: completed,
             listId: listId,
             updatedAtEpochMs: dueEpochMs
@@ -726,6 +727,320 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         XCTAssertFalse(
             first.hasSameContent(as: second),
             "a perList-only change (no global-feed change) must still be treated as new content"
+        )
+    }
+
+    // MARK: - Day rollover without a write
+    //
+    // The snapshot used to be a picture of "due today" that only a cache write could retake, so
+    // offline the widget kept yesterday's picture after midnight. It now records its day window
+    // and carries the next days built the same way; the widget picks the day containing its
+    // entry date via `TodayWidgetDayWindow` (the file both targets compile). These pin that the
+    // carried days read exactly like a rebuild on that day would.
+
+    func testSnapshotRecordsItsLocalDayAndTheDaysAfterIt() {
+        let calendar = utcCalendar()
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: OfflineSyncState(), now: now, calendar: calendar)
+
+        XCTAssertEqual(snapshot.dayStartEpochMs, startOfDay.epochMs)
+        XCTAssertEqual(snapshot.dayEndEpochMs, startOfDay.addingTimeInterval(86_400).epochMs)
+        XCTAssertEqual(snapshot.upcomingDays.count, TodayWidgetDayWindow.upcomingDayCount)
+        // Back to back: each upcoming day starts where the previous one ended.
+        var previousEnd = snapshot.dayEndEpochMs
+        for day in snapshot.upcomingDays {
+            XCTAssertEqual(day.dayStartEpochMs, previousEnd)
+            XCTAssertEqual(day.dayEndEpochMs - day.dayStartEpochMs, 86_400_000)
+            previousEnd = day.dayEndEpochMs
+        }
+    }
+
+    func testWidgetTurnsOverAtMidnightFromTheSnapshotAlone() {
+        // The reported bug: written late yesterday, nothing writes overnight (offline), and
+        // just after midnight the widget still showed yesterday's rows.
+        let calendar = utcCalendar()
+        let yesterdayStart = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_764_072_600))
+        let writtenAt = yesterdayStart.addingTimeInterval(23 * 3_600)
+        let justAfterMidnight = yesterdayStart.addingTimeInterval(24 * 3_600 + 60)
+        let state = OfflineSyncState(
+            todos: [
+                todo(id: "yesterday", title: "Yesterday", dueEpochMs: yesterdayStart.addingTimeInterval(9 * 3_600).epochMs),
+                todo(id: "today", title: "Today", dueEpochMs: yesterdayStart.addingTimeInterval(34 * 3_600).epochMs)
+            ]
+        )
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: writtenAt, calendar: calendar)
+        XCTAssertEqual(snapshot.tasks.map(\.id), ["yesterday"], "sanity: written on yesterday's window")
+
+        let offset = TodayWidgetDayWindow.dayOffset(of: justAfterMidnight.epochMs, in: coveredDays(of: snapshot, calendar))
+        XCTAssertEqual(offset, 1, "an entry after midnight must land on the next carried day, not the written one")
+        XCTAssertEqual(snapshot.upcomingDays[0].taskCount, 1)
+        XCTAssertEqual(snapshot.upcomingDays[0].tasks.map(\.id), ["today"])
+    }
+
+    func testUpcomingDaysReadExactlyLikeARebuildOnThatDay() {
+        let calendar = utcCalendar()
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        func due(day: Int, hour: Double) -> Int64 {
+            startOfDay.addingTimeInterval(TimeInterval(day) * 86_400 + hour * 3_600).epochMs
+        }
+        // A spread across the horizon, including more than the upcoming cap on one day and a
+        // pinned row (sorts ahead of everything) further out.
+        var todos = [
+            todo(id: "today", title: "Today", dueEpochMs: due(day: 0, hour: 10)),
+            todo(id: "tomorrow", title: "Tomorrow", dueEpochMs: due(day: 1, hour: 8)),
+            todo(id: "tomorrow-done", title: "Done", dueEpochMs: due(day: 1, hour: 9), completed: true),
+            todo(id: "day-3", title: "Day 3", dueEpochMs: due(day: 3, hour: 18)),
+            todo(id: "day-5-pinned", title: "Pinned", dueEpochMs: due(day: 5, hour: 7), pinned: true),
+            todo(id: "past-horizon", title: "Later", dueEpochMs: due(day: 7, hour: 1))
+        ]
+        todos += (0..<25).map { index in
+            todo(id: "busy-\(index)", title: "Busy \(index)", dueEpochMs: due(day: 2, hour: 1) + Int64(index) * 60_000)
+        }
+        let state = OfflineSyncState(todos: todos)
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: now, calendar: calendar)
+
+        for dayOffset in 1...TodayWidgetDayWindow.upcomingDayCount {
+            let thatDay = now.addingTimeInterval(TimeInterval(dayOffset) * 86_400)
+            let rebuilt = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: thatDay, calendar: calendar)
+            let carried = snapshot.upcomingDays[dayOffset - 1]
+            XCTAssertEqual(carried.dayStartEpochMs, rebuilt.dayStartEpochMs, "day \(dayOffset) window")
+            XCTAssertEqual(carried.dayEndEpochMs, rebuilt.dayEndEpochMs, "day \(dayOffset) window")
+            XCTAssertEqual(carried.taskCount, rebuilt.taskCount, "day \(dayOffset) count")
+            XCTAssertEqual(
+                carried.tasks,
+                Array(rebuilt.tasks.prefix(TodayTasksWidgetSnapshotStore.upcomingDayTaskLimit)),
+                "day \(dayOffset) rows"
+            )
+        }
+        // The busy day keeps its true count past the display cap.
+        XCTAssertEqual(snapshot.upcomingDays[1].taskCount, 25)
+        XCTAssertEqual(snapshot.upcomingDays[1].tasks.count, TodayTasksWidgetSnapshotStore.upcomingDayTaskLimit)
+        XCTAssertFalse(
+            snapshot.upcomingDays.contains { day in day.tasks.contains { $0.id == "past-horizon" } },
+            "nothing beyond the last carried day is written"
+        )
+    }
+
+    func testPerListUpcomingRowsLeadWithARebuildsRowsOnThatDay() {
+        let calendar = utcCalendar()
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        func due(day: Int, hour: Double) -> Int64 {
+            startOfDay.addingTimeInterval(TimeInterval(day) * 86_400 + hour * 3_600).epochMs
+        }
+        // The list's window is cumulative (overdue + that day), so the overdue row stays in it
+        // every day and the busy day pushes the list past its display cap from day 2 on.
+        var todos = [
+            todo(id: "overdue", title: "Overdue", dueEpochMs: due(day: -1, hour: 9), listId: "list-1"),
+            todo(id: "tomorrow", title: "Tomorrow", dueEpochMs: due(day: 1, hour: 8), listId: "list-1"),
+            todo(id: "day-4-pinned", title: "Pinned", dueEpochMs: due(day: 4, hour: 7), pinned: true, listId: "list-1"),
+            todo(id: "other-list", title: "Other", dueEpochMs: due(day: 1, hour: 8), listId: "list-2")
+        ]
+        todos += (0..<25).map { index in
+            todo(id: "busy-\(index)", title: "Busy \(index)", dueEpochMs: due(day: 2, hour: 1) + Int64(index) * 60_000, listId: "list-1")
+        }
+        let state = OfflineSyncState(todos: todos, lists: [list(id: "list-1", name: "Work")])
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: now, calendar: calendar)
+        let slice = try! XCTUnwrap(snapshot.perList["list-1"])
+        XCTAssertEqual(slice.tasks.map(\.id), ["overdue"], "sanity: today's slice is unchanged")
+        XCTAssertEqual(slice.upcomingTotalCounts.count, TodayWidgetDayWindow.upcomingDayCount)
+
+        for dayOffset in 1...TodayWidgetDayWindow.upcomingDayCount {
+            let thatDay = now.addingTimeInterval(TimeInterval(dayOffset) * 86_400)
+            let rebuilt = try! XCTUnwrap(
+                TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: thatDay, calendar: calendar).perList["list-1"]
+            )
+            let dayEnd = snapshot.upcomingDays[dayOffset - 1].dayEndEpochMs
+            // What the widget reads for that day: the carried rows due before it ends.
+            let read = slice.upcomingTasks.filter { $0.dueEpochMs < dayEnd }
+            XCTAssertEqual(slice.upcomingTotalCounts[dayOffset - 1], rebuilt.totalCount, "day \(dayOffset) count")
+            XCTAssertEqual(
+                Array(read.prefix(TodayTasksWidgetSnapshotStore.perListTaskLimit)),
+                rebuilt.tasks,
+                "day \(dayOffset) rows"
+            )
+        }
+    }
+
+    func testPerListIsWrittenForAListWithNothingDueUntilTomorrow() {
+        let calendar = utcCalendar()
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let tomorrow = calendar.startOfDay(for: now).addingTimeInterval(86_400 + 9 * 3_600).epochMs
+        let state = OfflineSyncState(
+            todos: [todo(id: "tomorrow", title: "Tomorrow", dueEpochMs: tomorrow, listId: "list-1")],
+            lists: [list(id: "list-1", name: "Work")]
+        )
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: now, calendar: calendar)
+
+        // Empty today, but present, so the widget has tomorrow's row once midnight passes.
+        let slice = try! XCTUnwrap(snapshot.perList["list-1"])
+        XCTAssertEqual(slice.totalCount, 0)
+        XCTAssertTrue(slice.tasks.isEmpty)
+        XCTAssertEqual(slice.upcomingTotalCounts.first, 1)
+        XCTAssertEqual(slice.upcomingTasks.map(\.id), ["tomorrow"])
+    }
+
+    func testANewLocalDayIsNewContentEvenWithTheSameTasks() {
+        let calendar = utcCalendar()
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        // Nothing due either day: the rows are identical, only the window moved. Skipping this
+        // write would leave the widget on a window that no longer contains "now".
+        let today = TodayTasksWidgetSnapshotStore.makeSnapshot(from: OfflineSyncState(), now: now, calendar: calendar)
+        let tomorrow = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(),
+            now: now.addingTimeInterval(86_400),
+            calendar: calendar
+        )
+
+        XCTAssertEqual(today.tasks, tomorrow.tasks)
+        XCTAssertFalse(today.hasSameContent(as: tomorrow))
+    }
+
+    func testSnapshotWithoutADayWindowCoversOnlyTheDayItWasGenerated() throws {
+        // Schema 2 snapshots carry no window; the widget must still stop trusting them after
+        // the day they were written, instead of treating them as timeless.
+        let calendar = utcCalendar()
+        let legacyJSON = """
+        {
+          "schemaVersion": 2,
+          "generatedAtEpochMs": 1764072600000,
+          "title": "Today's Tasks",
+          "status": "tasks",
+          "taskCount": 1,
+          "tasks": [{ "id": "legacy", "title": "Legacy task", "dueEpochMs": 1764076200000, "priority": "low" }],
+          "perList": { "list-1": { "totalCount": 1, "tasks": [] } }
+        }
+        """
+        let snapshot = try JSONDecoder().decode(TodayTasksWidgetSnapshot.self, from: Data(legacyJSON.utf8))
+        XCTAssertNil(snapshot.dayStartEpochMs)
+        XCTAssertTrue(snapshot.upcomingDays.isEmpty)
+        XCTAssertEqual(snapshot.perList["list-1"]?.upcomingTotalCounts, [])
+
+        let days = coveredDays(of: snapshot, calendar)
+        let generatedAt = Date(timeIntervalSince1970: 1_764_072_600)
+        XCTAssertEqual(days, TodayWidgetDayWindow.days(from: generatedAt, count: 1, calendar: calendar))
+        XCTAssertEqual(TodayWidgetDayWindow.dayOffset(of: generatedAt.epochMs, in: days), 0)
+        XCTAssertNil(TodayWidgetDayWindow.dayOffset(of: generatedAt.addingTimeInterval(86_400).epochMs, in: days))
+    }
+
+    func testSnapshotStopsVouchingForDaysPastItsLast() {
+        let calendar = utcCalendar()
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: OfflineSyncState(), now: now, calendar: calendar)
+        let days = coveredDays(of: snapshot, calendar)
+
+        let lastCovered = now.addingTimeInterval(TimeInterval(TodayWidgetDayWindow.upcomingDayCount) * 86_400)
+        XCTAssertEqual(TodayWidgetDayWindow.dayOffset(of: lastCovered.epochMs, in: days), TodayWidgetDayWindow.upcomingDayCount)
+        XCTAssertNil(
+            TodayWidgetDayWindow.dayOffset(of: lastCovered.addingTimeInterval(86_400).epochMs, in: days),
+            "past the carried days the widget shows its refresh prompt, not a guess"
+        )
+        XCTAssertNil(
+            TodayWidgetDayWindow.dayOffset(of: now.addingTimeInterval(-86_400).epochMs, in: days),
+            "a clock set back before the snapshot's day is not today either"
+        )
+    }
+
+    func testDayWindowsKeepTheirRealLengthAcrossDST() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        // Sat 7 Mar 2026, noon local: the next day is the 23-hour spring-forward day.
+        let beforeSpringForward = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 3, day: 7, hour: 12))
+        )
+
+        let days = TodayWidgetDayWindow.days(from: beforeSpringForward, count: 3, calendar: calendar)
+
+        XCTAssertEqual(days.map { ($0.endEpochMs - $0.startEpochMs) / 3_600_000 }, [24, 23, 24])
+        for day in days {
+            let start = Date(timeIntervalSince1970: TimeInterval(day.startEpochMs) / 1_000)
+            XCTAssertEqual(calendar.startOfDay(for: start), start, "every window starts at local midnight")
+        }
+    }
+
+    func testNextDayStartIsTheComingLocalMidnight() throws {
+        let calendar = utcCalendar()
+        let lateEvening = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 9, day: 27, hour: 23, minute: 45)))
+        let midnight = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 9, day: 28)))
+
+        XCTAssertEqual(TodayWidgetDayWindow.nextDayStart(after: lateEvening, calendar: calendar), midnight)
+        // Exactly at midnight, the next change is a whole day away — never "now" again.
+        XCTAssertEqual(
+            TodayWidgetDayWindow.nextDayStart(after: midnight, calendar: calendar),
+            midnight.addingTimeInterval(86_400)
+        )
+    }
+
+    func testSnapshotRoundTripsItsDayWindowAndUpcomingDays() throws {
+        let calendar = utcCalendar()
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let tomorrow = calendar.startOfDay(for: now).addingTimeInterval(86_400 + 9 * 3_600).epochMs
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(
+                todos: [todo(id: "tomorrow", title: "Tomorrow", dueEpochMs: tomorrow, listId: "list-1")],
+                lists: [list(id: "list-1", name: "Work")]
+            ),
+            now: now,
+            calendar: calendar
+        )
+
+        let decoded = try JSONDecoder().decode(TodayTasksWidgetSnapshot.self, from: JSONEncoder().encode(snapshot))
+
+        XCTAssertEqual(decoded, snapshot)
+        XCTAssertEqual(decoded.upcomingDays.first?.tasks.map(\.id), ["tomorrow"])
+    }
+
+    func testWatchMirrorLeavesTheUpcomingDaysBehind() {
+        let calendar = utcCalendar()
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(
+                todos: [
+                    todo(id: "today", title: "Today", dueEpochMs: startOfDay.addingTimeInterval(9 * 3_600).epochMs, listId: "list-1"),
+                    todo(id: "tomorrow", title: "Tomorrow", dueEpochMs: startOfDay.addingTimeInterval(33 * 3_600).epochMs, listId: "list-1")
+                ],
+                lists: [list(id: "list-1", name: "Work")]
+            ),
+            now: now,
+            calendar: calendar
+        )
+
+        let mirrored = snapshot.withoutUpcomingDays()
+
+        // The watch shows today's rows only; everything it does read is untouched.
+        XCTAssertEqual(mirrored.tasks, snapshot.tasks)
+        XCTAssertEqual(mirrored.taskCount, snapshot.taskCount)
+        XCTAssertEqual(mirrored.perList["list-1"]?.tasks, snapshot.perList["list-1"]?.tasks)
+        XCTAssertTrue(mirrored.upcomingDays.isEmpty)
+        XCTAssertEqual(mirrored.perList["list-1"]?.upcomingTasks, [])
+        XCTAssertEqual(mirrored.perList["list-1"]?.upcomingTotalCounts, [])
+    }
+
+    private func utcCalendar() -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return calendar
+    }
+
+    /// What the widget computes from a decoded snapshot (TodayTasksSnapshot.coveredDays in
+    /// TdayWidget/TodayTasksWidget.swift), built from the app-side DTO.
+    private func coveredDays(of snapshot: TodayTasksWidgetSnapshot, _ calendar: Calendar) -> [TodayWidgetDayWindow.Day] {
+        TodayWidgetDayWindow.coveredDays(
+            dayStartEpochMs: snapshot.dayStartEpochMs,
+            dayEndEpochMs: snapshot.dayEndEpochMs,
+            upcoming: snapshot.upcomingDays.map {
+                TodayWidgetDayWindow.Day(startEpochMs: $0.dayStartEpochMs, endEpochMs: $0.dayEndEpochMs)
+            },
+            generatedAtEpochMs: snapshot.generatedAtEpochMs,
+            calendar: calendar
         )
     }
 

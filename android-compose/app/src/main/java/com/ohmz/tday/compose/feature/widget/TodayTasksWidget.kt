@@ -23,6 +23,7 @@ import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshot
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotKind
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotSignal
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStore
+import com.ohmz.tday.compose.feature.widget.snapshot.isOutsideTodayWindow
 import java.text.DateFormat
 import java.time.Instant
 import java.time.LocalTime
@@ -105,6 +106,15 @@ class TodayTasksWidget : GlanceAppWidget() {
             val currentSnapshot = remember(snapshotVersion, isAppLocked) {
                 if (isAppLocked) null else snapshotStore.readToday()
             }
+            val nowEpochMs = System.currentTimeMillis()
+            val contentState = todayContentState(isAppLocked, currentSnapshot, nowEpochMs)
+            // Built for an earlier local day (see isOutsideTodayWindow). Rebuild it from the local
+            // cache — no network, so this is what keeps the widget right across midnight offline.
+            // The rewrite bumps snapshotVersion, which recomposes this with the fresh snapshot.
+            val snapshotStale = currentSnapshot?.isOutsideTodayWindow(nowEpochMs) == true
+            if (!isAppLocked && snapshotStale) {
+                WidgetHydrateWorker.runOnce(appContext)
+            }
             // Fires on every recompute this key change causes (cold start, a fresh snapshot, or
             // a lock toggle) — absence after a reboot means the widget was never composed at all;
             // presence with snapshotNull=true past the first frame means something is stuck.
@@ -113,7 +123,7 @@ class TodayTasksWidget : GlanceAppWidget() {
                 appWidgetId = appWidgetId,
                 providerKind = providerKind,
                 details = "version=$snapshotVersion locked=$isAppLocked " +
-                    "snapshotNull=${currentSnapshot == null}",
+                    "snapshotNull=${currentSnapshot == null} stale=$snapshotStale",
             )
             // Inside the composition so the day/night artwork follows the clock too.
             val visuals = todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
@@ -121,7 +131,7 @@ class TodayTasksWidget : GlanceAppWidget() {
             GlanceTheme {
                 TaskWidgetContent(
                     title = title,
-                    state = todayContentState(isAppLocked, currentSnapshot),
+                    state = contentState,
                     countLabel = strings.countLabel(currentSnapshot?.taskCount ?: 0),
                     setupTitle = strings.setupTitle,
                     setupMessage = strings.setupMessage,
@@ -167,12 +177,17 @@ private data class TodayTasksWidgetStrings(
     val countLabelFormat: String,
 )
 
-private fun todayContentState(
+/**
+ * A snapshot built for an earlier local day renders as LOADING, not as its own status: its rows
+ * and its EMPTY both describe yesterday. The composition hydrates a fresh one from the local cache.
+ */
+internal fun todayContentState(
     isAppLocked: Boolean,
     snapshot: WidgetSnapshot?,
+    nowEpochMs: Long,
 ): TaskWidgetContentState = when {
     isAppLocked -> TaskWidgetContentState.LOCKED
-    snapshot == null -> TaskWidgetContentState.LOADING
+    snapshot == null || snapshot.isOutsideTodayWindow(nowEpochMs) -> TaskWidgetContentState.LOADING
     else -> snapshot.status.toContentState()
 }
 

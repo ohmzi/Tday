@@ -20,6 +20,15 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
     /// Defaulted so snapshots persisted before this field existed still decode (as empty —
     /// those widgets simply show "no tasks" until the next save, at most one state change away).
     let perList: [String: TodayTasksWidgetPerListSnapshot]
+    /// The local day `status`/`taskCount`/`tasks` describe, `[dayStart, dayEnd)`. Nil in
+    /// snapshots written before it was recorded (schema 2), which the widget then dates by
+    /// `generatedAtEpochMs` instead — see `TodayWidgetDayWindow.coveredDays`.
+    let dayStartEpochMs: Int64?
+    let dayEndEpochMs: Int64?
+    /// The same "due today" selection for each of the next `TodayWidgetDayWindow.upcomingDayCount`
+    /// local days, so the widget can turn over at midnight without the app writing anything —
+    /// offline, nothing does. Defaulted so older snapshots still decode (as no upcoming days).
+    let upcomingDays: [TodayTasksWidgetDaySnapshot]
 
     init(
         schemaVersion: Int = TodayTasksWidgetSnapshotStore.snapshotSchemaVersion,
@@ -28,7 +37,10 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
         status: TodayTasksWidgetSnapshotStatus,
         taskCount: Int,
         tasks: [TodayTasksWidgetTaskSnapshot],
-        perList: [String: TodayTasksWidgetPerListSnapshot] = [:]
+        perList: [String: TodayTasksWidgetPerListSnapshot] = [:],
+        dayStartEpochMs: Int64? = nil,
+        dayEndEpochMs: Int64? = nil,
+        upcomingDays: [TodayTasksWidgetDaySnapshot] = []
     ) {
         self.schemaVersion = schemaVersion
         self.generatedAtEpochMs = generatedAtEpochMs
@@ -37,6 +49,9 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
         self.taskCount = taskCount
         self.tasks = tasks
         self.perList = perList
+        self.dayStartEpochMs = dayStartEpochMs
+        self.dayEndEpochMs = dayEndEpochMs
+        self.upcomingDays = upcomingDays
     }
 
     init(from decoder: Decoder) throws {
@@ -49,19 +64,54 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
         taskCount = try container.decodeIfPresent(Int.self, forKey: .taskCount) ?? decodedTasks.count
         tasks = decodedTasks
         perList = try container.decodeIfPresent([String: TodayTasksWidgetPerListSnapshot].self, forKey: .perList) ?? [:]
+        dayStartEpochMs = try container.decodeIfPresent(Int64.self, forKey: .dayStartEpochMs)
+        dayEndEpochMs = try container.decodeIfPresent(Int64.self, forKey: .dayEndEpochMs)
+        upcomingDays = try container.decodeIfPresent([TodayTasksWidgetDaySnapshot].self, forKey: .upcomingDays) ?? []
     }
 
     /// True when the DISPLAYED content matches, ignoring `generatedAtEpochMs` (which changes
     /// on every rebuild). Used to skip needless WidgetKit reloads on a background sync that
-    /// didn't alter what the widget actually shows.
+    /// didn't alter what the widget actually shows. The day window counts as content: a
+    /// rebuild on a new local day must land even when both days hold the same tasks, or the
+    /// widget keeps a window that no longer contains "now".
     func hasSameContent(as other: TodayTasksWidgetSnapshot) -> Bool {
         schemaVersion == other.schemaVersion &&
             title == other.title &&
             status == other.status &&
             taskCount == other.taskCount &&
             tasks == other.tasks &&
-            perList == other.perList
+            perList == other.perList &&
+            dayStartEpochMs == other.dayStartEpochMs &&
+            dayEndEpochMs == other.dayEndEpochMs &&
+            upcomingDays == other.upcomingDays
     }
+
+    /// This snapshot minus the days it pre-computes for the widget. The Apple Watch mirror
+    /// shows `tasks` alone, so the upcoming days would only grow its WatchConnectivity
+    /// application-context payload.
+    func withoutUpcomingDays() -> TodayTasksWidgetSnapshot {
+        TodayTasksWidgetSnapshot(
+            schemaVersion: schemaVersion,
+            generatedAtEpochMs: generatedAtEpochMs,
+            title: title,
+            status: status,
+            taskCount: taskCount,
+            tasks: tasks,
+            perList: perList.mapValues { TodayTasksWidgetPerListSnapshot(totalCount: $0.totalCount, tasks: $0.tasks) },
+            dayStartEpochMs: dayStartEpochMs,
+            dayEndEpochMs: dayEndEpochMs
+        )
+    }
+}
+
+/// One upcoming local day of `TodayTasksWidgetSnapshot.upcomingDays`: the global "due today"
+/// feed as it will read on that day — true `taskCount`, display-capped `tasks` — so the widget
+/// can switch to it at midnight on its own.
+struct TodayTasksWidgetDaySnapshot: Codable, Equatable {
+    let dayStartEpochMs: Int64
+    let dayEndEpochMs: Int64
+    let taskCount: Int
+    let tasks: [TodayTasksWidgetTaskSnapshot]
 }
 
 /// One todo list's slice of `TodayTasksWidgetSnapshot.perList`: the display-capped task rows
@@ -72,6 +122,33 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
 struct TodayTasksWidgetPerListSnapshot: Codable, Equatable {
     let totalCount: Int
     let tasks: [TodayTasksWidgetTaskSnapshot]
+    /// `totalCount` as it will read on each of the snapshot's `upcomingDays`, same order.
+    let upcomingTotalCounts: [Int]
+    /// Every row that makes the display cap on ANY upcoming day, in the app's fixed order. A
+    /// list's window is cumulative (overdue + due that day), so on upcoming day `n` the rows
+    /// due before that day's end are, in order, a list that STARTS with exactly the capped rows
+    /// a rebuild on that day would write — the widget filters by due time and needs no sort.
+    let upcomingTasks: [TodayTasksWidgetTaskSnapshot]
+
+    init(
+        totalCount: Int,
+        tasks: [TodayTasksWidgetTaskSnapshot],
+        upcomingTotalCounts: [Int] = [],
+        upcomingTasks: [TodayTasksWidgetTaskSnapshot] = []
+    ) {
+        self.totalCount = totalCount
+        self.tasks = tasks
+        self.upcomingTotalCounts = upcomingTotalCounts
+        self.upcomingTasks = upcomingTasks
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        totalCount = try container.decode(Int.self, forKey: .totalCount)
+        tasks = try container.decode([TodayTasksWidgetTaskSnapshot].self, forKey: .tasks)
+        upcomingTotalCounts = try container.decodeIfPresent([Int].self, forKey: .upcomingTotalCounts) ?? []
+        upcomingTasks = try container.decodeIfPresent([TodayTasksWidgetTaskSnapshot].self, forKey: .upcomingTasks) ?? []
+    }
 }
 
 struct TodayTasksWidgetTaskSnapshot: Codable, Equatable, Identifiable {
@@ -222,7 +299,9 @@ enum WidgetConfigurableListsStore {
 }
 
 enum TodayTasksWidgetSnapshotStore {
-    static let snapshotSchemaVersion = 2
+    /// 3: records the local day window and carries the upcoming days (`upcomingDays`, per-list
+    /// `upcomingTasks`) so the widget turns over at midnight without a write.
+    static let snapshotSchemaVersion = 3
     static let widgetKind = "TodayTasksWidget"
     static let appGroupSuiteName = "group.com.ohmz.tday"
     static let snapshotFileName = WidgetSnapshotFileStore.todayFileName
@@ -236,6 +315,9 @@ enum TodayTasksWidgetSnapshotStore {
     /// such array per todo list — keeping it small bounds both the on-disk file and the
     /// WatchConnectivity application-context payload `WatchSessionManager` mirrors it into.
     static let perListTaskLimit = 20
+    /// Display cap for each of `upcomingDays`. Smaller than `taskLimit`: the largest widget fits
+    /// nine rows, and these arrays exist only for the days the app never gets to rewrite.
+    static let upcomingDayTaskLimit = 20
 
     static func makeSnapshot(
         from state: OfflineSyncState,
@@ -253,21 +335,29 @@ enum TodayTasksWidgetSnapshotStore {
             )
         }
 
-        let dayStart = calendar.startOfDay(for: now)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart.addingTimeInterval(86_400)
-        let dayStartEpochMs = Int64(dayStart.timeIntervalSince1970 * 1_000)
-        let dayEndEpochMs = Int64(dayEnd.timeIntervalSince1970 * 1_000)
+        // Today first, then the upcoming days the widget falls back on if the app does not
+        // write again before midnight (see TodayWidgetDayWindow).
+        let days = TodayWidgetDayWindow.days(
+            from: now,
+            count: 1 + TodayWidgetDayWindow.upcomingDayCount,
+            calendar: calendar
+        )
+        let dayStartEpochMs = days[0].startEpochMs
+        let dayEndEpochMs = days[0].endEpochMs
+        let horizonEndEpochMs = days[days.count - 1].endEpochMs
 
         // An active iOS Focus filter (R6-3) narrows the widget to its chosen lists.
         let focusListIDs = TdayFocusFilterStore.activeListIDs()
         // Fixed TODO ordering (TaskSortEngine), identical to the app, applied
-        // before the display cap so the widget shows the same leading tasks.
-        let todayTasks = TaskSortEngine.sortedTodos(
+        // before the display cap so the widget shows the same leading tasks. Sorted once
+        // across every covered day: the order is total (id breaks the last tie), so each
+        // day's slice of it is exactly that day's own sorted list.
+        let feedTasks = TaskSortEngine.sortedTodos(
             state.todos.filter { record in
                 guard let dueEpochMs = record.dueEpochMs else {
                     return false
                 }
-                guard !record.completed && dueEpochMs >= dayStartEpochMs && dueEpochMs < dayEndEpochMs else {
+                guard !record.completed && dueEpochMs >= dayStartEpochMs && dueEpochMs < horizonEndEpochMs else {
                     return false
                 }
                 guard let focusListIDs else { return true }
@@ -275,6 +365,10 @@ enum TodayTasksWidgetSnapshotStore {
             },
             key: taskSortKey
         )
+        func feedTasksDue(on day: TodayWidgetDayWindow.Day) -> [CachedTodoRecord] {
+            feedTasks.filter { record in record.dueEpochMs.map(day.contains) ?? false }
+        }
+        let todayTasks = feedTasksDue(on: days[0])
 
         func makeTaskSnapshot(_ record: CachedTodoRecord) -> TodayTasksWidgetTaskSnapshot {
             TodayTasksWidgetTaskSnapshot(
@@ -298,19 +392,44 @@ enum TodayTasksWidgetSnapshotStore {
         // is deliberately "due today" only.
         var perList: [String: TodayTasksWidgetPerListSnapshot] = [:]
         for list in state.lists {
-            let listTodos = TaskSortEngine.sortedTodos(
+            // Everything the list will show on any covered day, sorted once. Its window only
+            // grows day to day, so each day's rows are the ones due before that day's end.
+            let coveredListTodos = TaskSortEngine.sortedTodos(
                 state.todos.filter { record in
                     guard record.listId == list.id, !record.completed, let dueEpochMs = record.dueEpochMs else {
                         return false
                     }
-                    return dueEpochMs < dayEndEpochMs
+                    return dueEpochMs < horizonEndEpochMs
                 },
                 key: taskSortKey
             )
-            guard !listTodos.isEmpty else { continue }
+            guard !coveredListTodos.isEmpty else { continue }
+            func listTodosDue(before endEpochMs: Int64) -> [CachedTodoRecord] {
+                coveredListTodos.filter { record in (record.dueEpochMs ?? endEpochMs) < endEpochMs }
+            }
+            let listTodos = listTodosDue(before: dayEndEpochMs)
+            var upcomingTotalCounts: [Int] = []
+            var upcomingTaskIDs = Set<String>()
+            for day in days.dropFirst() {
+                let dayListTodos = listTodosDue(before: day.endEpochMs)
+                upcomingTotalCounts.append(dayListTodos.count)
+                upcomingTaskIDs.formUnion(dayListTodos.prefix(perListTaskLimit).map(\.id))
+            }
             perList[list.id] = TodayTasksWidgetPerListSnapshot(
                 totalCount: listTodos.count,
-                tasks: listTodos.prefix(perListTaskLimit).map(makeTaskSnapshot)
+                tasks: listTodos.prefix(perListTaskLimit).map(makeTaskSnapshot),
+                upcomingTotalCounts: upcomingTotalCounts,
+                upcomingTasks: coveredListTodos.filter { upcomingTaskIDs.contains($0.id) }.map(makeTaskSnapshot)
+            )
+        }
+
+        let upcomingDays = days.dropFirst().map { day in
+            let dayTasks = feedTasksDue(on: day)
+            return TodayTasksWidgetDaySnapshot(
+                dayStartEpochMs: day.startEpochMs,
+                dayEndEpochMs: day.endEpochMs,
+                taskCount: dayTasks.count,
+                tasks: dayTasks.prefix(upcomingDayTaskLimit).map(makeTaskSnapshot)
             )
         }
 
@@ -320,7 +439,10 @@ enum TodayTasksWidgetSnapshotStore {
             status: todayTasks.isEmpty ? .empty : .tasks,
             taskCount: todayTasks.count,
             tasks: todayTasks.prefix(taskLimit).map(makeTaskSnapshot),
-            perList: perList
+            perList: perList,
+            dayStartEpochMs: dayStartEpochMs,
+            dayEndEpochMs: dayEndEpochMs,
+            upcomingDays: upcomingDays
         )
     }
 

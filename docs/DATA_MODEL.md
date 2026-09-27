@@ -115,7 +115,7 @@ The Today Tasks widgets do not add backend or shared DTOs. Android builds its wi
 from the Room-backed `OfflineSyncState`; iOS writes a versioned JSON snapshot into App Group defaults
 for the WidgetKit extension.
 
-The current iOS snapshot schema is version `2` (Today) / `1` (Floater) and includes:
+The current iOS snapshot schema is version `3` (Today) / `1` (Floater) and includes:
 
 - `schemaVersion`
 - `generatedAtEpochMs`
@@ -127,6 +127,15 @@ The current iOS snapshot schema is version `2` (Today) / `1` (Floater) and inclu
   todo/floater list that currently has open items. Each entry carries its own `totalCount` (true
   count) and a capped `tasks` array, mirroring the top-level `taskCount`/`tasks` split — see
   "Per-list configurable widgets (iOS)" below.
+- `dayStartEpochMs` / `dayEndEpochMs` (Today, schema 3): the local day `status`/`taskCount`/`tasks`
+  describe. Absent in older snapshots, which the widget then dates by `generatedAtEpochMs`.
+- `upcomingDays` (Today, schema 3): the same "due today" feed for each of the next six local days
+  (`dayStartEpochMs`, `dayEndEpochMs`, true `taskCount`, `tasks` capped at 20), and on each todo
+  `perList` entry `upcomingTotalCounts` (one per upcoming day) plus `upcomingTasks` (every row that
+  makes the per-list cap on any upcoming day, in sort order). The widget extension cannot open the
+  cache, so these let it render the day that contains its entry date after midnight without a new
+  write. The Apple Watch mirror sends the snapshot without them. See `docs/WIDGET_SYNC.md`
+  ("Day rollover (iOS)").
 
 Both platforms filter the source cache to pending scheduled tasks due today, sort by due time then
 title, cap displayed rows to the widget task limit, and exclude floaters and completed tasks from the
