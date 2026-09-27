@@ -17,6 +17,7 @@ fallback for when the app process isn't running to make that write.
 | Widget doesn't update when app is closed           | No lifecycle hook on app background                                                            | Not needed: the repaint already happened at write time, not on close. Android's `MainActivity.onStart()` still re-requests a refresh on the *next* foreground return as belt-and-braces; iOS re-arms its background fallback task |
 | Pressing + and adding a task doesn't update widget | No call to update the widget from the save path                                                | `OfflineCacheManager` is the single chokepoint every write goes through, on both platforms, and it writes the widget snapshot + requests a repaint itself |
 | Widget updates are irregular / unreliable          | No background worker as fallback                                                               | `WidgetSyncWorker` (Android, WorkManager `PeriodicWorkRequest`) / `BGAppRefreshTask` (iOS) both run on a **30-minute** earliest-begin fallback |
+| (iOS) Today widget shows yesterday's tasks, or "No tasks due today", after midnight when nothing syncs (offline) | The snapshot baked one local day at write time and only a cache write retook it; the extension cannot open the cache to rebuild | The snapshot carries the next six days and the widget renders the day containing its entry date, with a timeline entry at local midnight; launch, foreground and background refresh retake it — see "Day rollover (iOS)" |
 | (Android) Widget text unreadable after toggling system dark/light mode | Every widget color resolves correctly on a repaint, but nothing ever asked for one when the system theme itself changed — `ACTION_CONFIGURATION_CHANGED` is undeliverable to a manifest receiver, and no other trigger covered "app not foregrounded, theme flipped" | `TdayApplication.onConfigurationChanged` compares the system `uiMode`'s night bits against the last-seen value and calls `WidgetRefresher.requestRefresh()` on an actual flip — `Application` is notified in any live process, including a widget-only one that never opened `MainActivity` |
 
 ## Files — where they go
@@ -70,12 +71,14 @@ Tday/Core/Widget/
 ├── TodayTasksWidgetSnapshotStore.swift ← both snapshots' DTOs/stores (Today + Floater), WidgetSnapshotFileStore
 │                                          (App Group file, .completeUntilFirstUserAuthentication protection),
 │                                          WidgetPendingCompletionQueue, WidgetBackendSession
+├── TodayWidgetDayWindow.swift          ← local-day windows for the Today snapshot; the ONE source file the
+│                                          app and the TdayWidget extension both compile
 ├── WidgetBackgroundRefresh.swift       ← BGAppRefreshTask registration + ~30-min earliest-begin scheduling
 └── WatchSessionManager.swift           ← mirrors the Today snapshot to a paired Apple Watch
 
 TdayWidget/
-└── TodayTasksWidget.swift              ← the only file the widget extension target compiles: both
-                                            TimelineProviders, both Widget structs, CompleteWidgetTaskIntent
+└── TodayTasksWidget.swift              ← the extension's own source (it also compiles TodayWidgetDayWindow.swift):
+                                            both TimelineProviders, both Widget structs, CompleteWidgetTaskIntent
                                             (instant-sync completion), duplicated snapshot/session readers
 
 TdayWatchWidget/
@@ -121,6 +124,10 @@ reliability/efficiency trade-offs at this same point in the pipeline.
 - `AppRootView`'s `.onChange(of: scenePhase)` calls `WidgetBackgroundRefresh.scheduleNext()` on
   `.background` / `.inactive` (arms the ~30-min fallback task) and drains any queued widget
   completions (`todoRepository.drainWidgetCompletions()`) on `.active` and on cold launch.
+- The same `.active` handler, the cold-launch `.task`, and every `BGAppRefreshTask` run (whatever
+  its sync did) call `OfflineCacheManager.refreshTodayWidgetSnapshot()`, which retakes the Today
+  snapshot from the in-memory `lastState` mirror. It rewrites the snapshot and reloads WidgetKit only
+  when the content differs — normally once per new local day — see "Day rollover (iOS)".
 - The widget kind strings are `"TodayTasksWidget"` and `"FloaterTasksWidget"` — they must match
   `TodayTasksWidgetSnapshotStore.widgetKind` / `FloaterTasksWidgetSnapshotStore.widgetKind` and the
   `kind` on each `Widget` struct declared in `TdayWidget/TodayTasksWidget.swift`.
@@ -423,6 +430,47 @@ widget shows content or "Loading tasks…". Three rules, all in `WidgetSnapshotI
 `WidgetSnapshotIoTest` covers all three as plain JVM tests — the store itself needs AndroidKeyStore
 and a real `Context`, which is why the file behaviour lives in its own class.
 
+## Day rollover (iOS)
+
+The Today snapshot is a picture of "due today" taken when the app writes it. Only an offline-cache
+write retook it, so after midnight with nothing syncing (offline, or simply no change) the widget
+kept rendering yesterday's picture: yesterday's rows under today's clock, or "No tasks due today"
+while the cache already held today's tasks. A per-list todo widget went stale the same way (today's
+rows missing, although its overdue tint was computed live). The WidgetKit timeline reloads covered
+below never helped: they re-read the same file.
+
+Android fixes this by rebuilding from its cache (`WidgetHydrateWorker`). The iOS extension cannot
+open the cache, so the snapshot carries the days ahead instead:
+
+- **The snapshot records its day and the next six.** `makeSnapshot` writes `dayStartEpochMs` /
+  `dayEndEpochMs` for the day `tasks` describe, plus `upcomingDays` — the same "due today" feed for
+  each of the next six local days (true count, rows capped at 20). A todo list's `perList` entry adds
+  `upcomingTotalCounts` and `upcomingTasks`: every row that makes the list's cap on any upcoming day,
+  in sort order. A list's window is cumulative (overdue + due that day), so the upcoming rows due
+  before a given day's end begin with exactly the rows a rebuild on that day would write, and the
+  extension needs no sort engine. The windows come from `TodayWidgetDayWindow`, the one file both
+  targets compile, so writer and reader agree on where a day starts (DST days keep their real
+  length).
+- **The widget renders the day containing its entry date.** `TodayTasksProvider` (and a per-list
+  todo instance in either gallery slot) looks the entry date up in the covered days and renders that
+  day's feed. Each timeline carries a second entry at the next local midnight, so the switch lands on
+  time even if nothing reloads the timeline.
+- **Past the last covered day the widget says so.** It renders "Open T'Day / to refresh today's
+  tasks" rather than any day it cannot vouch for; tapping it opens the app, which retakes the
+  snapshot. A schema-2 snapshot (no window) covers only the day it was generated, so an upgraded
+  install goes to this state after midnight until the app next launches instead of trusting it
+  forever.
+- **The app retakes the snapshot whenever the day may have turned.** Launch, every foreground return
+  and every `BGAppRefreshTask` run call `OfflineCacheManager.refreshTodayWidgetSnapshot()`. The day
+  window counts as content in `hasSameContent`, so a new day always writes, even when both days hold
+  the same tasks.
+- The Apple Watch mirror sends `withoutUpcomingDays()`: the watch shows `tasks` alone, so the extra
+  days would only grow its WatchConnectivity payload.
+
+`TodayTasksWidgetSnapshotStoreTests` pins that each carried day, global and per-list, reads exactly
+like a rebuild on that day, that a snapshot written late yesterday lands on today's rows just after
+midnight, that a snapshot without a window stops at its own day, and the DST window lengths.
+
 ## Background refresh cadence
 
 - Android `WidgetSyncWorker` (WorkManager `PeriodicWorkRequest`, network-constrained) fires every
@@ -438,6 +486,11 @@ and a real `Context`, which is why the file behaviour lives in its own class.
 - The Today widget's own WidgetKit timeline additionally requests a fresh `getTimeline` at
   `min(now + 30 min, next 6am/6pm boundary)` (so the day/night watermark artwork follows the
   clock); the Floater widget's timeline refreshes every 30 min flat. Neither adds new task data
-  on its own — that only ever changes via a snapshot write.
+  on its own — that only ever changes via a snapshot write. What the Today widget does on its own
+  is switch days: each timeline also has an entry at the next local midnight, rendered from the
+  upcoming days the snapshot already carries (see "Day rollover (iOS)"). A todo list picked in the
+  Floater slot gets the same midnight entry.
+- `BGAppRefreshTask` runs also retake the Today snapshot from the cache after their sync, success
+  or not, so a run that finds nothing new, or no network, still rolls the widget onto the new day.
 - On both platforms, the snapshot-write step is the fast path and fires on every offline-cache
   write, independent of any cadence above — this is what makes freshness feel immediate.

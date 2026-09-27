@@ -602,6 +602,44 @@ private enum TodayTasksSnapshotStatus: String, Codable {
 private struct TodayTasksPerListSnapshot: Codable {
     let totalCount: Int
     let tasks: [TodayTaskSnapshot]
+    /// `totalCount` on each of the snapshot's `upcomingDays`, and every row that makes the
+    /// display cap on any of them, in the app's order. Defaulted so older snapshots decode.
+    let upcomingTotalCounts: [Int]
+    let upcomingTasks: [TodayTaskSnapshot]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        totalCount = try container.decode(Int.self, forKey: .totalCount)
+        tasks = try container.decode([TodayTaskSnapshot].self, forKey: .tasks)
+        upcomingTotalCounts = try container.decodeIfPresent([Int].self, forKey: .upcomingTotalCounts) ?? []
+        upcomingTasks = try container.decodeIfPresent([TodayTaskSnapshot].self, forKey: .upcomingTasks) ?? []
+    }
+
+    /// The list as it reads on covered day `dayOffset` (0 = the snapshot's own day), or nil
+    /// when the snapshot holds no count for that day. The list's window is cumulative, so on an
+    /// upcoming day its rows are the upcoming rows due before that day ends — already in order,
+    /// and led by exactly the rows a rebuild on that day would write.
+    func content(dayOffset: Int, dayEndEpochMs: Int64) -> (totalCount: Int, tasks: [TodayTaskSnapshot])? {
+        guard dayOffset > 0 else {
+            return (totalCount, tasks)
+        }
+        guard upcomingTotalCounts.indices.contains(dayOffset - 1) else {
+            return nil
+        }
+        return (
+            upcomingTotalCounts[dayOffset - 1],
+            upcomingTasks.filter { $0.dueEpochMs < dayEndEpochMs }
+        )
+    }
+}
+
+/// Widget-side twin of the app's `TodayTasksWidgetDaySnapshot`: the global "due today" feed as
+/// it reads on one upcoming local day.
+private struct TodayTasksDaySnapshot: Codable {
+    let dayStartEpochMs: Int64
+    let dayEndEpochMs: Int64
+    let taskCount: Int
+    let tasks: [TodayTaskSnapshot]
 }
 
 private func isTaskWidgetDaytime(_ date: Date) -> Bool {
@@ -632,6 +670,11 @@ private struct TodayTasksSnapshot: Codable {
     let tasks: [TodayTaskSnapshot]
     // Defaulted so snapshots persisted before this field existed still decode (as empty).
     let perList: [String: TodayTasksPerListSnapshot]
+    // The local day `tasks` describe, and the same feed for the days after it (schema 3).
+    // Nil/empty in older snapshots, which then cover only the day they were generated on.
+    let dayStartEpochMs: Int64?
+    let dayEndEpochMs: Int64?
+    let upcomingDays: [TodayTasksDaySnapshot]
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -643,16 +686,55 @@ private struct TodayTasksSnapshot: Codable {
         taskCount = try container.decodeIfPresent(Int.self, forKey: .taskCount) ?? decodedTasks.count
         tasks = decodedTasks
         perList = try container.decodeIfPresent([String: TodayTasksPerListSnapshot].self, forKey: .perList) ?? [:]
+        dayStartEpochMs = try container.decodeIfPresent(Int64.self, forKey: .dayStartEpochMs)
+        dayEndEpochMs = try container.decodeIfPresent(Int64.self, forKey: .dayEndEpochMs)
+        upcomingDays = try container.decodeIfPresent([TodayTasksDaySnapshot].self, forKey: .upcomingDays) ?? []
     }
 
-    /// Searches the global `tasks` aggregate first, then every per-list slice — a row rendered
-    /// from a configured per-list widget (R7) lives only in `perList`, not `tasks`.
+    /// The local days this snapshot can answer for: its own, then its upcoming ones.
+    func coveredDays(calendar: Calendar = .current) -> [TodayWidgetDayWindow.Day] {
+        TodayWidgetDayWindow.coveredDays(
+            dayStartEpochMs: dayStartEpochMs,
+            dayEndEpochMs: dayEndEpochMs,
+            upcoming: upcomingDays.map {
+                TodayWidgetDayWindow.Day(startEpochMs: $0.dayStartEpochMs, endEpochMs: $0.dayEndEpochMs)
+            },
+            generatedAtEpochMs: generatedAtEpochMs,
+            calendar: calendar
+        )
+    }
+
+    /// The global feed on covered day `dayOffset` (0 = the snapshot's own day).
+    func feed(dayOffset: Int) -> (taskCount: Int, tasks: [TodayTaskSnapshot])? {
+        guard dayOffset > 0 else {
+            return (taskCount, tasks)
+        }
+        guard upcomingDays.indices.contains(dayOffset - 1) else {
+            return nil
+        }
+        let day = upcomingDays[dayOffset - 1]
+        return (day.taskCount, day.tasks)
+    }
+
+    /// Searches the global `tasks` aggregate first, then every per-list slice, then the
+    /// upcoming days — a row rendered from a configured per-list widget (R7) lives only in
+    /// `perList`, and one rendered after midnight only in the upcoming rows.
     func firstTask(withId id: String) -> TodayTaskSnapshot? {
         if let match = tasks.first(where: { $0.id == id }) {
             return match
         }
         for list in perList.values {
             if let match = list.tasks.first(where: { $0.id == id }) {
+                return match
+            }
+        }
+        for day in upcomingDays {
+            if let match = day.tasks.first(where: { $0.id == id }) {
+                return match
+            }
+        }
+        for list in perList.values {
+            if let match = list.upcomingTasks.first(where: { $0.id == id }) {
                 return match
             }
         }
@@ -671,10 +753,18 @@ private struct TodayTasksProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: SelectTaskListIntent, in context: Context) async -> Timeline<TodayTasksEntry> {
         let now = Date()
-        let entry = loadEntry(configuration: configuration, date: now)
+        var entries = [loadEntry(configuration: configuration, date: now)]
+        // Due-date content turns over at local midnight. An entry of its own there switches
+        // the widget onto the new day on time, from the days the snapshot carries, even if
+        // nothing reloads the timeline — offline the app writes nothing, and a policy reload
+        // can land late. A floater list has no days, so it gets no extra entry.
+        if configuration.list?.kind != .floater {
+            let midnight = TodayWidgetDayWindow.nextDayStart(after: now, calendar: .current)
+            entries.append(loadEntry(configuration: configuration, date: midnight))
+        }
         let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: now) ?? now.addingTimeInterval(1800)
         let nextDayNightRefresh = nextTaskWidgetDayNightRefresh(after: now)
-        return Timeline(entries: [entry], policy: .after(min(nextRefresh, nextDayNightRefresh)))
+        return Timeline(entries: entries, policy: .after(min(nextRefresh, nextDayNightRefresh)))
     }
 
     /// `configuration.list == nil` (unset, or a widget placed before R7 existed) falls back to
@@ -713,15 +803,26 @@ private struct TodayTasksProvider: AppIntentTimelineProvider {
         guard let snapshot = loadSnapshot() else {
             return TodayTasksEntry(date: date, title: "Today's Tasks", status: .setup, taskCount: 0, rows: [], mode: .today)
         }
+        guard snapshot.status != .setup else {
+            return TodayTasksEntry(date: date, title: snapshot.title, status: .setup, taskCount: 0, rows: [], mode: .today)
+        }
+
+        // Render the local day that contains this entry's date, not the one the snapshot was
+        // written on: after midnight with nothing syncing, the snapshot's own `tasks` are
+        // yesterday's. Past the days it carries, ask for the app rather than guess.
+        let nowMs = Int64(date.timeIntervalSince1970 * 1_000)
+        guard let dayOffset = TodayWidgetDayWindow.dayOffset(of: nowMs, in: snapshot.coveredDays()),
+              let feed = snapshot.feed(dayOffset: dayOffset) else {
+            return TodayTasksEntry(date: date, title: snapshot.title, status: .stale, taskCount: 0, rows: [], mode: .today)
+        }
 
         // Hide rows completed from the widget that the app has not drained yet — but
         // keep a row that's mid check-off animation (still shown, checked + struck)
         // until its beat ends, at which point the pending filter removes it.
-        let nowMs = Int64(date.timeIntervalSince1970 * 1_000)
         let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.todoKind)
         let checking = WidgetPendingCompletionStore.checkingIds(kind: WidgetPendingCompletionStore.todoKind, nowEpochMs: nowMs)
-        let visible = snapshot.tasks.filter { checking.contains($0.id) || !pending.contains($0.id) }
-        let taskCount = max(0, snapshot.taskCount - (snapshot.tasks.count - visible.count))
+        let visible = feed.tasks.filter { checking.contains($0.id) || !pending.contains($0.id) }
+        let taskCount = max(0, feed.taskCount - (feed.tasks.count - visible.count))
         let rows = visible.map { task in
             WidgetTaskRowModel(
                 id: task.id,
@@ -735,7 +836,7 @@ private struct TodayTasksProvider: AppIntentTimelineProvider {
         return TodayTasksEntry(
             date: date,
             title: snapshot.title,
-            status: (snapshot.status == .tasks && taskCount == 0) ? .empty : TaskWidgetStatus(snapshot.status),
+            status: taskCount == 0 ? .empty : .tasks,
             taskCount: taskCount,
             rows: rows,
             mode: .today
@@ -852,17 +953,9 @@ private enum TaskWidgetStatus: Equatable {
     case empty
     case tasks
     case locked
-
-    init(_ status: TodayTasksSnapshotStatus) {
-        switch status {
-        case .setup:
-            self = .setup
-        case .empty:
-            self = .empty
-        case .tasks:
-            self = .tasks
-        }
-    }
+    /// The snapshot has run out of local days (see `TodayWidgetDayWindow`): rendering any of
+    /// its rows as "today" would be a guess, and the extension cannot rebuild from the cache.
+    case stale
 
     init(_ status: FloaterTasksSnapshotStatus) {
         switch status {
@@ -998,18 +1091,31 @@ private enum PerListWidgetContentLoader {
     /// .makeSnapshot`'s `perList` comment for why the window is wider than the global feed).
     /// `isOverdue` is computed live against `date`, not persisted, so it stays correct across
     /// timeline refreshes even though the underlying snapshot file only refreshes on state
-    /// change.
+    /// change. The window itself is the local day containing `date`, from the days the
+    /// snapshot carries — the same rollover as the global feed.
     private static func loadTodoList(list: TdayWidgetListEntity, date: Date) -> PerListWidgetContent {
-        guard let snapshot = TodayTasksProvider.loadWidgetSnapshot(),
-              let listSnapshot = snapshot.perList[list.listId] else {
+        guard let snapshot = TodayTasksProvider.loadWidgetSnapshot() else {
             return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .today)
         }
 
         let nowMs = Int64(date.timeIntervalSince1970 * 1_000)
+        let days = snapshot.coveredDays()
+        guard let dayOffset = TodayWidgetDayWindow.dayOffset(of: nowMs, in: days) else {
+            return PerListWidgetContent(title: list.name, status: .stale, taskCount: 0, rows: [], mode: .today)
+        }
+        // A list is written whenever it has anything due before the last covered day ends, so a
+        // missing slice means nothing due on this day either.
+        guard let listSnapshot = snapshot.perList[list.listId] else {
+            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .today)
+        }
+        guard let content = listSnapshot.content(dayOffset: dayOffset, dayEndEpochMs: days[dayOffset].endEpochMs) else {
+            return PerListWidgetContent(title: list.name, status: .stale, taskCount: 0, rows: [], mode: .today)
+        }
+
         let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.todoKind)
         let checking = WidgetPendingCompletionStore.checkingIds(kind: WidgetPendingCompletionStore.todoKind, nowEpochMs: nowMs)
-        let visible = listSnapshot.tasks.filter { checking.contains($0.id) || !pending.contains($0.id) }
-        let taskCount = max(0, listSnapshot.totalCount - (listSnapshot.tasks.count - visible.count))
+        let visible = content.tasks.filter { checking.contains($0.id) || !pending.contains($0.id) }
+        let taskCount = max(0, content.totalCount - (content.tasks.count - visible.count))
         let rows = visible.map { task in
             WidgetTaskRowModel(
                 id: task.id,
@@ -1084,6 +1190,9 @@ private struct TdayTasksWidgetContent: View {
                 message(title: mode.emptyTitle, subtitle: "")
             case .locked:
                 lockedMessage
+            case .stale:
+                // Tapping the widget opens the app, which retakes the snapshot on launch.
+                message(title: "Open T'Day", subtitle: "to refresh today's tasks")
             case .tasks:
                 EmptyView()
             }
@@ -1651,20 +1760,27 @@ private struct FloaterTasksProvider: AppIntentTimelineProvider {
     }
 
     func timeline(for configuration: SelectTaskListIntent, in context: Context) async -> Timeline<FloaterTasksEntry> {
-        let entry = loadEntry(configuration: configuration)
-        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: Date()) ?? Date().addingTimeInterval(1800)
-        return Timeline(entries: [entry], policy: .after(nextRefresh))
+        let now = Date()
+        var entries = [loadEntry(configuration: configuration, date: now)]
+        // A todo list picked in this gallery slot renders due-date content, which turns over
+        // at local midnight — see the Today twin's timeline.
+        if configuration.list?.kind == .todo {
+            let midnight = TodayWidgetDayWindow.nextDayStart(after: now, calendar: .current)
+            entries.append(loadEntry(configuration: configuration, date: midnight))
+        }
+        let nextRefresh = Calendar.current.date(byAdding: .minute, value: 30, to: now) ?? now.addingTimeInterval(1800)
+        return Timeline(entries: entries, policy: .after(nextRefresh))
     }
 
     /// See the Today twin's `loadEntry(configuration:date:)` — identical nil-falls-back-to-
     /// global, list-present-renders-via-`PerListWidgetContentLoader` shape.
-    private func loadEntry(configuration: SelectTaskListIntent) -> FloaterTasksEntry {
+    private func loadEntry(configuration: SelectTaskListIntent, date: Date = Date()) -> FloaterTasksEntry {
         // Checked before the snapshot is even read, so a locked device never decodes real
         // task titles into memory it isn't going to render.
         guard !WidgetAppLockStore.isEnabled else {
             let list = configuration.list
             return FloaterTasksEntry(
-                date: Date(),
+                date: date,
                 title: list?.name ?? "Floater Tasks",
                 status: .locked,
                 taskCount: 0,
@@ -1673,9 +1789,9 @@ private struct FloaterTasksProvider: AppIntentTimelineProvider {
             )
         }
         if let list = configuration.list {
-            let content = PerListWidgetContentLoader.load(list: list, date: Date())
+            let content = PerListWidgetContentLoader.load(list: list, date: date)
             return FloaterTasksEntry(
-                date: Date(),
+                date: date,
                 title: content.title,
                 status: content.status,
                 taskCount: content.taskCount,

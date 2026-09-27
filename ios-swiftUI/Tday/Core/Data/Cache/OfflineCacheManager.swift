@@ -439,6 +439,16 @@ final class OfflineCacheManager {
             !state.pendingMutations.isEmpty
     }
 
+    /// Retakes the Today widget snapshot from the cache as it stands, for the moments the local
+    /// day may have turned over with no cache write to do it — a launch or foreground return,
+    /// a background refresh that found nothing new. Offline, those are the only moments. The
+    /// save is conditional and the snapshot's day window counts as content, so this writes (and
+    /// reloads WidgetKit) once per new day and is a no-op otherwise. `lastState` mirrors the
+    /// cache, so there is no fetch.
+    func refreshTodayWidgetSnapshot() {
+        TodayTasksWidgetSnapshotStore.saveTodayTasks(from: lastState)
+    }
+
     func clearAllLocalData() {
         saveOfflineState(OfflineSyncState())
     }
