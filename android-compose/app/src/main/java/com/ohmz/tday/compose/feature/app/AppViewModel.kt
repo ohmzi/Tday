@@ -217,13 +217,13 @@ class AppViewModel @Inject constructor(
     private var connectivityJob: Job? = null
     private var foregroundReconnectJob: Job? = null
     // Retries against a failing server stop while this is false; see [ensureResyncLoop].
-    private val appInForeground = MutableStateFlow(true)
+    private val _appInForeground = MutableStateFlow(true)
 
     // Syncs through syncAndUpdateOfflineState that have failed in a row. Drives the resync loop's
     // backoff and its background pause. Reset by any sync that reached the server (whichever path
     // ran it, see observeOfflineSyncSuccesses), by a return to the foreground, and by sign-out.
     // Only touched on the main dispatcher.
-    private val consecutiveSyncFailures = MutableStateFlow(0)
+    private val _consecutiveSyncFailures = MutableStateFlow(0)
     private val offlineNoticeCooldown = OfflineNoticeCooldown()
 
     // The silent pending-approval re-login runs at most once per process (first launch),
@@ -1062,7 +1062,7 @@ class AppViewModel @Inject constructor(
 
     /** From the activity's ON_STOP. The resync loop and the realtime socket stop retrying. */
     fun onAppBackgrounded() {
-        appInForeground.value = false
+        _appInForeground.value = false
     }
 
     /**
@@ -1072,8 +1072,8 @@ class AppViewModel @Inject constructor(
      * activity was recreated while stopped, so the loop's normal cadence is the fallback there.
      */
     fun onAppForegrounded() {
-        consecutiveSyncFailures.value = 0
-        appInForeground.value = true
+        _consecutiveSyncFailures.value = 0
+        _appInForeground.value = true
     }
 
     fun reconnectAfterForeground() {
@@ -1143,7 +1143,7 @@ class AppViewModel @Inject constructor(
 
     private fun ensureResyncLoop(authenticated: Boolean) {
         if (!authenticated) {
-            consecutiveSyncFailures.value = 0
+            _consecutiveSyncFailures.value = 0
             resyncJob?.cancel()
             resyncJob = null
             realtimeJob?.cancel()
@@ -1182,9 +1182,9 @@ class AppViewModel @Inject constructor(
                 // managers penalize, up to a force-stop that on Android 15+ disables the widget.
                 // Resume once the app is back; reconnectAfterForeground syncs then. Background
                 // freshness is WidgetSyncWorker's job (network-constrained, every 30 min).
-                if (consecutiveSyncFailures.value > 0 && !appInForeground.value) {
+                if (_consecutiveSyncFailures.value > 0 && !_appInForeground.value) {
                     // Also released by a sync that gets through meanwhile (a network change).
-                    combine(appInForeground, consecutiveSyncFailures) { foreground, failures ->
+                    combine(_appInForeground, _consecutiveSyncFailures) { foreground, failures ->
                         foreground || failures == 0
                     }.first { it }
                     continue
@@ -1207,11 +1207,16 @@ class AppViewModel @Inject constructor(
     private fun resyncDelayMs(hasPendingMutations: Boolean): Long {
         var delayMs = if (hasPendingMutations) PENDING_RESYNC_INTERVAL_MS else RESYNC_INTERVAL_MS
         // Stops doubling at the cap, so a days-long outage can't overflow the Long.
-        repeat(consecutiveSyncFailures.value) {
+        repeat(_consecutiveSyncFailures.value) {
             if (delayMs >= MAX_RESYNC_BACKOFF_MS) return MAX_RESYNC_BACKOFF_MS
             delayMs *= 2
         }
         return delayMs.coerceAtMost(MAX_RESYNC_BACKOFF_MS)
+    }
+
+    /** Kept out of [syncAndUpdateOfflineState], which is already at the complexity ceiling. */
+    private fun recordSyncOutcome(failed: Boolean) {
+        _consecutiveSyncFailures.value = if (failed) _consecutiveSyncFailures.value + 1 else 0
     }
 
     private suspend fun syncAndUpdateOfflineState(
@@ -1231,7 +1236,7 @@ class AppViewModel @Inject constructor(
             connectionProbeTimeoutMs = connectionProbeTimeoutMs,
         )
         val syncError = result.exceptionOrNull()
-        consecutiveSyncFailures.value = if (syncError == null) 0 else consecutiveSyncFailures.value + 1
+        recordSyncOutcome(failed = syncError != null)
         val isOffline = syncError != null &&
                 shouldTreatSyncFailureAsOffline(
                     error = syncError,
@@ -1409,7 +1414,7 @@ class AppViewModel @Inject constructor(
                         // Backgrounded, don't retry on a timer. Any successful sync reconnects it
                         // (see syncAndUpdateOfflineState) — the foreground return's, or the loop's
                         // own while the server is still reachable.
-                        if (_uiState.value.authenticated && appInForeground.value) {
+                        if (_uiState.value.authenticated && _appInForeground.value) {
                             realtimeClient.connect()
                         }
                     }
@@ -1511,7 +1516,7 @@ class AppViewModel @Inject constructor(
             syncManager.offlineSyncSuccesses.collect {
                 // The server answered, whoever asked (a manual refresh goes around
                 // syncAndUpdateOfflineState), so the backoff has nothing left to wait out.
-                consecutiveSyncFailures.value = 0
+                _consecutiveSyncFailures.value = 0
                 val syncMetadata = syncMetadataSnapshot(AppDataMode.SERVER)
                 _uiState.update {
                     if (!it.authenticated) {
