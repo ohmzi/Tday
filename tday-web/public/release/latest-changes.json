@@ -1,11 +1,10 @@
 {
-  "version": "0.7.41",
-  "publishedAt": "2026-09-27T16:54:10-04:00",
+  "version": "0.7.42",
+  "publishedAt": "2026-09-27T18:50:09-04:00",
   "notes": [
-    "Roll the iOS Today widget over at midnight without a sync",
-    "Rebuild the Today widget after midnight when offline",
-    "Back off sync retries and pause them in the background"
+    "Carry the next six days in the Today widget snapshot",
+    "Drop the not-null assertion in the upcoming-days widget test"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.41",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.40..v0.7.41"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.42",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.41..v0.7.42"
 }
