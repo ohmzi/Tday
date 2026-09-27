@@ -693,6 +693,9 @@ struct AppRootView: View {
             await appLock.authenticateIfNeeded()
         }
         .task {
+            // Cold launch: `.onChange(of: scenePhase)` never fires for the launch value, so the
+            // Today widget's day rollover (see the `.active` case below) runs here too.
+            container.cacheManager.refreshTodayWidgetSnapshot()
             if !appViewModel.hasCompletedInitialBootstrap {
                 await appViewModel.bootstrap()
             }
@@ -749,6 +752,9 @@ struct AppRootView: View {
                 Task {
                     await container.todoRepository.drainWidgetCompletions()
                 }
+                // A new local day since the last cache write leaves the Today widget on a stale
+                // window until something writes again — offline, nothing does.
+                container.cacheManager.refreshTodayWidgetSnapshot()
                 // The notification permission is granted in the *system* Settings app, so the
                 // only moment T'Day can notice is the return from it — and the screen the user
                 // lands back on is whichever one they left, not ours. Owned here rather than in

@@ -33,7 +33,7 @@ final class WatchSessionManager: NSObject, WCSessionDelegate {
               session.isPaired,
               session.isWatchAppInstalled else { return }
         guard let snapshot = TodayTasksWidgetSnapshotStore.loadSnapshot(),
-              let data = try? JSONEncoder().encode(snapshot) else { return }
+              let data = try? JSONEncoder().encode(snapshot.withoutUpcomingDays()) else { return }
         try? session.updateApplicationContext([Self.snapshotKey: data])
     }
 

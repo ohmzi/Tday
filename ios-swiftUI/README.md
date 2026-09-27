@@ -121,11 +121,16 @@ See [`../docs/DATA_MODEL.md`](../docs/DATA_MODEL.md) for the shared cache model.
 `TdayWidget` is a WidgetKit app extension with small, medium, and large Today Tasks and Floater
 Tasks widgets. The app writes snapshots through the App Group suite `group.com.ohmz.tday` using keys
 `tday.widget.todayTasksSnapshot` and `tday.widget.floaterTasksSnapshot`; the Today extension model
-decodes schema version 2 snapshots and keeps a legacy fallback for older payloads.
+decodes schema version 3 snapshots and keeps a legacy fallback for older payloads.
 
 - Snapshot status is `setup`, `empty`, or `tasks`, with task count, generated time, and capped task rows.
 - Today includes pending scheduled tasks due today; Floater includes active unscheduled floaters
   across all floater lists. Completed tasks and overdue scheduled tasks are excluded.
+- The Today snapshot records its local day and carries the next six days as well, so the widget
+  turns over at midnight on its own (a timeline entry at the next local midnight) even when nothing
+  syncs or writes — offline, say. Past the last carried day it shows "Open T'Day" instead of a stale
+  day; launching or foregrounding the app retakes the snapshot. `Tday/Core/Widget/TodayWidgetDayWindow.swift`
+  is the one source file the app and the widget extension both compile. See `docs/WIDGET_SYNC.md`.
 - Medium and large layouts show the title, neutral count text, a mode-accented native plus icon add
   target, and dense scan-first rows; compact layouts stay count-first and prioritize task titles
   over due-time detail.

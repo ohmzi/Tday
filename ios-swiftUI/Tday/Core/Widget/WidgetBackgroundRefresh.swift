@@ -61,6 +61,9 @@ enum WidgetBackgroundRefresh {
                 replayPendingMutations: true,
                 notifyOfflineFailure: false
             )
+            // Whatever the sync did — offline it wrote nothing, and a sync that found nothing
+            // new skips the snapshot too — roll the Today widget onto the current local day.
+            AppContainer.shared.cacheManager.refreshTodayWidgetSnapshot()
             // Rides the same wake-up rather than adding a background mode of its own. It is a
             // no-op for anyone who is not a signed-in admin, and it never throws, so the
             // completion below is still reached on every path.
