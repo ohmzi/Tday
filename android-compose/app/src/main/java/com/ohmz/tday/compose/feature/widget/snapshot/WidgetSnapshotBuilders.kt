@@ -34,7 +34,35 @@ internal fun buildTodayWidgetSnapshot(
 
     val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
     val dayEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
-    val todayTasks = TaskSortEngine.sortedTodos(
+    val todayTasks = dueTodayFeed(state, dayStart, dayEnd)
+
+    return WidgetSnapshot(
+        generatedAtEpochMs = nowEpochMs,
+        status = if (todayTasks.isEmpty()) WidgetSnapshotStatus.EMPTY else WidgetSnapshotStatus.TASKS,
+        taskCount = todayTasks.size,
+        dayStartEpochMs = dayStart,
+        dayEndEpochMs = dayEnd,
+        rows = todayTasks.take(taskLimit).map { it.toSnapshotRow() },
+        // The same selection for each of the following days, so the widget turns over at midnight
+        // from what is already on disk (see WidgetSnapshot.todayAt). Each end is one calendar day
+        // after its start, so 23- and 25-hour DST days keep their real length.
+        upcomingDays = (1..UPCOMING_DAY_COUNT).map { offset ->
+            val start = today.plusDays(offset.toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val end = today.plusDays(offset + 1L).atStartOfDay(zoneId).toInstant().toEpochMilli()
+            val tasks = dueTodayFeed(state, start, end)
+            WidgetSnapshotDay(
+                dayStartEpochMs = start,
+                dayEndEpochMs = end,
+                taskCount = tasks.size,
+                rows = tasks.take(UPCOMING_DAY_TASK_LIMIT).map { it.toSnapshotRow() },
+            )
+        },
+    )
+}
+
+/** Incomplete tasks due in `[dayStart, dayEnd)`, in the Today feed's order. */
+private fun dueTodayFeed(state: OfflineSyncState, dayStart: Long, dayEnd: Long): List<CachedTodoRecord> =
+    TaskSortEngine.sortedTodos(
         state.todos.filter { task ->
             val dueEpochMs = task.dueEpochMs ?: return@filter false
             !task.completed && dueEpochMs >= dayStart && dueEpochMs < dayEnd
@@ -48,16 +76,6 @@ internal fun buildTodayWidgetSnapshot(
             updatedAtEpochMs = task.updatedAtEpochMs.takeIf { it > 0L },
         )
     }
-
-    return WidgetSnapshot(
-        generatedAtEpochMs = nowEpochMs,
-        status = if (todayTasks.isEmpty()) WidgetSnapshotStatus.EMPTY else WidgetSnapshotStatus.TASKS,
-        taskCount = todayTasks.size,
-        dayStartEpochMs = dayStart,
-        dayEndEpochMs = dayEnd,
-        rows = todayTasks.take(taskLimit).map { it.toSnapshotRow() },
-    )
-}
 
 /**
  * The per-instance list widget (widgets v3): every incomplete task in ONE arbitrary list, chosen

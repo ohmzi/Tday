@@ -7,6 +7,7 @@ import com.ohmz.tday.compose.core.data.SecureConfigStore
 import com.ohmz.tday.compose.feature.widget.WidgetListSelectionStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.serialization.json.Json
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -50,17 +51,21 @@ class WidgetSnapshotWriter @Inject constructor(
     }
 
     /**
-     * Writes only when no file exists on disk yet. Exists for
-     * `OfflineCacheManager.saveOfflineStateBlocking`'s no-op early return (the very first save
-     * call this process makes, when nothing actually changed from what was already persisted) —
-     * without this, a first run with no changes would never seed the file, and the widget would
-     * sit in LOADING until an unrelated write happened to land.
+     * Writes only when a file is missing, or the Today snapshot was written on an earlier local
+     * day. For `OfflineCacheManager.saveOfflineStateBlocking`'s saves that change nothing the
+     * widget shows — the normal case for a sync on a quiet day. Without the missing check a first
+     * run with no changes never seeds the file; without the day check nothing rewrites the Today
+     * snapshot until the task data happens to change, so the days it carries ahead (see
+     * `WidgetSnapshot.todayAt`) would run down to nothing instead of being topped up every day the
+     * app runs. Returns true when it wrote.
      */
-    fun ensureSeeded(state: OfflineSyncState) {
-        val needsToday = !store.exists(WidgetSnapshotKind.TODAY)
+    fun ensureCurrent(state: OfflineSyncState): Boolean {
+        val needsToday = store.lastWrittenEpochMs(WidgetSnapshotKind.TODAY)?.let {
+            wasWrittenBeforeLocalDay(it, System.currentTimeMillis(), ZoneId.systemDefault())
+        } ?: true
         val needsFloater = !store.exists(WidgetSnapshotKind.FLOATER)
         val needsAnyList = listSelectionStore.configuredWidgetIds().any { !store.existsList(it) }
-        if (needsToday || needsFloater || needsAnyList) write(state)
+        return (needsToday || needsFloater || needsAnyList) && write(state)
     }
 
     /**
