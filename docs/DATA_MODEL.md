@@ -111,9 +111,10 @@ Android has a one-time migration path from the legacy encrypted JSON cache into 
 
 ## Widget Snapshot Payloads
 
-The Today Tasks widgets do not add backend or shared DTOs. Android builds its widget model directly
-from the Room-backed `OfflineSyncState`; iOS writes a versioned JSON snapshot into App Group defaults
-for the WidgetKit extension.
+The Today Tasks widgets do not add backend or shared DTOs. Android writes a Keystore-encrypted JSON
+snapshot per widget (`feature/widget/snapshot/WidgetSnapshot`) built from the Room-backed
+`OfflineSyncState`; iOS writes a versioned JSON snapshot into App Group defaults for the WidgetKit
+extension.
 
 The current iOS snapshot schema is version `3` (Today) / `1` (Floater) and includes:
 
@@ -136,6 +137,12 @@ The current iOS snapshot schema is version `3` (Today) / `1` (Floater) and inclu
   cache, so these let it render the day that contains its entry date after midnight without a new
   write. The Apple Watch mirror sends the snapshot without them. See `docs/WIDGET_SYNC.md`
   ("Day rollover (iOS)").
+
+Android's Today snapshot carries the same day window: `dayStartEpochMs` / `dayEndEpochMs` for its own
+day, and `upcomingDays` for the next six (`dayStartEpochMs`, `dayEndEpochMs`, true `taskCount`,
+`rows` capped at 20). The widget renders the day containing now (`WidgetSnapshot.todayAt`), so it
+turns over at midnight without a rebuild; a snapshot written before `upcomingDays` existed decodes
+with none and covers only its own day.
 
 Both platforms filter the source cache to pending scheduled tasks due today, sort by due time then
 title, cap displayed rows to the widget task limit, and exclude floaters and completed tasks from the

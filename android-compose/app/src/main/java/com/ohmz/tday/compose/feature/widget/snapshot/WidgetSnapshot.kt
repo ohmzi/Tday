@@ -8,6 +8,12 @@ internal const val TODAY_TASKS_WIDGET_TASK_LIMIT = 50
 internal const val FLOATER_TASKS_WIDGET_TASK_LIMIT = 50
 internal const val LIST_TASKS_WIDGET_TASK_LIMIT = 50
 
+/** Local days after the Today snapshot's own that it pre-computes: a week of cover in all. */
+internal const val UPCOMING_DAY_COUNT = 6
+
+/** Display cap for each upcoming day. Smaller than the Today cap, matching iOS. */
+internal const val UPCOMING_DAY_TASK_LIMIT = 20
+
 @Serializable
 internal enum class WidgetSnapshotStatus { SETUP, EMPTY, TASKS }
 
@@ -51,7 +57,52 @@ internal data class WidgetSnapshot(
     val dayStartEpochMs: Long? = null,
     val dayEndEpochMs: Long? = null,
     val rows: List<WidgetSnapshotRow> = emptyList(),
+    /**
+     * Today only: the same "due that day" selection for each of the next [UPCOMING_DAY_COUNT]
+     * local days, so the widget turns over at midnight without a write (see [todayAt]). Defaulted
+     * so a snapshot written before this existed still decodes, as covering its own day only.
+     */
+    val upcomingDays: List<WidgetSnapshotDay> = emptyList(),
 )
+
+/** One upcoming local day of [WidgetSnapshot.upcomingDays], `[dayStartEpochMs, dayEndEpochMs)`. */
+@Serializable
+internal data class WidgetSnapshotDay(
+    val dayStartEpochMs: Long,
+    val dayEndEpochMs: Long,
+    val taskCount: Int,
+    val rows: List<WidgetSnapshotRow> = emptyList(),
+)
+
+/** What the Today widget renders for one local day. */
+internal data class TodayWidgetDay(
+    val status: WidgetSnapshotStatus,
+    val taskCount: Int,
+    val rows: List<WidgetSnapshotRow>,
+)
+
+/**
+ * The day of this Today snapshot that contains [nowEpochMs]: its own, or one of its
+ * [WidgetSnapshot.upcomingDays] — or null when it covers none (it has run out of days, or the
+ * clock moved back before it), which must not be rendered as today.
+ *
+ * Only a cache write with UI changes rebuilds the snapshot, and offline there are none, so it is
+ * routinely read on a later day than it was written. Carrying the days ahead lets the widget turn
+ * over at midnight from disk alone, instead of waiting on a rebuild in the background that OEM
+ * battery managers can defer for hours. A snapshot with no window (SETUP, Floater, per-list)
+ * describes no particular day and is always returned as-is. Mirrors iOS's `TodayWidgetDayWindow`.
+ */
+internal fun WidgetSnapshot.todayAt(nowEpochMs: Long): TodayWidgetDay? {
+    val start = dayStartEpochMs
+    val end = dayEndEpochMs
+    if (start == null || end == null || nowEpochMs in start until end) {
+        return TodayWidgetDay(status, taskCount, rows)
+    }
+    val day = upcomingDays.firstOrNull { nowEpochMs in it.dayStartEpochMs until it.dayEndEpochMs }
+        ?: return null
+    val dayStatus = if (day.taskCount == 0) WidgetSnapshotStatus.EMPTY else WidgetSnapshotStatus.TASKS
+    return TodayWidgetDay(dayStatus, day.taskCount, day.rows)
+}
 
 @Serializable
 internal data class WidgetSnapshotRow(
@@ -71,24 +122,11 @@ internal data class WidgetSnapshotRow(
     val overdue: Boolean = false,
 )
 
-/**
- * True when [nowEpochMs] falls outside the local day this Today snapshot was built for.
- *
- * The window is baked at write time and only a cache write with UI changes rebuilds it, so after
- * midnight with no such write — always the case offline, where nothing syncs — the snapshot still
- * describes yesterday. Rendering it would show yesterday's leftovers, or "No tasks due today",
- * while the local cache holds today's tasks. A snapshot with no window (SETUP, Floater) never is.
- */
-internal fun WidgetSnapshot.isOutsideTodayWindow(nowEpochMs: Long): Boolean {
-    val start = dayStartEpochMs ?: return false
-    val end = dayEndEpochMs ?: return false
-    return nowEpochMs < start || nowEpochMs >= end
-}
 
 /**
- * The broadcast-side twin of [isOutsideTodayWindow]: a file stat instead of a decrypt, cheap
- * enough for every `onUpdate`. A Today snapshot is built for the local day it is written on, so a
- * file last written before today's local midnight describes an earlier day.
+ * Whether a snapshot file was last written before today's local midnight: a file stat, not a
+ * decrypt, cheap enough for every save and every `onUpdate`. The Today snapshot is built from the
+ * day it is written on, so an earlier write means today is (at best) one of its upcoming days.
  */
 internal fun wasWrittenBeforeLocalDay(
     lastModifiedEpochMs: Long,

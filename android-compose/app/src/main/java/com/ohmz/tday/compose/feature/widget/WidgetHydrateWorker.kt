@@ -18,8 +18,10 @@ import dagger.assisted.AssistedInject
  * The only widget-flow component allowed to open the encrypted cache — and never on a render
  * path. A widget's `provideGlance` enqueues this when it finds no snapshot on disk (the LOADING
  * state): a fresh install, or an upgrade that rebooted before the app was ever opened for the
- * first time. The Today widget also enqueues it when its snapshot was built for an earlier local
- * day (see `isOutsideTodayWindow`) — nothing else rebuilds it at midnight while offline. Writes
+ * first time. The Today widget also enqueues it when its snapshot has run out of the days it
+ * carries ahead (see `WidgetSnapshot.todayAt`) — a week with the app never opened. Only a
+ * fallback: WorkManager can be deferred for hours in the background, so nothing day-to-day may
+ * depend on it (that is what the carried days and `WidgetSnapshotWriter.ensureCurrent` are for). Writes
  * every snapshot from the current cache, then repaints — exactly what the app process's own first
  * cache load would have done anyway, just triggered from the widget side instead of waiting for
  * the user to open the app. Deliberately not network-constrained: it only reads the local cache.

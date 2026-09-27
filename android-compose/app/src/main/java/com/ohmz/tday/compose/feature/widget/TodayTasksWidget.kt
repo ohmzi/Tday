@@ -23,7 +23,7 @@ import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshot
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotKind
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotSignal
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStore
-import com.ohmz.tday.compose.feature.widget.snapshot.isOutsideTodayWindow
+import com.ohmz.tday.compose.feature.widget.snapshot.todayAt
 import java.text.DateFormat
 import java.time.Instant
 import java.time.LocalTime
@@ -108,10 +108,13 @@ class TodayTasksWidget : GlanceAppWidget() {
             }
             val nowEpochMs = System.currentTimeMillis()
             val contentState = todayContentState(isAppLocked, currentSnapshot, nowEpochMs)
-            // Built for an earlier local day (see isOutsideTodayWindow). Rebuild it from the local
-            // cache — no network, so this is what keeps the widget right across midnight offline.
-            // The rewrite bumps snapshotVersion, which recomposes this with the fresh snapshot.
-            val snapshotStale = currentSnapshot?.isOutsideTodayWindow(nowEpochMs) == true
+            // The snapshot's day containing now — usually its own, or after midnight one of the
+            // upcoming days it carries (see todayAt), so turning over needs no rebuild.
+            val day = currentSnapshot?.todayAt(nowEpochMs)
+            // Only once it has run out of days (a week offline with the app never opened) does it
+            // need rebuilding from the local cache; the rewrite bumps snapshotVersion, which
+            // recomposes this with the fresh snapshot. Until then this renders LOADING.
+            val snapshotStale = currentSnapshot != null && day == null
             if (!isAppLocked && snapshotStale) {
                 WidgetHydrateWorker.runOnce(appContext)
             }
@@ -132,7 +135,7 @@ class TodayTasksWidget : GlanceAppWidget() {
                 TaskWidgetContent(
                     title = title,
                     state = contentState,
-                    countLabel = strings.countLabel(currentSnapshot?.taskCount ?: 0),
+                    countLabel = strings.countLabel(day?.taskCount ?: 0),
                     setupTitle = strings.setupTitle,
                     setupMessage = strings.setupMessage,
                     emptyTitle = strings.emptyMessage,
@@ -140,7 +143,7 @@ class TodayTasksWidget : GlanceAppWidget() {
                     lockedTitle = appContext.getString(R.string.widget_locked_title),
                     lockedMessage = appContext.getString(R.string.widget_locked_message),
                     loadingTitle = appContext.getString(R.string.widget_loading),
-                    rows = if (isAppLocked || currentSnapshot == null) {
+                    rows = if (isAppLocked || day == null) {
                         emptyList()
                     } else {
                         // One formatter for the whole list, not one per row: dueEpochMs is
@@ -149,7 +152,7 @@ class TodayTasksWidget : GlanceAppWidget() {
                         // constructing DateFormat.getTimeInstance is not free and every row
                         // needs the same instance.
                         val timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT)
-                        currentSnapshot.rows.map { row ->
+                        day.rows.map { row ->
                             TaskWidgetRow(
                                 key = row.key,
                                 title = row.title,
@@ -178,17 +181,18 @@ private data class TodayTasksWidgetStrings(
 )
 
 /**
- * A snapshot built for an earlier local day renders as LOADING, not as its own status: its rows
- * and its EMPTY both describe yesterday. The composition hydrates a fresh one from the local cache.
+ * Renders the snapshot's day containing [nowEpochMs] (see [todayAt]). LOADING only when there is
+ * no snapshot yet, or it has run out of days — never for one merely written on an earlier day,
+ * which is the normal state of a widget after midnight whenever nothing has changed.
  */
 internal fun todayContentState(
     isAppLocked: Boolean,
     snapshot: WidgetSnapshot?,
     nowEpochMs: Long,
-): TaskWidgetContentState = when {
-    isAppLocked -> TaskWidgetContentState.LOCKED
-    snapshot == null || snapshot.isOutsideTodayWindow(nowEpochMs) -> TaskWidgetContentState.LOADING
-    else -> snapshot.status.toContentState()
+): TaskWidgetContentState {
+    if (isAppLocked) return TaskWidgetContentState.LOCKED
+    val day = snapshot?.todayAt(nowEpochMs) ?: return TaskWidgetContentState.LOADING
+    return day.status.toContentState()
 }
 
 private fun TodayTasksWidgetStrings.countLabel(count: Int): String {
