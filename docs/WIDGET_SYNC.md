@@ -1,7 +1,7 @@
 # Widget Synchronization
 
 How the **Today** (Scheduled) and **Floater** (Anytime) home-screen widgets stay in sync with the
-app on Android (Glance + WorkManager) and iOS (WidgetKit + App Groups).
+app on Android (RemoteViews + WorkManager) and iOS (WidgetKit + App Groups).
 
 The guiding principle is **app-driven, immediate refresh**: the widget repaints synchronously the
 moment the app's offline cache changes, from the single write chokepoint every mutation already
@@ -18,7 +18,11 @@ fallback for when the app process isn't running to make that write.
 | Pressing + and adding a task doesn't update widget | No call to update the widget from the save path                                                | `OfflineCacheManager` is the single chokepoint every write goes through, on both platforms, and it writes the widget snapshot + requests a repaint itself |
 | Widget updates are irregular / unreliable          | No background worker as fallback                                                               | `WidgetSyncWorker` (Android, WorkManager `PeriodicWorkRequest`) / `BGAppRefreshTask` (iOS) both run on a **30-minute** earliest-begin fallback |
 | (iOS) Today widget shows yesterday's tasks, or "No tasks due today", after midnight when nothing syncs (offline) | The snapshot baked one local day at write time and only a cache write retook it; the extension cannot open the cache to rebuild | The snapshot carries the next six days and the widget renders the day containing its entry date, with a timeline entry at local midnight; launch, foreground and background refresh retake it — see "Day rollover (iOS)" |
-| (Android) Today widget says "No tasks due today", shows yesterday's tasks, or sits on "Loading tasks…" after midnight | The Today snapshot bakes its day at write time, and only a cache write with UI changes rewrote it — so on any day nothing changed (offline, or just a quiet day) it described an earlier day. v0.7.41 rendered that as LOADING until `WidgetHydrateWorker` rebuilt it, and WorkManager in the background can be deferred for hours, so the widget stuck on "Loading tasks…" | Like iOS, the snapshot carries the next six days (`upcomingDays`) and the widget renders the one containing now (`WidgetSnapshot.todayAt`) — no rebuild, no network, no WorkManager. Every cache save also rewrites a snapshot from an earlier day even when nothing changed (`WidgetSnapshotWriter.ensureCurrent`), so opening the app or any sync tops the days up. The receivers' 30-min `onUpdate` bumps the repaint signal once the day changes so a live session recomposes; `WidgetHydrateWorker` is left as the fallback for a snapshot that has run out of days |
+| (Android) Today widget says "No tasks due today", shows yesterday's tasks, or sits on "Loading tasks…" after midnight | The Today snapshot bakes its day at write time, and only a cache write with UI changes rewrote it — so on any day nothing changed (offline, or just a quiet day) it described an earlier day. v0.7.41 rendered that as LOADING until `WidgetHydrateWorker` rebuilt it, and WorkManager in the background can be deferred for hours, so the widget stuck on "Loading tasks…" | Like iOS, the snapshot carries the next six days (`upcomingDays`) and the widget renders the one containing now (`WidgetSnapshot.todayAt`) — no rebuild, no network, no WorkManager. Every cache save also rewrites a snapshot from an earlier day even when nothing changed (`WidgetSnapshotWriter.ensureCurrent`), so opening the app or any sync tops the days up. The receivers' 30-min `onUpdate` re-renders, and every render re-reads the clock, so the day turns over offline; `WidgetHydrateWorker` is left as the fallback for a snapshot that has run out of days |
+| (Android, HyperOS 4) Both widgets stuck on "Loading tasks…" after sign-in, even with Autostart on and no battery restrictions | Not an app-side render failure: the app composed with a valid snapshot and `AppWidgetService` stored the RemoteViews, but the launcher's widget host had stopped listening (`dumpsys appwidget` → that host's `callbacks=null`), so nothing was delivered until the launcher restarted | Nothing an app can force; the renderer below at least never depends on a WorkManager job to publish. Diagnose with the `dumpsys appwidget` host block before touching app code |
+| (Android, HyperOS 4) Widget shows its header but the task list is blank, and no tap works — not the body, not "+", not the check ring | HyperOS 4's launcher re-implements RemoteViews in Flutter and ignores the `RemoteViews(packageName, layoutId, viewId)` constructor. Glance 1.1.1 builds every element that way on API 33+ and targets that generated id for text, clicks and the list adapter, so on that host every one of those actions missed | Rendering no longer uses Glance: `TaskWidgetRemoteViews` builds plain RemoteViews from `layout/widget_task.xml` and `widget_task_list_row.xml`, where every targeted view has a real XML id. Verified on the device with hand-built probes (XML ids, `addView`, `RemoteCollectionItems` and size maps all work there; the generated-id child does not) |
+| (Android) Pressing a widget shows a sharp square highlight around the rounded widget | The root view was square with a rounded *drawable*, so the launcher's press/drag treatment followed the square bounds | The root is `@android:id/background` with `android:clipToOutline="true"`, which is what launchers use to find the widget's rounded silhouette |
+| (Android) Today widget still says "Set up your workspace" after setting up a workspace with no tasks | SETUP is baked into the snapshot from `AppDataMode`, and `WidgetSnapshotWriter.ensureCurrent` only rewrote a missing or earlier-day snapshot, so a mode change that changed no task data left SETUP on disk | `ensureCurrent` also rewrites when the workspace flag differs from the one the last write recorded (a boolean in plain prefs) |
 | (Android) Widget text unreadable after toggling system dark/light mode | Every widget color resolves correctly on a repaint, but nothing ever asked for one when the system theme itself changed — `ACTION_CONFIGURATION_CHANGED` is undeliverable to a manifest receiver, and no other trigger covered "app not foregrounded, theme flipped" | `TdayApplication.onConfigurationChanged` compares the system `uiMode`'s night bits against the last-seen value and calls `WidgetRefresher.requestRefresh()` on an actual flip — `Application` is notified in any live process, including a widget-only one that never opened `MainActivity` |
 
 ## Files — where they go
@@ -27,34 +31,39 @@ fallback for when the app process isn't running to make that write.
 
 ```
 app/src/main/java/com/ohmz/tday/compose/feature/widget/
-├── TodayTasksWidget.kt                 ← Glance widget (Today): renders WidgetSnapshotStore, no Hilt on the render path
-├── TodayTasksWidgetReceiver.kt         ← Small/default/Large AppWidgetReceivers + WidgetFastPaint cold-boot hook
-├── WidgetRefresher.kt                  ← the ONE repaint trigger for all three widgets (Hilt Singleton: one mutex + one conflated channel)
-├── WidgetInstanceKind.kt               ← the ONE per-instance kind/feed resolution (provider binding -> TODAY/FLOATER/LIST) + the render plan
-├── TodayTasksWidgetPreviewPublisher.kt ← Android 15+ widget-picker preview (setWidgetPreview)
+├── TaskWidgetDesign.kt                 ← TaskWidgetRemoteViews: builds the RemoteViews every widget renders through (states, header, list, sizes)
+├── WidgetRenderer.kt                   ← renders + publishes via AppWidgetManager.updateAppWidget, one render at a time process-wide
+├── TaskWidgetReceiver.kt               ← AppWidgetProvider base: onUpdate / resize render that receiver's own ids straight away
+├── TodayTasksWidget.kt                 ← Today model: reads WidgetSnapshotStore + app lock, no Hilt on the render path
+├── TodayTasksWidgetReceiver.kt         ← Small/default/Large receivers
 ├── FloaterTasksWidget.kt               ← mirror of TodayTasksWidget for floaters
 ├── FloaterTasksWidgetReceiver.kt       ← mirror receivers
-├── CompleteTaskAction.kt               ← inline-completion ActionCallbacks (widgets v2)
+├── ListTasksWidget.kt                  ← per-list widget (widgets v3): per-instance selection
+├── ListTasksWidgetReceiver.kt          ← its Small/default/Large receivers (+ onDeleted cleanup)
+├── WidgetTaskActions.kt                ← list-row taps: the row template, the invisible trampoline activity, the complete receiver
+├── WidgetRefresher.kt                  ← the ONE repaint trigger for all three widgets (Hilt Singleton, one conflated channel)
+├── WidgetInstanceKind.kt               ← the ONE per-instance kind/feed resolution (provider binding -> TODAY/FLOATER/LIST) + the render plan
+├── TodayTasksWidgetPreviewPublisher.kt ← Android 15+ widget-picker preview (setWidgetPreview)
 ├── WidgetCompleteTaskSubmitter.kt      ← resolves the tapped row, completes it, pushes an expedited sync
 ├── WidgetCreateTaskActivity.kt         ← translucent Activity behind the widget's + button (a bottom sheet, not MainActivity)
 ├── WidgetCreateRoute.kt                ← the tday://todos/create deep link (carries the tapped appWidgetId) + WidgetCreateTarget
 ├── WidgetCreateTaskSubmitter.kt        ← creates the task, then repaints every instance with the tapped one first
-├── ListTasksWidget.kt                  ← per-list widget (widgets v3): one class, per-instance selection
-├── ListTasksWidgetReceiver.kt          ← its Small/default/Large receivers
 ├── WidgetListConfigurationActivity.kt  ← the ACTION_APPWIDGET_CONFIGURE list picker
 ├── WidgetListSelectionStore.kt         ← per-appWidgetId list selection (plain SharedPreferences)
-├── WidgetEntryPoint.kt                 ← Hilt @EntryPoint exposing only the completion/refresh singletons to the render path
-├── WidgetFastPaint.kt                  ← paints from the cold-boot broadcast before Glance's managed session starts (~2.4-3.0s saved)
+├── WidgetEntryPoint.kt                 ← Hilt @EntryPoint exposing only the completion/refresh singletons to widget actions
 ├── WidgetHydrateWorker.kt              ← the only widget-flow class allowed to open the encrypted cache; seeds a missing snapshot, rebuilds a Today snapshot that has run out of days
 ├── WidgetSyncWorker.kt                 ← WorkManager periodic (30 min, network sync) + expedited one-shot
-├── WidgetLog.kt                        ← shared "TdayWidget" Logcat tag
-├── TaskWidgetDesign.kt                 ← shared Glance UI (rows, states) both widgets render through
+├── WidgetLog.kt                        ← shared "TdayWidget" Logcat tag + the per-render identity line
 └── snapshot/
     ├── WidgetSnapshot.kt               ← the render-payload DTOs
-    ├── WidgetSnapshotStore.kt          ← AES/GCM (AndroidKeyStore) encrypted read/write of the two snapshot files
+    ├── WidgetSnapshotStore.kt          ← AES/GCM (AndroidKeyStore) encrypted read/write of the snapshot files
     ├── WidgetSnapshotIo.kt             ← the store's process-wide lock + encrypt-then-rename write (JVM-testable)
-    ├── WidgetSnapshotWriter.kt         ← builds + writes both snapshots from OfflineSyncState, bumps the repaint signal
+    ├── WidgetSnapshotWriter.kt         ← builds + writes every snapshot from OfflineSyncState; ensureCurrent tops them up
     └── WidgetSnapshotBuilders.kt       ← buildTodayWidgetSnapshot / buildFloaterWidgetSnapshot (selection, ordering, capping)
+
+app/src/main/res/layout/
+├── widget_task.xml                     ← the placed widget: root @android:id/background, clipToOutline, real ids only
+└── widget_task_list_row.xml            ← one row of the scrolling task list (RemoteCollectionItems item)
 ```
 
 The write chokepoint lives outside this package, in `core/data/cache/OfflineCacheManager.kt`:
@@ -64,8 +73,9 @@ and then `WidgetRefresher.requestRefresh()`.
 
 **res/xml/{today,floater}_tasks_widget_{,small_,large}_info.xml** — `android:updatePeriodMillis="1800000"`
 (30 min). This is only the OS-level fallback; the app still refreshes explicitly on every cache write.
-The Today receivers also use this broadcast to recompose a live session after midnight (see the table
-above) — it fires offline, unlike the network-constrained `WidgetSyncWorker`.
+Each `onUpdate` re-renders from the snapshot and the current clock, which is what turns the Today
+widget over after midnight (see the table above) — it fires offline, unlike the network-constrained
+`WidgetSyncWorker`.
 
 ### iOS (`ios-swiftUI/`)
 
@@ -137,25 +147,58 @@ reliability/efficiency trade-offs at this same point in the pipeline.
 - For the check-ring App Intent, `CompleteWidgetTaskIntent.perform()` already calls
   `WidgetCenter.shared.reloadTimelines(ofKind:)` and drives the instant-sync completion described below.
 
+## Rendering (Android)
+
+Widgets are plain RemoteViews built by hand; there is no Glance, no composition and no render
+session.
+
+- **One renderer.** `WidgetRenderer.publish` turns each `(appWidgetId, kind)` step into a model
+  (`TodayTasksWidget.model` / `FloaterTasksWidget.model` / `ListTasksWidget.model` — app lock first,
+  then the snapshot, then the clock) and `TaskWidgetRemoteViews.build` into RemoteViews, then calls
+  `AppWidgetManager.updateAppWidget` directly. Renders are serialised process-wide by one mutex, so
+  the refresher, an `onUpdate` and a resize can never publish out of order.
+- **Straight from the broadcast.** `TaskWidgetReceiver.onUpdate` and `onAppWidgetOptionsChanged`
+  render that receiver's own ids inside a `goAsync()` window. Under Glance the only publish point
+  was a WorkManager `SessionWorker` (~2.4-3.0s after a reboot, and nothing at all if the job never
+  ran), which `WidgetFastPaint` existed to shortcut; both are gone.
+- **Real ids only.** Every view an action targets is declared, with its id, in
+  `layout/widget_task.xml` or `layout/widget_task_list_row.xml`. Hosts that re-implement RemoteViews
+  (HyperOS 4's Flutter launcher) ignore ids stamped on at runtime — see the table at the top. Only
+  RemoteViews-allowed classes appear in those layouts (empty `TextView`s stand in for spacers).
+- **Sizes.** `taskWidgetSizes` reads the host's reported sizes (`OPTION_APPWIDGET_SIZES` on API 31+,
+  else the min/max landscape/portrait pair, else the provider's minimum). Each distinct layout bucket
+  (`taskWidgetLayoutFor`: COMPACT, WIDE, MEDIUM, TALL) is built once; one bucket is a plain
+  RemoteViews, several become a size map (API 31+) or the orientation pair below it.
+- **The task list** is a `ListView` fed by `RemoteViewsCompat.setRemoteAdapter` with
+  `RemoteCollectionItems` (core-remoteviews backports it below API 31 through its own service), so it
+  still scrolls through the full snapshot.
+- **Rounded press.** The root is `@android:id/background` with `clipToOutline`, so launchers follow
+  the rounded silhouette for press, drag and launch animations.
+- **Colors** are resource references in the XML (and `setColorStateList` on API 31+ for the overdue
+  tint), so the host resolves day/night itself.
+
 ## Inline completion (widgets v2)
 
 ### Android
 
-Tapping a task's leading dot in the Today/Floater widgets completes it inline:
+Tapping a task's leading check ring in any widget completes it inline:
 
-1. The row's dot carries `actionRunCallback<CompleteTodayTaskAction|CompleteFloaterTaskAction>`
-   with the cached record id (`feature/widget/CompleteTaskAction.kt`).
-2. The callback resolves `WidgetCompleteTaskSubmitter` via `WidgetEntryPoint`,
-   looks the record up in the offline cache, and calls the same
-   `TodoRepository.completeTodo/completeFloater` the in-app checkbox uses —
-   optimistic cache write (`eagerSync = false`, so the tap isn't held hostage by the
-   network) and a queued `COMPLETE_*` mutation.
-3. `OfflineCacheManager`'s own write-chokepoint refresh repaints the widget the moment
-   the optimistic write lands, so the row disappears immediately. The submitter then
-   pushes an **expedited** `WidgetSyncWorker.runOnce()` so the completion reaches the
-   backend right away in Server Mode, instead of waiting for the periodic sync or the
-   next app launch. Mis-taps are reversed from the app's Completed screen (no transient
-   in-widget undo).
+1. A list item cannot own a `PendingIntent`, so the list carries one mutable template
+   (`WidgetTaskActions.rowTemplate`, an activity) and each row fills in its action: the ring fills
+   in `complete` + the cached record id, the rest of the row fills in `open`. The template targets
+   `WidgetTaskActionActivity`, an invisible trampoline (translucent, no animation, no history, its
+   own task affinity) — the same shape Glance used for lazy lists. Where to open is re-derived from
+   the instance, never taken from the fill-in, because a mutable template lets the host set extras.
+2. For `complete`, the trampoline hands off to `WidgetTaskActionReceiver`, which keeps the process
+   alive with `goAsync()`, resolves the instance's feed (`WidgetInstanceResolver.feedOf`) and calls
+   `WidgetCompleteTaskSubmitter`, which looks the record up in the offline cache and calls the same
+   `TodoRepository.completeTodo/completeFloater` the in-app checkbox uses — optimistic cache write
+   (`eagerSync = false`, so the tap isn't held hostage by the network) and a queued `COMPLETE_*`
+   mutation.
+3. The receiver then calls `refreshNow(firstAppWidgetId = …)`, so the tapped widget repaints before
+   the broadcast window closes and the row disappears immediately. The submitter also pushes an
+   **expedited** `WidgetSyncWorker.runOnce()` so the completion reaches the backend right away in
+   Server Mode. Mis-taps are reversed from the app's Completed screen (no transient in-widget undo).
 
 ### iOS
 
@@ -200,10 +243,9 @@ repository.createTodo(payload)  /  createFloater(payload)
         │
         ├─[Android]──▶  OfflineCacheManager.saveOfflineStateBlocking(state)
         │                 ├─ WidgetSnapshotWriter.write(state)      ← unconditional: always re-encrypts + rewrites
-        │                 │    └─ WidgetSnapshotSignal.bump()
         │                 └─ widgetRefresher.requestRefresh()
-        │                      └─ widget.update(id) per real appWidgetId, paired with THAT id's own
-        │                         widget class ──▶ widget recomposes ~instantly
+        │                      └─ WidgetRenderer.publish(plan): per real appWidgetId, rendered as THAT
+        │                         id's own kind ──▶ updateAppWidget ──▶ widget repaints ~instantly
         │
         └─[iOS]──────▶  OfflineCacheManager.saveOfflineState(state)
                           ├─ TodayTasksWidgetSnapshotStore.saveTodayTasks(from: state)     ← conditional: skipped if content unchanged
@@ -236,7 +278,7 @@ App backgrounds / user leaves it
 
 ## Which widget is which (Android)
 
-There are three Glance classes — `TodayTasksWidget`, `FloaterTasksWidget` and `ListTasksWidget` —
+There are three widget kinds — `TodayTasksWidget`, `FloaterTasksWidget` and `ListTasksWidget` —
 and every question of the form "which widget is this instance?" is answered in exactly one place:
 `WidgetInstanceKind.kt`.
 
@@ -250,8 +292,8 @@ and every question of the form "which widget is this instance?" is answered in e
   separate paths — the create sheet's `target=` parameter defaulted to `today`, and
   `ListTasksWidget` picked its visuals on a `when` whose `null` branch shared the todo-list arm, so
   a per-list instance whose selection would not read painted the Today sun watermark and the Today
-  accent until the selection re-read (opening the app bumps `WidgetSnapshotSignal`, which is what
-  made it flip back).
+  accent until the selection re-read (the next repaint, e.g. opening the app, is what made it flip
+  back).
 - Rendering an unresolved instance is now explicitly kind-neutral:
   `ListTasksWidget.UnconfiguredListWidgetVisuals` draws no watermark at all and a neutral "+",
   because every watermark this app ships is a kind-specific glyph in that kind's accent, so
@@ -259,9 +301,10 @@ and every question of the form "which widget is this instance?" is answered in e
   nullable for exactly this.
 - The widget's "+" carries its own `appWidgetId` on the deep link
   (`tday://todos/create?target=…&appWidgetId=…`, built by `WidgetCreateRoute`). It rides in the
-  **data URI**, not an intent extra: Glance builds these `PendingIntent`s with request code 0 and
-  `FLAG_UPDATE_CURRENT`, and `Intent.filterEquals` ignores extras — an extra would be shared across
-  instances, a query parameter is not. `WidgetCreateTaskActivity` is `singleTop`, so it also
+  **data URI**, not an intent extra: `Intent.filterEquals` ignores extras, so an extra would not
+  distinguish two instances' `PendingIntent`s, while a query parameter does. (The renderer also uses
+  the `appWidgetId` as each `PendingIntent`'s request code, which covers intents that differ only by
+  an extra, such as the per-list reconfigure intent.) `WidgetCreateTaskActivity` is `singleTop`, so it also
   re-resolves in `onNewIntent`.
 - `WidgetCreateTarget.resolve` still ends in `else -> TODAY`, and that is intended: it is the
   no-widget default for the Quick Settings tile, the launcher shortcut and the share sheet. A
@@ -271,82 +314,57 @@ and every question of the form "which widget is this instance?" is answered in e
   stay exact inverses; `WidgetInstanceKindTest` pins the round trip.
 - `WidgetRefresher` is the single repaint trigger. `WidgetInstanceCatalog.renderPlan` pairs every
   live `appWidgetId` with the kind of the receiver it was enumerated from, so no id can ever be
-  handed to a foreign widget class, and one call repaints all three kinds — there is no per-kind
+  handed to a foreign widget kind, and one call repaints all three kinds — there is no per-kind
   refresher left for a call site to forget. `refreshNow(firstAppWidgetId = …)` paints the instance
   the user just interacted with first. The plan is the **only** thing it renders through: the
-  `updateAll` belt-and-braces sweep that used to follow it was removed, because `updateAll` bottoms
-  out in the same `AppWidgetManager.getAppWidgetIds` over a *subset* of the receivers (only those
-  Glance has recorded this process), so it can never reach an id the plan missed — and it routes by
-  class, which is not an instance identity in a release build (see below). An enumeration failure is
-  now logged at ERROR instead of silently compensated for.
+  Glance-era `updateAll` sweep that used to follow it could only reach ids the plan already had and
+  routed by class, which is not an instance identity in a release build (see below). An enumeration
+  failure is logged at ERROR instead of silently compensated for.
 
-- Every widget's composition logs its own identity, so a report of the form "my Floater widget
+- Every render logs the instance's identity, so a report of the form "my Floater widget
   rendered as the Today widget" is answerable from one `adb logcat -s TdayWidget` capture instead
   of from code review:
 
   ```
-  floater[42]: composing, provider=FLOATER, version=7 locked=false snapshotNull=false
-  list[43]:    composing, provider=LIST, version=7 locked=false listType=none snapshotNull=false
+  floater[42]: composing, provider=FLOATER, locked=false snapshotNull=false
+  list[43]:    composing, provider=LIST, locked=false listType=none snapshotNull=false
   ```
 
-  The prefix is the Glance class that is composing; `provider=` is the receiver
-  `AppWidgetManager.getAppWidgetInfo` says owns that id. Glance keys its render session by
-  `appWidgetId` **alone** (`AppWidgetSession` → `createUniqueRemoteUiName(appWidgetId)`) and reuses
-  a running session with the `GlanceAppWidget` it was constructed with, so a session started with
-  the wrong class renders the wrong kind for that instance until the process dies. That is not
-  hypothetical — it is what the R8 section below describes — and if it happens again the line reads
-  `today[42]: composing, provider=FLOATER KIND-MISMATCH …`, at ERROR level.
+  The prefix is the kind being rendered; `provider=` is the receiver
+  `AppWidgetManager.getAppWidgetInfo` says owns that id. Under the Glance renderer these could
+  disagree — Glance kept whichever widget class started an id's render session, and R8 once merged
+  the three classes (see below). Rendering now routes by kind with no session, but if the two ever
+  disagree again the line reads `today[42]: composing, provider=FLOATER KIND-MISMATCH …`, at ERROR.
 
 `WidgetInstanceKindTest` and `WidgetRefreshRoutingTest` cover these rules as plain JVM tests.
 
-### Widget class identity survives R8 only because of a keep rule
+### Receiver class identity survives R8 only because of a keep rule
 
-**Everything above assumes `TodayTasksWidget`, `FloaterTasksWidget` and `ListTasksWidget` are three
-different classes at runtime. In a release build that is true only because `proguard-rules.pro`
-says so.**
+`WidgetInstanceResolver.kindOf` maps the provider class NAME the platform reports for an id back to
+a kind through each receiver's runtime `Class.name`, so the nine size receivers must reach the
+release APK under their own names. The manifest pins them, and so does an explicit
+`-keep class * extends com.ohmz.tday.compose.feature.widget.TaskWidgetReceiver` in
+`android-compose/app/proguard-rules.pro`. `:app:verifyReleaseWidgetClassIdentity`, wired into
+`assembleRelease`/`bundleRelease`, reads the R8 mapping back and fails the build unless each receiver
+appears under its **own** name — which also catches a class R8 *removed* (it still gets a mapping
+line, as `<original> -> R8$$REMOVED$$CLASS$$<N>:`) and one *renamed* because a keep rule stopped
+matching. There is no unit-test equivalent; the defect exists only in the minified artifact.
 
-Glance identifies a widget provider by class NAME, never by class identity:
-`GlanceAppWidgetManager.updateReceiver` records `provider:<receiver>` as
-`appWidget.javaClass.canonicalName`; `updateAll` reads it back through an unvalidated
-`providerNameToReceivers[canonicalName]`; and `GlanceAppWidget.update` keys its render session on
-`createUniqueRemoteUiName(appWidgetId)` — the id alone, with no class in the key.
+History worth keeping: the Glance renderer identified widgets by class name too, keyed its render
+sessions on the `appWidgetId` alone, and R8's horizontal class merger collapsed the three
+structurally identical Glance widget classes into one. All nine receivers then registered under one
+provider name and a Today session could own a Floater instance until the process died — "my Floater
+widget turned into the Today widget until I reopened the app". Debug builds and unit tests are
+unminified, which is why source review and JVM tests all said it was impossible. The renderer no
+longer has widget classes or sessions to confuse; the receiver names are what remain load-bearing.
 
-The three widget classes are structurally identical, so R8's horizontal class merger collapsed all
-three into one. In the mapping of a release build made without the keep rules, `FloaterTasksWidget`
-mapped to `ki1` carrying a synthesized `$r8$classId` discriminator and a `provideGlance` inlined
-from all three, and the other two classes had no mapping entry at all; `GlanceAppWidget` itself was
-then *vertically* merged into it, which R8 only does once a class has one subclass left. All nine
-receivers therefore registered under one provider name, every kind's `updateAll` enumerated every
-other kind's ids, and a Today-flavoured instance could take ownership of a Floater instance's render
-session until the process was replaced — "my Floater widget turned into the Today widget until I
-reopened the app". Debug builds and unit tests are unminified, which is why source review and JVM
-tests all said this was impossible.
-
-Two things keep it fixed:
-
-- `-keep class * extends androidx.glance.appwidget.GlanceAppWidget` (and the same for
-  `GlanceAppWidgetReceiver`) in `android-compose/app/proguard-rules.pro`. Pinning the names is what
-  excludes the classes from the merger. glance-appwidget ships no such rule of its own — its
-  consumer rules cover only `ActionCallback` subclasses, which is why `CompleteTodayTaskAction` and
-  `CompleteFloaterTaskAction`, identically-shaped siblings, were never merged.
-- `:app:verifyReleaseWidgetClassIdentity`, wired into `assembleRelease`/`bundleRelease`. It reads
-  the R8 mapping back and fails the build unless each of the twelve classes appears under its **own**
-  name. All twelve are `-keep`-pinned, so that identity check is available and is strictly stronger
-  than asking whether any two share an output name: it also catches a class R8 *removed* (which
-  still gets a mapping line, as `<original> -> R8$$REMOVED$$CLASS$$<N>:`, unique per class and so
-  invisible to a collision check) and a class R8 *renamed* because a keep rule stopped matching.
-  There is no unit-test equivalent — the defect exists only in the minified artifact.
-
-What the single refresher fixed, precisely — the per-kind refreshers could not paint the wrong
-content *in an unminified build* (each only ever enumerated its own receivers' ids, and Glance's
-`updateAll` resolves a `GlanceAppWidget` class to that class's own receivers via
-`GlanceAppWidgetManager.getGlanceIds`); under class merging that guarantee did not hold.
-What they got wrong was coverage: the add path aimed its one *synchronous* repaint by a guessed
-create target, leaving the widget actually tapped to the fire-and-forget request from the cache
-write — which a short-lived widget process can be torn down before it paints — and `MainActivity`,
-`TodoRepository`, `SyncManager`, `BulkTaskRepository` and `BootRescheduleReceiver` never called the
-per-list refresher at all, so a per-list instance sat on its static `android:initialLayout` after a
-reboot until some unrelated cache write repainted it.
+What the single refresher fixed, precisely: the per-kind refreshers it replaced got coverage wrong.
+The add path aimed its one *synchronous* repaint by a guessed create target, leaving the widget
+actually tapped to the fire-and-forget request from the cache write — which a short-lived widget
+process can be torn down before it paints — and `MainActivity`, `TodoRepository`, `SyncManager`,
+`BulkTaskRepository` and `BootRescheduleReceiver` never called the per-list refresher at all, so a
+per-list instance sat on its static `android:initialLayout` after a reboot until some unrelated
+cache write repainted it.
 
 ## Widget corner radius (Android)
 
@@ -355,7 +373,7 @@ separate radius tokens (`app/src/main/res/values/dimens.xml`):
 
 | Surface | Drawable | Token | Where it renders |
 | --- | --- | --- | --- |
-| Placed widget | `widget_preview_background` | `tday_widget_surface_corner_radius` (24dp) | The Glance runtime background (`TaskWidgetDesign`) and the three `android:initialLayout`s — i.e. the widget on a home screen |
+| Placed widget | `widget_preview_background` | `tday_widget_surface_corner_radius` (24dp) | The rendered widget's root (`layout/widget_task.xml`) and the three `android:initialLayout`s — i.e. the widget on a home screen |
 | Picker preview | `widget_preview_bg_today`, `widget_preview_bg_floater` | `tday_widget_picker_preview_corner_radius` (16dp) | The six `android:previewLayout`s and `TodayTasksWidgetPreviewPublisher`'s `setWidgetPreview` — i.e. the card in the launcher's widget picker, API 31+ only |
 
 **The picker preview's radius must never be LARGER than the host's clip.** Since Android 12 the
@@ -424,11 +442,11 @@ widget shows content or "Loading tasks…". Three rules, all in `WidgetSnapshotI
   WorkManager thread and `WidgetListConfigurationViewModel.selectList` on `viewModelScope` all write
   the same files. Two interleaving inside one `writeBytes` produced a file that failed GCM
   authentication, which `read` then deleted.
-- **The file is never absent.** `FloaterTasksWidget`, `TodayTasksWidget`, `ListTasksWidget` and
-  `WidgetFastPaint` all decide whether to hydrate (or whether to fast-paint at all) from a bare
-  `File.exists()`. Under delete-then-write that probe was transiently false on *every* cache write,
-  which spuriously enqueued `WidgetHydrateWorker` as one more unsynchronised writer and made fast
-  paint silently skip. A rename-based write closes all four windows with no call-site change.
+- **The file is never absent.** `FloaterTasksWidget`, `TodayTasksWidget` and `ListTasksWidget` read
+  the snapshot on every render and enqueue `WidgetHydrateWorker` when there is none. Under
+  delete-then-write the file was transiently absent on *every* cache write, which spuriously
+  enqueued the worker as one more unsynchronised writer and painted "Loading tasks…" over real
+  content. A rename-based write closes that window with no call-site change.
 
 `WidgetSnapshotIoTest` covers all three as plain JVM tests — the store itself needs AndroidKeyStore
 and a real `Context`, which is why the file behaviour lives in its own class.

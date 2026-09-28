@@ -35,24 +35,19 @@ import org.junit.Test
  * ## The widget exemption
  *
  * `feature/widget/` is out of the walk, permanently — 43n's question, answered here so the file
- * stops carrying it. The split it expected to make, radius out and spacing in, has nothing to cut:
- * `TaskWidgetDesign.kt` declares no radius at all. A Glance surface is painted with
- * `background(ImageProvider(R.drawable.…))`, so the widget's corners live in `res/values/dimens.xml`
- * where `WidgetCornerRadiusTest` pins them against the launcher's own enforced clip. All 77 of its
- * anonymous `.dp` are sizes and insets, and every one of them answers to something that is not our
- * scale:
+ * stops carrying it. A widget is not drawn by this app at all: it is RemoteViews inflated by the
+ * launcher from `res/layout/widget_task*.xml`, and nearly all of its geometry lives in that XML,
+ * where `WidgetCornerRadiusTest` pins the surface radius against the launcher's own enforced clip.
+ * What is left in Kotlin answers to something that is not our scale:
  *
- *  - `TaskWidgetResponsiveSizes` and the breakpoints in `taskWidgetLayoutFor` are the host's cell
- *    grid. Glance offers the set and the launcher picks from it, so the thresholds have to agree
- *    with the sizes offered, and neither end of that is ours to round to a spacing step;
- *  - the `taskWidgetMetrics` table is a cross-platform contract and the file says so. Inset 14, top
- *    13, bottom 11, header 42, spacing 7, row 22 on 3 are the same numbers `WidgetLayoutMetrics`
- *    holds in `ios-swiftUI/TdayWidget/TodayTasksWidget.swift`, which has never heard of
- *    `TdayDimens`; `taskWidgetVisibleRowCount` then divides by them to decide how many rows fit, so
- *    they are a solver's inputs rather than decoration;
- *  - those same three insets are spelled a third time in `layout/widget_*_loading.xml`, because the
- *    static `initialLayout` is what a host shows until the first composition and the handoff is
- *    meant to be invisible.
+ *  - the breakpoints in `taskWidgetLayoutFor` (and the fallback size inside them) are the host's
+ *    cell grid — the launcher reports a size and the bucket has to agree with it, so neither end
+ *    is ours to round to a spacing step;
+ *  - the insets, header and row metrics in `widget_task.xml` are a cross-platform contract. Inset
+ *    14, top 13, bottom 11, header 42, spacing 7, rows on 3 are the same numbers
+ *    `WidgetLayoutMetrics` holds in `ios-swiftUI/TdayWidget/TodayTasksWidget.swift`, which has
+ *    never heard of `TdayDimens`, and they are spelled again in `layout/widget_*_loading.xml`
+ *    because the static `initialLayout` is what a host shows until the first render.
  *
  * Routing any of that through `TdayDimens` would hand an Android-only rename of the spacing scale
  * the power to move an iOS widget, a RemoteViews handoff and a launcher's grid — which is
@@ -72,7 +67,7 @@ import org.junit.Test
  * reason the exemption exists does not reach them, and a directory is the wrong shape for an
  * argument about what draws the pixels. Carving them back in by name says that; widening the
  * exemption to cover them would have said the opposite. They are the whole set, not the two noticed
- * so far: every other file under `widget/` paints through Glance or nothing at all.
+ * so far: every other file under `widget/` builds RemoteViews or paints nothing at all.
  */
 class FeatureDimensBudgetTest {
 
@@ -193,10 +188,12 @@ class FeatureDimensBudgetTest {
         )
 
         /**
-         * What the subtree counted on the day the exemption became permanent, measured with the
-         * rule above rather than transcribed: 77, every one of them in `TaskWidgetDesign.kt`.
+         * What the subtree counts, measured with the rule above rather than transcribed. It was 77
+         * — every one in the Glance `TaskWidgetDesign.kt` — until the widget moved its geometry into
+         * `widget_task.xml`; 5 is what is left, all of them in `taskWidgetLayoutFor`'s breakpoints
+         * and its fallback size.
          */
-        const val EXEMPT_SUBTREE_FROZEN_DP = 77
+        const val EXEMPT_SUBTREE_FROZEN_DP = 5
 
         val BLOCK_COMMENT = Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL)
         val LINE_COMMENT = Regex("""//.*""")

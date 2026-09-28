@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The placed task widget (Today, Floater and per-list share it), built in code by
+  TaskWidgetRemoteViews. Plain XML with real ids on purpose: every view a RemoteViews action
+  targets must carry its id in this file. Glance's approach of stamping generated ids onto
+  inflated children via RemoteViews(pkg, layout, viewId) is ignored by some hosts (HyperOS 4's
+  launcher), which left widgets blank and untappable. Only RemoteViews-allowed classes appear
+  here, so empty TextViews stand in for spacers.
+
+  The root carries @android:id/background and clips to its rounded background, so a launcher's
+  press, drag and launch treatment follows the rounded silhouette instead of the square bounds.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_preview_background"
+    android:clipToOutline="true"
+    tools:targetApi="31">
+
+    <!-- One watermark per layout bucket (see taskWidgetWatermarkViewId); at most one is visible. -->
+    <ImageView
+        android:id="@+id/widget_watermark_compact"
+        android:layout_width="112dp"
+        android:layout_height="112dp"
+        android:layout_gravity="bottom|end"
+        android:contentDescription="@null"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/widget_watermark_wide"
+        android:layout_width="128dp"
+        android:layout_height="128dp"
+        android:layout_gravity="bottom|end"
+        android:contentDescription="@null"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/widget_watermark_medium"
+        android:layout_width="148dp"
+        android:layout_height="148dp"
+        android:layout_gravity="bottom|end"
+        android:contentDescription="@null"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/widget_watermark_tall"
+        android:layout_width="208dp"
+        android:layout_height="208dp"
+        android:layout_gravity="bottom|end"
+        android:contentDescription="@null"
+        android:visibility="gone" />
+
+    <!-- Centred state message: setup, empty, locked and loading. -->
+    <LinearLayout
+        android:id="@+id/widget_message"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/widget_message_icon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginBottom="6dp"
+            android:contentDescription="@null"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/widget_message_icon_compact"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginBottom="4dp"
+            android:contentDescription="@null"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/widget_message_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="@font/nunito_app"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:textColor="@color/tday_widget_on_surface"
+            android:textDirection="locale"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_message_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:ellipsize="end"
+            android:fontFamily="@font/nunito_app"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="2"
+            android:textColor="@color/tday_widget_on_surface_variant"
+            android:textDirection="locale"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingTop="13dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="11dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="42dp">
+
+            <!-- Wide header: title, then the count hugging it. The end padding keeps it clear of
+                 the add button (42dp + 8dp). -->
+            <LinearLayout
+                android:id="@+id/widget_header_wide"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingEnd="50dp">
+
+                <TextView
+                    android:id="@+id/widget_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:fontFamily="@font/nunito_app"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="@color/tday_widget_on_surface"
+                    android:textDirection="locale"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="8dp"
+                    android:fontFamily="@font/nunito_app"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="@color/tday_widget_on_surface_variant"
+                    android:textDirection="locale"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Compact (2x2) header: the count leads instead of the title, which cannot fit
+                 beside the add button at that width. -->
+            <TextView
+                android:id="@+id/widget_compact_count"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:ellipsize="end"
+                android:fontFamily="@font/nunito_app"
+                android:gravity="center_vertical|start"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:paddingEnd="50dp"
+                android:textColor="@color/tday_widget_on_surface_variant"
+                android:textDirection="locale"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <FrameLayout
+                android:id="@+id/widget_add"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:layout_gravity="end|center_vertical"
+                android:contentDescription="@string/widget_today_tasks_add">
+
+                <ImageView
+                    android:id="@+id/widget_add_icon"
+                    android:layout_width="17dp"
+                    android:layout_height="17dp"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null" />
+            </FrameLayout>
+        </FrameLayout>
+
+        <ListView
+            android:id="@+id/widget_list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="7dp"
+            android:layout_weight="1"
+            android:cacheColorHint="@android:color/transparent"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:listSelector="@android:color/transparent"
+            android:scrollbars="none"
+            android:visibility="gone" />
+    </LinearLayout>
+</FrameLayout>

@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit
  * It runs a full [SyncManager.syncCachedData] (network), then writes through the single cache
  * path. The repaint that follows is UNCONDITIONAL and single-flight (see [WidgetRefresher]):
  * [SyncManager.syncCachedData] ends in a `refreshNow()` on every exit path, and re-rendering
- * unchanged data is an invisible no-op because `provideGlance` re-reads the current snapshot —
+ * unchanged data is an invisible no-op because every render re-reads the current snapshot —
  * skipping a render is what risks a stuck widget. The only content guard on this pipeline sits
  * one layer up, in `OfflineCacheManager`, which rewrites the snapshot and requests a refresh from
  * a cache write only when the UI-visible state actually changed; it does not gate this worker's
@@ -132,8 +132,8 @@ class WidgetSyncWorker @AssistedInject constructor(
         }
 
         /**
-         * Immediate one-shot refresh via WorkManager. Use as a fallback alongside direct Glance
-         * calls so the widget still updates if the process is killed before Glance finishes.
+         * Immediate one-shot refresh via WorkManager. Use as a fallback alongside a direct render
+         * so the widget still updates if the process is killed before that render finishes.
          *
          * Deliberately NOT network-constrained, unlike [schedule]: [SyncManager.syncCachedData] in
          * local mode does a cache write plus a widget refresh and returns success before any

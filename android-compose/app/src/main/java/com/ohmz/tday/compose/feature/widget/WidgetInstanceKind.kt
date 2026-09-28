@@ -2,7 +2,6 @@ package com.ohmz.tday.compose.feature.widget
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
-import androidx.glance.appwidget.GlanceAppWidget
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
 
 /**
@@ -10,7 +9,7 @@ import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
  * actually bound that `appWidgetId` to.
  *
  * This exists because the app used to answer "which widget is this?" three different ways — the
- * Glance class a refresher happened to construct, the per-instance selection in
+ * widget class a refresher happened to construct, the per-instance selection in
  * [WidgetListSelectionStore], and a `target=` query parameter on the create deep link that
  * silently defaulted to "today". The tap on a widget's "+" threw the instance identity away and
  * the activity guessed it back, so which task the "+" created, and which widget got the one
@@ -107,17 +106,6 @@ internal object WidgetInstanceCatalog {
     }
 
     /**
-     * The Glance class that renders [kind]. A fresh instance per call, matching what the refreshers
-     * already did — a `GlanceAppWidget` is a stateless renderer, and this is the ONLY place that
-     * decides which one an `appWidgetId` is handed to.
-     */
-    fun newWidget(kind: WidgetInstanceKind): GlanceAppWidget = when (kind) {
-        WidgetInstanceKind.TODAY -> TodayTasksWidget()
-        WidgetInstanceKind.FLOATER -> FloaterTasksWidget()
-        WidgetInstanceKind.LIST -> ListTasksWidget()
-    }
-
-    /**
      * The exact (`appWidgetId`, kind) pairs a full repaint will execute, as a pure function of the
      * ids the platform reports per receiver. [WidgetRefresher] does nothing but run this plan, so
      * the routing rule that used to be spread across three refreshers and their callers is one
@@ -159,7 +147,7 @@ internal object WidgetInstanceCatalog {
     }
 }
 
-/** One repaint: this id, rendered by the Glance class this kind names. */
+/** One repaint: this id, rendered as this kind (see [WidgetRenderer]). */
 internal data class WidgetRenderStep(
     val appWidgetId: Int,
     val kind: WidgetInstanceKind,

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  One task row in the widget's scrolling list (a RemoteCollectionItems item). The check ring is
+  its own tap target (complete in place); the rest of the row opens the app. Title and trailing
+  time share one LinearLayout so the title's 0dp + weight=1 is sized by the framework, and an
+  empty TextView stands in for the gap to the next row (Space is not a RemoteViews class).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="top"
+        android:orientation="horizontal"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp">
+
+        <!-- Padded past the 14dp ring so the tap target stays usable at home-screen sizes. -->
+        <FrameLayout
+            android:id="@+id/widget_row_check"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="1dp"
+            android:paddingEnd="4dp"
+            android:paddingBottom="3dp">
+
+            <ImageView
+                android:id="@+id/widget_row_ring"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:contentDescription="@null" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/widget_row_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="@font/nunito_app"
+            android:gravity="start"
+            android:includeFontPadding="false"
+            android:maxLines="2"
+            android:textColor="@color/tday_widget_on_surface"
+            android:textDirection="locale"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_row_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_marginTop="1dp"
+            android:fontFamily="@font/nunito_app"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:paddingStart="7dp"
+            android:paddingEnd="7dp"
+            android:singleLine="true"
+            android:textColor="@color/tday_widget_on_surface_variant"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Notes sit outside the title row; the 3dp bottom pad matches the title row's own, so a
+         notes-bearing task keeps the same 9dp task-to-task rhythm as a title-only one. -->
+    <TextView
+        android:id="@+id/widget_row_notes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:fontFamily="@font/nunito_app"
+        android:gravity="start"
+        android:includeFontPadding="false"
+        android:maxLines="2"
+        android:paddingStart="14dp"
+        android:paddingBottom="3dp"
+        android:textColor="@color/tday_widget_on_surface_variant"
+        android:textDirection="locale"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/widget_row_gap"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:includeFontPadding="false"
+        android:text="" />
+</LinearLayout>

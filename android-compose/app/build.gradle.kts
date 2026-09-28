@@ -264,8 +264,8 @@ dependencies {
     // Optional, opt-in app lock (BiometricPrompt with device-credential fallback).
     implementation("androidx.biometric:biometric:1.1.0")
 
-    implementation("androidx.glance:glance-appwidget:1.1.1")
-    implementation("androidx.glance:glance-material3:1.1.1")
+    // Widget task lists: RemoteCollectionItems, backported below API 31 by its own service.
+    implementation("androidx.core:core-remoteviews:1.1.0")
 
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
@@ -316,16 +316,15 @@ sentry {
 
 // ── Widget class identity (R8) ──────────────────────────────────────────────
 //
-// Glance looks a widget provider up by CLASS NAME — `GlanceAppWidgetManager` stores
-// `provider:<receiver>` as `appWidget.javaClass.canonicalName`, `updateAll` reads it back with an
-// unvalidated `providerNameToReceivers[canonicalName]`, and `GlanceAppWidget.update` keys its
-// render session on the appWidgetId alone. So two widget classes sharing one runtime name is not a
-// size regression, it is a widget rendering as the wrong kind.
+// `WidgetInstanceCatalog` resolves a placed widget's kind from the provider class NAME the platform
+// reports for it, compared against each receiver's runtime `Class.name`. A receiver that R8 merged,
+// shrank or renamed would make its instances resolve to no kind at all — painted by nothing, or
+// routed by an `onUpdate` alone. (The Glance renderer these receivers once fronted had the sharper
+// version of this: R8 merged its three widget classes and a widget rendered as the wrong kind.)
 //
-// R8 did exactly that: without the keep rules in `proguard-rules.pro`, its horizontal class merger
-// collapsed TodayTasksWidget, FloaterTasksWidget and ListTasksWidget into a single class. The keep
-// rules prevent it, but a keep rule is easy to delete and the symptom only appears in a signed
-// release build on a real home screen. This reads the R8 mapping back and fails the build instead.
+// The keep rule in `proguard-rules.pro` prevents it, but a keep rule is easy to delete and the
+// symptom only appears in a signed release build on a real home screen. This reads the R8 mapping
+// back and fails the build instead.
 //
 // Release-only by construction — there is no mapping file without R8 — so it runs in
 // `release.yml`'s `assembleRelease`, not in the PR unit-test job.
@@ -334,9 +333,6 @@ sentry {
 // check is therefore `output == original`, not merely "no two share an output name" — see the
 // three defect shapes enumerated at the comparison itself.
 val widgetClassesRequiringOwnRuntimeName = listOf(
-    "com.ohmz.tday.compose.feature.widget.TodayTasksWidget",
-    "com.ohmz.tday.compose.feature.widget.FloaterTasksWidget",
-    "com.ohmz.tday.compose.feature.widget.ListTasksWidget",
     "com.ohmz.tday.compose.feature.widget.TodayTasksWidgetSmallReceiver",
     "com.ohmz.tday.compose.feature.widget.TodayTasksWidgetReceiver",
     "com.ohmz.tday.compose.feature.widget.TodayTasksWidgetLargeReceiver",
@@ -363,7 +359,7 @@ androidComponents.onVariants { variant ->
     val verifyWidgetClassIdentity = tasks.register("verify${variantName}WidgetClassIdentity") {
         group = "verification"
         description =
-            "Fails if R8 merged, removed or renamed a Glance widget class or receiver."
+            "Fails if R8 merged, removed or renamed an app widget receiver."
 
         inputs.file(mappingFile).withPropertyName("r8Mapping")
         // Cheap, and a stale "pass" here would be a silently broken gate.
@@ -397,14 +393,14 @@ androidComponents.onVariants { variant ->
             // guarantee can be lost, where a "no two share an output name" check catches only one:
             //
             //  - MERGED into a sibling — the class loses its definition line entirely. This is how
-            //    TodayTasksWidget and ListTasksWidget vanished, and it is the reported bug.
+            //    the old Glance TodayTasksWidget and ListTasksWidget classes vanished.
             //  - SHRUNK OUT — R8 still writes a line, as `<original> -> R8$$REMOVED$$CLASS$$<N>:`.
             //    It has the same `" -> "` + trailing-colon shape as a real class, so a naive parse
             //    records it as present, and <N> is unique per removed class so it collides with
             //    nothing. A distinctness-only check would report success on a class that is not in
             //    the APK at all. Not hypothetical: this build's own mapping carries ~1000 of them.
-            //  - RENAMED — the keep rule stopped matching (a package move, a rule edit). Glance's
-            //    `providerNameToReceivers` lookup is by canonical name, so a rename breaks the same
+            //  - RENAMED — the keep rule stopped matching (a package move, a rule edit).
+            //    `WidgetInstanceCatalog` looks kinds up by class name, so a rename breaks the same
             //    resolution a merge does.
             val removedMarker = "R8\$\$REMOVED\$\$CLASS\$\$"
             val defects = expected.mapNotNull { original ->
@@ -421,20 +417,19 @@ androidComponents.onVariants { variant ->
             if (defects.isNotEmpty()) {
                 val detail = buildString {
                     appendLine(
-                        "Glance widget classes lost their own runtime names in the release build.",
+                        "App widget receivers lost their own runtime names in the release build.",
                     )
-                    appendLine("Glance resolves providers by canonical class name and keys render")
-                    appendLine("sessions on the appWidgetId alone, so this makes a widget render as")
-                    appendLine("another kind until the process is replaced.")
+                    appendLine("WidgetInstanceCatalog resolves a placed widget's kind by receiver")
+                    appendLine("class name, so affected instances would resolve to no kind at all.")
                     defects.forEach { (original, reason) -> appendLine("  - $original — $reason") }
-                    appendLine("Restore the Glance keep rules in app/proguard-rules.pro.")
+                    appendLine("Restore the widget receiver keep rule in app/proguard-rules.pro.")
                     append("Mapping: ${mapping.absolutePath}")
                 }
                 throw GradleException(detail)
             }
 
             logger.lifecycle(
-                "verifyWidgetClassIdentity: ${expected.size} widget classes kept their own " +
+                "verifyWidgetClassIdentity: ${expected.size} widget receivers kept their own " +
                     "runtime names.",
             )
         }

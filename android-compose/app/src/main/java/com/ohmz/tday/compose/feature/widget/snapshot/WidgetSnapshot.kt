@@ -33,7 +33,7 @@ internal enum class WidgetListType { TODO, FLOATER }
 
 /**
  * The exact render payload a widget needs — nothing more. Written by the app process (which has
- * Hilt and the encrypted Room cache) and read directly by a widget's `provideGlance` (which has
+ * Hilt and the encrypted Room cache) and read directly by a widget render (which has
  * neither): opening the SQLCipher cache costs ~9.5s cold on a Pixel 7, dominated by SQLCipher's
  * default PBKDF2 KDF, and the renderer only ever needs a status, a count, and up to
  * [TODAY_TASKS_WIDGET_TASK_LIMIT] rows.

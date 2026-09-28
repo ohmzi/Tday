@@ -126,6 +126,10 @@ class TdayApplication : Application(), Configuration.Provider {
         createNotificationChannels()
         enqueuePeriodicRescheduleWorker()
         WidgetSyncWorker.schedule(this)
+        // Widgets no longer render through Glance, but an install upgraded from a Glance build can
+        // still hold its SessionWorker requests; that class is gone, so each would only fail when
+        // it ran. WorkManager tags every request with its worker's class name.
+        WorkManager.getInstance(this).cancelAllWorkByTag(LEGACY_GLANCE_SESSION_WORKER)
         // Opt-in and permission-gated internally, so this is a no-op until the user turns the
         // device-calendar mirror on.
         calendarSyncManager.start()
@@ -165,3 +169,5 @@ class TdayApplication : Application(), Configuration.Provider {
         )
     }
 }
+
+private const val LEGACY_GLANCE_SESSION_WORKER = "androidx.glance.session.SessionWorker"

@@ -5,9 +5,6 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Log
 import com.ohmz.tday.compose.feature.widget.WIDGET_LOG_TAG
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.security.KeyStore
@@ -24,7 +21,7 @@ internal enum class WidgetSnapshotKind(val fileName: String) {
 
 /**
  * Matches [com.ohmz.tday.compose.core.network.NetworkModule.provideJson] exactly. The read side
- * (a widget's `provideGlance`) cannot reach Hilt — that is the whole point of this store — so it
+ * (a widget render) cannot reach Hilt — that is the whole point of this store — so it
  * owns a standalone copy of the same config instead of the injected instance.
  */
 internal val WidgetSnapshotJson = Json {
@@ -34,24 +31,8 @@ internal val WidgetSnapshotJson = Json {
 }
 
 /**
- * Hoisted, process-wide repaint signal — the widget-render analogue of
- * [com.ohmz.tday.compose.core.data.cache.OfflineCacheManager.cacheDataVersion], which the render
- * path can no longer collect without pulling in Hilt and the DB. Mirrors
- * [com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore]'s hoisted companion flow: handing
- * out a fresh `StateFlow` instance per read would restart `collectAsState`'s collector and
- * recompose in a loop, since it remembers keyed on the flow instance.
- */
-internal object WidgetSnapshotSignal {
-    private val versionMutable = MutableStateFlow(0L)
-    val version: StateFlow<Long> = versionMutable.asStateFlow()
-    fun bump() {
-        versionMutable.value = versionMutable.value + 1L
-    }
-}
-
-/**
  * Reads and writes the per-widget render snapshot as a Keystore-encrypted file under
- * `filesDir/widget/`, with no Hilt dependency — a widget's `provideGlance` constructs this
+ * `filesDir/widget/`, with no Hilt dependency — a widget render constructs this
  * directly from `applicationContext`, so nothing on the render path calls `EntryPointAccessors`
  * or touches [com.ohmz.tday.compose.core.data.db.TdayDatabase].
  *
@@ -116,9 +97,9 @@ internal class WidgetSnapshotStore(
      * complete ciphertext exists, so a Keystore/cipher/IO failure leaves the previous good snapshot
      * readable instead of destroying it — see [WidgetSnapshotIo] for the full argument.
      *
-     * Still returns a boolean because [WidgetSnapshotWriter] uses it to decide whether to bump
-     * [WidgetSnapshotSignal], but the throwable is now LOGGED rather than swallowed: a widget stuck
-     * on "Loading tasks…" used to leave no trace at all of why.
+     * Still returns a boolean because [WidgetSnapshotWriter] reports whether anything was written,
+     * but the throwable is now LOGGED rather than swallowed: a widget stuck on "Loading tasks…"
+     * used to leave no trace at all of why.
      */
     private fun write(fileName: String, snapshot: WidgetSnapshot): Boolean =
         WidgetSnapshotIo.withStoreLock {

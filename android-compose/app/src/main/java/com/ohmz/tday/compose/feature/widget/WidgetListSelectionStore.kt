@@ -23,9 +23,9 @@ internal data class WidgetListSelection(
  * reason to pay for `EncryptedSharedPreferences`' Keystore round trip.
  *
  * Read from three places: [WidgetListConfigurationActivity] (writes on pick), `ListTasksWidget`'s
- * `provideGlance` (reads the instance it is rendering), and [WidgetSnapshotWriter] (enumerates
+ * render (reads the instance it is rendering), and [WidgetSnapshotWriter] (enumerates
  * every configured instance so a cache write can rebuild each one's snapshot). None of those are
- * Hilt-reachable from a Glance render path, so — like [WidgetSnapshotStore] — this is constructed
+ * Hilt-reachable from a widget render path, so — like [WidgetSnapshotStore] — this is constructed
  * directly from `applicationContext`, not injected.
  */
 internal class WidgetListSelectionStore(context: Context) {
