@@ -144,13 +144,10 @@ class WidgetTaskActionReceiver : BroadcastReceiver() {
         val pending = goAsync()
         val appContext = context.applicationContext
         scope.launch {
-            try {
-                WidgetTaskActions.complete(appContext, appWidgetId, taskId)
-            } catch (error: Exception) {
-                Log.w(WIDGET_LOG_TAG, "widget[$appWidgetId]: complete failed", error)
-            } finally {
-                pending.finish()
-            }
+            // Nothing may escape: an uncaught throwable in this scope would crash the process.
+            runCatching { WidgetTaskActions.complete(appContext, appWidgetId, taskId) }
+                .onFailure { Log.w(WIDGET_LOG_TAG, "widget[$appWidgetId]: complete failed", it) }
+            pending.finish()
         }
     }
 
