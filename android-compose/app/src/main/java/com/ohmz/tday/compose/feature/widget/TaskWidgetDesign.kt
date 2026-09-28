@@ -1,47 +1,23 @@
 package com.ohmz.tday.compose.feature.widget
 
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.os.Bundle
+import android.util.SizeF
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.ColorRes
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.Dp
+import androidx.annotation.IdRes
 import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.glance.GlanceModifier
-import androidx.glance.Image
-import androidx.glance.ImageProvider
-import androidx.glance.LocalContext
-import androidx.glance.LocalSize
-import androidx.glance.action.Action
-import androidx.glance.action.clickable
-import androidx.glance.appwidget.AndroidRemoteViews
-import androidx.glance.appwidget.lazy.LazyColumn
-import androidx.glance.appwidget.lazy.itemsIndexed
-import androidx.glance.background
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Box
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
-import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextAlign
-import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
+import androidx.core.widget.RemoteViewsCompat
 import com.ohmz.tday.compose.R
+import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetPriorityRing
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStatus
 import com.ohmz.tday.compose.ui.priority.PRIORITY_IMPORTANT_VALUE
@@ -51,7 +27,6 @@ import com.ohmz.tday.compose.ui.priority.PRIORITY_URGENT_VALUE
 import com.ohmz.tday.compose.ui.priority.isImportantPriority
 import com.ohmz.tday.compose.ui.priority.isLowestPriority
 import com.ohmz.tday.compose.ui.priority.isUrgentPriority
-import com.ohmz.tday.compose.core.text.flattenNotesToPlainText
 
 internal enum class TaskWidgetContentState {
     SETUP,
@@ -63,9 +38,9 @@ internal enum class TaskWidgetContentState {
      * No snapshot on disk yet — a fresh install or an upgrade rebooted before the app was ever
      * opened (see `WidgetHydrateWorker`). Pixel-matched to the XML `initialLayout` placeholders
      * (`widget_loading.xml`, `widget_today_tasks_loading.xml`, `widget_floater_tasks_loading.xml`)
-     * so the handoff from that static layout to the first real composition is invisible: same
-     * header, a centred "Loading tasks…" line, no watermark. Never used once a snapshot decodes
-     * to SETUP/EMPTY/TASKS, even an empty one — this is specifically "haven't read anything yet".
+     * so the handoff from that static layout to the first real render is invisible: same header, a
+     * centred "Loading tasks…" line, no watermark. Never used once a snapshot decodes to
+     * SETUP/EMPTY/TASKS, even an empty one — this is specifically "haven't read anything yet".
      */
     LOADING,
 }
@@ -92,13 +67,6 @@ internal enum class TaskWidgetLayout {
     TALL,
 }
 
-internal val TaskWidgetResponsiveSizes = setOf(
-    DpSize(150.dp, 110.dp),
-    DpSize(250.dp, 126.dp),
-    DpSize(250.dp, 140.dp),
-    DpSize(250.dp, 220.dp),
-)
-
 internal data class TaskWidgetVisuals(
     val addButtonBackground: Int,
     val addIcon: Int,
@@ -116,308 +84,253 @@ internal data class TaskWidgetVisuals(
 
 internal data class TaskWidgetRow(
     val key: Long,
+    /** The cached-record id a tap on the row's check ring completes. */
+    val id: String,
     val title: String,
     val priority: String,
     val trailingText: String? = null,
     val description: String? = null,
-    /** Tapping the leading dot completes the task inline (widgets v2). */
-    val completeAction: Action? = null,
     /** List widget only (widgets v3): tints [trailingText] as overdue. Today/Floater never set
      *  this, so their trailing time keeps its normal secondary color unchanged. */
     val overdueTrailing: Boolean = false,
 )
 
-private enum class TaskWidgetTextColor(@ColorRes val resourceId: Int) {
-    PRIMARY(R.color.tday_widget_on_surface),
-    SECONDARY(R.color.tday_widget_on_surface_variant),
-}
+/**
+ * Everything one widget instance shows, resolved by its kind ([TodayTasksWidget],
+ * [FloaterTasksWidget], [ListTasksWidget]) and drawn by [TaskWidgetRemoteViews]. Taps are plain
+ * intents here and become `PendingIntent`s only at render time, keyed to the instance.
+ */
+internal data class TaskWidgetModel(
+    val title: String,
+    val state: TaskWidgetContentState,
+    val countLabel: String,
+    val setupTitle: String,
+    val setupMessage: String,
+    val emptyTitle: String,
+    val lockedTitle: String,
+    val lockedMessage: String,
+    val loadingTitle: String,
+    /** Spoken label for the "+" button. */
+    val addLabel: String,
+    val rows: List<TaskWidgetRow>,
+    val visuals: TaskWidgetVisuals,
+    val openIntent: Intent,
+    val addIntent: Intent,
+)
 
-@Composable
-internal fun TaskWidgetContent(
-    title: String,
-    state: TaskWidgetContentState,
-    countLabel: String,
-    setupTitle: String,
-    setupMessage: String,
-    emptyTitle: String,
-    emptyMessage: String,
-    lockedTitle: String,
-    lockedMessage: String,
-    loadingTitle: String,
-    rows: List<TaskWidgetRow>,
-    visuals: TaskWidgetVisuals,
-    openAction: Action,
-    addAction: Action,
-) {
-    val widgetSize = LocalSize.current
-    val layout = taskWidgetLayoutFor(widgetSize)
-    val metrics = taskWidgetMetrics(layout)
-    val watermark = when (state) {
-        TaskWidgetContentState.SETUP -> visuals.setupWatermark
-        TaskWidgetContentState.EMPTY,
-        TaskWidgetContentState.TASKS,
-        TaskWidgetContentState.LOCKED -> visuals.emptyWatermark
-        // Matches the loading XML layouts: no watermark image, just the title and a centred
-        // loading line. Showing one here would flash in on the first composition, then vanish
-        // the moment a real snapshot lands — the opposite of the invisible handoff this is for.
-        TaskWidgetContentState.LOADING -> null
+/**
+ * Builds a widget's RemoteViews directly from `layout/widget_task.xml` and
+ * `layout/widget_task_list_row.xml`.
+ *
+ * This replaced a Glance renderer. On API 33+ Glance inserts every element through
+ * `RemoteViews(packageName, layoutId, viewId)` + `addStableView` and then targets that generated
+ * `viewId` for text, clicks and the list adapter. HyperOS 4's launcher re-implements RemoteViews
+ * and ignores that constructor's `viewId` — the inflated view keeps its XML id (`@id/glanceView`)
+ * — so on that host every tap silently missed and the task list stayed blank. Verified on-device
+ * with hand-built RemoteViews: XML ids, `addView`, `RemoteCollectionItems` and size maps all
+ * work there, the generated-id child does not. So every view this class touches is declared, with
+ * its id, in XML, and nothing here depends on an id assigned at runtime.
+ */
+internal object TaskWidgetRemoteViews {
+
+    /**
+     * One RemoteViews for every size the host reported for [appWidgetId], built once per distinct
+     * layout bucket. A single bucket (the common case) is a plain RemoteViews; more than one
+     * becomes a size map on API 31+, or the landscape/portrait pair below it.
+     */
+    fun build(
+        context: Context,
+        appWidgetId: Int,
+        model: TaskWidgetModel,
+        sizes: List<DpSize>,
+    ): RemoteViews {
+        val byLayout = sizes.ifEmpty { listOf(FallbackWidgetSize) }
+            .distinct()
+            .groupBy(::taskWidgetLayoutFor)
+        if (byLayout.size == 1) return buildForLayout(context, appWidgetId, model, byLayout.keys.single())
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // One entry per bucket, never one RemoteViews under two keys: the size map stamps each
+            // value's ideal size onto the instance itself. The key is the smallest width and height
+            // the bucket was reported at, so it fits every host size that maps to it.
+            val sized = byLayout.map { (layout, layoutSizes) ->
+                SizeF(layoutSizes.minOf { it.width.value }, layoutSizes.minOf { it.height.value }) to
+                    buildForLayout(context, appWidgetId, model, layout)
+            }.toMap()
+            return RemoteViews(sized)
+        }
+        // Below API 31 the only multi-layout form is the orientation pair. `sizes` came from
+        // taskWidgetSizes, which lists landscape first and portrait second in that case.
+        return RemoteViews(
+            buildForLayout(context, appWidgetId, model, taskWidgetLayoutFor(sizes.first())),
+            buildForLayout(context, appWidgetId, model, taskWidgetLayoutFor(sizes.last())),
+        )
     }
 
-    Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(ImageProvider(R.drawable.widget_preview_background))
-            .clickable(openAction),
-    ) {
+    private fun buildForLayout(
+        context: Context,
+        appWidgetId: Int,
+        model: TaskWidgetModel,
+        layout: TaskWidgetLayout,
+    ): RemoteViews = RemoteViews(context.packageName, R.layout.widget_task).apply {
+        val state = model.state
+        val compact = layout == TaskWidgetLayout.COMPACT
+
+        setOnClickPendingIntent(android.R.id.background, activityIntent(context, appWidgetId, model.openIntent))
+
+        val watermark = when (state) {
+            TaskWidgetContentState.SETUP -> model.visuals.setupWatermark
+            TaskWidgetContentState.EMPTY,
+            TaskWidgetContentState.TASKS,
+            TaskWidgetContentState.LOCKED -> model.visuals.emptyWatermark
+            // Matches the loading XML layouts: no watermark image, just the title and a centred
+            // loading line. Showing one here would flash in on the first render, then vanish the
+            // moment a real snapshot lands — the opposite of the invisible handoff this is for.
+            TaskWidgetContentState.LOADING -> null
+        }
         if (watermark != null) {
-            TaskWidgetMessageBackground(
-                watermark = watermark,
-                metrics = metrics,
-            )
+            val watermarkId = taskWidgetWatermarkViewId(layout)
+            setImageViewResource(watermarkId, watermark)
+            setViewVisibility(watermarkId, View.VISIBLE)
         }
 
-        if (state != TaskWidgetContentState.TASKS) {
-            TaskWidgetMessage(
-                title = when (state) {
-                    TaskWidgetContentState.SETUP -> setupTitle
-                    TaskWidgetContentState.LOCKED -> lockedTitle
-                    TaskWidgetContentState.LOADING -> loadingTitle
-                    else -> emptyTitle
-                },
-                message = when (state) {
-                    TaskWidgetContentState.SETUP -> setupMessage
-                    TaskWidgetContentState.LOCKED -> lockedMessage
-                    else -> ""
-                },
-                compact = layout == TaskWidgetLayout.COMPACT,
-                openAction = openAction,
-                icon = if (state == TaskWidgetContentState.LOCKED) R.drawable.widget_lock_icon else null,
-            )
-        }
+        applyHeader(context, appWidgetId, model, compact)
 
-        Column(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .padding(
-                    start = metrics.horizontalPadding,
-                    top = metrics.topPadding,
-                    end = metrics.horizontalPadding,
-                    bottom = metrics.bottomPadding,
-                ),
-        ) {
-            TaskWidgetHeader(
-                title = title,
-                countLabel = countLabel,
-                showCount = state == TaskWidgetContentState.TASKS,
-                layout = layout,
-                metrics = metrics,
-                visuals = visuals,
-                addAction = addAction,
-            )
-
-            if (state == TaskWidgetContentState.TASKS) {
-                Spacer(modifier = GlanceModifier.height(metrics.contentSpacing))
-
-                TaskWidgetList(
-                    rows = rows,
-                    layout = layout,
-                    metrics = metrics,
-                    visuals = visuals,
-                    openAction = openAction,
-                    modifier = GlanceModifier
-                        .fillMaxWidth()
-                        .defaultWeight(),
-                )
-            }
+        if (state == TaskWidgetContentState.TASKS) {
+            setViewVisibility(R.id.widget_list, View.VISIBLE)
+            applyRows(context, appWidgetId, model, layout)
+        } else {
+            applyMessage(model, compact)
         }
     }
-}
 
-@Composable
-private fun TaskWidgetHeader(
-    title: String,
-    countLabel: String,
-    showCount: Boolean,
-    layout: TaskWidgetLayout,
-    metrics: TaskWidgetMetrics,
-    visuals: TaskWidgetVisuals,
-    addAction: Action,
-) {
-    Box(
-        modifier = GlanceModifier
-            .fillMaxWidth()
-            .height(metrics.headerHeight),
+    private fun RemoteViews.applyHeader(
+        context: Context,
+        appWidgetId: Int,
+        model: TaskWidgetModel,
+        compact: Boolean,
     ) {
-        if (layout == TaskWidgetLayout.COMPACT) {
-            // Compact lays the add button out INLINE as the trailing Row child. The
-            // overlay-Box approach the wider layouts use silently dropped the button here
-            // (the weighted count lockup left it no room), so the small widget had no way
-            // to add a task. A leading weighted cell pushes the button to the right edge.
-            Row(
-                modifier = GlanceModifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (showCount) {
-                    CompactCountLockup(
-                        countLabel = countLabel,
-                        modifier = GlanceModifier.defaultWeight(),
-                    )
-                } else {
-                    Spacer(modifier = GlanceModifier.defaultWeight())
-                }
-                AddButton(
-                    visuals = visuals,
-                    action = addAction,
-                    size = metrics.addButtonSize,
-                )
+        val showCount = model.state == TaskWidgetContentState.TASKS
+        if (compact) {
+            // Compact shows no title — "Floater Tasks" + count + button can't fit a 2x2 width —
+            // so the count leads, and only once there is something to count.
+            setViewVisibility(R.id.widget_header_wide, View.GONE)
+            if (showCount) {
+                setTextViewText(R.id.widget_compact_count, model.countLabel)
+                setViewVisibility(R.id.widget_compact_count, View.VISIBLE)
             }
         } else {
-            Row(
-                modifier = GlanceModifier
-                    .fillMaxSize()
-                    .padding(end = metrics.addButtonSize + 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                HeaderText(
-                    modifier = GlanceModifier.height(metrics.headerHeight),
-                    text = title,
-                    color = TaskWidgetTextColor.PRIMARY,
-                    // One title size across all sizes (natural width, fillWidth=false) so the
-                    // count hugs it like iOS and resizing never changes the header.
-                    fontSize = 17.sp,
-                    maxLines = 1,
-                    fillWidth = false,
-                )
-                if (showCount) {
-                    Spacer(modifier = GlanceModifier.width(8.dp))
-                    CountPill(label = countLabel)
-                }
-            }
-
-            Box(
-                modifier = GlanceModifier.fillMaxSize(),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                AddButton(
-                    visuals = visuals,
-                    action = addAction,
-                    size = metrics.addButtonSize,
-                )
+            setTextViewText(R.id.widget_title, model.title)
+            if (showCount) {
+                setTextViewText(R.id.widget_count, model.countLabel)
+                setViewVisibility(R.id.widget_count, View.VISIBLE)
             }
         }
-    }
-}
 
-@Composable
-private fun CompactCountLockup(
-    countLabel: String,
-    modifier: GlanceModifier = GlanceModifier,
-) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.CenterStart,
+        setInt(R.id.widget_add, "setBackgroundResource", model.visuals.addButtonBackground)
+        setImageViewResource(R.id.widget_add_icon, model.visuals.addIcon)
+        setContentDescription(R.id.widget_add, model.addLabel)
+        setOnClickPendingIntent(R.id.widget_add, activityIntent(context, appWidgetId, model.addIntent))
+    }
+
+    private fun RemoteViews.applyMessage(model: TaskWidgetModel, compact: Boolean) {
+        val (title, message) = when (model.state) {
+            TaskWidgetContentState.SETUP -> model.setupTitle to model.setupMessage
+            TaskWidgetContentState.LOCKED -> model.lockedTitle to model.lockedMessage
+            TaskWidgetContentState.LOADING -> model.loadingTitle to ""
+            else -> model.emptyTitle to ""
+        }
+        setViewVisibility(R.id.widget_message, View.VISIBLE)
+        if (model.state == TaskWidgetContentState.LOCKED) {
+            val iconId = if (compact) R.id.widget_message_icon_compact else R.id.widget_message_icon
+            setImageViewResource(iconId, R.drawable.widget_lock_icon)
+            setViewVisibility(iconId, View.VISIBLE)
+        }
+        setTextViewText(R.id.widget_message_title, title)
+        setTextViewTextSize(R.id.widget_message_title, TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 15f)
+        setInt(R.id.widget_message_title, "setMaxLines", if (compact) 1 else 2)
+        if (!compact && message.isNotEmpty()) {
+            setTextViewText(R.id.widget_message_body, message)
+            setViewVisibility(R.id.widget_message_body, View.VISIBLE)
+        }
+    }
+
+    private fun RemoteViews.applyRows(
+        context: Context,
+        appWidgetId: Int,
+        model: TaskWidgetModel,
+        layout: TaskWidgetLayout,
     ) {
-        HeaderText(
-            modifier = GlanceModifier.fillMaxSize(),
-            text = countLabel,
-            color = TaskWidgetTextColor.SECONDARY,
-            fontSize = 18.sp,
-            maxLines = 1,
-        )
+        val showTrailing = taskWidgetShowsTrailingText(layout)
+        val items = RemoteViewsCompat.RemoteCollectionItems.Builder()
+            .setHasStableIds(true)
+            .setViewTypeCount(1)
+        model.rows.forEachIndexed { index, row ->
+            items.addItem(
+                row.key,
+                rowViews(context, row, model.visuals, showTrailing, isLast = index == model.rows.lastIndex),
+            )
+        }
+        RemoteViewsCompat.setRemoteAdapter(context, this, appWidgetId, R.id.widget_list, items.build())
+        // One template for the whole list; each row fills in what its tap means (see
+        // WidgetTaskActions). A list item cannot carry a PendingIntent of its own.
+        setPendingIntentTemplate(R.id.widget_list, WidgetTaskActions.rowTemplate(context, appWidgetId))
     }
+
+    private fun rowViews(
+        context: Context,
+        row: TaskWidgetRow,
+        visuals: TaskWidgetVisuals,
+        showTrailing: Boolean,
+        isLast: Boolean,
+    ): RemoteViews = RemoteViews(context.packageName, R.layout.widget_task_list_row).apply {
+        setImageViewResource(
+            R.id.widget_row_ring,
+            visuals.priorityRingOverride ?: taskWidgetPriorityRingResource(row.priority),
+        )
+        setTextViewText(R.id.widget_row_title, row.title)
+
+        val trailing = row.trailingText?.takeIf { showTrailing }
+        if (trailing != null) {
+            setTextViewText(R.id.widget_row_time, trailing)
+            setViewVisibility(R.id.widget_row_time, View.VISIBLE)
+            if (row.overdueTrailing) {
+                // Reuses the existing high-priority ring color as the overdue tint rather than
+                // adding a new color resource — same red, already themed for day/night.
+                setDayNightTextColor(context, R.id.widget_row_time, R.color.tday_widget_priority_high)
+            }
+        }
+
+        val notes = flattenNotesToPlainText(row.description).takeIf { it.isNotBlank() }
+        if (notes != null) {
+            setTextViewText(R.id.widget_row_notes, notes)
+            setViewVisibility(R.id.widget_row_notes, View.VISIBLE)
+        }
+        // Plain whitespace between rows, no separator line — matches the widget-picker previews.
+        if (isLast) setViewVisibility(R.id.widget_row_gap, View.GONE)
+
+        setOnClickFillInIntent(R.id.widget_row, WidgetTaskActions.openFillIn())
+        setOnClickFillInIntent(R.id.widget_row_check, WidgetTaskActions.completeFillIn(row.id))
+    }
+
+    /**
+     * Request code = the instance id, so two instances never share a PendingIntent even where
+     * their intents compare equal (a reconfigure intent differs only by an extra).
+     */
+    private fun activityIntent(context: Context, appWidgetId: Int, intent: Intent): PendingIntent =
+        PendingIntent.getActivity(
+            context,
+            appWidgetId,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
 }
 
-@Composable
-private fun CountPill(
-    label: String,
-    modifier: GlanceModifier = GlanceModifier,
-) {
-    Box(
-        modifier = modifier.height(26.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        HeaderText(
-            text = label,
-            color = TaskWidgetTextColor.SECONDARY,
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            fillWidth = false,
-        )
-    }
-}
-
-@Composable
-private fun AddButton(
-    visuals: TaskWidgetVisuals,
-    action: Action,
-    size: Dp,
-) {
-    Box(
-        modifier = GlanceModifier
-            .size(size)
-            .background(ImageProvider(visuals.addButtonBackground))
-            .clickable(action),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(
-            provider = ImageProvider(visuals.addIcon),
-            contentDescription = null,
-            modifier = GlanceModifier.size(if (size < 48.dp) 17.dp else 18.dp),
-        )
-    }
-}
-
-// ColorProvider(resourceId) is Glance's documented way to use a color
-// resource; the overload is only lint-restricted, not actually internal.
-@android.annotation.SuppressLint("RestrictedApi")
-@Composable
-private fun HeaderText(
-    text: String,
-    color: TaskWidgetTextColor,
-    fontSize: TextUnit,
-    modifier: GlanceModifier = GlanceModifier,
-    textAlign: TextAlign = TextAlign.Start,
-    maxLines: Int = 1,
-    fillWidth: Boolean = true,
-) {
-    require(fontSize.isSp) { "Widget font sizes must be expressed in sp." }
-
-    Box(
-        modifier = modifier,
-        contentAlignment = when (textAlign) {
-            TextAlign.Center -> Alignment.Center
-            TextAlign.Right,
-            TextAlign.End -> Alignment.CenterEnd
-
-            else -> Alignment.CenterStart
-        },
-    ) {
-        Text(
-            text = text,
-            // fillWidth=false lets the title size to its own text (natural width) so the
-            // count sits right after it (like iOS) instead of a fixed-width column that
-            // both wastes space AND truncates a slightly larger title.
-            modifier = if (fillWidth) GlanceModifier.fillMaxWidth() else GlanceModifier,
-            style = TextStyle(
-                color = ColorProvider(color.resourceId),
-                fontSize = fontSize,
-                fontWeight = FontWeight.Bold,
-                textAlign = textAlign,
-            ),
-            maxLines = maxLines,
-        )
-    }
-}
-
-// Mirrors Glance's own gating for a resource-backed ColorProvider (see HeaderText above,
-// and TextTranslatorKt.setText in glance-appwidget): on API 31+, RemoteViews.setColorStateList
-// stores a color-resource REFERENCE, not a resolved literal, so whichever process later
-// applies this RemoteViews (the launcher/widget host, the OS, or our own app) re-resolves it
-// against ITS OWN current configuration — self-correcting on a theme change even if this
-// app's process was never alive to catch Application.onConfigurationChanged. That overload
-// does not exist below API 31, so we still eagerly bake a literal there — minSdk is 26, so
-// that branch is load-bearing, not dead code; it's exactly this call site's old behavior.
+// On API 31+, RemoteViews.setColorStateList stores a color-resource REFERENCE, not a resolved
+// literal, so whichever process applies this RemoteViews (the launcher/widget host, the OS, or our
+// own app) re-resolves it against ITS OWN current configuration — self-correcting on a theme
+// change even if this app's process was never alive to catch it. That overload does not exist
+// below API 31, so a literal is baked there — minSdk is 26, so that branch is load-bearing.
 private fun RemoteViews.setDayNightTextColor(
     context: Context,
     viewId: Int,
@@ -430,292 +343,56 @@ private fun RemoteViews.setDayNightTextColor(
     }
 }
 
-@Composable
-private fun WidgetText(
-    text: String,
-    color: TaskWidgetTextColor,
-    fontSize: TextUnit,
-    modifier: GlanceModifier = GlanceModifier,
-    textAlign: TextAlign = TextAlign.Start,
-    maxLines: Int = 1,
-    fillBounds: Boolean = false,
-    fillWidth: Boolean = false,
-) {
-    require(fontSize.isSp) { "Widget font sizes must be expressed in sp." }
+/**
+ * Every size the host has told us [appWidgetId] is drawn at, in dp.
+ *
+ * API 31+ hosts list them in `OPTION_APPWIDGET_SIZES`. Otherwise (older platforms, and launchers
+ * that never fill that list) the min/max bounds give the classic pair — landscape first, portrait
+ * second, the order [TaskWidgetRemoteViews.build] relies on. A widget the host has not sized yet
+ * falls back to its provider's declared minimum; `onAppWidgetOptionsChanged` re-renders once the
+ * real size arrives.
+ */
+internal fun taskWidgetSizes(context: Context, appWidgetId: Int): List<DpSize> {
+    val manager = AppWidgetManager.getInstance(context)
+    val options = runCatching { manager.getAppWidgetOptions(appWidgetId) }.getOrNull() ?: Bundle.EMPTY
 
-    val context = LocalContext.current
-    val layoutId = when {
-        fillWidth -> R.layout.widget_nunito_text_fill_width
-        fillBounds -> R.layout.widget_nunito_text_fill
-        else -> R.layout.widget_nunito_text_wrap
-    }
-    val remoteViews = RemoteViews(context.packageName, layoutId).apply {
-        setTextViewText(R.id.widget_nunito_text, text)
-        setTextViewTextSize(R.id.widget_nunito_text, TypedValue.COMPLEX_UNIT_SP, fontSize.value)
-        setDayNightTextColor(context, R.id.widget_nunito_text, color.resourceId)
-        setInt(R.id.widget_nunito_text, "setGravity", textAlign.toWidgetGravity())
-        setInt(R.id.widget_nunito_text, "setMaxLines", maxLines)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val reported = reportedSizes(options)
+        if (reported.isNotEmpty()) return reported
     }
 
-    AndroidRemoteViews(
-        remoteViews = remoteViews,
-        modifier = modifier,
-    )
-}
-
-private fun TextAlign.toWidgetGravity(): Int {
-    return when (this) {
-        TextAlign.Center -> Gravity.CENTER
-        TextAlign.Left -> Gravity.LEFT or Gravity.CENTER_VERTICAL
-        TextAlign.Right -> Gravity.RIGHT or Gravity.CENTER_VERTICAL
-        TextAlign.End -> Gravity.END or Gravity.CENTER_VERTICAL
-        else -> Gravity.START or Gravity.CENTER_VERTICAL
-    }
-}
-
-@Composable
-private fun TaskWidgetMessage(
-    title: String,
-    message: String,
-    compact: Boolean,
-    openAction: Action,
-    icon: Int? = null,
-) {
-    Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .clickable(openAction),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = GlanceModifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (icon != null) {
-                Image(
-                    provider = ImageProvider(icon),
-                    contentDescription = null,
-                    modifier = GlanceModifier.size(if (compact) 20.dp else 24.dp),
-                )
-                Spacer(modifier = GlanceModifier.height(if (compact) 4.dp else 6.dp))
-            }
-            WidgetText(
-                modifier = GlanceModifier.fillMaxWidth(),
-                text = title,
-                color = TaskWidgetTextColor.PRIMARY,
-                fontSize = if (compact) 13.sp else 15.sp,
-                textAlign = TextAlign.Center,
-                maxLines = if (compact) 1 else 2,
-                fillBounds = true,
-            )
-            if (!compact && message.isNotEmpty()) {
-                Spacer(modifier = GlanceModifier.height(3.dp))
-                WidgetText(
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    text = message,
-                    color = TaskWidgetTextColor.SECONDARY,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    fillBounds = true,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TaskWidgetMessageBackground(
-    watermark: Int,
-    metrics: TaskWidgetMetrics,
-) {
-    Box(
-        modifier = GlanceModifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomEnd,
-    ) {
-        Image(
-            provider = ImageProvider(watermark),
-            contentDescription = null,
-            modifier = GlanceModifier.size(metrics.messageWatermarkSize),
+    val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
+    val maxWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH)
+    val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
+    val maxHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)
+    if (minWidth > 0 && minHeight > 0) {
+        return listOf(
+            DpSize(maxWidth.coerceAtLeast(minWidth).dp, minHeight.dp),
+            DpSize(minWidth.dp, maxHeight.coerceAtLeast(minHeight).dp),
         )
     }
+
+    val info = runCatching { manager.getAppWidgetInfo(appWidgetId) }.getOrNull() ?: return emptyList()
+    val density = context.resources.displayMetrics.density
+    return listOf(DpSize((info.minWidth / density).dp, (info.minHeight / density).dp))
 }
 
-@Composable
-private fun TaskWidgetList(
-    rows: List<TaskWidgetRow>,
-    layout: TaskWidgetLayout,
-    metrics: TaskWidgetMetrics,
-    visuals: TaskWidgetVisuals,
-    openAction: Action,
-    modifier: GlanceModifier = GlanceModifier,
-) {
-    LazyColumn(modifier = modifier) {
-        itemsIndexed(rows, itemId = { _, row -> row.key }) { index, row ->
-            // Row + spacer must live under ONE root per item: Glance wraps multiple
-            // item children in a Box (which overlaps them), so a bare Spacer sibling
-            // would add no height. A Column stacks them so the gap is real.
-            Column(modifier = GlanceModifier.fillMaxWidth()) {
-                TaskWidgetRow(
-                    row = row,
-                    layout = layout,
-                    metrics = metrics,
-                    visuals = visuals,
-                    openAction = openAction,
-                )
-                if (index < rows.lastIndex) {
-                    // Plain whitespace between rows, no separator line — matches the
-                    // widget-picker preview layouts, which never drew one. Same height
-                    // as before, so the visible row count is unchanged.
-                    Spacer(modifier = GlanceModifier.height(metrics.rowSpacing))
-                }
-            }
-        }
-    }
-}
+@Suppress("DEPRECATION") // The typed overload is API 33; this runs from 31.
+private fun reportedSizes(options: Bundle): List<DpSize> =
+    options.getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
+        .orEmpty()
+        .filter { it.width > 0f && it.height > 0f }
+        .map { DpSize(it.width.dp, it.height.dp) }
 
-@Composable
-private fun TaskWidgetRow(
-    row: TaskWidgetRow,
-    layout: TaskWidgetLayout,
-    metrics: TaskWidgetMetrics,
-    visuals: TaskWidgetVisuals,
-    openAction: Action,
-) {
-    val description = flattenNotesToPlainText(row.description).takeIf { it.isNotBlank() }
+/** A size in the MEDIUM bucket, for the one case where no size is known at all. */
+private val FallbackWidgetSize = DpSize(250.dp, 140.dp)
 
-    Column(
-        modifier = GlanceModifier
-            .fillMaxWidth()
-            .clickable(openAction),
-    ) {
-        Row(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .padding(vertical = 3.dp),
-            // Top-align so the dot/time sit on the first line of a wrapped
-            // two-line title rather than centring across both lines.
-            verticalAlignment = Alignment.Top,
-        ) {
-            // Widgets v2: the leading check ring is an inline complete target — tap it
-            // to check the task off in place (parity with the iOS widget). The clickable
-            // box pads past the 14dp ring so the tap target stays usable at home-screen
-            // sizes without moving the layout.
-            if (row.completeAction != null) {
-                Box(
-                    modifier = GlanceModifier
-                        .clickable(row.completeAction)
-                        .padding(top = 1.dp, bottom = 3.dp, end = 4.dp),
-                ) {
-                    PriorityCheckRing(
-                        priority = row.priority,
-                        size = 14.dp,
-                        ringResourceOverride = visuals.priorityRingOverride,
-                    )
-                }
-                Spacer(modifier = GlanceModifier.width(4.dp))
-            } else {
-                PriorityCheckRing(
-                    priority = row.priority,
-                    size = 14.dp,
-                    ringResourceOverride = visuals.priorityRingOverride,
-                    // Nudge down slightly to sit on the first line of a wrapped title.
-                    modifier = GlanceModifier.padding(top = 1.dp),
-                )
-                Spacer(modifier = GlanceModifier.width(7.dp))
-            }
-            // Title + trailing time are ONE AndroidRemoteViews. The title is a
-            // RemoteViews TextView (Nunito font), and Glance collapses a weighted
-            // AndroidRemoteViews to zero width when the Row has a *trailing* Glance
-            // sibling — which is exactly why medium/large (with a time chip) rendered
-            // blank titles while small (no time) was fine. Folding the time INTO the
-            // same RemoteViews removes that sibling: the title's 0dp+weight=1 now lives
-            // inside the RemoteViews' own LinearLayout, which the framework sizes
-            // reliably (same structure as the static previews).
-            val trailing = row.trailingText?.takeIf { taskWidgetShowsTrailingText(layout) }
-            Box(modifier = GlanceModifier.defaultWeight()) {
-                TaskTitleAndTime(
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    title = row.title,
-                    trailingText = trailing,
-                    trailingOverdue = row.overdueTrailing,
-                    titleFontSize = metrics.rowFontSize,
-                )
-            }
-        }
-        if (description != null) {
-            // The title Row's own 3dp bottom padding is what separates a title-only row
-            // from the next task. Notes sit OUTSIDE that Row, so without a bottom pad here
-            // a notes-bearing task would end flush against the inter-row spacer: 3dp from
-            // its own title but only 6dp from the next task. With no divider line left to
-            // mark the boundary, that reads as one run-on block. Matching the Row's 3dp
-            // keeps every row shape at 3dp title->notes and 9dp task->task.
-            WidgetText(
-                modifier = GlanceModifier
-                    .fillMaxWidth()
-                    .padding(start = 14.dp, bottom = 3.dp),
-                text = description,
-                color = TaskWidgetTextColor.SECONDARY,
-                fontSize = 11.sp,
-                maxLines = 2,
-            )
-        }
-    }
-}
-
-// Renders the task title and its optional trailing time as a SINGLE RemoteViews
-// (see widget_task_row_line.xml). This is the fix for blank titles on any widget
-// size that shows the time: the title's 0dp+weight=1 lives inside the RemoteViews,
-// so there is no trailing Glance sibling to collapse the weighted wrapper.
-@Composable
-private fun TaskTitleAndTime(
-    title: String,
-    trailingText: String?,
-    titleFontSize: TextUnit,
-    modifier: GlanceModifier = GlanceModifier,
-    trailingOverdue: Boolean = false,
-) {
-    require(titleFontSize.isSp) { "Widget font sizes must be expressed in sp." }
-    val context = LocalContext.current
-    val remoteViews = RemoteViews(context.packageName, R.layout.widget_task_row_line).apply {
-        setTextViewText(R.id.widget_row_title, title)
-        setTextViewTextSize(R.id.widget_row_title, TypedValue.COMPLEX_UNIT_SP, titleFontSize.value)
-        setDayNightTextColor(context, R.id.widget_row_title, TaskWidgetTextColor.PRIMARY.resourceId)
-        setInt(R.id.widget_row_title, "setMaxLines", 2)
-        if (trailingText != null) {
-            // Reuses the existing high-priority ring color as the overdue tint rather than adding
-            // a new color resource — same red, already themed for day/night.
-            val trailingColorRes = if (trailingOverdue) {
-                R.color.tday_widget_priority_high
-            } else {
-                TaskWidgetTextColor.SECONDARY.resourceId
-            }
-            setViewVisibility(R.id.widget_row_time, View.VISIBLE)
-            setTextViewText(R.id.widget_row_time, trailingText)
-            setTextViewTextSize(R.id.widget_row_time, TypedValue.COMPLEX_UNIT_SP, 11f)
-            setDayNightTextColor(context, R.id.widget_row_time, trailingColorRes)
-        } else {
-            setViewVisibility(R.id.widget_row_time, View.GONE)
-        }
-    }
-    AndroidRemoteViews(remoteViews = remoteViews, modifier = modifier)
-}
-
-// The leading bullet is a hollow priority-coloured CHECK RING (matching the iOS
-// widget's tappable Circle().strokeBorder), not a solid dot — so it reads as a
-// checkbox you tap to complete the task in place.
-@Composable
-private fun PriorityCheckRing(
-    priority: String,
-    size: Dp,
-    modifier: GlanceModifier = GlanceModifier,
-    ringResourceOverride: Int? = null,
-) {
-    Image(
-        provider = ImageProvider(ringResourceOverride ?: taskWidgetPriorityRingResource(priority)),
-        contentDescription = null,
-        modifier = modifier.size(size),
-    )
+@IdRes
+internal fun taskWidgetWatermarkViewId(layout: TaskWidgetLayout): Int = when (layout) {
+    TaskWidgetLayout.COMPACT -> R.id.widget_watermark_compact
+    TaskWidgetLayout.WIDE -> R.id.widget_watermark_wide
+    TaskWidgetLayout.MEDIUM -> R.id.widget_watermark_medium
+    TaskWidgetLayout.TALL -> R.id.widget_watermark_tall
 }
 
 internal fun taskWidgetPriorityRingResource(priority: String): Int {
@@ -729,6 +406,11 @@ internal fun taskWidgetPriorityRingResource(priority: String): Int {
 
 internal fun taskWidgetIsDaytime(hour: Int): Boolean = hour in 6 until 18
 
+/**
+ * The layout bucket for a host size. The breakpoints are the launcher's cell grid, not our spacing
+ * scale; the insets, header and row metrics each bucket draws with live in `widget_task.xml` and
+ * mirror iOS's `WidgetLayoutMetrics`.
+ */
 internal fun taskWidgetLayoutFor(size: DpSize): TaskWidgetLayout {
     return when {
         size.height >= 208.dp -> TaskWidgetLayout.TALL
@@ -740,107 +422,3 @@ internal fun taskWidgetLayoutFor(size: DpSize): TaskWidgetLayout {
 
 internal fun taskWidgetShowsTrailingText(layout: TaskWidgetLayout): Boolean =
     layout == TaskWidgetLayout.MEDIUM || layout == TaskWidgetLayout.TALL
-
-private fun taskWidgetMetrics(layout: TaskWidgetLayout): TaskWidgetMetrics {
-    return when (layout) {
-        // Metrics mirror the iOS widget (WidgetLayoutMetrics) so both platforms breathe the
-        // same: matched horizontal inset, top/bottom inset, row spacing and row height. Row
-        // font is bumped +1 over iOS because Nunito renders ~1pt smaller than iOS's SF Rounded.
-        // COMPACT (the small 2x2) shares the SAME insets, header height, + button, row height,
-        // spacing and font as the wider sizes, so the padding and task placement match exactly.
-        // It only differs in the header CONTENT — the count leads instead of the title, because
-        // "Floater Tasks" + count + button can't fit a 2x2 width. Watermark stays small.
-        TaskWidgetLayout.COMPACT -> TaskWidgetMetrics(
-            horizontalPadding = 14.dp,
-            topPadding = 13.dp,
-            bottomPadding = 11.dp,
-            headerHeight = 42.dp,
-            headerTitleWidth = 0.dp,
-            headerCountWidth = 0.dp,
-            addButtonSize = 42.dp,
-            contentSpacing = 7.dp,
-            rowHeight = 22.dp,
-            rowSpacing = 3.dp,
-            rowFontSize = 13.sp,
-            messageWatermarkSize = 112.dp,
-        )
-
-        TaskWidgetLayout.WIDE -> TaskWidgetMetrics(
-            horizontalPadding = 14.dp,
-            topPadding = 13.dp,
-            bottomPadding = 11.dp,
-            headerHeight = 42.dp,
-            headerTitleWidth = 108.dp,
-            headerCountWidth = 50.dp,
-            addButtonSize = 42.dp,
-            contentSpacing = 7.dp,
-            rowHeight = 22.dp,
-            rowSpacing = 3.dp,
-            rowFontSize = 13.sp,
-            messageWatermarkSize = 128.dp,
-        )
-
-        TaskWidgetLayout.MEDIUM -> TaskWidgetMetrics(
-            horizontalPadding = 14.dp,
-            topPadding = 13.dp,
-            bottomPadding = 11.dp,
-            headerHeight = 42.dp,
-            headerTitleWidth = 108.dp,
-            headerCountWidth = 50.dp,
-            addButtonSize = 42.dp,
-            contentSpacing = 7.dp,
-            rowHeight = 22.dp,
-            rowSpacing = 3.dp,
-            rowFontSize = 13.sp,
-            messageWatermarkSize = 148.dp,
-        )
-
-        // TALL deliberately shares WIDE/MEDIUM's insets, header, row height and font, so
-        // resizing medium -> large -> extra-large never jumps the padding: the bigger widget
-        // just shows MORE rows at the same density. Only the empty-state watermark scales up.
-        TaskWidgetLayout.TALL -> TaskWidgetMetrics(
-            horizontalPadding = 14.dp,
-            topPadding = 13.dp,
-            bottomPadding = 11.dp,
-            headerHeight = 42.dp,
-            headerTitleWidth = 108.dp,
-            headerCountWidth = 50.dp,
-            addButtonSize = 42.dp,
-            contentSpacing = 7.dp,
-            rowHeight = 22.dp,
-            rowSpacing = 3.dp,
-            rowFontSize = 13.sp,
-            messageWatermarkSize = 208.dp,
-        )
-    }
-}
-
-private fun taskWidgetVisibleRowCount(
-    size: DpSize,
-    metrics: TaskWidgetMetrics,
-): Int {
-    val availableHeight = size.height.value -
-        metrics.topPadding.value -
-        metrics.bottomPadding.value -
-        metrics.headerHeight.value -
-        metrics.contentSpacing.value
-    val rowStep = metrics.rowHeight.value + metrics.rowSpacing.value
-    return ((availableHeight + metrics.rowSpacing.value) / rowStep)
-        .toInt()
-        .coerceAtLeast(1)
-}
-
-private data class TaskWidgetMetrics(
-    val horizontalPadding: Dp,
-    val topPadding: Dp,
-    val bottomPadding: Dp,
-    val headerHeight: Dp,
-    val headerTitleWidth: Dp,
-    val headerCountWidth: Dp,
-    val addButtonSize: Dp,
-    val contentSpacing: Dp,
-    val rowHeight: Dp,
-    val rowSpacing: Dp,
-    val rowFontSize: TextUnit,
-    val messageWatermarkSize: Dp,
-)

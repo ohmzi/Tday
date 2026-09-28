@@ -9,10 +9,8 @@ import com.ohmz.tday.compose.core.model.TodoListMode
  * The `tday://todos/create` deep link a widget's "+" opens, and the rules for reading it back.
  *
  * The instance id travels in the DATA URI rather than in an intent extra, and that is load-bearing.
- * Glance turns an `actionStartActivity` into `PendingIntent.getActivity(context, 0, intent,
- * FLAG_UPDATE_CURRENT or ...)`, and stamps its own per-instance disambiguating URI ONLY when the
- * intent has no data of its own. These intents all set data, so `PendingIntent` identity comes down
- * to `Intent.filterEquals` — which compares the data URI and IGNORES extras. An
+ * `PendingIntent` identity comes down to `Intent.filterEquals` plus the request code, and
+ * `filterEquals` compares the data URI and IGNORES extras. An
  * `EXTRA_APPWIDGET_ID` here would therefore be silently overwritten across instances of the same
  * kind; a query parameter makes each instance's PendingIntent genuinely distinct.
  */
@@ -42,8 +40,8 @@ internal object WidgetCreateRoute {
     }
 
     /**
-     * [appWidgetId] is omitted when it is not a real placed id — `provideGlance` also runs for
-     * Glance's own synthetic (negative) preview ids, and those resolve to nothing.
+     * [appWidgetId] is omitted when it is not a real placed id (a synthetic negative preview id, or
+     * `INVALID_APPWIDGET_ID`), since those resolve to nothing.
      */
     fun deepLink(target: String, appWidgetId: Int, listId: String? = null): String = buildString {
         append(CREATE_PATH)

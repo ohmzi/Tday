@@ -14,7 +14,7 @@ Current feature surface:
   replay.
 - Scheduled task home and Floater task home root feeds controlled by `RootFeedDock`.
 - Scheduled tasks, floaters, scheduled-task lists, floater lists, completed history, calendar,
-  search, settings, reminders, an opt-in device-calendar mirror, Glance Today/Floater widgets, an internal car-mode task surface,
+  search, settings, reminders, an opt-in device-calendar mirror, Today/Floater/List home-screen widgets, an internal car-mode task surface,
   and in-app APK updates.
 - Room-backed local cache with a one-time migration from the older encrypted JSON cache.
 
@@ -45,7 +45,7 @@ android-compose/app/src/main/java/com/ohmz/tday/compose/
 │   ├── completed/     # Completed todo/floater history
 │   ├── settings/      # Settings and admin toggles
 │   ├── release/       # Latest release and APK installer
-│   └── widget/        # Today/Floater Glance widgets and refresh coordinators
+│   └── widget/        # Today/Floater/List widgets (plain RemoteViews) and the refresh coordinator
 └── ui/
     ├── component/     # RootFeedDock, sheets, pull refresh, controls
     └── theme/         # Colors, typography, dimensions
@@ -134,14 +134,16 @@ See [`../docs/DATA_MODEL.md`](../docs/DATA_MODEL.md) for the shared cache model.
 
 ## Widgets
 
-The Today Tasks and Floater Tasks widgets are implemented with Glance and the same cache-backed task
-models as the app. Today shows pending scheduled tasks due today only; Floater shows active
+The Today Tasks and Floater Tasks widgets are plain RemoteViews built from XML layouts
+(`layout/widget_task.xml`, `widget_task_list_row.xml`) and rendered from the same cache-backed task
+models as the app. They do not use Glance: HyperOS 4's launcher ignores the runtime-assigned view ids
+Glance depends on, which left its widgets blank and untappable (see `docs/WIDGET_SYNC.md`). Today shows pending scheduled tasks due today only; Floater shows active
 unscheduled floaters across all floater lists. Completed tasks and overdue scheduled tasks stay out
 of these widget surfaces.
 
 - Android exposes small, medium, and large picker entries backed by separate AppWidget provider
   metadata for each widget kind. These picker choices are starting sizes; every placed entry shares
-  the same 2x2-to-4x4 resize range and renders the matching responsive Glance layout as it is
+  the same 2x2-to-4x4 resize range and renders the matching responsive layout bucket as it is
   stretched or compressed.
 - Static picker previews use RemoteViews-compatible XML, and Android 15+ generated previews are
   published from `TodayTasksWidgetPreviewPublisher` when the app starts.
@@ -168,7 +170,7 @@ of these widget surfaces.
 Keep future widget work responsive across compact, wide, and tall sizes, preserve large add/content
 tap targets, keep the persistent watermark calm behind both rows and empty text, reserve
 Today/Floater accent treatment for the plus add button, and prefer system widget bounds, dynamic
-color, and Material/Glance idioms over custom chrome.
+color, and native RemoteViews idioms over custom chrome.
 
 ### List widget (per-instance configuration)
 
@@ -189,9 +191,8 @@ and lets the user pick one.
   instance.
 - The configuration activity writes the first snapshot synchronously (it has Hilt/Room access,
   unlike a widget's own render path) so a freshly placed instance skips the `LOADING` state.
-- List widgets skip the `WidgetFastPaint` post-reboot optimisation Today/Floater use — that path is
-  keyed by a shared per-kind file, not per instance — so a cold List widget repaints on the normal
-  Glance timeline instead of the ~2.4-3s-faster one.
+- Every receiver, List included, renders its own ids straight from `onUpdate` (no WorkManager
+  session), so a List widget repaints after a reboot on the same timeline as Today/Floater.
 
 ## Car Surface
 

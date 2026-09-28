@@ -49,6 +49,18 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.Tday.WidgetCreate"
             android:windowSoftInputMode="adjustResize" />
+        <!-- Widget list-row taps (see WidgetTaskActions): invisible, own task, no history. -->
+        <activity
+            android:name=".feature.widget.WidgetTaskActionActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:noHistory="true"
+            android:taskAffinity="com.ohmz.tday.compose.widget.RowActionTrampoline"
+            android:theme="@style/Theme.Tday.WidgetTrampoline" />
+        <receiver
+            android:name=".feature.widget.WidgetTaskActionReceiver"
+            android:exported="false" />
         <activity
             android:name=".feature.widget.WidgetListConfigurationActivity"
             android:configChanges="keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"

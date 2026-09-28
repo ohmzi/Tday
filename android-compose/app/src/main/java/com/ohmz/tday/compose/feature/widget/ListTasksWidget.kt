@@ -5,172 +5,66 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.glance.GlanceId
-import androidx.glance.GlanceTheme
-import androidx.glance.action.Action
-import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.GlanceAppWidgetManager
-import androidx.glance.appwidget.SizeMode
-import androidx.glance.appwidget.action.actionStartActivity
-import androidx.glance.appwidget.provideContent
-import androidx.glance.state.GlanceStateDefinition
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshot
-import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotSignal
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStore
 import java.text.DateFormat
-import java.time.Instant
 import java.time.LocalTime
-import java.util.Date
 import java.util.Locale
 
 /**
  * Widgets v3: a widget instance scoped to ONE arbitrary list, chosen per instance via
  * [WidgetListConfigurationActivity] rather than fixed to "today's due tasks" or "the floater
  * list" the way [TodayTasksWidget]/[FloaterTasksWidget] are. Content shape follows whichever list
- * TYPE was configured (see [WidgetListType]'s KDoc) — this class does not decide that itself, it
+ * TYPE was configured (see [WidgetListType]'s KDoc) — this object does not decide that itself, it
  * only reads what [WidgetListSelectionStore] already recorded at configuration time.
  *
- * CRITICAL (see the `glance-widget-provideglance-once` project note): `provideGlance` runs
- * EXACTLY ONCE per Glance session — a live session's `update()` only recomposes, it never re-runs
- * this function. [appWidgetId] itself is safe to resolve once (an instance's id never changes for
- * its lifetime), but the SELECTION that id maps to, the app-lock flag, and the snapshot on disk
- * can all change after this session started — they are read as composable state INSIDE
- * `provideContent`, exactly like [TodayTasksWidget], never captured above it.
+ * The selection, the lock flag and the snapshot are all read on every render, so a reconfigure
+ * (the launcher's widget-edit affordance relaunches the configuration activity for the SAME
+ * `appWidgetId`) shows up on the next repaint without any per-instance state to invalidate.
  */
-class ListTasksWidget : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Responsive(TaskWidgetResponsiveSizes)
+internal object ListTasksWidget {
 
-    // See TodayTasksWidget: this app never reads Glance's own state store.
-    override val stateDefinition: GlanceStateDefinition<*>? = null
-
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
+    fun model(context: Context, appWidgetId: Int): TaskWidgetModel {
         val appContext = context.applicationContext
-        // Synchronous — GlanceAppWidgetManager.getAppWidgetId is a plain int lookup, not a
-        // DataStore read. Safe to resolve once: unlike the SELECTION it maps to, an instance's
-        // own id is fixed for its lifetime, so this is the one piece of per-instance state that
-        // is fine to read above `provideContent`.
-        val appWidgetId = GlanceAppWidgetManager(appContext).getAppWidgetId(id)
-        // See TodayTasksWidget: the platform's own owner for this id, logged alongside the class
-        // that is composing. Same "fixed for this instance's lifetime" argument as the id above.
-        val providerKind = WidgetInstanceResolver(appContext).kindOf(appWidgetId)
-
-        val securityPreferenceStore = AppSecurityPreferenceStore(appContext)
-        val snapshotStore = WidgetSnapshotStore(appContext)
-        val selectionStore = WidgetListSelectionStore(appContext)
-
-        val initialLocked = securityPreferenceStore.appLockEnabled.value
-        val initialSelection = selectionStore.selectionFor(appWidgetId)
-        // Same fallback Today/Floater use for "no snapshot yet" (fresh install, or a reboot
-        // before the app was ever opened) — a configured-but-unseeded instance shouldn't sit in
-        // LOADING forever waiting for an unrelated cache write. The normal case never reaches
-        // this: WidgetListConfigurationActivity writes the first snapshot synchronously right
-        // after the user picks a list, before this provideGlance call ever runs.
-        if (!initialLocked && initialSelection != null && !snapshotStore.existsList(appWidgetId)) {
-            WidgetHydrateWorker.runOnce(appContext)
+        val isAppLocked = AppSecurityPreferenceStore(appContext).appLockEnabled.value
+        val selection = WidgetListSelectionStore(appContext).selectionFor(appWidgetId)
+        val snapshot = if (isAppLocked || selection == null) {
+            null
+        } else {
+            WidgetSnapshotStore(appContext).readList(appWidgetId)
         }
+        // Same fallback Today/Floater use for "no snapshot yet" — a configured-but-unseeded
+        // instance shouldn't sit in LOADING forever waiting for an unrelated cache write. The
+        // normal case never reaches this: WidgetListConfigurationActivity writes the first
+        // snapshot synchronously right after the user picks a list.
+        if (!isAppLocked && selection != null && snapshot == null) WidgetHydrateWorker.runOnce(appContext)
+        logWidgetComposition(
+            composingAs = WidgetInstanceKind.LIST,
+            appWidgetId = appWidgetId,
+            providerKind = WidgetInstanceResolver(appContext).kindOf(appWidgetId),
+            details = "locked=$isAppLocked listType=${selection?.listType?.name ?: "none"} " +
+                "snapshotNull=${snapshot == null}",
+        )
 
-        provideContent {
-            ListTasksWidgetContent(
-                appContext = appContext,
-                appWidgetId = appWidgetId,
-                providerKind = providerKind,
-                securityPreferenceStore = securityPreferenceStore,
-                snapshotStore = snapshotStore,
-                selectionStore = selectionStore,
-            )
+        val visuals = listWidgetVisualsFor(selection?.listType)
+        val title = listWidgetTitleFor(appContext, selection, isAppLocked)
+        return if (selection == null) {
+            unconfiguredModel(appContext, appWidgetId, title, visuals, isAppLocked)
+        } else {
+            configuredModel(appContext, appWidgetId, selection, title, visuals, isAppLocked, snapshot)
         }
     }
-}
 
-/**
- * Everything `provideGlance` runs ONCE per Glance session for (see the class KDoc): every value
- * that can change after cold start is collected as composable state HERE, not above
- * `provideContent`, exactly like TodayTasksWidget/FloaterTasksWidget. Pulled out to its own
- * composable so `provideGlance`'s own body stays a flat, linear setup sequence.
- */
-@Composable
-private fun ListTasksWidgetContent(
-    appContext: Context,
-    appWidgetId: Int,
-    providerKind: WidgetInstanceKind?,
-    securityPreferenceStore: AppSecurityPreferenceStore,
-    snapshotStore: WidgetSnapshotStore,
-    selectionStore: WidgetListSelectionStore,
-) {
-    val isAppLocked by securityPreferenceStore.appLockEnabled.collectAsState()
-    val snapshotVersion by WidgetSnapshotSignal.version.collectAsState()
-    // The configured list itself can change too (the user reconfigures via the launcher's
-    // widget-edit affordance, which relaunches WidgetListConfigurationActivity for this SAME
-    // appWidgetId) — re-read on every signal bump, not just once at cold start.
-    val selection = remember(snapshotVersion) { selectionStore.selectionFor(appWidgetId) }
-    // `remember`, not `produceState` — see TodayTasksWidget for the on-device race this avoids:
-    // an async follow-up recomposition can lose Glance's RemoteViews publish race.
-    val currentSnapshot = remember(snapshotVersion, isAppLocked, selection) {
-        if (isAppLocked || selection == null) null else snapshotStore.readList(appWidgetId)
-    }
-    logWidgetComposition(
-        composingAs = WidgetInstanceKind.LIST,
-        appWidgetId = appWidgetId,
-        providerKind = providerKind,
-        details = "version=$snapshotVersion locked=$isAppLocked " +
-            "listType=${selection?.listType?.name ?: "none"} snapshotNull=${currentSnapshot == null}",
-    )
-
-    GlanceTheme {
-        ListTasksWidgetBody(
-            appContext = appContext,
-            appWidgetId = appWidgetId,
-            selection = selection,
-            isAppLocked = isAppLocked,
-            currentSnapshot = currentSnapshot,
-        )
-    }
-}
-
-@Composable
-private fun ListTasksWidgetBody(
-    appContext: Context,
-    appWidgetId: Int,
-    selection: WidgetListSelection?,
-    isAppLocked: Boolean,
-    currentSnapshot: WidgetSnapshot?,
-) {
-    val visuals = listWidgetVisualsFor(selection?.listType)
-    val title = listWidgetTitleFor(appContext, selection, isAppLocked)
-
-    if (selection == null) {
-        // No selection on disk: an instance whose configuration was somehow lost (store cleared
-        // without the widget itself being removed), or the launcher called `provideGlance`
-        // before `WidgetListConfigurationActivity` finished writing it — reuse the SETUP content
-        // state as "tap to finish setting this up" rather than inventing a fourth one. The
-        // VISUALS for it are kind-neutral (see UnconfiguredListWidgetVisuals): the content state
-        // is shared with the configured widgets, the identity is not.
-        UnconfiguredListWidgetContent(
-            appContext = appContext,
-            appWidgetId = appWidgetId,
-            title = title,
-            visuals = visuals,
-            isAppLocked = isAppLocked,
-        )
-    } else {
-        ConfiguredListWidgetContent(
-            appContext = appContext,
-            appWidgetId = appWidgetId,
-            selection = selection,
-            title = title,
-            visuals = visuals,
-            isAppLocked = isAppLocked,
-            currentSnapshot = currentSnapshot,
-        )
+    /** Where a tap on this instance (or one of its rows) goes. */
+    fun openIntent(context: Context, appWidgetId: Int): Intent {
+        val selection = WidgetListSelectionStore(context.applicationContext).selectionFor(appWidgetId)
+            ?: return reconfigureIntent(appWidgetId)
+        return openListIntent(selection.listId, selection.listName, selection.listType)
     }
 }
 
@@ -210,73 +104,45 @@ private fun listWidgetTitleFor(appContext: Context, selection: WidgetListSelecti
     return selection?.listName?.takeIf { it.isNotBlank() } ?: appContext.getString(R.string.widget_list_tasks_title)
 }
 
-@Composable
-private fun UnconfiguredListWidgetContent(
+/**
+ * No selection on disk: an instance whose configuration was somehow lost (store cleared without
+ * the widget itself being removed), or a render that landed before
+ * `WidgetListConfigurationActivity` finished writing it — reuse the SETUP content state as "tap to
+ * finish setting this up" rather than inventing a fourth one, with kind-neutral visuals.
+ */
+private fun unconfiguredModel(
     appContext: Context,
     appWidgetId: Int,
     title: String,
     visuals: TaskWidgetVisuals,
     isAppLocked: Boolean,
-) {
-    TaskWidgetContent(
-        title = title,
-        state = if (isAppLocked) TaskWidgetContentState.LOCKED else TaskWidgetContentState.SETUP,
-        countLabel = "",
-        setupTitle = appContext.getString(R.string.widget_list_tasks_setup_title),
-        setupMessage = appContext.getString(R.string.widget_list_tasks_setup_message),
-        emptyTitle = "",
-        emptyMessage = "",
-        lockedTitle = appContext.getString(R.string.widget_locked_title),
-        lockedMessage = appContext.getString(R.string.widget_locked_message),
-        loadingTitle = appContext.getString(R.string.widget_loading),
-        rows = emptyList(),
-        visuals = visuals,
-        openAction = reconfigureAction(appWidgetId),
-        addAction = reconfigureAction(appWidgetId),
-    )
-}
+): TaskWidgetModel = TaskWidgetModel(
+    title = title,
+    state = if (isAppLocked) TaskWidgetContentState.LOCKED else TaskWidgetContentState.SETUP,
+    countLabel = "",
+    setupTitle = appContext.getString(R.string.widget_list_tasks_setup_title),
+    setupMessage = appContext.getString(R.string.widget_list_tasks_setup_message),
+    emptyTitle = "",
+    lockedTitle = appContext.getString(R.string.widget_locked_title),
+    lockedMessage = appContext.getString(R.string.widget_locked_message),
+    loadingTitle = appContext.getString(R.string.widget_loading),
+    addLabel = appContext.getString(R.string.widget_list_tasks_setup_title),
+    rows = emptyList(),
+    visuals = visuals,
+    openIntent = reconfigureIntent(appWidgetId),
+    addIntent = reconfigureIntent(appWidgetId),
+)
 
-@Composable
-private fun ConfiguredListWidgetContent(
+private fun configuredModel(
     appContext: Context,
     appWidgetId: Int,
     selection: WidgetListSelection,
     title: String,
     visuals: TaskWidgetVisuals,
     isAppLocked: Boolean,
-    currentSnapshot: WidgetSnapshot?,
-) {
-    val strings = listTasksWidgetStringsFor(appContext, selection.listType)
-    TaskWidgetContent(
-        title = title,
-        state = listContentState(isAppLocked, currentSnapshot),
-        countLabel = strings.countLabel(currentSnapshot?.taskCount ?: 0),
-        setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
-        setupMessage = appContext.getString(R.string.widget_today_tasks_setup_message),
-        emptyTitle = strings.emptyMessage,
-        emptyMessage = strings.addTaskLabel,
-        lockedTitle = appContext.getString(R.string.widget_locked_title),
-        lockedMessage = appContext.getString(R.string.widget_locked_message),
-        loadingTitle = appContext.getString(R.string.widget_loading),
-        rows = if (isAppLocked || currentSnapshot == null) {
-            emptyList()
-        } else {
-            listRows(currentSnapshot, selection.listType)
-        },
-        visuals = visuals,
-        openAction = openListAction(selection.listId, selection.listName, selection.listType),
-        addAction = openCreateListTaskAction(appWidgetId, selection.listId, selection.listType),
-    )
-}
-
-private data class ListTasksWidgetStrings(
-    val emptyMessage: String,
-    val addTaskLabel: String,
-    val countLabelFormat: String,
-)
-
-private fun listTasksWidgetStringsFor(appContext: Context, listType: WidgetListType): ListTasksWidgetStrings {
-    val (emptyRes, addRes, countRes) = when (listType) {
+    snapshot: WidgetSnapshot?,
+): TaskWidgetModel {
+    val (emptyRes, addRes, countRes) = when (selection.listType) {
         WidgetListType.TODO -> Triple(
             R.string.widget_today_tasks_empty,
             R.string.widget_today_tasks_add,
@@ -289,15 +155,23 @@ private fun listTasksWidgetStringsFor(appContext: Context, listType: WidgetListT
             R.string.widget_floater_tasks_count,
         )
     }
-    return ListTasksWidgetStrings(
-        emptyMessage = appContext.getString(emptyRes),
-        addTaskLabel = appContext.getString(addRes),
-        countLabelFormat = appContext.getString(countRes),
+    return TaskWidgetModel(
+        title = title,
+        state = listContentState(isAppLocked, snapshot),
+        countLabel = String.format(Locale.getDefault(), appContext.getString(countRes), snapshot?.taskCount ?: 0),
+        setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
+        setupMessage = appContext.getString(R.string.widget_today_tasks_setup_message),
+        emptyTitle = appContext.getString(emptyRes),
+        lockedTitle = appContext.getString(R.string.widget_locked_title),
+        lockedMessage = appContext.getString(R.string.widget_locked_message),
+        loadingTitle = appContext.getString(R.string.widget_loading),
+        addLabel = appContext.getString(addRes),
+        rows = if (isAppLocked || snapshot == null) emptyList() else listRows(snapshot, selection.listType),
+        visuals = visuals,
+        openIntent = openListIntent(selection.listId, selection.listName, selection.listType),
+        addIntent = createListTaskIntent(appWidgetId, selection.listId, selection.listType),
     )
 }
-
-private fun ListTasksWidgetStrings.countLabel(count: Int): String =
-    String.format(Locale.getDefault(), countLabelFormat, count)
 
 private fun listContentState(
     isAppLocked: Boolean,
@@ -309,53 +183,29 @@ private fun listContentState(
 }
 
 private fun listRows(snapshot: WidgetSnapshot, listType: WidgetListType): List<TaskWidgetRow> {
-    val completeAction: (String) -> Action = when (listType) {
-        WidgetListType.TODO -> ::completeTodayTaskAction
-        WidgetListType.FLOATER -> ::completeFloaterTaskAction
-    }
-    return if (listType == WidgetListType.TODO) {
-        // One formatter for the whole list — see TodayTasksWidget for why this isn't baked at
-        // write time (locale + 12/24h setting are read-time concerns).
-        val timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT)
-        snapshot.rows.map { row ->
-            TaskWidgetRow(
-                key = row.key,
-                title = row.title,
-                priority = row.priorityRing.toPriorityValue(),
-                trailingText = row.dueEpochMs?.let { dueTimeText(timeFormatter, it) },
-                overdueTrailing = row.overdue,
-                description = row.description,
-                completeAction = completeAction(row.id),
-            )
-        }
-    } else {
-        snapshot.rows.map { row ->
-            TaskWidgetRow(
-                key = row.key,
-                title = row.title,
-                priority = row.priorityRing.toPriorityValue(),
-                description = row.description,
-                completeAction = completeAction(row.id),
-            )
-        }
+    // One formatter for the whole list — see TodayTasksWidget for why this isn't baked at write
+    // time (locale + 12/24h setting are read-time concerns).
+    val timeFormatter = if (listType == WidgetListType.TODO) DateFormat.getTimeInstance(DateFormat.SHORT) else null
+    return snapshot.rows.map { row ->
+        TaskWidgetRow(
+            key = row.key,
+            id = row.id,
+            title = row.title,
+            priority = row.priorityRing.toPriorityValue(),
+            trailingText = timeFormatter?.let { formatter -> row.dueEpochMs?.let { dueTimeText(formatter, it) } },
+            overdueTrailing = timeFormatter != null && row.overdue,
+            description = row.description,
+        )
     }
 }
 
-private fun dueTimeText(formatter: DateFormat, epochMs: Long): String =
-    formatter.format(Date.from(Instant.ofEpochMilli(epochMs)))
-
 /** Relaunches configuration for THIS instance — the same activity the launcher's own widget-edit
  *  affordance opens, reused here as the recovery path for a selection-less instance. */
-private fun reconfigureAction(appWidgetId: Int) = actionStartActivity(
-    Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
-        component = ComponentName(
-            BuildConfig.APPLICATION_ID,
-            WidgetListConfigurationActivity::class.java.name,
-        )
-        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    },
-)
+private fun reconfigureIntent(appWidgetId: Int): Intent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
+    component = ComponentName(BuildConfig.APPLICATION_ID, WidgetListConfigurationActivity::class.java.name)
+    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+}
 
 /**
  * Carries this instance's own `appWidgetId`, so the create sheet resolves the feed from the
@@ -363,36 +213,30 @@ private fun reconfigureAction(appWidgetId: Int) = actionStartActivity(
  * is no longer what decides this widget's behavior — a list instance whose stored selection cannot
  * be read now fails closed instead of quietly creating a scheduled task.
  */
-private fun openCreateListTaskAction(
+private fun createListTaskIntent(
     appWidgetId: Int,
     listId: String,
     listType: WidgetListType,
-) = actionStartActivity(
-    Intent(
-        Intent.ACTION_VIEW,
-        Uri.parse(
-            WidgetCreateRoute.deepLink(
-                target = WidgetCreateRoute.targetFor(WidgetInstanceCatalog.feedForListType(listType)),
-                appWidgetId = appWidgetId,
-                listId = listId,
-            ),
+): Intent = Intent(
+    Intent.ACTION_VIEW,
+    Uri.parse(
+        WidgetCreateRoute.deepLink(
+            target = WidgetCreateRoute.targetFor(WidgetInstanceCatalog.feedForListType(listType)),
+            appWidgetId = appWidgetId,
+            listId = listId,
         ),
-    ).apply {
-        component = ComponentName(
-            BuildConfig.APPLICATION_ID,
-            WidgetCreateTaskActivity::class.java.name,
-        )
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-    },
-)
+    ),
+).apply {
+    component = ComponentName(BuildConfig.APPLICATION_ID, WidgetCreateTaskActivity::class.java.name)
+    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+}
 
-private fun openListAction(listId: String, listName: String, listType: WidgetListType) = actionStartActivity(
+private fun openListIntent(listId: String, listName: String, listType: WidgetListType): Intent =
     Intent(Intent.ACTION_VIEW, Uri.parse(listDeepLink(listId, listName, listType))).apply {
         component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         addCategory(Intent.CATEGORY_LAUNCHER)
-    },
-)
+    }
 
 private fun listDeepLink(listId: String, listName: String, listType: WidgetListType): String {
     val prefix = if (listType == WidgetListType.TODO) "tday://todos/list" else "tday://floater/list"

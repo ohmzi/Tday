@@ -78,19 +78,18 @@ class WidgetCornerRadiusTest {
         )
     }
 
-    /** The Glance runtime paints the same surface the initialLayout does, or the widget reflows. */
+    /**
+     * The rendered widget (`layout/widget_task.xml`, built by `TaskWidgetRemoteViews`) paints the
+     * same surface the initialLayout does, or the widget reflows when the first render lands.
+     */
     @Test
-    fun `should paint the Glance runtime background with the placed widget surface`() {
+    fun `should paint the rendered widget with the placed widget surface`() {
         val placed = surfacesFor(AppWidgetDescriptor::initialLayout)
-        val design = File(widgetSourceDir, "TaskWidgetDesign.kt").readText()
-        val painted = Regex("""\.background\(ImageProvider\(R\.drawable\.(\w+)\)\)""")
-            .findAll(design)
-            .map { it.groupValues[1] }
-            .toSet()
+        val rendered = rootBackgroundDrawable(RENDERED_WIDGET_LAYOUT)
         assertTrue(
-            "TaskWidgetDesign paints $painted; the initialLayouts root on $placed. The composed " +
-                "widget and the layout it replaces must use the same surface drawable",
-            painted.any { it in placed },
+            "$RENDERED_WIDGET_LAYOUT roots on $rendered; the initialLayouts root on $placed. The " +
+                "rendered widget and the layout it replaces must use the same surface drawable",
+            rendered in placed,
         )
     }
 
@@ -201,6 +200,7 @@ class WidgetCornerRadiusTest {
 
         const val PICKER_PREVIEW_TOKEN = "tday_widget_picker_preview_corner_radius"
         const val PLACED_SURFACE_TOKEN = "tday_widget_surface_corner_radius"
+        const val RENDERED_WIDGET_LAYOUT = "widget_task"
 
         fun parse(file: File): Element =
             DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file).documentElement

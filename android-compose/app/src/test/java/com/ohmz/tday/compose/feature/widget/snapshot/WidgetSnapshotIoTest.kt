@@ -29,9 +29,9 @@ import java.util.concurrent.atomic.AtomicReference
  *     migration, `WidgetHydrateWorker` on a WorkManager thread and `WidgetListConfigurationViewModel`
  *     on `viewModelScope` all wrote the same files with no shared lock. Two interleaving inside one
  *     `writeBytes` produced a file that failed GCM authentication, which `read` then deleted.
- *  3. `FloaterTasksWidget`, `TodayTasksWidget`, `ListTasksWidget` and `WidgetFastPaint` decide
- *     whether to hydrate (or whether to fast-paint at all) from a bare `File.exists()`. Under
- *     delete-then-write that probe was transiently false on every single cache write.
+ *  3. `FloaterTasksWidget`, `TodayTasksWidget` and `ListTasksWidget` decide whether to hydrate
+ *     from whether a snapshot is there to read. Under delete-then-write the file was transiently
+ *     absent on every single cache write.
  *
  * Defect 3 is checked by asserting that the replacement never unlinks the name, rather than by
  * racing a thread to catch the name missing. A `rename(2)` has no window to catch, so a sampling

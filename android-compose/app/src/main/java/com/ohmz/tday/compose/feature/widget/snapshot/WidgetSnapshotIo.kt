@@ -38,14 +38,12 @@ import kotlin.concurrent.withLock
  * the old file or the new one, never a partial one — and a failure leaves the old file readable
  * instead of leaving nothing.
  *
- * It also closes a window the callers depend on. `FloaterTasksWidget`, `TodayTasksWidget`,
- * `ListTasksWidget` and `WidgetFastPaint` probe `File.exists()` to decide whether to enqueue
- * `WidgetHydrateWorker` or whether to fast-paint at all. Under delete-then-write that probe was
- * transiently false on EVERY cache write, so a `provideGlance` landing in that window enqueued the
- * hydrate worker — adding one more unsynchronised writer — and a fast paint landing in it silently
- * skipped, reintroducing the ~2.4-3.0s post-reboot delay that class exists to remove. Here the
- * target is only ever replaced, never absent, so all four probes are truthful without changing a
- * single call site.
+ * It also closes a window the callers depend on. `FloaterTasksWidget`, `TodayTasksWidget` and
+ * `ListTasksWidget` read the snapshot on every render and enqueue `WidgetHydrateWorker` when there
+ * is none. Under delete-then-write the file was transiently absent on EVERY cache write, so a
+ * render landing in that window enqueued the hydrate worker — adding one more unsynchronised
+ * writer — and painted "Loading tasks…" over real content. Here the target is only ever replaced,
+ * never absent, so a render always sees either the old snapshot or the new one.
  */
 internal object WidgetSnapshotIo {
 
