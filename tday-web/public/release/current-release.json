@@ -1,10 +1,10 @@
 {
-  "version": "0.7.42",
-  "publishedAt": "2026-09-27T18:50:09-04:00",
+  "version": "0.7.43",
+  "publishedAt": "2026-09-28T00:45:52-04:00",
   "notes": [
-    "Carry the next six days in the Today widget snapshot",
-    "Drop the not-null assertion in the upcoming-days widget test"
+    "Render widgets as plain RemoteViews instead of Glance",
+    "Make widget receiver bases open and drop the generic catch"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.42",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.41..v0.7.42"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.43",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.42..v0.7.43"
 }
