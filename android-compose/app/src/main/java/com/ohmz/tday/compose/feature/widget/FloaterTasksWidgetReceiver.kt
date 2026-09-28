@@ -1,6 +1,8 @@
 package com.ohmz.tday.compose.feature.widget
 
-abstract class BaseFloaterTasksWidgetReceiver : TaskWidgetReceiver() {
+// `open`, not `abstract`: it has nothing left to implement — the three subclasses exist only
+// because the manifest/AppWidgetManager need a DISTINCT class per size receiver.
+open class BaseFloaterTasksWidgetReceiver : TaskWidgetReceiver() {
     override val kind: WidgetInstanceKind get() = WidgetInstanceKind.FLOATER
 }
 
