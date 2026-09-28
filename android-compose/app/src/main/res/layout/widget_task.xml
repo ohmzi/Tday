@@ -7,6 +7,10 @@
   launcher), which left widgets blank and untappable. Only RemoteViews-allowed classes appear
   here, so empty TextViews stand in for spacers.
 
+  Hosts re-apply each new render onto the views already on screen rather than inflating afresh,
+  so a gone-by-default view here must be shown AND hidden in code on every render (setVisible),
+  never only shown when needed — or a resize leaves the previous bucket's views drawn.
+
   The root carries @android:id/background and clips to its rounded background, so a launcher's
   press, drag and launch treatment follows the rounded silhouette instead of the square bounds.
 -->

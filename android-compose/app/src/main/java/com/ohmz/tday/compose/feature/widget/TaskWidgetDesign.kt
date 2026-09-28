@@ -188,16 +188,21 @@ internal object TaskWidgetRemoteViews {
             // moment a real snapshot lands — the opposite of the invisible handoff this is for.
             TaskWidgetContentState.LOADING -> null
         }
-        if (watermark != null) {
-            val watermarkId = taskWidgetWatermarkViewId(layout)
-            setImageViewResource(watermarkId, watermark)
-            setViewVisibility(watermarkId, View.VISIBLE)
+        // Every bucket's watermark is switched, not just this one's: after a resize the host still
+        // shows the previous bucket's watermark unless this render hides it (see setVisible).
+        val watermarkId = taskWidgetWatermarkViewId(layout)
+        for (bucket in TaskWidgetLayout.entries) {
+            val bucketWatermarkId = taskWidgetWatermarkViewId(bucket)
+            setVisible(bucketWatermarkId, watermark != null && bucketWatermarkId == watermarkId)
         }
+        if (watermark != null) setImageViewResource(watermarkId, watermark)
 
         applyHeader(context, appWidgetId, model, compact)
 
-        if (state == TaskWidgetContentState.TASKS) {
-            setViewVisibility(R.id.widget_list, View.VISIBLE)
+        val showsTasks = state == TaskWidgetContentState.TASKS
+        setVisible(R.id.widget_list, showsTasks)
+        setVisible(R.id.widget_message, !showsTasks)
+        if (showsTasks) {
             applyRows(context, appWidgetId, model, layout)
         } else {
             applyMessage(model, compact)
@@ -211,20 +216,16 @@ internal object TaskWidgetRemoteViews {
         compact: Boolean,
     ) {
         val showCount = model.state == TaskWidgetContentState.TASKS
+        // Compact shows no title — "Floater Tasks" + count + button can't fit a 2x2 width — so the
+        // count leads, and only once there is something to count.
+        setVisible(R.id.widget_header_wide, !compact)
+        setVisible(R.id.widget_compact_count, compact && showCount)
+        setVisible(R.id.widget_count, !compact && showCount)
         if (compact) {
-            // Compact shows no title — "Floater Tasks" + count + button can't fit a 2x2 width —
-            // so the count leads, and only once there is something to count.
-            setViewVisibility(R.id.widget_header_wide, View.GONE)
-            if (showCount) {
-                setTextViewText(R.id.widget_compact_count, model.countLabel)
-                setViewVisibility(R.id.widget_compact_count, View.VISIBLE)
-            }
+            if (showCount) setTextViewText(R.id.widget_compact_count, model.countLabel)
         } else {
             setTextViewText(R.id.widget_title, model.title)
-            if (showCount) {
-                setTextViewText(R.id.widget_count, model.countLabel)
-                setViewVisibility(R.id.widget_count, View.VISIBLE)
-            }
+            if (showCount) setTextViewText(R.id.widget_count, model.countLabel)
         }
 
         setInt(R.id.widget_add, "setBackgroundResource", model.visuals.addButtonBackground)
@@ -240,19 +241,19 @@ internal object TaskWidgetRemoteViews {
             TaskWidgetContentState.LOADING -> model.loadingTitle to ""
             else -> model.emptyTitle to ""
         }
-        setViewVisibility(R.id.widget_message, View.VISIBLE)
-        if (model.state == TaskWidgetContentState.LOCKED) {
+        val locked = model.state == TaskWidgetContentState.LOCKED
+        setVisible(R.id.widget_message_icon, locked && !compact)
+        setVisible(R.id.widget_message_icon_compact, locked && compact)
+        if (locked) {
             val iconId = if (compact) R.id.widget_message_icon_compact else R.id.widget_message_icon
             setImageViewResource(iconId, R.drawable.widget_lock_icon)
-            setViewVisibility(iconId, View.VISIBLE)
         }
         setTextViewText(R.id.widget_message_title, title)
         setTextViewTextSize(R.id.widget_message_title, TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 15f)
         setInt(R.id.widget_message_title, "setMaxLines", if (compact) 1 else 2)
-        if (!compact && message.isNotEmpty()) {
-            setTextViewText(R.id.widget_message_body, message)
-            setViewVisibility(R.id.widget_message_body, View.VISIBLE)
-        }
+        val showBody = !compact && message.isNotEmpty()
+        setVisible(R.id.widget_message_body, showBody)
+        if (showBody) setTextViewText(R.id.widget_message_body, message)
     }
 
     private fun RemoteViews.applyRows(
@@ -290,24 +291,26 @@ internal object TaskWidgetRemoteViews {
         )
         setTextViewText(R.id.widget_row_title, row.title)
 
+        // Rows are recycled by re-applying onto a previous row's views, so the time's visibility
+        // and color are both set every time, never left to the XML defaults.
         val trailing = row.trailingText?.takeIf { showTrailing }
+        setVisible(R.id.widget_row_time, trailing != null)
         if (trailing != null) {
             setTextViewText(R.id.widget_row_time, trailing)
-            setViewVisibility(R.id.widget_row_time, View.VISIBLE)
-            if (row.overdueTrailing) {
-                // Reuses the existing high-priority ring color as the overdue tint rather than
-                // adding a new color resource — same red, already themed for day/night.
-                setDayNightTextColor(context, R.id.widget_row_time, R.color.tday_widget_priority_high)
-            }
+            // Reuses the existing high-priority ring color as the overdue tint rather than
+            // adding a new color resource — same red, already themed for day/night.
+            setDayNightTextColor(
+                context,
+                R.id.widget_row_time,
+                if (row.overdueTrailing) R.color.tday_widget_priority_high else R.color.tday_widget_on_surface_variant,
+            )
         }
 
         val notes = flattenNotesToPlainText(row.description).takeIf { it.isNotBlank() }
-        if (notes != null) {
-            setTextViewText(R.id.widget_row_notes, notes)
-            setViewVisibility(R.id.widget_row_notes, View.VISIBLE)
-        }
+        setVisible(R.id.widget_row_notes, notes != null)
+        if (notes != null) setTextViewText(R.id.widget_row_notes, notes)
         // Plain whitespace between rows, no separator line — matches the widget-picker previews.
-        if (isLast) setViewVisibility(R.id.widget_row_gap, View.GONE)
+        setVisible(R.id.widget_row_gap, !isLast)
 
         setOnClickFillInIntent(R.id.widget_row, WidgetTaskActions.openFillIn())
         setOnClickFillInIntent(R.id.widget_row_check, WidgetTaskActions.completeFillIn(row.id))
@@ -325,6 +328,17 @@ internal object TaskWidgetRemoteViews {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 }
+
+/**
+ * The only way this file changes a view's visibility: always explicitly shown or hidden, never
+ * "show if needed" on top of the XML default. A host that already displays `widget_task` does not
+ * inflate a new RemoteViews — it re-applies the actions onto the live view tree (AppWidgetHostView
+ * on every update and resize, RemoteCollectionItemsAdapter on every recycled row). So a view an
+ * earlier render made VISIBLE stays VISIBLE until a later render hides it: resizing from MEDIUM to
+ * TALL drew both buckets' watermarks on top of each other. `WidgetReapplyVisibilityTest` pins it.
+ */
+private fun RemoteViews.setVisible(@IdRes viewId: Int, visible: Boolean) =
+    setViewVisibility(viewId, if (visible) View.VISIBLE else View.GONE)
 
 // On API 31+, RemoteViews.setColorStateList stores a color-resource REFERENCE, not a resolved
 // literal, so whichever process applies this RemoteViews (the launcher/widget host, the OS, or our
