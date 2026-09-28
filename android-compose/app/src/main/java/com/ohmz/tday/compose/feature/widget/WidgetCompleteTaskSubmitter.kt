@@ -18,7 +18,7 @@ import javax.inject.Singleton
  * COMPLETE_TODO/COMPLETE_TODO_INSTANCE/COMPLETE_FLOATER mutation, sync in
  * Server Mode, widget refresh. Mirrors [WidgetCreateTaskSubmitter].
  *
- * The repository call passes eagerSync=false so the Glance action isn't held
+ * The repository call passes eagerSync=false so the widget tap isn't held
  * hostage by the network (the tap re-renders the widget the moment the optimistic
  * write lands). The queued mutation is then pushed to the backend IMMEDIATELY via
  * an expedited [WidgetSyncWorker] one-shot — without it, the completion sat in the

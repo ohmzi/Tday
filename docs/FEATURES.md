@@ -160,7 +160,7 @@ On both platforms a scheduled list renders with due times and a floater list ren
 
 Widgets refresh as soon as a task changes. After every add, edit, complete, or delete, and when the
 app goes to the background, the app pushes a refresh instead of waiting for the system's slow
-schedule. Android uses `GlanceAppWidgetManager` with a WorkManager fallback; iOS uses `WidgetCenter`
+schedule. Android publishes RemoteViews through `AppWidgetManager` with a WorkManager fallback; iOS uses `WidgetCenter`
 reloads backed by an App Group snapshot. A 15-minute background refresh on each platform is the
 safety net.
 

@@ -16,7 +16,7 @@ import dagger.assisted.AssistedInject
 
 /**
  * The only widget-flow component allowed to open the encrypted cache — and never on a render
- * path. A widget's `provideGlance` enqueues this when it finds no snapshot on disk (the LOADING
+ * path. A widget render enqueues this when it finds no snapshot on disk (the LOADING
  * state): a fresh install, or an upgrade that rebooted before the app was ever opened for the
  * first time. The Today widget also enqueues it when its snapshot has run out of the days it
  * carries ahead (see `WidgetSnapshot.todayAt`) — a week with the app never opened. Only a
@@ -49,8 +49,8 @@ class WidgetHydrateWorker @AssistedInject constructor(
             Result.success()
         }.getOrElse { e ->
             // Best-effort: if this fails, the widget simply stays in LOADING until the app is
-            // opened (the normal write chokepoints then seed it) or another provideGlance
-            // session retries. Not worth WorkManager retry/backoff machinery for that.
+            // opened (the normal write chokepoints then seed it) or another widget render
+            // retries. Not worth WorkManager retry/backoff machinery for that.
             Log.e(TAG, "Widget hydrate failed", e)
             Result.failure()
         }
@@ -61,7 +61,7 @@ class WidgetHydrateWorker @AssistedInject constructor(
         private const val WORK_NAME = "tday_widget_hydrate"
 
         /**
-         * Fire-and-forget from a widget's `provideGlance`. Six widget instances (three sizes x
+         * Fire-and-forget from a widget render. Six widget instances (three sizes x
          * two widgets) can all discover a missing snapshot in the same cold-start window, so this
          * is uniqued with KEEP: whichever request lands first wins and the rest collapse into it
          * instead of five redundant cache opens.

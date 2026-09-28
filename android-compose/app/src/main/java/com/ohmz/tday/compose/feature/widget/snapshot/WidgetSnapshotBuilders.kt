@@ -14,7 +14,7 @@ import java.time.ZoneId
 /**
  * Selection, ordering and capping for the Today snapshot — moved verbatim from the old
  * `TodayTasksWidgetModel.kt` (deleted). The write side, not the widget, now owns this: it runs
- * once per cache save, not once per `provideGlance`.
+ * once per cache save, not once per render.
  */
 internal fun buildTodayWidgetSnapshot(
     state: OfflineSyncState,

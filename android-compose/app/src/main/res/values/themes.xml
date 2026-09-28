@@ -19,6 +19,14 @@
         <item name="android:windowNoTitle">true</item>
     </style>
 
+    <!-- WidgetTaskActionActivity: a widget row tap that must never show a window. -->
+    <style name="Theme.Tday.WidgetTrampoline" parent="@android:style/Theme">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
     <style name="TdayWidgetCreateWindowAnimation">
         <item name="android:activityOpenEnterAnimation">@anim/widget_create_enter</item>
         <item name="android:activityOpenExitAnimation">@anim/widget_create_hold</item>
