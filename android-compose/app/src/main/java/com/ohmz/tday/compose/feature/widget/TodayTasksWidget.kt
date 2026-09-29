@@ -20,6 +20,7 @@ import com.ohmz.tday.compose.feature.widget.snapshot.todayAt
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -141,7 +142,7 @@ internal fun todayContentState(
 }
 
 /** The parts of a Today model that come from its day's content rather than from its state. */
-private class TodayContent(
+private data class TodayContent(
     val countLabel: String?,
     val compactCountLabel: String?,
     val emptyTitle: String,
@@ -182,64 +183,12 @@ private fun todayContent(
     val total = done + dueToday
     val dueLabel = String.format(locale, context.getString(R.string.widget_today_tasks_count), dueToday)
 
-    val items = buildList {
-        day.rows.forEach { row ->
-            add(
-                TaskWidgetListItem.Task(
-                    row.toWidgetRow(
-                        trailingText = row.dueEpochMs?.let { dueTimeText(timeFormatter, it) },
-                        checking = row.id in checkingIds,
-                    ),
-                ),
-            )
-        }
-        if (day.overdueRows.isNotEmpty()) {
-            add(sectionLabel(OVERDUE_LABEL_SLOT, context.getString(R.string.todos_title_overdue), day.overdueCount))
-            day.overdueRows.forEach { row ->
-                add(
-                    TaskWidgetListItem.Task(
-                        row.toWidgetRow(
-                            trailingText = row.dueEpochMs?.let { dueTimeText(overdueDateFormatter, it) },
-                            overdue = true,
-                            checking = row.id in checkingIds,
-                        ),
-                    ),
-                )
-            }
-        }
-    }
-
     val emptyTitle = context.getString(
         if (done > 0) R.string.todos_all_done_today else R.string.widget_today_tasks_empty,
     )
     val dayStart = Instant.ofEpochMilli(day.dayStartEpochMs ?: nowEpochMs).atZone(zoneId).toLocalDate()
     val emptyPreview = if (day.taskCount == 0 && day.overdueCount == 0) {
-        snapshot.nextDayWithTasks(nowEpochMs)?.let { next ->
-            val nextDate = Instant.ofEpochMilli(next.dayStartEpochMs).atZone(zoneId).toLocalDate()
-            val dayName = if (nextDate == dayStart.plusDays(1)) {
-                context.getString(R.string.todos_section_tomorrow)
-            } else {
-                DateTimeFormatter.ofPattern(
-                    android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEMMMd"),
-                    locale,
-                ).format(nextDate)
-            }
-            val nextDue = String.format(locale, context.getString(R.string.widget_today_tasks_count), next.taskCount)
-            buildList {
-                add(TaskWidgetListItem.Label(TaskWidgetListItem.labelKey(EMPTY_MESSAGE_SLOT), emptyTitle, MESSAGE))
-                add(TaskWidgetListItem.Label(TaskWidgetListItem.labelKey(PREVIEW_LABEL_SLOT), "$dayName · $nextDue", SECTION))
-                next.rows.forEach { row ->
-                    add(
-                        TaskWidgetListItem.Task(
-                            row.toWidgetRow(
-                                trailingText = row.dueEpochMs?.let { dueTimeText(timeFormatter, it) },
-                                preview = true,
-                            ),
-                        ),
-                    )
-                }
-            }
-        }.orEmpty()
+        nextDayPreview(context, snapshot, nowEpochMs, dayStart, emptyTitle, timeFormatter)
     } else {
         emptyList()
     }
@@ -252,7 +201,7 @@ private fun todayContent(
         },
         compactCountLabel = dueLabel.takeIf { dueToday > 0 },
         emptyTitle = emptyTitle,
-        items = items,
+        items = todayItems(context, day, checkingIds, timeFormatter, overdueDateFormatter),
         emptyPreview = emptyPreview,
         dateBlock = TaskWidgetDateBlock(
             weekday = DateTimeFormatter.ofPattern("EEE", locale).format(dayStart),
@@ -261,6 +210,80 @@ private fun todayContent(
         ),
         progress = TaskWidgetProgress(done = done, total = total).takeIf { total > 0 },
     )
+}
+
+/** Today's rows, then an Overdue section when anything is overdue. */
+private fun todayItems(
+    context: Context,
+    day: TodayWidgetDay,
+    checkingIds: Set<String>,
+    timeFormatter: DateFormat,
+    overdueDateFormatter: DateFormat,
+): List<TaskWidgetListItem> = buildList {
+    day.rows.forEach { row ->
+        add(
+            TaskWidgetListItem.Task(
+                row.toWidgetRow(
+                    trailingText = row.dueEpochMs?.let { dueTimeText(timeFormatter, it) },
+                    checking = row.id in checkingIds,
+                ),
+            ),
+        )
+    }
+    if (day.overdueRows.isNotEmpty()) {
+        add(sectionLabel(OVERDUE_LABEL_SLOT, context.getString(R.string.todos_title_overdue), day.overdueCount))
+        day.overdueRows.forEach { row ->
+            add(
+                TaskWidgetListItem.Task(
+                    row.toWidgetRow(
+                        trailingText = row.dueEpochMs?.let { dueTimeText(overdueDateFormatter, it) },
+                        overdue = true,
+                        checking = row.id in checkingIds,
+                    ),
+                ),
+            )
+        }
+    }
+}
+
+/**
+ * An empty day's [emptyTitle] followed by the next day with tasks, or nothing when no later day
+ * in the snapshot has any.
+ */
+private fun nextDayPreview(
+    context: Context,
+    snapshot: WidgetSnapshot,
+    nowEpochMs: Long,
+    dayStart: LocalDate,
+    emptyTitle: String,
+    timeFormatter: DateFormat,
+): List<TaskWidgetListItem> {
+    val next = snapshot.nextDayWithTasks(nowEpochMs) ?: return emptyList()
+    val locale = Locale.getDefault()
+    val nextDate = Instant.ofEpochMilli(next.dayStartEpochMs).atZone(ZoneId.systemDefault()).toLocalDate()
+    val dayName = if (nextDate == dayStart.plusDays(1)) {
+        context.getString(R.string.todos_section_tomorrow)
+    } else {
+        DateTimeFormatter.ofPattern(
+            android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEMMMd"),
+            locale,
+        ).format(nextDate)
+    }
+    val nextDue = String.format(locale, context.getString(R.string.widget_today_tasks_count), next.taskCount)
+    return buildList {
+        add(TaskWidgetListItem.Label(TaskWidgetListItem.labelKey(EMPTY_MESSAGE_SLOT), emptyTitle, MESSAGE))
+        add(TaskWidgetListItem.Label(TaskWidgetListItem.labelKey(PREVIEW_LABEL_SLOT), "$dayName · $nextDue", SECTION))
+        next.rows.forEach { row ->
+            add(
+                TaskWidgetListItem.Task(
+                    row.toWidgetRow(
+                        trailingText = row.dueEpochMs?.let { dueTimeText(timeFormatter, it) },
+                        preview = true,
+                    ),
+                ),
+            )
+        }
+    }
 }
 
 private fun sectionLabel(slot: Int, name: String, count: Int) = TaskWidgetListItem.Label(
