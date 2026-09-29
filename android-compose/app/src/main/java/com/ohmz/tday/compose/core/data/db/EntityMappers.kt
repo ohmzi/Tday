@@ -198,6 +198,9 @@ fun PendingMutationRecord.toEntity() = PendingMutationEntity(
     name = name,
     color = color,
     iconKey = iconKey,
+    reusable = reusable,
+    defaultPriority = defaultPriority,
+    defaultPriorityChanged = defaultPriorityChanged,
 )
 
 fun PendingMutationEntity.toRecord() = PendingMutationRecord(
@@ -217,4 +220,7 @@ fun PendingMutationEntity.toRecord() = PendingMutationRecord(
     name = name,
     color = color,
     iconKey = iconKey,
+    reusable = reusable,
+    defaultPriority = defaultPriority,
+    defaultPriorityChanged = defaultPriorityChanged,
 )

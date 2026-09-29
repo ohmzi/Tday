@@ -246,6 +246,8 @@ Current mutation kinds:
 
 Server Mode replays pending mutations through `SyncManager`. Local Mode clears/ignores pending mutations because there is no remote target.
 
+The list and floater-list create/update mutations carry the list's own fields beside `name`/`color`/`iconKey`: `reusable` (floater lists only), `defaultPriority`, and `defaultPriorityChanged`, which tells "clear the default" apart from "leave it alone". All three are nullable, and null means "not part of this mutation". Both clients persist them with the queued mutation — Android's `pending_mutations` Room table since schema v13 (`Migration12To13`), iOS's SwiftData `PendingMutationEntity` — because the queue is read back from storage before a replay, and a field the store dropped came back null: an offline "Reusable off" then replayed as "leave it alone", and the next sync switched it back on.
+
 `staged` (Android/iOS, default `false`) marks a `DELETE_LIST`/`DELETE_FLOATER_LIST` mutation written by the delayed-commit delete's stage step (`ListRepository.stageDeleteList`/`FloaterListRepository.stageDeleteList`) while the Undo toast is still open. A staged delete is never replayed to the server (the whole point of staging is that Undo needs no network trace), but it counts the same as a real pending delete for `SyncManager`'s merge-time resurrection guard, so a pull-to-refresh landing inside the undo window can't write the still-server-side list back into the cache. The commit step (`deleteList()`) replaces the staged marker with a normal pending mutation of the same kind; Undo removes the marker outright.
 
 ## Web Local Mode Workspace

@@ -61,6 +61,17 @@ private class Migration11To12 : Migration(11, 12) {
     }
 }
 
+// v13: the list/floater-list mutations' `reusable`, `defaultPriority` and
+// `defaultPriorityChanged` on the pending-mutation queue. Nullable, because null is what every
+// other mutation kind means by them ("not part of this mutation"), and so no default is needed.
+private class Migration12To13 : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE pending_mutations ADD COLUMN reusable INTEGER")
+        db.execSQL("ALTER TABLE pending_mutations ADD COLUMN defaultPriority TEXT")
+        db.execSQL("ALTER TABLE pending_mutations ADD COLUMN defaultPriorityChanged INTEGER")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -101,7 +112,14 @@ object DatabaseModule {
             // The DB holds unsynced pending mutations, not just re-fetchable
             // cache, so schema bumps must ship a real Migration. Pre-v7 schemas
             // (no exported history) still fall back destructively.
-            .addMigrations(Migration7To8(), Migration8To9(), Migration9To10(), Migration10To11(), Migration11To12())
+            .addMigrations(
+                Migration7To8(),
+                Migration8To9(),
+                Migration9To10(),
+                Migration10To11(),
+                Migration11To12(),
+                Migration12To13(),
+            )
             .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6)
             // Safety net: callers should run DAO access off the main thread (see
             // OfflineCacheManager / repositories using Dispatchers.IO). Kept so a missed

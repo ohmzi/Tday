@@ -137,6 +137,12 @@ data class PendingMutationEntity(
     val name: String?,
     val color: String?,
     val iconKey: String?,
+    // The list and floater-list create/update mutations' own fields (v13). Without them a
+    // queued edit that outlived its process replayed with all three null — "leave unchanged" —
+    // so e.g. turning a floater list's Reusable off offline never reached the server.
+    val reusable: Boolean? = null,
+    val defaultPriority: String? = null,
+    val defaultPriorityChanged: Boolean? = null,
 )
 
 @Entity(tableName = "sync_metadata")
