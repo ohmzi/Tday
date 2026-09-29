@@ -66,6 +66,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -445,27 +446,9 @@ fun TdayApp(
                         // draws it in the shared overlay for the whole flight. Fading the same entry
                         // in place as well only shows once that flight has landed — mid-fade, with
                         // home's dock and create button showing through it — so it gets no fade.
-                        enterTransition = {
-                            if (motionEnabled && targetState.isHomeTileArrival()) {
-                                EnterTransition.None
-                            } else {
-                                navigationEnterTransition(motionEnabled)
-                            }
-                        },
-                        exitTransition = {
-                            if (motionEnabled && targetState.isHomeTileArrival()) {
-                                TdayTileZoomHold
-                            } else {
-                                navigationExitTransition(motionEnabled)
-                            }
-                        },
-                        popEnterTransition = {
-                            if (motionEnabled && initialState.isHomeTileArrival()) {
-                                EnterTransition.None
-                            } else {
-                                navigationEnterTransition(motionEnabled)
-                            }
-                        },
+                        enterTransition = { tileAwareEnterTransition(motionEnabled, arriving = targetState) },
+                        exitTransition = { tileAwareExitTransition(motionEnabled, arriving = targetState) },
+                        popEnterTransition = { tileAwareEnterTransition(motionEnabled, arriving = initialState) },
                         popExitTransition = { navigationPopExitTransition(motionEnabled) },
                     ) {
                         splashAndAuthRoutes(
@@ -2596,6 +2579,26 @@ private fun navigationEnterTransition(motionEnabled: Boolean): EnterTransition =
                 easing = LinearOutSlowInEasing,
             ),
         )
+    }
+
+/**
+ * [navigationEnterTransition], except for the screen a home tile zooms open (or the screen under
+ * one that is closing): the zoom reveals it, so fading it in place as well would only show once the
+ * flight has landed. [arriving] is the destination the tile opened.
+ */
+private fun tileAwareEnterTransition(motionEnabled: Boolean, arriving: NavBackStackEntry): EnterTransition =
+    if (motionEnabled && arriving.isHomeTileArrival()) {
+        EnterTransition.None
+    } else {
+        navigationEnterTransition(motionEnabled)
+    }
+
+/** [navigationExitTransition], except that home holds still under a tile's zoom (`TdayTileZoomHold`). */
+private fun tileAwareExitTransition(motionEnabled: Boolean, arriving: NavBackStackEntry): ExitTransition =
+    if (motionEnabled && arriving.isHomeTileArrival()) {
+        TdayTileZoomHold
+    } else {
+        navigationExitTransition(motionEnabled)
     }
 
 /** The other curve of the pair; see [navigationEnterTransition] for the length they share. */

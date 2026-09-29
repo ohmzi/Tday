@@ -272,6 +272,17 @@ internal object TaskWidgetRemoteViews {
         // for it. The loading layouts a first render hands over from have neither, so LOADING
         // keeps the plain header they match.
         val dateBlock = model.dateBlock?.takeUnless { compact || narrow || loading }
+        applyHeaderText(model, compact, dateBlock)
+        applyProgress(model.progress?.takeIf { dateBlock != null && it.total > 0 })
+
+        setInt(R.id.widget_add, "setBackgroundResource", model.visuals.addButtonBackground)
+        setImageViewResource(R.id.widget_add_icon, model.visuals.addIcon)
+        setContentDescription(R.id.widget_add, model.addLabel)
+        setOnClickPendingIntent(R.id.widget_add, activityIntent(context, appWidgetId, model.addIntent))
+    }
+
+    /** The header's title and count: stacked under [dateBlock] when there is one, else in a row. */
+    private fun RemoteViews.applyHeaderText(model: TaskWidgetModel, compact: Boolean, dateBlock: TaskWidgetDateBlock?) {
         val stacked = dateBlock != null
         val count = model.countLabel
         val compactCount = model.compactCountLabel
@@ -296,15 +307,11 @@ internal object TaskWidgetRemoteViews {
                 count?.let { setTextViewText(R.id.widget_count, it) }
             }
         }
+    }
 
-        val progress = model.progress?.takeIf { dateBlock != null && it.total > 0 }
+    private fun RemoteViews.applyProgress(progress: TaskWidgetProgress?) {
         setVisible(R.id.widget_progress, progress != null)
         if (progress != null) setProgressBar(R.id.widget_progress, progress.total, progress.done, false)
-
-        setInt(R.id.widget_add, "setBackgroundResource", model.visuals.addButtonBackground)
-        setImageViewResource(R.id.widget_add_icon, model.visuals.addIcon)
-        setContentDescription(R.id.widget_add, model.addLabel)
-        setOnClickPendingIntent(R.id.widget_add, activityIntent(context, appWidgetId, model.addIntent))
     }
 
     private fun RemoteViews.applyMessage(model: TaskWidgetModel, compact: Boolean) {
