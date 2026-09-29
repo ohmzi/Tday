@@ -1258,7 +1258,14 @@ private struct ListWidgetSetupSheet: View {
         .padding(.horizontal, 28)
         .padding(.top, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(colors.background)
+        // The same sheet surface every other sheet wears. `colors.background` is the screen's
+        // own near-black in dark mode, so the card vanished into the feed behind it.
+        .background(colors.bottomSheetBackground.ignoresSafeArea())
+        .presentationCornerRadius(34)
+        .presentationBackground {
+            colors.bottomSheetBackground
+                .ignoresSafeArea(.container, edges: .bottom)
+        }
     }
 
     private func step(_ number: Int, _ text: String) -> some View {
