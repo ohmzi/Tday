@@ -1973,6 +1973,21 @@ animates.
               the shape and not the feel: frame pacing on real hardware, and whether the close's
               tween and the open's spring read as one motion at full speed, are only visible on a
               device.
+- [ ] **PR 32g · android · The tile zoom, measured instead of timed** — a device with animations
+      on; one scheduled custom list.
+      Do:     tap the **Scheduled** tile and the custom list row, closing each with the back button;
+              then open one again and close it with a slow back swipe from the screen's edge.
+      Watch:  on open, home's dock and create button slide down out of the way as the tile starts to
+              grow, and only the list screen's own create button is ever in the bottom corner. The
+              growing screen keeps the tile's rounded corners until it is well past the tile's size
+              and is square as it fills the screen. On close, the screen shrinks back as itself and
+              only dissolves in the last moment, already at the tile's size.
+      Fails:  two create buttons overlapping in the corner, or the dock visible through the new
+              screen just after it lands; a square rectangle growing out of a rounded tile; on close,
+              the screen going see-through while it is still larger than the tile, or its title
+              doubled over the tile's label and the tiles around it.
+      Why:    recorded at 60 fps on an emulator, which settles the shape; whether the dissolve
+              lands cleanly at full speed on real hardware is only visible on a device.
 
 - [ ] **PR 195 · ios · The calendar's docked title** — a phone, Calendar, scrolled until the bar has
       collapsed. Run it at the default text size and again at a large Dynamic Type size.

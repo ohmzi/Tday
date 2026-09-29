@@ -22,7 +22,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -31,7 +35,9 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.navigation.NavBackStackEntry
@@ -62,7 +68,8 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
  *   [TdayTileResizeMode]: measured once at its final size and drawn scaled into the travelling
  *   rectangle, so nothing re-lays-out mid-flight and no component is ever drawn larger than it
  *   will finally be. [TdayTileCornerClip] rounds it to the tile's radius at the tile and squares it
- *   off at the screen.
+ *   off at the screen, and [TdayTileFlight] measures where the rectangle is between the two so the
+ *   corner and the close's final dissolve stay with it rather than with a clock.
  * - The NAVHOST holds the home screen still under a tile push ([TdayTileZoomHold]) and shows it at
  *   once under a tile pop, instead of crossfading it, so the screen grows over a home screen that
  *   stays put — the only way the zoom can read as coming out of the tile rather than out of a
@@ -89,6 +96,14 @@ val LocalTdaySharedTransitionScope = compositionLocalOf<SharedTransitionScope?> 
 val LocalTdayTileSourceScope = compositionLocalOf<AnimatedVisibilityScope?> { null }
 
 /**
+ * Each tile's width in pixels, by the key it publishes: the tile end of the scale [TdayTileFlight]
+ * measures the flight on. Written by the sources as they are laid out and read by the destinations
+ * in the draw phase. Entries are never removed: a pop reads the width in the frame home is laid
+ * out again, and a stale entry for a deleted list is one nobody asks for.
+ */
+private val LocalTdayTileWidths = staticCompositionLocalOf<SnapshotStateMap<String, Float>?> { null }
+
+/**
  * Wraps the NavHost so every tile and destination underneath is matched in one namespace, and
  * re-publishes the scope — Compose 1.7 has no `LocalSharedTransitionScope` to read it back from,
  * and the tiles are built two files away from the graph behind private composables.
@@ -98,8 +113,12 @@ fun TdayTileTransitionLayout(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
+    val tileWidths = remember { mutableStateMapOf<String, Float>() }
     SharedTransitionLayout(modifier = modifier) {
-        CompositionLocalProvider(LocalTdaySharedTransitionScope provides this) {
+        CompositionLocalProvider(
+            LocalTdaySharedTransitionScope provides this,
+            LocalTdayTileWidths provides tileWidths,
+        ) {
             content()
         }
     }
@@ -183,11 +202,10 @@ private val TdayTileScreenEnter: EnterTransition = fadeIn(
 )
 
 /**
- * The same dissolve on the way back, moved to the END of the flight: the screen stays opaque while
- * it shrinks — it is the screen going back into the tile, not a screen fading out over home — and
- * hands over to the tile in the last `Quick`, as the rectangle lands. The delay is `Quick` so the
- * dissolve is done at 300 ms, as [tdayTileCloseSpec]'s rectangle reaches the tile at 320 — and, on
- * a back swipe, so it runs through the second half of the swipe rather than the first.
+ * The same dissolve on the way back, on a clock, for a destination with no [TdayTileFlight] to
+ * measure the landing by. The delay is `Quick` so the dissolve is done at 300 ms, as
+ * [tdayTileCloseSpec]'s rectangle reaches the tile at 320. A flight exists wherever a zoom is
+ * installed, so in practice its own landing ([TdayTileFlight.landingAlpha]) is what plays.
  */
 private val TdayTileScreenExit: ExitTransition = fadeOut(
     animationSpec = tween(
@@ -196,6 +214,53 @@ private val TdayTileScreenExit: ExitTransition = fadeOut(
         easing = TdayMotionTokens.Easings.Exit,
     ),
 )
+
+/**
+ * Where the travelling rectangle is between the tile and the screen — 1 at the tile, 0 at the
+ * screen — measured from its WIDTH on every frame it is drawn in the overlay, and the two things
+ * that have to stay with it: the corner radius, and the close's final dissolve into the tile.
+ *
+ * WHY GEOMETRY AND NOT A CLOCK. Measured: a pop cannot start the rectangle toward the tile until
+ * home has been laid out again under it, which costs the first frames, while every animation on
+ * the transition has already been running. A dissolve on that clock ran ahead of the rectangle it
+ * belongs to, so the screen went translucent while it was still twice the tile's size, its title
+ * doubled over the tile's label and the tiles around it; and a corner on a clock of its own was
+ * nearly square before the opening rectangle had grown past the tile. Read off the rectangle
+ * itself, both stay with it on any device, through any stall, and under a back swipe that holds it
+ * half-way.
+ *
+ * The bounds are a straight interpolation, so the width's fraction of the way is the height's too
+ * and one number describes the whole rectangle. The close dissolves over the last TENTH of the
+ * way, a fraction of the flight and not a duration, so not a motion token: the height closes on
+ * the tile's across four times the width's distance, so at 80% of the way the rectangle is still
+ * four tiles tall, and a dissolve that started there spilled the screen over the row beneath.
+ *
+ * The progress is written from the overlay clip ([TdayTileCornerClip]), which is handed the
+ * rectangle's bounds each frame, and read by the content's layer, which records before the overlay
+ * clips it — so the dissolve is one frame behind the rectangle; the corner, read in the clip
+ * itself, is not. It starts at 1: the opening's first frame is drawn at the tile.
+ */
+private class TdayTileFlight(
+    private val key: String,
+    private val tileWidths: SnapshotStateMap<String, Float>,
+) {
+    var screenWidthPx = 0f
+    private val progress = mutableFloatStateOf(1f)
+
+    fun track(rectWidthPx: Float) {
+        val tileWidthPx = tileWidths[key] ?: return
+        val span = screenWidthPx - tileWidthPx
+        if (span <= 0f) return
+        progress.floatValue = ((screenWidthPx - rectWidthPx) / span).coerceIn(0f, 1f)
+    }
+
+    /** 1 at the tile, 0 at the screen: the share of the tile's corner radius to draw. */
+    val cornerFraction: Float get() = progress.floatValue
+
+    /** Opening is faded in on a clock ([TdayTileScreenEnter]); only the landing is measured. */
+    fun landingAlpha(closing: Boolean): Float =
+        if (closing) 1f - ((progress.floatValue - 0.9f) / 0.1f).coerceIn(0f, 1f) else 1f
+}
 
 /**
  * What the NavHost gives the screen UNDER a tile zoom: it holds, fully opaque, for `Scene`, and
@@ -220,7 +285,8 @@ val TdayTileZoomHold: ExitTransition = fadeOut(
 )
 
 /**
- * Publishes THIS RECTANGLE as the one the screen it opens grows out of, and draws nothing at all.
+ * Publishes THIS RECTANGLE as the one the screen it opens grows out of, and its width as the tile
+ * end of [TdayTileFlight]'s scale. Draws nothing at all.
  *
  * Applied to an empty sibling that matches the tile's own bounds rather than to the tile's `Card`:
  * what a shared bounds node contributes is whatever is composed inside it, and the tile's icon,
@@ -230,8 +296,14 @@ val TdayTileZoomHold: ExitTransition = fadeOut(
  * motion is refused.
  */
 @Composable
-fun Modifier.tdayTileTransitionSource(key: String?): Modifier =
-    tdaySharedBounds(
+fun Modifier.tdayTileTransitionSource(key: String?): Modifier {
+    val tileWidths = LocalTdayTileWidths.current
+    val publish = if (key != null && tileWidths != null) {
+        Modifier.onSizeChanged { size -> tileWidths[key] = size.width.toFloat() }
+    } else {
+        Modifier
+    }
+    return this.then(publish).tdaySharedBounds(
         key = key,
         animatedVisibilityScope = LocalTdayTileSourceScope.current,
         // Nothing is composed inside this node, so there is nothing an overlay copy could add,
@@ -240,7 +312,9 @@ fun Modifier.tdayTileTransitionSource(key: String?): Modifier =
         enter = EnterTransition.None,
         exit = ExitTransition.None,
         cornerFraction = null,
+        flight = null,
     )
+}
 
 /**
  * Marks this screen as the destination a tile grows into. The receiver is the
@@ -274,13 +348,14 @@ fun AnimatedVisibilityScope.TdayTileDestination(
     // Composed only when a zoom can actually be installed: an animation on this transition keeps
     // the route hand-over running until it settles, and a deep-link arrival has no corner to
     // animate.
-    val cornerFraction = if (key != null && rememberTdaySharedScope(this) != null) {
-        // One fraction for the corners, on the same clock the rectangle rides in each direction
-        // (see TdayTileBoundsTransform), so the corner squares off at the rate the rectangle opens
-        // and rounds at the rate it closes. Pulled in the draw phase by the clip; nothing
-        // recomposes per frame. Written as the negative case so a state this file has never heard
-        // of rounds rather than squares — a rounded corner over a tile is invisible, a square one
-        // is a pop.
+    val zoomInstalled = key != null && rememberTdaySharedScope(this) != null
+    val cornerFraction = if (zoomInstalled) {
+        // The corner's clock, on the one the rectangle rides in each direction (see
+        // TdayTileBoundsTransform). The clip draws the corner from the measured flight instead
+        // wherever there is one (TdayTileFlight — always, once a zoom is installed); this stays as
+        // its fallback. Pulled in the draw phase by the clip; nothing recomposes per frame. Written
+        // as the negative case so a state this file has never heard of rounds rather than squares
+        // — a rounded corner over a tile is invisible, a square one is a pop.
         transition.animateFloat(
             transitionSpec = {
                 if (targetState == EnterExitState.PostExit) {
@@ -294,16 +369,49 @@ fun AnimatedVisibilityScope.TdayTileDestination(
     } else {
         null
     }
+    val tileWidths = LocalTdayTileWidths.current
+    val flight = if (zoomInstalled && key != null && tileWidths != null) {
+        remember(key, tileWidths) { TdayTileFlight(key, tileWidths) }
+    } else {
+        null
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .then(
+                if (flight != null) {
+                    // The screen end of the flight's scale: this box's own size, which the overlay
+                    // scales but never re-lays-out.
+                    Modifier.onSizeChanged { size -> flight.screenWidthPx = size.width.toFloat() }
+                } else {
+                    Modifier
+                },
+            )
             .tdaySharedBounds(
                 key = key,
                 animatedVisibilityScope = this@TdayTileDestination,
                 renderInOverlay = true,
                 enter = TdayTileScreenEnter,
-                exit = TdayTileScreenExit,
+                // With a flight the landing is measured, not timed (TdayTileFlight.landingAlpha).
+                exit = if (flight != null) ExitTransition.None else TdayTileScreenExit,
                 cornerFraction = cornerFraction,
+                flight = flight,
+            )
+            .then(
+                if (flight != null) {
+                    // Read in the draw phase, so nothing recomposes the screen per frame. Only while
+                    // the zoom is moving: once it settles the screen is drawn as itself, whatever the
+                    // last measured frame said.
+                    Modifier.graphicsLayer {
+                        alpha = if (transition.currentState == transition.targetState) {
+                            1f
+                        } else {
+                            flight.landingAlpha(closing = transition.targetState == EnterExitState.PostExit)
+                        }
+                    }
+                } else {
+                    Modifier
+                },
             ),
     ) {
         content()
@@ -323,6 +431,7 @@ fun AnimatedVisibilityScope.TdayTileDestination(
  */
 private class TdayTileCornerClip(
     private val cornerFraction: State<Float>,
+    private val flight: TdayTileFlight?,
 ) : SharedTransitionScope.OverlayClip {
 
     private val path = Path()
@@ -333,8 +442,12 @@ private class TdayTileCornerClip(
         layoutDirection: LayoutDirection,
         density: Density,
     ): Path {
+        // The one place each frame's rectangle is handed over, so the flight is measured here, and
+        // the corner follows it where there is one.
+        flight?.track(bounds.width)
+        val fraction = flight?.cornerFraction ?: cornerFraction.value
         val radius = with(density) {
-            (TdayDimens.RadiusCard * cornerFraction.value).toPx()
+            (TdayDimens.RadiusCard * fraction).toPx()
         }
         path.reset()
         path.addRoundRect(
@@ -394,6 +507,7 @@ private fun Modifier.tdaySharedBounds(
     enter: EnterTransition,
     exit: ExitTransition,
     cornerFraction: State<Float>?,
+    flight: TdayTileFlight?,
 ): Modifier {
     val sharedTransitionScope = rememberTdaySharedScope(animatedVisibilityScope)
     val bounds = if (
@@ -413,7 +527,7 @@ private fun Modifier.tdaySharedBounds(
                 // A morphing radius where the destination supplies one; a plain rectangle for
                 // the source, which never draws in the overlay and so never consults it.
                 clipInOverlayDuringTransition = cornerFraction
-                    ?.let { TdayTileCornerClip(it) }
+                    ?.let { TdayTileCornerClip(it, flight) }
                     ?: OverlayClip(RectangleShape),
             )
         }
