@@ -81,9 +81,11 @@ targets:
       - path: TdayWidget
         excludes:
           - Info.plist
-      # App files the extension compiles as well: the day-window math and the raw motion values
-      # (the WidgetCheckHold beat), neither of which pulls in anything app-only.
+      # App files the extension compiles as well: the day-window math, the List widget's setup
+      # picture (the app's setup sheet draws it too) and the raw motion values (the
+      # WidgetCheckHold beat), none of which pulls in anything app-only.
       - path: Tday/Core/Widget/TodayWidgetDayWindow.swift
+      - path: Tday/Core/Widget/ListWidgetSetupArt.swift
       - path: Tday/UI/Theme/TdayMotionGenerated.swift
     settings:
       base:

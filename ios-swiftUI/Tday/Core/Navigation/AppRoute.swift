@@ -89,6 +89,14 @@ enum AppRoute: Hashable {
         }
     }
 
+    /// The List widget's tap while it has no list — `tday://widget/list-setup` — which opens the
+    /// sheet showing how to pick one. Not a route: it presents over wherever the app is.
+    static func isListWidgetSetupLink(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == "tday" &&
+            url.host?.lowercased() == "widget" &&
+            url.pathComponents.filter { $0 != "/" } == ["list-setup"]
+    }
+
     static func from(url: URL) -> AppRoute? {
         guard url.scheme?.lowercased() == "tday" else {
             return nil

@@ -1248,7 +1248,7 @@
       ],
       "badge": null,
       "serverOnly": false,
-      "sinceVersion": "0.7.44",
+      "sinceVersion": "0.7.45",
       "deepLink": null,
       "helpAnchors": [],
       "title": "Widget de liste",

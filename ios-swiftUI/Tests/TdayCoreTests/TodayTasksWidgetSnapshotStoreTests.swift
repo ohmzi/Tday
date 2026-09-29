@@ -532,6 +532,16 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         XCTAssertNil(AppRoute.createTaskListId(from: URL(string: "tday://todos/list/list-1/Work?listId=list-1")!))
     }
 
+    // The unconfigured List widget's tap (`ListWidgetChrome.setupURL` in the extension, which
+    // hardcodes the same string) opens the setup sheet and is not a navigation route.
+    func testListWidgetSetupLinkIsRecognisedAndIsNotARoute() {
+        let setup = URL(string: "tday://widget/list-setup")!
+        XCTAssertTrue(AppRoute.isListWidgetSetupLink(setup))
+        XCTAssertNil(AppRoute.from(url: setup))
+        XCTAssertFalse(AppRoute.isListWidgetSetupLink(URL(string: "tday://widget")!))
+        XCTAssertFalse(AppRoute.isListWidgetSetupLink(URL(string: "tday://todos/list/a/b")!))
+    }
+
     // MARK: - Whole lists (the List widget)
     //
     // `openByList` is every open task of a todo list whatever day it is due — unlike `perList`,

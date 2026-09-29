@@ -354,7 +354,7 @@ object GuideCatalog {
             // added), then shows only that list and adds into it. Separate from iOS's
             // WIDGET_LIST_SELECTION above, which re-points a Today or Floater widget instead.
             GuideTopicIds.LIST_WIDGETS, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",
-            setOf(ANDROID, IOS), sinceVersion = "0.7.44",
+            setOf(ANDROID, IOS), sinceVersion = "0.7.45",
             body = listOf(para(GuideTopicIds.LIST_WIDGETS), tip(GuideTopicIds.LIST_WIDGETS)),
         ),
         topic(

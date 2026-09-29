@@ -64,6 +64,8 @@ struct AppRootView: View {
     // Prefill for the next create sheet, on whichever feed it opens: a share-extension capture,
     // or the list a List widget's "+" files into.
     @State private var rootCreateTaskPrefill: CreateTaskPayload?
+    // A List widget with no list was tapped: show how to pick one (see `ListWidgetSetupSheet`).
+    @State private var showingListWidgetSetup = false
     @State private var scheduledTaskHomeScrollToTopRequestID = 0
     @State private var floaterTaskHomeScrollToTopRequestID = 0
     @State private var rootDockCollapsed = false
@@ -713,6 +715,17 @@ struct AppRootView: View {
         .onOpenURL { url in
             handleDeepLink(url)
         }
+        .sheet(isPresented: $showingListWidgetSetup) {
+            ListWidgetSetupSheet { showingListWidgetSetup = false }
+                // A sheet takes the environment of where it is attached, and this one is attached
+                // outside the body's own `tdayAppTheme` — without its own it drew light in dark mode.
+                .tdayAppTheme(
+                    themeMode: appViewModel.themeMode,
+                    reduceMotion: container.motionPreference.isEnabled
+                )
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
         .onChange(of: notificationDeepLinkRouter.pendingURL) { _, _ in
             routePendingNotificationDeepLink()
         }
@@ -1155,6 +1168,10 @@ struct AppRootView: View {
     }
 
     private func handleDeepLink(_ url: URL) {
+        if AppRoute.isListWidgetSetupLink(url) {
+            showingListWidgetSetup = true
+            return
+        }
         guard let route = AppRoute.from(url: url) else {
             return
         }
@@ -1170,6 +1187,17 @@ struct AppRootView: View {
                 rrule: nil,
                 listId: listId
             )
+        }
+        // A list opened from outside — a List widget, a notification — lands on its own root
+        // feed first, so back returns to Scheduled or Anytime by the list's type rather than to
+        // whichever feed happened to be showing. Android does the same (`rememberListBack`).
+        switch route {
+        case .listTodos:
+            selectRootFeedTab(.scheduledTaskHome)
+        case .floaterListTodos:
+            selectRootFeedTab(.floaterTaskHome)
+        default:
+            break
         }
         handleRoute(route)
     }
@@ -1193,6 +1221,56 @@ struct AppRootView: View {
             Task {
                 try? await container.todoRepository.moveTodoTonight(taskID: taskID)
             }
+        }
+    }
+}
+
+/// What a tap on a List widget with no list opens. iOS keeps a widget's settings to itself — a tap
+/// cannot open them and the app cannot write them — so this shows the way to the widget's own
+/// Edit Widget, under the same picture the widget itself shows.
+private struct ListWidgetSetupSheet: View {
+    let onDone: () -> Void
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        VStack(spacing: 16) {
+            ListWidgetSetupArt()
+                .frame(width: 132, height: 132 * ListWidgetSetupArt.aspectRatio)
+                .accessibilityHidden(true)
+            Text(L("Choose a list for your widget"))
+                .font(.tdayRounded(size: 22, weight: .heavy))
+                .foregroundStyle(colors.onSurface)
+                .multilineTextAlignment(.center)
+            VStack(alignment: .leading, spacing: 10) {
+                step(1, L("Touch and hold the List widget"))
+                step(2, L("Tap Edit Widget"))
+                step(3, L("Pick a list"))
+            }
+            Button(action: onDone) {
+                Text(L("Got it"))
+                    .font(.tdayRounded(size: 16, weight: .bold))
+                    .frame(maxWidth: .infinity, minHeight: 48)
+            }
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+        }
+        .padding(.horizontal, 28)
+        .padding(.top, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(colors.background)
+    }
+
+    private func step(_ number: Int, _ text: String) -> some View {
+        HStack(spacing: 12) {
+            Text("\(number)")
+                .font(.tdayRounded(size: 14, weight: .heavy))
+                .foregroundStyle(colors.onPrimary)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(colors.primary))
+            Text(text)
+                .font(.tdayRounded(size: 16, weight: .semibold))
+                .foregroundStyle(colors.onSurface)
         }
     }
 }
