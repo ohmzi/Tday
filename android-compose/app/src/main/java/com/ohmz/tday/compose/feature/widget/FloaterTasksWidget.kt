@@ -18,7 +18,6 @@ internal val FloaterWidgetVisuals = TaskWidgetVisuals(
     addIcon = R.drawable.widget_add_icon_floater,
     emptyWatermark = R.drawable.widget_empty_watermark_floater,
     setupWatermark = R.drawable.widget_empty_watermark_floater,
-    priorityRingOverride = R.drawable.widget_priority_ring_floater,
 )
 
 /** What a Floater widget instance shows right now. See [TodayTasksWidget] for the read rules. */
@@ -38,14 +37,15 @@ internal object FloaterTasksWidget {
             details = "locked=$isAppLocked snapshotNull=${snapshot == null}",
         )
 
+        val state = floaterContentState(isAppLocked, snapshot)
         return TaskWidgetModel(
             title = appContext.getString(R.string.widget_floater_tasks_title),
-            state = floaterContentState(isAppLocked, snapshot),
+            state = state,
             countLabel = String.format(
                 Locale.getDefault(),
                 appContext.getString(R.string.widget_floater_tasks_count),
                 snapshot?.taskCount ?: 0,
-            ),
+            ).takeIf { state == TaskWidgetContentState.TASKS },
             setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
             setupMessage = appContext.getString(R.string.widget_today_tasks_setup_message),
             emptyTitle = appContext.getString(R.string.widget_floater_tasks_empty),
@@ -53,16 +53,20 @@ internal object FloaterTasksWidget {
             lockedMessage = appContext.getString(R.string.widget_locked_message),
             loadingTitle = appContext.getString(R.string.widget_loading),
             addLabel = appContext.getString(R.string.widget_floater_tasks_add),
-            rows = if (isAppLocked || snapshot == null) {
+            items = if (isAppLocked || snapshot == null) {
                 emptyList()
             } else {
+                val checkingIds = WidgetCheckOff.ids()
                 snapshot.rows.map { row ->
-                    TaskWidgetRow(
-                        key = row.key,
-                        id = row.id,
-                        title = row.title,
-                        priority = row.priorityRing.toPriorityValue(),
-                        description = row.description,
+                    TaskWidgetListItem.Task(
+                        TaskWidgetRow(
+                            key = row.key,
+                            id = row.id,
+                            title = row.title,
+                            priority = row.priorityRing.toPriorityValue(),
+                            description = row.description,
+                            checking = row.id in checkingIds,
+                        ),
                     )
                 }
             },

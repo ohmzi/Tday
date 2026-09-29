@@ -1154,6 +1154,13 @@
         "body": "Os widgets de Hoje e Flutuantes agora respondem ao toque: toque no anel no início de qualquer linha para concluir essa tarefa sem abrir a aplicação. A linha desaparece de imediato e a conclusão sincroniza como qualquer outra — os toques feitos offline ficam em fila e aplicam-se assim que voltar a estar online.",
         "tip": "Tocou sem querer? Abra o histórico de concluídas na aplicação e restaure a tarefa a partir daí."
       },
+      "today-widget-progress": {
+        "title": "O widget Hoje num relance",
+        "summary": "Veja quanto do dia já fez, o que está atrasado e o que vem a seguir.",
+        "keywords": "widget, hoje, progresso, anel, concluída, atrasada, amanhã, data, tela inicial",
+        "body": "O widget Hoje começa com a data e um anel de progresso: quantas das tarefas de hoje estão concluídas, do total. O que está atrasado fica numa seção própria abaixo das tarefas de hoje, com o dia em que vencia. Quando não há nada para hoje, o widget mostra o que vem no próximo dia com tarefas. Ao marcar uma tarefa, ela fica marcada e riscada por um instante antes de sair.",
+        "tip": "O anel só conta as tarefas de hoje. Concluir algo de outro dia não o preenche."
+      },
       "share-into-tday": {
         "title": "Partilhar para o T'Day",
         "summary": "Envie texto de qualquer aplicação diretamente para uma nova tarefa.",

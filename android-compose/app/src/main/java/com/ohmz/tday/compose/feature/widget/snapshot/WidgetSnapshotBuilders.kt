@@ -35,6 +35,7 @@ internal fun buildTodayWidgetSnapshot(
     val dayStart = today.atStartOfDay(zoneId).toInstant().toEpochMilli()
     val dayEnd = today.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli()
     val todayTasks = dueTodayFeed(state, dayStart, dayEnd)
+    val overdueTasks = overdueFeed(state, dayStart)
 
     return WidgetSnapshot(
         generatedAtEpochMs = nowEpochMs,
@@ -50,24 +51,60 @@ internal fun buildTodayWidgetSnapshot(
             val start = today.plusDays(offset.toLong()).atStartOfDay(zoneId).toInstant().toEpochMilli()
             val end = today.plusDays(offset + 1L).atStartOfDay(zoneId).toInstant().toEpochMilli()
             val tasks = dueTodayFeed(state, start, end)
+            // Anything still open from before this day — today's own tasks included — is overdue
+            // by then. No write happening in between is what makes "still open" true.
+            val overdue = overdueFeed(state, start)
             WidgetSnapshotDay(
                 dayStartEpochMs = start,
                 dayEndEpochMs = end,
                 taskCount = tasks.size,
                 rows = tasks.take(UPCOMING_DAY_TASK_LIMIT).map { it.toSnapshotRow() },
+                overdueCount = overdue.size,
+                overdueRows = overdue.take(OVERDUE_TASK_LIMIT).map { it.toSnapshotRow() },
+                completedCount = completedDueIn(state, start, end),
             )
         },
+        completedCount = completedDueIn(state, dayStart, dayEnd),
+        overdueCount = overdueTasks.size,
+        overdueRows = overdueTasks.take(OVERDUE_TASK_LIMIT).map { it.toSnapshotRow() },
     )
 }
 
 /** Incomplete tasks due in `[dayStart, dayEnd)`, in the Today feed's order. */
 private fun dueTodayFeed(state: OfflineSyncState, dayStart: Long, dayEnd: Long): List<CachedTodoRecord> =
-    TaskSortEngine.sortedTodos(
+    sortedLikeToday(
         state.todos.filter { task ->
             val dueEpochMs = task.dueEpochMs ?: return@filter false
             !task.completed && dueEpochMs >= dayStart && dueEpochMs < dayEnd
         },
-    ) { task ->
+    )
+
+/**
+ * Completed tasks that were due in `[dayStart, dayEnd)` — the done half of that day's progress,
+ * whenever they were checked off. A task due another day and finished today is not one of today's
+ * tasks, so it must not fill today's ring: counting by completion time made a day with one open
+ * task read "3 of 4 done".
+ */
+private fun completedDueIn(state: OfflineSyncState, dayStart: Long, dayEnd: Long): Int =
+    state.completedItems.count { record ->
+        val dueEpochMs = record.dueEpochMs ?: return@count false
+        dueEpochMs >= dayStart && dueEpochMs < dayEnd
+    }
+
+/**
+ * Incomplete tasks due before [dayStart]: the app's Today "Earlier" bucket, which is the overdue
+ * set clipped to the day boundary (`todayEarlierItems`) so a task due earlier today stays today's.
+ */
+private fun overdueFeed(state: OfflineSyncState, dayStart: Long): List<CachedTodoRecord> =
+    sortedLikeToday(
+        state.todos.filter { task ->
+            val dueEpochMs = task.dueEpochMs ?: return@filter false
+            !task.completed && dueEpochMs < dayStart
+        },
+    )
+
+private fun sortedLikeToday(tasks: List<CachedTodoRecord>): List<CachedTodoRecord> =
+    TaskSortEngine.sortedTodos(tasks) { task ->
         TaskSortKey(
             id = task.id,
             pinned = task.pinned,

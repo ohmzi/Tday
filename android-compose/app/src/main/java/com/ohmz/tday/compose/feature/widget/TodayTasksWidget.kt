@@ -8,12 +8,21 @@ import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
+import com.ohmz.tday.compose.feature.widget.TaskWidgetListItem.Label.Style.MESSAGE
+import com.ohmz.tday.compose.feature.widget.TaskWidgetListItem.Label.Style.SECTION
+import com.ohmz.tday.compose.feature.widget.snapshot.TodayWidgetDay
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshot
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotRow
+import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStatus
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStore
+import com.ohmz.tday.compose.feature.widget.snapshot.nextDayWithTasks
 import com.ohmz.tday.compose.feature.widget.snapshot.todayAt
 import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
@@ -69,40 +78,28 @@ internal object TodayTasksWidget {
             details = "locked=$isAppLocked snapshotNull=${snapshot == null} stale=$snapshotStale",
         )
 
+        val content = if (isAppLocked || snapshot == null || day == null) {
+            null
+        } else {
+            todayContent(appContext, snapshot, day, nowEpochMs, WidgetCheckOff.ids())
+        }
+
         return TaskWidgetModel(
             title = appContext.getString(R.string.widget_today_tasks_title),
             state = todayContentState(isAppLocked, snapshot, nowEpochMs),
-            countLabel = String.format(
-                Locale.getDefault(),
-                appContext.getString(R.string.widget_today_tasks_count),
-                day?.taskCount ?: 0,
-            ),
+            countLabel = content?.countLabel,
+            compactCountLabel = content?.compactCountLabel,
             setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
             setupMessage = appContext.getString(R.string.widget_today_tasks_setup_message),
-            emptyTitle = appContext.getString(R.string.widget_today_tasks_empty),
+            emptyTitle = content?.emptyTitle ?: appContext.getString(R.string.widget_today_tasks_empty),
             lockedTitle = appContext.getString(R.string.widget_locked_title),
             lockedMessage = appContext.getString(R.string.widget_locked_message),
             loadingTitle = appContext.getString(R.string.widget_loading),
             addLabel = appContext.getString(R.string.widget_today_tasks_add),
-            rows = if (isAppLocked || day == null) {
-                emptyList()
-            } else {
-                // One formatter for the whole list, not one per row: dueEpochMs is deliberately
-                // NOT preformatted at write time (see WidgetSnapshot's KDoc — it depends on the
-                // read-time locale and 12/24h setting), but constructing
-                // DateFormat.getTimeInstance is not free and every row needs the same instance.
-                val timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT)
-                day.rows.map { row ->
-                    TaskWidgetRow(
-                        key = row.key,
-                        id = row.id,
-                        title = row.title,
-                        priority = row.priorityRing.toPriorityValue(),
-                        trailingText = row.dueEpochMs?.let { dueTimeText(timeFormatter, it) },
-                        description = row.description,
-                    )
-                }
-            },
+            items = content?.items.orEmpty(),
+            emptyPreview = content?.emptyPreview.orEmpty(),
+            dateBlock = content?.dateBlock,
+            progress = content?.progress,
             // Follows the clock, so the day/night artwork turns over with it.
             visuals = todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour)),
             openIntent = openIntent(),
@@ -138,8 +135,160 @@ internal fun todayContentState(
 ): TaskWidgetContentState {
     if (isAppLocked) return TaskWidgetContentState.LOCKED
     val day = snapshot?.todayAt(nowEpochMs) ?: return TaskWidgetContentState.LOADING
+    // Nothing due today but something overdue is still a list to show, not an empty day.
+    if (day.status == WidgetSnapshotStatus.EMPTY && day.overdueCount > 0) return TaskWidgetContentState.TASKS
     return day.status.toContentState()
 }
+
+/** The parts of a Today model that come from its day's content rather than from its state. */
+private class TodayContent(
+    val countLabel: String?,
+    val compactCountLabel: String?,
+    val emptyTitle: String,
+    val items: List<TaskWidgetListItem>,
+    val emptyPreview: List<TaskWidgetListItem>,
+    val dateBlock: TaskWidgetDateBlock,
+    val progress: TaskWidgetProgress?,
+)
+
+/**
+ * [checkingIds] are rows mid check-off (see [WidgetCheckOff]). They still sit in the snapshot —
+ * the completion is written when the beat ends — but the header already counts today's as done,
+ * so the ring fills in step with the tick instead of a second later. An overdue row is not one of
+ * today's tasks, so checking it off moves nothing in the header.
+ */
+private fun todayContent(
+    context: Context,
+    snapshot: WidgetSnapshot,
+    day: TodayWidgetDay,
+    nowEpochMs: Long,
+    checkingIds: Set<String>,
+): TodayContent {
+    val locale = Locale.getDefault()
+    val zoneId = ZoneId.systemDefault()
+    // One formatter for the whole list, not one per row: dueEpochMs is deliberately NOT
+    // preformatted at write time (see WidgetSnapshot's KDoc — it depends on the read-time locale
+    // and 12/24h setting), but constructing DateFormat.getTimeInstance is not free.
+    val timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT)
+    // An overdue row's time of day says little; the day it was due says how late it is.
+    val overdueDateFormatter = SimpleDateFormat(
+        android.text.format.DateFormat.getBestDateTimePattern(locale, "MMMd"),
+        locale,
+    )
+
+    val checkingToday = day.rows.count { it.id in checkingIds }
+    val dueToday = (day.taskCount - checkingToday).coerceAtLeast(0)
+    val done = day.completedCount + checkingToday
+    val total = done + dueToday
+    val dueLabel = String.format(locale, context.getString(R.string.widget_today_tasks_count), dueToday)
+
+    val items = buildList {
+        day.rows.forEach { row ->
+            add(
+                TaskWidgetListItem.Task(
+                    row.toWidgetRow(
+                        trailingText = row.dueEpochMs?.let { dueTimeText(timeFormatter, it) },
+                        checking = row.id in checkingIds,
+                    ),
+                ),
+            )
+        }
+        if (day.overdueRows.isNotEmpty()) {
+            add(sectionLabel(OVERDUE_LABEL_SLOT, context.getString(R.string.todos_title_overdue), day.overdueCount))
+            day.overdueRows.forEach { row ->
+                add(
+                    TaskWidgetListItem.Task(
+                        row.toWidgetRow(
+                            trailingText = row.dueEpochMs?.let { dueTimeText(overdueDateFormatter, it) },
+                            overdue = true,
+                            checking = row.id in checkingIds,
+                        ),
+                    ),
+                )
+            }
+        }
+    }
+
+    val emptyTitle = context.getString(
+        if (done > 0) R.string.todos_all_done_today else R.string.widget_today_tasks_empty,
+    )
+    val dayStart = Instant.ofEpochMilli(day.dayStartEpochMs ?: nowEpochMs).atZone(zoneId).toLocalDate()
+    val emptyPreview = if (day.taskCount == 0 && day.overdueCount == 0) {
+        snapshot.nextDayWithTasks(nowEpochMs)?.let { next ->
+            val nextDate = Instant.ofEpochMilli(next.dayStartEpochMs).atZone(zoneId).toLocalDate()
+            val dayName = if (nextDate == dayStart.plusDays(1)) {
+                context.getString(R.string.todos_section_tomorrow)
+            } else {
+                DateTimeFormatter.ofPattern(
+                    android.text.format.DateFormat.getBestDateTimePattern(locale, "EEEMMMd"),
+                    locale,
+                ).format(nextDate)
+            }
+            val nextDue = String.format(locale, context.getString(R.string.widget_today_tasks_count), next.taskCount)
+            buildList {
+                add(TaskWidgetListItem.Label(TaskWidgetListItem.labelKey(EMPTY_MESSAGE_SLOT), emptyTitle, MESSAGE))
+                add(TaskWidgetListItem.Label(TaskWidgetListItem.labelKey(PREVIEW_LABEL_SLOT), "$dayName · $nextDue", SECTION))
+                next.rows.forEach { row ->
+                    add(
+                        TaskWidgetListItem.Task(
+                            row.toWidgetRow(
+                                trailingText = row.dueEpochMs?.let { dueTimeText(timeFormatter, it) },
+                                preview = true,
+                            ),
+                        ),
+                    )
+                }
+            }
+        }.orEmpty()
+    } else {
+        emptyList()
+    }
+
+    return TodayContent(
+        countLabel = when {
+            done > 0 -> String.format(locale, context.getString(R.string.widget_today_progress), done, total)
+            dueToday > 0 -> dueLabel
+            else -> null
+        },
+        compactCountLabel = dueLabel.takeIf { dueToday > 0 },
+        emptyTitle = emptyTitle,
+        items = items,
+        emptyPreview = emptyPreview,
+        dateBlock = TaskWidgetDateBlock(
+            weekday = DateTimeFormatter.ofPattern("EEE", locale).format(dayStart),
+            day = DateTimeFormatter.ofPattern("d", locale).format(dayStart),
+            title = context.getString(R.string.todos_title_today),
+        ),
+        progress = TaskWidgetProgress(done = done, total = total).takeIf { total > 0 },
+    )
+}
+
+private fun sectionLabel(slot: Int, name: String, count: Int) = TaskWidgetListItem.Label(
+    key = TaskWidgetListItem.labelKey(slot),
+    text = String.format(Locale.getDefault(), "%s · %d", name, count),
+    style = SECTION,
+)
+
+private fun WidgetSnapshotRow.toWidgetRow(
+    trailingText: String?,
+    overdue: Boolean = false,
+    checking: Boolean = false,
+    preview: Boolean = false,
+) = TaskWidgetRow(
+    key = key,
+    id = id,
+    title = title,
+    priority = priorityRing.toPriorityValue(),
+    trailingText = trailingText,
+    description = description,
+    overdueTrailing = overdue,
+    checking = checking,
+    preview = preview,
+)
+
+private const val OVERDUE_LABEL_SLOT = 0
+private const val EMPTY_MESSAGE_SLOT = 1
+private const val PREVIEW_LABEL_SLOT = 2
 
 internal fun dueTimeText(formatter: DateFormat, epochMs: Long): String =
     formatter.format(Date.from(Instant.ofEpochMilli(epochMs)))

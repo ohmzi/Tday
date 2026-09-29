@@ -71,6 +71,9 @@ object TdayMotionTokens {
 
         /** How long the confetti has the screen to itself before the scene comes up behind it. */
         const val CelebrationLead: Int = TdayMotionTokensGenerated.Delays.CelebrationLead
+
+        /** How long a task checked off on a widget stays ticked and struck before it leaves. */
+        const val WidgetCheckHold: Int = TdayMotionTokensGenerated.Delays.WidgetCheckHold
     }
 
     /**

@@ -43,6 +43,7 @@ final class TdayMotionTests: XCTestCase {
 
         XCTAssertEqual(TdayMotion.Delays.placementLead, TdayMotionGenerated.Delays.placementLead)
         XCTAssertEqual(TdayMotion.Delays.celebrationLead, TdayMotionGenerated.Delays.celebrationLead)
+        XCTAssertEqual(TdayMotion.Delays.widgetCheckHold, TdayMotionGenerated.Delays.widgetCheckHold)
     }
 
     func testPressScalesAreTheGeneratedValues() {

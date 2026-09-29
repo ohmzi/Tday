@@ -121,72 +121,171 @@
         android:paddingEnd="14dp"
         android:paddingBottom="11dp">
 
-        <FrameLayout
+        <!-- Header row. Every slot is declared here and switched in code (see setVisible); only
+             one of the three title arrangements is ever shown. -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="42dp">
+            android:layout_height="42dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <!-- Wide header: title, then the count hugging it. The end padding keeps it clear of
-                 the add button (42dp + 8dp). -->
+            <!-- Today only: the day it is showing, weekday over date. -->
             <LinearLayout
-                android:id="@+id/widget_header_wide"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingEnd="50dp">
+                android:id="@+id/widget_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:gravity="center_horizontal"
+                android:minWidth="28dp"
+                android:orientation="vertical"
+                android:visibility="gone">
 
                 <TextView
-                    android:id="@+id/widget_title"
+                    android:id="@+id/widget_date_weekday"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:ellipsize="end"
+                    android:fontFamily="@font/nunito_app_medium"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textColor="@color/tday_widget_today_accent"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/widget_date_day"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
                     android:fontFamily="@font/nunito_app"
                     android:includeFontPadding="false"
                     android:maxLines="1"
                     android:textColor="@color/tday_widget_on_surface"
-                    android:textDirection="locale"
-                    android:textSize="17sp"
+                    android:textSize="20sp"
                     android:textStyle="bold" />
+            </LinearLayout>
 
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1">
+
+                <!-- Wide header: title, then the count hugging it. -->
+                <LinearLayout
+                    android:id="@+id/widget_header_wide"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/widget_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:fontFamily="@font/nunito_app"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:textColor="@color/tday_widget_on_surface"
+                        android:textDirection="locale"
+                        android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/widget_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="26dp"
+                        android:layout_marginStart="8dp"
+                        android:fontFamily="@font/nunito_app_medium"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:textColor="@color/tday_widget_on_surface_variant"
+                        android:textDirection="locale"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <!-- Today's header beside its date: title over count, so a progress phrase fits a
+                     3-cell width without squeezing the title. -->
+                <LinearLayout
+                    android:id="@+id/widget_header_stacked"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/widget_title_stacked"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:fontFamily="@font/nunito_app"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:textColor="@color/tday_widget_on_surface"
+                        android:textDirection="locale"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/widget_count_stacked"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:ellipsize="end"
+                        android:fontFamily="@font/nunito_app_medium"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:textColor="@color/tday_widget_on_surface_variant"
+                        android:textDirection="locale"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <!-- Compact (2x2) header: the count leads instead of the title, which cannot fit
+                     beside the add button at that width. -->
                 <TextView
-                    android:id="@+id/widget_count"
-                    android:layout_width="wrap_content"
-                    android:layout_height="26dp"
-                    android:layout_marginStart="8dp"
+                    android:id="@+id/widget_compact_count"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:ellipsize="end"
                     android:fontFamily="@font/nunito_app"
-                    android:gravity="center"
+                    android:gravity="center_vertical|start"
                     android:includeFontPadding="false"
                     android:maxLines="1"
                     android:textColor="@color/tday_widget_on_surface_variant"
                     android:textDirection="locale"
-                    android:textSize="12sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:visibility="gone" />
-            </LinearLayout>
+            </FrameLayout>
 
-            <!-- Compact (2x2) header: the count leads instead of the title, which cannot fit
-                 beside the add button at that width. -->
-            <TextView
-                android:id="@+id/widget_compact_count"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:ellipsize="end"
-                android:fontFamily="@font/nunito_app"
-                android:gravity="center_vertical|start"
-                android:includeFontPadding="false"
-                android:maxLines="1"
-                android:paddingEnd="50dp"
-                android:textColor="@color/tday_widget_on_surface_variant"
-                android:textDirection="locale"
-                android:textSize="18sp"
-                android:textStyle="bold"
+            <!-- Today only: done today out of done plus still due today. The size is pinned four
+                 ways because the platform's horizontal style clamps a bar to 16dp high. -->
+            <ProgressBar
+                android:id="@+id/widget_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="8dp"
+                android:importantForAccessibility="no"
+                android:indeterminate="false"
+                android:max="1"
+                android:maxHeight="24dp"
+                android:maxWidth="24dp"
+                android:minHeight="24dp"
+                android:minWidth="24dp"
+                android:progress="0"
+                android:progressBackgroundTint="@color/tday_widget_progress_track"
+                android:progressDrawable="@drawable/widget_progress_ring"
+                android:progressTint="@color/tday_widget_today_accent"
                 android:visibility="gone" />
 
             <FrameLayout
                 android:id="@+id/widget_add"
                 android:layout_width="42dp"
                 android:layout_height="42dp"
-                android:layout_gravity="end|center_vertical"
+                android:layout_marginStart="8dp"
                 android:contentDescription="@string/widget_today_tasks_add">
 
                 <ImageView
@@ -196,7 +295,7 @@
                     android:layout_gravity="center"
                     android:contentDescription="@null" />
             </FrameLayout>
-        </FrameLayout>
+        </LinearLayout>
 
         <ListView
             android:id="@+id/widget_list"

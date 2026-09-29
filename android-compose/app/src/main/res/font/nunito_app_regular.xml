@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- nunito_app pinned for widget task notes. 500 rather than 400: Nunito's 400 is thin enough at
+     11sp on a home screen to lose legibility, and 500 is where it reads as body text. -->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+    <font
+        android:font="@font/nunito_wght"
+        android:fontVariationSettings="'wght' 500"
+        android:fontStyle="normal"
+        android:fontWeight="500" />
+</font-family>

@@ -13,6 +13,7 @@ import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -69,8 +70,14 @@ internal object WidgetTaskActions {
     }
 
     /**
-     * Completes [taskId] through the same repository path the in-app checkbox uses, then repaints
-     * the tapped instance first so the row disappears before the broadcast's process window ends.
+     * Shows [taskId] checked off for [WidgetCheckOff.holdMs], then completes it through the same
+     * repository path the in-app checkbox uses and repaints, tapped instance first, so the row
+     * leaves before the broadcast's process window ends.
+     *
+     * The check paints first and the write waits for it: the row is only kept on screen by still
+     * being in the snapshot, and the write is what drops it from there. The beat is held from the
+     * moment the check is painted, so a cold cache open (seconds) during the write only lengthens
+     * it, never shortens it.
      */
     suspend fun complete(context: Context, appWidgetId: Int, taskId: String) {
         val appContext = context.applicationContext
@@ -81,13 +88,21 @@ internal object WidgetTaskActions {
             Log.w(WIDGET_LOG_TAG, "widget[$appWidgetId]: complete skipped, instance feed unknown")
             return
         }
+        if (!WidgetCheckOff.begin(taskId)) return
         val entryPoint = EntryPointAccessors.fromApplication(appContext, WidgetEntryPoint::class.java)
-        val submitter = entryPoint.widgetCompleteTaskSubmitter()
-        when (feed) {
-            WidgetFeed.SCHEDULED -> submitter.completeTodayTask(taskId)
-            WidgetFeed.FLOATER -> submitter.completeFloaterTask(taskId)
+        val refresher = entryPoint.widgetRefresher()
+        try {
+            refresher.refreshNow(firstAppWidgetId = appWidgetId)
+            delay(WidgetCheckOff.holdMs)
+            val submitter = entryPoint.widgetCompleteTaskSubmitter()
+            when (feed) {
+                WidgetFeed.SCHEDULED -> submitter.completeTodayTask(taskId)
+                WidgetFeed.FLOATER -> submitter.completeFloaterTask(taskId)
+            }
+        } finally {
+            WidgetCheckOff.end(taskId)
         }
-        entryPoint.widgetRefresher().refreshNow(firstAppWidgetId = appWidgetId)
+        refresher.refreshNow(firstAppWidgetId = appWidgetId)
     }
 
     fun taskIdOf(intent: Intent): String? = intent.getStringExtra(EXTRA_TASK_ID)

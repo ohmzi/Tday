@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A label row in the widget's task list (a RemoteCollectionItems item, the list's second view
+  type): the Overdue section name, or the "No tasks due today" line and the "Tomorrow · 3 due"
+  name that head an empty Today's preview. Two TextViews, one shown per label, because a
+  RemoteViews action cannot change a font — see TaskWidgetRemoteViews.labelViews.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_label"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <TextView
+        android:id="@+id/widget_label_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:fontFamily="@font/nunito_app"
+        android:includeFontPadding="false"
+        android:maxLines="2"
+        android:paddingTop="4dp"
+        android:paddingBottom="8dp"
+        android:textColor="@color/tday_widget_on_surface"
+        android:textDirection="locale"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/widget_label_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:fontFamily="@font/nunito_app_medium"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp"
+        android:textColor="@color/tday_widget_on_surface_variant"
+        android:textDirection="locale"
+        android:textSize="11sp"
+        android:visibility="gone" />
+</FrameLayout>

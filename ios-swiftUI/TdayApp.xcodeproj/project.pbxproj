@@ -179,6 +179,7 @@
 		F0A57E0200000000000000C2 /* TdayTaskRowSkeletonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0200000000000000C1 /* TdayTaskRowSkeletonTests.swift */; };
 		F0A57E0000000000000000A2 /* TdayMotion.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000A1 /* TdayMotion.swift */; };
 		F0A57E0000000000000000B2 /* TdayMotionGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */; };
+		F0A57E0000000000000000B3 /* TdayMotionGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0000000000000000B1 /* TdayMotionGenerated.swift */; };
 		F0A57E0300000000000000A2 /* TaskRowListMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000A1 /* TaskRowListMark.swift */; };
 		F0A57E0300000000000000B2 /* TdayListIconInference.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000B1 /* TdayListIconInference.swift */; };
 		F0A57E0300000000000000C2 /* TdayListIconInferenceGenerated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A57E0300000000000000C1 /* TdayListIconInferenceGenerated.swift */; };
@@ -1377,6 +1378,7 @@
 			files = (
 				D4A100000000000000000012 /* TodayTasksWidget.swift in Sources */,
 				7D4E57A1D0A1000000000002 /* TodayWidgetDayWindow.swift in Sources */,
+				F0A57E0000000000000000B3 /* TdayMotionGenerated.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

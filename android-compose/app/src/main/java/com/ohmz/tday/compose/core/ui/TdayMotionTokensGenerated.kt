@@ -20,6 +20,7 @@ object TdayMotionTokensGenerated {
     object Delays {
         const val PlacementLead: Int = 320
         const val CelebrationLead: Int = 320
+        const val WidgetCheckHold: Int = 900
     }
 
     object Easings {

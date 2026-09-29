@@ -1300,6 +1300,40 @@
       "searchBody": "marca tareas directamente en el widget de la pantalla de inicio. los widgets de hoy y flotantes ahora responden al toque: pulsa el anillo al inicio de cualquier fila para completar esa tarea sin abrir la app. la fila desaparece al instante y el completado se sincroniza como cualquier otro; los toques hechos sin conexion se ponen en cola y se aplican cuando vuelves a estar en linea. ¿un toque accidental? abre el historial de completadas en la app y restaura la tarea desde alli."
     },
     {
+      "id": "today-widget-progress",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "circle-check-big",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "El widget de Hoy de un vistazo",
+      "summary": "Mira cuánto llevas del día, qué está vencido y qué viene después.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "El widget de Hoy empieza con la fecha y un anillo de progreso: cuántas de las tareas de hoy están hechas, del total. Lo vencido tiene su propia sección debajo de las tareas de hoy, con el día en que vencía. Cuando no hay nada para hoy, el widget muestra lo que viene el próximo día con tareas. Al marcar una tarea, queda marcada y tachada un momento antes de desaparecer."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "El anillo solo cuenta las tareas de hoy. Terminar algo de otro día no lo llena."
+          ]
+        }
+      ],
+      "searchTitle": "el widget de hoy de un vistazo",
+      "searchKeywords": "widget, hoy, progreso, anillo, hecho, vencido, manana, fecha, pantalla de inicio",
+      "searchBody": "mira cuanto llevas del dia, que esta vencido y que viene despues. el widget de hoy empieza con la fecha y un anillo de progreso: cuantas de las tareas de hoy estan hechas, del total. lo vencido tiene su propia seccion debajo de las tareas de hoy, con el dia en que vencia. cuando no hay nada para hoy, el widget muestra lo que viene el proximo dia con tareas. al marcar una tarea, queda marcada y tachada un momento antes de desaparecer. el anillo solo cuenta las tareas de hoy. terminar algo de otro dia no lo llena."
+    },
+    {
       "id": "share-into-tday",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

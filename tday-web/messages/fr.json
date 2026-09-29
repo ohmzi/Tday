@@ -1154,6 +1154,13 @@
         "body": "Les widgets Aujourd'hui et Floaters réagissent désormais au toucher : touchez l'anneau au début d'une ligne pour terminer la tâche sans ouvrir l'application. La ligne disparaît aussitôt et la complétion se synchronise comme n'importe quelle autre — les appuis effectués hors ligne sont mis en file et appliqués dès que la connexion revient.",
         "tip": "Touché par erreur ? Ouvrez l'historique des tâches terminées dans l'application et restaurez la tâche à partir de là."
       },
+      "today-widget-progress": {
+        "title": "Le widget Aujourd'hui en un coup d'œil",
+        "summary": "Voyez où vous en êtes dans la journée, ce qui est en retard et ce qui vient ensuite.",
+        "keywords": "widget, aujourd'hui, progression, anneau, terminé, en retard, demain, date, écran d'accueil",
+        "body": "Le widget Aujourd'hui commence par la date et un anneau de progression : combien des tâches du jour sont terminées, sur le total. Ce qui est en retard a sa propre section sous les tâches du jour, avec le jour d'échéance. Quand rien n'est prévu aujourd'hui, le widget montre ce qui arrive le prochain jour qui a des tâches. Une tâche cochée reste cochée et barrée un instant avant de disparaître.",
+        "tip": "L'anneau ne compte que les tâches du jour. Terminer une tâche d'un autre jour ne le remplit pas."
+      },
       "share-into-tday": {
         "title": "Partager vers T'Day",
         "summary": "Envoyez du texte depuis n'importe quelle app directement dans une nouvelle tâche.",

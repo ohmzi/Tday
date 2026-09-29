@@ -66,7 +66,7 @@ class WidgetReapplyVisibilityTest {
 
     private companion object {
         const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
-        val RENDERED_LAYOUTS = listOf("widget_task", "widget_task_list_row")
+        val RENDERED_LAYOUTS = listOf("widget_task", "widget_task_list_row", "widget_task_list_label")
 
         val mainDir: File = generateSequence(File(".").canonicalFile) { it.parentFile }
             .flatMap { sequenceOf(File(it, "src/main"), File(it, "app/src/main")) }

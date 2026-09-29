@@ -1300,6 +1300,40 @@
       "searchBody": "spunta le attivita direttamente dal widget nella schermata home. i widget oggi e floater ora rispondono al tocco: tocca l'anello all'inizio di una riga per completare quell'attivita senza aprire l'app. la riga scompare subito e il completamento si sincronizza come qualsiasi altro — i tocchi fatti offline vengono messi in coda e applicati appena torni online. tocco sbagliato? apri la cronologia completati nell'app e ripristina l'attivita da li."
     },
     {
+      "id": "today-widget-progress",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "circle-check-big",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Il widget Oggi a colpo d'occhio",
+      "summary": "Guarda a che punto sei della giornata, cosa è in ritardo e cosa viene dopo.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Il widget Oggi si apre con la data e un anello di avanzamento: quante delle attività di oggi sono fatte, sul totale. Ciò che è in ritardo ha una sezione a parte sotto le attività di oggi, con il giorno di scadenza. Quando oggi non c'è nulla in scadenza, il widget mostra cosa arriva il prossimo giorno con attività. Un'attività spuntata resta spuntata e barrata per un attimo prima di sparire."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "L'anello conta solo le attività di oggi. Completare qualcosa di un altro giorno non lo riempie."
+          ]
+        }
+      ],
+      "searchTitle": "il widget oggi a colpo d'occhio",
+      "searchKeywords": "widget, oggi, progresso, anello, fatto, in ritardo, domani, data, schermata home",
+      "searchBody": "guarda a che punto sei della giornata, cosa e in ritardo e cosa viene dopo. il widget oggi si apre con la data e un anello di avanzamento: quante delle attivita di oggi sono fatte, sul totale. cio che e in ritardo ha una sezione a parte sotto le attivita di oggi, con il giorno di scadenza. quando oggi non c'e nulla in scadenza, il widget mostra cosa arriva il prossimo giorno con attivita. un'attivita spuntata resta spuntata e barrata per un attimo prima di sparire. l'anello conta solo le attivita di oggi. completare qualcosa di un altro giorno non lo riempie."
+    },
+    {
       "id": "share-into-tday",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

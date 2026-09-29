@@ -524,6 +524,7 @@
     <string name="widget_today_tasks_empty">今日期限のタスクはありません</string>
     <string name="widget_today_tasks_add">今日のタスクを追加</string>
     <string name="widget_today_tasks_count">%1$d件期限</string>
+    <string name="widget_today_progress">%2$d件中%1$d件完了</string>
     <string name="widget_today_tasks_count_unit">期限</string>
     <string name="widget_today_tasks_setup_title">T\'Day を開く</string>
     <string name="widget_today_tasks_setup_message">ワークスペースをセットアップ</string>

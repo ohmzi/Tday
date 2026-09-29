@@ -524,6 +524,7 @@
     <string name="widget_today_tasks_empty">Tiada tugasan untuk hari ini</string>
     <string name="widget_today_tasks_add">Tambah satu untuk hari ini</string>
     <string name="widget_today_tasks_count">%1$d perlu disiapkan</string>
+    <string name="widget_today_progress">%1$d daripada %2$d selesai</string>
     <string name="widget_today_tasks_count_unit">perlu disiapkan</string>
     <string name="widget_today_tasks_setup_title">Buka T\'Day</string>
     <string name="widget_today_tasks_setup_message">Sediakan ruang kerja anda</string>

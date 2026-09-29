@@ -1154,6 +1154,13 @@
         "body": "I widget Oggi e Floater ora rispondono al tocco: tocca l'anello all'inizio di una riga per completare quell'attività senza aprire l'app. La riga scompare subito e il completamento si sincronizza come qualsiasi altro — i tocchi fatti offline vengono messi in coda e applicati appena torni online.",
         "tip": "Tocco sbagliato? Apri la cronologia completati nell'app e ripristina l'attività da lì."
       },
+      "today-widget-progress": {
+        "title": "Il widget Oggi a colpo d'occhio",
+        "summary": "Guarda a che punto sei della giornata, cosa è in ritardo e cosa viene dopo.",
+        "keywords": "widget, oggi, progresso, anello, fatto, in ritardo, domani, data, schermata home",
+        "body": "Il widget Oggi si apre con la data e un anello di avanzamento: quante delle attività di oggi sono fatte, sul totale. Ciò che è in ritardo ha una sezione a parte sotto le attività di oggi, con il giorno di scadenza. Quando oggi non c'è nulla in scadenza, il widget mostra cosa arriva il prossimo giorno con attività. Un'attività spuntata resta spuntata e barrata per un attimo prima di sparire.",
+        "tip": "L'anello conta solo le attività di oggi. Completare qualcosa di un altro giorno non lo riempie."
+      },
       "share-into-tday": {
         "title": "Condividi su T'Day",
         "summary": "Invia testo da qualsiasi app direttamente in una nuova attività.",

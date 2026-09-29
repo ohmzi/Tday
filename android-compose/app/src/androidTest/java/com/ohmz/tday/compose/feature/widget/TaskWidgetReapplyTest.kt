@@ -71,7 +71,7 @@ class TaskWidgetReapplyTest {
     private fun model(state: TaskWidgetContentState) = TaskWidgetModel(
         title = "Today's Tasks",
         state = state,
-        countLabel = "1 due",
+        countLabel = "1 due".takeIf { state == TaskWidgetContentState.TASKS },
         setupTitle = "",
         setupMessage = "",
         emptyTitle = "No tasks due today",
@@ -79,8 +79,8 @@ class TaskWidgetReapplyTest {
         lockedMessage = "",
         loadingTitle = "",
         addLabel = "Add",
-        rows = if (state == TaskWidgetContentState.TASKS) {
-            listOf(TaskWidgetRow(key = 1L, id = "row", title = "Row", priority = "Low"))
+        items = if (state == TaskWidgetContentState.TASKS) {
+            listOf(TaskWidgetListItem.Task(TaskWidgetRow(key = 1L, id = "row", title = "Row", priority = "Low")))
         } else {
             emptyList()
         },

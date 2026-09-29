@@ -14,6 +14,9 @@ internal const val UPCOMING_DAY_COUNT = 6
 /** Display cap for each upcoming day. Smaller than the Today cap, matching iOS. */
 internal const val UPCOMING_DAY_TASK_LIMIT = 20
 
+/** Display cap for each day's Overdue section, matching iOS. The true count travels beside it. */
+internal const val OVERDUE_TASK_LIMIT = 20
+
 @Serializable
 internal enum class WidgetSnapshotStatus { SETUP, EMPTY, TASKS }
 
@@ -63,6 +66,20 @@ internal data class WidgetSnapshot(
      * so a snapshot written before this existed still decodes, as covering its own day only.
      */
     val upcomingDays: List<WidgetSnapshotDay> = emptyList(),
+    /**
+     * Today only: tasks due on the snapshot's own day that are already completed — the done half
+     * of the header's "2 of 5 done", whose total is this plus [taskCount]. Counted by due date,
+     * not completion time, so finishing another day's task never fills today's ring.
+     */
+    val completedCount: Int = 0,
+    /**
+     * Today only: incomplete tasks due before the snapshot's own day, true count and capped rows
+     * — the app's Today "Earlier" bucket (`todayEarlierItems`), shown under an Overdue label below
+     * the day's own tasks. Never part of [taskCount], exactly as Earlier never counts as pending
+     * today in the app.
+     */
+    val overdueCount: Int = 0,
+    val overdueRows: List<WidgetSnapshotRow> = emptyList(),
 )
 
 /** One upcoming local day of [WidgetSnapshot.upcomingDays], `[dayStartEpochMs, dayEndEpochMs)`. */
@@ -72,6 +89,11 @@ internal data class WidgetSnapshotDay(
     val dayEndEpochMs: Long,
     val taskCount: Int,
     val rows: List<WidgetSnapshotRow> = emptyList(),
+    /** Overdue as it will read on this day, so the section turns over at midnight with the rest. */
+    val overdueCount: Int = 0,
+    val overdueRows: List<WidgetSnapshotRow> = emptyList(),
+    /** This day's tasks already completed ahead of it; see [WidgetSnapshot.completedCount]. */
+    val completedCount: Int = 0,
 )
 
 /** What the Today widget renders for one local day. */
@@ -79,6 +101,11 @@ internal data class TodayWidgetDay(
     val status: WidgetSnapshotStatus,
     val taskCount: Int,
     val rows: List<WidgetSnapshotRow>,
+    /** The day's local start, or null for a snapshot that recorded no window (SETUP, pre-window). */
+    val dayStartEpochMs: Long? = null,
+    val completedCount: Int = 0,
+    val overdueCount: Int = 0,
+    val overdueRows: List<WidgetSnapshotRow> = emptyList(),
 )
 
 /**
@@ -96,12 +123,42 @@ internal fun WidgetSnapshot.todayAt(nowEpochMs: Long): TodayWidgetDay? {
     val start = dayStartEpochMs
     val end = dayEndEpochMs
     if (start == null || end == null || nowEpochMs in start until end) {
-        return TodayWidgetDay(status, taskCount, rows)
+        return TodayWidgetDay(
+            status = status,
+            taskCount = taskCount,
+            rows = rows,
+            dayStartEpochMs = start,
+            completedCount = completedCount,
+            overdueCount = overdueCount,
+            overdueRows = overdueRows,
+        )
     }
     val day = upcomingDays.firstOrNull { nowEpochMs in it.dayStartEpochMs until it.dayEndEpochMs }
         ?: return null
     val dayStatus = if (day.taskCount == 0) WidgetSnapshotStatus.EMPTY else WidgetSnapshotStatus.TASKS
-    return TodayWidgetDay(dayStatus, day.taskCount, day.rows)
+    return TodayWidgetDay(
+        status = dayStatus,
+        taskCount = day.taskCount,
+        rows = day.rows,
+        dayStartEpochMs = day.dayStartEpochMs,
+        completedCount = day.completedCount,
+        overdueCount = day.overdueCount,
+        overdueRows = day.overdueRows,
+    )
+}
+
+/**
+ * The first covered day AFTER the one containing [nowEpochMs] that has anything due — what an
+ * empty Today widget previews ("Tomorrow · 3 due"). Null when no later day in the snapshot has
+ * tasks, or the snapshot records no day window to count from.
+ */
+internal fun WidgetSnapshot.nextDayWithTasks(nowEpochMs: Long): WidgetSnapshotDay? {
+    val start = dayStartEpochMs ?: return null
+    val end = dayEndEpochMs ?: return null
+    val days = listOf(WidgetSnapshotDay(start, end, taskCount, rows)) + upcomingDays
+    val current = days.indexOfFirst { nowEpochMs in it.dayStartEpochMs until it.dayEndEpochMs }
+    if (current < 0) return null
+    return days.drop(current + 1).firstOrNull { it.taskCount > 0 }
 }
 
 @Serializable

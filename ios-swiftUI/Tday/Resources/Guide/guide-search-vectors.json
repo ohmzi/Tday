@@ -18,6 +18,7 @@
       "widget-list-selection",
       "widget-quick-add",
       "interactive-widgets",
+      "today-widget-progress",
       "focus-filters"
     ],
     "offline": [
@@ -28,6 +29,7 @@
     "date": [
       "nlp-date-syntax",
       "floaters-vs-todos",
+      "today-widget-progress",
       "calendar-views",
       "root-feeds",
       "create-task",

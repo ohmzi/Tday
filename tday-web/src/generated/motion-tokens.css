@@ -14,6 +14,7 @@
 
   --tday-delay-placement-lead: 320ms;
   --tday-delay-celebration-lead: 320ms;
+  --tday-delay-widget-check-hold: 900ms;
 
   --tday-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --tday-ease-enter: cubic-bezier(0, 0, 0.2, 1);

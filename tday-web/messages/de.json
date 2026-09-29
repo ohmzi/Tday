@@ -1154,6 +1154,13 @@
         "body": "Die Today- und Floater-Widgets reagieren jetzt auf Tippen: Tippe auf den Ring am Anfang einer Zeile, um die Aufgabe abzuschließen, ohne die App zu öffnen. Die Zeile verschwindet sofort und der Abschluss synchronisiert wie jeder andere — offline getippte Häkchen warten in der Warteschlange und werden übernommen, sobald du wieder online bist.",
         "tip": "Vertippt? Öffne in der App die Abgeschlossene Historie und stelle die Aufgabe von dort wieder her."
       },
+      "today-widget-progress": {
+        "title": "Das Heute-Widget auf einen Blick",
+        "summary": "Sieh, wie weit du im Tag bist, was überfällig ist und was als Nächstes kommt.",
+        "keywords": "Widget, heute, Fortschritt, Ring, erledigt, überfällig, morgen, Datum, Startbildschirm",
+        "body": "Das Heute-Widget beginnt mit dem Datum und einem Fortschrittsring: wie viele der heute fälligen Aufgaben erledigt sind, von allen. Überfälliges steht in einem eigenen Abschnitt unter den heutigen Aufgaben, mit dem Tag, an dem es fällig war. Ist heute nichts fällig, zeigt das Widget, was am nächsten Tag mit Aufgaben ansteht. Eine abgehakte Aufgabe bleibt kurz abgehakt und durchgestrichen, bevor sie verschwindet.",
+        "tip": "Der Ring zählt nur heute fällige Aufgaben. Etwas von einem anderen Tag zu erledigen, füllt ihn nicht."
+      },
       "share-into-tday": {
         "title": "In T'Day teilen",
         "summary": "Schicke Text aus jeder App direkt in eine neue Aufgabe.",

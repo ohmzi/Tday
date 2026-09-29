@@ -119,7 +119,7 @@ private fun unconfiguredModel(
 ): TaskWidgetModel = TaskWidgetModel(
     title = title,
     state = if (isAppLocked) TaskWidgetContentState.LOCKED else TaskWidgetContentState.SETUP,
-    countLabel = "",
+    countLabel = null,
     setupTitle = appContext.getString(R.string.widget_list_tasks_setup_title),
     setupMessage = appContext.getString(R.string.widget_list_tasks_setup_message),
     emptyTitle = "",
@@ -127,7 +127,7 @@ private fun unconfiguredModel(
     lockedMessage = appContext.getString(R.string.widget_locked_message),
     loadingTitle = appContext.getString(R.string.widget_loading),
     addLabel = appContext.getString(R.string.widget_list_tasks_setup_title),
-    rows = emptyList(),
+    items = emptyList(),
     visuals = visuals,
     openIntent = reconfigureIntent(appWidgetId),
     addIntent = reconfigureIntent(appWidgetId),
@@ -155,10 +155,12 @@ private fun configuredModel(
             R.string.widget_floater_tasks_count,
         )
     }
+    val state = listContentState(isAppLocked, snapshot)
     return TaskWidgetModel(
         title = title,
-        state = listContentState(isAppLocked, snapshot),
-        countLabel = String.format(Locale.getDefault(), appContext.getString(countRes), snapshot?.taskCount ?: 0),
+        state = state,
+        countLabel = String.format(Locale.getDefault(), appContext.getString(countRes), snapshot?.taskCount ?: 0)
+            .takeIf { state == TaskWidgetContentState.TASKS },
         setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
         setupMessage = appContext.getString(R.string.widget_today_tasks_setup_message),
         emptyTitle = appContext.getString(emptyRes),
@@ -166,7 +168,7 @@ private fun configuredModel(
         lockedMessage = appContext.getString(R.string.widget_locked_message),
         loadingTitle = appContext.getString(R.string.widget_loading),
         addLabel = appContext.getString(addRes),
-        rows = if (isAppLocked || snapshot == null) emptyList() else listRows(snapshot, selection.listType),
+        items = if (isAppLocked || snapshot == null) emptyList() else listRows(snapshot, selection.listType),
         visuals = visuals,
         openIntent = openListIntent(selection.listId, selection.listName, selection.listType),
         addIntent = createListTaskIntent(appWidgetId, selection.listId, selection.listType),
@@ -182,19 +184,23 @@ private fun listContentState(
     else -> snapshot.status.toContentState()
 }
 
-private fun listRows(snapshot: WidgetSnapshot, listType: WidgetListType): List<TaskWidgetRow> {
+private fun listRows(snapshot: WidgetSnapshot, listType: WidgetListType): List<TaskWidgetListItem> {
     // One formatter for the whole list — see TodayTasksWidget for why this isn't baked at write
     // time (locale + 12/24h setting are read-time concerns).
     val timeFormatter = if (listType == WidgetListType.TODO) DateFormat.getTimeInstance(DateFormat.SHORT) else null
+    val checkingIds = WidgetCheckOff.ids()
     return snapshot.rows.map { row ->
-        TaskWidgetRow(
-            key = row.key,
-            id = row.id,
-            title = row.title,
-            priority = row.priorityRing.toPriorityValue(),
-            trailingText = timeFormatter?.let { formatter -> row.dueEpochMs?.let { dueTimeText(formatter, it) } },
-            overdueTrailing = timeFormatter != null && row.overdue,
-            description = row.description,
+        TaskWidgetListItem.Task(
+            TaskWidgetRow(
+                key = row.key,
+                id = row.id,
+                title = row.title,
+                priority = row.priorityRing.toPriorityValue(),
+                trailingText = timeFormatter?.let { formatter -> row.dueEpochMs?.let { dueTimeText(formatter, it) } },
+                overdueTrailing = timeFormatter != null && row.overdue,
+                description = row.description,
+                checking = row.id in checkingIds,
+            ),
         )
     }
 }

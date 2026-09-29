@@ -33,8 +33,9 @@ enum WidgetPendingCompletionStore {
     }
 
     /// The checked-and-struck frame lasts this long before the pending queue removes
-    /// the row. Also the staleness cutoff for a crashed animation.
-    static let checkingWindowMs: Int64 = 900
+    /// the row. Also the staleness cutoff for a crashed animation. The shared
+    /// `WidgetCheckHold` token, which Android's widget holds its check for too.
+    static let checkingWindowMs = Int64((TdayMotionGenerated.Delays.widgetCheckHold * 1_000).rounded())
 
     static func load() -> [Entry] {
         guard let data = store().data(forKey: queueKey),
@@ -543,6 +544,38 @@ private struct TodayTasksEntry: TimelineEntry {
     let taskCount: Int
     let rows: [WidgetTaskRowModel]
     let mode: TaskWidgetMode
+    /// The global Today feed only — a per-list or locked entry leaves these empty.
+    var today: TodayHeaderContent? = nil
+}
+
+/// What the global Today feed adds on top of a task list: the date-led header with its progress
+/// ring, the Overdue section, and the preview an empty day shows. Mirrors Android's
+/// `TodayTasksWidget.todayContent`.
+private struct TodayHeaderContent {
+    /// "Mon" over "28" for the day the entry shows.
+    let weekday: String
+    let day: String
+    /// "2 of 5 done", or "3 due" before anything is done; nil with nothing to count.
+    let countLabel: String?
+    let progress: WidgetProgress?
+    let overdueRows: [WidgetTaskRowModel]
+    let overdueCount: Int
+    /// "All done for today" once something due today is done, else nil for the plain message.
+    let emptyTitle: String?
+    let preview: WidgetDayPreview?
+}
+
+/// Today's header ring: tasks due today that are done, out of those plus the ones still due.
+private struct WidgetProgress: Equatable {
+    let done: Int
+    let total: Int
+}
+
+/// An empty Today's look ahead: the next day with tasks, named ("Tomorrow · 3 due").
+private struct WidgetDayPreview {
+    let label: String
+    let taskCount: Int
+    let rows: [WidgetTaskRowModel]
 }
 
 private struct TodayTaskSnapshot: Codable, Identifiable {
@@ -640,6 +673,31 @@ private struct TodayTasksDaySnapshot: Codable {
     let dayEndEpochMs: Int64
     let taskCount: Int
     let tasks: [TodayTaskSnapshot]
+    // Schema 4; defaulted so older snapshots decode as nothing done and nothing overdue.
+    let completedCount: Int
+    let overdueCount: Int
+    let overdueTasks: [TodayTaskSnapshot]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        dayStartEpochMs = try container.decode(Int64.self, forKey: .dayStartEpochMs)
+        dayEndEpochMs = try container.decode(Int64.self, forKey: .dayEndEpochMs)
+        taskCount = try container.decode(Int.self, forKey: .taskCount)
+        tasks = try container.decode([TodayTaskSnapshot].self, forKey: .tasks)
+        completedCount = try container.decodeIfPresent(Int.self, forKey: .completedCount) ?? 0
+        overdueCount = try container.decodeIfPresent(Int.self, forKey: .overdueCount) ?? 0
+        overdueTasks = try container.decodeIfPresent([TodayTaskSnapshot].self, forKey: .overdueTasks) ?? []
+    }
+}
+
+/// The global Today feed on one covered day: its own tasks, how many of its tasks are already
+/// done, and what is overdue by then.
+private struct TodayTasksFeed {
+    let taskCount: Int
+    let tasks: [TodayTaskSnapshot]
+    let completedCount: Int
+    let overdueCount: Int
+    let overdueTasks: [TodayTaskSnapshot]
 }
 
 private func isTaskWidgetDaytime(_ date: Date) -> Bool {
@@ -675,6 +733,10 @@ private struct TodayTasksSnapshot: Codable {
     let dayStartEpochMs: Int64?
     let dayEndEpochMs: Int64?
     let upcomingDays: [TodayTasksDaySnapshot]
+    // Schema 4: the header's done count and the Overdue section, for the snapshot's own day.
+    let completedCount: Int
+    let overdueCount: Int
+    let overdueTasks: [TodayTaskSnapshot]
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -689,6 +751,9 @@ private struct TodayTasksSnapshot: Codable {
         dayStartEpochMs = try container.decodeIfPresent(Int64.self, forKey: .dayStartEpochMs)
         dayEndEpochMs = try container.decodeIfPresent(Int64.self, forKey: .dayEndEpochMs)
         upcomingDays = try container.decodeIfPresent([TodayTasksDaySnapshot].self, forKey: .upcomingDays) ?? []
+        completedCount = try container.decodeIfPresent(Int.self, forKey: .completedCount) ?? 0
+        overdueCount = try container.decodeIfPresent(Int.self, forKey: .overdueCount) ?? 0
+        overdueTasks = try container.decodeIfPresent([TodayTaskSnapshot].self, forKey: .overdueTasks) ?? []
     }
 
     /// The local days this snapshot can answer for: its own, then its upcoming ones.
@@ -705,22 +770,46 @@ private struct TodayTasksSnapshot: Codable {
     }
 
     /// The global feed on covered day `dayOffset` (0 = the snapshot's own day).
-    func feed(dayOffset: Int) -> (taskCount: Int, tasks: [TodayTaskSnapshot])? {
+    func feed(dayOffset: Int) -> TodayTasksFeed? {
         guard dayOffset > 0 else {
-            return (taskCount, tasks)
+            return TodayTasksFeed(
+                taskCount: taskCount,
+                tasks: tasks,
+                completedCount: completedCount,
+                overdueCount: overdueCount,
+                overdueTasks: overdueTasks
+            )
         }
         guard upcomingDays.indices.contains(dayOffset - 1) else {
             return nil
         }
         let day = upcomingDays[dayOffset - 1]
-        return (day.taskCount, day.tasks)
+        return TodayTasksFeed(
+            taskCount: day.taskCount,
+            tasks: day.tasks,
+            completedCount: day.completedCount,
+            overdueCount: day.overdueCount,
+            overdueTasks: day.overdueTasks
+        )
     }
 
-    /// Searches the global `tasks` aggregate first, then every per-list slice, then the
-    /// upcoming days — a row rendered from a configured per-list widget (R7) lives only in
-    /// `perList`, and one rendered after midnight only in the upcoming rows.
+    /// The first covered day after `dayOffset` that has anything due — what an empty Today
+    /// previews — with how many days on it is. Nil when no later covered day has tasks.
+    func nextDayWithTasks(after dayOffset: Int) -> (daysAhead: Int, day: TodayTasksDaySnapshot)? {
+        guard dayOffset < upcomingDays.count else {
+            return nil
+        }
+        for index in dayOffset..<upcomingDays.count where upcomingDays[index].taskCount > 0 {
+            return (index + 1 - dayOffset, upcomingDays[index])
+        }
+        return nil
+    }
+
+    /// Searches the global `tasks` aggregate (and its Overdue rows) first, then every per-list
+    /// slice, then the upcoming days — a row rendered from a configured per-list widget (R7)
+    /// lives only in `perList`, and one rendered after midnight only in the upcoming rows.
     func firstTask(withId id: String) -> TodayTaskSnapshot? {
-        if let match = tasks.first(where: { $0.id == id }) {
+        if let match = tasks.first(where: { $0.id == id }) ?? overdueTasks.first(where: { $0.id == id }) {
             return match
         }
         for list in perList.values {
@@ -729,7 +818,7 @@ private struct TodayTasksSnapshot: Codable {
             }
         }
         for day in upcomingDays {
-            if let match = day.tasks.first(where: { $0.id == id }) {
+            if let match = day.tasks.first(where: { $0.id == id }) ?? day.overdueTasks.first(where: { $0.id == id }) {
                 return match
             }
         }
@@ -821,25 +910,70 @@ private struct TodayTasksProvider: AppIntentTimelineProvider {
         // until its beat ends, at which point the pending filter removes it.
         let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.todoKind)
         let checking = WidgetPendingCompletionStore.checkingIds(kind: WidgetPendingCompletionStore.todoKind, nowEpochMs: nowMs)
-        let visible = feed.tasks.filter { checking.contains($0.id) || !pending.contains($0.id) }
-        let taskCount = max(0, feed.taskCount - (feed.tasks.count - visible.count))
-        let rows = visible.map { task in
+        func isShown(_ task: TodayTaskSnapshot) -> Bool {
+            checking.contains(task.id) || !pending.contains(task.id)
+        }
+        func row(_ task: TodayTaskSnapshot, isOverdue: Bool = false, isPreview: Bool = false) -> WidgetTaskRowModel {
             WidgetTaskRowModel(
                 id: task.id,
                 title: task.title,
                 priority: task.priority,
                 dueEpochMs: task.dueEpochMs,
                 description: task.description,
-                isChecking: checking.contains(task.id)
+                isChecking: checking.contains(task.id),
+                isOverdue: isOverdue,
+                showsDueDay: isOverdue,
+                isPreview: isPreview
             )
         }
+        let visible = feed.tasks.filter(isShown)
+        let completedFromWidget = feed.tasks.count - visible.count
+        let taskCount = max(0, feed.taskCount - completedFromWidget)
+        let visibleOverdue = feed.overdueTasks.filter(isShown)
+        let overdueCount = max(0, feed.overdueCount - (feed.overdueTasks.count - visibleOverdue.count))
+
+        // Done is counted by due date: today's tasks already finished, plus the ones checked off
+        // here that the app has not drained yet, plus any mid check-off — so the ring fills with
+        // the tick. An overdue row is not one of today's tasks and moves nothing in the header.
+        let checkingToday = visible.filter { checking.contains($0.id) }.count
+        let dueToday = max(0, taskCount - checkingToday)
+        let done = feed.completedCount + completedFromWidget + checkingToday
+        let total = done + dueToday
+
+        let calendar = Calendar.current
+        let days = snapshot.coveredDays()
+        let dayStart = Date(timeIntervalSince1970: TimeInterval(days[dayOffset].startEpochMs) / 1_000)
+        let emptyTitle: String? = done > 0 ? "All done for today" : nil
+        var preview: WidgetDayPreview?
+        if taskCount == 0, overdueCount == 0, let next = snapshot.nextDayWithTasks(after: dayOffset) {
+            let nextStart = Date(timeIntervalSince1970: TimeInterval(next.day.dayStartEpochMs) / 1_000)
+            let dayName = next.daysAhead == 1
+                ? "Tomorrow"
+                : nextStart.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+            preview = WidgetDayPreview(
+                label: "\(dayName) · \(next.day.taskCount) due",
+                taskCount: next.day.taskCount,
+                rows: next.day.tasks.filter(isShown).map { row($0, isPreview: true) }
+            )
+        }
+        let today = TodayHeaderContent(
+            weekday: dayStart.formatted(.dateTime.weekday(.abbreviated)),
+            day: String(calendar.component(.day, from: dayStart)),
+            countLabel: done > 0 ? "\(done) of \(total) done" : (dueToday > 0 ? "\(dueToday) due" : nil),
+            progress: total > 0 ? WidgetProgress(done: done, total: total) : nil,
+            overdueRows: visibleOverdue.map { row($0, isOverdue: true) },
+            overdueCount: overdueCount,
+            emptyTitle: emptyTitle,
+            preview: preview
+        )
         return TodayTasksEntry(
             date: date,
             title: snapshot.title,
-            status: taskCount == 0 ? .empty : .tasks,
+            status: taskCount == 0 && overdueCount == 0 ? .empty : .tasks,
             taskCount: taskCount,
-            rows: rows,
-            mode: .today
+            rows: visible.map { row($0) },
+            mode: .today,
+            today: today
         )
     }
 
@@ -922,7 +1056,8 @@ private struct TodayTasksWidgetView: View {
             taskCount: entry.taskCount,
             rows: entry.rows,
             date: entry.date,
-            mode: entry.mode
+            mode: entry.mode,
+            today: entry.today
         )
     }
 }
@@ -935,16 +1070,43 @@ private struct WidgetTaskRowModel: Identifiable {
     let description: String?
     /// Mid check-off: render the ring filled + the title struck-through for one beat.
     var isChecking: Bool = false
-    /// Past due (R7 per-list widgets only — the global Today aggregate is strictly "due
-    /// today" and never produces an overdue row): tints the due-time chip red instead of
-    /// fabricating a second due-time text style.
+    /// Past due — a per-list row, or one of Today's Overdue section: tints the due chip red
+    /// instead of fabricating a second due-time text style.
     var isOverdue: Bool = false
+    /// Today's Overdue rows show the day they were due ("Sep 27"), which says how late they are;
+    /// a time of day would not.
+    var showsDueDay: Bool = false
+    /// A later day's task previewed under an empty Today: muted, and not completable from here.
+    var isPreview: Bool = false
 
     var note: String? {
         guard let trimmed = description?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
             return nil
         }
         return trimmed
+    }
+}
+
+/// One entry of a widget's task list: a task, or a label introducing what follows it.
+private enum WidgetListItem: Identifiable {
+    case task(WidgetTaskRowModel)
+    case section(id: String, text: String)
+    case message(id: String, text: String)
+
+    var id: String {
+        switch self {
+        case .task(let row):
+            return "task-\(row.id)"
+        case .section(let id, _), .message(let id, _):
+            return "label-\(id)"
+        }
+    }
+
+    var isTask: Bool {
+        if case .task = self {
+            return true
+        }
+        return false
     }
 }
 
@@ -1174,6 +1336,8 @@ private struct TdayTasksWidgetContent: View {
     let rows: [WidgetTaskRowModel]
     let date: Date
     let mode: TaskWidgetMode
+    /// The global Today feed's header, Overdue section and empty-day preview; nil elsewhere.
+    var today: TodayHeaderContent? = nil
 
     @Environment(\.widgetFamily) private var family
     @Environment(\.widgetRenderingMode) private var renderingMode
@@ -1187,7 +1351,9 @@ private struct TdayTasksWidgetContent: View {
             case .setup:
                 message(title: "Open T'Day", subtitle: "Set up your workspace")
             case .empty:
-                message(title: mode.emptyTitle, subtitle: "")
+                if !showsPreview {
+                    message(title: today?.emptyTitle ?? mode.emptyTitle, subtitle: "")
+                }
             case .locked:
                 lockedMessage
             case .stale:
@@ -1201,7 +1367,10 @@ private struct TdayTasksWidgetContent: View {
                 header
 
                 if status == .tasks {
-                    taskList
+                    taskList(items: taskItems, totalTaskCount: taskCount + (today?.overdueCount ?? 0), reservesOverflow: true)
+                } else if showsPreview, let today, let preview = today.preview {
+                    // The label already says how many are due that day, so no "+X more" row.
+                    taskList(items: previewItems(today, preview), totalTaskCount: preview.taskCount, reservesOverflow: false)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -1218,6 +1387,29 @@ private struct TdayTasksWidgetContent: View {
 
     private var metrics: WidgetLayoutMetrics {
         WidgetLayoutMetrics(family: family)
+    }
+
+    /// Where there is room, an empty Today previews its next day with tasks rather than centring
+    /// one line over blank space. Small keeps the plain message.
+    private var showsPreview: Bool {
+        status == .empty && family != .systemSmall && today?.preview != nil
+    }
+
+    /// Today's own rows, then its Overdue section — the order the app's Today screen uses.
+    private var taskItems: [WidgetListItem] {
+        var items = rows.map(WidgetListItem.task)
+        if let today, !today.overdueRows.isEmpty {
+            items.append(.section(id: "overdue", text: "Overdue · \(today.overdueCount)"))
+            items += today.overdueRows.map(WidgetListItem.task)
+        }
+        return items
+    }
+
+    private func previewItems(_ today: TodayHeaderContent, _ preview: WidgetDayPreview) -> [WidgetListItem] {
+        [
+            .message(id: "empty", text: today.emptyTitle ?? mode.emptyTitle),
+            .section(id: "preview", text: preview.label)
+        ] + preview.rows.map(WidgetListItem.task)
     }
 
     private var accentColor: Color {
@@ -1268,9 +1460,11 @@ private struct TdayTasksWidgetContent: View {
     private var header: some View {
         HStack(spacing: 8) {
             if family == .systemSmall {
-                if status == .tasks {
+                if status == .tasks, taskCount > 0 {
                     smallCountLabel
                 }
+            } else if let today {
+                dateHeader(today)
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(title)
@@ -1285,9 +1479,61 @@ private struct TdayTasksWidgetContent: View {
             }
 
             Spacer(minLength: 4)
+            if family != .systemSmall, let progress = today?.progress {
+                progressRing(progress)
+            }
             addButton
         }
         .frame(minHeight: metrics.headerHeight)
+    }
+
+    /// Today leads with its date — weekday over day number — and stacks "Today" over the count,
+    /// so a progress phrase fits beside the ring without squeezing the title.
+    private func dateHeader(_ today: TodayHeaderContent) -> some View {
+        HStack(spacing: 10) {
+            VStack(spacing: 1) {
+                Text(today.weekday)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(accentColor)
+                    .widgetAccentable()
+                Text(today.day)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+            }
+            .lineLimit(1)
+            .frame(minWidth: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Today")
+                    .font(.system(size: family == .systemLarge ? 16 : 15, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                if let countLabel = today.countLabel {
+                    Text(countLabel)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(secondaryTextColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Done today out of done plus still due today, swept clockwise from twelve.
+    private func progressRing(_ progress: WidgetProgress) -> some View {
+        let fraction = progress.total > 0 ? CGFloat(progress.done) / CGFloat(progress.total) : 0
+        return ZStack {
+            Circle()
+                .stroke(accentColor.opacity(renderingMode == .fullColor ? 0.22 : 0.18), lineWidth: 3)
+            Circle()
+                .trim(from: 0, to: fraction)
+                .stroke(accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .widgetAccentable()
+        }
+        .frame(width: 22, height: 22)
+        // WidgetKit tweens between reloads, so the sweep follows a check-off.
+        .animation(.easeInOut(duration: 0.2), value: fraction)
+        .accessibilityHidden(true)
     }
 
     private var smallCountLabel: some View {
@@ -1301,7 +1547,7 @@ private struct TdayTasksWidgetContent: View {
 
     private var countPill: some View {
         Text(countText)
-            .font(.system(size: 12, weight: .heavy, design: .rounded))
+            .font(.system(size: 12, weight: .semibold, design: .rounded))
             .foregroundStyle(secondaryTextColor)
             .lineLimit(1)
             .minimumScaleFactor(0.85)
@@ -1326,11 +1572,11 @@ private struct TdayTasksWidgetContent: View {
         .accessibilityLabel(mode.addAccessibilityLabel)
     }
 
-    private var taskList: some View {
+    private func taskList(items: [WidgetListItem], totalTaskCount: Int, reservesOverflow: Bool) -> some View {
         // WidgetKit system-family widgets do not support true in-widget scrolling, so iOS keeps a best-fit row set plus overflow text.
-        let totalCount = max(taskCount, rows.count)
-        let visibleRows = visibleTaskRows(totalCount: totalCount)
-        let overflowCount = max(0, totalCount - visibleRows.count)
+        let visibleItems = visibleListItems(items, totalTaskCount: totalTaskCount, reservesOverflow: reservesOverflow)
+        let taskTotal = max(totalTaskCount, items.filter(\.isTask).count)
+        let overflowCount = reservesOverflow ? max(0, taskTotal - visibleItems.filter(\.isTask).count) : 0
 
         let hasOverflow = overflowCount > 0
 
@@ -1338,9 +1584,9 @@ private struct TdayTasksWidgetContent: View {
         // metrics.rowSpacing, so removing the visible separator line costs no height —
         // the row-fit count (3 medium / 9 large) stays exactly the same as with dividers.
         return VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(visibleRows.enumerated()), id: \.element.id) { index, row in
-                taskRow(row)
-                if index < visibleRows.count - 1 || hasOverflow {
+            ForEach(Array(visibleItems.enumerated()), id: \.element.id) { index, item in
+                listItemView(item)
+                if index < visibleItems.count - 1 || hasOverflow {
                     rowGap
                 }
             }
@@ -1349,6 +1595,36 @@ private struct TdayTasksWidgetContent: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private func listItemView(_ item: WidgetListItem) -> some View {
+        switch item {
+        case .task(let row):
+            taskRow(row)
+        case .section(_, let text):
+            sectionLabel(text)
+        case .message(_, let text):
+            messageLine(text)
+        }
+    }
+
+    /// Names the rows below it: "Overdue · 2", "Tomorrow · 3 due".
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .foregroundStyle(secondaryTextColor)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, minHeight: metrics.rowHeight, alignment: .bottomLeading)
+    }
+
+    /// The empty day's own line, heading its preview of the next one.
+    private func messageLine(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: family == .systemLarge ? 15 : 14, weight: .bold, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .frame(maxWidth: .infinity, minHeight: metrics.rowHeight, alignment: .leading)
     }
 
     /// Inter-row spacing with no visible separator line. Fixed-height so it always
@@ -1364,29 +1640,47 @@ private struct TdayTasksWidgetContent: View {
         metrics.showsNotes && row.note != nil ? 2 : 1
     }
 
-    private func visibleTaskRows(totalCount: Int) -> [WidgetTaskRowModel] {
+    private func itemUnitCost(_ item: WidgetListItem) -> Int {
+        switch item {
+        case .task(let row):
+            return rowUnitCost(row)
+        case .section, .message:
+            return 1
+        }
+    }
+
+    private func visibleListItems(
+        _ items: [WidgetListItem],
+        totalTaskCount: Int,
+        reservesOverflow: Bool
+    ) -> [WidgetListItem] {
         let capacity = metrics.rowUnitCapacity
 
         // If every task is available and fits within the unit budget, show
         // them all and skip the overflow row entirely.
-        if rows.count >= totalCount {
-            let totalUnits = rows.reduce(0) { $0 + rowUnitCost($1) }
+        if items.filter(\.isTask).count >= totalTaskCount {
+            let totalUnits = items.reduce(0) { $0 + itemUnitCost($1) }
             if totalUnits <= capacity {
-                return rows
+                return items
             }
         }
 
-        // Otherwise reserve 1 unit for the "+X more" row and fill rows
-        // greedily in order until the next row would no longer fit.
-        var visible: [WidgetTaskRowModel] = []
+        // Otherwise reserve 1 unit for the "+X more" row (where there is one) and fill items
+        // greedily in order until the next one would no longer fit.
+        let reserved = reservesOverflow ? 1 : 0
+        var visible: [WidgetListItem] = []
         var usedUnits = 0
-        for row in rows {
-            let cost = rowUnitCost(row)
-            guard usedUnits + cost + 1 <= capacity else {
+        for item in items {
+            let cost = itemUnitCost(item)
+            guard usedUnits + cost + reserved <= capacity else {
                 break
             }
-            visible.append(row)
+            visible.append(item)
             usedUnits += cost
+        }
+        // A section label never closes the list: it would name rows that did not fit.
+        while case .section = visible.last {
+            visible.removeLast()
         }
         return visible
     }
@@ -1436,7 +1730,7 @@ private struct TdayTasksWidgetContent: View {
 
     private func taskRow(_ row: WidgetTaskRowModel) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 7) {
-            completeButton(for: row)
+            leadingRing(for: row)
                 // Pin the ring to the first line (near its vertical centre) instead
                 // of centring it across a wrapped two-line title.
                 .alignmentGuide(.firstTextBaseline) { dimension in
@@ -1444,23 +1738,24 @@ private struct TdayTasksWidgetContent: View {
                 }
             VStack(alignment: .leading, spacing: 1) {
                 Text(row.title)
-                    .font(.system(size: metrics.rowFontSize, weight: .bold, design: .rounded))
+                    .font(.system(size: metrics.rowFontSize, weight: .medium, design: .rounded))
                     .strikethrough(row.isChecking, color: secondaryTextColor)
                     .lineLimit(2)
                 if metrics.showsNotes, let note = row.note {
+                    // One quiet line: the title carries the row, the note only hints at more.
                     Text(note)
-                        .font(.system(size: metrics.rowFontSize - 2, weight: .semibold, design: .rounded))
+                        .font(.system(size: metrics.rowFontSize - 2, weight: .regular, design: .rounded))
                         .foregroundStyle(secondaryTextColor)
                         .strikethrough(row.isChecking, color: secondaryTextColor)
-                        .lineLimit(2)
+                        .lineLimit(1)
                 }
             }
             Spacer(minLength: 4)
             if mode.showsDueTime, family != .systemSmall, let dueEpochMs = row.dueEpochMs {
-                dueTimeChip(Self.dueTimeText(from: dueEpochMs), isOverdue: row.isOverdue)
+                dueTimeChip(Self.dueText(for: row, epochMs: dueEpochMs), isOverdue: row.isOverdue)
             }
         }
-        .foregroundStyle(.primary)
+        .foregroundStyle(row.isPreview ? secondaryTextColor : .primary)
         // Dim the whole row as it's checked off, so the fade reads as "leaving".
         .opacity(row.isChecking ? 0.55 : 1)
         .frame(minHeight: metrics.rowHeight, alignment: .leading)
@@ -1470,17 +1765,31 @@ private struct TdayTasksWidgetContent: View {
         .accessibilityLabel(accessibilityLabel(for: row))
     }
 
-    /// `isOverdue` only ever arrives true from a per-list widget (R7) — the global Today feed
-    /// is strictly "due today" and never produces one, so this is a pure addition for existing
-    /// widgets (isOverdue defaults false, tint is unchanged).
+    /// A small rounded pill, red for a time or day already past (a per-list row past due, or
+    /// Today's Overdue section).
     private func dueTimeChip(_ text: String, isOverdue: Bool) -> some View {
         Text(text)
-            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
             .foregroundStyle(isOverdue ? overdueColor : secondaryTextColor)
             .lineLimit(1)
             .minimumScaleFactor(0.85)
-            .padding(.horizontal, 2)
-            .frame(height: 22)
+            .padding(.horizontal, 7)
+            .frame(height: 20)
+            .background(Capsule().fill(isOverdue ? overdueChipColor : dueChipColor))
+    }
+
+    private var dueChipColor: Color {
+        guard renderingMode == .fullColor else {
+            return .primary.opacity(0.08)
+        }
+        return colorScheme == .dark ? .tdayDueChipDark : .tdayDueChip
+    }
+
+    private var overdueChipColor: Color {
+        guard renderingMode == .fullColor else {
+            return .primary.opacity(0.08)
+        }
+        return colorScheme == .dark ? .tdayOverdueChipDark : .tdayOverdueChip
     }
 
     /// Reuses the same red the priority-High ring already carries, rather than introducing a
@@ -1501,10 +1810,24 @@ private struct TdayTasksWidgetContent: View {
             .frame(height: metrics.rowHeight, alignment: .leading)
     }
 
+    /// A previewed row belongs to a later day: a grey ring that completes nothing (the tap falls
+    /// through to the widget, which opens the app).
+    @ViewBuilder
+    private func leadingRing(for row: WidgetTaskRowModel) -> some View {
+        if row.isPreview {
+            Circle()
+                .strokeBorder(widgetPriorityColor("lowest"), lineWidth: 1.6)
+                .frame(width: 14, height: 14)
+        } else {
+            completeButton(for: row)
+        }
+    }
+
     /// Tappable check ring (widgets v2): completes the task in place without
-    /// opening the app. Keeps the priority colour the old leading dot carried.
+    /// opening the app. Keeps the priority colour the old leading dot carried — floaters
+    /// included, since a floater has a priority too.
     private func completeButton(for row: WidgetTaskRowModel) -> some View {
-        let ringColor = mode == .floater ? accentColor : widgetPriorityColor(row.priority)
+        let ringColor = widgetPriorityColor(row.priority)
         return Button(intent: CompleteWidgetTaskIntent(kind: mode.completionKind, taskID: row.id)) {
             ZStack {
                 Circle()
@@ -1547,12 +1870,16 @@ private struct TdayTasksWidgetContent: View {
         guard mode.showsDueTime, let dueEpochMs = row.dueEpochMs else {
             return row.title
         }
-        let dueText = Self.dueTimeText(from: dueEpochMs)
+        let dueText = Self.dueText(for: row, epochMs: dueEpochMs)
         return row.isOverdue ? "\(row.title), overdue, \(dueText)" : "\(row.title), due \(dueText)"
     }
 
-    private static func dueTimeText(from epochMs: Int64) -> String {
+    /// The time of day, or for an Overdue row the day it was due ("Sep 27").
+    private static func dueText(for row: WidgetTaskRowModel, epochMs: Int64) -> String {
         let date = Date(timeIntervalSince1970: TimeInterval(epochMs) / 1_000)
+        if row.showsDueDay {
+            return date.formatted(.dateTime.month(.abbreviated).day())
+        }
         return date.formatted(date: .omitted, time: .shortened)
     }
 }
@@ -1959,6 +2286,12 @@ private extension Color {
     // colors.xml addition for cross-platform parity.
     static let tdayPriorityLowest = Color(red: 142.0 / 255.0, green: 142.0 / 255.0, blue: 147.0 / 255.0)
     static let tdayPriorityLowestDark = Color(red: 152.0 / 255.0, green: 152.0 / 255.0, blue: 157.0 / 255.0)
+    // Due-time pill fills, numerically identical to Android's tday_widget_due_chip_background and
+    // tday_widget_overdue_chip_background (light / values-night).
+    static let tdayDueChip = Color(red: 241.0 / 255.0, green: 244.0 / 255.0, blue: 249.0 / 255.0)
+    static let tdayDueChipDark = Color(red: 34.0 / 255.0, green: 39.0 / 255.0, blue: 54.0 / 255.0)
+    static let tdayOverdueChip = Color(red: 1.0, green: 236.0 / 255.0, blue: 234.0 / 255.0)
+    static let tdayOverdueChipDark = Color(red: 58.0 / 255.0, green: 35.0 / 255.0, blue: 38.0 / 255.0)
 }
 
 private extension Date {

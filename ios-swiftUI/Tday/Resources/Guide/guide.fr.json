@@ -1300,6 +1300,40 @@
       "searchBody": "cochez vos taches directement sur le widget de l'ecran d'accueil. les widgets aujourd'hui et floaters reagissent desormais au toucher : touchez l'anneau au debut d'une ligne pour terminer la tache sans ouvrir l'application. la ligne disparait aussitot et la completion se synchronise comme n'importe quelle autre — les appuis effectues hors ligne sont mis en file et appliques des que la connexion revient. touche par erreur ? ouvrez l'historique des taches terminees dans l'application et restaurez la tache a partir de la."
     },
     {
+      "id": "today-widget-progress",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "circle-check-big",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Le widget Aujourd'hui en un coup d'œil",
+      "summary": "Voyez où vous en êtes dans la journée, ce qui est en retard et ce qui vient ensuite.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Le widget Aujourd'hui commence par la date et un anneau de progression : combien des tâches du jour sont terminées, sur le total. Ce qui est en retard a sa propre section sous les tâches du jour, avec le jour d'échéance. Quand rien n'est prévu aujourd'hui, le widget montre ce qui arrive le prochain jour qui a des tâches. Une tâche cochée reste cochée et barrée un instant avant de disparaître."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "L'anneau ne compte que les tâches du jour. Terminer une tâche d'un autre jour ne le remplit pas."
+          ]
+        }
+      ],
+      "searchTitle": "le widget aujourd'hui en un coup d'œil",
+      "searchKeywords": "widget, aujourd'hui, progression, anneau, termine, en retard, demain, date, ecran d'accueil",
+      "searchBody": "voyez ou vous en etes dans la journee, ce qui est en retard et ce qui vient ensuite. le widget aujourd'hui commence par la date et un anneau de progression : combien des taches du jour sont terminees, sur le total. ce qui est en retard a sa propre section sous les taches du jour, avec le jour d'echeance. quand rien n'est prevu aujourd'hui, le widget montre ce qui arrive le prochain jour qui a des taches. une tache cochee reste cochee et barree un instant avant de disparaitre. l'anneau ne compte que les taches du jour. terminer une tache d'un autre jour ne le remplit pas."
+    },
+    {
       "id": "share-into-tday",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

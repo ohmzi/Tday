@@ -51,6 +51,7 @@ object GuideTopicIds {
     const val LIST_WIDGETS = "list-widgets"
     const val WIDGET_QUICK_ADD = "widget-quick-add"
     const val INTERACTIVE_WIDGETS = "interactive-widgets"
+    const val TODAY_WIDGET_PROGRESS = "today-widget-progress"
     const val SHARE_INTO_TDAY = "share-into-tday"
     const val ANDROID_SHORTCUTS = "android-shortcuts"
     const val FOCUS_FILTERS = "focus-filters"

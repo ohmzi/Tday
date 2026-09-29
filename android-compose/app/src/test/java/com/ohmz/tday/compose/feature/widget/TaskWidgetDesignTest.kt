@@ -33,6 +33,19 @@ class TaskWidgetDesignTest {
     }
 
     @Test
+    fun `a two-column widget drops the due pill and header extras whatever its height`() {
+        // A 2x2 on a tall-celled launcher reports ~160x160: MEDIUM by height, but too thin for a
+        // pill beside a title or a date and ring beside the header.
+        val twoColumn = taskWidgetShapeFor(DpSize(160.dp, 160.dp))
+        assertEquals(TaskWidgetShape(TaskWidgetLayout.MEDIUM, narrow = true), twoColumn)
+        assertEquals(false, taskWidgetShowsTrailingText(twoColumn))
+
+        val threeColumn = taskWidgetShapeFor(DpSize(250.dp, 160.dp))
+        assertEquals(TaskWidgetShape(TaskWidgetLayout.MEDIUM, narrow = false), threeColumn)
+        assertEquals(true, taskWidgetShowsTrailingText(threeColumn))
+    }
+
+    @Test
     fun `priority check ring resource follows task priority`() {
         assertEquals(R.drawable.widget_priority_ring_high, taskWidgetPriorityRingResource("High"))
         assertEquals(R.drawable.widget_priority_ring_high, taskWidgetPriorityRingResource("urgent"))

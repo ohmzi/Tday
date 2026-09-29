@@ -1300,6 +1300,40 @@
       "searchBody": "check off tasks right on the home-screen widget. the today and floater widgets take taps now: hit the ring at the start of any row to complete that task without opening the app. the row disappears immediately and the completion syncs like any other — taps made offline queue up and apply once you're back. mis-tapped? open the completed history in the app and restore the task from there."
     },
     {
+      "id": "today-widget-progress",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "circle-check-big",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Today widget at a glance",
+      "summary": "See how far through the day you are, what's overdue, and what's next.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "The Today widget leads with the date and a progress ring: how many of the tasks due today are done, out of all of them. Anything overdue sits in its own section below today's tasks, marked with the day it was due. When nothing is due today, the widget shows what's coming up on the next day that has tasks. Check a task off and it stays ticked and struck through for a moment before it leaves."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "The ring counts only tasks due today. Finishing something from another day won't fill it."
+          ]
+        }
+      ],
+      "searchTitle": "today widget at a glance",
+      "searchKeywords": "widget, today, progress, ring, done, overdue, tomorrow, date, home screen",
+      "searchBody": "see how far through the day you are, what's overdue, and what's next. the today widget leads with the date and a progress ring: how many of the tasks due today are done, out of all of them. anything overdue sits in its own section below today's tasks, marked with the day it was due. when nothing is due today, the widget shows what's coming up on the next day that has tasks. check a task off and it stays ticked and struck through for a moment before it leaves. the ring counts only tasks due today. finishing something from another day won't fill it."
+    },
+    {
       "id": "share-into-tday",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

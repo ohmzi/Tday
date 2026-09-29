@@ -31,6 +31,7 @@ enum TdayMotionGenerated {
     enum Delays {
         static let placementLead: TimeInterval = 0.32
         static let celebrationLead: TimeInterval = 0.32
+        static let widgetCheckHold: TimeInterval = 0.9
     }
 
     enum Easings {

@@ -42,51 +42,50 @@
             android:layout_marginStart="4dp"
             android:layout_weight="1"
             android:ellipsize="end"
-            android:fontFamily="@font/nunito_app"
+            android:fontFamily="@font/nunito_app_medium"
             android:gravity="start"
             android:includeFontPadding="false"
             android:maxLines="2"
             android:textColor="@color/tday_widget_on_surface"
             android:textDirection="locale"
-            android:textSize="13sp"
-            android:textStyle="bold" />
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/widget_row_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="6dp"
-            android:layout_marginTop="1dp"
-            android:fontFamily="@font/nunito_app"
+            android:background="@drawable/widget_due_chip"
+            android:fontFamily="@font/nunito_app_medium"
             android:gravity="center"
             android:includeFontPadding="false"
             android:maxLines="1"
             android:paddingStart="7dp"
+            android:paddingTop="2dp"
             android:paddingEnd="7dp"
-            android:singleLine="true"
+            android:paddingBottom="2dp"
             android:textColor="@color/tday_widget_on_surface_variant"
             android:textSize="11sp"
-            android:textStyle="bold"
             android:visibility="gone" />
     </LinearLayout>
 
-    <!-- Notes sit outside the title row; the 3dp bottom pad matches the title row's own, so a
+    <!-- Notes sit outside the title row, one quiet line indented under the title (ring 14dp +
+         check pad 4dp + title margin 4dp); the 3dp bottom pad matches the title row's own, so a
          notes-bearing task keeps the same 9dp task-to-task rhythm as a title-only one. -->
     <TextView
         android:id="@+id/widget_row_notes"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ellipsize="end"
-        android:fontFamily="@font/nunito_app"
+        android:fontFamily="@font/nunito_app_regular"
         android:gravity="start"
         android:includeFontPadding="false"
-        android:maxLines="2"
-        android:paddingStart="14dp"
+        android:maxLines="1"
+        android:paddingStart="22dp"
         android:paddingBottom="3dp"
         android:textColor="@color/tday_widget_on_surface_variant"
         android:textDirection="locale"
         android:textSize="11sp"
-        android:textStyle="bold"
         android:visibility="gone" />
 
     <TextView

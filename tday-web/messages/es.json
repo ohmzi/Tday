@@ -1154,6 +1154,13 @@
         "body": "Los widgets de Hoy y Flotantes ahora responden al toque: pulsa el anillo al inicio de cualquier fila para completar esa tarea sin abrir la app. La fila desaparece al instante y el completado se sincroniza como cualquier otro; los toques hechos sin conexión se ponen en cola y se aplican cuando vuelves a estar en línea.",
         "tip": "¿Un toque accidental? Abre el historial de completadas en la app y restaura la tarea desde allí."
       },
+      "today-widget-progress": {
+        "title": "El widget de Hoy de un vistazo",
+        "summary": "Mira cuánto llevas del día, qué está vencido y qué viene después.",
+        "keywords": "widget, hoy, progreso, anillo, hecho, vencido, mañana, fecha, pantalla de inicio",
+        "body": "El widget de Hoy empieza con la fecha y un anillo de progreso: cuántas de las tareas de hoy están hechas, del total. Lo vencido tiene su propia sección debajo de las tareas de hoy, con el día en que vencía. Cuando no hay nada para hoy, el widget muestra lo que viene el próximo día con tareas. Al marcar una tarea, queda marcada y tachada un momento antes de desaparecer.",
+        "tip": "El anillo solo cuenta las tareas de hoy. Terminar algo de otro día no lo llena."
+      },
       "share-into-tday": {
         "title": "Compartir a T'Day",
         "summary": "Envía texto desde cualquier app directamente a una tarea nueva.",

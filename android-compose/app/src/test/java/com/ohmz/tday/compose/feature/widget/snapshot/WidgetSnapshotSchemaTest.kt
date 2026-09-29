@@ -37,6 +37,22 @@ class WidgetSnapshotSchemaTest {
                     priorityRing = WidgetPriorityRing.LOWEST,
                 ),
             ),
+            upcomingDays = listOf(
+                WidgetSnapshotDay(
+                    dayStartEpochMs = 86_500L,
+                    dayEndEpochMs = 172_900L,
+                    taskCount = 0,
+                    overdueCount = 1,
+                    overdueRows = listOf(
+                        WidgetSnapshotRow(id = "d", key = "d".hashCode().toLong(), title = "Delta", priorityRing = WidgetPriorityRing.MEDIUM),
+                    ),
+                ),
+            ),
+            completedCount = 3,
+            overdueCount = 1,
+            overdueRows = listOf(
+                WidgetSnapshotRow(id = "d", key = "d".hashCode().toLong(), title = "Delta", priorityRing = WidgetPriorityRing.MEDIUM),
+            ),
         )
 
         val encoded = WidgetSnapshotJson.encodeToString(WidgetSnapshot.serializer(), original)
@@ -58,6 +74,9 @@ class WidgetSnapshotSchemaTest {
         assertEquals(null, decoded.dayStartEpochMs)
         assertEquals(null, decoded.dayEndEpochMs)
         assertTrue(decoded.rows.isEmpty())
+        assertEquals(0, decoded.completedCount)
+        assertEquals(0, decoded.overdueCount)
+        assertTrue(decoded.overdueRows.isEmpty())
     }
 
     @Test
