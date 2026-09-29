@@ -156,6 +156,8 @@ internal data class TaskWidgetModel(
     val dateBlock: TaskWidgetDateBlock? = null,
     /** Today only: the header's progress ring, drawn while there is anything to count. */
     val progress: TaskWidgetProgress? = null,
+    /** A picture drawn above the SETUP message — the List widget's "choose a list" art. */
+    val setupArt: Int? = null,
     val visuals: TaskWidgetVisuals,
     val openIntent: Intent,
     val addIntent: Intent,
@@ -320,6 +322,12 @@ internal object TaskWidgetRemoteViews {
             TaskWidgetContentState.LOCKED -> model.lockedTitle to model.lockedMessage
             TaskWidgetContentState.LOADING -> model.loadingTitle to ""
             else -> model.emptyTitle to ""
+        }
+        val art = model.setupArt?.takeIf { model.state == TaskWidgetContentState.SETUP }
+        setVisible(R.id.widget_message_art, art != null && !compact)
+        setVisible(R.id.widget_message_art_compact, art != null && compact)
+        if (art != null) {
+            setImageViewResource(if (compact) R.id.widget_message_art_compact else R.id.widget_message_art, art)
         }
         val locked = model.state == TaskWidgetContentState.LOCKED
         setVisible(R.id.widget_message_icon, locked && !compact)

@@ -72,6 +72,23 @@ enum AppRoute: Hashable {
         }
     }
 
+    /// The list a create link files its task into — `tday://todos/create?target=…&listId=…`,
+    /// which is the List widget's "+". Read beside `from(url:)` rather than carried on
+    /// `.createTodayTodo`/`.createFloaterTodo`, which are compared by value as path markers;
+    /// nil for any other link, or a create link without one.
+    static func createTaskListId(from url: URL) -> String? {
+        switch from(url: url) {
+        case .createTodayTodo?, .createFloaterTodo?:
+            let listId = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "listId" })?
+                .value
+            return listId?.isEmpty == false ? listId : nil
+        default:
+            return nil
+        }
+    }
+
     static func from(url: URL) -> AppRoute? {
         guard url.scheme?.lowercased() == "tday" else {
             return nil

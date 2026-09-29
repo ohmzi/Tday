@@ -682,6 +682,11 @@ struct TodoListScreen: View {
     let showsRootControls: Bool
     let usesRootFeedHeader: Bool
     let createTaskRequestID: Int
+    /// Applied to the next create sheet the request above opens — the Anytime root feed's half
+    /// of `AppRootView.rootCreateTaskPrefill` (a List widget's "+") — and handed back through
+    /// `onCreateTaskSheetClosed` so a later manual create starts blank.
+    let createTaskPrefill: CreateTaskPayload?
+    let onCreateTaskSheetClosed: () -> Void
     let openCreateTaskOnAppear: Bool
     let scrollToTopRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
@@ -826,6 +831,8 @@ struct TodoListScreen: View {
         pullRefreshEnabled: Bool = false,
         usesRootFeedHeader: Bool = false,
         createTaskRequestID: Int = 0,
+        createTaskPrefill: CreateTaskPayload? = nil,
+        onCreateTaskSheetClosed: @escaping () -> Void = {},
         openCreateTaskOnAppear: Bool = false,
         scrollToTopRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
@@ -844,6 +851,8 @@ struct TodoListScreen: View {
         self.pullRefreshEnabled = pullRefreshEnabled
         self.usesRootFeedHeader = usesRootFeedHeader
         self.createTaskRequestID = createTaskRequestID
+        self.createTaskPrefill = createTaskPrefill
+        self.onCreateTaskSheetClosed = onCreateTaskSheetClosed
         self.openCreateTaskOnAppear = openCreateTaskOnAppear
         self.scrollToTopRequestID = scrollToTopRequestID
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
@@ -1922,6 +1931,11 @@ struct TodoListScreen: View {
 
     private var screenWithTaskSheets: some View {
         screenWithLifecycleHandlers
+        .onChange(of: showingCreateTask) { _, showing in
+            if !showing {
+                onCreateTaskSheetClosed()
+            }
+        }
         .createTaskSheet(isPresented: $showingCreateTask) {
             createTaskSheetContent
         }
@@ -2476,7 +2490,7 @@ struct TodoListScreen: View {
             lists: viewModel.lists,
             titleText: L("New task"),
             submitText: L("Create"),
-            initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? TaskPriorityDisplay.importantValue : TaskPriorityDisplay.normalValue, due: viewModel.mode == .floater ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
+            initialPayload: createTaskPrefill ?? CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? TaskPriorityDisplay.importantValue : TaskPriorityDisplay.normalValue, due: viewModel.mode == .floater ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
             defaultScheduled: viewModel.mode != .floater,
             showScheduleControls: viewModel.mode != .floater,
             onParseTaskTitleNlp: viewModel.mode == .floater ? nil : { title, dueRef in

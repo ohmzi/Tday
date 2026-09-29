@@ -1238,6 +1238,40 @@
       "searchBody": "fai puntare un widget su una lista specifica invece che sull'intero flusso. tieni premuto un widget t'day e scegli modifica widget per decidere esattamente quale lista mostra — una qualsiasi delle tue liste programmate o liste flottanti. una lista programmata mostra gli orari di scadenza e segnala cio che e in ritardo; una lista flottante mostra un elenco aperto senza orari di scadenza. se non scegli nulla, il widget continua a mostrare l'intero flusso oggi o flottanti. aggiungi piu widget, ognuno puntato su una lista diversa, per vederli tutti insieme sulla tua schermata home."
     },
     {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget lista",
+      "summary": "Un terzo widget, per la lista che preferisci.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Accanto a Oggi e Libere c'è un widget lista. Posizionalo e ti chiede quale lista mostrare — qualsiasi lista pianificata o di attività libere. Da quel momento mostra solo quella lista, e il suo + aggiunge un'attività direttamente lì, con la priorità predefinita della lista. Posizionane un altro per un'altra lista; ognuno mantiene la propria."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Per passare un widget lista a un'altra lista, tienilo premuto e scegli Modifica (Modifica widget su iPhone)."
+          ]
+        }
+      ],
+      "searchTitle": "widget lista",
+      "searchKeywords": "widget, schermata home, lista, configura, selettore, libera, pianificata, aggiungi",
+      "searchBody": "un terzo widget, per la lista che preferisci. accanto a oggi e libere c'e un widget lista. posizionalo e ti chiede quale lista mostrare — qualsiasi lista pianificata o di attivita libere. da quel momento mostra solo quella lista, e il suo + aggiunge un'attivita direttamente li, con la priorita predefinita della lista. posizionane un altro per un'altra lista; ognuno mantiene la propria. per passare un widget lista a un'altra lista, tienilo premuto e scegli modifica (modifica widget su iphone)."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

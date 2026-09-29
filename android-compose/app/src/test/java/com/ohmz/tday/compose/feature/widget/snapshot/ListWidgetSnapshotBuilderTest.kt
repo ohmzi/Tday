@@ -1,6 +1,8 @@
 package com.ohmz.tday.compose.feature.widget.snapshot
 
+import com.ohmz.tday.compose.core.data.CachedFloaterListRecord
 import com.ohmz.tday.compose.core.data.CachedFloaterRecord
+import com.ohmz.tday.compose.core.data.CachedListRecord
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import org.junit.Assert.assertEquals
@@ -20,6 +22,8 @@ class ListWidgetSnapshotBuilderTest {
     fun `todo snapshot includes only pending tasks from the chosen list`() {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(
+                lists = LISTS,
+                floaterLists = FLOATER_LISTS,
                 todos = listOf(
                     todo(id = "in-list", title = "In list", listId = "list-1"),  // skipcq: KT-W1042
                     todo(id = "other-list", title = "Other list", listId = "list-2"),
@@ -42,6 +46,8 @@ class ListWidgetSnapshotBuilderTest {
     fun `todo snapshot is not restricted to a day window unlike Today`() {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(
+                lists = LISTS,
+                floaterLists = FLOATER_LISTS,
                 todos = listOf(
                     todo(id = "far-future", title = "Far future", listId = "list-1", dueEpochMs = now + 30L * 86_400_000L),
                     todo(id = "undated", title = "Undated", listId = "list-1", dueEpochMs = null),  // skipcq: KT-W1042
@@ -61,6 +67,8 @@ class ListWidgetSnapshotBuilderTest {
     fun `todo snapshot flags a task overdue only when its due time has passed`() {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(
+                lists = LISTS,
+                floaterLists = FLOATER_LISTS,
                 todos = listOf(
                     todo(id = "past", title = "Past", listId = "list-1", dueEpochMs = now - 1L),
                     todo(id = "future", title = "Future", listId = "list-1", dueEpochMs = now + 1L),
@@ -83,6 +91,8 @@ class ListWidgetSnapshotBuilderTest {
     fun `floater snapshot includes only pending floaters from the chosen list`() {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(
+                lists = LISTS,
+                floaterLists = FLOATER_LISTS,
                 floaters = listOf(
                     floater(id = "in-list", title = "In list", listId = "list-1"),
                     floater(id = "other-list", title = "Other list", listId = "list-2"),
@@ -110,7 +120,7 @@ class ListWidgetSnapshotBuilderTest {
         }
 
         val snapshot = buildListWidgetSnapshot(
-            state = OfflineSyncState(todos = todos),
+            state = OfflineSyncState(todos = todos, lists = LISTS),
             listId = "list-1",
             listType = WidgetListType.TODO,
             workspaceConfigured = true,
@@ -124,7 +134,7 @@ class ListWidgetSnapshotBuilderTest {
     @Test
     fun `snapshot exposes empty state for a configured list with no pending tasks`() {
         val snapshot = buildListWidgetSnapshot(
-            state = OfflineSyncState(),
+            state = OfflineSyncState(lists = LISTS),
             listId = "list-1",
             listType = WidgetListType.TODO,
             workspaceConfigured = true,
@@ -140,6 +150,8 @@ class ListWidgetSnapshotBuilderTest {
     fun `snapshot exposes setup state before workspace configuration`() {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(
+                lists = LISTS,
+                floaterLists = FLOATER_LISTS,
                 todos = listOf(todo(id = "a", title = "A", listId = "list-1")),
             ),
             listId = "list-1",
@@ -151,6 +163,50 @@ class ListWidgetSnapshotBuilderTest {
         assertEquals(WidgetSnapshotStatus.SETUP, snapshot.status)
         assertEquals(0, snapshot.taskCount)
         assertTrue(snapshot.rows.isEmpty())
+    }
+
+    @Test
+    fun `snapshot carries the list's current name`() {
+        val snapshot = buildListWidgetSnapshot(
+            state = OfflineSyncState(lists = listOf(CachedListRecord(id = "list-1", name = "Renamed"))),
+            listId = "list-1",
+            listType = WidgetListType.TODO,
+            workspaceConfigured = true,
+            nowEpochMs = now,
+        )
+
+        assertEquals("Renamed", snapshot.listName)
+        assertEquals(false, snapshot.listMissing)
+    }
+
+    @Test
+    fun `snapshot reports a list that no longer exists instead of an empty one`() {
+        val snapshot = buildListWidgetSnapshot(
+            state = OfflineSyncState(
+                todos = listOf(todo(id = "orphan", title = "Orphan", listId = "gone")),
+                lists = LISTS,
+            ),
+            listId = "gone",
+            listType = WidgetListType.TODO,
+            workspaceConfigured = true,
+            nowEpochMs = now,
+        )
+
+        assertTrue(snapshot.listMissing)
+        assertTrue(snapshot.rows.isEmpty())
+    }
+
+    @Test
+    fun `a floater list is looked up among floater lists, not scheduled ones`() {
+        val snapshot = buildListWidgetSnapshot(
+            state = OfflineSyncState(lists = listOf(CachedListRecord(id = "shared-id", name = "Scheduled"))),
+            listId = "shared-id",
+            listType = WidgetListType.FLOATER,
+            workspaceConfigured = true,
+            nowEpochMs = now,
+        )
+
+        assertTrue(snapshot.listMissing)
     }
 
     private fun todo(
@@ -184,4 +240,9 @@ class ListWidgetSnapshotBuilderTest {
         completed = completed,
         listId = listId,
     )
+
+    private companion object {
+        val LISTS = listOf(CachedListRecord(id = "list-1", name = "Errands"))
+        val FLOATER_LISTS = listOf(CachedFloaterListRecord(id = "list-1", name = "Someday"))
+    }
 }

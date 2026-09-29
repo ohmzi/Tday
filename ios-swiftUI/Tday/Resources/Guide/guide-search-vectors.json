@@ -16,6 +16,7 @@
     "widget": [
       "home-widget",
       "widget-list-selection",
+      "list-widgets",
       "widget-quick-add",
       "interactive-widgets",
       "today-widget-progress",
@@ -57,6 +58,7 @@
       "default-home-screen",
       "promote-and-float",
       "reusable-lists",
+      "list-widgets",
       "root-feeds",
       "create-task",
       "morning-sweep",
@@ -82,7 +84,8 @@
       "bulk-actions",
       "nlp-date-syntax",
       "copy-task-text",
-      "promote-and-float"
+      "promote-and-float",
+      "list-widgets"
     ],
     "pin": [
       "pin-task",

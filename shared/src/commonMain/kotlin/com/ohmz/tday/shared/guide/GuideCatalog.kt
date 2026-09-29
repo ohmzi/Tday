@@ -349,10 +349,12 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.WIDGET_LIST_SELECTION), tip(GuideTopicIds.WIDGET_LIST_SELECTION)),
         ),
         topic(
-            // Android only: a distinct per-list widget type (add-time configuration
-            // Activity), not the same mechanism as iOS's WIDGET_LIST_SELECTION picker above.
+            // The third widget kind, beside Today and Floater, on both platforms: placed without a
+            // list, it asks for one (Android opens its picker on a tap, iOS 18+ asks as it is
+            // added), then shows only that list and adds into it. Separate from iOS's
+            // WIDGET_LIST_SELECTION above, which re-points a Today or Floater widget instead.
             GuideTopicIds.LIST_WIDGETS, GuideSectionId.WIDGETS_AND_SURFACES, "layout-grid",
-            setOf(ANDROID), sinceVersion = "0.7.8",
+            setOf(ANDROID, IOS), sinceVersion = "0.7.44",
             body = listOf(para(GuideTopicIds.LIST_WIDGETS), tip(GuideTopicIds.LIST_WIDGETS)),
         ),
         topic(

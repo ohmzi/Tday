@@ -541,6 +541,23 @@
     <string name="widget_floater_tasks_count">%1$d открыто</string>
     <string name="widget_floater_tasks_count_unit">открыто</string>
     <string name="widget_loading">Загрузка задач…</string>
+    <string name="widget_list_tasks_description">Показывает выбранный вами список</string>
+    <string name="widget_list_tasks_title">Список</string>
+    <string name="widget_list_tasks_title_small">Список — маленький</string>
+    <string name="widget_list_tasks_title_medium">Список — средний</string>
+    <string name="widget_list_tasks_title_large">Список — большой</string>
+    <string name="widget_list_tasks_setup_title">Выберите список</string>
+    <string name="widget_list_tasks_setup_message">Нажмите, чтобы выбрать список для этого виджета</string>
+    <string name="widget_list_tasks_missing_message">Этот список удалён. Нажмите, чтобы выбрать другой.</string>
+    <string name="widget_list_tasks_empty">В этом списке ничего не осталось</string>
+    <string name="widget_list_picker_title">Выберите список</string>
+    <string name="widget_list_picker_subtitle">Виджет будет показывать только этот список, а кнопка + будет добавлять задачи прямо в него.</string>
+    <string name="widget_list_picker_empty_title">Списков пока нет</string>
+    <string name="widget_list_picker_empty">Создайте список в T\'Day, затем снова нажмите на этот виджет.</string>
+    <string name="widget_list_picker_section_todo">Запланированные списки</string>
+    <string name="widget_list_picker_section_floater">Списки без срока</string>
+    <string name="widget_list_picker_shared_label">Общий</string>
+    <string name="widget_list_picker_selected">Выбран</string>
 
     <!-- Settings: updates -->
     <string name="settings_check_updates">Проверить обновления</string>

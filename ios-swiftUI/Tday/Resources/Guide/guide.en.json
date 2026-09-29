@@ -1238,6 +1238,40 @@
       "searchBody": "point any widget at one specific list instead of the whole feed. long-press a t'day widget and choose edit widget to pick exactly which list it shows — any of your scheduled lists or floater lists. a scheduled list shows due times and flags anything overdue; a floater list shows an open list with no due times. leave it unset and the widget keeps showing the full today or floater feed. add several widgets, each pointed at a different list, to see them all on your home screen at once."
     },
     {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "List widget",
+      "summary": "A third widget, for one list of your choice.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Beside Today and Floater there's a List widget. Place it and it asks which list to show — any scheduled or floater list. From then on it shows only that list, and its + adds a task straight into it, with the list's default priority. Place another for another list; each keeps its own."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "To switch a List widget to a different list, long-press it and choose Edit (Edit Widget on iPhone)."
+          ]
+        }
+      ],
+      "searchTitle": "list widget",
+      "searchKeywords": "widget, home screen, list, setup, picker, floater, scheduled, add",
+      "searchBody": "a third widget, for one list of your choice. beside today and floater there's a list widget. place it and it asks which list to show — any scheduled or floater list. from then on it shows only that list, and its + adds a task straight into it, with the list's default priority. place another for another list; each keeps its own. to switch a list widget to a different list, long-press it and choose edit (edit widget on iphone)."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

@@ -1238,6 +1238,40 @@
       "searchBody": "faites pointer un widget vers une liste precise plutot que tout le flux. appuyez longuement sur un widget t'day et choisissez modifier le widget pour definir exactement la liste qu'il affiche — n'importe laquelle de vos listes planifiees ou de vos listes flottantes. une liste planifiee affiche les heures d'echeance et signale les taches en retard ; une liste flottante affiche une liste ouverte sans heure d'echeance. sans choix, le widget continue d'afficher le flux complet aujourd'hui ou flottant. ajoutez plusieurs widgets, chacun pointant vers une liste differente, pour tous les voir en meme temps sur votre ecran d'accueil."
     },
     {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget de liste",
+      "summary": "Un troisième widget, pour la liste de votre choix.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "À côté d'Aujourd'hui et Flottantes, il y a un widget de liste. Placez-le et il vous demande quelle liste afficher — n'importe quelle liste planifiée ou de tâches flottantes. Ensuite, il n'affiche que cette liste, et son + y ajoute directement une tâche, avec la priorité par défaut de la liste. Placez-en un autre pour une autre liste ; chacun garde la sienne."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Pour passer un widget de liste à une autre liste, appuyez longuement dessus et choisissez Modifier (Modifier le widget sur iPhone)."
+          ]
+        }
+      ],
+      "searchTitle": "widget de liste",
+      "searchKeywords": "widget, ecran d'accueil, liste, configurer, selecteur, flottant, prevu, ajouter",
+      "searchBody": "un troisieme widget, pour la liste de votre choix. a cote d'aujourd'hui et flottantes, il y a un widget de liste. placez-le et il vous demande quelle liste afficher — n'importe quelle liste planifiee ou de taches flottantes. ensuite, il n'affiche que cette liste, et son + y ajoute directement une tache, avec la priorite par defaut de la liste. placez-en un autre pour une autre liste ; chacun garde la sienne. pour passer un widget de liste a une autre liste, appuyez longuement dessus et choisissez modifier (modifier le widget sur iphone)."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

@@ -1238,6 +1238,40 @@
       "searchBody": "faca um widget apontar para uma lista especifica em vez de todo o feed. mantenha premido um widget do t'day e escolha editar widget para definir exatamente que lista ele mostra — qualquer uma das suas listas agendadas ou listas de flutuantes. uma lista agendada mostra horas de vencimento e assinala o que esta atrasado; uma lista de flutuantes mostra uma lista aberta sem horas de vencimento. se nao escolher nada, o widget continua a mostrar o feed completo de hoje ou de flutuantes. adicione varios widgets, cada um apontando para uma lista diferente, para os ver todos ao mesmo tempo no seu ecra principal."
     },
     {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget de lista",
+      "summary": "Um terceiro widget, para a lista que escolher.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Ao lado de Hoje e Flutuantes há um widget de lista. Coloque-o e ele pergunta qual lista mostrar — qualquer lista agendada ou de tarefas flutuantes. A partir daí mostra só essa lista, e o seu + adiciona uma tarefa diretamente nela, com a prioridade padrão da lista. Coloque outro para outra lista; cada um mantém a sua."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Para trocar um widget de lista para outra lista, toque e segure nele e escolha Editar (Editar widget no iPhone)."
+          ]
+        }
+      ],
+      "searchTitle": "widget de lista",
+      "searchKeywords": "widget, tela inicial, lista, configurar, seletor, flutuante, agendada, adicionar",
+      "searchBody": "um terceiro widget, para a lista que escolher. ao lado de hoje e flutuantes ha um widget de lista. coloque-o e ele pergunta qual lista mostrar — qualquer lista agendada ou de tarefas flutuantes. a partir dai mostra so essa lista, e o seu + adiciona uma tarefa diretamente nela, com a prioridade padrao da lista. coloque outro para outra lista; cada um mantem a sua. para trocar um widget de lista para outra lista, toque e segure nele e escolha editar (editar widget no iphone)."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

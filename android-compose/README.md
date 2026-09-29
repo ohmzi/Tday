@@ -174,23 +174,33 @@ color, and native RemoteViews idioms over custom chrome.
 
 ### List widget (per-instance configuration)
 
-A third widget kind, `ListTasksWidget`, lets a placed instance show any single list instead of the
-fixed Today/Floater scope — the app's first `android:configure` widget. Placing (or long-press
-editing) one of its three size receivers launches `WidgetListConfigurationActivity`
-(`ACTION_APPWIDGET_CONFIGURE`), which lists every scheduled and floater list from the offline cache
-and lets the user pick one.
+The third widget kind, beside Today and Floater, shows one list the user picks for that placed
+instance. There are exactly three kinds — Today, Floater, List — each offered in Small, Medium and
+Large (`ListWidgetSmallReceiver`, `ListWidgetReceiver`, `ListWidgetLargeReceiver`).
 
-- **Content shape follows the chosen list's type**, not a third layout: a scheduled list renders
-  due-date-shaped (due times, an overdue-time tint) like Today; a floater list renders undated like
-  Floater. Both reuse the same `TaskWidgetContent` visual layer as Today/Floater.
-- **Configuration is per `appWidgetId`**, not per kind — unlike Today/Floater's one shared snapshot
-  file, `WidgetListSelectionStore` (SharedPreferences, keyed by widget id) and a
-  `widget-list-snapshot-<appWidgetId>.json` file exist per placed instance, so two List widgets can
-  show two different lists at once. `WidgetSnapshotWriter` rebuilds every configured instance's
-  snapshot on each cache write; the widget's own `onDeleted` clears both stores for a removed
-  instance.
-- The configuration activity writes the first snapshot synchronously (it has Hilt/Room access,
-  unlike a widget's own render path) so a freshly placed instance skips the `LOADING` state.
+- **It lands unconfigured.** Its provider info declares `widgetFeatures="reconfigurable|configuration_optional"`,
+  so on Android 12+ the launcher places it straight away. It shows the setup picture
+  (`widget_list_setup_art`, drawn the same on iOS) and "Choose a list"; a tap anywhere — "+"
+  included — opens `WidgetListPickerActivity` for that `appWidgetId`. The same activity is the
+  `android:configure` target, so older launchers open it at placement and every launcher offers it
+  again from the widget's long-press reconfigure.
+- **The picker** lists every scheduled and floater list from the offline cache with its open count,
+  writes the selection and the instance's first snapshot, and repaints it. With no lists it says so
+  and offers to open the app.
+- **Content is the whole list.** A scheduled list shows every open task in it, whatever day it is
+  due: today's rows carry their time and any other row its day ("Sep 30"), tinted when overdue. A
+  floater list shows its open floaters undated. Both count "open" and empty to "Nothing left in this
+  list".
+- **"+" creates straight into the list** — its task type, the list preselected, and so the list's own
+  default priority, which the create sheet applies.
+- **Configuration is per `appWidgetId`**, not per kind — `WidgetListSelectionStore` (SharedPreferences,
+  keyed by widget id) and a `widget-list-snapshot-<appWidgetId>.json` file exist per placed instance,
+  so two List widgets can show two different lists. `WidgetSnapshotWriter` rebuilds every configured
+  instance on each cache write and prunes selections whose id now belongs to another kind; the
+  receiver's `onDeleted` clears both stores for a removed instance.
+- **A deleted list** makes its widget ask again ("That list was deleted. Tap to choose another.");
+  a renamed one shows its new name on the next write, since the snapshot carries the cache's name.
+- While app lock is on, the widget shows the lock and the generic "List" title, never the list name.
 - Every receiver, List included, renders its own ids straight from `onUpdate` (no WorkManager
   session), so a List widget repaints after a reboot on the same timeline as Today/Floater.
 

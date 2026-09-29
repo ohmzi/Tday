@@ -538,6 +538,23 @@
     <string name="widget_floater_tasks_count">%1$d terbuka</string>
     <string name="widget_floater_tasks_count_unit">terbuka</string>
     <string name="widget_loading">Memuatkan tugasan…</string>
+    <string name="widget_list_tasks_description">Memaparkan satu senarai pilihan anda sepintas lalu</string>
+    <string name="widget_list_tasks_title">Senarai</string>
+    <string name="widget_list_tasks_title_small">Senarai - Kecil</string>
+    <string name="widget_list_tasks_title_medium">Senarai - Sederhana</string>
+    <string name="widget_list_tasks_title_large">Senarai - Besar</string>
+    <string name="widget_list_tasks_setup_title">Pilih senarai</string>
+    <string name="widget_list_tasks_setup_message">Ketik untuk memilih senarai yang dipaparkan widget ini</string>
+    <string name="widget_list_tasks_missing_message">Senarai itu telah dipadam. Ketik untuk memilih yang lain.</string>
+    <string name="widget_list_tasks_empty">Tiada apa-apa lagi dalam senarai ini</string>
+    <string name="widget_list_picker_title">Pilih senarai</string>
+    <string name="widget_list_picker_subtitle">Widget ini hanya akan memaparkan senarai ini, dan butang + menambah tugasan terus ke dalamnya.</string>
+    <string name="widget_list_picker_empty_title">Belum ada senarai</string>
+    <string name="widget_list_picker_empty">Cipta senarai dalam T\'Day, kemudian ketik widget ini sekali lagi.</string>
+    <string name="widget_list_picker_section_todo">Senarai berjadual</string>
+    <string name="widget_list_picker_section_floater">Senarai apungan</string>
+    <string name="widget_list_picker_shared_label">Dikongsi</string>
+    <string name="widget_list_picker_selected">Dipilih</string>
 
     <!-- Settings: updates -->
     <string name="settings_check_updates">Semak kemas kini</string>

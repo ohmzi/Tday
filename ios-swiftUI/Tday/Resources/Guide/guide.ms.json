@@ -1238,6 +1238,40 @@
       "searchBody": "jadikan mana-mana widget menunjuk pada satu senarai tertentu, bukan seluruh suapan. tekan lama widget t'day dan pilih edit widget untuk menetapkan senarai yang dipaparkan — mana-mana senarai berjadual atau senarai floater anda. senarai berjadual memaparkan waktu tarikh akhir dan menandakan tugasan tertunggak; senarai floater memaparkan senarai terbuka tanpa waktu tarikh akhir. jika tidak ditetapkan, widget terus memaparkan suapan penuh hari ini atau floater. tambah beberapa widget, masing-masing menunjuk ke senarai berbeza, untuk melihat semuanya sekali gus pada skrin utama anda."
     },
     {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.44",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget senarai",
+      "summary": "Widget ketiga, untuk satu senarai pilihan anda.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Selain Hari Ini dan Terapung, ada widget senarai. Letakkannya dan ia akan bertanya senarai mana yang hendak dipaparkan — mana-mana senarai berjadual atau senarai terapung. Selepas itu ia hanya memaparkan senarai itu, dan butang + menambah tugasan terus ke dalamnya, dengan keutamaan lalai senarai itu. Letakkan satu lagi untuk senarai lain; setiap satu mengekalkan senarainya sendiri."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Untuk menukar widget senarai kepada senarai lain, tekan lama widget itu dan pilih Edit (Edit Widget pada iPhone)."
+          ]
+        }
+      ],
+      "searchTitle": "widget senarai",
+      "searchKeywords": "widget, skrin utama, senarai, persediaan, pemilih, terapung, berjadual, tambah",
+      "searchBody": "widget ketiga, untuk satu senarai pilihan anda. selain hari ini dan terapung, ada widget senarai. letakkannya dan ia akan bertanya senarai mana yang hendak dipaparkan — mana-mana senarai berjadual atau senarai terapung. selepas itu ia hanya memaparkan senarai itu, dan butang + menambah tugasan terus ke dalamnya, dengan keutamaan lalai senarai itu. letakkan satu lagi untuk senarai lain; setiap satu mengekalkan senarainya sendiri. untuk menukar widget senarai kepada senarai lain, tekan lama widget itu dan pilih edit (edit widget pada iphone)."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

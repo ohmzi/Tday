@@ -539,6 +539,23 @@
     <string name="widget_floater_tasks_count">%1$d offen</string>
     <string name="widget_floater_tasks_count_unit">offen</string>
     <string name="widget_loading">Aufgaben werden geladen…</string>
+    <string name="widget_list_tasks_description">Zeigt eine Liste deiner Wahl auf einen Blick</string>
+    <string name="widget_list_tasks_title">Liste</string>
+    <string name="widget_list_tasks_title_small">Liste - Klein</string>
+    <string name="widget_list_tasks_title_medium">Liste - Mittel</string>
+    <string name="widget_list_tasks_title_large">Liste - Groß</string>
+    <string name="widget_list_tasks_setup_title">Liste wählen</string>
+    <string name="widget_list_tasks_setup_message">Tippe, um die Liste für dieses Widget zu wählen</string>
+    <string name="widget_list_tasks_missing_message">Diese Liste wurde gelöscht. Tippe, um eine andere zu wählen.</string>
+    <string name="widget_list_tasks_empty">Nichts mehr in dieser Liste</string>
+    <string name="widget_list_picker_title">Liste wählen</string>
+    <string name="widget_list_picker_subtitle">Dieses Widget zeigt nur diese Liste, und sein + fügt Aufgaben direkt hinzu.</string>
+    <string name="widget_list_picker_empty_title">Noch keine Listen</string>
+    <string name="widget_list_picker_empty">Erstelle eine Liste in T\'Day und tippe dann erneut auf dieses Widget.</string>
+    <string name="widget_list_picker_section_todo">Geplante Listen</string>
+    <string name="widget_list_picker_section_floater">Floater-Listen</string>
+    <string name="widget_list_picker_shared_label">Geteilt</string>
+    <string name="widget_list_picker_selected">Ausgewählt</string>
 
     <!-- Settings: updates -->
     <string name="settings_check_updates">Nach Updates suchen</string>

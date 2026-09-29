@@ -27,9 +27,9 @@ class WidgetRefreshRoutingTest {
         FloaterTasksWidgetSmallReceiver::class.java to intArrayOf(21),
         FloaterTasksWidgetReceiver::class.java to intArrayOf(22),
         FloaterTasksWidgetLargeReceiver::class.java to intArrayOf(23, 24),
-        ListTasksWidgetSmallReceiver::class.java to intArrayOf(31),
-        ListTasksWidgetReceiver::class.java to intArrayOf(32),
-        ListTasksWidgetLargeReceiver::class.java to intArrayOf(33),
+        ListWidgetSmallReceiver::class.java to intArrayOf(31),
+        ListWidgetReceiver::class.java to intArrayOf(32),
+        ListWidgetLargeReceiver::class.java to intArrayOf(33),
     )
 
     /** The kind each placed id genuinely is, i.e. what `AppWidgetManager` would report. */

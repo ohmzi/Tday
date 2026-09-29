@@ -80,6 +80,14 @@ internal data class WidgetSnapshot(
      */
     val overdueCount: Int = 0,
     val overdueRows: List<WidgetSnapshotRow> = emptyList(),
+    /**
+     * List widget only: the list's name as the cache has it now, so a rename reaches the header
+     * on the next write instead of waiting for the widget to be set up again. A list name is the
+     * user's own text, not a localized string, so it is safe to bake where the Today title is not.
+     */
+    val listName: String? = null,
+    /** List widget only: the chosen list no longer exists; the widget asks for another. */
+    val listMissing: Boolean = false,
 )
 
 /** One upcoming local day of [WidgetSnapshot.upcomingDays], `[dayStartEpochMs, dayEndEpochMs)`. */

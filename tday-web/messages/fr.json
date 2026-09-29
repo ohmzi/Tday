@@ -1135,11 +1135,11 @@
         "tip": "Ajoutez plusieurs widgets, chacun pointant vers une liste différente, pour tous les voir en même temps sur votre écran d'accueil."
       },
       "list-widgets": {
-        "title": "Widgets de listes",
-        "summary": "Affichez n'importe quelle liste sur votre écran d'accueil, pas seulement Aujourd'hui.",
-        "keywords": "widget, écran d'accueil, liste, configurer, sélecteur, flottant, prévu",
-        "body": "Ajoutez un widget T'Day et un sélecteur vous permet de choisir la liste qu'il affiche — n'importe quelle liste planifiée ou de tâches flottantes, pas seulement Aujourd'hui ou Flottantes. Ajoutez à nouveau le widget pour afficher une autre liste ; chacun mémorise son propre choix.",
-        "tip": "Appuyez longuement sur un widget placé et choisissez Modifier (ou les réglages de widgets de votre launcher) pour le changer de liste plus tard."
+        "title": "Widget de liste",
+        "summary": "Un troisième widget, pour la liste de votre choix.",
+        "keywords": "widget, écran d'accueil, liste, configurer, sélecteur, flottant, prévu, ajouter",
+        "body": "À côté d'Aujourd'hui et Flottantes, il y a un widget de liste. Placez-le et il vous demande quelle liste afficher — n'importe quelle liste planifiée ou de tâches flottantes. Ensuite, il n'affiche que cette liste, et son + y ajoute directement une tâche, avec la priorité par défaut de la liste. Placez-en un autre pour une autre liste ; chacun garde la sienne.",
+        "tip": "Pour passer un widget de liste à une autre liste, appuyez longuement dessus et choisissez Modifier (Modifier le widget sur iPhone)."
       },
       "widget-quick-add": {
         "title": "Ajout rapide depuis le widget",

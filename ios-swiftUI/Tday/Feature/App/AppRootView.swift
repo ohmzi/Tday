@@ -61,7 +61,8 @@ struct AppRootView: View {
     @State private var rootFeedTabWasChosen = false
     @State private var rootCreateTaskRequestID = 0
     @State private var pendingRootCreateTask: PendingRootCreateTask?
-    // Prefill from a share-extension capture, applied to the next create sheet.
+    // Prefill for the next create sheet, on whichever feed it opens: a share-extension capture,
+    // or the list a List widget's "+" files into.
     @State private var rootCreateTaskPrefill: CreateTaskPayload?
     @State private var scheduledTaskHomeScrollToTopRequestID = 0
     @State private var floaterTaskHomeScrollToTopRequestID = 0
@@ -220,6 +221,8 @@ struct AppRootView: View {
                                     createTaskRequestID: (rootFeedTab == .floaterTaskHome
                                         ? rootCreateTaskRequestID
                                         : 0),
+                                    createTaskPrefill: rootCreateTaskPrefill,
+                                    onCreateTaskSheetClosed: { rootCreateTaskPrefill = nil },
                                     scrollToTopRequestID: floaterTaskHomeScrollToTopRequestID,
                                     onRootDockCollapsedChange: { rootDockCollapsed = $0 },
                                     onRootControlsVisibleChange: { rootControlsVisible = $0 },
@@ -1154,6 +1157,19 @@ struct AppRootView: View {
     private func handleDeepLink(_ url: URL) {
         guard let route = AppRoute.from(url: url) else {
             return
+        }
+        // A List widget's "+": the sheet opens on that list, which also gives it the list's own
+        // default priority — the sheet resolves that from the list it opens on.
+        if let listId = AppRoute.createTaskListId(from: url) {
+            rootCreateTaskPrefill = CreateTaskPayload(
+                title: "",
+                description: nil,
+                priority: TaskPriorityDisplay.normalValue,
+                // The blank sheet's own default for a dated task; a floater has no date.
+                due: route == .createTodayTodo ? Date().addingTimeInterval(60 * 60) : nil,
+                rrule: nil,
+                listId: listId
+            )
         }
         handleRoute(route)
     }

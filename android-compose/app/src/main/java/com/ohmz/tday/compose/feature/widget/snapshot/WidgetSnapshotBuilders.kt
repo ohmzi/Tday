@@ -143,6 +143,21 @@ internal fun buildListWidgetSnapshot(
         )
     }
 
+    // Found by id in the list catalog of its own type; a list that is gone is reported as such
+    // rather than rendered as an empty list, so the widget can ask for another one.
+    val listName = when (listType) {
+        WidgetListType.TODO -> state.lists.firstOrNull { it.id == listId }?.name
+        WidgetListType.FLOATER -> state.floaterLists.firstOrNull { it.id == listId }?.name
+    }
+    if (listName == null) {
+        return WidgetSnapshot(
+            generatedAtEpochMs = nowEpochMs,
+            status = WidgetSnapshotStatus.EMPTY,
+            taskCount = 0,
+            listMissing = true,
+        )
+    }
+
     return when (listType) {
         WidgetListType.TODO -> {
             val tasks = TaskSortEngine.sortedTodos(
@@ -161,6 +176,7 @@ internal fun buildListWidgetSnapshot(
                 status = if (tasks.isEmpty()) WidgetSnapshotStatus.EMPTY else WidgetSnapshotStatus.TASKS,
                 taskCount = tasks.size,
                 rows = tasks.take(taskLimit).map { it.toSnapshotRow(nowEpochMs) },
+                listName = listName,
             )
         }
 
@@ -180,6 +196,7 @@ internal fun buildListWidgetSnapshot(
                 status = if (tasks.isEmpty()) WidgetSnapshotStatus.EMPTY else WidgetSnapshotStatus.TASKS,
                 taskCount = tasks.size,
                 rows = tasks.take(taskLimit).map { it.toSnapshotRow() },
+                listName = listName,
             )
         }
     }

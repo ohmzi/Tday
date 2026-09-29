@@ -539,6 +539,23 @@
     <string name="widget_floater_tasks_count">%1$d aperte</string>
     <string name="widget_floater_tasks_count_unit">aperte</string>
     <string name="widget_loading">Caricamento attività…</string>
+    <string name="widget_list_tasks_description">Mostra una lista a tua scelta a colpo d\'occhio</string>
+    <string name="widget_list_tasks_title">Lista</string>
+    <string name="widget_list_tasks_title_small">Lista - Piccolo</string>
+    <string name="widget_list_tasks_title_medium">Lista - Medio</string>
+    <string name="widget_list_tasks_title_large">Lista - Grande</string>
+    <string name="widget_list_tasks_setup_title">Scegli una lista</string>
+    <string name="widget_list_tasks_setup_message">Tocca per scegliere quale lista mostra questo widget</string>
+    <string name="widget_list_tasks_missing_message">Quella lista è stata eliminata. Tocca per sceglierne un\'altra.</string>
+    <string name="widget_list_tasks_empty">Niente da fare in questo elenco</string>
+    <string name="widget_list_picker_title">Scegli una lista</string>
+    <string name="widget_list_picker_subtitle">Questo widget mostrerà solo questa lista e il suo + vi aggiungerà direttamente le attività.</string>
+    <string name="widget_list_picker_empty_title">Ancora nessuna lista</string>
+    <string name="widget_list_picker_empty">Crea una lista in T\'Day, poi tocca di nuovo questo widget.</string>
+    <string name="widget_list_picker_section_todo">Liste pianificate</string>
+    <string name="widget_list_picker_section_floater">Liste senza data</string>
+    <string name="widget_list_picker_shared_label">Condivisa</string>
+    <string name="widget_list_picker_selected">Selezionata</string>
 
     <!-- Settings: updates -->
     <string name="settings_check_updates">Controlla aggiornamenti</string>

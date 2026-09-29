@@ -13,6 +13,16 @@
     <color name="tday_widget_due_chip_background">#FF222736</color>
     <color name="tday_widget_overdue_chip_background">#FF3A2326</color>
     <color name="tday_widget_progress_track">#FF263447</color>
+    <color name="tday_widget_setup_art_back_card">#FF3A2A36</color>
+    <color name="tday_widget_setup_art_card">#FF232834</color>
+    <color name="tday_widget_setup_art_card_edge">#FF343B4B</color>
+    <color name="tday_widget_setup_art_accent">#FF8DC3F3</color>
+    <color name="tday_widget_setup_art_green">#FF7FC7B9</color>
+    <color name="tday_widget_setup_art_orange">#FFFFB454</color>
+    <color name="tday_widget_setup_art_pink">#FFF06FB0</color>
+    <color name="tday_widget_setup_art_line">#FF39414F</color>
+    <color name="tday_widget_setup_art_sparkle">#FFF7D46B</color>
+    <color name="tday_widget_setup_art_sparkle_soft">#FF3E5A78</color>
     <color name="tday_widget_on_surface">#FFF2F5FA</color>
     <color name="tday_widget_on_surface_variant">#FFBAC3D3</color>
     <color name="tday_widget_priority_high">#FFFF6B61</color>

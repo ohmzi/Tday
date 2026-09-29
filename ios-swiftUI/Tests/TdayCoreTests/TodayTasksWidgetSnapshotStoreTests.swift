@@ -204,7 +204,7 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         // hardcodes the same name, so a rename here has to be mirrored there.
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotFileName, "widget-today-snapshot.json")
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.legacySnapshotKey, "tday.widget.todayTasksSnapshot")
-        XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotSchemaVersion, 4)
+        XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotSchemaVersion, 5)
         // R7 configuration picker catalog (WidgetConfigurableListsStore's writer /
         // TdayWidgetListEntityQuery's reader): the extension hand-duplicates this same file
         // name with no shared source of truth, so pin it here too or a rename on one side
@@ -515,6 +515,87 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
             AppRoute.from(url: URL(string: "tday://todos/create?target=today")!),
             .createTodayTodo
         )
+    }
+
+    // The List widget's "+" carries its list on the same create links.
+    func testCreateDeepLinkCarriesTheListWidgetsList() {
+        let scheduled = URL(string: "tday://todos/create?target=today&listId=list-1")!
+        XCTAssertEqual(AppRoute.from(url: scheduled), .createTodayTodo)
+        XCTAssertEqual(AppRoute.createTaskListId(from: scheduled), "list-1")
+
+        let floater = URL(string: "tday://todos/create?target=floater&listId=floater-list-1")!
+        XCTAssertEqual(AppRoute.from(url: floater), .createFloaterTodo)
+        XCTAssertEqual(AppRoute.createTaskListId(from: floater), "floater-list-1")
+
+        XCTAssertNil(AppRoute.createTaskListId(from: URL(string: "tday://todos/create?target=today")!))
+        XCTAssertNil(AppRoute.createTaskListId(from: URL(string: "tday://todos/create?target=today&listId=")!))
+        XCTAssertNil(AppRoute.createTaskListId(from: URL(string: "tday://todos/list/list-1/Work?listId=list-1")!))
+    }
+
+    // MARK: - Whole lists (the List widget)
+    //
+    // `openByList` is every open task of a todo list whatever day it is due — unlike `perList`,
+    // which is that list's due-today-or-overdue slice for a Today widget set to it.
+
+    func testOpenByListHoldsTheWholeListWhateverDayItIsDue() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        let state = OfflineSyncState(
+            todos: [
+                todo(id: "overdue", title: "Overdue", dueEpochMs: startOfDay.addingTimeInterval(-3_600).epochMs, listId: "list-1"),
+                todo(id: "today", title: "Today", dueEpochMs: startOfDay.addingTimeInterval(9 * 3_600).epochMs, listId: "list-1"),
+                todo(id: "next-month", title: "Next month", dueEpochMs: startOfDay.addingTimeInterval(30 * 86_400).epochMs, listId: "list-1"),
+                todo(id: "done", title: "Done", dueEpochMs: startOfDay.addingTimeInterval(9 * 3_600).epochMs, completed: true, listId: "list-1"),
+                todo(id: "other-list", title: "Other", dueEpochMs: startOfDay.addingTimeInterval(9 * 3_600).epochMs, listId: "list-2")
+            ],
+            lists: [list(id: "list-1", name: "Work"), list(id: "list-2", name: "Home"), list(id: "empty", name: "Empty")]
+        )
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: now, calendar: calendar)
+
+        let whole = try! XCTUnwrap(snapshot.openByList["list-1"])
+        XCTAssertEqual(whole.totalCount, 3)
+        XCTAssertEqual(whole.tasks.map(\.id), ["overdue", "today", "next-month"])
+        XCTAssertEqual(snapshot.openByList["list-2"]?.tasks.map(\.id), ["other-list"])
+        XCTAssertNil(snapshot.openByList["empty"], "a list with nothing open has no entry")
+        // The Today widget's slice of the same list still stops at the covered days.
+        XCTAssertFalse(snapshot.perList["list-1"]?.tasks.contains { $0.id == "next-month" } ?? true)
+    }
+
+    func testOpenByListCapsRowsButKeepsTheTrueCount() {
+        let nowEpochMs: Int64 = 1_764_072_600_000
+        let todos = (0..<25).map { index in
+            todo(id: "t\(index)", title: "T\(index)", dueEpochMs: nowEpochMs + Int64(index) * 86_400_000, listId: "list-1")
+        }
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(todos: todos, lists: [list(id: "list-1", name: "Work")]),
+            now: Date(timeIntervalSince1970: 1_764_072_600)
+        )
+
+        let whole = try! XCTUnwrap(snapshot.openByList["list-1"])
+        XCTAssertEqual(whole.totalCount, 25)
+        XCTAssertEqual(whole.tasks.count, TodayTasksWidgetSnapshotStore.perListTaskLimit)
+    }
+
+    func testOpenByListIsContentButStaysOffTheWatch() {
+        let nowEpochMs: Int64 = 1_764_072_600_000
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let lists = [list(id: "list-1", name: "Work")]
+        let first = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(todos: [todo(id: "a", title: "A", dueEpochMs: nowEpochMs + 20 * 86_400_000, listId: "list-1")], lists: lists),
+            now: now
+        )
+        let second = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(todos: [todo(id: "b", title: "B", dueEpochMs: nowEpochMs + 20 * 86_400_000, listId: "list-1")], lists: lists),
+            now: now
+        )
+
+        // Nothing inside the covered days changed, so only the whole list differs.
+        XCTAssertEqual(first.perList, second.perList)
+        XCTAssertFalse(first.hasSameContent(as: second))
+        XCTAssertTrue(first.withoutUpcomingDays().openByList.isEmpty)
     }
 
     private func todo(

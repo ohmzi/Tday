@@ -538,6 +538,23 @@
     <string name="widget_floater_tasks_count">%1$d件未完了</string>
     <string name="widget_floater_tasks_count_unit">未完了</string>
     <string name="widget_loading">タスクを読み込み中…</string>
+    <string name="widget_list_tasks_description">選んだリストをひと目で表示します</string>
+    <string name="widget_list_tasks_title">リスト</string>
+    <string name="widget_list_tasks_title_small">リスト - 小</string>
+    <string name="widget_list_tasks_title_medium">リスト - 中</string>
+    <string name="widget_list_tasks_title_large">リスト - 大</string>
+    <string name="widget_list_tasks_setup_title">リストを選択</string>
+    <string name="widget_list_tasks_setup_message">タップしてこのウィジェットに表示するリストを選択</string>
+    <string name="widget_list_tasks_missing_message">このリストは削除されました。タップして別のリストを選択してください。</string>
+    <string name="widget_list_tasks_empty">このリストは空です</string>
+    <string name="widget_list_picker_title">リストを選択</string>
+    <string name="widget_list_picker_subtitle">このウィジェットにはこのリストだけが表示され、＋でこのリストに直接タスクを追加できます。</string>
+    <string name="widget_list_picker_empty_title">まだリストがありません</string>
+    <string name="widget_list_picker_empty">T\'Day でリストを作成してから、もう一度このウィジェットをタップしてください。</string>
+    <string name="widget_list_picker_section_todo">予定リスト</string>
+    <string name="widget_list_picker_section_floater">フローターリスト</string>
+    <string name="widget_list_picker_shared_label">共有</string>
+    <string name="widget_list_picker_selected">選択中</string>
 
     <!-- Settings: updates -->
     <string name="settings_check_updates">更新を確認</string>

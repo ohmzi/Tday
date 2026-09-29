@@ -146,15 +146,17 @@ and [ios-swiftUI/README.md](../ios-swiftUI/README.md#natural-language-scheduling
 
 ## Home-screen widgets
 
-Both mobile apps ship **Today** (scheduled tasks due today) and **Floater** (Anytime tasks)
-widgets in small, medium, and large sizes. You can complete a task from the widget or start a new
-one with its plus button.
+Both mobile apps ship three widgets — **Today** (scheduled tasks due today), **Floater** (Anytime
+tasks) and **List** — each in small, medium, and large sizes. You can complete a task from the widget
+or start a new one with its plus button.
 
-To show a single list instead of a whole feed:
+The **List** widget shows one list you pick for it. It starts with a setup picture and "Choose a
+list": on Android a tap opens the list picker, on iOS 18+ the list is asked for as the widget is
+added (or later from long-press ▸ Edit Widget). From then on it shows only that list — every open
+task in it — and its plus button adds a task straight into that list with the list's default
+priority. Each placed List widget keeps its own list.
 
-- **Android** has a third widget, **List**. Each placed List widget picks its own list, so two can
-  show two different lists.
-- **iOS** lets you point either widget at one list with long-press ▸ Edit Widget.
+iOS can also point a Today or Floater widget at one list with long-press ▸ Edit Widget.
 
 On both platforms a scheduled list renders with due times and a floater list renders undated.
 

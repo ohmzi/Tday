@@ -538,6 +538,23 @@
     <string name="widget_floater_tasks_count">%1$d 个未完成</string>
     <string name="widget_floater_tasks_count_unit">个未完成</string>
     <string name="widget_loading">正在加载任务…</string>
+    <string name="widget_list_tasks_description">一目了然地显示你选择的一个清单</string>
+    <string name="widget_list_tasks_title">清单</string>
+    <string name="widget_list_tasks_title_small">清单 - 小</string>
+    <string name="widget_list_tasks_title_medium">清单 - 中</string>
+    <string name="widget_list_tasks_title_large">清单 - 大</string>
+    <string name="widget_list_tasks_setup_title">选择清单</string>
+    <string name="widget_list_tasks_setup_message">轻点以选择此小组件显示的清单</string>
+    <string name="widget_list_tasks_missing_message">该清单已删除。轻点以选择其他清单。</string>
+    <string name="widget_list_tasks_empty">此列表已清空</string>
+    <string name="widget_list_picker_title">选择清单</string>
+    <string name="widget_list_picker_subtitle">此小组件只显示这个清单，点 + 会直接向其中添加任务。</string>
+    <string name="widget_list_picker_empty_title">还没有清单</string>
+    <string name="widget_list_picker_empty">先在 T\'Day 中创建清单，然后再轻点此小组件。</string>
+    <string name="widget_list_picker_section_todo">计划清单</string>
+    <string name="widget_list_picker_section_floater">浮动清单</string>
+    <string name="widget_list_picker_shared_label">共享</string>
+    <string name="widget_list_picker_selected">已选择</string>
 
     <!-- Settings: updates -->
     <string name="settings_check_updates">检查更新</string>
