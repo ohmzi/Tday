@@ -1,9 +1,12 @@
 package com.ohmz.tday.compose.feature.widget.snapshot
 
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import com.ohmz.tday.compose.core.data.SecureConfigStore
+import com.ohmz.tday.compose.feature.widget.WidgetInstanceCatalog
+import com.ohmz.tday.compose.feature.widget.WidgetInstanceKind
 import com.ohmz.tday.compose.feature.widget.WidgetListSelectionStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.serialization.json.Json
@@ -33,6 +36,7 @@ class WidgetSnapshotWriter @Inject constructor(
     private val secureConfigStore: SecureConfigStore,
     json: Json,
 ) {
+    private val appContext = context.applicationContext
     private val store = WidgetSnapshotStore(context, json)
     private val listSelectionStore = WidgetListSelectionStore(context)
 
@@ -99,6 +103,7 @@ class WidgetSnapshotWriter @Inject constructor(
      */
     private fun writeListSnapshots(state: OfflineSyncState, workspaceConfigured: Boolean): Boolean {
         var changed = false
+        pruneOrphanedListSelections()
         for (appWidgetId in listSelectionStore.configuredWidgetIds()) {
             val selection = listSelectionStore.selectionFor(appWidgetId) ?: continue
             val snapshot = buildListWidgetSnapshot(
@@ -110,6 +115,27 @@ class WidgetSnapshotWriter @Inject constructor(
             if (store.writeList(appWidgetId, snapshot)) changed = true
         }
         return changed
+    }
+
+    /**
+     * Clears the selection and the snapshot of every id that is no longer a placed List widget.
+     * `onDeleted` covers a widget the user removes; this covers the ones Android removes without
+     * telling the provider — above all every instance of the first List widget, whose receivers
+     * were deleted rather than migrated, so their selections and their snapshots of task text
+     * would otherwise sit in app storage for good. An id is kept whenever the answer is not a
+     * clear "not ours": a lookup that fails is not proof the widget is gone.
+     */
+    private fun pruneOrphanedListSelections() {
+        val manager = runCatching { AppWidgetManager.getInstance(appContext) }.getOrNull() ?: return
+        for (appWidgetId in listSelectionStore.configuredWidgetIds()) {
+            val info = runCatching { manager.getAppWidgetInfo(appWidgetId) }
+            if (info.isFailure) continue
+            val kind = WidgetInstanceCatalog.kindForReceiverClassName(info.getOrNull()?.provider?.className)
+            if (kind != WidgetInstanceKind.LIST) {
+                listSelectionStore.clearSelection(appWidgetId)
+                store.deleteList(appWidgetId)
+            }
+        }
     }
 
     private companion object {

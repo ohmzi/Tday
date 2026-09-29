@@ -1136,10 +1136,10 @@
       },
       "list-widgets": {
         "title": "Widget senarai",
-        "summary": "Letakkan mana-mana senarai pada skrin utama anda, bukan sekadar Hari Ini.",
-        "keywords": "widget, skrin utama, senarai, konfigurasi, pemilih, terapung, berjadual",
-        "body": "Tambah widget T'Day dan pemilih membolehkan anda memilih senarai yang dipaparkan — mana-mana senarai berjadual atau senarai terapung, bukan sekadar Hari Ini atau Terapung. Tambah widget itu semula untuk memaparkan senarai lain; setiap satu mengingati pilihannya sendiri.",
-        "tip": "Tekan lama widget yang telah diletakkan dan pilih Edit (atau tetapan widget pelancar anda) untuk menukarnya ke senarai lain kemudian."
+        "summary": "Widget ketiga, untuk satu senarai pilihan anda.",
+        "keywords": "widget, skrin utama, senarai, persediaan, pemilih, terapung, berjadual, tambah",
+        "body": "Selain Hari Ini dan Terapung, ada widget senarai. Letakkannya dan ia akan bertanya senarai mana yang hendak dipaparkan — mana-mana senarai berjadual atau senarai terapung. Selepas itu ia hanya memaparkan senarai itu, dan butang + menambah tugasan terus ke dalamnya, dengan keutamaan lalai senarai itu. Letakkan satu lagi untuk senarai lain; setiap satu mengekalkan senarainya sendiri.",
+        "tip": "Untuk menukar widget senarai kepada senarai lain, tekan lama widget itu dan pilih Edit (Edit Widget pada iPhone)."
       },
       "widget-quick-add": {
         "title": "Tambah pantas dari widget",

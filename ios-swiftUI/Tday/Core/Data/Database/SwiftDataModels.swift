@@ -208,6 +208,11 @@ final class PendingMutationEntity {
     var staged: Bool = false
     var defaultPriority: String?
     var defaultPriorityChanged: Bool?
+    // A floater list's create/update carries its `reusable` flag, and the queue is read back
+    // from here before every replay. Without the column the flag came back nil — "leave it
+    // alone" — so turning Reusable off never reached the server and the next sync switched it
+    // back on. Optional, so the lightweight migration fills existing rows with nil.
+    var reusable: Bool?
 
     init(from record: PendingMutationRecord) {
         mutationId = record.mutationId
@@ -229,6 +234,7 @@ final class PendingMutationEntity {
         staged = record.staged
         defaultPriority = record.defaultPriority
         defaultPriorityChanged = record.defaultPriorityChanged
+        reusable = record.reusable
     }
 }
 

@@ -257,6 +257,7 @@ final class OfflineCacheManager {
                     name: $0.name,
                     color: $0.color,
                     iconKey: $0.iconKey,
+                    reusable: $0.reusable,
                     defaultPriority: $0.defaultPriority,
                     defaultPriorityChanged: $0.defaultPriorityChanged,
                     staged: $0.staged

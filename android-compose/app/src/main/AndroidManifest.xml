@@ -61,12 +61,15 @@
         <receiver
             android:name=".feature.widget.WidgetTaskActionReceiver"
             android:exported="false" />
+        <!-- The List widget's list picker: a widget tap on an unconfigured List widget, and the
+             launcher's reconfigure step. Its own task, so closing it lands on the home screen. -->
         <activity
-            android:name=".feature.widget.WidgetListConfigurationActivity"
+            android:name=".feature.widget.WidgetListPickerActivity"
             android:configChanges="keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+            android:excludeFromRecents="true"
             android:exported="true"
-            android:launchMode="singleTop"
-            android:theme="@style/Theme.Tday.WidgetCreate">
+            android:taskAffinity="com.ohmz.tday.compose.widget.ListPicker"
+            android:theme="@style/Theme.Tday">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
@@ -207,7 +210,7 @@
         </receiver>
 
         <receiver
-            android:name=".feature.widget.ListTasksWidgetSmallReceiver"
+            android:name=".feature.widget.ListWidgetSmallReceiver"
             android:exported="true"
             android:label="@string/widget_list_tasks_title_small">
             <intent-filter>
@@ -215,11 +218,11 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/list_tasks_widget_small_info" />
+                android:resource="@xml/list_widget_small_info" />
         </receiver>
 
         <receiver
-            android:name=".feature.widget.ListTasksWidgetReceiver"
+            android:name=".feature.widget.ListWidgetReceiver"
             android:exported="true"
             android:label="@string/widget_list_tasks_title_medium">
             <intent-filter>
@@ -227,11 +230,11 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/list_tasks_widget_info" />
+                android:resource="@xml/list_widget_info" />
         </receiver>
 
         <receiver
-            android:name=".feature.widget.ListTasksWidgetLargeReceiver"
+            android:name=".feature.widget.ListWidgetLargeReceiver"
             android:exported="true"
             android:label="@string/widget_list_tasks_title_large">
             <intent-filter>
@@ -239,7 +242,7 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/list_tasks_widget_large_info" />
+                android:resource="@xml/list_widget_large_info" />
         </receiver>
 
         <receiver

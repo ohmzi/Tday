@@ -67,6 +67,24 @@
         android:paddingEnd="14dp"
         android:visibility="gone">
 
+        <!-- A picture above the message, for the states that have one (the List widget's setup
+             state). Two sizes, like the icon below; at most one is shown. -->
+        <ImageView
+            android:id="@+id/widget_message_art"
+            android:layout_width="108dp"
+            android:layout_height="90dp"
+            android:layout_marginBottom="8dp"
+            android:contentDescription="@null"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/widget_message_art_compact"
+            android:layout_width="66dp"
+            android:layout_height="55dp"
+            android:layout_marginBottom="4dp"
+            android:contentDescription="@null"
+            android:visibility="gone" />
+
         <ImageView
             android:id="@+id/widget_message_icon"
             android:layout_width="24dp"

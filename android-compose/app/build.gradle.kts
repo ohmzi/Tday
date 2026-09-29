@@ -339,9 +339,9 @@ val widgetClassesRequiringOwnRuntimeName = listOf(
     "com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetSmallReceiver",
     "com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetReceiver",
     "com.ohmz.tday.compose.feature.widget.FloaterTasksWidgetLargeReceiver",
-    "com.ohmz.tday.compose.feature.widget.ListTasksWidgetSmallReceiver",
-    "com.ohmz.tday.compose.feature.widget.ListTasksWidgetReceiver",
-    "com.ohmz.tday.compose.feature.widget.ListTasksWidgetLargeReceiver",
+    "com.ohmz.tday.compose.feature.widget.ListWidgetSmallReceiver",
+    "com.ohmz.tday.compose.feature.widget.ListWidgetReceiver",
+    "com.ohmz.tday.compose.feature.widget.ListWidgetLargeReceiver",
 )
 
 // The mapping comes from AGP's artifact API rather than a hardcoded

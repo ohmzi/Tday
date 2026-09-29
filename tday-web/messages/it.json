@@ -1135,11 +1135,11 @@
         "tip": "Aggiungi più widget, ognuno puntato su una lista diversa, per vederli tutti insieme sulla tua schermata Home."
       },
       "list-widgets": {
-        "title": "Widget di liste",
-        "summary": "Mostra qualsiasi lista sulla schermata Home, non solo Oggi.",
-        "keywords": "widget, schermata home, lista, configura, selettore, libera, pianificata",
-        "body": "Aggiungi un widget T'Day e un selettore ti permette di scegliere quale lista mostra — qualsiasi lista pianificata o di attività libere, non solo Oggi o Libere. Aggiungi di nuovo il widget per mostrare un'altra lista; ognuno ricorda la propria scelta.",
-        "tip": "Tieni premuto un widget posizionato e scegli Modifica (o le impostazioni widget del tuo launcher) per cambiargli lista in seguito."
+        "title": "Widget lista",
+        "summary": "Un terzo widget, per la lista che preferisci.",
+        "keywords": "widget, schermata home, lista, configura, selettore, libera, pianificata, aggiungi",
+        "body": "Accanto a Oggi e Libere c'è un widget lista. Posizionalo e ti chiede quale lista mostrare — qualsiasi lista pianificata o di attività libere. Da quel momento mostra solo quella lista, e il suo + aggiunge un'attività direttamente lì, con la priorità predefinita della lista. Posizionane un altro per un'altra lista; ognuno mantiene la propria.",
+        "tip": "Per passare un widget lista a un'altra lista, tienilo premuto e scegli Modifica (Modifica widget su iPhone)."
       },
       "widget-quick-add": {
         "title": "Aggiunta rapida dal widget",

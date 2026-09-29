@@ -539,6 +539,23 @@
     <string name="widget_floater_tasks_count">%1$d abiertas</string>
     <string name="widget_floater_tasks_count_unit">abiertas</string>
     <string name="widget_loading">Cargando tareas…</string>
+    <string name="widget_list_tasks_description">Muestra una lista de tu elección de un vistazo</string>
+    <string name="widget_list_tasks_title">Lista</string>
+    <string name="widget_list_tasks_title_small">Lista - Pequeño</string>
+    <string name="widget_list_tasks_title_medium">Lista - Mediano</string>
+    <string name="widget_list_tasks_title_large">Lista - Grande</string>
+    <string name="widget_list_tasks_setup_title">Elige una lista</string>
+    <string name="widget_list_tasks_setup_message">Toca para elegir qué lista muestra este widget</string>
+    <string name="widget_list_tasks_missing_message">Esa lista se eliminó. Toca para elegir otra.</string>
+    <string name="widget_list_tasks_empty">No queda nada en esta lista</string>
+    <string name="widget_list_picker_title">Elige una lista</string>
+    <string name="widget_list_picker_subtitle">Este widget mostrará solo esta lista, y su + añadirá tareas directamente a ella.</string>
+    <string name="widget_list_picker_empty_title">Aún no hay listas</string>
+    <string name="widget_list_picker_empty">Crea una lista en T\'Day y vuelve a tocar este widget.</string>
+    <string name="widget_list_picker_section_todo">Listas programadas</string>
+    <string name="widget_list_picker_section_floater">Listas flotantes</string>
+    <string name="widget_list_picker_shared_label">Compartida</string>
+    <string name="widget_list_picker_selected">Seleccionada</string>
 
     <!-- Settings: updates -->
     <string name="settings_check_updates">Buscar actualizaciones</string>

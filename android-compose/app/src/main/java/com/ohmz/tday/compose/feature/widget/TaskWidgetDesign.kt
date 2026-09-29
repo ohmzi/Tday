@@ -156,6 +156,8 @@ internal data class TaskWidgetModel(
     val dateBlock: TaskWidgetDateBlock? = null,
     /** Today only: the header's progress ring, drawn while there is anything to count. */
     val progress: TaskWidgetProgress? = null,
+    /** A picture drawn above the SETUP message — the List widget's "choose a list" art. */
+    val setupArt: Int? = null,
     val visuals: TaskWidgetVisuals,
     val openIntent: Intent,
     val addIntent: Intent,
@@ -321,13 +323,33 @@ internal object TaskWidgetRemoteViews {
             TaskWidgetContentState.LOADING -> model.loadingTitle to ""
             else -> model.emptyTitle to ""
         }
-        val locked = model.state == TaskWidgetContentState.LOCKED
+        applySetupArt(model.setupArt?.takeIf { model.state == TaskWidgetContentState.SETUP }, compact)
+        applyLockIcon(model.state == TaskWidgetContentState.LOCKED, compact)
+        applyMessageText(title, message, compact)
+    }
+
+    /**
+     * The List widget's setup picture, in its full or compact slot, or in neither. Both slots are
+     * set every time: a host re-applying a render keeps whatever the last one left visible.
+     */
+    private fun RemoteViews.applySetupArt(art: Int?, compact: Boolean) {
+        setVisible(R.id.widget_message_art, art != null && !compact)
+        setVisible(R.id.widget_message_art_compact, art != null && compact)
+        if (art != null) {
+            setImageViewResource(if (compact) R.id.widget_message_art_compact else R.id.widget_message_art, art)
+        }
+    }
+
+    private fun RemoteViews.applyLockIcon(locked: Boolean, compact: Boolean) {
         setVisible(R.id.widget_message_icon, locked && !compact)
         setVisible(R.id.widget_message_icon_compact, locked && compact)
         if (locked) {
             val iconId = if (compact) R.id.widget_message_icon_compact else R.id.widget_message_icon
             setImageViewResource(iconId, R.drawable.widget_lock_icon)
         }
+    }
+
+    private fun RemoteViews.applyMessageText(title: String, message: String, compact: Boolean) {
         setTextViewText(R.id.widget_message_title, title)
         setTextViewTextSize(R.id.widget_message_title, TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 15f)
         setInt(R.id.widget_message_title, "setMaxLines", if (compact) 1 else 2)

@@ -144,6 +144,14 @@ The current iOS snapshot schema is version `4` (Today) / `1` (Floater) and inclu
   app's Today "Earlier" bucket), true count plus rows capped at 20. For an upcoming day the overdue
   set includes today's still-open tasks. Never part of `taskCount`. Absent fields decode as zero /
   empty. The Apple Watch mirror keeps the counts and drops `overdueTasks`.
+- `openByList` (iOS Today snapshot, schema 5): the List widget's whole lists — for each todo list
+  with anything open, every open task in it whatever day it is due (true `totalCount`, `tasks`
+  capped at 20, the app's sort order), keyed by list id. Unlike `perList` it has no day window: a
+  row's time-or-day label and overdue tint are worked out as the widget renders. Floater lists need
+  no twin — the floater snapshot's `perList` is already the whole list. The Apple Watch mirror drops
+  it. Android keeps the List widget's snapshot per placed instance instead
+  (`widget-list-snapshot-<appWidgetId>.json`, the same `WidgetSnapshot` shape plus `listName` /
+  `listMissing`).
 
 Android's Today snapshot carries the same day window: `dayStartEpochMs` / `dayEndEpochMs` for its own
 day, and `upcomingDays` for the next six (`dayStartEpochMs`, `dayEndEpochMs`, true `taskCount`,
@@ -175,6 +183,11 @@ gallery slot can render either shape once configured. Content comes from the SAM
 via `perList[listId]` — there is no third, per-instance file; two widget instances configured to the
 same list read the same `perList` entry, and WidgetKit itself (not the app) tracks which instance
 has which configuration.
+
+The third kind, `ListTasksWidget`, has its own configuration intent (`SelectListWidgetListIntent`,
+no "unset means the default feed" fallback) and reads `openByList[listId]` for a todo list or the
+floater snapshot's `perList[listId]` for a floater list. A picked list missing from the catalog shows
+the setup state again with a "deleted" line; an unreadable catalog is not taken as a deletion.
 
 ## Device Calendar Mirror
 

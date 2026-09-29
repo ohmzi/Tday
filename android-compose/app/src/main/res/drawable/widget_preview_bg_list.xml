@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?><!-- Widget-picker preview background for the List widgets: the surface alone. The List widget
+     has no watermark — its preview carries the setup picture in its content instead — so the
+     picker tells it apart from Today and Floater by that, not by borrowing their art. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/tday_widget_surface" />
+    <corners android:radius="@dimen/tday_widget_picker_preview_corner_radius" />
+</shape>

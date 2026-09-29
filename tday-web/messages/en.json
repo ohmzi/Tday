@@ -1135,11 +1135,11 @@
         "tip": "Add several widgets, each pointed at a different list, to see them all on your home screen at once."
       },
       "list-widgets": {
-        "title": "List widgets",
-        "summary": "Put any list on your home screen, not just Today.",
-        "keywords": "widget, home screen, list, configure, picker, floater, todo",
-        "body": "Add a T'Day widget and a picker lets you choose which list it shows — any scheduled list or floater list, not just Today or Floater. Add the widget again to show a different list; each one remembers its own choice.",
-        "tip": "Long-press a placed widget and choose Edit (or your launcher's widget settings) to switch it to a different list later."
+        "title": "List widget",
+        "summary": "A third widget, for one list of your choice.",
+        "keywords": "widget, home screen, list, setup, picker, floater, scheduled, add",
+        "body": "Beside Today and Floater there's a List widget. Place it and it asks which list to show — any scheduled or floater list. From then on it shows only that list, and its + adds a task straight into it, with the list's default priority. Place another for another list; each keeps its own.",
+        "tip": "To switch a List widget to a different list, long-press it and choose Edit (Edit Widget on iPhone)."
       },
       "widget-quick-add": {
         "title": "Quick-add from the widget",

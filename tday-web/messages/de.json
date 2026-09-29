@@ -1135,11 +1135,11 @@
         "tip": "Füge mehrere Widgets hinzu, jedes auf eine andere Liste ausgerichtet, um sie alle gleichzeitig auf deinem Startbildschirm zu sehen."
       },
       "list-widgets": {
-        "title": "Listen-Widgets",
-        "summary": "Zeige jede Liste auf deinem Startbildschirm, nicht nur Heute.",
-        "keywords": "widget, startbildschirm, liste, konfigurieren, auswahl, jederzeit, geplant",
-        "body": "Füge ein T'Day-Widget hinzu, und eine Auswahl lässt dich entscheiden, welche Liste es zeigt — jede geplante Liste oder Jederzeit-Liste, nicht nur Heute oder Jederzeit. Füge das Widget erneut hinzu, um eine andere Liste zu zeigen; jedes merkt sich seine eigene Wahl.",
-        "tip": "Halte ein platziertes Widget gedrückt und wähle Bearbeiten (oder die Widget-Einstellungen deines Launchers), um es später auf eine andere Liste umzustellen."
+        "title": "Listen-Widget",
+        "summary": "Ein drittes Widget, für eine Liste deiner Wahl.",
+        "keywords": "widget, startbildschirm, liste, einrichtung, auswahl, jederzeit, geplant, hinzufügen",
+        "body": "Neben Heute und Jederzeit gibt es ein Listen-Widget. Platziere es, und es fragt, welche Liste es zeigen soll — jede geplante Liste oder Jederzeit-Liste. Danach zeigt es nur diese Liste, und sein + legt eine Aufgabe direkt darin an, mit der Standardpriorität der Liste. Platziere ein weiteres für eine andere Liste; jedes behält seine eigene.",
+        "tip": "Um ein Listen-Widget auf eine andere Liste umzustellen, halte es gedrückt und wähle Bearbeiten (auf dem iPhone: Widget bearbeiten)."
       },
       "widget-quick-add": {
         "title": "Schnell hinzufügen aus dem Widget",

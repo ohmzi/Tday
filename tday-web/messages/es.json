@@ -1135,11 +1135,11 @@
         "tip": "Añade varios widgets, cada uno apuntando a una lista distinta, para verlos todos a la vez en tu pantalla de inicio."
       },
       "list-widgets": {
-        "title": "Widgets de listas",
-        "summary": "Pon cualquier lista en tu pantalla de inicio, no solo Hoy.",
-        "keywords": "widget, pantalla de inicio, lista, configurar, selector, cualquier momento, programado",
-        "body": "Añade un widget de T'Day y un selector te deja elegir qué lista muestra — cualquier lista programada o de cualquier momento, no solo Hoy o Cualquier momento. Añade el widget de nuevo para mostrar otra lista; cada uno recuerda su propia elección.",
-        "tip": "Mantén pulsado un widget colocado y elige Editar (o los ajustes de widgets de tu launcher) para cambiarlo a otra lista más adelante."
+        "title": "Widget de lista",
+        "summary": "Un tercer widget, para la lista que elijas.",
+        "keywords": "widget, pantalla de inicio, lista, configurar, selector, cualquier momento, programado, añadir",
+        "body": "Junto a Hoy y Cualquier momento hay un widget de lista. Colócalo y te pregunta qué lista mostrar — cualquier lista programada o de cualquier momento. A partir de ahí muestra solo esa lista, y su + añade una tarea directamente en ella, con la prioridad predeterminada de la lista. Coloca otro para otra lista; cada uno conserva la suya.",
+        "tip": "Para cambiar un widget de lista a otra lista, mantenlo pulsado y elige Editar (Editar widget en iPhone)."
       },
       "widget-quick-add": {
         "title": "Añadir rápido desde el widget",

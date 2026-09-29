@@ -170,6 +170,12 @@ from the same two snapshot files' new `perList[listId]` map (see `docs/DATA_MODE
 instance's todo window is due-today-OR-overdue (wider than the global "due today" feed), since the
 user explicitly chose that one list rather than the aggregate.
 
+A third widget kind, **List** (`ListTasksWidget`), is for one list and nothing else: iOS 18+ asks for
+the list as it is added (`promptsForUserConfiguration`); unconfigured — skipped, iOS 17, or its list
+deleted — it shows the same setup picture as Android's List widget and "Choose a list". It shows the
+list's every open task (`openByList` for todo lists), and its "+" opens the create sheet on that
+list (`tday://todos/create?target=…&listId=…`), so the list's default priority applies.
+
 This is a sibling to, not a replacement for, iOS Focus Filters (`Feature/CarPlay/CarTaskIntents.swift`
 — `TdayFocusFilterStore`/`TdayListAppEntity`), which narrows the Today feed to a set of lists while a
 Focus is active. Both mechanisms can be in play at once; a per-list widget's content ignores the

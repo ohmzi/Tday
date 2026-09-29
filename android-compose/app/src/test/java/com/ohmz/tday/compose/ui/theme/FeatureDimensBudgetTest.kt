@@ -59,7 +59,7 @@ import org.junit.Test
  * it may not rise, and a value that should be neither a rung nor frozen has the same way out every
  * other file has — a named `private val Dp`.
  *
- * Two files are carved back out of it by name. `WidgetListConfigurationActivity.kt` and
+ * Two files are carved back out of it by name. `WidgetListPickerActivity.kt` and
  * `WidgetCreateTaskActivity.kt` live in that directory because they belong to a widget's plumbing —
  * one configures an instance, the other is the "+" it opens — but each renders Material into an
  * Activity of our own, the picker in the first and in the second the create sheet
@@ -183,7 +183,7 @@ class FeatureDimensBudgetTest {
 
         /** The files inside it that the exemption's reason does not reach. Same heading. */
         val EXEMPT_SUBTREE_CARVE_INS = setOf(
-            "widget/WidgetListConfigurationActivity.kt",
+            "widget/WidgetListPickerActivity.kt",
             "widget/WidgetCreateTaskActivity.kt",
         )
 

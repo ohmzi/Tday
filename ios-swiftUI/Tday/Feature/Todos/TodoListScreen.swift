@@ -126,6 +126,16 @@ enum TodoTimelineMetrics {
     static let topBarRowHeight: CGFloat = 56
     static let topBarButtonFrame: CGFloat = 56
     static let topBarButtonSpacing: CGFloat = 8
+    /// A floater list that is reusable carries five actions beside the back chevron — search,
+    /// summary, select, Reset and more — and six 56pt circles do not fit a phone: the bar grew
+    /// past the screen and SwiftUI widened the whole page with it, pushing the rows' rings and
+    /// the create button off both edges. From five actions the cluster shrinks to these, which
+    /// is Android's `HeaderButtonCompactSize` (48dp, 20dp glyphs, 6dp gaps) and web's 48px/6px
+    /// for the same screen; every other bar keeps the full size.
+    static let topBarCompactActionThreshold = 5
+    static let topBarCompactButtonFrame: CGFloat = 48
+    static let topBarCompactButtonIconSize: CGFloat = 20
+    static let topBarCompactButtonSpacing: CGFloat = 6
     /// What every circle in a pinned bar draws its glyph at, the root feeds'
     /// buttons included — see `RootFeedHeaderCircleButton`, and Android's 22.dp.
     static let topBarButtonIconSize: CGFloat = 22
@@ -682,6 +692,11 @@ struct TodoListScreen: View {
     let showsRootControls: Bool
     let usesRootFeedHeader: Bool
     let createTaskRequestID: Int
+    /// Applied to the next create sheet the request above opens — the Anytime root feed's half
+    /// of `AppRootView.rootCreateTaskPrefill` (a List widget's "+") — and handed back through
+    /// `onCreateTaskSheetClosed` so a later manual create starts blank.
+    let createTaskPrefill: CreateTaskPayload?
+    let onCreateTaskSheetClosed: () -> Void
     let openCreateTaskOnAppear: Bool
     let scrollToTopRequestID: Int
     let onRootDockCollapsedChange: (Bool) -> Void
@@ -826,6 +841,8 @@ struct TodoListScreen: View {
         pullRefreshEnabled: Bool = false,
         usesRootFeedHeader: Bool = false,
         createTaskRequestID: Int = 0,
+        createTaskPrefill: CreateTaskPayload? = nil,
+        onCreateTaskSheetClosed: @escaping () -> Void = {},
         openCreateTaskOnAppear: Bool = false,
         scrollToTopRequestID: Int = 0,
         onRootDockCollapsedChange: @escaping (Bool) -> Void = { _ in },
@@ -844,6 +861,8 @@ struct TodoListScreen: View {
         self.pullRefreshEnabled = pullRefreshEnabled
         self.usesRootFeedHeader = usesRootFeedHeader
         self.createTaskRequestID = createTaskRequestID
+        self.createTaskPrefill = createTaskPrefill
+        self.onCreateTaskSheetClosed = onCreateTaskSheetClosed
         self.openCreateTaskOnAppear = openCreateTaskOnAppear
         self.scrollToTopRequestID = scrollToTopRequestID
         self.onRootDockCollapsedChange = onRootDockCollapsedChange
@@ -1922,6 +1941,11 @@ struct TodoListScreen: View {
 
     private var screenWithTaskSheets: some View {
         screenWithLifecycleHandlers
+        .onChange(of: showingCreateTask) { _, showing in
+            if !showing {
+                onCreateTaskSheetClosed()
+            }
+        }
         .createTaskSheet(isPresented: $showingCreateTask) {
             createTaskSheetContent
         }
@@ -2476,7 +2500,7 @@ struct TodoListScreen: View {
             lists: viewModel.lists,
             titleText: L("New task"),
             submitText: L("Create"),
-            initialPayload: CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? TaskPriorityDisplay.importantValue : TaskPriorityDisplay.normalValue, due: viewModel.mode == .floater ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
+            initialPayload: createTaskPrefill ?? CreateTaskPayload(title: "", description: nil, priority: viewModel.mode == .priority ? TaskPriorityDisplay.importantValue : TaskPriorityDisplay.normalValue, due: viewModel.mode == .floater ? nil : Date().addingTimeInterval(60 * 60), rrule: nil, listId: viewModel.listId),
             defaultScheduled: viewModel.mode != .floater,
             showScheduleControls: viewModel.mode != .floater,
             onParseTaskTitleNlp: viewModel.mode == .floater ? nil : { title, dueRef in
@@ -4009,10 +4033,25 @@ struct TimelineTopBar: View {
         )
     }
 
+    private var isCrowded: Bool {
+        actions.count >= TodoTimelineMetrics.topBarCompactActionThreshold
+    }
+
+    private var actionFrame: CGFloat {
+        isCrowded ? TodoTimelineMetrics.topBarCompactButtonFrame : TodoTimelineMetrics.topBarButtonFrame
+    }
+
+    private var actionSpacing: CGFloat {
+        isCrowded ? TodoTimelineMetrics.topBarCompactButtonSpacing : TodoTimelineMetrics.topBarButtonSpacing
+    }
+
+    private var actionIconSize: CGFloat {
+        isCrowded ? TodoTimelineMetrics.topBarCompactButtonIconSize : TodoTimelineMetrics.topBarButtonIconSize
+    }
+
     private var trailingActionReservedWidth: CGFloat {
         let count = CGFloat(max(1, actions.count))
-        return count * TodoTimelineMetrics.topBarButtonFrame +
-            max(0, count - 1) * TodoTimelineMetrics.topBarButtonSpacing
+        return count * actionFrame + max(0, count - 1) * actionSpacing
     }
 
     /// The capsule is exactly as tall as the bar's button row, so swapping it in
@@ -4099,7 +4138,7 @@ struct TimelineTopBar: View {
                         } else {
                             // Same gap as the web list header's action cluster (gap-2
                             // between the circular buttons).
-                            HStack(spacing: TodoTimelineMetrics.topBarButtonSpacing) {
+                            HStack(spacing: actionSpacing) {
                                 ForEach(actions.indices, id: \.self) { index in
                                     let action = actions[index]
                                     let button = TimelineTopBarButton(
@@ -4107,6 +4146,8 @@ struct TimelineTopBar: View {
                                         assetName: action.assetName,
                                         chrome: action.usesCircularChrome ? .filled : .plain,
                                         tint: action.tint,
+                                        frame: actionFrame,
+                                        filledIconSize: actionIconSize,
                                         action: action.action
                                     )
                                     if let label = action.accessibilityLabel {
@@ -4119,28 +4160,33 @@ struct TimelineTopBar: View {
                         }
                     }
                 }
-
-                if !searchActive {
-                    titleContent
-                        .opacity(revealProgress)
-                        .offset(y: titleOffsetY)
-                        .scaleEffect(0.985 + (0.015 * revealProgress))
-                        // Reserve each side for what actually sits there (back button
-                        // left, action cluster right) instead of the larger side twice:
-                        // with three actions a symmetric reserve exceeds the screen
-                        // width and stretches the whole layout edge-to-edge.
-                        //
-                        // Android's twin of this bar reaches the same conclusion by
-                        // measuring (`tdayBarTitleReserve`), and then does one thing
-                        // more that this one does not: below the per-side reserve it
-                        // scales the title down to 0.72 before letting it clip, the
-                        // way `CalendarElasticTopBar` already does. Three actions on
-                        // a narrow phone is exactly where that matters — and this
-                        // `titleContent` carries only `lineLimit(1)`. Owed here.
-                        .padding(.leading, TodoTimelineMetrics.topBarButtonFrame + 12)
-                        .padding(.trailing, trailingActionReservedWidth + 12)
-                        .frame(maxWidth: .infinity)
-                        .allowsHitTesting(false)
+                // The collapsed title rides OVER the row, not beside it in the stack: an overlay is
+                // sized by the row and cannot widen it. As a stack sibling its side reserves were
+                // a minimum width, and once the reserves outgrew the screen the whole page was
+                // laid out wider than the phone.
+                .overlay {
+                    if !searchActive {
+                        titleContent
+                            .opacity(revealProgress)
+                            .offset(y: titleOffsetY)
+                            .scaleEffect(0.985 + (0.015 * revealProgress))
+                            // Reserve each side for what actually sits there (back button
+                            // left, action cluster right) instead of the larger side twice:
+                            // with three actions a symmetric reserve exceeds the screen
+                            // width and stretches the whole layout edge-to-edge.
+                            //
+                            // Android's twin of this bar reaches the same conclusion by
+                            // measuring (`tdayBarTitleReserve`), and then does one thing
+                            // more that this one does not: below the per-side reserve it
+                            // scales the title down to 0.72 before letting it clip, the
+                            // way `CalendarElasticTopBar` already does. Three actions on
+                            // a narrow phone is exactly where that matters — and this
+                            // `titleContent` carries only `lineLimit(1)`. Owed here.
+                            .padding(.leading, TodoTimelineMetrics.topBarButtonFrame + 12)
+                            .padding(.trailing, trailingActionReservedWidth + 12)
+                            .frame(maxWidth: .infinity)
+                            .allowsHitTesting(false)
+                    }
                 }
             }
         }
@@ -4402,6 +4448,10 @@ private struct TimelineTopBarButton: View {
     let assetName: String?
     let chrome: Chrome
     let tint: Color?
+    /// The circle's side, and a filled circle's glyph size: a crowded bar passes its compact
+    /// pair (see `TodoTimelineMetrics.topBarCompactActionThreshold`).
+    let frame: CGFloat
+    let filledIconSize: CGFloat
     let action: () -> Void
 
     @Environment(\.tdayColors) private var colors
@@ -4411,12 +4461,16 @@ private struct TimelineTopBarButton: View {
         assetName: String? = nil,
         chrome: Chrome,
         tint: Color? = nil,
+        frame: CGFloat = TodoTimelineMetrics.topBarButtonFrame,
+        filledIconSize: CGFloat = TodoTimelineMetrics.topBarButtonIconSize,
         action: @escaping () -> Void
     ) {
         self.systemName = systemName
         self.assetName = assetName
         self.chrome = chrome
         self.tint = tint
+        self.frame = frame
+        self.filledIconSize = filledIconSize
         self.action = action
     }
 
@@ -4437,7 +4491,7 @@ private struct TimelineTopBarButton: View {
     var body: some View {
         Button(action: action) {
             glyph
-                .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
+                .frame(width: frame, height: frame)
                 .background {
                     if chrome == .filled {
                         // Fill AND hairline, both: `RootFeedHeaderCircleButton`
@@ -4473,7 +4527,7 @@ private struct TimelineTopBarButton: View {
     }
 
     private var iconSize: CGFloat {
-        chrome == .filled ? TodoTimelineMetrics.topBarButtonIconSize : 28
+        chrome == .filled ? filledIconSize : 28
     }
 
     private var foregroundColor: Color {

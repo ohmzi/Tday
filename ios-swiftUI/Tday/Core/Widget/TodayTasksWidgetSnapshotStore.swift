@@ -39,6 +39,11 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
     /// beside display-capped rows, like `taskCount`/`tasks`.
     let overdueCount: Int
     let overdueTasks: [TodayTasksWidgetTaskSnapshot]
+    /// Every open task of each todo list, whatever day it is due, keyed by list id — what the
+    /// List widget shows, which is the whole list rather than `perList`'s due-today-or-overdue
+    /// slice of it (schema 5). Same capped-rows-beside-true-count shape; a list with nothing open
+    /// has no entry. Defaulted so older snapshots decode (as every list empty until the next save).
+    let openByList: [String: TodayTasksWidgetPerListSnapshot]
 
     init(
         schemaVersion: Int = TodayTasksWidgetSnapshotStore.snapshotSchemaVersion,
@@ -53,7 +58,8 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
         upcomingDays: [TodayTasksWidgetDaySnapshot] = [],
         completedCount: Int = 0,
         overdueCount: Int = 0,
-        overdueTasks: [TodayTasksWidgetTaskSnapshot] = []
+        overdueTasks: [TodayTasksWidgetTaskSnapshot] = [],
+        openByList: [String: TodayTasksWidgetPerListSnapshot] = [:]
     ) {
         self.schemaVersion = schemaVersion
         self.generatedAtEpochMs = generatedAtEpochMs
@@ -68,6 +74,7 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
         self.completedCount = completedCount
         self.overdueCount = overdueCount
         self.overdueTasks = overdueTasks
+        self.openByList = openByList
     }
 
     init(from decoder: Decoder) throws {
@@ -86,6 +93,7 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
         completedCount = try container.decodeIfPresent(Int.self, forKey: .completedCount) ?? 0
         overdueCount = try container.decodeIfPresent(Int.self, forKey: .overdueCount) ?? 0
         overdueTasks = try container.decodeIfPresent([TodayTasksWidgetTaskSnapshot].self, forKey: .overdueTasks) ?? []
+        openByList = try container.decodeIfPresent([String: TodayTasksWidgetPerListSnapshot].self, forKey: .openByList) ?? [:]
     }
 
     /// True when the DISPLAYED content matches, ignoring `generatedAtEpochMs` (which changes
@@ -105,12 +113,13 @@ struct TodayTasksWidgetSnapshot: Codable, Equatable {
             upcomingDays == other.upcomingDays &&
             completedCount == other.completedCount &&
             overdueCount == other.overdueCount &&
-            overdueTasks == other.overdueTasks
+            overdueTasks == other.overdueTasks &&
+            openByList == other.openByList
     }
 
-    /// This snapshot minus the days it pre-computes for the widget, and minus the overdue rows.
-    /// The Apple Watch mirror shows `tasks` alone, so either would only grow its
-    /// WatchConnectivity application-context payload.
+    /// This snapshot minus the days it pre-computes for the widget, the overdue rows and the
+    /// List widget's whole lists. The Apple Watch mirror shows `tasks` alone, so any of them
+    /// would only grow its WatchConnectivity application-context payload.
     func withoutUpcomingDays() -> TodayTasksWidgetSnapshot {
         TodayTasksWidgetSnapshot(
             schemaVersion: schemaVersion,
@@ -362,7 +371,8 @@ enum TodayTasksWidgetSnapshotStore {
     /// `upcomingTasks`) so the widget turns over at midnight without a write.
     /// 4: each day carries its done count and its overdue tasks (`completedCount`,
     /// `overdueCount`, `overdueTasks`) for the header ring and the Overdue section.
-    static let snapshotSchemaVersion = 4
+    /// 5: every todo list's whole open list (`openByList`) for the List widget.
+    static let snapshotSchemaVersion = 5
     static let widgetKind = "TodayTasksWidget"
     static let appGroupSuiteName = "group.com.ohmz.tday"
     static let snapshotFileName = WidgetSnapshotFileStore.todayFileName
@@ -503,6 +513,21 @@ enum TodayTasksWidgetSnapshotStore {
             )
         }
 
+        // The List widget's whole lists: every open task in the list, due any day, in the app's
+        // order. Like `perList`, independent of the Focus filter — a widget set to one list shows
+        // that list. A list's rows do not depend on the day (only how a row's due is labelled,
+        // which the widget works out as it renders), so there is nothing to pre-compute per day.
+        var openByList: [String: TodayTasksWidgetPerListSnapshot] = [:]
+        let openTodosByList = Dictionary(grouping: state.todos.filter { !$0.completed && $0.dueEpochMs != nil }) { $0.listId }
+        for list in state.lists {
+            guard let listTodos = openTodosByList[list.id], !listTodos.isEmpty else { continue }
+            let sorted = TaskSortEngine.sortedTodos(listTodos, key: taskSortKey)
+            openByList[list.id] = TodayTasksWidgetPerListSnapshot(
+                totalCount: sorted.count,
+                tasks: sorted.prefix(perListTaskLimit).map(makeTaskSnapshot)
+            )
+        }
+
         let upcomingDays = days.dropFirst().map { day in
             let dayTasks = feedTasksDue(on: day)
             let dayOverdue = overdueTasks(before: day)
@@ -530,7 +555,8 @@ enum TodayTasksWidgetSnapshotStore {
             upcomingDays: upcomingDays,
             completedCount: completedCount(on: days[0]),
             overdueCount: todayOverdue.count,
-            overdueTasks: todayOverdue.prefix(overdueTaskLimit).map(makeTaskSnapshot)
+            overdueTasks: todayOverdue.prefix(overdueTaskLimit).map(makeTaskSnapshot),
+            openByList: openByList
         )
     }
 

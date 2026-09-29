@@ -57,9 +57,9 @@ internal object WidgetInstanceCatalog {
         WidgetReceiverBinding(WidgetInstanceKind.FLOATER, FloaterTasksWidgetSmallReceiver::class.java),
         WidgetReceiverBinding(WidgetInstanceKind.FLOATER, FloaterTasksWidgetReceiver::class.java),
         WidgetReceiverBinding(WidgetInstanceKind.FLOATER, FloaterTasksWidgetLargeReceiver::class.java),
-        WidgetReceiverBinding(WidgetInstanceKind.LIST, ListTasksWidgetSmallReceiver::class.java),
-        WidgetReceiverBinding(WidgetInstanceKind.LIST, ListTasksWidgetReceiver::class.java),
-        WidgetReceiverBinding(WidgetInstanceKind.LIST, ListTasksWidgetLargeReceiver::class.java),
+        WidgetReceiverBinding(WidgetInstanceKind.LIST, ListWidgetSmallReceiver::class.java),
+        WidgetReceiverBinding(WidgetInstanceKind.LIST, ListWidgetReceiver::class.java),
+        WidgetReceiverBinding(WidgetInstanceKind.LIST, ListWidgetLargeReceiver::class.java),
     )
 
     private val kindByReceiverClassName: Map<String, WidgetInstanceKind> =

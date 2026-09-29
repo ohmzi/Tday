@@ -66,15 +66,15 @@ class WidgetInstanceKindTest {
         )
         assertEquals(
             WidgetInstanceKind.LIST,
-            WidgetInstanceCatalog.kindForReceiverClassName(ListTasksWidgetSmallReceiver::class.java.name),
+            WidgetInstanceCatalog.kindForReceiverClassName(ListWidgetSmallReceiver::class.java.name),
         )
         assertEquals(
             WidgetInstanceKind.LIST,
-            WidgetInstanceCatalog.kindForReceiverClassName(ListTasksWidgetReceiver::class.java.name),
+            WidgetInstanceCatalog.kindForReceiverClassName(ListWidgetReceiver::class.java.name),
         )
         assertEquals(
             WidgetInstanceKind.LIST,
-            WidgetInstanceCatalog.kindForReceiverClassName(ListTasksWidgetLargeReceiver::class.java.name),
+            WidgetInstanceCatalog.kindForReceiverClassName(ListWidgetLargeReceiver::class.java.name),
         )
         assertEquals(9, WidgetInstanceCatalog.bindings.size)
         // Every kind has at least one receiver. These bindings are now the ONLY thing a repaint

@@ -38,8 +38,8 @@ app/src/main/java/com/ohmz/tday/compose/feature/widget/
 ├── TodayTasksWidgetReceiver.kt         ← Small/default/Large receivers
 ├── FloaterTasksWidget.kt               ← mirror of TodayTasksWidget for floaters
 ├── FloaterTasksWidgetReceiver.kt       ← mirror receivers
-├── ListTasksWidget.kt                  ← per-list widget (widgets v3): per-instance selection
-├── ListTasksWidgetReceiver.kt          ← its Small/default/Large receivers (+ onDeleted cleanup)
+├── ListTasksWidget.kt                  ← List widget model: unconfigured setup state, then one picked list per instance
+├── ListWidgetReceiver.kt               ← its Small/default/Large receivers (+ onDeleted cleanup)
 ├── WidgetTaskActions.kt                ← list-row taps: the row template, the invisible trampoline activity, the complete receiver
 ├── WidgetRefresher.kt                  ← the ONE repaint trigger for all three widgets (Hilt Singleton, one conflated channel)
 ├── WidgetInstanceKind.kt               ← the ONE per-instance kind/feed resolution (provider binding -> TODAY/FLOATER/LIST) + the render plan
@@ -48,7 +48,7 @@ app/src/main/java/com/ohmz/tday/compose/feature/widget/
 ├── WidgetCreateTaskActivity.kt         ← translucent Activity behind the widget's + button (a bottom sheet, not MainActivity)
 ├── WidgetCreateRoute.kt                ← the tday://todos/create deep link (carries the tapped appWidgetId) + WidgetCreateTarget
 ├── WidgetCreateTaskSubmitter.kt        ← creates the task, then repaints every instance with the tapped one first
-├── WidgetListConfigurationActivity.kt  ← the ACTION_APPWIDGET_CONFIGURE list picker
+├── WidgetListPickerActivity.kt         ← the List widget's list picker (tap on an unconfigured widget, reconfigure, APPWIDGET_CONFIGURE)
 ├── WidgetListSelectionStore.kt         ← per-appWidgetId list selection (plain SharedPreferences)
 ├── WidgetEntryPoint.kt                 ← Hilt @EntryPoint exposing only the completion/refresh singletons to widget actions
 ├── WidgetHydrateWorker.kt              ← the only widget-flow class allowed to open the encrypted cache; seeds a missing snapshot, rebuilds a Today snapshot that has run out of days
@@ -300,8 +300,8 @@ App backgrounds / user leaves it
 
 ## Which widget is which (Android)
 
-There are three widget kinds — `TodayTasksWidget`, `FloaterTasksWidget` and `ListTasksWidget` —
-and every question of the form "which widget is this instance?" is answered in exactly one place:
+There are three widget kinds — `TodayTasksWidget`, `FloaterTasksWidget` and `ListTasksWidget`, each in
+Small, Medium and Large — and every question of the form "which widget is this instance?" is answered in exactly one place:
 `WidgetInstanceKind.kt`.
 
 - `WidgetInstanceResolver.kindOf(appWidgetId)` reads

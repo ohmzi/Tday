@@ -1238,6 +1238,40 @@
       "searchBody": "ein widget auf eine bestimmte liste statt den ganzen feed richten. widget lange gedruckt halten und „widget bearbeiten\" wahlen, um genau festzulegen, welche liste es zeigt – jede deiner geplanten listen oder floater-listen. eine geplante liste zeigt falligkeitszeiten und markiert uberfalliges; eine floater-liste zeigt eine offene liste ohne falligkeitszeiten. bleibt die auswahl leer, zeigt das widget weiterhin den vollstandigen today- oder floater-feed. fuge mehrere widgets hinzu, jedes auf eine andere liste ausgerichtet, um sie alle gleichzeitig auf deinem startbildschirm zu sehen."
     },
     {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.45",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Listen-Widget",
+      "summary": "Ein drittes Widget, für eine Liste deiner Wahl.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Neben Heute und Jederzeit gibt es ein Listen-Widget. Platziere es, und es fragt, welche Liste es zeigen soll — jede geplante Liste oder Jederzeit-Liste. Danach zeigt es nur diese Liste, und sein + legt eine Aufgabe direkt darin an, mit der Standardpriorität der Liste. Platziere ein weiteres für eine andere Liste; jedes behält seine eigene."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Um ein Listen-Widget auf eine andere Liste umzustellen, halte es gedrückt und wähle Bearbeiten (auf dem iPhone: Widget bearbeiten)."
+          ]
+        }
+      ],
+      "searchTitle": "listen-widget",
+      "searchKeywords": "widget, startbildschirm, liste, einrichtung, auswahl, jederzeit, geplant, hinzufugen",
+      "searchBody": "ein drittes widget, fur eine liste deiner wahl. neben heute und jederzeit gibt es ein listen-widget. platziere es, und es fragt, welche liste es zeigen soll — jede geplante liste oder jederzeit-liste. danach zeigt es nur diese liste, und sein + legt eine aufgabe direkt darin an, mit der standardprioritat der liste. platziere ein weiteres fur eine andere liste; jedes behalt seine eigene. um ein listen-widget auf eine andere liste umzustellen, halte es gedruckt und wahle bearbeiten (auf dem iphone: widget bearbeiten)."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

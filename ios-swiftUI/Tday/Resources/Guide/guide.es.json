@@ -1238,6 +1238,40 @@
       "searchBody": "haz que un widget muestre una lista concreta en vez de todo el feed. manten pulsado un widget de t'day y elige editar widget para decidir exactamente que lista muestra: cualquiera de tus listas programadas o de flotantes. una lista programada muestra horas de vencimiento y marca lo atrasado; una lista de flotantes muestra una lista abierta sin horas de vencimiento. si la dejas sin elegir, el widget sigue mostrando el feed completo de hoy o de flotantes. anade varios widgets, cada uno apuntando a una lista distinta, para verlos todos a la vez en tu pantalla de inicio."
     },
     {
+      "id": "list-widgets",
+      "section": "WIDGETS_AND_SURFACES",
+      "sectionOrder": 5,
+      "icon": "layout-grid",
+      "platforms": [
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.7.45",
+      "deepLink": null,
+      "helpAnchors": [],
+      "title": "Widget de lista",
+      "summary": "Un tercer widget, para la lista que elijas.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Junto a Hoy y Cualquier momento hay un widget de lista. Colócalo y te pregunta qué lista mostrar — cualquier lista programada o de cualquier momento. A partir de ahí muestra solo esa lista, y su + añade una tarea directamente en ella, con la prioridad predeterminada de la lista. Coloca otro para otra lista; cada uno conserva la suya."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Para cambiar un widget de lista a otra lista, mantenlo pulsado y elige Editar (Editar widget en iPhone)."
+          ]
+        }
+      ],
+      "searchTitle": "widget de lista",
+      "searchKeywords": "widget, pantalla de inicio, lista, configurar, selector, cualquier momento, programado, anadir",
+      "searchBody": "un tercer widget, para la lista que elijas. junto a hoy y cualquier momento hay un widget de lista. colocalo y te pregunta que lista mostrar — cualquier lista programada o de cualquier momento. a partir de ahi muestra solo esa lista, y su + anade una tarea directamente en ella, con la prioridad predeterminada de la lista. coloca otro para otra lista; cada uno conserva la suya. para cambiar un widget de lista a otra lista, mantenlo pulsado y elige editar (editar widget en iphone)."
+    },
+    {
       "id": "widget-quick-add",
       "section": "WIDGETS_AND_SURFACES",
       "sectionOrder": 5,

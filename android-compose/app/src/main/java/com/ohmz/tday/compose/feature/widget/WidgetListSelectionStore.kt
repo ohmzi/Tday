@@ -7,10 +7,9 @@ import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
 internal data class WidgetListSelection(
     val listId: String,
     val listType: WidgetListType,
-    /** Shown as the widget's header — same trade-off as Today/Floater's title (see
-     *  `WidgetSnapshot`'s KDoc): storing the name here, chosen once at configure time, is simpler
-     *  than re-reading the cache on every render, and a rename is rare enough that a stale header
-     *  until the next reconfigure is an acceptable trade. */
+    /** The name the list had when it was picked: the header's fallback until the list's snapshot
+     *  carries the cache's current name (`WidgetSnapshot.listName`), which it does from the first
+     *  write after the pick — so a rename reaches the header without picking the list again. */
     val listName: String,
 )
 
@@ -22,7 +21,7 @@ internal data class WidgetListSelection(
  * — nothing stored here is sensitive (a list id and its cached display name), so there is no
  * reason to pay for `EncryptedSharedPreferences`' Keystore round trip.
  *
- * Read from three places: [WidgetListConfigurationActivity] (writes on pick), `ListTasksWidget`'s
+ * Read from three places: [WidgetListPickerActivity] (writes on pick), `ListTasksWidget`'s
  * render (reads the instance it is rendering), and [WidgetSnapshotWriter] (enumerates
  * every configured instance so a cache write can rebuild each one's snapshot). None of those are
  * Hilt-reachable from a widget render path, so — like [WidgetSnapshotStore] — this is constructed

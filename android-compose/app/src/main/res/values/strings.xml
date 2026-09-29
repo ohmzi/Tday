@@ -618,9 +618,13 @@
     <string name="widget_list_tasks_title_medium">List — Medium</string>
     <string name="widget_list_tasks_title_large">List — Large</string>
     <string name="widget_list_tasks_setup_title">Choose a list</string>
-    <string name="widget_list_tasks_setup_message">Tap to finish setting up this widget</string>
+    <string name="widget_list_tasks_setup_message">Tap to pick which list this widget shows</string>
+    <string name="widget_list_tasks_missing_message">That list was deleted. Tap to choose another.</string>
+    <string name="widget_list_tasks_empty">Nothing left in this list</string>
     <string name="widget_list_picker_title">Choose a list</string>
-    <string name="widget_list_picker_empty">Create a list in T\'Day first, then add this widget again</string>
+    <string name="widget_list_picker_subtitle">This widget will show only this list, and its + adds tasks straight to it.</string>
+    <string name="widget_list_picker_empty_title">No lists yet</string>
+    <string name="widget_list_picker_empty">Create a list in T\'Day, then tap this widget again.</string>
     <string name="widget_list_picker_section_todo">Scheduled lists</string>
     <string name="widget_list_picker_section_floater">Floater lists</string>
     <string name="widget_list_picker_shared_label">Shared</string>

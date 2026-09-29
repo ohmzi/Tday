@@ -2,6 +2,7 @@ package com.ohmz.tday.compose
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterExitState
@@ -66,6 +67,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavGraph
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -898,6 +901,7 @@ private fun NavGraphBuilder.listRoutes(
         // A list's key carries its id, so this row grows only out of the row for THIS list —
         // and the id comes from the route on both ends, here from the argument and on the
         // tile from the list it is drawn for.
+        val onBack = rememberListBack(entry, navController, RootFeedTab.SCHEDULED_TASK_HOME, onChangeRootFeedTab)
         TdayTileDestination(
             route = AppRoute.ListTodos,
             fromHomeTile = rememberHomeTileOrigin(entry),
@@ -907,7 +911,7 @@ private fun NavGraphBuilder.listRoutes(
                 mode = TodoListMode.LIST,
                 listId = listId,
                 listName = listName,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 pullRefreshEnabled = !isLocalMode(),
                 summaryAvailable = !isLocalMode(),
                 onListDeleted = {
@@ -932,6 +936,7 @@ private fun NavGraphBuilder.listRoutes(
     ) { entry ->
         val listId = entry.arguments?.getString(ARG_LIST_ID).orEmpty()
         val listName = Uri.decode(entry.arguments?.getString(ARG_LIST_NAME).orEmpty())
+        val onBack = rememberListBack(entry, navController, RootFeedTab.FLOATER_TASK_HOME, onChangeRootFeedTab)
         TdayTileDestination(
             route = AppRoute.FloaterListTodos,
             fromHomeTile = rememberHomeTileOrigin(entry),
@@ -941,7 +946,7 @@ private fun NavGraphBuilder.listRoutes(
                 mode = TodoListMode.FLOATER,
                 listId = listId,
                 listName = listName,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 pullRefreshEnabled = !isLocalMode(),
                 summaryAvailable = !isLocalMode(),
                 onListDeleted = {
@@ -954,6 +959,38 @@ private fun NavGraphBuilder.listRoutes(
             )
         }
     }
+}
+
+/**
+ * Back from a list screen, for the case where nothing sits under it: a list opened on its own —
+ * from a List widget, a notification, a `tday://` link — is the only entry in the back stack, so
+ * a pop had nowhere to go. The chevron did nothing and system back closed the app. There, back
+ * goes to the list's own root feed (Scheduled or Anytime) instead, the screen a list opened from
+ * inside the app returns to. Reached through the app, a list has home under it and back stays an
+ * ordinary pop, predictive preview included — the handler below is off then.
+ *
+ * Read from the live back stack for THIS entry, not "the previous entry" of whatever is on top:
+ * a list still fading out after that navigation must not claim system back from the feed.
+ */
+@Composable
+private fun rememberListBack(
+    entry: NavBackStackEntry,
+    navController: NavHostController,
+    feed: RootFeedTab,
+    onChangeRootFeedTab: (RootFeedTab) -> Unit,
+): () -> Unit {
+    val backStack by navController.currentBackStack.collectAsStateWithLifecycle()
+    val opensAlone = entry in backStack &&
+        backStack.takeWhile { it.id != entry.id }.none { it.destination !is NavGraph }
+    val backToFeed: () -> Unit = {
+        onChangeRootFeedTab(feed)
+        navController.navigate(AppRoute.ScheduledTaskHome.route) {
+            popUpTo(navController.graph.id) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
+    BackHandler(enabled = opensAlone, onBack = backToFeed)
+    return if (opensAlone) backToFeed else ({ navController.popBackStack() })
 }
 
 /** Completed history, calendar, the car surface, morning sweep, and the in-app guide. */
