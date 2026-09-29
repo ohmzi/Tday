@@ -66,7 +66,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -179,8 +178,21 @@ private const val ARG_COMPLETED_SCOPE = "scope"
 private const val CREATE_TARGET_TODAY = "today"
 private const val CREATE_TARGET_FLOATER = "floater"
 
+// KT-R1006 (cyclomatic complexity, reported at 20) is suppressed on this
+// declaration rather than fixed here. The three tile-zoom exceptions in the
+// NavHost's transition slots below account for six of those points, and
+// moving them into helpers is what would bring the number down. They stay
+// inline on purpose: `tday-web/tests/guardrails/route-handover.test.ts` reads
+// each slot and pins which side the flag is read off — `targetState` on the
+// way in, `initialState` on the way back — because a check read off the other
+// side is never true, and home would quietly go back to crossfading under
+// every zoom with nothing else failing.
+//
+// One declaration, one issue code — the narrowest form the tool has, and the
+// style the repo already uses for TodoListScreen's and SyncManager's own
+// KT-R1006 suppressions. Never file-wide.
 @Composable
-fun TdayApp(
+fun TdayApp( // skipcq: KT-R1006
     onFirstFrameDrawn: () -> Unit = {},
 ) {
     val splashTaglineOptions = stringArrayResource(R.array.splash_taglines)
@@ -446,9 +458,27 @@ fun TdayApp(
                         // draws it in the shared overlay for the whole flight. Fading the same entry
                         // in place as well only shows once that flight has landed — mid-fade, with
                         // home's dock and create button showing through it — so it gets no fade.
-                        enterTransition = { tileAwareEnterTransition(motionEnabled, arriving = targetState) },
-                        exitTransition = { tileAwareExitTransition(motionEnabled, arriving = targetState) },
-                        popEnterTransition = { tileAwareEnterTransition(motionEnabled, arriving = initialState) },
+                        enterTransition = {
+                            if (motionEnabled && targetState.isHomeTileArrival()) {
+                                EnterTransition.None
+                            } else {
+                                navigationEnterTransition(motionEnabled)
+                            }
+                        },
+                        exitTransition = {
+                            if (motionEnabled && targetState.isHomeTileArrival()) {
+                                TdayTileZoomHold
+                            } else {
+                                navigationExitTransition(motionEnabled)
+                            }
+                        },
+                        popEnterTransition = {
+                            if (motionEnabled && initialState.isHomeTileArrival()) {
+                                EnterTransition.None
+                            } else {
+                                navigationEnterTransition(motionEnabled)
+                            }
+                        },
                         popExitTransition = { navigationPopExitTransition(motionEnabled) },
                     ) {
                         splashAndAuthRoutes(
@@ -2579,26 +2609,6 @@ private fun navigationEnterTransition(motionEnabled: Boolean): EnterTransition =
                 easing = LinearOutSlowInEasing,
             ),
         )
-    }
-
-/**
- * [navigationEnterTransition], except for the screen a home tile zooms open (or the screen under
- * one that is closing): the zoom reveals it, so fading it in place as well would only show once the
- * flight has landed. [arriving] is the destination the tile opened.
- */
-private fun tileAwareEnterTransition(motionEnabled: Boolean, arriving: NavBackStackEntry): EnterTransition =
-    if (motionEnabled && arriving.isHomeTileArrival()) {
-        EnterTransition.None
-    } else {
-        navigationEnterTransition(motionEnabled)
-    }
-
-/** [navigationExitTransition], except that home holds still under a tile's zoom (`TdayTileZoomHold`). */
-private fun tileAwareExitTransition(motionEnabled: Boolean, arriving: NavBackStackEntry): ExitTransition =
-    if (motionEnabled && arriving.isHomeTileArrival()) {
-        TdayTileZoomHold
-    } else {
-        navigationExitTransition(motionEnabled)
     }
 
 /** The other curve of the pair; see [navigationEnterTransition] for the length they share. */
