@@ -1,10 +1,11 @@
 {
-  "version": "0.7.43",
-  "publishedAt": "2026-09-28T00:45:52-04:00",
+  "version": "0.7.44",
+  "publishedAt": "2026-09-28T21:49:13-04:00",
   "notes": [
-    "Render widgets as plain RemoteViews instead of Glance",
-    "Make widget receiver bases open and drop the generic catch"
+    "Give task widgets a progress ring, overdue section and check-off beat",
+    "Keep the Android tile zoom in step with its rectangle",
+    "Stop resized widgets from stacking stale watermarks"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.43",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.42..v0.7.43"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.44",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.43..v0.7.44"
 }
