@@ -6,6 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.StrikethroughSpan
 import android.util.SizeF
 import android.util.TypedValue
 import android.view.View
@@ -77,9 +80,6 @@ internal data class TaskWidgetVisuals(
     // the same way LOADING already does: no watermark, just the header and the message.
     val emptyWatermark: Int?,
     val setupWatermark: Int?,
-    // When set, every task row uses this check ring instead of a priority-coloured one
-    // (floater tasks have no priority, so they use the widget's green accent).
-    val priorityRingOverride: Int? = null,
 )
 
 internal data class TaskWidgetRow(
@@ -90,10 +90,43 @@ internal data class TaskWidgetRow(
     val priority: String,
     val trailingText: String? = null,
     val description: String? = null,
-    /** List widget only (widgets v3): tints [trailingText] as overdue. Today/Floater never set
-     *  this, so their trailing time keeps its normal secondary color unchanged. */
+    /** Tints [trailingText] as overdue: per-list rows past due, and Today's Overdue section. */
     val overdueTrailing: Boolean = false,
+    /** Mid check-off (see [WidgetCheckOff]): ring filled and ticked, text struck through. */
+    val checking: Boolean = false,
+    /** A later day's task previewed under an empty Today: muted, and a ring tap opens the app. */
+    val preview: Boolean = false,
 )
+
+/** One entry of a widget's task list: a task, or a label introducing what follows it. */
+internal sealed interface TaskWidgetListItem {
+    val key: Long
+
+    data class Task(val row: TaskWidgetRow) : TaskWidgetListItem {
+        override val key: Long get() = row.key
+    }
+
+    /**
+     * [MESSAGE] is the empty-day line that heads a preview; [SECTION] names the rows below it.
+     * Keys come from [labelKey], so they stay apart from task keys (`id.hashCode()`).
+     */
+    data class Label(override val key: Long, val text: String, val style: Style) : TaskWidgetListItem {
+        enum class Style { MESSAGE, SECTION }
+    }
+
+    companion object {
+        fun labelKey(slot: Int): Long = Long.MIN_VALUE + slot
+    }
+}
+
+/**
+ * Today's header date ("Mon" over "28"), formatted for the day the widget is showing, and the
+ * shorter [title] ("Today") that stands beside it — the date already says which day.
+ */
+internal data class TaskWidgetDateBlock(val weekday: String, val day: String, val title: String)
+
+/** Today's header ring: tasks done today out of done plus still due today. */
+internal data class TaskWidgetProgress(val done: Int, val total: Int)
 
 /**
  * Everything one widget instance shows, resolved by its kind ([TodayTasksWidget],
@@ -103,7 +136,10 @@ internal data class TaskWidgetRow(
 internal data class TaskWidgetModel(
     val title: String,
     val state: TaskWidgetContentState,
-    val countLabel: String,
+    /** The header count beside the title; null hides it. */
+    val countLabel: String?,
+    /** The compact (2x2) header's count, which has no room for a progress phrase. */
+    val compactCountLabel: String? = countLabel,
     val setupTitle: String,
     val setupMessage: String,
     val emptyTitle: String,
@@ -112,7 +148,14 @@ internal data class TaskWidgetModel(
     val loadingTitle: String,
     /** Spoken label for the "+" button. */
     val addLabel: String,
-    val rows: List<TaskWidgetRow>,
+    /** The list drawn in the TASKS state. */
+    val items: List<TaskWidgetListItem>,
+    /** Drawn instead of the centred empty message wherever there is room for it (not compact). */
+    val emptyPreview: List<TaskWidgetListItem> = emptyList(),
+    /** Today only: the date the header leads with. */
+    val dateBlock: TaskWidgetDateBlock? = null,
+    /** Today only: the header's progress ring, drawn while there is anything to count. */
+    val progress: TaskWidgetProgress? = null,
     val visuals: TaskWidgetVisuals,
     val openIntent: Intent,
     val addIntent: Intent,
@@ -135,8 +178,9 @@ internal object TaskWidgetRemoteViews {
 
     /**
      * One RemoteViews for every size the host reported for [appWidgetId], built once per distinct
-     * layout bucket. A single bucket (the common case) is a plain RemoteViews; more than one
-     * becomes a size map on API 31+, or the landscape/portrait pair below it.
+     * shape (layout bucket and width class). A single shape (the common case) is a plain
+     * RemoteViews; more than one becomes a size map on API 31+, or the landscape/portrait pair
+     * below it.
      */
     fun build(
         context: Context,
@@ -144,36 +188,37 @@ internal object TaskWidgetRemoteViews {
         model: TaskWidgetModel,
         sizes: List<DpSize>,
     ): RemoteViews {
-        val byLayout = sizes.ifEmpty { listOf(FallbackWidgetSize) }
+        val byShape = sizes.ifEmpty { listOf(FallbackWidgetSize) }
             .distinct()
-            .groupBy(::taskWidgetLayoutFor)
-        if (byLayout.size == 1) return buildForLayout(context, appWidgetId, model, byLayout.keys.single())
+            .groupBy(::taskWidgetShapeFor)
+        if (byShape.size == 1) return buildForShape(context, appWidgetId, model, byShape.keys.single())
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // One entry per bucket, never one RemoteViews under two keys: the size map stamps each
+            // One entry per shape, never one RemoteViews under two keys: the size map stamps each
             // value's ideal size onto the instance itself. The key is the smallest width and height
-            // the bucket was reported at, so it fits every host size that maps to it.
-            val sized = byLayout.map { (layout, layoutSizes) ->
-                SizeF(layoutSizes.minOf { it.width.value }, layoutSizes.minOf { it.height.value }) to
-                    buildForLayout(context, appWidgetId, model, layout)
+            // the shape was reported at, so it fits every host size that maps to it.
+            val sized = byShape.map { (shape, shapeSizes) ->
+                SizeF(shapeSizes.minOf { it.width.value }, shapeSizes.minOf { it.height.value }) to
+                    buildForShape(context, appWidgetId, model, shape)
             }.toMap()
             return RemoteViews(sized)
         }
         // Below API 31 the only multi-layout form is the orientation pair. `sizes` came from
         // taskWidgetSizes, which lists landscape first and portrait second in that case.
         return RemoteViews(
-            buildForLayout(context, appWidgetId, model, taskWidgetLayoutFor(sizes.first())),
-            buildForLayout(context, appWidgetId, model, taskWidgetLayoutFor(sizes.last())),
+            buildForShape(context, appWidgetId, model, taskWidgetShapeFor(sizes.first())),
+            buildForShape(context, appWidgetId, model, taskWidgetShapeFor(sizes.last())),
         )
     }
 
-    private fun buildForLayout(
+    private fun buildForShape(
         context: Context,
         appWidgetId: Int,
         model: TaskWidgetModel,
-        layout: TaskWidgetLayout,
+        shape: TaskWidgetShape,
     ): RemoteViews = RemoteViews(context.packageName, R.layout.widget_task).apply {
         val state = model.state
+        val layout = shape.layout
         val compact = layout == TaskWidgetLayout.COMPACT
 
         setOnClickPendingIntent(android.R.id.background, activityIntent(context, appWidgetId, model.openIntent))
@@ -188,17 +233,28 @@ internal object TaskWidgetRemoteViews {
             // moment a real snapshot lands — the opposite of the invisible handoff this is for.
             TaskWidgetContentState.LOADING -> null
         }
-        if (watermark != null) {
-            val watermarkId = taskWidgetWatermarkViewId(layout)
-            setImageViewResource(watermarkId, watermark)
-            setViewVisibility(watermarkId, View.VISIBLE)
+        // Every bucket's watermark is switched, not just this one's: after a resize the host still
+        // shows the previous bucket's watermark unless this render hides it (see setVisible).
+        val watermarkId = taskWidgetWatermarkViewId(layout)
+        for (bucket in TaskWidgetLayout.entries) {
+            val bucketWatermarkId = taskWidgetWatermarkViewId(bucket)
+            setVisible(bucketWatermarkId, watermark != null && bucketWatermarkId == watermarkId)
         }
+        if (watermark != null) setImageViewResource(watermarkId, watermark)
 
-        applyHeader(context, appWidgetId, model, compact)
+        applyHeader(context, appWidgetId, model, compact, shape.narrow)
 
-        if (state == TaskWidgetContentState.TASKS) {
-            setViewVisibility(R.id.widget_list, View.VISIBLE)
-            applyRows(context, appWidgetId, model, layout)
+        // Where there is room, an empty Today previews its next day with tasks rather than
+        // centring one line over blank space. Compact keeps the plain message.
+        val listItems = when {
+            state == TaskWidgetContentState.TASKS -> model.items
+            state == TaskWidgetContentState.EMPTY && !compact && model.emptyPreview.isNotEmpty() -> model.emptyPreview
+            else -> null
+        }
+        setVisible(R.id.widget_list, listItems != null)
+        setVisible(R.id.widget_message, listItems == null)
+        if (listItems != null) {
+            applyItems(context, appWidgetId, listItems, shape)
         } else {
             applyMessage(model, compact)
         }
@@ -209,28 +265,53 @@ internal object TaskWidgetRemoteViews {
         appWidgetId: Int,
         model: TaskWidgetModel,
         compact: Boolean,
+        narrow: Boolean,
     ) {
-        val showCount = model.state == TaskWidgetContentState.TASKS
-        if (compact) {
-            // Compact shows no title — "Floater Tasks" + count + button can't fit a 2x2 width —
-            // so the count leads, and only once there is something to count.
-            setViewVisibility(R.id.widget_header_wide, View.GONE)
-            if (showCount) {
-                setTextViewText(R.id.widget_compact_count, model.countLabel)
-                setViewVisibility(R.id.widget_compact_count, View.VISIBLE)
-            }
-        } else {
-            setTextViewText(R.id.widget_title, model.title)
-            if (showCount) {
-                setTextViewText(R.id.widget_count, model.countLabel)
-                setViewVisibility(R.id.widget_count, View.VISIBLE)
-            }
-        }
+        val loading = model.state == TaskWidgetContentState.LOADING
+        // Today leads with its date and stacks the title over the count, where there is the width
+        // for it. The loading layouts a first render hands over from have neither, so LOADING
+        // keeps the plain header they match.
+        val dateBlock = model.dateBlock?.takeUnless { compact || narrow || loading }
+        applyHeaderText(model, compact, dateBlock)
+        applyProgress(model.progress?.takeIf { dateBlock != null && it.total > 0 })
 
         setInt(R.id.widget_add, "setBackgroundResource", model.visuals.addButtonBackground)
         setImageViewResource(R.id.widget_add_icon, model.visuals.addIcon)
         setContentDescription(R.id.widget_add, model.addLabel)
         setOnClickPendingIntent(R.id.widget_add, activityIntent(context, appWidgetId, model.addIntent))
+    }
+
+    /** The header's title and count: stacked under [dateBlock] when there is one, else in a row. */
+    private fun RemoteViews.applyHeaderText(model: TaskWidgetModel, compact: Boolean, dateBlock: TaskWidgetDateBlock?) {
+        val stacked = dateBlock != null
+        val count = model.countLabel
+        val compactCount = model.compactCountLabel
+        // Compact shows no title — "Floater Tasks" + count + button can't fit a 2x2 width — so the
+        // count leads, and only once there is something to count.
+        setVisible(R.id.widget_date, stacked)
+        setVisible(R.id.widget_header_wide, !compact && !stacked)
+        setVisible(R.id.widget_header_stacked, stacked)
+        setVisible(R.id.widget_compact_count, compact && compactCount != null)
+        setVisible(R.id.widget_count, !compact && !stacked && count != null)
+        setVisible(R.id.widget_count_stacked, stacked && count != null)
+        when {
+            compact -> compactCount?.let { setTextViewText(R.id.widget_compact_count, it) }
+            dateBlock != null -> {
+                setTextViewText(R.id.widget_date_weekday, dateBlock.weekday)
+                setTextViewText(R.id.widget_date_day, dateBlock.day)
+                setTextViewText(R.id.widget_title_stacked, dateBlock.title)
+                count?.let { setTextViewText(R.id.widget_count_stacked, it) }
+            }
+            else -> {
+                setTextViewText(R.id.widget_title, model.title)
+                count?.let { setTextViewText(R.id.widget_count, it) }
+            }
+        }
+    }
+
+    private fun RemoteViews.applyProgress(progress: TaskWidgetProgress?) {
+        setVisible(R.id.widget_progress, progress != null)
+        if (progress != null) setProgressBar(R.id.widget_progress, progress.total, progress.done, false)
     }
 
     private fun RemoteViews.applyMessage(model: TaskWidgetModel, compact: Boolean) {
@@ -240,38 +321,46 @@ internal object TaskWidgetRemoteViews {
             TaskWidgetContentState.LOADING -> model.loadingTitle to ""
             else -> model.emptyTitle to ""
         }
-        setViewVisibility(R.id.widget_message, View.VISIBLE)
-        if (model.state == TaskWidgetContentState.LOCKED) {
+        val locked = model.state == TaskWidgetContentState.LOCKED
+        setVisible(R.id.widget_message_icon, locked && !compact)
+        setVisible(R.id.widget_message_icon_compact, locked && compact)
+        if (locked) {
             val iconId = if (compact) R.id.widget_message_icon_compact else R.id.widget_message_icon
             setImageViewResource(iconId, R.drawable.widget_lock_icon)
-            setViewVisibility(iconId, View.VISIBLE)
         }
         setTextViewText(R.id.widget_message_title, title)
         setTextViewTextSize(R.id.widget_message_title, TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 15f)
         setInt(R.id.widget_message_title, "setMaxLines", if (compact) 1 else 2)
-        if (!compact && message.isNotEmpty()) {
-            setTextViewText(R.id.widget_message_body, message)
-            setViewVisibility(R.id.widget_message_body, View.VISIBLE)
-        }
+        val showBody = !compact && message.isNotEmpty()
+        setVisible(R.id.widget_message_body, showBody)
+        if (showBody) setTextViewText(R.id.widget_message_body, message)
     }
 
-    private fun RemoteViews.applyRows(
+    private fun RemoteViews.applyItems(
         context: Context,
         appWidgetId: Int,
-        model: TaskWidgetModel,
-        layout: TaskWidgetLayout,
+        listItems: List<TaskWidgetListItem>,
+        shape: TaskWidgetShape,
     ) {
-        val showTrailing = taskWidgetShowsTrailingText(layout)
-        val items = RemoteViewsCompat.RemoteCollectionItems.Builder()
+        val showTrailing = taskWidgetShowsTrailingText(shape)
+        val collection = RemoteViewsCompat.RemoteCollectionItems.Builder()
             .setHasStableIds(true)
-            .setViewTypeCount(1)
-        model.rows.forEachIndexed { index, row ->
-            items.addItem(
-                row.key,
-                rowViews(context, row, model.visuals, showTrailing, isLast = index == model.rows.lastIndex),
-            )
+            // A task row and a label row: the two layouts the list recycles between.
+            .setViewTypeCount(2)
+        listItems.forEachIndexed { index, item ->
+            val views = when (item) {
+                // A row's gap spaces it from the next TASK; a label brings its own top space.
+                is TaskWidgetListItem.Task -> rowViews(
+                    context,
+                    item.row,
+                    showTrailing,
+                    isLast = listItems.getOrNull(index + 1) !is TaskWidgetListItem.Task,
+                )
+                is TaskWidgetListItem.Label -> labelViews(context, item)
+            }
+            collection.addItem(item.key, views)
         }
-        RemoteViewsCompat.setRemoteAdapter(context, this, appWidgetId, R.id.widget_list, items.build())
+        RemoteViewsCompat.setRemoteAdapter(context, this, appWidgetId, R.id.widget_list, collection.build())
         // One template for the whole list; each row fills in what its tap means (see
         // WidgetTaskActions). A list item cannot carry a PendingIntent of its own.
         setPendingIntentTemplate(R.id.widget_list, WidgetTaskActions.rowTemplate(context, appWidgetId))
@@ -280,37 +369,76 @@ internal object TaskWidgetRemoteViews {
     private fun rowViews(
         context: Context,
         row: TaskWidgetRow,
-        visuals: TaskWidgetVisuals,
         showTrailing: Boolean,
         isLast: Boolean,
     ): RemoteViews = RemoteViews(context.packageName, R.layout.widget_task_list_row).apply {
-        setImageViewResource(
-            R.id.widget_row_ring,
-            visuals.priorityRingOverride ?: taskWidgetPriorityRingResource(row.priority),
+        val ring = when {
+            // Floater rows included: a floater has a priority too, and its ring shows it.
+            row.checking -> taskWidgetCheckedRingResource(row.priority)
+            // A preview is not today's to complete; the grey ring says so.
+            row.preview -> R.drawable.widget_priority_ring_lowest
+            else -> taskWidgetPriorityRingResource(row.priority)
+        }
+        setImageViewResource(R.id.widget_row_ring, ring)
+
+        // Rows are recycled by re-applying onto a previous row's views, so every text, color,
+        // visibility and background below is set on every row, never left to the XML defaults —
+        // a struck, dimmed row must not hand its look to the next task recycled into it.
+        val muted = row.checking || row.preview
+        setTextViewText(R.id.widget_row_title, row.title.struckThroughIf(row.checking))
+        setDayNightTextColor(
+            context,
+            R.id.widget_row_title,
+            if (muted) R.color.tday_widget_on_surface_variant else R.color.tday_widget_on_surface,
         )
-        setTextViewText(R.id.widget_row_title, row.title)
 
         val trailing = row.trailingText?.takeIf { showTrailing }
+        setVisible(R.id.widget_row_time, trailing != null)
         if (trailing != null) {
             setTextViewText(R.id.widget_row_time, trailing)
-            setViewVisibility(R.id.widget_row_time, View.VISIBLE)
-            if (row.overdueTrailing) {
-                // Reuses the existing high-priority ring color as the overdue tint rather than
-                // adding a new color resource — same red, already themed for day/night.
-                setDayNightTextColor(context, R.id.widget_row_time, R.color.tday_widget_priority_high)
-            }
+            // Reuses the existing high-priority ring color as the overdue tint rather than
+            // adding a new color resource — same red, already themed for day/night.
+            setDayNightTextColor(
+                context,
+                R.id.widget_row_time,
+                if (row.overdueTrailing) R.color.tday_widget_priority_high else R.color.tday_widget_on_surface_variant,
+            )
+            setInt(
+                R.id.widget_row_time,
+                "setBackgroundResource",
+                if (row.overdueTrailing) R.drawable.widget_due_chip_overdue else R.drawable.widget_due_chip,
+            )
         }
 
         val notes = flattenNotesToPlainText(row.description).takeIf { it.isNotBlank() }
-        if (notes != null) {
-            setTextViewText(R.id.widget_row_notes, notes)
-            setViewVisibility(R.id.widget_row_notes, View.VISIBLE)
-        }
+        setVisible(R.id.widget_row_notes, notes != null)
+        if (notes != null) setTextViewText(R.id.widget_row_notes, notes.struckThroughIf(row.checking))
         // Plain whitespace between rows, no separator line — matches the widget-picker previews.
-        if (isLast) setViewVisibility(R.id.widget_row_gap, View.GONE)
+        setVisible(R.id.widget_row_gap, !isLast)
 
         setOnClickFillInIntent(R.id.widget_row, WidgetTaskActions.openFillIn())
-        setOnClickFillInIntent(R.id.widget_row_check, WidgetTaskActions.completeFillIn(row.id))
+        setOnClickFillInIntent(
+            R.id.widget_row_check,
+            if (row.preview) WidgetTaskActions.openFillIn() else WidgetTaskActions.completeFillIn(row.id),
+        )
+    }
+
+    private fun labelViews(context: Context, label: TaskWidgetListItem.Label): RemoteViews =
+        RemoteViews(context.packageName, R.layout.widget_task_list_label).apply {
+            // Two styled TextViews, one shown, rather than one restyled per label: RemoteViews
+            // cannot swap a font, and the message and the section name are set in different ones.
+            val message = label.style == TaskWidgetListItem.Label.Style.MESSAGE
+            setVisible(R.id.widget_label_message, message)
+            setVisible(R.id.widget_label_section, !message)
+            setTextViewText(if (message) R.id.widget_label_message else R.id.widget_label_section, label.text)
+            setOnClickFillInIntent(R.id.widget_label, WidgetTaskActions.openFillIn())
+        }
+
+    private fun CharSequence.struckThroughIf(struck: Boolean): CharSequence {
+        if (!struck) return this
+        return SpannableString(this).apply {
+            setSpan(StrikethroughSpan(), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
     }
 
     /**
@@ -325,6 +453,17 @@ internal object TaskWidgetRemoteViews {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 }
+
+/**
+ * The only way this file changes a view's visibility: always explicitly shown or hidden, never
+ * "show if needed" on top of the XML default. A host that already displays `widget_task` does not
+ * inflate a new RemoteViews — it re-applies the actions onto the live view tree (AppWidgetHostView
+ * on every update and resize, RemoteCollectionItemsAdapter on every recycled row). So a view an
+ * earlier render made VISIBLE stays VISIBLE until a later render hides it: resizing from MEDIUM to
+ * TALL drew both buckets' watermarks on top of each other. `WidgetReapplyVisibilityTest` pins it.
+ */
+private fun RemoteViews.setVisible(@IdRes viewId: Int, visible: Boolean) =
+    setViewVisibility(viewId, if (visible) View.VISIBLE else View.GONE)
 
 // On API 31+, RemoteViews.setColorStateList stores a color-resource REFERENCE, not a resolved
 // literal, so whichever process applies this RemoteViews (the launcher/widget host, the OS, or our
@@ -404,6 +543,16 @@ internal fun taskWidgetPriorityRingResource(priority: String): Int {
     }
 }
 
+/** The filled, ticked ring a row shows mid check-off, in the colour of its [taskWidgetPriorityRingResource]. */
+internal fun taskWidgetCheckedRingResource(priority: String): Int {
+    return when {
+        isUrgentPriority(priority) -> R.drawable.widget_check_ring_high
+        isImportantPriority(priority) -> R.drawable.widget_check_ring_medium
+        isLowestPriority(priority) -> R.drawable.widget_check_ring_lowest
+        else -> R.drawable.widget_check_ring_low
+    }
+}
+
 internal fun taskWidgetIsDaytime(hour: Int): Boolean = hour in 6 until 18
 
 /**
@@ -422,3 +571,19 @@ internal fun taskWidgetLayoutFor(size: DpSize): TaskWidgetLayout {
 
 internal fun taskWidgetShowsTrailingText(layout: TaskWidgetLayout): Boolean =
     layout == TaskWidgetLayout.MEDIUM || layout == TaskWidgetLayout.TALL
+
+/**
+ * A layout bucket plus whether it is [narrow]: a two-column widget tall enough for MEDIUM or TALL
+ * but too thin for a due-time pill beside its titles, or for the date and ring beside its header —
+ * the same content iOS gives its small family.
+ */
+internal data class TaskWidgetShape(val layout: TaskWidgetLayout, val narrow: Boolean)
+
+/** The WIDE bucket's own breakpoint: below it, a row has no room to spare for a pill. */
+private val NarrowWidgetWidth = 220.dp
+
+internal fun taskWidgetShapeFor(size: DpSize): TaskWidgetShape =
+    TaskWidgetShape(taskWidgetLayoutFor(size), narrow = size.width < NarrowWidgetWidth)
+
+internal fun taskWidgetShowsTrailingText(shape: TaskWidgetShape): Boolean =
+    !shape.narrow && taskWidgetShowsTrailingText(shape.layout)

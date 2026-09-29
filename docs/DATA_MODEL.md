@@ -116,7 +116,7 @@ snapshot per widget (`feature/widget/snapshot/WidgetSnapshot`) built from the Ro
 `OfflineSyncState`; iOS writes a versioned JSON snapshot into App Group defaults for the WidgetKit
 extension.
 
-The current iOS snapshot schema is version `3` (Today) / `1` (Floater) and includes:
+The current iOS snapshot schema is version `4` (Today) / `1` (Floater) and includes:
 
 - `schemaVersion`
 - `generatedAtEpochMs`
@@ -137,17 +137,27 @@ The current iOS snapshot schema is version `3` (Today) / `1` (Floater) and inclu
   cache, so these let it render the day that contains its entry date after midnight without a new
   write. The Apple Watch mirror sends the snapshot without them. See `docs/WIDGET_SYNC.md`
   ("Day rollover (iOS)").
+- `completedCount`, `overdueCount`, `overdueTasks` (Today, schema 4), on the snapshot and on each
+  `upcomingDays` entry: the header ring's done count — tasks due that day that are already
+  completed, counted by **due date**, not completion time, so finishing another day's task never
+  fills today's ring — and that day's Overdue section: open tasks due before the day starts (the
+  app's Today "Earlier" bucket), true count plus rows capped at 20. For an upcoming day the overdue
+  set includes today's still-open tasks. Never part of `taskCount`. Absent fields decode as zero /
+  empty. The Apple Watch mirror keeps the counts and drops `overdueTasks`.
 
 Android's Today snapshot carries the same day window: `dayStartEpochMs` / `dayEndEpochMs` for its own
 day, and `upcomingDays` for the next six (`dayStartEpochMs`, `dayEndEpochMs`, true `taskCount`,
 `rows` capped at 20). The widget renders the day containing now (`WidgetSnapshot.todayAt`), so it
 turns over at midnight without a rebuild; a snapshot written before `upcomingDays` existed decodes
-with none and covers only its own day.
+with none and covers only its own day. It carries the same `completedCount`, `overdueCount` and
+`overdueRows` (iOS `overdueTasks`) on its own day and on each upcoming one, with the same rules and
+cap; missing fields decode as zero / empty.
 
 Both platforms filter the source cache to pending scheduled tasks due today, sort by due time then
 title, cap displayed rows to the widget task limit, and exclude floaters and completed tasks from the
-global feed. The global Today aggregate still excludes overdue tasks (due strictly today only); a
-per-list widget instance (see below) does not — it includes overdue.
+global feed. The global Today aggregate's own rows and `taskCount` still exclude overdue tasks (due
+strictly today only) — overdue travels separately, in `overdueCount`/`overdueRows`, and renders as
+its own section below them; a per-list widget instance (see below) folds overdue into its rows.
 
 ### Per-list configurable widgets (iOS)
 

@@ -204,7 +204,7 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         // hardcodes the same name, so a rename here has to be mirrored there.
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotFileName, "widget-today-snapshot.json")
         XCTAssertEqual(TodayTasksWidgetSnapshotStore.legacySnapshotKey, "tday.widget.todayTasksSnapshot")
-        XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotSchemaVersion, 3)
+        XCTAssertEqual(TodayTasksWidgetSnapshotStore.snapshotSchemaVersion, 4)
         // R7 configuration picker catalog (WidgetConfigurableListsStore's writer /
         // TdayWidgetListEntityQuery's reader): the extension hand-duplicates this same file
         // name with no shared source of truth, so pin it here too or a rename on one side
@@ -816,6 +816,9 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
                 Array(rebuilt.tasks.prefix(TodayTasksWidgetSnapshotStore.upcomingDayTaskLimit)),
                 "day \(dayOffset) rows"
             )
+            XCTAssertEqual(carried.overdueCount, rebuilt.overdueCount, "day \(dayOffset) overdue count")
+            XCTAssertEqual(carried.overdueTasks, rebuilt.overdueTasks, "day \(dayOffset) overdue rows")
+            XCTAssertEqual(carried.completedCount, rebuilt.completedCount, "day \(dayOffset) done count")
         }
         // The busy day keeps its true count past the display cap.
         XCTAssertEqual(snapshot.upcomingDays[1].taskCount, 25)
@@ -1020,8 +1023,116 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         XCTAssertEqual(mirrored.taskCount, snapshot.taskCount)
         XCTAssertEqual(mirrored.perList["list-1"]?.tasks, snapshot.perList["list-1"]?.tasks)
         XCTAssertTrue(mirrored.upcomingDays.isEmpty)
+        XCTAssertTrue(mirrored.overdueTasks.isEmpty)
         XCTAssertEqual(mirrored.perList["list-1"]?.upcomingTasks, [])
         XCTAssertEqual(mirrored.perList["list-1"]?.upcomingTotalCounts, [])
+    }
+
+    // MARK: Header progress and the Overdue section
+
+    func testDoneCountIsByDueDateNotByWhenItWasCheckedOff() {
+        // The on-device report: one open task today read "3 of 4 done", because tasks due on
+        // other days had been completed today and were counted as today's.
+        let calendar = utcCalendar()
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        func at(day: Int, hour: Double) -> Int64 {
+            startOfDay.addingTimeInterval(TimeInterval(day) * 86_400 + hour * 3_600).epochMs
+        }
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(
+                todos: [todo(id: "open", title: "Open", dueEpochMs: at(day: 0, hour: 20))],
+                completedItems: [
+                    completed(id: "due-yesterday", due: at(day: -1, hour: 9), at: at(day: 0, hour: 8)),
+                    completed(id: "due-tomorrow", due: at(day: 1, hour: 9), at: at(day: 0, hour: 8)),
+                    completed(id: "due-today-done-yesterday", due: at(day: 0, hour: 9), at: at(day: -1, hour: 20)),
+                    completed(id: "due-today-done-today", due: at(day: 0, hour: 7), at: at(day: 0, hour: 8))
+                ]
+            ),
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(snapshot.completedCount, 2)
+        XCTAssertEqual(snapshot.taskCount, 1)
+        // Tomorrow's own task finished early counts on tomorrow.
+        XCTAssertEqual(snapshot.upcomingDays[0].completedCount, 1)
+    }
+
+    func testOverdueTasksAreTheirOwnSectionAndNeverDueToday() {
+        let calendar = utcCalendar()
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        func at(day: Int, hour: Double) -> Int64 {
+            startOfDay.addingTimeInterval(TimeInterval(day) * 86_400 + hour * 3_600).epochMs
+        }
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(
+                todos: [
+                    todo(id: "last-week", title: "Last week", dueEpochMs: at(day: -7, hour: 12)),
+                    todo(id: "yesterday", title: "Yesterday", dueEpochMs: at(day: -1, hour: 12)),
+                    todo(id: "early-today", title: "Early today", dueEpochMs: at(day: 0, hour: 1)),
+                    todo(id: "done-late", title: "Done", dueEpochMs: at(day: -1, hour: 12), completed: true)
+                ]
+            ),
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(snapshot.tasks.map(\.id), ["early-today"])
+        XCTAssertEqual(snapshot.taskCount, 1)
+        XCTAssertEqual(snapshot.overdueTasks.map(\.id), ["last-week", "yesterday"])
+        XCTAssertEqual(snapshot.overdueCount, 2)
+        // Tomorrow, today's still-open task is overdue too.
+        XCTAssertEqual(snapshot.upcomingDays[0].overdueTasks.map(\.id), ["last-week", "yesterday", "early-today"])
+    }
+
+    func testOverdueRowsAreCappedButKeepTheirTrueCount() {
+        let calendar = utcCalendar()
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let startOfDay = calendar.startOfDay(for: now)
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(
+            from: OfflineSyncState(
+                todos: (0..<30).map { index in
+                    todo(id: "o\(index)", title: "O", dueEpochMs: startOfDay.addingTimeInterval(-TimeInterval(index + 1) * 3_600).epochMs)
+                }
+            ),
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(snapshot.overdueTasks.count, TodayTasksWidgetSnapshotStore.overdueTaskLimit)
+        XCTAssertEqual(snapshot.overdueCount, 30)
+    }
+
+    func testSnapshotWrittenBeforeProgressAndOverdueDecodesWithout() throws {
+        let legacy = """
+        {"schemaVersion":3,"generatedAtEpochMs":1000,"title":"Today's Tasks","status":"empty","taskCount":0,"tasks":[],
+         "upcomingDays":[{"dayStartEpochMs":0,"dayEndEpochMs":86400000,"taskCount":0,"tasks":[]}]}
+        """
+        let decoded = try JSONDecoder().decode(TodayTasksWidgetSnapshot.self, from: Data(legacy.utf8))
+
+        XCTAssertEqual(decoded.completedCount, 0)
+        XCTAssertEqual(decoded.overdueCount, 0)
+        XCTAssertTrue(decoded.overdueTasks.isEmpty)
+        XCTAssertEqual(decoded.upcomingDays.first?.overdueCount, 0)
+    }
+
+    private func completed(id: String, due: Int64, at completedAt: Int64) -> CachedCompletedRecord {
+        CachedCompletedRecord(
+            id: id,
+            originalTodoId: id,
+            title: id,
+            description: nil,
+            priority: "low",
+            dueEpochMs: due,
+            completedAtEpochMs: completedAt,
+            rrule: nil,
+            instanceDateEpochMs: nil,
+            listId: nil,
+            listName: nil,
+            listColor: nil
+        )
     }
 
     private func utcCalendar() -> Calendar {

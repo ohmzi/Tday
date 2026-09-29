@@ -525,6 +525,7 @@
     <string name="widget_today_tasks_empty">Aucune tâche due aujourd\'hui</string>
     <string name="widget_today_tasks_add">Ajoutez-en une pour aujourd\'hui</string>
     <string name="widget_today_tasks_count">%1$d dues</string>
+    <string name="widget_today_progress">%1$d sur %2$d terminées</string>
     <string name="widget_today_tasks_count_unit">dues</string>
     <string name="widget_today_tasks_setup_title">Ouvrir T\'Day</string>
     <string name="widget_today_tasks_setup_message">Configurez votre espace de travail</string>

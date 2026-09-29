@@ -433,11 +433,12 @@ describeParity("motion token parity across the five files", () => {
       expect(css.raw).toMatch(/--tday-delay-placement-lead/);
     });
 
-    it("holds the two delays the vocabulary is locked to", () => {
+    it("holds the three delays the vocabulary is locked to", () => {
       // PlacementLead being Emphasis by construction is checked by the parser above;
       // it is checked there as a derivation, not as a value. Re-point EMPHASIS_MS at
       // Change and every cross-file comparison still agrees — on 260.
-      expect(source.delays).toEqual({ placementlead: 320, celebrationlead: 320 });
+      // WidgetCheckHold is the widgets' tick-and-strike beat, shared by Android and iOS.
+      expect(source.delays).toEqual({ placementlead: 320, celebrationlead: 320, widgetcheckhold: 900 });
     });
   });
 

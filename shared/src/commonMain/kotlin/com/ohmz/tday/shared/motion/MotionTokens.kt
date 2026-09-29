@@ -171,6 +171,13 @@ object MotionTokens {
                 "Independent of anything a host feed does — equal to Emphasis today by " +
                 "coincidence, not by derivation.",
         ),
+        Delay(
+            "WidgetCheckHold", 900,
+            "How long a task checked off on a home-screen widget stays in its list, ticked and " +
+                "struck through, before it leaves. A widget cannot play the app's completion " +
+                "fade, so this beat is the whole of its feedback: long enough to read as done, " +
+                "short enough that the list is already settling when the eye comes back to it.",
+        ),
     )
 
     // ── Easings ──────────────────────────────────────────────────────────

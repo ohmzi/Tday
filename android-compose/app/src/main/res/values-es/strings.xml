@@ -525,6 +525,7 @@
     <string name="widget_today_tasks_empty">No hay tareas que venzan hoy</string>
     <string name="widget_today_tasks_add">Añade una para hoy</string>
     <string name="widget_today_tasks_count">%1$d pendientes</string>
+    <string name="widget_today_progress">%1$d de %2$d hechas</string>
     <string name="widget_today_tasks_count_unit">pendientes</string>
     <string name="widget_today_tasks_setup_title">Abrir T\'Day</string>
     <string name="widget_today_tasks_setup_message">Configura tu espacio de trabajo</string>

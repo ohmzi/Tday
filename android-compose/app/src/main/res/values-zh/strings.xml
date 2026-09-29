@@ -524,6 +524,7 @@
     <string name="widget_today_tasks_empty">今天没有到期任务</string>
     <string name="widget_today_tasks_add">添加一个今天的任务</string>
     <string name="widget_today_tasks_count">%1$d 个到期</string>
+    <string name="widget_today_progress">已完成 %1$d/%2$d</string>
     <string name="widget_today_tasks_count_unit">个到期</string>
     <string name="widget_today_tasks_setup_title">打开 T\'Day</string>
     <string name="widget_today_tasks_setup_message">设置你的工作区</string>

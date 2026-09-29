@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
@@ -177,8 +178,21 @@ private const val ARG_COMPLETED_SCOPE = "scope"
 private const val CREATE_TARGET_TODAY = "today"
 private const val CREATE_TARGET_FLOATER = "floater"
 
+// KT-R1006 (cyclomatic complexity, reported at 20) is suppressed on this
+// declaration rather than fixed here. The three tile-zoom exceptions in the
+// NavHost's transition slots below account for six of those points, and
+// moving them into helpers is what would bring the number down. They stay
+// inline on purpose: `tday-web/tests/guardrails/route-handover.test.ts` reads
+// each slot and pins which side the flag is read off — `targetState` on the
+// way in, `initialState` on the way back — because a check read off the other
+// side is never true, and home would quietly go back to crossfading under
+// every zoom with nothing else failing.
+//
+// One declaration, one issue code — the narrowest form the tool has, and the
+// style the repo already uses for TodoListScreen's and SyncManager's own
+// KT-R1006 suppressions. Never file-wide.
 @Composable
-fun TdayApp(
+fun TdayApp( // skipcq: KT-R1006
     onFirstFrameDrawn: () -> Unit = {},
 ) {
     val splashTaglineOptions = stringArrayResource(R.array.splash_taglines)
@@ -440,7 +454,17 @@ fun TdayApp(
                         // at once while that screen shrinks back into it, instead of crossfading —
                         // see `TdayTileZoomHold`. The arriving and departing screens keep their
                         // own slots, which matter only when the tile is no longer there to match.
-                        enterTransition = { navigationEnterTransition(motionEnabled) },
+                        // A tile's screen is revealed by its own zoom (TdayTileDestination), which
+                        // draws it in the shared overlay for the whole flight. Fading the same entry
+                        // in place as well only shows once that flight has landed — mid-fade, with
+                        // home's dock and create button showing through it — so it gets no fade.
+                        enterTransition = {
+                            if (motionEnabled && targetState.isHomeTileArrival()) {
+                                EnterTransition.None
+                            } else {
+                                navigationEnterTransition(motionEnabled)
+                            }
+                        },
                         exitTransition = {
                             if (motionEnabled && targetState.isHomeTileArrival()) {
                                 TdayTileZoomHold
@@ -607,6 +631,16 @@ private fun NavGraphBuilder.rootFeedRoutes(
         // the destination's own `AnimatedContentScope`, which is an `AnimatedVisibilityScope`
         // — and it is published once here rather than threaded down through the feed and the
         // private composables that build the tiles.
+        //
+        // A tile's screen grows over home from the tile outward, and the dock and the create
+        // button sit on top of home until it reaches the bottom edge — then share that corner
+        // with the screen's own create button for the last frames of the flight. They duck out
+        // as the tile opens instead, with the spring they always duck with. The pop draws them
+        // in place again, under a screen that is shrinking away from that corner.
+        val motionEnabled = rememberTdayMotionEnabled()
+        val leavingForTile = motionEnabled &&
+            transition.targetState == EnterExitState.PostExit &&
+            navController.currentBackStackEntry?.isHomeTileArrival() == true
         CompositionLocalProvider(LocalTdayTileSourceScope provides this) {
             ScheduledTaskHomeRoute(
                 appUiState = appUiState(),
@@ -623,7 +657,7 @@ private fun NavGraphBuilder.rootFeedRoutes(
                 floaterScrollToTopRequestKey = floaterScrollToTopRequestKey(),
                 rootDockCollapsed = rootDockCollapsed(),
                 onRootDockCollapsedChange = onRootDockCollapsedChange,
-                rootControlsVisible = rootControlsVisible(),
+                rootControlsVisible = rootControlsVisible() && !leavingForTile,
                 onRootControlsVisibleChange = onRootControlsVisibleChange,
             )
         }

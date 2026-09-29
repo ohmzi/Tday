@@ -43,6 +43,10 @@ enum TdayMotion {
     enum Delays {
         static let placementLead: TimeInterval = TdayMotionGenerated.Delays.placementLead
         static let celebrationLead: TimeInterval = TdayMotionGenerated.Delays.celebrationLead
+        /// How long a task checked off on a widget stays ticked and struck before it leaves.
+        /// The widget extension reads `TdayMotionGenerated` directly: it compiles the raw values
+        /// only, not this SwiftUI wrapper.
+        static let widgetCheckHold: TimeInterval = TdayMotionGenerated.Delays.widgetCheckHold
     }
 
     // MARK: - Easings

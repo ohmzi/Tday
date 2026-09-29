@@ -166,12 +166,27 @@ session.
   (HyperOS 4's Flutter launcher) ignore ids stamped on at runtime — see the table at the top. Only
   RemoteViews-allowed classes appear in those layouts (empty `TextView`s stand in for spacers).
 - **Sizes.** `taskWidgetSizes` reads the host's reported sizes (`OPTION_APPWIDGET_SIZES` on API 31+,
-  else the min/max landscape/portrait pair, else the provider's minimum). Each distinct layout bucket
-  (`taskWidgetLayoutFor`: COMPACT, WIDE, MEDIUM, TALL) is built once; one bucket is a plain
-  RemoteViews, several become a size map (API 31+) or the orientation pair below it.
+  else the min/max landscape/portrait pair, else the provider's minimum). Each distinct shape
+  (`taskWidgetShapeFor`: the layout bucket from `taskWidgetLayoutFor` — COMPACT, WIDE, MEDIUM, TALL —
+  plus whether it is narrower than 220dp) is built once; one shape is a plain RemoteViews, several
+  become a size map (API 31+) or the orientation pair below it. A narrow MEDIUM/TALL (a two-column
+  widget on a tall-celled launcher) drops the due pills and Today's date and ring, the way iOS's
+  small family does.
+- **Every render sets every optional view both ways.** A host that already shows `widget_task`
+  re-applies a new render onto the live views instead of inflating afresh (on every update and
+  resize, and on every recycled list row), so a view only ever switched on stays on. All visibility
+  goes through `setVisible(id, Boolean)`; `WidgetReapplyVisibilityTest` and the on-device
+  `TaskWidgetReapplyTest` pin it.
 - **The task list** is a `ListView` fed by `RemoteViewsCompat.setRemoteAdapter` with
   `RemoteCollectionItems` (core-remoteviews backports it below API 31 through its own service), so it
-  still scrolls through the full snapshot.
+  still scrolls through the full snapshot. It has two view types: task rows
+  (`layout/widget_task_list_row.xml`) and labels (`layout/widget_task_list_label.xml` — the Overdue
+  section name, and the message and day name heading an empty Today's preview).
+- **Today's header** (both platforms): a date block ("Mon" over "28") for the day being shown, "Today"
+  over "2 of 5 done" (or "3 due" before anything is done), and a progress ring — tasks due that day
+  that are done, out of those plus the ones still due. Overdue rows sit in their own section below
+  the day's tasks, under "Overdue · N", with the day each was due in a red pill. An empty day with
+  room previews the next day with tasks ("Tomorrow · 3 due") instead of centring one line.
 - **Rounded press.** The root is `@android:id/background` with `clipToOutline`, so launchers follow
   the rounded silhouette for press, drag and launch animations.
 - **Colors** are resource references in the XML (and `setColorStateList` on API 31+ for the overdue
@@ -195,8 +210,13 @@ Tapping a task's leading check ring in any widget completes it inline:
    `TodoRepository.completeTodo/completeFloater` the in-app checkbox uses — optimistic cache write
    (`eagerSync = false`, so the tap isn't held hostage by the network) and a queued `COMPLETE_*`
    mutation.
-3. The receiver then calls `refreshNow(firstAppWidgetId = …)`, so the tapped widget repaints before
-   the broadcast window closes and the row disappears immediately. The submitter also pushes an
+3. Before any of that, the receiver marks the id checked off (`WidgetCheckOff`, in memory) and
+   repaints: the ring fills and ticks, the text is struck through and dimmed, and Today's ring counts
+   it as done. It holds that frame for the shared `WidgetCheckHold` token (900ms, the same beat iOS
+   plays), then writes the completion, then calls `refreshNow(firstAppWidgetId = …)` so the row
+   leaves before the broadcast window closes. The write waits for the beat because the row is only
+   kept on screen by still being in the snapshot; a widget cannot animate its removal, so the check
+   is the whole of the feedback. The submitter also pushes an
    **expedited** `WidgetSyncWorker.runOnce()` so the completion reaches the backend right away in
    Server Mode. Mis-taps are reversed from the app's Completed screen (no transient in-widget undo).
 
@@ -206,11 +226,13 @@ The widget extension runs in its own process with no cache or SwiftData access, 
 tap is durable-first (a queued fallback) with a best-effort instant path on top:
 
 1. Each row's leading ring is a `Button(intent: CompleteWidgetTaskIntent(...))`
-   (`TdayWidget/TodayTasksWidget.swift`, the only file the widget target compiles).
+   (`TdayWidget/TodayTasksWidget.swift`; the widget target also compiles the app's
+   `TodayWidgetDayWindow.swift` and `TdayMotionGenerated.swift`).
    `perform()` first queues a `{kind, id}` descriptor under the
    `tday.widget.pendingCompletions` app-group key (`WidgetPendingCompletionStore`),
-   then marks it "checking" so the ring shows filled + a checkmark for one ~900ms
-   beat, and reloads that widget's timeline.
+   then marks it "checking" so the ring shows filled + a checkmark for one beat — the
+   shared `WidgetCheckHold` token (900ms), which the extension compiles in from
+   `TdayMotionGenerated.swift` — and reloads that widget's timeline.
 2. Both timeline providers filter out snapshot rows whose id is queued (but keep a row
    mid-"checking" so the animation plays), so the row disappears right after that beat
    even though nothing has necessarily completed server-side yet.

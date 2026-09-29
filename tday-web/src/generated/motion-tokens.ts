@@ -16,6 +16,7 @@ export const DURATIONS = {
 export const DELAYS = {
   placementLead: 320,
   celebrationLead: 320,
+  widgetCheckHold: 900,
 } as const;
 
 export const EASINGS = {

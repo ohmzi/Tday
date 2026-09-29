@@ -366,6 +366,13 @@ object GuideCatalog {
             body = listOf(para(GuideTopicIds.INTERACTIVE_WIDGETS), tip(GuideTopicIds.INTERACTIVE_WIDGETS)),
         ),
         topic(
+            // The Today widget's date-led header, progress ring, Overdue section and empty-day
+            // preview, and the tick-and-strike beat on completion.
+            GuideTopicIds.TODAY_WIDGET_PROGRESS, GuideSectionId.WIDGETS_AND_SURFACES, "circle-check-big",
+            setOf(ANDROID, IOS), sinceVersion = "0.7.44",
+            body = listOf(para(GuideTopicIds.TODAY_WIDGET_PROGRESS), tip(GuideTopicIds.TODAY_WIDGET_PROGRESS)),
+        ),
+        topic(
             GuideTopicIds.SHARE_INTO_TDAY, GuideSectionId.WIDGETS_AND_SURFACES, "share-2",
             setOf(WEB, ANDROID, IOS), sinceVersion = "0.4.0",
             body = listOf(para(GuideTopicIds.SHARE_INTO_TDAY), tip(GuideTopicIds.SHARE_INTO_TDAY)),

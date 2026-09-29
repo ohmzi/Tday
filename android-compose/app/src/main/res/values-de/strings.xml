@@ -525,6 +525,7 @@
     <string name="widget_today_tasks_empty">Heute keine Aufgaben fällig</string>
     <string name="widget_today_tasks_add">Eine für heute hinzufügen</string>
     <string name="widget_today_tasks_count">%1$d fällig</string>
+    <string name="widget_today_progress">%1$d von %2$d erledigt</string>
     <string name="widget_today_tasks_count_unit">fällig</string>
     <string name="widget_today_tasks_setup_title">T\'Day öffnen</string>
     <string name="widget_today_tasks_setup_message">Richte deinen Arbeitsbereich ein</string>

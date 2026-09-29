@@ -1154,6 +1154,13 @@
         "body": "The Today and Floater widgets take taps now: hit the ring at the start of any row to complete that task without opening the app. The row disappears immediately and the completion syncs like any other — taps made offline queue up and apply once you're back.",
         "tip": "Mis-tapped? Open the Completed history in the app and restore the task from there."
       },
+      "today-widget-progress": {
+        "title": "Today widget at a glance",
+        "summary": "See how far through the day you are, what's overdue, and what's next.",
+        "keywords": "widget, today, progress, ring, done, overdue, tomorrow, date, home screen",
+        "body": "The Today widget leads with the date and a progress ring: how many of the tasks due today are done, out of all of them. Anything overdue sits in its own section below today's tasks, marked with the day it was due. When nothing is due today, the widget shows what's coming up on the next day that has tasks. Check a task off and it stays ticked and struck through for a moment before it leaves.",
+        "tip": "The ring counts only tasks due today. Finishing something from another day won't fill it."
+      },
       "share-into-tday": {
         "title": "Share into T'Day",
         "summary": "Send text from any app straight into a new task.",

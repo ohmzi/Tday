@@ -208,9 +208,10 @@ guardrail could tell apart.
 |---|---|---|---|---|
 | `PlacementLead` | `320` | `0.32` | `var(--tday-delay-placement-lead)` | A feed must hold a celebration back until the rows that scene displaces have reached their new slots |
 | `CelebrationLead` | `320` | `0.32` | `var(--tday-delay-celebration-lead)` | The confetti should have the screen to itself before the scene comes up behind it |
+| `WidgetCheckHold` | `900` | `0.9` | `var(--tday-delay-widget-check-hold)` | A task checked off on a home-screen widget should stay in the list, ticked and struck through, long enough to read as done before it leaves |
 
-The two are sequential, not competing: the source calls them *added, never
-traded*. `PlacementLead` is **derived** from `Emphasis` in `MotionTokens.kt`,
+The two celebration delays are sequential, not competing: the source calls them *added, never
+traded*. `WidgetCheckHold` stands apart from both. `PlacementLead` is **derived** from `Emphasis` in `MotionTokens.kt`,
 because it exists to match the placement tween exactly and has no freedom of its
 own. `CelebrationLead` is an independent literal that happens to equal 320 today
 — welding it to `Emphasis` would let a later PR that retimes row placement
@@ -227,6 +228,15 @@ silently retime the confetti on all three clients.
   `tday-web/src/features/floater/component/NativeFloaterTaskHomeDashboard.tsx:238`.
   The overlay callers on both clients pass nothing, because nothing behind the
   overlay moves. See the open question below.
+- **`WidgetCheckHold`.** Two clients, one site each — the only token web does not spend, because web
+  has no widget. iOS: `WidgetPendingCompletionStore.checkingWindowMs` in
+  `ios-swiftUI/TdayWidget/TodayTasksWidget.swift`, where it is both the beat and the staleness
+  cutoff for a beat whose process died; the extension reads `TdayMotionGenerated` directly because
+  it compiles the raw values, not the SwiftUI wrapper. Android: `WidgetCheckOff.holdMs` in
+  `android-compose/app/src/main/java/com/ohmz/tday/compose/feature/widget/WidgetCheckOff.kt`, spent
+  as a plain `delay()` in `WidgetTaskActions.complete`. That is deliberate, not a missed
+  `scaledDelay`: the host draws the checked frame in one go and nothing animates through the wait,
+  so it is reading time — it would still make sense with the screen frozen.
 - **`CelebrationLead`.** One site per client:
   `android-compose/app/src/main/java/com/ohmz/tday/compose/core/ui/TdayEmptyState.kt:391`,
   `ios-swiftUI/Tday/Core/UI/TdayConfetti.swift:520`,

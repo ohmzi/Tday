@@ -525,6 +525,7 @@
     <string name="widget_today_tasks_empty">Nenhuma tarefa para hoje</string>
     <string name="widget_today_tasks_add">Adicione uma para hoje</string>
     <string name="widget_today_tasks_count">%1$d a vencer</string>
+    <string name="widget_today_progress">%1$d de %2$d concluídas</string>
     <string name="widget_today_tasks_count_unit">a vencer</string>
     <string name="widget_today_tasks_setup_title">Abrir o T\'Day</string>
     <string name="widget_today_tasks_setup_message">Configure seu espaço de trabalho</string>

@@ -527,6 +527,7 @@
     <string name="widget_today_tasks_empty">Нет задач на сегодня</string>
     <string name="widget_today_tasks_add">Добавьте на сегодня</string>
     <string name="widget_today_tasks_count">%1$d на сегодня</string>
+    <string name="widget_today_progress">Готово %1$d из %2$d</string>
     <string name="widget_today_tasks_count_unit">на сегодня</string>
     <string name="widget_today_tasks_setup_title">Открыть T\'Day</string>
     <string name="widget_today_tasks_setup_message">Настройте рабочее пространство</string>

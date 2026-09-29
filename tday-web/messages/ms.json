@@ -1154,6 +1154,13 @@
         "body": "Widget Today dan Floater kini menerima ketikan: ketik gelang di awal mana-mana baris untuk menyelesaikan tugasan itu tanpa membuka aplikasi. Baris itu hilang serta-merta dan penyelesaian disegerakkan seperti biasa — ketikan semasa luar talian menunggu dalam barisan dan digunakan sebaik sahaja anda kembali dalam talian.",
         "tip": "Tersilap ketik? Buka sejarah selesai dalam aplikasi dan pulihkan tugasan dari situ."
       },
+      "today-widget-progress": {
+        "title": "Widget Hari Ini sepintas lalu",
+        "summary": "Lihat sejauh mana hari anda, apa yang tertunggak dan apa yang seterusnya.",
+        "keywords": "widget, hari ini, kemajuan, gelang, selesai, tertunggak, esok, tarikh, skrin utama",
+        "body": "Widget Hari Ini bermula dengan tarikh dan gelang kemajuan: berapa banyak tugasan yang perlu siap hari ini sudah selesai, daripada semuanya. Apa-apa yang tertunggak diletakkan dalam bahagian tersendiri di bawah tugasan hari ini, bersama hari ia sepatutnya siap. Apabila tiada apa-apa untuk hari ini, widget menunjukkan apa yang akan datang pada hari seterusnya yang ada tugasan. Tugasan yang ditanda kekal bertanda dan bergaris seketika sebelum hilang.",
+        "tip": "Gelang hanya mengira tugasan yang perlu siap hari ini. Menyelesaikan tugasan hari lain tidak mengisinya."
+      },
       "share-into-tday": {
         "title": "Kongsi ke T'Day",
         "summary": "Hantar teks dari mana-mana aplikasi terus menjadi tugasan baharu.",
