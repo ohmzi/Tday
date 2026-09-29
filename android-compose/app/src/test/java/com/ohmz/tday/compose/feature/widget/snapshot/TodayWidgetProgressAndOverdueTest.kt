@@ -64,7 +64,7 @@ class TodayWidgetProgressAndOverdueTest {
             OfflineSyncState(
                 todos = listOf(
                     todo("last week", noonOf(today.minusDays(7))),
-                    todo("yesterday", noonOf(today.minusDays(1))),
+                    todo(YESTERDAY_ID, noonOf(today.minusDays(1))),
                     todo("early today", startOf(today) + HOUR_MS),
                     todo("done yesterday", noonOf(today.minusDays(1)), completed = true),
                 ),
@@ -73,7 +73,7 @@ class TodayWidgetProgressAndOverdueTest {
 
         assertEquals(listOf("early today"), snapshot.rows.map { it.id })
         assertEquals(1, snapshot.taskCount)
-        assertEquals(listOf("last week", "yesterday"), snapshot.overdueRows.map { it.id })
+        assertEquals(listOf("last week", YESTERDAY_ID), snapshot.overdueRows.map { it.id })
         assertEquals(2, snapshot.overdueCount)
     }
 
@@ -96,16 +96,16 @@ class TodayWidgetProgressAndOverdueTest {
         val snapshot = build(
             OfflineSyncState(
                 todos = listOf(
-                    todo("yesterday", noonOf(today.minusDays(1))),
-                    todo("today", noonOf(today)),
+                    todo(YESTERDAY_ID, noonOf(today.minusDays(1))),
+                    todo(TODAY_ID, noonOf(today)),
                     todo("tomorrow", noonOf(today.plusDays(1))),
                 ),
             ),
         )
 
-        val tomorrow = snapshot.todayAt(noonOf(today.plusDays(1)))!!
+        val tomorrow = requireNotNull(snapshot.todayAt(noonOf(today.plusDays(1))))
         assertEquals(listOf("tomorrow"), tomorrow.rows.map { it.id })
-        assertEquals(listOf("yesterday", "today"), tomorrow.overdueRows.map { it.id })
+        assertEquals(listOf(YESTERDAY_ID, TODAY_ID), tomorrow.overdueRows.map { it.id })
         assertEquals(2, tomorrow.overdueCount)
         assertEquals(0, tomorrow.completedCount)
         assertEquals(startOf(today.plusDays(1)), tomorrow.dayStartEpochMs)
@@ -122,9 +122,9 @@ class TodayWidgetProgressAndOverdueTest {
             ),
         )
 
-        assertEquals(1, snapshot.todayAt(noonOf(today))!!.completedCount)
-        assertEquals(1, snapshot.todayAt(noonOf(today.plusDays(1)))!!.completedCount)
-        assertEquals(0, snapshot.todayAt(noonOf(today.plusDays(2)))!!.completedCount)
+        assertEquals(1, requireNotNull(snapshot.todayAt(noonOf(today))).completedCount)
+        assertEquals(1, requireNotNull(snapshot.todayAt(noonOf(today.plusDays(1)))).completedCount)
+        assertEquals(0, requireNotNull(snapshot.todayAt(noonOf(today.plusDays(2)))).completedCount)
     }
 
     @Test
@@ -149,16 +149,17 @@ class TodayWidgetProgressAndOverdueTest {
             ),
         )
 
-        val next = snapshot.nextDayWithTasks(noonOf(today))!!
+        val next = requireNotNull(snapshot.nextDayWithTasks(noonOf(today)))
         assertEquals(startOf(today.plusDays(3)), next.dayStartEpochMs)
         assertEquals(listOf("in three days"), next.rows.map { it.id })
         // Read on day three itself, the preview moves on to day five.
-        assertEquals(startOf(today.plusDays(5)), snapshot.nextDayWithTasks(noonOf(today.plusDays(3)))!!.dayStartEpochMs)
+        val afterDayThree = requireNotNull(snapshot.nextDayWithTasks(noonOf(today.plusDays(3))))
+        assertEquals(startOf(today.plusDays(5)), afterDayThree.dayStartEpochMs)
     }
 
     @Test
     fun `should preview nothing when no later day has tasks`() {
-        val snapshot = build(OfflineSyncState(todos = listOf(todo("today", noonOf(today)))))
+        val snapshot = build(OfflineSyncState(todos = listOf(todo(TODAY_ID, noonOf(today)))))
 
         assertNull(snapshot.nextDayWithTasks(noonOf(today)))
     }
@@ -188,5 +189,7 @@ class TodayWidgetProgressAndOverdueTest {
 
     private companion object {
         const val HOUR_MS = 3_600_000L
+        const val YESTERDAY_ID = "yesterday"
+        const val TODAY_ID = "today"
     }
 }
