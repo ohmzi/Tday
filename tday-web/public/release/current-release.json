@@ -1,11 +1,11 @@
 {
-  "version": "0.7.45",
-  "publishedAt": "2026-09-29T00:18:39-04:00",
+  "version": "0.7.46",
+  "publishedAt": "2026-09-30T14:35:59-04:00",
   "notes": [
-    "Fix List widget follow-ups on both platforms",
-    "Add the List widget on both platforms",
-    "Split the widget message's pictures out of applyMessage"
+    "Smooth iOS transitions: stop root re-renders and main-thread cache reads",
+    "Stop drawing home under a landed tile zoom and ship a baseline profile",
+    "Load the list before its first frame so a tile zoom lands with every row"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.45",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.44..v0.7.45"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.46",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.45..v0.7.46"
 }
