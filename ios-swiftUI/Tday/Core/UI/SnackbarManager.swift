@@ -39,7 +39,13 @@ final class SnackbarManager {
         show(message, kind: .error)
     }
 
-    func dismiss() {
+    /// Clears the toast. Pass the `id` of the toast being closed and a request for any other
+    /// toast is ignored: `show` replaces a toast in place, and a late dismissal meant for the
+    /// one it replaced (its auto-hide timer finishing in the same frame, a stale closure) would
+    /// otherwise remove the newcomer — and with it the only way to reach that toast's Undo.
+    /// Without an `id` it clears whatever is showing.
+    func dismiss(id: Content.ID? = nil) {
+        if let id, content?.id != id { return }
         content = nil
     }
 }

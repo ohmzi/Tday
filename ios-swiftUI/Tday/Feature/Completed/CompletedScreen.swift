@@ -14,14 +14,29 @@ private enum CompletedRestorePhase {
     case fading
 }
 
+/// Where this screen's view model lives: built on first read, then kept. This screen is
+/// a `navigationDestination`, and those re-run for presented routes whenever
+/// `AppRootView`'s body does. `CompletedViewModel.init` maps both completed histories and
+/// both list sets, so under `State(initialValue:)` each re-run paid for a model SwiftUI
+/// then threw away. `TodoListScreen`'s copy of this box has the full reasoning. This copy
+/// is file-private and identical.
+private final class LazyViewModelBox<M: AnyObject> {
+    var model: M?
+}
+
 struct CompletedScreen: View {
     private let pullRefreshEnabled: Bool
-    @State private var viewModel: CompletedViewModel
+    /// The view model's box and the one input it is built from. See `LazyViewModelBox`.
+    @State private var viewModelBox = LazyViewModelBox<CompletedViewModel>()
+    private let viewModelContainer: AppContainer
     @Environment(\.tdayColors) private var colors
     @Environment(\.tdayAnimation) private var tdayAnimation
     @Environment(\.dismiss) private var dismiss
     @State private var editingItem: CompletedItem?
-    @State private var timelineScrollOffset: CGFloat = 0
+    /// The scroll offset, boxed so a scroll frame redraws the bar and the hero title row and
+    /// not the history under them. `TimelineTitleScrollState` says why; nothing in this body
+    /// may read it except through `TimelineCollapseProgressReader`.
+    @State private var timelineScroll = TimelineTitleScrollState()
     @State private var collapsedSectionIDs: Set<String> = []
     /// The screen's single swipe slot — see `TodoListScreen` for the shape and its one rule:
     /// every dismissal is a WRITE to this and nothing else. No host `body` may read it, or a
@@ -44,7 +59,7 @@ struct CompletedScreen: View {
         origin: HomeTileOrigin? = nil
     ) {
         self.pullRefreshEnabled = pullRefreshEnabled
-        _viewModel = State(initialValue: CompletedViewModel(container: container))
+        self.viewModelContainer = container
         // Everything that is not the Floater feed opens the first tab, which is web's own
         // rule for `?scope=floater` and the safe polarity: a deep link, a shortcut or a
         // notification names no board and lands on the history rather than nowhere.
@@ -54,6 +69,19 @@ struct CompletedScreen: View {
         // payload, which SwiftUI resolves as a different destination — re-running
         // `.navigationTransition` and re-zooming the screen mid-flight.
         _scope = State(initialValue: origin ?? .scheduledBoard)
+    }
+
+    /// Built on first read, which is the first body pass, then served from the box. The
+    /// model still hydrates synchronously before the first frame, so
+    /// `completedAnswer`'s `hasHydratedFromCache` term is true from the start. Never read
+    /// this from `init`: the box `init` sees is the throwaway.
+    private var viewModel: CompletedViewModel {
+        if let model = viewModelBox.model {
+            return model
+        }
+        let model = CompletedViewModel(container: viewModelContainer)
+        viewModelBox.model = model
+        return model
     }
 
     /// The active tab's own rows, and nothing else's: this is the whole of the split.
@@ -174,12 +202,6 @@ struct CompletedScreen: View {
     /// alone would put a green disc over a slate title where web has the two the same colour.
     private var activeScopeAccent: Color {
         .tdayCompletedGreen
-    }
-
-    private var titleCollapseProgress: CGFloat {
-        let distance = TodoTimelineMetrics.titleCollapseDistance
-        guard distance > 0 else { return 0 }
-        return min(max(timelineScrollOffset / distance, 0), 1)
     }
 
     private var completedTimelineAnimationKey: String {
@@ -373,18 +395,28 @@ struct CompletedScreen: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
             .safeAreaInset(edge: .top, spacing: 0) {
-                TimelineTopBar(
-                    title: L("Completed"),
-                    accentColor: completedAccentColor,
-                    collapseProgress: titleCollapseProgress,
-                    onBack: { dismiss() },
-                    actions: topBarActions,
-                    searchActive: searchExpanded,
-                    searchText: $searchQuery,
-                    searchPlaceholder: searchPlaceholder,
-                    searchFieldFocused: $searchFieldFocused,
-                    onSearchClose: closeSearch
-                )
+                // Every input but the progress is read here, in this body, and handed to the
+                // reader by value — `TodoListScreen.timelineTopInset` says why.
+                let barAccentColor = completedAccentColor
+                let barActions = topBarActions
+                let barSearchActive = searchExpanded
+                let barSearchText = $searchQuery
+                let barSearchPlaceholder = searchPlaceholder
+                let barSearchFieldFocused = $searchFieldFocused
+                TimelineCollapseProgressReader(scroll: timelineScroll) { progress in
+                    TimelineTopBar(
+                        title: L("Completed"),
+                        accentColor: barAccentColor,
+                        collapseProgress: progress,
+                        onBack: { dismiss() },
+                        actions: barActions,
+                        searchActive: barSearchActive,
+                        searchText: barSearchText,
+                        searchPlaceholder: barSearchPlaceholder,
+                        searchFieldFocused: barSearchFieldFocused,
+                        onSearchClose: closeSearch
+                    )
+                }
             }
             .onChange(of: activeItems.map(\.id)) { _, ids in
                 guard let openSwipeTaskID, !ids.contains(openSwipeTaskID) else { return }
@@ -455,7 +487,14 @@ struct CompletedScreen: View {
     }
 
     private var completedTimelineList: some View {
-        ZStack {
+        // Built once per body pass and handed to every section by value. `groupedItems` is
+        // computed — search filter, day grouping, sorts, a title per day — and the sections'
+        // content is conditional, so the `List` resolves every section's closure to count its
+        // rows. Read inside each closure it ran once per section on top of the `ForEach`'s own
+        // read: history has a section per day with a completion, so the cost grew with the
+        // square of it and a long history stuttered on scroll and lagged search keystrokes.
+        let sections = groupedItems
+        return ZStack {
             List {
                 timelineHeroTitleRow
                     .id(completedTimelineScrollTopID)
@@ -511,11 +550,11 @@ struct CompletedScreen: View {
                     }
                 }
 
-                ForEach(Array(groupedItems.enumerated()), id: \.element.id) { index, section in
+                ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
                     completedTimelineSection(
                         section,
                         sectionIndex: index,
-                        sections: groupedItems,
+                        sections: sections,
                         isFirstSection: index == 0
                     )
                 }
@@ -562,27 +601,37 @@ struct CompletedScreen: View {
     }
 
     private var timelineHeroTitleRow: some View {
-        TimelineExpandedTitleRow(
-            title: L("Completed"),
-            accentColor: completedAccentColor,
-            collapseProgress: titleCollapseProgress,
-            // The disc's echo is the check alone — `frontMark` says why — so the
-            // mark the echo repeats is the check, not the calendar.
-            mark: Image("LucideCheck"),
-            frontMark: AnyView(CompletedMark(
-                variant: isFloaterTab ? .floater : .scheduled,
-                size: TodoTimelineMetrics.heroMarkGlyph,
-                tint: activeScopeAccent
-            )),
-            // The echo is a drawing of the mark, so it takes the mark's colour
-            // rather than the disc's chrome: left on `markAccentColor` the disc
-            // drew the same check twice in two colours — slate behind, green in
-            // front — where the web draws both from its one accent.
-            markEchoColor: activeScopeAccent
-        )
+        // Read here and handed over by value, for the reason the top bar's inset gives.
+        let rowAccentColor = completedAccentColor
+        let rowMarkVariant: CompletedMark.Variant = isFloaterTab ? .floater : .scheduled
+        let rowScopeAccent = activeScopeAccent
+        return TimelineCollapseProgressReader(scroll: timelineScroll) { progress in
+            TimelineExpandedTitleRow(
+                title: L("Completed"),
+                accentColor: rowAccentColor,
+                collapseProgress: progress,
+                // The disc's echo is the check alone — `frontMark` says why — so the
+                // mark the echo repeats is the check, not the calendar.
+                mark: Image("LucideCheck"),
+                frontMark: AnyView(CompletedMark(
+                    variant: rowMarkVariant,
+                    size: TodoTimelineMetrics.heroMarkGlyph,
+                    tint: rowScopeAccent
+                )),
+                // The echo is a drawing of the mark, so it takes the mark's colour
+                // rather than the disc's chrome: left on `markAccentColor` the disc
+                // drew the same check twice in two colours — slate behind, green in
+                // front — where the web draws both from its one accent.
+                markEchoColor: rowScopeAccent
+            )
+        }
+        // Outside the reader, so the observer is part of this body and not rebuilt with the
+        // row on every scroll frame.
         .background {
-            TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
-                .frame(width: 0, height: 0)
+            TimelineScrollOffsetObserver { offset in
+                timelineScroll.publish(offset)
+            }
+            .frame(width: 0, height: 0)
         }
         .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
@@ -1191,6 +1240,11 @@ private func buildCompletedTimelineSections(
     let grouped = Dictionary(grouping: items) { item in
         calendar.startOfDay(for: item.completedAt ?? item.due ?? .distantPast)
     }
+    // One formatter per build, not one per section: a `DateFormatter` and its template
+    // resolution are expensive, and history has a section per day with a completion. Made
+    // here rather than cached globally so every build still reads `AppLocale.current`, and
+    // an in-app language change re-localizes the titles on the next pass.
+    let titleFormatter = CompletedTimelineFormatters.sectionTitle()
 
     return grouped.keys.sorted(by: >).map { date in
         let sectionItems = (grouped[date] ?? []).sorted { lhs, rhs in
@@ -1208,15 +1262,11 @@ private func buildCompletedTimelineSections(
             // id twice — a duplicate `ForEach` identity, and a month shut on one tab
             // arriving shut on the other.
             id: "completed-\(tabDiscriminator)-\(date.timeIntervalSince1970)",
-            title: completedTimelineSectionTitle(for: date),
+            title: titleFormatter.string(from: date),
             items: sectionItems,
             isCollapsible: false
         )
     }
-}
-
-private func completedTimelineSectionTitle(for date: Date) -> String {
-    CompletedTimelineFormatters.sectionTitle().string(from: date)
 }
 
 private enum CompletedTimelineFormatters {

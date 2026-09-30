@@ -104,6 +104,7 @@ import com.ohmz.tday.compose.core.ui.informationalToastTimeoutMillis
 import com.ohmz.tday.compose.core.ui.rememberHomeTileOrigin
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
+import com.ohmz.tday.compose.core.ui.tdayTileCoveredScreen
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
@@ -1454,6 +1455,9 @@ private fun RootFeedContent(
                 slot = rootSwipeSlot,
                 close = { rootSwipeSlot.openId = null },
             )
+            // Home is what every tile zoom opens over; once the screen covers it, it stops
+            // drawing — see `TdayTileCover`.
+            .tdayTileCoveredScreen()
     ) {
         val motionEnabled = rememberTdayMotionEnabled()
 
@@ -2415,7 +2419,19 @@ private fun TodosRoute(
     summaryAvailable: Boolean = true,
 ) {
     val viewModel: TodoListViewModel = hiltViewModel()
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // `load` reads the cache synchronously, so running it here, before the state is first read,
+    // puts the whole cached list into the screen's first composition and the list's first
+    // measure. From a `LaunchedEffect` it ran one frame late: the first frame drew the
+    // ViewModel's default state (an empty Today with the row skeleton), and the rows then arrived
+    // as new keys in a list that had already been laid out, so every one of them ran
+    // `animateItem`'s fade-in — the late wave of rows at the end of a tile zoom. Rows present at
+    // the list's first measure are not "appearing" to it, so nothing fades; later additions still
+    // do. Same keys the effect had, so a route change still loads once.
+    val arrivalState = remember(viewModel, mode, listId, listName) {
+        viewModel.load(mode = mode, listId = listId, listName = listName)
+        viewModel.uiState.value
+    }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle(initialValue = arrivalState)
 
     // Pull-to-refresh belongs to the two root feeds and nowhere else. Every
     // other screen this composable draws — the five timeline scopes, a custom
@@ -2425,9 +2441,6 @@ private fun TodosRoute(
     // "this is a root feed" flag, so the two cannot drift apart.
     val rootPullRefreshEnabled = pullRefreshEnabled && usesRootFeedHeader
 
-    LaunchedEffect(mode, listId, listName) {
-        viewModel.load(mode = mode, listId = listId, listName = listName)
-    }
     OnRouteResume {
         viewModel.load(mode = mode, listId = listId, listName = listName)
     }

@@ -446,3 +446,48 @@ describe("a first answer with no rows in it still reaches the iOS feeds", () => 
     expect(pure).toContain("lastSuccessfulSyncEpochMs > 0");
   });
 });
+
+/**
+ * A tile's screen has its cached rows on the first frame it draws.
+ *
+ * Android's list screen used to compose its first frame from the view model's default state and
+ * read the cache one frame later, so a tile zoom landed with a skeleton and then every row faded
+ * in — an insertion animation running on rows that had been in the cache all along. iOS never had
+ * that, and the reason is one line: `TodoListViewModel`'s `init` hydrates from the local cache
+ * synchronously, so the screen's first body pass already builds every row, and SwiftUI runs no
+ * insertion transition for a view that is in the hierarchy it first builds. Moving that read into
+ * a `.task` or an `.onAppear` would look like tidying and would bring the Android bug straight
+ * across, with nothing else in this repository going red. Both halves are pinned.
+ */
+describe("the iOS task list has its cached rows on its first frame", () => {
+  const viewModel = readCode(resolve(MONO, "ios-swiftUI/Tday/Feature/Todos/TodoListViewModel.swift"));
+  const screen = readCode(TODO_LIST_SCREEN);
+
+  /** Every brace block that opens after an occurrence of `anchor`. */
+  function blocksAfterEach(source: string, anchor: string): string[] {
+    const blocks: string[] = [];
+    let from = source.indexOf(anchor);
+    while (from >= 0) {
+      blocks.push(blockAfter(source.slice(from), anchor));
+      from = source.indexOf(anchor, from + anchor.length);
+    }
+    return blocks;
+  }
+
+  it("hydrates from the cache inside the view model's init", () => {
+    const init = blockAfter(
+      viewModel,
+      "init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?) {",
+    );
+    expect(init).not.toBe("");
+    expect(init).toContain("hydrateFromCache()");
+  });
+
+  it("does not load its rows from a .task or .onAppear after the screen is built", () => {
+    const deferred = [...blocksAfterEach(screen, ".task {"), ...blocksAfterEach(screen, ".onAppear {")];
+    expect(deferred.length).toBeGreaterThan(0);
+    for (const block of deferred) {
+      expect(block).not.toMatch(/viewModel\.(hydrateFromCache|refresh|load)\b/);
+    }
+  });
+});

@@ -11,9 +11,10 @@ struct TodoListCacheSnapshot {
     let lists: [ListSummary]
     let items: [TodoItem]
     let aiSummaryEnabled: Bool
-    /// Carried on the snapshot so hydrating a list costs ONE `loadOfflineState()`.
-    /// It used to be a second, separate full-cache read per hydrate, and every
-    /// cache write wakes every live list view model.
+    /// Carried on the snapshot so hydrating a list costs ONE read of the cache
+    /// (now `OfflineCacheManager.cachedState`, the in-memory mirror). It used to be
+    /// a second, separate full-cache read per hydrate, and every cache write wakes
+    /// every live list view model.
     let completedTodayCount: Int
 }
 
@@ -72,12 +73,24 @@ final class TodoRepository {
         buildTodos(from: cacheManager.loadOfflineState(), mode: mode, listId: listId)
     }
 
+    // The `*Snapshot` reads below build off `cacheManager.cachedState`, the persisted state's
+    // in-memory mirror, rather than a fresh `loadOfflineState()`. Their hot callers are the one
+    // view-model build each screen does in its first body pass (the frame the tile zoom draws
+    // first; the screens build it on first read, see `LazyViewModelBox` in `TodoListScreen`) and
+    // the re-hydrate every live model does on each `.offlineCacheDidChange`. A whole-store
+    // SwiftData read there sat in front of the zoom's first frame and ran again on every cache
+    // write. See `OfflineCacheManager.cachedState` for why the mirror is faithful. Each builder
+    // re-applies its own ordering. Todos sort on `todoSortPrecedes`, a total order that ends on
+    // id, so their mirror order never shows. Lists go through `orderListsLikeWeb` /
+    // `orderFloaterListsLikeWeb`, which keep input order among lists they cannot tell apart
+    // (undated, or created in the same millisecond). Those keep the last writer's order, where
+    // they used to keep the store's equally unspecified fetch order.
     func fetchTodosSnapshot(mode: TodoListMode, listId: String? = nil) -> [TodoItem] {
-        buildTodos(from: cacheManager.loadOfflineState(), mode: mode, listId: listId)
+        buildTodos(from: cacheManager.cachedState, mode: mode, listId: listId)
     }
 
     func fetchDashboardCacheSnapshot() -> TodoDashboardCacheSnapshot {
-        makeDashboardCacheSnapshot(from: cacheManager.loadOfflineState())
+        makeDashboardCacheSnapshot(from: cacheManager.cachedState)
     }
 
     func makeDashboardCacheSnapshot(from state: OfflineSyncState) -> TodoDashboardCacheSnapshot {
@@ -85,7 +98,7 @@ final class TodoRepository {
     }
 
     func fetchTodoListCacheSnapshot(mode: TodoListMode, listId: String?) -> TodoListCacheSnapshot {
-        makeTodoListCacheSnapshot(from: cacheManager.loadOfflineState(), mode: mode, listId: listId)
+        makeTodoListCacheSnapshot(from: cacheManager.cachedState, mode: mode, listId: listId)
     }
 
     func makeTodoListCacheSnapshot(

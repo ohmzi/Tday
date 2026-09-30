@@ -13,9 +13,11 @@ final class TodoListViewModel {
 
     var isLoading = false
     /// This scope's local cache read has landed in state. True from the first
-    /// frame on this client, because `hydrateFromCache()` runs in `init` and
-    /// beats the first body pass — which is the honest statement of the fact
-    /// rather than a flag pretending to a cold open this client does not have.
+    /// frame on this client. `hydrateFromCache()` runs in `init`, and
+    /// `TodoListScreen` builds this model at the first body pass's first read of
+    /// it, so the hydrate lands before that pass reads any of this state. That
+    /// is the honest statement of the fact rather than a flag pretending to a
+    /// cold open this client does not have.
     /// Published anyway, and published HERE rather than as view `@State`, for
     /// the reason `shouldCelebrateEmptyState` was lifted out of the view: a
     /// computed property on a `View` is reachable from no test, and this is one
@@ -43,6 +45,14 @@ final class TodoListViewModel {
     // rather than leaving as a claim: Android's own count IS bumped by hand and
     // had to be rolled back on undo, and the next reader comparing the two
     // clients needs to know this one has nothing to roll back.
+    //
+    // One add-on, and it is not a hand bump either: rows `completingIDs` holds
+    // out of the list while their stage sits queued on the lock past
+    // `stageLockWaitGrace`, normally behind a sync or a list create, are
+    // counted in by `hydrateFromCache(snapshot:)`, off that same snapshot.
+    // A row drops out of the add-on in the hydrate where its write lands, and
+    // the snapshot's own count includes it from then on, so there is still
+    // nothing to roll back.
     var completedTodayCount = 0
     /// When the user last ticked something off. Feeds the confetti: an empty
     /// list that emptied under the user's own hand is a payoff, one that was
@@ -111,6 +121,35 @@ final class TodoListViewModel {
 
     private let listName: String?
     @ObservationIgnored nonisolated(unsafe) private var observationTask: Task<Void, Never>?
+    /// Rows a completion took out of `items` because its stage was still queued
+    /// on the lock past `stageLockWaitGrace`, normally behind a sync or a list
+    /// create (see `awaitStage(hidingIfStalled:_:)`). Every hydrate filters them
+    /// out until that stage returns. Until their write lands the cache still
+    /// lists them as pending, and the hydrate the lock holder's own save drives
+    /// would otherwise put the row back (as the blank faded gap for a single tick,
+    /// still `.fading` on the screen, or fully drawn for a batch), only for the
+    /// stage to take it away again. Empty whenever no stage has stalled, and
+    /// then every hydrate is exactly what it was.
+    /// `ScheduledTaskHomeViewModel.completingIDs` and
+    /// `CalendarViewModel.completingIDs` are the same guard. Those two fill it
+    /// at the tap. This one fills it only once the stage has stalled.
+    @ObservationIgnored private var completingIDs: Set<String> = []
+    /// How long a completion's stage may go without writing before its rows
+    /// leave anyway. It is there to tell a holder waiting on the network apart
+    /// from the rest. A sync is one, and so is a list create
+    /// (`ListRepository.createList` / `FloaterListRepository.createList` hold
+    /// the lock for request plus remap). Each waits with the main actor free,
+    /// and that is the wait this is for. The rest (a sibling stage, an undo, a
+    /// commit's unstaging, a list delete's stage) each hold it for one write on
+    /// the main actor, and the check runs on the main actor, so it cannot run
+    /// in the middle of one. A free lock costs the stage a couple of actor hops
+    /// before it writes. It can also trip when one write runs past it with a
+    /// second stage already queued behind, and that stage's rows then leave one
+    /// write early. A tenth of a second
+    /// is far above those hops and short enough that the gap closes with no
+    /// pause worth seeing. not a token — see docs/motion.md: one client, and a
+    /// wait threshold rather than a motion value.
+    private static let stageLockWaitGrace: Duration = .milliseconds(100)
 
     init(container: AppContainer, mode: TodoListMode, listId: String?, listName: String?) {
         self.container = container
@@ -359,13 +398,35 @@ final class TodoListViewModel {
     /// a deallocated view model has no screen left to be celebrating on — so the
     /// weak reference costs the restore nothing and the optional chain below is
     /// the honest way to say that.
+    ///
+    /// The row leaves `items` after the stage lands, from the hydrate that
+    /// follows it. The stage's write (`updateOfflineState`) is a full cache
+    /// load and save on the main actor. Awaited first, it runs while the
+    /// screen's `.fading` beat holds the row faded and still. Taking the row
+    /// out first would start the list's gap-closing travel, and on the last
+    /// row Day Done's transition and confetti, and then run that write inside
+    /// them, on every completion.
+    ///
+    /// The exception is a stage queued behind a sync or a list create. Either
+    /// holds the lock across network round trips, and the faded row used to
+    /// keep its height for all of them, leaving a blank gap in the list.
+    /// `OfflineCacheManager` does not say whether the lock is held, so
+    /// `awaitStage(hidingIfStalled:_:)` asks the cache instead. If the row is
+    /// still pending there after `stageLockWaitGrace`, it leaves then, and
+    /// `completingIDs` keeps it out until the stage lands. Only that tick can
+    /// pay the stall the order above avoids: its write lands whenever that
+    /// holder lets go, which can be inside the travel. The toast, and with it
+    /// Undo, still waits for the stage, because `restore` needs what the stage
+    /// returns.
     func complete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("task.complete", data: taskTelemetryData(mode: mode))
         let container = container
         let isFloater = mode == .floater
         lastCompletionAt = Date()
         if isFloater {
-            let staged = await container.todoRepository.stageCompleteFloater(todo)
+            let staged = await awaitStage(hidingIfStalled: [todo.id]) {
+                await container.todoRepository.stageCompleteFloater(todo)
+            }
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: L("Task completed"),
@@ -385,7 +446,9 @@ final class TodoListViewModel {
                 }
             )
         } else {
-            let staged = await container.todoRepository.stageCompleteTodo(todo)
+            let staged = await awaitStage(hidingIfStalled: [todo.id]) {
+                await container.todoRepository.stageCompleteTodo(todo)
+            }
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: L("Task completed"),
@@ -474,15 +537,27 @@ final class TodoListViewModel {
     ///
     /// Recurring occurrences stay in the batch: complete is the one action with a
     /// per-occurrence route, and the repository carries each row's `instanceDate`.
+    ///
+    /// The batch leaves `items` after the stage lands, so the stage's write
+    /// runs before the list's gap-closing travel and Day Done start, not
+    /// inside them (see `complete(_:)`). Unlike the single tick, no `.fading`
+    /// beat covers that write. The selected rows stay fully drawn, and the
+    /// write overlaps `exitSelectionMode`'s spring. A stage queued behind a
+    /// sync or a list create is caught the same way as the single tick's. The
+    /// rows leave after `stageLockWaitGrace` instead of staying drawn until
+    /// that holder frees the lock.
     func bulkComplete(_ todos: [TodoItem]) async {
         guard !todos.isEmpty else { return }
         TdayTelemetry.addBreadcrumb("task.bulk_complete", data: bulkTelemetryData(count: todos.count))
         let container = container
         let isFloater = mode == .floater
         let count = todos.count
+        let ids = Set(todos.map(\.id))
         lastCompletionAt = Date()
         if isFloater {
-            let staged = await container.todoRepository.stageCompleteFloaters(todos)
+            let staged = await awaitStage(hidingIfStalled: ids) {
+                await container.todoRepository.stageCompleteFloaters(todos)
+            }
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: BulkSelectionCopy.completedToast(count),
@@ -499,7 +574,9 @@ final class TodoListViewModel {
                 }
             )
         } else {
-            let staged = await container.todoRepository.stageCompleteTodos(todos)
+            let staged = await awaitStage(hidingIfStalled: ids) {
+                await container.todoRepository.stageCompleteTodos(todos)
+            }
             hydrateFromCache()
             container.undoableDeleteScheduler.schedule(
                 message: BulkSelectionCopy.completedToast(count),
@@ -747,14 +824,27 @@ final class TodoListViewModel {
 
     private func hydrateFromCache(snapshot: TodoListCacheSnapshot) {
         lists = snapshot.lists
-        items = snapshot.items
+        // `completingIDs` is empty on every hydrate except those that land after
+        // a stage has gone `stageLockWaitGrace` without writing (normally because
+        // a sync or a list create holds the lock) and before that stage returns.
+        // See `completingIDs`.
+        let visibleItems = completingIDs.isEmpty
+            ? snapshot.items
+            : snapshot.items.filter { !completingIDs.contains($0.id) }
+        items = visibleItems
         aiSummaryEnabled = snapshot.aiSummaryEnabled
         errorMessage = nil
         if mode == .today {
             // Off the snapshot, not a second `loadOfflineState()`: every cache
             // write wakes every live list view model, so a hydrate that reads the
             // whole cache twice doubles the main-actor cost of every sync.
-            completedTodayCount = snapshot.completedTodayCount
+            //
+            // Plus the rows held out above. Each is a completion the list already
+            // shows as gone whose stage has not written it yet, and each adds one
+            // completed-today record when it does. Without this, the last row
+            // leaving during a stall would draw the plain empty state first and
+            // switch to Day Done only once the lock holder let go.
+            completedTodayCount = snapshot.completedTodayCount + (snapshot.items.count - visibleItems.count)
         }
         // Both of `feedAnswer`'s non-row terms, settled on the same frame the
         // rows are. They have to move together: a gate that saw a hydrated feed
@@ -765,6 +855,39 @@ final class TodoListViewModel {
         hasHydratedFromCache = true
     }
 
+    /// Awaits a completion's stage just as a bare `await` would. If the stage
+    /// has not written by `stageLockWaitGrace`, the stall check takes `ids`
+    /// out of `items` at that point instead of when the lock holder lets go. `ids`
+    /// leave `completingIDs` the moment the stage returns, before the caller's
+    /// own hydrate. The stage never throws and cannot be cancelled (the lock
+    /// cannot be), so no row this hides stays hidden past its stage.
+    private func awaitStage<Staged>(
+        hidingIfStalled ids: Set<String>,
+        _ stage: () async -> Staged
+    ) async -> Staged {
+        let stallCheck = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.stageLockWaitGrace)
+            guard !Task.isCancelled else { return }
+            self?.hideRowsStillAwaitingStage(ids)
+        }
+        let staged = await stage()
+        stallCheck.cancel()
+        completingIDs.subtract(ids)
+        return staged
+    }
+
+    /// The stall check. It holds `ids` out of `items` only if the cache still
+    /// lists one of them as pending, which means their stage has not written
+    /// yet. Otherwise it changes nothing. A stage whose write has landed is
+    /// only its lock release away from returning, and its own hydrate then
+    /// does exactly what it does when the lock was free.
+    private func hideRowsStillAwaitingStage(_ ids: Set<String>) {
+        let snapshot = container.todoRepository.fetchTodoListCacheSnapshot(mode: mode, listId: listId)
+        guard snapshot.items.contains(where: { ids.contains($0.id) }) else { return }
+        completingIDs.formUnion(ids)
+        hydrateFromCache(snapshot: snapshot)
+    }
+
     private func shouldUseRecentSuccessfulSync(_ state: OfflineSyncState) -> Bool {
         guard state.pendingMutations.isEmpty, state.lastSuccessfulSyncEpochMs > 0 else {
             return false
@@ -772,13 +895,15 @@ final class TodoListViewModel {
         return Date().epochMilliseconds - state.lastSuccessfulSyncEpochMs < Self.recentSuccessfulSyncSkipWindowMs
     }
 
-    // `[weak self]` here is load-bearing, not style: SwiftUI's
-    // `State(initialValue:)` (see `TodoListScreen.init`) re-runs this view
-    // model's initializer on every parent body pass and discards the surplus
-    // instance. Capturing `self` strongly would keep this Task (and the
+    // `[weak self]` here is load-bearing, not style. When `TodoListScreen`
+    // seeded this model with `State(initialValue:)`, this initializer re-ran on
+    // every parent body pass and SwiftUI discarded the surplus instances. The
+    // screen now builds the model on first read (`LazyViewModelBox`), so there
+    // are no surplus instances, but every pop and every root-feed tab swap
+    // still drops one. Capturing `self` strongly would keep this Task (and the
     // NotificationCenter async sequence it iterates) alive forever, which
     // keeps `self` alive forever too — `deinit` could never run to cancel it.
-    // Every discarded instance would go on reacting to every future cache
+    // Every dropped instance would go on reacting to every future cache
     // write for the life of the process, and a bulk completion posts four of
     // those writes, each a full cache reload on the main actor. That
     // unbounded, immortal observer set — not request concurrency, which this

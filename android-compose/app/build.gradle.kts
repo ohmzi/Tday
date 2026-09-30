@@ -230,6 +230,11 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
+    // Installs the APK's baseline profile (src/main/baseline-prof.txt plus the libraries' own) on
+    // first launch, for ART to compile at its next idle dexopt. Sideloaded APKs get no install-time
+    // profile, so this is the only way it reaches them. Pinned because the 1.3.1 that arrives
+    // transitively predates Android 14's ART and refuses to install anything there.
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
     implementation("androidx.compose.ui:ui:1.7.6")
     implementation("androidx.compose.ui:ui-tooling-preview:1.7.6")

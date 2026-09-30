@@ -56,6 +56,17 @@ private enum CreateListSheetMetrics {
 
 private let scheduledTaskHomeScrollTopID = "scheduled-task-home-scroll-top"
 
+/// Where this screen's view model lives: built on first read, then kept. This is the
+/// root feed `AppRootView` rebuilds on every push and pop, FAB tap and search toggle
+/// (and, before `AppSnackbarHost` and `RootChromeState`, on every toast and dock fold
+/// too), and `ScheduledTaskHomeViewModel.init` reads the whole dashboard snapshot. Under
+/// `State(initialValue:)` every one of those rebuilds paid for a model SwiftUI then threw
+/// away. `TodoListScreen`'s copy of this box has the full reasoning. This copy is
+/// file-private and identical, so no screen's file depends on another's.
+private final class LazyViewModelBox<M: AnyObject> {
+    var model: M?
+}
+
 struct ScheduledTaskHomeScreen: View {
     let onRootFeedTabSelected: (RootFeedTab) -> Void
     let showsRootControls: Bool
@@ -71,7 +82,9 @@ struct ScheduledTaskHomeScreen: View {
     let summaryAvailable: Bool
     let onNavigate: (AppRoute) -> Void
 
-    @State private var viewModel: ScheduledTaskHomeViewModel
+    /// The view model's box and the one input it is built from. See `LazyViewModelBox`.
+    @State private var viewModelBox = LazyViewModelBox<ScheduledTaskHomeViewModel>()
+    private let viewModelContainer: AppContainer
     @Environment(\.tdayColors) private var colors
     /// Gates the today block's own motion — see the `.animation(_:value:)` that
     /// carries it and `TdayFeedItemMotion.row(reduceMotion:)`. The travel and the
@@ -124,7 +137,20 @@ struct ScheduledTaskHomeScreen: View {
         self.pullRefreshEnabled = pullRefreshEnabled
         self.summaryAvailable = summaryAvailable
         self.onNavigate = onNavigate
-        _viewModel = State(initialValue: ScheduledTaskHomeViewModel(container: container))
+        self.viewModelContainer = container
+    }
+
+    /// Built on first read, which is the first body pass, then served from the box. The
+    /// model still hydrates synchronously before the first frame, so
+    /// `showsTodayFeedSkeleton`'s `hasHydratedFromCache` term is true from the start.
+    /// Never read this from `init`: the box `init` sees is the throwaway.
+    private var viewModel: ScheduledTaskHomeViewModel {
+        if let model = viewModelBox.model {
+            return model
+        }
+        let model = ScheduledTaskHomeViewModel(container: viewModelContainer)
+        viewModelBox.model = model
+        return model
     }
 
     private var normalizedSearchQuery: String {

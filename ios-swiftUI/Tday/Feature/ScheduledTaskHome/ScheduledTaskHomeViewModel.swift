@@ -34,6 +34,21 @@ final class ScheduledTaskHomeViewModel {
 
     @ObservationIgnored nonisolated(unsafe) private var observationTask: Task<Void, Never>?
     @ObservationIgnored private var activeLoadingRefreshes = 0
+    /// Rows `complete(_:)` has already taken off screen whose staged write has
+    /// not landed in the cache yet. Every refresh filters them out until it does.
+    ///
+    /// The row was already removed optimistically, but nothing kept it out. The
+    /// stage waits on `cacheManager.withSyncLock`, and the sync holding that lock
+    /// posts its cache-changed notification before releasing it, so the refresh
+    /// that notification drives re-read the still-pending row and put it back
+    /// fully drawn. The row then left a second time once the stage landed, which
+    /// is the reappear-then-leave the choreography was written against. Cleared
+    /// the moment the stage returns, before that call's own refresh, when the
+    /// cache itself says the row is complete. `CalendarViewModel.completingIDs`
+    /// is the same guard. `TodoListViewModel.complete(_:)` avoids the window
+    /// differently: it keeps the faded row until the stage lands, and its
+    /// comment gives the trade.
+    @ObservationIgnored private var completingIDs: Set<String> = []
 
     init(container: AppContainer) {
         self.container = container
@@ -80,8 +95,15 @@ final class ScheduledTaskHomeViewModel {
 
     private func refreshFromCache(snapshot: TodoDashboardCacheSnapshot) {
         summary = snapshot.summary
-        searchableTodos = snapshot.searchableTodos
-        todayTodos = snapshot.todayTodos
+        // Empty on every refresh but the ones that land inside a stage: see
+        // `completingIDs`.
+        if completingIDs.isEmpty {
+            searchableTodos = snapshot.searchableTodos
+            todayTodos = snapshot.todayTodos
+        } else {
+            searchableTodos = snapshot.searchableTodos.filter { !completingIDs.contains($0.id) }
+            todayTodos = snapshot.todayTodos.filter { !completingIDs.contains($0.id) }
+        }
         aiSummaryEnabled = snapshot.aiSummaryEnabled
         isLoading = activeLoadingRefreshes > 0
         errorMessage = nil
@@ -158,11 +180,17 @@ final class ScheduledTaskHomeViewModel {
     /// removed only from `todayTodos` comes straight back off the next sync and
     /// the deferred commit then takes it away again. Same discipline as
     /// `delete(_:)` below.
+    ///
+    /// The staging covers the time after the stage lands. `completingIDs` covers
+    /// the time before it: the stage waits on the sync lock, and a refresh in
+    /// that window would otherwise put the row back.
     func complete(_ todo: TodoItem) async {
         let container = container
+        completingIDs.insert(todo.id)
         todayTodos.removeAll { $0.id == todo.id }
         searchableTodos.removeAll { $0.id == todo.id }
         let staged = await container.todoRepository.stageCompleteTodo(todo)
+        completingIDs.remove(todo.id)
         refreshFromCache()
         container.undoableDeleteScheduler.schedule(
             message: L("Task completed"),

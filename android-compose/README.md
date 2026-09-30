@@ -103,6 +103,24 @@ gate itself — that `TdayApp` withholds the `NavHost` — has no automated test
 has no Robolectric toolchain and an instrumented test of `TdayApp` would need the full Hilt graph
 and a device. It is verified on device.
 
+### Compiled code
+
+The APK is installed from GitHub releases, so there is no Play cloud profile, and Android does not
+read a profile embedded in an APK at install: every install or update starts as `verify`, with the
+app's code interpreted and JIT-compiled. `androidx.profileinstaller` (pinned in
+`app/build.gradle.kts`; the version that arrives transitively cannot install on Android 14+) writes
+the APK's baseline profile on first launch, and ART compiles it at its next idle dexopt. That
+profile is the libraries' own plus `app/src/main/baseline-prof.txt`, one wildcard over the app's
+code, which R8 rewrites to the obfuscated names. To check the profile on a device without waiting
+for idle:
+
+```bash
+adb shell am broadcast -a androidx.profileinstaller.action.INSTALL_PROFILE \
+  com.ohmz.tday.compose/androidx.profileinstaller.ProfileInstallReceiver   # result=1 is installed
+adb shell cmd package compile -m speed-profile -f com.ohmz.tday.compose
+adb shell dumpsys package dexopt | grep -A2 com.ohmz.tday.compose          # status=speed-profile
+```
+
 ## Version Compatibility
 
 - `android-compose/app/build.gradle.kts` reads root `../version.json` for `versionName` and computes

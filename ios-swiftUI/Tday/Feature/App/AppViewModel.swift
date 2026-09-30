@@ -886,7 +886,11 @@ final class AppViewModel {
             lastSyncAttemptEpochMs = 0
             return
         }
-        let state = container.cacheManager.loadOfflineState()
+        // Off the in-memory mirror, not `loadOfflineState()`: this runs on every
+        // `.offlineCacheDidChange`, i.e. right behind every check-off's hydrate while the row
+        // is collapsing, and it only wants a count and two stamps. `lastState` carries all three on
+        // both save paths — see `OfflineCacheManager.cachedState`.
+        let state = container.cacheManager.cachedState
         pendingMutationCount = state.pendingMutations.count
         lastSuccessfulSyncEpochMs = state.lastSuccessfulSyncEpochMs
         lastSyncAttemptEpochMs = state.lastSyncAttemptEpochMs
