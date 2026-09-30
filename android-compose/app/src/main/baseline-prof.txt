@@ -1,0 +1,14 @@
+# T'Day's own code, compiled ahead of time at install.
+#
+# The AndroidX and Compose libraries ship baseline profiles of their own, which AGP merges into this
+# APK's. Nothing covered the app's code, so every method in it ran interpreted until ART's idle-time
+# dexopt had seen it hot — and the APK is installed from GitHub releases, where no Play cloud profile
+# fills that gap. The first tile zoom after an install or update was the visible cost: on a
+# two-core emulator the frame that lays the destination out took 55–68 ms uncompiled and about
+# 25 ms profile-compiled. On an older phone the same frame is several times longer, and the zoom
+# starts late and in a lurch.
+#
+# One wildcard for the whole app rather than a generated per-method list: every screen a tile
+# opens, the home board, navigation and the transition itself are app code, and a rule that
+# names none of them cannot go stale as they change. R8 rewrites it to the obfuscated names.
+HSPLcom/ohmz/tday/**->**(**)**

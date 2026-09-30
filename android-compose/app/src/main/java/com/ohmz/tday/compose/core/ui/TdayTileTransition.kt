@@ -20,15 +20,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -73,7 +79,8 @@ import com.ohmz.tday.compose.ui.theme.TdayDimens
  * - The NAVHOST holds the home screen still under a tile push ([TdayTileZoomHold]) and shows it at
  *   once under a tile pop, instead of crossfading it, so the screen grows over a home screen that
  *   stays put — the only way the zoom can read as coming out of the tile rather than out of a
- *   blank window. [isHomeTileArrival] is how it knows a push or pop is a tile zoom.
+ *   blank window. [isHomeTileArrival] is how it knows a push or pop is a tile zoom. Once the
+ *   screen has grown over all of it, home stops drawing ([tdayTileCoveredScreen]) until a pop.
  *
  * WHERE THE SCREEN CAME FROM IS A PUSH SITE'S FACT, NOT THE ROUTE'S. A tile route is reachable
  * without a press — a shortcut, a notification, a widget row — with home still composed
@@ -104,6 +111,32 @@ val LocalTdayTileSourceScope = compositionLocalOf<AnimatedVisibilityScope?> { nu
 private val LocalTdayTileWidths = staticCompositionLocalOf<SnapshotStateMap<String, Float>?> { null }
 
 /**
+ * Whether a tile's screen has grown to cover the whole window — the cue for the screen underneath
+ * ([tdayTileCoveredScreen]) to stop drawing itself.
+ *
+ * The NavHost holds home under an opening zoom for `Scene` and fades it for `Quick` after that
+ * ([TdayTileZoomHold]): 670 ms of home drawn in full on every frame, when the spring has the
+ * screen over all of it by about 320. Every frame after that paid for two whole screens and showed
+ * one — home's rows, tiles and their shadows re-rendered under an opaque screen, and in its last
+ * `Quick` into an offscreen layer for a fade nobody could see. On a phone whose GPU is already
+ * the bottleneck, that was most of the zoom's second half spent on a screen no one could see.
+ *
+ * Read off the rectangle, like the corner, rather than off a clock: covered means the flight
+ * measured it at the screen's full size on the way IN. A pop is never covered, from its first
+ * frame — its target is set before home's first frame back is drawn — so the screen shrinking
+ * away always has home under it. Being wrong in the other direction only costs a frame of drawing
+ * something hidden, so every doubt resolves to "not covered".
+ */
+private class TdayTileCover {
+    /** The installed destination's answer; null when no zoom is installed. */
+    var covering: State<Boolean>? by mutableStateOf(null)
+
+    val coversScreen: Boolean get() = covering?.value == true
+}
+
+private val LocalTdayTileCover = staticCompositionLocalOf<TdayTileCover?> { null }
+
+/**
  * Wraps the NavHost so every tile and destination underneath is matched in one namespace, and
  * re-publishes the scope — Compose 1.7 has no `LocalSharedTransitionScope` to read it back from,
  * and the tiles are built two files away from the graph behind private composables.
@@ -114,10 +147,12 @@ fun TdayTileTransitionLayout(
     content: @Composable () -> Unit,
 ) {
     val tileWidths = remember { mutableStateMapOf<String, Float>() }
+    val cover = remember { TdayTileCover() }
     SharedTransitionLayout(modifier = modifier) {
         CompositionLocalProvider(
             LocalTdaySharedTransitionScope provides this,
             LocalTdayTileWidths provides tileWidths,
+            LocalTdayTileCover provides cover,
         ) {
             content()
         }
@@ -260,6 +295,13 @@ private class TdayTileFlight(
     /** Opening is faded in on a clock ([TdayTileScreenEnter]); only the landing is measured. */
     fun landingAlpha(closing: Boolean): Float =
         if (closing) 1f - ((progress.floatValue - 0.9f) / 0.1f).coerceIn(0f, 1f) else 1f
+
+    /**
+     * The rectangle has reached the screen's full size. Its bounds are one straight interpolation,
+     * so the width arriving is the height and the position arriving too; and the opening's fade
+     * ([TdayTileScreenEnter], `Quick`) is long done by then, so the screen is opaque over all of it.
+     */
+    val landed: Boolean get() = progress.floatValue <= 0f
 }
 
 /**
@@ -314,6 +356,19 @@ fun Modifier.tdayTileTransitionSource(key: String?): Modifier {
         cornerFraction = null,
         flight = null,
     )
+}
+
+/**
+ * For the screen the tiles live on: draws nothing while a tile's screen covers the whole window
+ * (see [TdayTileCover]), and itself the rest of the time. Only drawing is skipped — the screen stays
+ * composed and laid out, so a pop has it in place on its first frame.
+ */
+@Composable
+fun Modifier.tdayTileCoveredScreen(): Modifier {
+    val cover = LocalTdayTileCover.current ?: return this
+    return this.drawWithContent {
+        if (!cover.coversScreen) drawContent()
+    }
 }
 
 /**
@@ -374,6 +429,18 @@ fun AnimatedVisibilityScope.TdayTileDestination(
         remember(key, tileWidths) { TdayTileFlight(key, tileWidths) }
     } else {
         null
+    }
+    val cover = LocalTdayTileCover.current
+    if (flight != null && cover != null) {
+        // Derived, so the screen underneath is invalidated when the answer flips and not on every
+        // frame the rectangle moves.
+        val covering = remember(flight) {
+            derivedStateOf { transition.targetState == EnterExitState.Visible && flight.landed }
+        }
+        DisposableEffect(cover, covering) {
+            cover.covering = covering
+            onDispose { if (cover.covering === covering) cover.covering = null }
+        }
     }
     Box(
         modifier = Modifier
