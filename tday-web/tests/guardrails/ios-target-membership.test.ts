@@ -45,6 +45,51 @@ const PBXPROJ = resolve(IOS_ROOT, "TdayApp.xcodeproj", "project.pbxproj");
  */
 const NOT_A_BUILD_SOURCE = new Set([resolve(IOS_ROOT, "Package.swift")]);
 
+/**
+ * The directories `ios-swiftUI/.gitignore` excludes, read from that file rather than listed here.
+ *
+ * Build output is not project source, and the walk used to descend into it. `ios-swiftUI/build/`
+ * is where a default-location Xcode build lands, and it carries the resolved SPM checkouts with
+ * it — 648 vendored `.swift` files on this machine, none of them ours and none of them in the
+ * pbxproj. Every one of them read as "compiles into no target", so both rules below were red on
+ * any Mac where somebody had ever built in the default place, and they stayed red until that
+ * directory was deleted. A test that a normal build turns red is a test people learn to ignore.
+ *
+ * The rules come out of the ignore file instead of being written here because that file is
+ * already the place this repository says what is output: `build/`, `DerivedData/`, `xcuserdata/`
+ * and fastlane's two result directories, plus the dotted ones the walk was skipping for its own
+ * reasons. Hard-coding "build" would have to be kept in step with it by hand, which is the
+ * failure mode this suite exists to catch in the pbxproj.
+ *
+ * Deliberately NOT a gitignore implementation. Only two shapes are honoured — a bare directory
+ * name, matched at any depth the way git matches it, and a slash-bearing directory path, matched
+ * against the walk's position under `ios-swiftUI/`. Negations, globs and file patterns are
+ * skipped: a file pattern cannot hide a directory, and a `!` rule that re-admitted build output
+ * is not a thing this ignore file has ever had. Anything unparsed simply stays in the walk, so
+ * the failure direction is a rule that fires too rarely, never one that hides a real source.
+ */
+function ignoredDirectoryRules(): { names: Set<string>; paths: Set<string> } {
+  const names = new Set<string>();
+  const paths = new Set<string>();
+  const ignoreFile = resolve(IOS_ROOT, ".gitignore");
+  if (!existsSync(ignoreFile)) return { names, paths };
+
+  for (const raw of readFileSync(ignoreFile, "utf8").split("\n")) {
+    const line = raw.trim();
+    if (line === "" || line.startsWith("#") || line.startsWith("!")) continue;
+    if (!line.endsWith("/")) continue;
+    if (/[*?\[\]]/.test(line)) continue;
+    const entry = line.replace(/^\/+/, "").replace(/\/+$/, "");
+    if (entry === "") continue;
+    if (entry.includes("/")) paths.add(entry);
+    else names.add(entry);
+  }
+
+  return { names, paths };
+}
+
+const IGNORED = ignoredDirectoryRules();
+
 /** A pbxproj object id: 24 uppercase hex characters. */
 const OBJECT_ID = "[0-9A-F]{24}";
 
@@ -54,10 +99,18 @@ function walkSwift(dir: string): string[] {
     // `.spm-cache/` is where `ios-tests.yml` clones resolved packages; on a CI checkout it holds
     // thousands of third-party sources that no target of ours registers. Nothing Xcode builds
     // from this repository lives in a dotted directory, so skipping the whole class is safe and
-    // survives the next tool that invents one.
+    // survives the next tool that invents one. The ignore file names three of these too; this
+    // rule stays because it is the broader one, and because it does not depend on that file
+    // still being there.
     if (entry.name.startsWith(".")) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
+      // Build output, per `ios-swiftUI/.gitignore` — see `ignoredDirectoryRules`. Checked on the
+      // directory rather than on each file so the walk never descends, which is also what keeps
+      // a default-location build's SPM checkouts from costing this suite a recursive read of
+      // several thousand entries.
+      if (IGNORED.names.has(entry.name)) continue;
+      if (IGNORED.paths.has(relative(IOS_ROOT, full))) continue;
       found.push(...walkSwift(full));
     } else if (entry.name.endsWith(".swift") && !NOT_A_BUILD_SOURCE.has(full)) {
       found.push(full);
@@ -219,6 +272,24 @@ describeIOS("iOS target membership", () => {
 describeIOS("the scanner is actually reading the project", () => {
   it("walks the iOS source tree", () => {
     expect(DISK.length).toBeGreaterThan(100);
+  });
+
+  it("read the ignore file it prunes build output with", () => {
+    // Without this, a renamed or moved `ios-swiftUI/.gitignore` does not fail here — it fails as
+    // several hundred "compiles into no target" lines pointing at vendored SPM sources, which
+    // reads as a catastrophically broken project rather than as one missing file. Naming `build`
+    // specifically because that is the directory a default-location Xcode build lands in, and it
+    // is the only one of the rules whose absence is reproducible on a developer's Mac.
+    expect(IGNORED.names.has("build")).toBe(true);
+    expect(IGNORED.names.size + IGNORED.paths.size).toBeGreaterThan(1);
+  });
+
+  it("still sees the source tree the ignore rules sit beside", () => {
+    // The other direction: a rule broad enough to prune real sources. `Tday/` is the app target's
+    // own directory and is the largest thing in the walk — if a future ignore entry ever swallows
+    // it, `DISK.length` alone could still clear 100 on the other targets.
+    const appSources = DISK.filter((file) => relative(IOS_ROOT, file).startsWith("Tday/"));
+    expect(appSources.length).toBeGreaterThan(100);
   });
 
   it("parses the pbxproj it is asserting about", () => {
