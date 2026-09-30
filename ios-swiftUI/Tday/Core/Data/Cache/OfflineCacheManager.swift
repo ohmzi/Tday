@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import UIKit
 
 extension Notification.Name {
     static let offlineCacheDidChange = Notification.Name("tday.offline-cache.did-change")
@@ -129,6 +130,35 @@ final class OfflineCacheManager {
     /// one case this accessor exists for.
     var lastSuccessfulSyncEpochMsSnapshot: Int64 {
         lastState.lastSuccessfulSyncEpochMs
+    }
+
+    /// The whole persisted state's in-memory mirror, for the synchronous UI snapshots the
+    /// repositories hand to view models (`fetchTodoListCacheSnapshot`, `fetchDashboardCacheSnapshot`,
+    /// the completed and list `*Snapshot` reads). Those run in view-model initializers and in the
+    /// re-hydrate every live model does on each `.offlineCacheDidChange`. The screens that hydrate in
+    /// `init` used to seed their model with `State(initialValue:)`, which is not lazy, so every
+    /// parent body pass (a push, a pop, a toast, the home dock folding mid-scroll) built a model and
+    /// threw the surplus away. They now build it on first read (`LazyViewModelBox`, see
+    /// `TodoListScreen`), so there is no surplus. The one construction each screen still does
+    /// happens in its first body pass, which is the frame the tile zoom has to draw first. Off
+    /// `loadOfflineState()`, that construction and every re-hydrate was eight unfiltered SwiftData
+    /// fetches (the entire completed history among them) mapped record by record on the main
+    /// actor. Off this they are an in-memory filter and sort.
+    ///
+    /// Safe to trust for the same reason the two scalar mirrors above are: this manager owns the
+    /// only `ModelContext`, `init` seeds `lastState` from the store, the content-changed save path
+    /// assigns the whole normalized state, and the metadata-only path copies across the only fields
+    /// it moves. Ordering is NOT part of the contract — the store's fetch order is unspecified and
+    /// `loadOfflineState` re-sorts lists, while this keeps whatever order the last writer saved —
+    /// so every reader re-applies its own ordering (`orderListsLikeWeb`, `todoSortPrecedes`, the
+    /// Completed screen's `completedAt` grouping), as they already did. It also assumes no writer
+    /// hands `saveOfflineState` two records sharing one id: the store's `@Attribute(.unique)` would
+    /// merge them and this mirror would not. None does today.
+    ///
+    /// Read-modify-write paths (`updateOfflineState`, the async `loadOfflineState`) stay on the
+    /// store; this is for reads that only draw.
+    var cachedState: OfflineSyncState {
+        lastState
     }
 
     func loadOfflineState() -> OfflineSyncState {
@@ -406,8 +436,22 @@ final class OfflineCacheManager {
 
         try? modelContext.save()
         lastState = normalizedState
-        TodayTasksWidgetSnapshotStore.saveTodayTasks(from: normalizedState)
-        FloaterTasksWidgetSnapshotStore.saveFloaterTasks(from: normalizedState)
+        // Handed off, not written here. This save runs inside the stage write of every check-off
+        // and undo and at the end of every sync that moves a row. Rebuilding both snapshots inline
+        // held main for tens of milliseconds, right as the toast slid out or the next ticked row
+        // struck through. `WidgetSnapshotWriter` explains why its ordering keeps an older state
+        // from landing last.
+        WidgetSnapshotWriter.shared.submit(normalizedState)
+        // In the background the save still waits for its write, as it did when the write was
+        // inline. A caller there can return right after this save, and iOS may suspend the app
+        // once it does. Siri/Shortcuts' `CreateCarTaskIntent` (`openAppWhenRun = false`) hands back
+        // its dialog straight after `createTodo`/`createFloater` save, and a write still queued
+        // then would leave the widget and watch without the new task until the app next runs.
+        // There is no frame to protect in the background, so `flush` waits behind every queued
+        // write, this one included. The foreground check-off and undo path does not wait.
+        if UIApplication.shared.applicationState == .background {
+            WidgetSnapshotWriter.shared.flush()
+        }
         cacheDataVersion += 1
         if notify {
             NotificationCenter.default.post(name: .offlineCacheDidChange, object: nil)
@@ -446,8 +490,22 @@ final class OfflineCacheManager {
     /// save is conditional and the snapshot's day window counts as content, so this writes (and
     /// reloads WidgetKit) once per new day and is a no-op otherwise. `lastState` mirrors the
     /// cache, so there is no fetch.
+    ///
+    /// The no-op still costs a full snapshot build, a catalogue write and a file read and decode.
+    /// In the foreground it runs in the scene's `.active` beat, alongside the resume animation, so
+    /// there it is handed to `WidgetSnapshotWriter` and nothing waits. In the background it waits.
+    /// `WidgetBackgroundRefresh`, for one, hands its task back (`setTaskCompleted`) shortly after
+    /// this returns, and from then on iOS may suspend the app, so a write still queued could miss
+    /// the run it exists for. The cache saves that run's sync made already waited for their own
+    /// writes (see `saveOfflineState`), but the Local Mode sync queues one through `submit`
+    /// outside a save, and that has to land too. There is no frame to protect in the background,
+    /// so this takes the waiting `saveTodayTasks`, which runs after everything already queued.
     func refreshTodayWidgetSnapshot() {
-        TodayTasksWidgetSnapshotStore.saveTodayTasks(from: lastState)
+        if UIApplication.shared.applicationState == .background {
+            TodayTasksWidgetSnapshotStore.saveTodayTasks(from: lastState)
+        } else {
+            WidgetSnapshotWriter.shared.submit(lastState, includeFloater: false)
+        }
     }
 
     func clearAllLocalData() {

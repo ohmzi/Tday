@@ -104,6 +104,7 @@ import com.ohmz.tday.compose.core.ui.informationalToastTimeoutMillis
 import com.ohmz.tday.compose.core.ui.rememberHomeTileOrigin
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
+import com.ohmz.tday.compose.core.ui.tdayTileCoveredScreen
 import com.ohmz.tday.compose.feature.app.AppUiState
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.app.ProfileEditResult
@@ -1454,6 +1455,9 @@ private fun RootFeedContent(
                 slot = rootSwipeSlot,
                 close = { rootSwipeSlot.openId = null },
             )
+            // Home is what every tile zoom opens over; once the screen covers it, it stops
+            // drawing — see `TdayTileCover`.
+            .tdayTileCoveredScreen()
     ) {
         val motionEnabled = rememberTdayMotionEnabled()
 

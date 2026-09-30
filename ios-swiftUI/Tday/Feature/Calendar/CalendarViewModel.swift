@@ -14,6 +14,15 @@ final class CalendarViewModel {
     var errorMessage: String?
 
     @ObservationIgnored nonisolated(unsafe) private var observationTask: Task<Void, Never>?
+    /// Rows `complete(_:)` has already taken off screen whose staged write has
+    /// not landed in the cache yet. Every hydrate filters them out until it does.
+    /// The stage waits on the sync lock, and the sync holding it posts its
+    /// cache-changed notification first, so without this the hydrate that
+    /// notification drives put the pending row back before the stage took it
+    /// away again. `ScheduledTaskHomeViewModel.completingIDs` is the same guard.
+    /// `TodoListViewModel.complete(_:)` needs none: it keeps the row on screen
+    /// until the stage lands, so a hydrate inside the stage changes nothing.
+    @ObservationIgnored private var completingIDs: Set<String> = []
 
     init(container: AppContainer) {
         self.container = container
@@ -61,11 +70,17 @@ final class CalendarViewModel {
     /// removed only from `items` comes straight back off the next sync and the
     /// deferred commit then takes it away again. Same discipline as `delete(_:)`
     /// below.
+    ///
+    /// The staging covers the time after the stage lands. `completingIDs` covers
+    /// the time before it: the stage waits on the sync lock, and a hydrate in
+    /// that window would otherwise put the row back.
     func complete(_ todo: TodoItem) async {
         TdayTelemetry.addBreadcrumb("calendar.task.complete", data: calendarTelemetryData())
         let container = container
+        completingIDs.insert(todo.id)
         items.removeAll { $0.id == todo.id }
         let staged = await container.todoRepository.stageCompleteTodo(todo)
+        completingIDs.remove(todo.id)
         hydrateFromCache()
         container.undoableDeleteScheduler.schedule(
             message: L("Task completed"),
@@ -163,7 +178,11 @@ final class CalendarViewModel {
     }
 
     private func hydrateFromCache() {
-        items = container.todoRepository.fetchTodosSnapshot(mode: .all).filter { $0.due != nil }
+        // `completingIDs` is empty on every hydrate but the ones that land
+        // inside a stage, when it hides the rows that stage is completing.
+        items = container.todoRepository.fetchTodosSnapshot(mode: .all).filter {
+            $0.due != nil && !completingIDs.contains($0.id)
+        }
         completedItems = container.completedRepository.fetchCompletedItemsSnapshot()
         lists = container.listRepository.fetchListsSnapshot()
         errorMessage = nil

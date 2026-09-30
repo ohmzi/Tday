@@ -31,8 +31,16 @@ final class ListRepository {
         buildLists(from: cacheManager.loadOfflineState())
     }
 
+    /// Off `cacheManager.cachedState`, the in-memory mirror: `CompletedViewModel` and
+    /// `CalendarViewModel` read this in the synchronous hydrate their initializers run in
+    /// the screen's first body pass (the frame the tile zoom draws first), and again on
+    /// every `.offlineCacheDidChange` and after each of their own refreshes and writes.
+    /// See `OfflineCacheManager.cachedState`. `buildLists` re-applies `orderListsLikeWeb`,
+    /// so the mirror's order shows only among lists it cannot tell apart (undated, or
+    /// created in the same millisecond). Those keep the last writer's order, where they
+    /// used to keep the store's equally unspecified fetch order.
     func fetchListsSnapshot() -> [ListSummary] {
-        buildLists(from: cacheManager.loadOfflineState())
+        buildLists(from: cacheManager.cachedState)
     }
 
     func createList(name: String, color: String? = nil, iconKey: String? = nil, defaultPriority: String? = nil) async throws {

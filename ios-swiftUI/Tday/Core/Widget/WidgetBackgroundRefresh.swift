@@ -7,8 +7,8 @@ import Foundation
 /// process. iOS schedules `BGAppRefreshTask` opportunistically, so 30 minutes is an
 /// *earliest-begin* hint, not a guarantee; the OS may run it less often based on usage.
 ///
-/// Reloading is still conditional: the sync writes through OfflineCacheManager →
-/// `saveTodayTasks`/`saveFloaterTasks`, which skip the WidgetKit reload when the displayed
+/// Reloading is still conditional: the sync's cache saves hand the snapshot to
+/// `WidgetSnapshotWriter`, whose writes skip the WidgetKit reload when the displayed
 /// content is unchanged. So a background run that finds nothing new for the widget leaves it
 /// untouched while the app still holds the latest state.
 enum WidgetBackgroundRefresh {

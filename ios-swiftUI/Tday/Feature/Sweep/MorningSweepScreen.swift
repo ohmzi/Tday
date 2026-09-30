@@ -38,8 +38,18 @@ struct MorningSweepScreen: View {
                     markAccentColor: sweepAccentColor
                 )
                 .background {
-                    TimelineScrollOffsetObserver { scrollOffset = $0 }
-                        .frame(width: 0, height: 0)
+                    // Clamped to the collapse distance and written only when it
+                    // changes: the offset is `@State` read in this body, so every raw
+                    // scroll frame re-evaluated the whole sweep. Past the distance the
+                    // collapse is finished and there is nothing left to redraw.
+                    // `TimelineTitleScrollState` stores its offset the same way.
+                    TimelineScrollOffsetObserver { offset in
+                        let clamped = min(max(offset, 0), TodoTimelineMetrics.titleCollapseDistance)
+                        if clamped != scrollOffset {
+                            scrollOffset = clamped
+                        }
+                    }
+                    .frame(width: 0, height: 0)
                 }
 
                 if let card {

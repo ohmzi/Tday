@@ -557,18 +557,28 @@ struct CreateTaskSheet: View {
     }
 
     private func submit() async {
+        // Re-entrancy guard, the same one `CreateListSheet.onConfirm` carries:
+        // the card stays mounted and interactive through its exit
+        // (`TdayBottomSheetMotion.exitDuration`), and through the save before
+        // that when the save is waited on (below), and two taps inside one
+        // frame each start a `Task` before `.disabled` has re-rendered.
+        // Everything up to the first `await` below runs in one go on the main
+        // actor, so the first one's `isSubmitting = true` is what the second
+        // one finds here.
+        guard !isSubmitting else { return }
         HapticManager.completion()
-        // Up front rather than on the way out: `onSubmit` is awaited below, so
-        // leaving the keyboard to the sheet's own dismissal keeps it standing
-        // over the card for the whole save. The dismissal resigns too (see
-        // `TdayBottomSheetPresentationHost.animateOut`), which is what covers
-        // the header's X; this is the confirm path's head start on a slow
-        // network. Focus is cleared first, in the order the selector path and
-        // the Title field's own submit already use: the broadcast resigns the
-        // responder, and a `@FocusState` still naming a field is SwiftUI's
-        // standing instruction to put it back.
+        // Up front rather than on the way out: a save that is waited on (below)
+        // would otherwise leave the keyboard to the dismissal's own resign
+        // (`TdayBottomSheetPresentationHost.animateOut`, which is all the
+        // header's X has) and keep it standing over the card for the whole
+        // save. Focus is cleared first, then the broadcast resign, in the order
+        // the selector path and the Title field's own submit already use, so the
+        // keyboard starts down on the confirm tap itself.
         focusedInputField = nil
         createTaskSheetResignKeyboard()
+        // Latched for good rather than reset after the save: the card is still
+        // mounted through its exit, and the latch is what keeps a second tap
+        // there from filing the task twice.
         isSubmitting = true
         let payload = CreateTaskPayload(
             title: effectiveTitle(),
@@ -578,10 +588,82 @@ struct CreateTaskSheet: View {
             rrule: showScheduleControls && scheduleEnabled ? repeatRule : nil,
             listId: selectedListID
         )
+        // In Server Mode every host's `onSubmit` reaches a repository that
+        // writes the optimistic row and then awaits the network before it
+        // returns: a forced sync (the sync lock, and the pending-mutation replay
+        // between two snapshot fetches) for tasks and floaters, and a direct
+        // PATCH for Completed's edit, which puts the previous cache state back
+        // if the PATCH fails. In Local Mode the repository returns once the row
+        // is written. A failure surfaces through the host (a snackbar, or
+        // Completed's `errorMessage`, with its row reverted) and never back in
+        // this card, and nothing here retries in place, so which of the two
+        // orders below runs decides only what the user is looking at while the
+        // save is out, never whether a failure reaches them.
+        //
+        // An edit that keeps every row id where it was leaves first: the card
+        // goes on the tap, the save's own cache write updates the row as the
+        // card slides away, and the sync that follows re-keys nothing. See
+        // `saveKeepsRowIDs(_:)` for which saves those are.
+        //
+        // `onConfirm`'s `Task` is unstructured, so on either order the save
+        // outlives this view's teardown. Nothing the closures touch belongs to
+        // this sheet: an edit's task is held by value, and the view model is
+        // reached through the host's `@State` box (built on the host's first
+        // body pass and never replaced), which outlives this sheet.
+        if saveKeepsRowIDs(payload) {
+            onDismiss()
+            dismiss()
+            await onSubmit(payload)
+            return
+        }
+        // Everything else saves first and leaves after: the card and its scrim
+        // cover the feed until `onSubmit` returns.
+        //
+        // The wait is what a create needs. A new task or floater is written with
+        // a `LOCAL_TODO_PREFIX` / `LOCAL_FLOATER_PREFIX` id, and the forced
+        // sync's replay swaps in the server's (`SyncManager.replaceLocalTodoID` /
+        // `replaceLocalFloaterID`) before it lets go of the sync lock. The hosts
+        // key their rows and their travel on `id`: ScheduledTaskHome's today
+        // block (its `ForEach` and the placement travel keyed on
+        // `todayTodos.map(\.id)`), TodoList (`timelineItemAnimationKey`) and
+        // Calendar's day list (`pendingDayAnimationKey`; its create sheet starts
+        // on the selected day). Leaving first would play that swap in view, the
+        // new row leaving and arriving again, and would hand the user the
+        // local-id row while the sync still holds the lock: a tick on it waits
+        // for the lock, then lands after the remap against an id no row carries
+        // any more. Behind the card neither is reachable, short of a throttled or
+        // failed sync that leaves the swap to a later one, or the user closing
+        // the card mid-save (the header's X, a scrim tap and the drag all stay
+        // live through it).
         await onSubmit(payload)
-        isSubmitting = false
         onDismiss()
         dismiss()
+    }
+
+    /// Whether this save leaves every row id the feeds behind the card key on
+    /// where it was, which is what lets `submit()` take the card away before
+    /// the save's network wait rather than after it.
+    ///
+    /// Only an edit can. A create always writes a `LOCAL_TODO_PREFIX` /
+    /// `LOCAL_FLOATER_PREFIX` row for the sync to re-key. An edit writes its
+    /// fields onto the row it was opened on, and the replay PATCHes it under
+    /// that same id; a repeating task is no exception, since the timeline
+    /// carries it as one row under its template's id (the backend's
+    /// `TodoService.getTimeline`). The exception is clearing a due date. On a
+    /// scheduled task that is the demote in `TodoRepository.updateTodo`: the
+    /// rest of the save is written, and in Server Mode synced, before the todo
+    /// row goes, with a `LOCAL_FLOATER_PREFIX` floater written in its place, so
+    /// it waits like a create. Completed's edit takes that branch too when its
+    /// due is cleared, and there waits out its PATCH.
+    ///
+    /// What the card cannot see is a row whose own create is still queued
+    /// (that create's forced sync was throttled or failed). The sync an edit of
+    /// it starts re-keys it in view, the same swap whichever sync came next
+    /// would have played.
+    private func saveKeepsRowIDs(_ payload: CreateTaskPayload) -> Bool {
+        guard isEditingExistingTask, let initialPayload else { return false }
+        let clearsDue = initialPayload.due != nil && payload.due == nil
+        return !clearsDue
     }
 
     /// The one place `activeSelector` moves.

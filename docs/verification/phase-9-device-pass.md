@@ -1989,6 +1989,22 @@ animates.
       Why:    recorded at 60 fps on an emulator, which settles the shape; whether the dissolve
               lands cleanly at full speed on real hardware is only visible on a device.
 
+- [ ] **PR 32h · android · The tile zoom on an older phone** — the slowest Android phone to hand,
+      animations on, a workspace with a list that fills the screen.
+      Do:     open the **All** tile and a custom list row a few times each, closing with the back
+              button and once with a slow back swipe. Then leave the phone idle on a charger
+              overnight (or run `adb shell cmd package compile -m speed-profile -f
+              com.ohmz.tday.compose`) and do the first open of the next launch again.
+      Watch:  home stays in place around the growing screen right up to the frame the screen fills
+              it, and is there around the shrinking screen from the first frame of a close. The
+              second half of the open is as even as the first. After the idle compile, the first
+              open of a launch starts without a stall.
+      Fails:  a flash of empty background at the edges just before the screen fills them, or behind
+              the screen as it starts to shrink — that is home skipped while some of it is still in
+              view; a stall before the tile starts to grow that is still there after the idle compile.
+      Why:    measured on a two-core emulator on a software GPU, which settles that the work went
+              away; whether a real older GPU now keeps up is only visible on one.
+
 - [ ] **PR 195 · ios · The calendar's docked title** — a phone, Calendar, scrolled until the bar has
       collapsed. Run it at the default text size and again at a large Dynamic Type size.
       Do:     scroll up until the title docks, then scroll back down to the top, slowly.

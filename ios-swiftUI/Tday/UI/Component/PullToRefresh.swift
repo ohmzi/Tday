@@ -703,6 +703,9 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
         private var settledTargetOffset: CGFloat = 0
         private var snapTimer: Timer?
         private var isSnapping = false
+        private let settle = ScrollOffsetSettle()
+        /// The offset `watchSettle`'s last poll read once the feed looked idle.
+        private var watchedOffsetY: CGFloat?
         private let releaseVelocityThreshold: CGFloat = 90
 
         init(collapseDistance: CGFloat) {
@@ -711,6 +714,7 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
 
         deinit {
             snapTimer?.invalidate()
+            settle.stop()
         }
 
         func attach(to view: UIView) {
@@ -735,6 +739,7 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
                 snapTimer?.invalidate()
                 isSnapping = false
                 scrollView.layer.removeAllAnimations()
+                settle.stop()
                 releaseVelocityY = 0
                 lastDragDelta = 0
                 dragStartOffset = offset
@@ -849,23 +854,87 @@ private struct VerticalScrollSnapObserver: UIViewRepresentable {
                 return
             }
 
+            // Stepped into `contentOffset` once per frame by `ScrollOffsetSettle`,
+            // not `setContentOffset(animated: false)` inside a `UIView.animate`
+            // block. That block wrote the model `contentOffset` to the target in one
+            // step and left Core Animation to move the pixels, so the offset KVO the
+            // collapsing bar reads fired once, with the final value: the title
+            // jumped to its end state while the rows were still gliding. Stepped per
+            // frame, the bar follows the settle the way it follows a drag, and a
+            // finger landing mid-settle stops the feed where it is instead of
+            // jumping it to the target.
+            //
+            // Only the driver changed; the spring keeps the block's numbers: 0.92
+            // damping, settling in 0.22 s plus 0.12 s times the share of the
+            // collapse still to travel, launched with the release velocity in
+            // UIKit's unit (whole trips per second, capped at 2.4). It is not
+            // UIKit's `setContentOffset(animated: true)`, which steps the offset too
+            // but on UIKit's own curve: one fixed length that ignores both the
+            // distance left and the speed of the flick.
+            //
+            // No callback reaches this coordinator when a tap stops the settle, so
+            // `settledTargetOffset` is recorded up front and `watchSettle` notices
+            // the end of the settle itself.
+            settledTargetOffset = target
             isSnapping = true
-            scrollView.layer.removeAllAnimations()
             let remainingDistance = abs(scrollView.contentOffset.y - targetOffset.y)
             let progress = min(max(remainingDistance / max(collapseDistance, 1), 0), 1)
-            let duration = 0.22 + (0.12 * progress)
-            let initialVelocity = min(abs(releaseVelocityY) / max(collapseDistance, 1), 2.4)
-            UIView.animate(
-                withDuration: duration,
-                delay: 0,
-                usingSpringWithDamping: 0.92,
-                initialSpringVelocity: initialVelocity,
-                options: [.allowUserInteraction, .beginFromCurrentState]
-            ) {
-                scrollView.setContentOffset(targetOffset, animated: false)
-            } completion: { [weak self] _ in
-                self?.settledTargetOffset = target
-                self?.isSnapping = false
+            // not a token — see docs/motion.md. Android's `SettleSpring` in
+            // `TdayHeroTitleHeader.kt` names this spring as the one it is pinned to,
+            // and the deliberate non-tokens keep it off `Settle` for that reason.
+            // This half stays written out for the same one: moving either side onto
+            // the token would undo the match.
+            let settleDuration = TimeInterval(0.22 + (0.12 * progress))
+            let initialVelocity = Double(min(abs(releaseVelocityY) / max(collapseDistance, 1), 2.4))
+            settle.start(
+                scrollView,
+                toY: targetOffset.y,
+                duration: settleDuration,
+                curve: .spring(dampingRatio: 0.92, initialVelocity: initialVelocity)
+            )
+            watchSettle()
+        }
+
+        /// Polls the settle on `scheduleSnapCheck`'s interval. A tap stops the
+        /// settle (its step sees `isTracking`) with no callback and without a pan
+        /// `.began` or `.ended`, so nothing else would notice the bar stranded
+        /// part-way. Once the settle has stopped, no finger is on the feed, and two
+        /// polls in a row read the same offset, it is over, whether it landed or was
+        /// cut short: drop the latch and run `maybeSnap` again. It returns at either
+        /// end of the collapse and otherwise resumes the settle from where the tap
+        /// left it. A pan's `.began` invalidates this timer.
+        ///
+        /// The two matching polls are for an animated scroll this observer did not
+        /// start, which is not a finger and so passes the other checks. Snapping
+        /// while it still moves the feed would start a settle that fights it, and
+        /// whichever wrote last would decide where the feed stops.
+        private func watchSettle() {
+            snapTimer?.invalidate()
+            watchedOffsetY = nil
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                guard let scrollView = self.observedScrollView else {
+                    timer.invalidate()
+                    self.isSnapping = false
+                    return
+                }
+                guard !self.settle.isRunning,
+                      !scrollView.isTracking, !scrollView.isDragging, !scrollView.isDecelerating
+                else {
+                    self.watchedOffsetY = nil
+                    return
+                }
+                let offsetY = scrollView.contentOffset.y
+                guard let previousY = self.watchedOffsetY, abs(offsetY - previousY) <= 0.5 else {
+                    self.watchedOffsetY = offsetY
+                    return
+                }
+                timer.invalidate()
+                self.isSnapping = false
+                self.maybeSnap(scrollView: scrollView)
             }
         }
     }
@@ -898,7 +967,9 @@ private struct TopPartialScrollSnapObserver: UIViewRepresentable {
         var isDisabled: Bool
         private weak var observedScrollView: UIScrollView?
         private var snapTimer: Timer?
-        private var isSnapping = false
+        private let settle = ScrollOffsetSettle()
+        /// The offset `watchSettle`'s last poll read once the feed looked idle.
+        private var watchedOffsetY: CGFloat?
 
         init(anchorDistance: CGFloat, isDisabled: Bool) {
             self.anchorDistance = anchorDistance
@@ -907,6 +978,7 @@ private struct TopPartialScrollSnapObserver: UIViewRepresentable {
 
         deinit {
             snapTimer?.invalidate()
+            settle.stop()
         }
 
         func attach(to view: UIView) {
@@ -951,7 +1023,7 @@ private struct TopPartialScrollSnapObserver: UIViewRepresentable {
         }
 
         private func maybeSnap(scrollView: UIScrollView) {
-            guard !isDisabled, !isSnapping, anchorDistance > 0 else { return }
+            guard !isDisabled, anchorDistance > 0 else { return }
             let maxOffset = maxScrollableOffset(for: scrollView)
             guard maxOffset > 0.5 else { return }
 
@@ -978,18 +1050,159 @@ private struct TopPartialScrollSnapObserver: UIViewRepresentable {
             let targetY = normalizedOffset - scrollView.adjustedContentInset.top
             guard abs(scrollView.contentOffset.y - targetY) > 0.5 else { return }
 
-            isSnapping = true
-            scrollView.layer.removeAllAnimations()
-            UIView.animate(
-                withDuration: 0.26,
-                delay: 0,
-                options: [.allowUserInteraction, .beginFromCurrentState, .curveEaseInOut]
-            ) {
-                scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: targetY), animated: false)
-            } completion: { [weak self] _ in
-                self?.isSnapping = false
+            // Stepped into `contentOffset` once per frame by `ScrollOffsetSettle`,
+            // not `setContentOffset(animated: false)` inside a `UIView.animate`
+            // block. That block wrote the model `contentOffset` to the target in one
+            // step, so the offset KVO that `RootFeedHeaderScrollObserver` publishes
+            // fired once, with the final value, and the hero morph (sun, title,
+            // search fold) popped to its end state in one frame while the rows
+            // glided underneath. Stepped per frame, the morph tracks the settle
+            // through its stagger curves exactly as it does under a finger, and a
+            // finger landing mid-settle stops the feed where it is.
+            //
+            // No in-flight latch: `start` stops any settle already running before it
+            // begins, and `watchSettle` does not call back in until the settle has
+            // stopped.
+            //
+            // not a token — see docs/motion.md. Only the driver changed: this is
+            // still the block's 0.26 s ease-in-out. The number is `Change`'s, but a
+            // settle moves the feed, which the second idiom rule puts on `Emphasis`,
+            // so naming either rung here would be a mislabel or a retiming, and a
+            // retiming belongs in a PR that admits to it.
+            let settleDuration: TimeInterval = 0.26
+            settle.start(scrollView, toY: targetY, duration: settleDuration, curve: .easeInOut)
+            watchSettle()
+        }
+
+        /// Polls the settle on `scheduleSnapCheck`'s interval. A tap stops the
+        /// settle (its step sees `isTracking`) with no callback and without a pan
+        /// `.ended`, so nothing else would notice the hero header stranded
+        /// half-folded. Once the settle has stopped, no finger is on the feed, and
+        /// two polls in a row read the same offset, it is over, whether it landed or
+        /// was cut short: run `maybeSnap` again. It returns at either end of the
+        /// fold and otherwise resumes the settle from where the tap left it. A pan's
+        /// `.ended` replaces this timer through `scheduleSnapCheck`.
+        ///
+        /// The two matching polls are for an animated scroll this observer did not
+        /// start: a tap on the header title scrolls the feed to the top, and that
+        /// tap can come while a settle is still running. The scroll is not a finger
+        /// and passes the other checks. Snapping while it still moves the feed would
+        /// start a settle toward the nearer end, and one that outlasts the scroll
+        /// can leave the feed folded after a tap that asked for the top.
+        private func watchSettle() {
+            snapTimer?.invalidate()
+            watchedOffsetY = nil
+            snapTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] timer in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+                guard let scrollView = self.observedScrollView else {
+                    timer.invalidate()
+                    return
+                }
+                guard !self.settle.isRunning,
+                      !scrollView.isTracking, !scrollView.isDragging, !scrollView.isDecelerating
+                else {
+                    self.watchedOffsetY = nil
+                    return
+                }
+                let offsetY = scrollView.contentOffset.y
+                guard let previousY = self.watchedOffsetY, abs(offsetY - previousY) <= 0.5 else {
+                    self.watchedOffsetY = offsetY
+                    return
+                }
+                timer.invalidate()
+                self.maybeSnap(scrollView: scrollView)
             }
         }
+    }
+}
+
+/// Plays a snap observer's settle by writing the scroll view's `contentOffset`
+/// once per display frame, so everything that reads the offset (the collapsing
+/// bar's KVO, the root feed header's morph) sees every step of the settle and not
+/// only its end, the same as under a drag.
+///
+/// The curve is the caller's. Both observers keep the one their `UIView.animate`
+/// block used to play; see their call sites.
+///
+/// A finger on the feed ends the settle where it stands. The step checks
+/// `isTracking` before it writes, because a tap never becomes a pan and so reaches
+/// no `.began` handler that could stop it. The observers poll `isRunning` to learn
+/// that the settle is over, however it ended.
+///
+/// The display link retains this object, not the coordinator that owns it, so the
+/// coordinator can still go away mid-settle. Its `deinit` calls `stop()`, and the
+/// step stops itself once the scroll view is gone.
+private final class ScrollOffsetSettle: NSObject {
+    enum Curve {
+        /// The spring `UIView.animate(withDuration:delay:usingSpringWithDamping:
+        /// initialSpringVelocity:options:animations:completion:)` describes: a
+        /// damping ratio, settled within the duration, launched at
+        /// `initialVelocity` in that method's unit, whole trips per second toward
+        /// the target. Solved by SwiftUI's `Spring(settlingDuration:dampingRatio:)`,
+        /// which takes the same two numbers.
+        case spring(dampingRatio: Double, initialVelocity: Double)
+        /// `UIView.AnimationOptions.curveEaseInOut`, the (0.42, 0, 0.58, 1) bezier
+        /// that SwiftUI calls `UnitCurve.easeInOut`.
+        case easeInOut
+    }
+
+    private weak var scrollView: UIScrollView?
+    private var displayLink: CADisplayLink?
+    private var startY: CGFloat = 0
+    private var travel: CGFloat = 0
+    private var duration: TimeInterval = 0
+    private var startTime: CFTimeInterval = 0
+    /// The share of `travel` covered at a given time into the settle.
+    private var covered: (TimeInterval) -> Double = { _ in 1 }
+
+    var isRunning: Bool { displayLink != nil }
+
+    func start(_ scrollView: UIScrollView, toY targetY: CGFloat, duration: TimeInterval, curve: Curve) {
+        stop()
+        self.scrollView = scrollView
+        startY = scrollView.contentOffset.y
+        travel = targetY - startY
+        self.duration = duration
+        switch curve {
+        case let .spring(dampingRatio, initialVelocity):
+            // Solved over one whole trip, 0 to 1, which is the unit UIKit measures
+            // `initialSpringVelocity` in, so the velocity carries over unconverted.
+            let spring = Spring(settlingDuration: duration, dampingRatio: dampingRatio)
+            covered = { time in
+                spring.value(target: 1.0, initialVelocity: initialVelocity, time: time)
+            }
+        case .easeInOut:
+            covered = { time in
+                UnitCurve.easeInOut.value(at: time / duration)
+            }
+        }
+        startTime = CACurrentMediaTime()
+        let link = CADisplayLink(target: self, selector: #selector(step(_:)))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    func stop() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
+    @objc private func step(_ link: CADisplayLink) {
+        guard let scrollView = scrollView, !scrollView.isTracking else {
+            stop()
+            return
+        }
+        let elapsed = max(link.targetTimestamp - startTime, 0)
+        guard elapsed < duration else {
+            scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: startY + travel)
+            stop()
+            return
+        }
+        let y = startY + travel * CGFloat(covered(elapsed))
+        scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: y)
     }
 }
 

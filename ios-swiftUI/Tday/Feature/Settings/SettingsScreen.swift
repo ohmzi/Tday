@@ -558,8 +558,18 @@ struct SettingsScreen: View {
             markAccentColor: colors.primary
         )
         .background {
-            TimelineScrollOffsetObserver { settingsScrollOffset = $0 }
-                .frame(width: 0, height: 0)
+            // Clamped to the collapse distance and written only when it changes: the offset
+            // is `@State` read in this body, so every raw scroll frame re-evaluated the whole
+            // screen. Past the distance the collapse is finished and every frame would carry
+            // the same progress, so there is nothing left to redraw. `TimelineTitleScrollState`
+            // stores its offset the same way.
+            TimelineScrollOffsetObserver { offset in
+                let clamped = min(max(offset, 0), TodoTimelineMetrics.titleCollapseDistance)
+                if clamped != settingsScrollOffset {
+                    settingsScrollOffset = clamped
+                }
+            }
+            .frame(width: 0, height: 0)
         }
         .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
