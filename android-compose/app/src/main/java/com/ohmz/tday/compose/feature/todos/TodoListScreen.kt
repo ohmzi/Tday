@@ -776,6 +776,22 @@ internal fun earlierSceneFollowsSection(sectionKey: String): Boolean =
     sectionKey == EARLIER_SECTION_KEY
 
 /**
+ * Whether the timeline's rows may carry `animateItem` from the screen's first composition.
+ *
+ * Every scope but Today may. Today may too once its first snapshot is already in hand, which
+ * `TodosRoute` now guarantees for a cached workspace by loading before the first read: the rows
+ * are then in the list's first measure, where `animateItem` sees nothing appearing. Holding the
+ * modifier back for a frame there is what made them fade — on Compose 1.7.6 a measure with no
+ * animated item in it resets the item animator's key map to empty, so every row is "new" on the
+ * frame the modifier comes back. Today without a snapshot keeps the old one-frame hold, because
+ * its rows genuinely arrive after the first frame (see the `LaunchedEffect` beside the call).
+ */
+internal fun timelineAnimationsInitiallyReady(
+    mode: TodoListMode,
+    hasHydratedSnapshot: Boolean,
+): Boolean = mode != TodoListMode.TODAY || hasHydratedSnapshot
+
+/**
  * The inline scene's own visibility -- [TodoListScreen]'s
  * `showEarlierIllustration` -- pulled out for the reason
  * [shouldCelebrateEmptyState] and [nonEarlierSectionsEmpty] were: on this screen
@@ -1307,7 +1323,12 @@ fun TodoListScreen( // skipcq: KT-R1006
     }
     val floaterTaskHomeListById = remember(uiState.lists) { uiState.lists.associateBy { it.id } }
     var timelineAnimationsReady by remember(uiState.mode, uiState.listId) {
-        mutableStateOf(uiState.mode != TodoListMode.TODAY)
+        mutableStateOf(
+            timelineAnimationsInitiallyReady(
+                mode = uiState.mode,
+                hasHydratedSnapshot = uiState.hasHydratedSnapshot,
+            ),
+        )
     }
     LaunchedEffect(uiState.mode, uiState.listId, uiState.hasHydratedSnapshot) {
         if (uiState.mode != TodoListMode.TODAY) {

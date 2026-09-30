@@ -2155,3 +2155,19 @@ animates.
               check at any size, and the two ways to buy it back were both rendered and rejected as worse
               than the loss. That is disclosed in the code. Whether the leaf and the calendar still READ
               as themselves at the small sizes is the half no arithmetic settles.
+
+- [ ] **PR 32i · android · A tile's screen lands with its rows** — any Android phone, animations on, a
+      workspace with more tasks than fit on one screen.
+      Do:     open the **All** tile, the Today card and a custom list row, watching the list as the
+              zoom lands; then complete a task in the open list and undo it.
+      Watch:  the list is full to the bottom of the screen for the whole zoom, and nothing in it
+              moves or fades once the zoom has landed. Completing a row still takes it out with its
+              fade and closes the gap; undo still brings it back the same way.
+      Fails:  a grey placeholder bar in the list at any point of the open; a first handful of rows
+              with the rest fading or sliding in just after the zoom lands; a completed row that cuts
+              out instead of leaving.
+      Also:   the same three opens on an iPhone. iOS has always had its rows on the first frame, and
+              the guardrail now holds that; this is the device half of it.
+      Why:    confirmed with frame logs and 10× frame captures on an emulator; whether the first
+              frame's extra cache read shows as a stall before a large workspace's zoom starts is
+              only visible on a slower phone.
