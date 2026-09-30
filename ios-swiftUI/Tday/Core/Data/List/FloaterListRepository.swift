@@ -34,8 +34,14 @@ final class FloaterListRepository {
         buildLists(from: cacheManager.loadOfflineState())
     }
 
+    /// Off `cacheManager.cachedState`, the in-memory mirror, for the reason on
+    /// `ListRepository.fetchListsSnapshot` (here the one reader is `CompletedViewModel`'s
+    /// hydrate). `buildLists` re-applies `orderFloaterListsLikeWeb`, so, as there, the
+    /// mirror's order shows only among floater lists it cannot tell apart (undated, or
+    /// created in the same millisecond). Those keep the last writer's order, where they
+    /// used to keep the store's equally unspecified fetch order.
     func fetchListsSnapshot() -> [ListSummary] {
-        buildLists(from: cacheManager.loadOfflineState())
+        buildLists(from: cacheManager.cachedState)
     }
 
     func createList(

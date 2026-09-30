@@ -366,6 +366,81 @@ enum WidgetConfigurableListsStore {
     }
 }
 
+/// Every widget and watch snapshot write goes through here, on one serial background queue.
+///
+/// These writes used to run inline in `OfflineCacheManager.saveOfflineState`, on the main actor,
+/// after every save that changed content. One save meant two snapshot builds (per-list sorts, a
+/// seven-day window, a pass over the whole completed history for each day, rich-note flattening
+/// for every row), two catalogue writes, two file reads and decodes, and, on a change, encodes,
+/// protected atomic writes, a WidgetKit reload and a watch push. That was tens of milliseconds
+/// and grew with lists and history. On Undo it landed in the toast's slide-out. When ticking
+/// tasks in a row it landed in the next row's strike and collapse. On a sync it landed mid-push
+/// or mid-scroll. None of it has to be on main: the stores are plain enums over value types, and
+/// WidgetKit and WatchConnectivity are both safe to call off it.
+///
+/// Why a serial `DispatchQueue` plus a single pending slot, and not a Task per save: each save
+/// has to land in the order it was made, or an older state written last would show a completed
+/// task as open again. Unstructured Tasks give no such order, and the runtime is free to run a
+/// higher-priority job ahead of a queued lower-priority one. A serial queue is FIFO whatever the
+/// QoS. Main fills the slot in save order, and each block takes whatever is newest in it, so a
+/// burst of saves costs one write and an older state can never land after a newer one.
+///
+/// `runNow` is the barrier for callers that must return with the snapshot written. It waits
+/// behind every earlier `submit`, then does its own write. `flush` is the same barrier without
+/// a write of its own, for a background caller whose cache save already queued one.
+final class WidgetSnapshotWriter: @unchecked Sendable {
+    static let shared = WidgetSnapshotWriter()
+
+    private let queue = DispatchQueue(label: "com.ohmz.tday.widget-snapshot", qos: .utility)
+    /// Marks the queue so `runNow` can tell it is already on it and run inline. A `sync` onto a
+    /// serial queue from that same queue would deadlock.
+    private let queueKey = DispatchSpecificKey<Bool>()
+    /// Guards `pending`. Main writes it in `submit` and the queue drains it.
+    private let lock = NSLock()
+    private var pending: (state: OfflineSyncState, includeFloater: Bool)?
+
+    private init() {
+        queue.setSpecific(key: queueKey, value: true)
+    }
+
+    /// Hands `state` to the queue and returns at once. Latest-wins: if an earlier state has not
+    /// been written yet, this one replaces it, and a Floater write asked for by either is kept.
+    func submit(_ state: OfflineSyncState, includeFloater: Bool = true) {
+        lock.lock()
+        pending = (state: state, includeFloater: includeFloater || (pending?.includeFloater ?? false))
+        lock.unlock()
+        queue.async { [self] in
+            lock.lock()
+            let next = pending
+            pending = nil
+            lock.unlock()
+            // Nil means an earlier block already took the newest state and wrote it.
+            guard let next else { return }
+            TodayTasksWidgetSnapshotStore.writeTodayTasks(from: next.state)
+            if next.includeFloater {
+                FloaterTasksWidgetSnapshotStore.writeFloaterTasks(from: next.state)
+            }
+        }
+    }
+
+    /// Runs `work` on the queue and returns when it is done. Every block submitted before this
+    /// call has run by then.
+    func runNow(_ work: () -> Void) {
+        if DispatchQueue.getSpecific(key: queueKey) == true {
+            work()
+        } else {
+            queue.sync(execute: work)
+        }
+    }
+
+    /// Returns once every block submitted before this call has been written. For background
+    /// callers that queue writes through `submit` (via a cache save) and must not return
+    /// before they land, because iOS may suspend the app right after.
+    func flush() {
+        runNow {}
+    }
+}
+
 enum TodayTasksWidgetSnapshotStore {
     /// 3: records the local day window and carries the upcoming days (`upcomingDays`, per-list
     /// `upcomingTasks`) so the widget turns over at midnight without a write.
@@ -560,7 +635,20 @@ enum TodayTasksWidgetSnapshotStore {
         )
     }
 
+    /// Writes the Today snapshot and returns once it is on disk. It runs on
+    /// `WidgetSnapshotWriter`'s queue, so it lands after every write submitted before it and can
+    /// never race one. For callers that must finish with the snapshot written: the Focus filter
+    /// intent, and a background refresh about to hand its task back. The cache-save path uses
+    /// `WidgetSnapshotWriter.submit` and does not wait; the voice-create intent, which saves
+    /// through it in the background, waits with `WidgetSnapshotWriter.flush` instead.
     static func saveTodayTasks(from state: OfflineSyncState) {
+        WidgetSnapshotWriter.shared.runNow { writeTodayTasks(from: state) }
+    }
+
+    /// The write itself. Runs only on `WidgetSnapshotWriter`'s queue, so it is `fileprivate`.
+    /// A caller elsewhere could otherwise write outside that order and have its snapshot
+    /// overwritten by an older one still queued.
+    fileprivate static func writeTodayTasks(from state: OfflineSyncState) {
         let snapshot = makeSnapshot(from: state)
         // The lists catalog (id/name/kind, no task content) backs the widget CONFIGURATION
         // picker and has no bearing on `hasSameContent`, so it is written unconditionally —
@@ -820,13 +908,20 @@ enum FloaterTasksWidgetSnapshotStore {
         )
     }
 
+    /// See `TodayTasksWidgetSnapshotStore.saveTodayTasks`: returns once the snapshot is written,
+    /// and is ordered with every other snapshot write on `WidgetSnapshotWriter`'s queue.
     static func saveFloaterTasks(from state: OfflineSyncState) {
+        WidgetSnapshotWriter.shared.runNow { writeFloaterTasks(from: state) }
+    }
+
+    /// The write itself. `fileprivate` for the same reason as the Today store's twin.
+    fileprivate static func writeFloaterTasks(from state: OfflineSyncState) {
         let snapshot = makeSnapshot(from: state)
-        // See saveTodayTasks: written unconditionally, cheap, keeps the widget configuration
+        // See writeTodayTasks: written unconditionally, cheap, keeps the widget configuration
         // picker's list names/choices fresh independent of task-content change detection.
         WidgetConfigurableListsStore.save(from: state)
         // Conditional reload: skip the write + WidgetKit reload when the displayed floater
-        // content is unchanged (see saveTodayTasks). A background sync that didn't touch the
+        // content is unchanged (see writeTodayTasks). A background sync that didn't touch the
         // floater list leaves the widget untouched while the app still holds the latest state.
         if let existing = loadSnapshot(), existing.hasSameContent(as: snapshot) {
             return
@@ -838,7 +933,7 @@ enum FloaterTasksWidgetSnapshotStore {
         WidgetSnapshotFileStore.write(data, to: snapshotFileName)
 
         #if canImport(WidgetKit)
-        // See saveTodayTasks: a per-list widget can render either shape from either gallery
+        // See writeTodayTasks: a per-list widget can render either shape from either gallery
         // kind now, so both kinds need reloading, not just `widgetKind`.
         WidgetCenter.shared.reloadAllTimelines()
         #endif

@@ -1,3 +1,4 @@
+import Observation
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -97,6 +98,34 @@ private enum CalendarTitleHandoff {
     /// resizing in one frame.
     static let todayLabelFoldStart: CGFloat = 0.25
     static let todayLabelFoldEnd: CGFloat = 0.50
+}
+
+/// The elastic title's collapse, boxed so a pan frame redraws only the bar that draws it.
+///
+/// The same shape as `RootFeedHeaderScrollState` and `TimelineTitleScrollState`, for the
+/// same reason. The offset is written on every `.changed` event of the list's pan for the
+/// first `collapseDistance` points of a drag — the stretch where the bar takes the drag and
+/// the list is held still — so at touch rate, up to 120 Hz. Held as `@State` and read in
+/// `CalendarScreen.body` through the top inset, each of those writes rebuilt the whole
+/// screen: the day grouping, every task row, and the calendar card, whose pager re-hosts all
+/// three pages and forces a layout, so 126 day cells re-diffed per finger movement while the
+/// mark, the title and the Today pill were meant to be tracking that finger. Held here, only
+/// `CalendarElasticTopBar` reads it, so a pan frame invalidates the bar and nothing behind
+/// it. Nothing in `CalendarScreen.body` may read `offset` or `progress`.
+///
+/// Written only by `CalendarTitleCollapseScrollObserver`, whose coordinator reads it back for
+/// its own guards rather than keeping a copy — one number, one writer.
+@Observable
+private final class CalendarTitleCollapseState {
+    /// How far the bar has taken the drag, `0...CalendarTitleHandoff.collapseDistance`.
+    var offset: CGFloat = 0
+
+    /// How far the title has handed off into the bar, 0 to 1.
+    var progress: CGFloat {
+        let distance = CalendarTitleHandoff.collapseDistance
+        guard distance > 0 else { return 0 }
+        return min(max(offset / distance, 0), 1)
+    }
 }
 
 private enum CalendarPeriodCardMetrics {
@@ -238,9 +267,22 @@ private struct CalendarTaskRescheduleDrop: Equatable {
     let targetDate: Date
 }
 
+/// Where this screen's view model lives: built on first read, then kept. The calendar is
+/// a `navigationDestination`, and those re-run for presented routes whenever
+/// `AppRootView`'s body does. `CalendarViewModel.init` reads every dated task, the whole
+/// completed history and the lists, and records a `calendar.load` breadcrumb, so under
+/// `State(initialValue:)` each re-run paid for a model SwiftUI then threw away.
+/// `TodoListScreen`'s copy of this box has the full reasoning. This copy is file-private
+/// and identical.
+private final class LazyViewModelBox<M: AnyObject> {
+    var model: M?
+}
+
 struct CalendarScreen: View {
     private let pullRefreshEnabled: Bool
-    @State private var viewModel: CalendarViewModel
+    /// The view model's box and the one input it is built from. See `LazyViewModelBox`.
+    @State private var viewModelBox = LazyViewModelBox<CalendarViewModel>()
+    private let viewModelContainer: AppContainer
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
     /// Gates the day list's own motion — see `pendingDayAnimationKey`'s
@@ -259,7 +301,9 @@ struct CalendarScreen: View {
     @State private var calendarModeContentTransitionProgress: CGFloat = 1
     @State private var showingCreateTask = false
     @State private var editingTodo: TodoItem?
-    @State private var calendarTitleCollapseOffset: CGFloat = 0
+    /// The title's collapse, boxed — see `CalendarTitleCollapseState`. This body hands the
+    /// box to the observer and the bar and never reads through it.
+    @State private var titleCollapse = CalendarTitleCollapseState()
     @State private var todayJumpRequestID = 0
     @State private var todayJumpRequest: CalendarTodayJumpRequest?
     @State private var draggedTodo: TodoItem?
@@ -277,7 +321,19 @@ struct CalendarScreen: View {
 
     init(container: AppContainer, pullRefreshEnabled: Bool = false) {
         self.pullRefreshEnabled = pullRefreshEnabled
-        _viewModel = State(initialValue: CalendarViewModel(container: container))
+        self.viewModelContainer = container
+    }
+
+    /// Built on first read, which is the first body pass, then served from the box. The
+    /// model still hydrates synchronously before the first frame. Never read this from
+    /// `init`: the box `init` sees is the throwaway.
+    private var viewModel: CalendarViewModel {
+        if let model = viewModelBox.model {
+            return model
+        }
+        let model = CalendarViewModel(container: viewModelContainer)
+        viewModelBox.model = model
+        return model
     }
 
     private var normalizedSearchQuery: String {
@@ -363,12 +419,6 @@ struct CalendarScreen: View {
         }
     }
 
-    private var titleCollapseProgress: CGFloat {
-        let distance = CalendarTitleHandoff.collapseDistance
-        guard distance > 0 else { return 0 }
-        return min(max(calendarTitleCollapseOffset / distance, 0), 1)
-    }
-
     private var minimumNavigableMonth: Date {
         calendarMonthStart(for: Date())
     }
@@ -403,7 +453,7 @@ struct CalendarScreen: View {
                 )
                 .background {
                     CalendarTitleCollapseScrollObserver(
-                        collapseOffset: $calendarTitleCollapseOffset,
+                        state: titleCollapse,
                         collapseDistance: CalendarTitleHandoff.collapseDistance,
                         sliderPartialSnapDistance: CalendarTitleHandoff.sliderPartialSnapDistance
                     )
@@ -591,7 +641,7 @@ struct CalendarScreen: View {
         CalendarElasticTopBar(
             title: "Calendar",
             accentColor: calendarAccentColor,
-            collapseProgress: titleCollapseProgress,
+            collapse: titleCollapse,
             onBack: { dismiss() },
             actionLabel: L("Today"),
             action: TimelineTopBarAction(
@@ -2430,7 +2480,11 @@ private extension Optional where Wrapped == [TodoItem] {
 private struct CalendarElasticTopBar: View {
     let title: String
     let accentColor: Color
-    let collapseProgress: CGFloat
+    /// Read here and nowhere above: this bar is the one view that depends on the
+    /// collapse, so a pan frame redraws the bar and not the calendar under it. Handed
+    /// the box rather than a progress for that reason — a `CGFloat` would have to be
+    /// read in the screen's body to be passed. See `CalendarTitleCollapseState`.
+    let collapse: CalendarTitleCollapseState
     let onBack: () -> Void
     var actionLabel: String?
     let action: TimelineTopBarAction?
@@ -2458,7 +2512,7 @@ private struct CalendarElasticTopBar: View {
     @State private var todayActionLabelWidth: CGFloat = 0
 
     private var progress: CGFloat {
-        min(max(collapseProgress, 0), 1)
+        collapse.progress
     }
 
     /// The one font the docked and expanded copies of the title are both drawn
@@ -3146,12 +3200,15 @@ private struct CalendarTodayActionButton: View {
 }
 
 private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
-    @Binding var collapseOffset: CGFloat
+    /// Handed on and never read on this side. `updateUIView` runs under observation, so
+    /// a read of `state.offset` there would make this representable a dependent of every
+    /// pan frame; the coordinator reads it from UIKit callbacks instead.
+    let state: CalendarTitleCollapseState
     let collapseDistance: CGFloat
     let sliderPartialSnapDistance: CGFloat
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(collapseOffset: collapseOffset)
+        Coordinator(state: state)
     }
 
     func makeUIView(context: Context) -> UIView {
@@ -3162,16 +3219,15 @@ private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
 
     func updateUIView(_ uiView: UIView, context: Context) {
         context.coordinator.update(
-            collapseOffset: collapseOffset,
             collapseDistance: collapseDistance,
             sliderPartialSnapDistance: sliderPartialSnapDistance,
             onChange: { value, animated in
                 if animated {
                     withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
-                        collapseOffset = value
+                        state.offset = value
                     }
                 } else {
-                    collapseOffset = value
+                    state.offset = value
                 }
             }
         )
@@ -3181,7 +3237,10 @@ private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
     }
 
     final class Coordinator: NSObject {
-        private var collapseOffset: CGFloat
+        /// The one copy of the offset, read back by every guard below rather than
+        /// mirrored. `onChange` is its only writer and writes it synchronously — inside
+        /// `withAnimation` too — so a read straight after a set sees the new value.
+        private let state: CalendarTitleCollapseState
         private var collapseDistance: CGFloat = 0
         private var sliderPartialSnapDistance: CGFloat = 0
         private var onChange: ((CGFloat, Bool) -> Void)?
@@ -3192,8 +3251,8 @@ private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
         private var releaseVelocityY: CGFloat = 0
         private var isAdjustingScrollOffset = false
 
-        init(collapseOffset: CGFloat) {
-            self.collapseOffset = collapseOffset
+        init(state: CalendarTitleCollapseState) {
+            self.state = state
         }
 
         deinit {
@@ -3201,12 +3260,10 @@ private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
         }
 
         func update(
-            collapseOffset: CGFloat,
             collapseDistance: CGFloat,
             sliderPartialSnapDistance: CGFloat,
             onChange: @escaping (CGFloat, Bool) -> Void
         ) {
-            self.collapseOffset = collapseOffset
             self.collapseDistance = collapseDistance
             self.sliderPartialSnapDistance = sliderPartialSnapDistance
             self.onChange = onChange
@@ -3258,7 +3315,7 @@ private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
             }
 
             if deltaY < 0 {
-                let previous = collapseOffset
+                let previous = state.offset
                 let next = min(max(previous - deltaY, 0), collapseDistance)
                 if next > previous {
                     setCollapseOffset(next, animated: false)
@@ -3268,10 +3325,10 @@ private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
             }
 
             if deltaY > 0 {
-                guard isListAtTop(scrollView), collapseOffset > 0 else {
+                guard isListAtTop(scrollView), state.offset > 0 else {
                     return
                 }
-                let previous = collapseOffset
+                let previous = state.offset
                 let next = min(max(previous - deltaY, 0), collapseDistance)
                 if next < previous {
                     setCollapseOffset(next, animated: false)
@@ -3303,7 +3360,7 @@ private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
             guard collapseDistance > 0 else {
                 return
             }
-            let bounded = min(max(collapseOffset, 0), collapseDistance)
+            let bounded = min(max(state.offset, 0), collapseDistance)
             guard bounded > 0, bounded < collapseDistance else {
                 return
             }
@@ -3330,7 +3387,7 @@ private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
             guard sliderPartialSnapDistance > 0 else {
                 return
             }
-            guard collapseOffset >= collapseDistance - 0.5 else {
+            guard state.offset >= collapseDistance - 0.5 else {
                 return
             }
 
@@ -3349,7 +3406,7 @@ private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
             guard collapseDistance > 0 else {
                 return
             }
-            guard collapseOffset < collapseDistance - 0.5 else {
+            guard state.offset < collapseDistance - 0.5 else {
                 return
             }
             guard normalizedOffset(for: scrollView) > 0.5 else {
@@ -3360,10 +3417,11 @@ private struct CalendarTitleCollapseScrollObserver: UIViewRepresentable {
 
         private func setCollapseOffset(_ offset: CGFloat, animated: Bool) {
             let bounded = min(max(offset, 0), collapseDistance)
-            guard abs(collapseOffset - bounded) > 0.1 else {
+            guard abs(state.offset - bounded) > 0.1 else {
                 return
             }
-            collapseOffset = bounded
+            // Always set by now: `attach` is what hooks the pan and the KVO up, and it
+            // is only ever scheduled from `updateUIView` after `update` has stored this.
             onChange?(bounded, animated)
         }
 

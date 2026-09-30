@@ -1,3 +1,4 @@
+import Observation
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -49,6 +50,31 @@ private final class TodoTaskDragSession {
 private struct TodoInAppDrag: Equatable {
     let todo: TodoItem
     var location: CGPoint
+}
+
+/// The in-app drag's per-move state, boxed so a finger move redraws only the floating preview.
+///
+/// The same shape as `TimelineTitleScrollState`, for the same reason. `drag` carries the
+/// finger's location and is written on every touch move of a long-press drag — 60 to 120
+/// times a second. Held as `@State` and read in `TodoListScreen.body` (the preview overlay and
+/// the List's `.scrollDisabled`), each move rebuilt the whole feed at its most expensive: a
+/// drag brings back every empty date bucket, and every section re-asked whether it could take
+/// the drop. The preview is drawn in that same pass, so it juddered and trailed the finger.
+/// Only `TodoDragPreviewLayer` reads `drag`; nothing in the screen's body may.
+///
+/// `sections` is the timeline as it stood when the drag began, empty drop buckets included,
+/// for the drop hit test and finish to resolve targets against. It never draws anything, so
+/// it is ignored by Observation. The target set cannot change shape mid-gesture — see
+/// `groupedSections` — and `handleItemsChanged` ends the drag if the items change under it.
+@Observable
+private final class TodoDragPreviewModel {
+    var drag: TodoInAppDrag? = nil
+    @ObservationIgnored var sections: [TodoTimelineSection]? = nil
+
+    func clear() {
+        drag = nil
+        sections = nil
+    }
 }
 
 private enum TodoCompletionPhase {
@@ -684,6 +710,28 @@ private struct FloaterTaskHomeCompletedCard: View {
     }
 }
 
+/// Where a screen's view model lives: built on first read, then kept for the life of
+/// the screen.
+///
+/// Not `State(initialValue: TodoListViewModel(…))`. SwiftUI evaluates that argument on
+/// every init of the screen struct, and whatever builds the screen re-inits it on every
+/// one of its own body passes. `AppRootView` rebuilds the root feed on every push and pop,
+/// FAB tap, dock fold and search toggle, and a `navigationDestination` re-runs for the
+/// routes it has already presented. SwiftUI kept the first model and discarded the rest,
+/// but each discarded one had already hydrated from the cache on the main actor, started
+/// and cancelled its observation Task, and recorded a `todo_list.load` breadcrumb. That
+/// work landed in the first frames of a zoom, or in the frame the create sheet was meant
+/// to start rising. Now a surplus init allocates only this empty box.
+///
+/// A plain class, deliberately not `@Observable`: filling it during the first body pass
+/// must invalidate nothing. The model is `@Observable` and body still tracks the
+/// properties it reads from it. `ScheduledTaskHomeScreen`, `CalendarScreen` and
+/// `CompletedScreen` keep their models the same way, each with its own file-private copy
+/// of this box.
+private final class LazyViewModelBox<M: AnyObject> {
+    var model: M?
+}
+
 struct TodoListScreen: View {
     let highlightedTodoId: String?
     let onListDeleted: () -> Void
@@ -710,7 +758,15 @@ struct TodoListScreen: View {
     /// `TodoListScreen` mode fails `isFloaterTaskHomeScreen` and never emits the
     /// tile, so the default no-op is never reached.
     let onOpenCompleted: () -> Void
-    @State private var viewModel: TodoListViewModel
+    /// The view model's box and the inputs it is built from. `LazyViewModelBox` says why
+    /// the model is built on first read and not in `init`. Only that first build reads
+    /// the inputs, so, as with `State(initialValue:)` before, a later init that passes
+    /// different ones does not rebuild the model for the same screen identity.
+    @State private var viewModelBox = LazyViewModelBox<TodoListViewModel>()
+    private let viewModelContainer: AppContainer
+    private let viewModelMode: TodoListMode
+    private let viewModelListId: String?
+    private let viewModelListName: String?
     @Environment(\.tdayColors) private var colors
     @Environment(\.dismiss) private var dismiss
     /// Foreground half of "the screen is actually visible/foregrounded" for
@@ -740,7 +796,10 @@ struct TodoListScreen: View {
     /// Set at drag start so the scroll reader can keep that row realized; see
     /// `beginInAppDrag`. Consumed and cleared by the reader.
     @State private var dragAnchorTodoID: String?
-    @State private var inAppDrag: TodoInAppDrag?
+    /// The finger's location and the drag-start sections. Only `TodoDragPreviewLayer` reads
+    /// the location — never this screen's body — so a finger move redraws the preview and
+    /// leaves the feed alone. `TodoDragPreviewModel` says why.
+    @State private var dragPreview = TodoDragPreviewModel()
     @State private var activeDropSectionId: String?
     @State private var dropTargetFrames: [String: TodoDropTargetFrame] = [:]
     @State private var pendingRescheduleDrop: TodoRescheduleDrop?
@@ -776,7 +835,10 @@ struct TodoListScreen: View {
     /// after the first, flips `collapsedSectionIDs` right back, and leaves
     /// Earlier the opposite of what the second tap actually asked for.
     @State private var earlierHandoffInFlight = false
-    @State private var timelineScrollOffset: CGFloat = 0
+    /// The per-mode screens' scroll offset. Only `TimelineCollapseProgressReader` reads it —
+    /// never this screen's body — so a scroll frame redraws the bar and the hero title row and
+    /// leaves the feed alone. `TimelineTitleScrollState` says why.
+    @State private var timelineScroll = TimelineTitleScrollState()
     @State private var headerScroll = RootFeedHeaderScrollState()
     @State private var rootDockCollapsed = false
     /// The same answer as `rootDockCollapsed`, for the modes that have no root
@@ -789,6 +851,10 @@ struct TodoListScreen: View {
     @State private var completionPhases: [String: TodoCompletionPhase] = [:]
     @State private var flashTodoId: String?
     @State private var highlightedScrollRequestID = 0
+    /// The highlight id `scrollToHighlightedTodo` has already scrolled to and
+    /// flashed. The route argument never changes on its own, so without this
+    /// every items change would replay the whole arrival sequence.
+    @State private var servedHighlightTodoId: String?
     @State private var floaterTaskHomeSearchExpanded = false
     @State private var floaterSearchResultsFrame: CGRect = .zero
     @State private var floaterTaskHomeSearchQuery = ""
@@ -871,8 +937,33 @@ struct TodoListScreen: View {
         self.onOpenSettings = onOpenSettings
         self.onOpenCompleted = onOpenCompleted
         self.summaryAvailable = summaryAvailable
-        _viewModel = State(initialValue: TodoListViewModel(container: container, mode: mode, listId: listId, listName: listName))
-        _collapsedSectionIDs = State(initialValue: mode == .today || mode == .priority || mode == .all || mode == .list ? ["earlier"] : [])
+        self.viewModelContainer = container
+        self.viewModelMode = mode
+        self.viewModelListId = listId
+        self.viewModelListName = listName
+        // A highlighted arrival (a reminder or a search result opening All)
+        // starts with Earlier open, as Android does: the target is in the first
+        // frame, so nothing springs open and reshuffles the rows while the push
+        // is still sliding in, and the pre-scroll lands on the push's first frames.
+        _collapsedSectionIDs = State(initialValue: highlightedTodoId?.isEmpty == false ? [] : (mode == .today || mode == .priority || mode == .all || mode == .list ? ["earlier"] : []))
+    }
+
+    /// Built on first read, which is the first body pass, then served from the box. The
+    /// first frame is still drawn from a model that has already hydrated, so
+    /// `feedAnswer`'s `hasHydratedFromCache` term is true from the start. Never read this
+    /// from `init`: the box `init` sees is the throwaway, not the one SwiftUI keeps.
+    private var viewModel: TodoListViewModel {
+        if let model = viewModelBox.model {
+            return model
+        }
+        let model = TodoListViewModel(
+            container: viewModelContainer,
+            mode: viewModelMode,
+            listId: viewModelListId,
+            listName: viewModelListName
+        )
+        viewModelBox.model = model
+        return model
     }
 
     /// An empty date bucket is scaffolding, not content: at rest a list holding
@@ -1349,15 +1440,11 @@ struct TodoListScreen: View {
         )
     }
 
-    private var titleCollapseProgress: CGFloat {
-        let distance = TodoTimelineMetrics.titleCollapseDistance
-        guard distance > 0 else { return 0 }
-        return min(max(timelineScrollOffset / distance, 0), 1)
-    }
-
     private var shouldCollapseRootDock: Bool {
-        // Root feed offsets live in the header model so a scroll frame does not
-        // invalidate this screen's body; other modes still use @State.
+        // Neither offset is read here, so a scroll frame does not invalidate this
+        // screen's body: the root feed's lives in `headerScroll`, every other
+        // mode's in `timelineScroll`. What this reads is the folded answer, which
+        // only changes when the scroll crosses the dock's fold point.
         usesRootFeedHeader
             ? rootDockCollapsed
             : legacyRootDockCollapsed
@@ -1367,10 +1454,16 @@ struct TodoListScreen: View {
         isFloaterTaskHomeScreen ? TodoTimelineMetrics.floaterTaskHomeBottomSpacerHeight : TodoTimelineMetrics.timelineBottomSpacerHeight
     }
 
+    /// Row identity and nothing else. The completing ids used to be joined in
+    /// too — a leftover from when they drove the row's fade — and that made the
+    /// tap itself a key change: the List's travel modifier is nearer the row
+    /// than `completeTodoWithoutReflow`'s `withAnimation`, so it took over the
+    /// tick and ran the checkmark at Emphasis instead of Quick, still filling
+    /// when the strike began. The fade is the row's own `isFading` animation
+    /// now, and the removal still changes this key in the same update that
+    /// rehydrates `items`, so the gap closing keeps the travel.
     private var timelineItemAnimationKey: String {
-        let itemIDs = viewModel.items.map(\.id).joined(separator: "|")
-        let completingIDs = completionPhases.keys.sorted().joined(separator: "|")
-        return "\(itemIDs)::\(completingIDs)"
+        viewModel.items.map(\.id).joined(separator: "|")
     }
 
     private var canSummarizeCurrentMode: Bool {
@@ -1728,19 +1821,11 @@ struct TodoListScreen: View {
         .tdayClosesSearchOnOutsideTap(isSearchOpen: showsListSearch && listSearchExpanded) {
             closeListSearch()
         }
+        // The preview reads the finger's location in a body of its own, so a move redraws this
+        // layer and not the screen around it — see `TodoDragPreviewModel`.
         .overlay(alignment: .topLeading) {
             GeometryReader { proxy in
-                if let inAppDrag {
-                    let rootFrame = proxy.frame(in: .global)
-                    let previewLocation = CGPoint(
-                        x: inAppDrag.location.x - rootFrame.minX,
-                        y: inAppDrag.location.y - rootFrame.minY
-                    )
-                    TodoDragPreview(todo: inAppDrag.todo)
-                        .position(x: previewLocation.x, y: previewLocation.y)
-                        .zIndex(20)
-                        .allowsHitTesting(false)
-                }
+                TodoDragPreviewLayer(model: dragPreview, rootOrigin: proxy.frame(in: .global).origin)
             }
             .allowsHitTesting(false)
         }
@@ -1867,13 +1952,6 @@ struct TodoListScreen: View {
         }
         .onChange(of: selectableRowIDKey) {
             reconcileSelection()
-        }
-        .onChange(of: timelineScrollOffset, initial: true) { _, offset in
-            guard !usesRootFeedHeader else { return }
-            let collapsed = RootFeedDockCollapse.next(previous: legacyRootDockCollapsed, offset: offset)
-            guard legacyRootDockCollapsed != collapsed else { return }
-            legacyRootDockCollapsed = collapsed
-            onRootDockCollapsedChange(collapsed)
         }
         .onChange(of: floaterTaskHomeSearchExpanded, initial: true) { _, expanded in
             guard isFloaterTaskHomeScreen else {
@@ -2186,32 +2264,64 @@ struct TodoListScreen: View {
         }
     }
 
+    /// The bar takes its collapse progress from `TimelineCollapseProgressReader` and nothing
+    /// else from it: every other input is read HERE, in this screen's body, and only the values
+    /// go into the reader's closure. So the screen still depends on each of them exactly as it
+    /// did, and a scroll frame re-runs the reader and the bar and not this body.
     @ViewBuilder
     private var timelineTopInset: some View {
         if showsTimelineNavigationTopBar {
-            TimelineTopBar(
-                title: viewModel.title,
-                accentColor: modeAccentColor,
-                collapseProgress: titleCollapseProgress,
-                onBack: { dismiss() },
-                actions: heroTopBarActions,
-                showsTimeOfDayIcon: viewModel.mode == .today,
-                searchActive: showsListSearch && listSearchExpanded,
-                searchText: $listSearchQuery,
-                searchPlaceholder: listSearchPlaceholder,
-                searchFieldFocused: $listSearchFieldFocused,
-                onSearchClose: closeListSearch,
-                selectionActive: isSelecting,
-                selectionTitle: BulkSelectionCopy.selectedCount(selectedTodoIDs.count, capped: isSelectionAtCap),
-                selectionAllSelected: selectionAllSelected,
-                onSelectionCancel: exitSelectionMode,
-                onSelectionToggleAll: toggleSelectAll
-            )
+            let barTitle = viewModel.title
+            let barAccentColor = modeAccentColor
+            let barActions = heroTopBarActions
+            let barShowsTimeOfDayIcon = viewModel.mode == .today
+            let barSearchActive = showsListSearch && listSearchExpanded
+            let barSearchText = $listSearchQuery
+            let barSearchPlaceholder = listSearchPlaceholder
+            let barSearchFieldFocused = $listSearchFieldFocused
+            let barSelectionActive = isSelecting
+            let barSelectionTitle = BulkSelectionCopy.selectedCount(selectedTodoIDs.count, capped: isSelectionAtCap)
+            let barSelectionAllSelected = selectionAllSelected
+            TimelineCollapseProgressReader(scroll: timelineScroll) { progress in
+                TimelineTopBar(
+                    title: barTitle,
+                    accentColor: barAccentColor,
+                    collapseProgress: progress,
+                    onBack: { dismiss() },
+                    actions: barActions,
+                    showsTimeOfDayIcon: barShowsTimeOfDayIcon,
+                    searchActive: barSearchActive,
+                    searchText: barSearchText,
+                    searchPlaceholder: barSearchPlaceholder,
+                    searchFieldFocused: barSearchFieldFocused,
+                    onSearchClose: closeListSearch,
+                    selectionActive: barSelectionActive,
+                    selectionTitle: barSelectionTitle,
+                    selectionAllSelected: barSelectionAllSelected,
+                    onSelectionCancel: exitSelectionMode,
+                    onSelectionToggleAll: toggleSelectAll
+                )
+            }
         }
     }
 
-    private var timelineHeroTitleCollapseProgress: CGFloat {
-        usesRootFeedHeader ? 0 : titleCollapseProgress
+    /// Where the per-mode scroll offset comes in. The offset goes into `timelineScroll` for the
+    /// two readers; the dock's fold is decided here, off the same number, and written to
+    /// `@State` only when it actually flips — so, as on the root feed, a scroll frame that
+    /// crosses nothing touches nothing this body reads.
+    ///
+    /// The fold used to be an `.onChange(of:)` on the offset held as `@State`, which is what
+    /// made every scroll frame re-run this body: Today, Overdue, Scheduled, All, Priority and
+    /// every list re-diffed the whole feed under the title reveal and the dock fold, 60 to
+    /// 120 times a second. The fold is tested against the raw offset, not the box's clamped
+    /// one, so its answer is the one that `.onChange` gave at every offset.
+    private func publishTimelineScrollOffset(_ offset: CGFloat) {
+        timelineScroll.publish(offset)
+        guard !usesRootFeedHeader else { return }
+        let collapsed = RootFeedDockCollapse.next(previous: legacyRootDockCollapsed, offset: offset)
+        guard legacyRootDockCollapsed != collapsed else { return }
+        legacyRootDockCollapsed = collapsed
+        onRootDockCollapsedChange(collapsed)
     }
 
     /// The screen's own glyph for the hero circle. Prefers the drawn tile art
@@ -2228,16 +2338,29 @@ struct TodoListScreen: View {
     }
 
     private var timelineHeroTitleRowBase: some View {
-        TimelineExpandedTitleRow(
-            title: viewModel.title,
-            accentColor: modeAccentColor,
-            collapseProgress: timelineHeroTitleCollapseProgress,
-            showsTimeOfDayIcon: viewModel.mode == .today,
-            mark: timelineHeroMark
-        )
+        // Read here and handed over by value, for the reason `timelineTopInset` gives.
+        let rowTitle = viewModel.title
+        let rowAccentColor = modeAccentColor
+        let rowShowsTimeOfDayIcon = viewModel.mode == .today
+        let rowMark = timelineHeroMark
+        // The root feed wears its own header, so this row never collapses there.
+        let rowPinnedExpanded = usesRootFeedHeader
+        return TimelineCollapseProgressReader(scroll: timelineScroll) { progress in
+            TimelineExpandedTitleRow(
+                title: rowTitle,
+                accentColor: rowAccentColor,
+                collapseProgress: rowPinnedExpanded ? 0 : progress,
+                showsTimeOfDayIcon: rowShowsTimeOfDayIcon,
+                mark: rowMark
+            )
+        }
+        // Outside the reader, so the observer is part of this body and not rebuilt with the
+        // row on every scroll frame.
         .background {
-            TimelineScrollOffsetObserver { timelineScrollOffset = $0 }
-                .frame(width: 0, height: 0)
+            TimelineScrollOffsetObserver { offset in
+                publishTimelineScrollOffset(offset)
+            }
+            .frame(width: 0, height: 0)
         }
         // Reports its own rendered height so the "all done" illustration can
         // reserve exactly this much space at the top of its frame instead of
@@ -2709,13 +2832,15 @@ struct TodoListScreen: View {
     private func handleItemsChanged() {
         setActiveDropSection(nil)
         draggedTodo = nil
-        inAppDrag = nil
+        dragPreview.clear()
         dropTargetFrames = [:]
         TodoTaskDragSession.shared.todo = nil
         if let openSwipeTaskID, !viewModel.items.contains(where: { $0.id == openSwipeTaskID }) {
             self.openSwipeTaskID = nil
         }
-        if viewModel.mode == .all, highlightedTodoId != nil {
+        // Only until the highlight has been shown: after that a section the
+        // user folded shut stays shut when another row changes.
+        if viewModel.mode == .all, highlightedTodoId != nil, servedHighlightTodoId != highlightedTodoId {
             collapsedSectionIDs = []
         }
     }
@@ -2723,7 +2848,7 @@ struct TodoListScreen: View {
     private func requestReschedule(_ todo: TodoItem, to targetDate: Date) {
         setActiveDropSection(nil)
         draggedTodo = nil
-        inAppDrag = nil
+        dragPreview.clear()
         dropTargetFrames = [:]
         TodoTaskDragSession.shared.todo = nil
         let targetDay = Calendar.current.startOfDay(for: targetDate)
@@ -2766,7 +2891,7 @@ struct TodoListScreen: View {
     private func requestRescheduleTime(_ todo: TodoItem, toHour hour: Int) {
         setActiveDropSection(nil)
         draggedTodo = nil
-        inAppDrag = nil
+        dragPreview.clear()
         dropTargetFrames = [:]
         TodoTaskDragSession.shared.todo = nil
         let dropSignature = "\(todo.id)|hour-\(hour)"
@@ -2792,21 +2917,45 @@ struct TodoListScreen: View {
     }
 
     private func sectionID(containing todo: TodoItem) -> String? {
-        if let exactSection = groupedSections.first(where: { section in
+        sectionID(containing: todo, in: groupedSections)
+    }
+
+    /// `groupedSections` is rebuilt on every read — grouped, sorted and titled from every
+    /// item — so a caller that already holds this pass's sections passes them in.
+    private func sectionID(containing todo: TodoItem, in sections: [TodoTimelineSection]) -> String? {
+        if let exactSection = sections.first(where: { section in
             section.items.contains { item in item.id == todo.id }
         }) {
             return exactSection.id
         }
-        return groupedSections.first { section in
+        return sections.first { section in
             section.items.contains { item in item.canonicalId == todo.canonicalId }
         }?.id
     }
 
+    /// The form the drop delegates call. They run outside a body pass and hold no sections of
+    /// their own, so this resolves the dragged task's section itself. The in-app drag's hit
+    /// test and finish do not come through here: they resolve against the sections snapshot
+    /// taken when the drag began — see `inAppDragSections`.
     private func canDropTodo(_ todo: TodoItem, into section: TodoTimelineSection) -> Bool {
+        guard section.targetDate != nil else {
+            return false
+        }
+        return canDrop(todo, into: section, draggedSectionID: sectionID(containing: todo))
+    }
+
+    /// The same question with the dragged task's section already resolved. The feed asks it
+    /// for every section on every body pass of a drag — the pass the pick-up makes, and one
+    /// each time the finger crosses into another section (the finger's own moves no longer
+    /// reach the body; see `TodoDragPreviewModel`). Resolving the section per ask rebuilt
+    /// `groupedSections` once or twice for each of them, on top of the rebuild the feed itself
+    /// made. `minimalTimelineModeContent` resolves it once per pass from the sections it built
+    /// and hands it to each section; the in-app hit test does the same from its snapshot.
+    private func canDrop(_ todo: TodoItem, into section: TodoTimelineSection, draggedSectionID: String?) -> Bool {
         guard let targetDate = section.targetDate else {
             return false
         }
-        if sectionID(containing: todo) == section.id {
+        if draggedSectionID == section.id {
             return false
         }
         guard let due = todo.due else {
@@ -2835,7 +2984,10 @@ struct TodoListScreen: View {
         draggedTodo = todo
         TodoTaskDragSession.shared.todo = todo
         TodoTaskDragSession.shared.handledDropSignature = nil
-        inAppDrag = TodoInAppDrag(todo: todo, location: location)
+        // Taken after `draggedTodo` is set, so the snapshot carries the empty drop buckets
+        // the drag is about to bring back. See `TodoDragPreviewModel`.
+        dragPreview.sections = groupedSections
+        dragPreview.drag = TodoInAppDrag(todo: todo, location: location)
         updateInAppDrag(todo, to: location)
         // Keep the picked-up row realized. Setting `draggedTodo` brings back
         // every empty bucket, and on a list whose tasks are months out that can
@@ -2848,25 +3000,37 @@ struct TodoListScreen: View {
         dragAnchorTodoID = todo.id
     }
 
+    /// Called on every touch move. Writes only the preview's box and — when the section under
+    /// the finger changes — `activeDropSectionId`, so a move that stays inside one section
+    /// redraws the preview and nothing else.
     private func updateInAppDrag(_ todo: TodoItem, to location: CGPoint) {
-        inAppDrag = TodoInAppDrag(todo: todo, location: location)
+        dragPreview.drag = TodoInAppDrag(todo: todo, location: location)
         setActiveDropSection(dropSectionID(at: location, for: todo))
     }
 
+    /// The sections the in-app drag resolves its targets against: the snapshot taken when the
+    /// drag began, falling back to a fresh build if there is none. `groupedSections` is
+    /// rebuilt on every read, and the hit test runs on every touch move.
+    private var inAppDragSections: [TodoTimelineSection] {
+        dragPreview.sections ?? groupedSections
+    }
+
     private func finishInAppDrag(_ todo: TodoItem, at location: CGPoint?) {
+        let sections = inAppDragSections
+        let draggedSectionID = sectionID(containing: todo, in: sections)
         let targetSectionID = location.flatMap { dropSectionID(at: $0, for: todo) } ??
-            activeDropSectionId.flatMap { sectionID in
-                guard let section = groupedSections.first(where: { $0.id == sectionID }),
-                      canDropTodo(todo, into: section) else {
+            activeDropSectionId.flatMap { activeID in
+                guard let section = sections.first(where: { $0.id == activeID }),
+                      canDrop(todo, into: section, draggedSectionID: draggedSectionID) else {
                     return nil
                 }
-                return sectionID
+                return activeID
             }
         let targetSection = targetSectionID
-            .flatMap { sectionID in groupedSections.first { $0.id == sectionID } }
+            .flatMap { targetID in sections.first { $0.id == targetID } }
         setActiveDropSection(nil)
         draggedTodo = nil
-        inAppDrag = nil
+        dragPreview.clear()
         dropTargetFrames = [:]
         if let targetSection {
             performDrop(todo, into: targetSection)
@@ -2878,19 +3042,28 @@ struct TodoListScreen: View {
     private func cancelInAppDrag() {
         setActiveDropSection(nil)
         draggedTodo = nil
-        inAppDrag = nil
+        dragPreview.clear()
         dropTargetFrames = [:]
         TodoTaskDragSession.shared.todo = nil
     }
 
+    /// Runs on every touch move. Resolves against `inAppDragSections` and works out the
+    /// dragged task's own section once per call, not once per frame under the finger: each of
+    /// those used to rebuild `groupedSections` from every item, in the frame the preview was
+    /// trying to keep up in.
     private func dropSectionID(at location: CGPoint, for todo: TodoItem) -> String? {
-        dropTargetFrames.values
-            .filter { $0.frame.contains(location) }
+        let candidates = dropTargetFrames.values.filter { $0.frame.contains(location) }
+        guard !candidates.isEmpty else {
+            return nil
+        }
+        let sections = inAppDragSections
+        let draggedSectionID = sectionID(containing: todo, in: sections)
+        return candidates
             .filter { target in
-                guard let section = groupedSections.first(where: { $0.id == target.sectionID }) else {
+                guard let section = sections.first(where: { $0.id == target.sectionID }) else {
                     return false
                 }
-                return canDropTodo(todo, into: section)
+                return canDrop(todo, into: section, draggedSectionID: draggedSectionID)
             }
             .min { lhs, rhs in
                 (lhs.frame.width * lhs.frame.height) < (rhs.frame.width * rhs.frame.height)
@@ -3008,14 +3181,29 @@ struct TodoListScreen: View {
         return matchesHighlightedTodo(todo, id: flashTodoId)
     }
 
+    /// Shows the highlighted row once per arrival, not once per items change.
+    /// `.onChange(of: viewModel.items)` calls this so a target that lands after
+    /// the screen opens is still found; `servedHighlightTodoId` is what stops
+    /// every later change — ticking another row, a sync landing, a pop back
+    /// re-firing `onAppear` — from jumping the list away from where the user is
+    /// working and scrolling it all the way back to the reminder's row.
     private func scrollToHighlightedTodo(using proxy: ScrollViewProxy) {
         guard viewModel.mode == .all,
               let highlightedTodoId,
               !highlightedTodoId.isEmpty,
+              servedHighlightTodoId != highlightedTodoId,
               let target = highlightedTodoTarget(for: highlightedTodoId) else {
             return
         }
+        // Latched as the sequence is scheduled rather than when it lands, so an
+        // items change inside the first half-second cannot restart it with the
+        // same hard jump. A target missing at open leaves this nil, which is
+        // what lets the late-arrival path above run it exactly once.
+        servedHighlightTodoId = highlightedTodoId
 
+        // A highlighted arrival is seeded with nothing collapsed (see `init`),
+        // so on the push this is empty and no section springs open under the
+        // slide; the branch is left for a highlight id that changes in place.
         let hadCollapsedSections = !collapsedSectionIDs.isEmpty
         if !collapsedSectionIDs.isEmpty {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
@@ -3028,20 +3216,28 @@ struct TodoListScreen: View {
         let preScrollID = timelineTodoScrollID(target.preScrollTodo.id)
         let targetScrollID = timelineTodoScrollID(target.todo.id)
         let preScrollDelay = hadCollapsedSections ? TodoTimelineMetrics.searchResultSectionExpandDelay : 0
+        // The pre-scroll and the wait after it only exist to give the long
+        // scroll a short, readable trip. Under Reduce Motion there is no trip,
+        // so the list goes straight to the finished state (rule 5) instead of
+        // sitting through a wait that covers nothing.
+        let animatesScroll = tdayAnimation.isEnabled
+        let scrollDelay = animatesScroll ? preScrollDelay + TodoTimelineMetrics.searchResultScrollDelay : preScrollDelay
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + preScrollDelay) {
-            guard requestID == highlightedScrollRequestID else {
-                return
+        if animatesScroll {
+            DispatchQueue.main.asyncAfter(deadline: .now() + preScrollDelay) {
+                guard requestID == highlightedScrollRequestID else {
+                    return
+                }
+                proxy.scrollTo(preScrollID, anchor: .top)
             }
-            proxy.scrollTo(preScrollID, anchor: .top)
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + preScrollDelay + TodoTimelineMetrics.searchResultScrollDelay) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + scrollDelay) {
             guard requestID == highlightedScrollRequestID else {
                 return
             }
 
-            withAnimation(.easeInOut(duration: TodoTimelineMetrics.searchResultScrollDuration)) {
+            withAnimation(tdayAnimation(.easeInOut(duration: TodoTimelineMetrics.searchResultScrollDuration))) {
                 proxy.scrollTo(targetScrollID, anchor: .center)
             }
 
@@ -3063,10 +3259,16 @@ struct TodoListScreen: View {
         }
     }
 
+    /// Sheet first, then the request, as the Scheduled home does: the tap gets
+    /// its answer on the next frame and the sheet's `isSummarizing` spinner
+    /// covers the round-trip, instead of a dead wait before a filled sheet.
+    /// Both lines sit in one main-actor turn — `summarizeCurrentMode` sets
+    /// `isSummarizing` and clears `summaryText` before its first `await` — so
+    /// the sheet's first frame is the spinner, never an earlier summary.
     private func presentSummary() {
         Task {
-            await viewModel.summarizeCurrentMode()
             showingSummary = true
+            await viewModel.summarizeCurrentMode()
         }
     }
 
@@ -3187,12 +3389,22 @@ struct TodoListScreen: View {
                             listSearchEmptyState
                         }
                     } else {
-                        ForEach(Array(groupedSections.enumerated()), id: \.element.id) { index, section in
+                        // Built once for the pass. Every read of `groupedSections` rebuilds it
+                        // from every item, and this used to read it once for the `ForEach` and
+                        // again inside it for every section — N+1 rebuilds on each check-off
+                        // phase, search keystroke and drag move, landing in the frames those
+                        // animations start on.
+                        let sections = groupedSections
+                        let draggedSectionID: String? = draggedTodo.flatMap { todo in
+                            sectionID(containing: todo, in: sections)
+                        }
+                        ForEach(Array(sections.enumerated()), id: \.element.id) { index, section in
                             minimalTimelineSection(
                                 section,
                                 sectionIndex: index,
-                                sections: groupedSections,
-                                isFirstSection: index == 0
+                                sections: sections,
+                                isFirstSection: index == 0,
+                                draggedSectionID: draggedSectionID
                             )
                         }
                     }
@@ -3279,8 +3491,11 @@ struct TodoListScreen: View {
                 .listSectionSpacing(0)
                 .scrollBounceBehavior(pullRefreshEnabled ? .always : .basedOnSize, axes: .vertical)
                 // Freeze list scrolling while a task is being dragged so the drop
-                // target stays put under the finger (matches Calendar).
-                .scrollDisabled(inAppDrag != nil)
+                // target stays put under the finger (matches Calendar). Keyed on
+                // `draggedTodo`, which is set and cleared with the drag and holds
+                // still between — never on the finger's location, which would
+                // rebuild this whole List on every touch move (`TodoDragPreviewModel`).
+                .scrollDisabled(draggedTodo != nil)
                 .environment(\.defaultMinListRowHeight, 1)
                 .disableVerticalScrollBounce(!pullRefreshEnabled)
                 .animation(todoDropPlaceholderAnimation, value: activeDropSectionId)
@@ -3549,7 +3764,11 @@ struct TodoListScreen: View {
         openSwipeTaskID = nil
         HapticManager.completion()
         SoundManager.taskCompleted()
-        withAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)) {
+        // Gated through `tdayAnimation` because nothing else gates it now: the
+        // completing ids left `timelineItemAnimationKey`, so the List's nil
+        // travel no longer overrides this under Reduce Motion, and the tick
+        // still has to be drawn finished on the tap frame there (rule 5).
+        withAnimation(tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick))) {
             completionPhases[todo.id] = .checked
         }
         Task { @MainActor in
@@ -3567,16 +3786,19 @@ struct TodoListScreen: View {
         }
     }
 
+    /// `draggedSectionID` is the dragged task's own section, resolved once for the pass from
+    /// `sections` — see `canDrop(_:into:draggedSectionID:)`.
     @ViewBuilder
     private func minimalTimelineSection(
         _ section: TodoTimelineSection,
         sectionIndex: Int,
         sections: [TodoTimelineSection],
-        isFirstSection: Bool
+        isFirstSection: Bool,
+        draggedSectionID: String?
     ) -> some View {
         let canCollapseSection = canCollapseTimelineSection(section)
         let isCollapsed = isTimelineSectionCollapsed(section)
-        let isDropEligibleSection = draggedTodo.map { canDropTodo($0, into: section) } ?? false
+        let isDropEligibleSection = draggedTodo.map { canDrop($0, into: section, draggedSectionID: draggedSectionID) } ?? false
         let isActiveDropSection = activeDropSectionId == section.id && isDropEligibleSection
 
         Section {
@@ -4571,6 +4793,58 @@ private struct TimelineScrollOffsetTrackingRow: View {
     }
 }
 
+/// The pinned-bar screens' scroll offset, boxed so a scroll frame redraws only the two views
+/// that draw the title collapse: `TimelineTopBar` and `TimelineExpandedTitleRow`, each reached
+/// through `TimelineCollapseProgressReader`.
+///
+/// The same shape as `RootFeedHeaderScrollState`, for the same reason. The offset changes on
+/// every frame of a scroll, and the screens that own it have the largest bodies in the app:
+/// held as `@State` and read in `TodoListScreen.body`, each frame rebuilt the whole feed —
+/// every section, every realized row, the placement animation's key — while the title slid
+/// into the bar and the dock folded. Nothing in the owning body may read `offset`.
+///
+/// Stored clamped to `0...titleCollapseDistance`, and only written when it changes. The
+/// collapse is finished at that distance, so past it every frame carries the same value and
+/// there is nothing to redraw.
+@Observable
+final class TimelineTitleScrollState {
+    private(set) var offset: CGFloat = 0
+
+    /// How far the hero title has travelled into the bar, 0 to 1.
+    var collapseProgress: CGFloat {
+        let distance = TodoTimelineMetrics.titleCollapseDistance
+        guard distance > 0 else { return 0 }
+        return min(max(offset / distance, 0), 1)
+    }
+
+    func publish(_ rawOffset: CGFloat) {
+        let clamped = min(max(rawOffset, 0), TodoTimelineMetrics.titleCollapseDistance)
+        guard offset != clamped else { return }
+        offset = clamped
+    }
+}
+
+/// Reads `TimelineTitleScrollState` in a body of its own and hands the progress to `content`.
+///
+/// Its owner reads every other input in its own body and passes the values into `content`, so
+/// the owner keeps depending on them and this is the only view that depends on the scroll.
+struct TimelineCollapseProgressReader<Content: View>: View {
+    let scroll: TimelineTitleScrollState
+    private let content: (CGFloat) -> Content
+
+    init(
+        scroll: TimelineTitleScrollState,
+        @ViewBuilder content: @escaping (CGFloat) -> Content
+    ) {
+        self.scroll = scroll
+        self.content = content
+    }
+
+    var body: some View {
+        content(scroll.collapseProgress)
+    }
+}
+
 struct TimelineScrollOffsetObserver: UIViewRepresentable {
     let onChange: (CGFloat) -> Void
 
@@ -4684,6 +4958,26 @@ struct TimelineSectionHeader: View {
             .buttonStyle(TimelineSectionHeaderButtonStyle())
         } else {
             content
+        }
+    }
+}
+
+/// Reads `TodoDragPreviewModel.drag` in a body of its own and floats the preview under the
+/// finger, so a touch move invalidates this layer and nothing else. `rootOrigin` is the
+/// overlay's global origin: the long-press bridge reports the finger in global coordinates.
+private struct TodoDragPreviewLayer: View {
+    let model: TodoDragPreviewModel
+    let rootOrigin: CGPoint
+
+    var body: some View {
+        if let drag = model.drag {
+            TodoDragPreview(todo: drag.todo)
+                .position(
+                    x: drag.location.x - rootOrigin.x,
+                    y: drag.location.y - rootOrigin.y
+                )
+                .zIndex(20)
+                .allowsHitTesting(false)
         }
     }
 }

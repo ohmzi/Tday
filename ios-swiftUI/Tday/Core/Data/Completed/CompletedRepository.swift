@@ -16,15 +16,26 @@ final class CompletedRepository {
         cacheManager.loadOfflineState().completedItems.map(completedFromCache)
     }
 
+    /// Off `cacheManager.cachedState`, the in-memory mirror, not a fresh
+    /// `loadOfflineState()`: `CompletedViewModel` and `CalendarViewModel` call this from
+    /// their synchronous hydrate. That hydrate runs once in the screen's first body pass,
+    /// because the model is built on first read (`LazyViewModelBox`), and that pass is the
+    /// frame the tile zoom draws first. It runs again on every `.offlineCacheDidChange`.
+    /// The whole completed history fetched out of SwiftData there was the heaviest thing
+    /// in front of the Completed and Calendar zooms. No reader depends on the mirror's
+    /// order: the Completed screen groups and sorts by `completedAt`, the Calendar only
+    /// counts the rows, and `ScheduledTaskHomeViewModel.suggestRepeatRrule` hands the times
+    /// to `RepeatSuggestionEngine.suggest`, which sorts them.
     func fetchCompletedItemsSnapshot() -> [CompletedItem] {
-        cacheManager.loadOfflineState().completedItems.map(completedFromCache)
+        cacheManager.cachedState.completedItems.map(completedFromCache)
     }
 
     /// Completed Floaters — synced into `OfflineSyncState.completedFloaters`
     /// by `SyncManager` since the sync pipeline shipped, but this is the first
-    /// feature to actually read them back out for display.
+    /// feature to actually read them back out for display. Off the mirror for the
+    /// reason on `fetchCompletedItemsSnapshot`.
     func fetchCompletedFloatersSnapshot() -> [CompletedItem] {
-        cacheManager.loadOfflineState().completedFloaters.map(completedFloaterFromCache)
+        cacheManager.cachedState.completedFloaters.map(completedFloaterFromCache)
     }
 
     func uncomplete(_ item: CompletedItem) async throws {

@@ -26,6 +26,17 @@ final class WatchSessionManager: NSObject, WCSessionDelegate {
 
     /// Push the current Today snapshot to the watch. Safe to call often — it only
     /// sends when a watch app is actually installed and reachable-ish.
+    ///
+    /// Not main-actor code, but it can run on the main thread. Most calls come from a
+    /// `WidgetSnapshotWriter.submit` block on the writer's background queue, and the
+    /// delegate callbacks below call it on WatchConnectivity's own queue. The two
+    /// `saveTodayTasks` callers (the Focus filter intent and a background
+    /// `refreshTodayWidgetSnapshot`) are main-actor code and reach it through `runNow`'s
+    /// `queue.sync`, which GCD usually runs on the calling thread. There it runs on main
+    /// with main blocked until it returns. So keep it free of main-actor work:
+    /// `MainActor.assumeIsolated` would trap on the writer's queue, and
+    /// `DispatchQueue.main.sync` would deadlock on the `runNow` path. The writer moved
+    /// off main so that a check-off's snapshot write would not stall the list animation.
     func syncTodaySnapshot() {
         guard WCSession.isSupported() else { return }
         let session = WCSession.default

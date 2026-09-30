@@ -265,8 +265,11 @@ final class SyncManager {
                 nextState.pendingMutations = []
                 return nextState
             }) {
-                TodayTasksWidgetSnapshotStore.saveTodayTasks(from: localState)
-                FloaterTasksWidgetSnapshotStore.saveFloaterTasks(from: localState)
+                // Queued off the main actor like every cache save's snapshot write, and ordered
+                // behind the one the save above may already have queued (see
+                // `WidgetSnapshotWriter`). A background refresh still ends with the snapshot on
+                // disk: its `refreshTodayWidgetSnapshot` waits behind this write.
+                WidgetSnapshotWriter.shared.submit(localState)
             }
             return .success(())
         }

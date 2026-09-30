@@ -123,6 +123,10 @@ final class CompletedViewModel {
         // Two lists rather than one concatenation. The merge this replaced was the only
         // place the two kinds were combined, and it is gone rather than left beside the
         // split: a merge nothing reads is a second answer to "what is on this screen".
+        //
+        // Four reads, one snapshot: each comes off `cacheManager.cachedState`, the in-memory
+        // mirror (see the repositories' `*Snapshot` notes), not a SwiftData fetch, and all four
+        // run in this one synchronous main-actor pass, so no save can land between them.
         completedItems = container.completedRepository.fetchCompletedItemsSnapshot()
         floaterItems = container.completedRepository.fetchCompletedFloatersSnapshot()
         lists = container.listRepository.fetchListsSnapshot()

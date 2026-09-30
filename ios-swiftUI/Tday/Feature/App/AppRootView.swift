@@ -1,3 +1,4 @@
+import Observation
 import SwiftUI
 import UIKit
 
@@ -68,7 +69,14 @@ struct AppRootView: View {
     @State private var showingListWidgetSetup = false
     @State private var scheduledTaskHomeScrollToTopRequestID = 0
     @State private var floaterTaskHomeScrollToTopRequestID = 0
-    @State private var rootDockCollapsed = false
+    // The dock's fold, in an `@Observable` box rather than plain `@State`, for the reason
+    // `RootFeedHeaderScrollState` is one: the fold is written from inside UIScrollView's
+    // contentOffset setter mid-drag, and as `@State` read by this body every fold crossing
+    // (44 pt on the way down, 24 pt on the way back — see `RootFeedDockCollapse`) re-ran the
+    // whole root — rebuilding the active feed with fresh closures, so its body ran
+    // again too — in the frame the dock's own Gesture spring started. Only `RootDockSlot`
+    // reads it now, so a crossing invalidates that slot and nothing else.
+    @State private var rootChrome = RootChromeState()
     @State private var rootControlsVisible = true
     // Optional biometric gate, default OFF. When disabled every member below is inert.
     @State private var appLock = AppLockController()
@@ -90,7 +98,10 @@ struct AppRootView: View {
     /// placed in, so a gate this view installs would reach its children and miss it.
     /// `AppSnackbar` below is a separate view with an environment of its own and is
     /// not covered — its drag snap-back still animates, and is owed to the open
-    /// `reduced-motion-coverage` box.
+    /// `reduced-motion-coverage` box. The toast's arrival and departure are covered,
+    /// but no longer from this property: they moved into `AppSnackbarHost`, which reads
+    /// the gate out of the environment it is placed in — inside this body, under the
+    /// provider `tdayAppTheme` installs, fed the same `motionPreference` as the scene's.
     @Environment(\.tdayAnimation) private var tdayAnimation
 
     init(container: AppContainer) {
@@ -132,474 +143,450 @@ struct AppRootView: View {
             } else {
                 let showOnboardingOverlay = !appViewModel.isWorkspaceAvailable && appViewModel.versionCheckResult == .compatible
 
-                NavigationStack(
-                    path: rootNavigationPath
-                ) {
-                    TdayBackground {
-                        ZStack(alignment: .bottom) {
-                            switch rootFeedTab {
-                            case .scheduledTaskHome:
-                                ScheduledTaskHomeScreen(
-                                    container: container,
-                                    onRootFeedTabSelected: handleRootFeedTabSelection,
-                                    showsRootControls: false,
-                                    // The live request id reaches the selected feed only, and
-                                    // that "only" is the whole of what this line says. It is
-                                    // NOT the mechanism that protects the hand-over, and it
-                                    // should not be read as one: this is a `switch rootFeedTab`
-                                    // arm, so it is built only while `rootFeedTab` already
-                                    // equals the tab it tests and the `0` branch is
-                                    // unreachable where it is written. What holds is the
-                                    // frozen render — the departing copy is the body it had
-                                    // before the tab changed, the same premise
-                                    // `TdayFeedDeparture` rests its z-order on, so its input
-                                    // never changes and its `.onChange(of:
-                                    // createTaskRequestID)` cannot fire. The sentinel is kept
-                                    // because it costs nothing and it is the right value
-                                    // under the other reading of that premise: both this
-                                    // screen's guard and `TodoListScreen`'s are on `> 0`, so
-                                    // a runtime that did re-render the removing copy would be
-                                    // handed `0` and refuse it. Android's twin really is
-                                    // structural — `AnimatedVisibility` recomposes its
-                                    // departing content with the new argument — so the two
-                                    // clients reach the same guarantee by different routes;
-                                    // see `presentPendingRootCreateTaskIfReady`.
-                                    createTaskRequestID: (rootFeedTab == .scheduledTaskHome
-                                        ? rootCreateTaskRequestID
-                                        : 0),
-                                    createTaskPrefill: rootCreateTaskPrefill,
-                                    onCreateTaskSheetClosed: { rootCreateTaskPrefill = nil },
-                                    scrollToTopRequestID: scheduledTaskHomeScrollToTopRequestID,
-                                    onRootDockCollapsedChange: { rootDockCollapsed = $0 },
-                                    onRootControlsVisibleChange: { rootControlsVisible = $0 },
-                                    pullRefreshEnabled: !appViewModel.isLocalMode,
-                                    summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
-                                ) { route in
-                                    handleRoute(route)
-                                }
-                                // The whole of the hand-over, both halves: this feed fades IN on
-                                // `Enter` when it is the tab that was asked for and OUT on `Exit`
-                                // when it is the tab being left, both over the one `Enter` length
-                                // they share. That is the pairing web makes at a route change —
-                                // `.tday-route-fade` on `--tday-ease-enter`, the outgoing
-                                // `::view-transition-old(root)` on `--tday-ease-exit`, both at
-                                // `--tday-duration-enter` — and it is why this is `.asymmetric`
-                                // rather than the splash's two one-way arms: a root feed arrives
-                                // AND leaves over the app's lifetime, so each direction has to
-                                // carry its own curve on the one view. The departure is raised
-                                // above the arrival by `TdayFeedDeparture`; web carries the same
-                                // requirement as `z-index: 1` on its outgoing snapshot and says
-                                // why there. The transaction these need is the `.animation(_:
-                                // value: rootFeedTab)` below the stack.
-                                .transition(.asymmetric(
-                                    insertion: .opacity.animation(
-                                        tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter))
-                                    ),
-                                    removal: .opacity
-                                        .animation(
-                                            tdayAnimation(TdayMotion.exit(duration: TdayMotion.Durations.enter))
-                                        )
-                                        .combined(with: .modifier(
-                                            active: TdayFeedDeparture(raised: true),
-                                            identity: TdayFeedDeparture(raised: false)
-                                        ))
-                                ))
-                            case .floaterTaskHome:
-                                TodoListScreen(
-                                    container: container,
-                                    mode: .floater,
-                                    listId: nil,
-                                    listName: nil,
-                                    highlightedTodoId: nil,
-                                    rootFeedTab: .floaterTaskHome,
-                                    onRootFeedTabSelected: handleRootFeedTabSelection,
-                                    showsRootControls: false,
-                                    pullRefreshEnabled: !appViewModel.isLocalMode,
-                                    usesRootFeedHeader: true,
-                                    // Gated on the selected tab for the reason written on the
-                                    // Scheduled feed's line above — including that the gate is a
-                                    // sentinel kept for the other reading of the frozen-render
-                                    // premise and is not itself the mechanism.
-                                    createTaskRequestID: (rootFeedTab == .floaterTaskHome
-                                        ? rootCreateTaskRequestID
-                                        : 0),
-                                    createTaskPrefill: rootCreateTaskPrefill,
-                                    onCreateTaskSheetClosed: { rootCreateTaskPrefill = nil },
-                                    scrollToTopRequestID: floaterTaskHomeScrollToTopRequestID,
-                                    onRootDockCollapsedChange: { rootDockCollapsed = $0 },
-                                    onRootControlsVisibleChange: { rootControlsVisible = $0 },
-                                    onOpenFloaterList: { listId, listName in
-                                        // `.floaterFeed` is the id the list card beside it publishes,
-                                        // and the two have to agree or the push silently falls back to
-                                        // the stock slide — see `ZoomNavigation.swift`.
-                                        handleRoute(.floaterListTodos(listId: listId, listName: listName, origin: .floaterFeed))
-                                    },
-                                    onOpenSettings: {
-                                        handleRoute(.settings)
-                                    },
-                                    onOpenCompleted: {
-                                        // The Anytime feed's own Completed id, not the Scheduled
-                                        // board's — both feeds are mounted together during the tab
-                                        // crossfade, so the two tiles cannot share one.
-                                        handleRoute(.completed(origin: .floaterFeed))
-                                    },
-                                    summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
-                                )
-                                // The same pairing as the Scheduled feed above, spelled once per
-                                // arm because that is what a two-curve hand-over costs in
-                                // SwiftUI — see the comment on the other arm, and
-                                // `AppRootView`'s own note about the splash.
-                                .transition(.asymmetric(
-                                    insertion: .opacity.animation(
-                                        tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter))
-                                    ),
-                                    removal: .opacity
-                                        .animation(
-                                            tdayAnimation(TdayMotion.exit(duration: TdayMotion.Durations.enter))
-                                        )
-                                        .combined(with: .modifier(
-                                            active: TdayFeedDeparture(raised: true),
-                                            identity: TdayFeedDeparture(raised: false)
-                                        ))
-                                ))
-                            }
-
-                            if appViewModel.isWorkspaceAvailable, rootControlsVisible {
-                                rootFloatingControls
-                                    // Above the feeds, explicitly rather than by declaration
-                                    // order, because the departing feed raises ITSELF to
-                                    // `zIndex(1)` for the whole of its removal — see
-                                    // `TdayFeedDeparture`. A sibling left at the `ZStack`'s
-                                    // implicit 0 would be painted under an opaque full-screen
-                                    // feed for those 200 ms: the pill the user just tapped and
-                                    // the create button gone at the first frame of every swap
-                                    // and fading back in with the screen the user left.
-                                    // Android carries the twin as `Modifier.zIndex(8f)` on
-                                    // both controls, against `0f`/`1f` on the feeds, and 8 is
-                                    // that number rather than a new one for the same question.
-                                    .zIndex(8)
-                                    // Down and out through the bottom edge, and back up the
-                                    // same way. The opacity half is load-bearing rather than
-                                    // decorative: `.move(edge:)` offsets by the view's own
-                                    // height, which clears the dock's box but not the home
-                                    // indicator strip it sits above, so the fade is what
-                                    // guarantees the control is gone rather than parked in
-                                    // it. Android pairs `slideOutVertically { it }` with a
-                                    // fade for the same reason. The travel answers to
-                                    // `rootControlsVisible` and to nothing else — the unlock
-                                    // that also inserts these controls is handed no animation
-                                    // below, for the reason written there.
-                                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                            }
-                        }
-                        // The dock's pill slides to the tab that was tapped and the feed under
-                        // it changed on the next frame: one gesture running at two speeds. The
-                        // two transitions above are inert without a transaction, and this is
-                        // it. Nothing in the body travels — the arriving feed is drawn in the
-                        // slot the leaving one had — so by the geometry rule this is not
-                        // Emphasis, and a tab handover is a rung the vocabulary names for it.
-                        //
-                        // `Enter`, and that is a reversal of what this swap used to say. The
-                        // `Quick`/`standard` pair it carried argued shorter-than-the-selector so
-                        // the body would not still be resolving after the control it answers had
-                        // landed; `docs/motion.md`'s `Scene` bullet had already answered that in
-                        // prose — "Nor is this rung for route or tab handovers: those are
-                        // `Enter` on both clients that have them" — and `Enter` keeps the
-                        // ordering that argument was about (200 ms of body against the
-                        // selector's own spring) while buying the one thing the old shape could
-                        // not express at all, which is that web's fade is TWO curves. The length
-                        // is named here, where the transaction is opened; the curves live
-                        // per-arm on the two `.transition`s above, exactly as this file already
-                        // argues for the splash. Android runs the same pairing.
-                        //
-                        // What used to hold the create-task hand-off together here was the
-                        // length itself: `presentPendingRootCreateTaskIfReady` waits 180 ms and
-                        // a 150 ms fade finished inside that, so a deep link that switched tab
-                        // and then asked for a sheet found one feed on screen. `Enter` is 200
-                        // and is not inside it, so the hand-off no longer leans on a sleep —
-                        // both feeds are handed the same request id only while ONE of them is
-                        // the selected tab, and the departing copy is handed the `0` sentinel
-                        // its own `.onChange` guard already refuses. See the two
-                        // `createTaskRequestID:` lines above.
-                        //
-                        // The floating controls are in the transaction too, which crosses their
-                        // accent over with the body instead of snapping it; the pill is a
-                        // `UISegmentedControl`, so its own indicator stays on UIKit's timing
-                        // rather than this one. Reduce Motion passes no animation at all: the
-                        // swap cuts to the arriving feed finished rather than holding it
-                        // half-faded (`docs/motion.md`'s fifth idiom rule), and because the
-                        // departing copy is only *raised* for the length of a transition that
-                        // does not play, it is gone in the frame the tab changes rather than
-                        // left opaque over the feed the user just asked for.
-                        .animation(
-                            tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter)),
-                            value: rootFeedTab
-                        )
-                        // The dock and the create button used to be nothing but the `if`
-                        // above: expanding the search field took them off the screen in the
-                        // frame the field grew into, leaving a hole where the chrome had
-                        // been and then putting the chrome back in it. The transition on the
-                        // controls is inert without a transaction, and this is that one.
-                        //
-                        // Travel, so Emphasis by the geometry rule — and Settle is the rung
-                        // spelled as a spring, the token whose own doc string names a dock
-                        // and a bar. One spec for both directions: the exit is the enter
-                        // played backwards, and a length of its own would read as two
-                        // gestures rather than one control getting out of the way. The first
-                        // idiom rule only forbids an exit that OUTLASTS its arrival, and
-                        // these cannot. Android drives the same two controls off the same
-                        // spring; web, having no spring runtime, spells it as the Gesture
-                        // easing on the Emphasis rung.
-                        //
-                        // Its own `.animation` rather than a second value on the one above,
-                        // because a tab swap and the chrome standing down are different
-                        // events that happen to share a container — folding them together
-                        // would put the dock's departure on the tab handover's clock.
-                        // Reduce Motion passes nil, so the controls are taken away and put
-                        // back finished (`docs/motion.md`'s fifth idiom rule).
-                        .animation(
-                            tdayAnimation(TdayMotion.settle),
-                            value: rootControlsVisible
-                        )
-                        // The other way these controls come and go: `isWorkspaceAvailable` in
-                        // the `if` above, which the unlock flips at the same moment as the
-                        // `showOnboardingOverlay` further down. That one opens a transaction
-                        // over this whole subtree, and a transaction is all a `.transition`
-                        // needs — so without this line the move above would ALSO play the
-                        // lock and unlock, travelling the dock and the button up from under
-                        // the bottom edge on the Quick rung, in the one handover where
-                        // nothing else on the screen moves at all.
-                        //
-                        // Handing that value no animation is how an insertion says it has no
-                        // before. Android says it in its own dialect: `RootFeedContent` is
-                        // composed fresh inside the arriving half of the lock Crossfade, and
-                        // `AnimatedVisibility` plays no enter for a `visible` that was
-                        // already true on its first composition, so the dock is simply drawn
-                        // in its slot while the wizard hands over above it. What fades on
-                        // either client is the wizard, not the chrome underneath it.
-                        //
-                        // It also settles a split this file already had: an unlock whose
-                        // version check is blocking leaves `showOnboardingOverlay` false on
-                        // both sides, so that unlock opened no transaction and the chrome
-                        // appeared finished, while an ordinary one animated it. The same
-                        // event cannot mean two things depending on a version number.
-                        .animation(nil, value: showOnboardingOverlay)
-                    }
-                    .blur(radius: showOnboardingOverlay ? 6 : 0)
-                    .scaleEffect(showOnboardingOverlay ? 0.992 : 1)
-                    .navigationBarBackButtonHidden(true)
-                    .toolbar(.hidden, for: .navigationBar)
-                    .navigationDestination(for: AppRoute.self) { route in
-                        // One site covers every push. `tdayZoomDestination` reads the route's
-                        // own source id, so the home tiles that publish one grow into their
-                        // screens and everything else falls through to the stock push without a
-                        // list here to keep in step with the one in `ZoomNavigation.swift`.
-                        destinationView(for: route)
-                            .tdayZoomDestination(route)
-                    }
-                    .onChange(of: appViewModel.navigationPath) { _, path in
-                        normalizeRootNavigationPath(path)
-                    }
-                    .onChange(of: appViewModel.offlineNoticeID) { _, _ in
-                        showOfflineToast()
-                    }
-                    .onChange(of: appViewModel.isOffline) { wasOffline, isOffline in
-                        if wasOffline && !isOffline {
-                            showBackOnlineToast()
-                        }
-                    }
-                    .overlay {
-                        if !appViewModel.isWorkspaceAvailable {
-                            let isVersionBlocking = appViewModel.versionCheckResult != .compatible
-
-                            if appViewModel.pendingApproval {
-                                PendingApprovalView(
-                                    username: appViewModel.pendingApprovalUsername,
-                                    isChecking: appViewModel.isCheckingApproval,
-                                    onCheckStatus: {
-                                        await appViewModel.checkPendingApproval()
-                                    },
-                                    onUseDifferentAccount: {
-                                        authViewModel.clearStatus()
-                                        appViewModel.cancelPendingApproval()
+                // The toast host wraps the stack rather than the stack carrying the toast's
+                // `.overlay` and `.animation(_:value:)` itself. Both of those read
+                // `snackbarManager.content`, and read in this body they made every toast shown or
+                // dismissed — one per check-off and delete, and its own dismissal 8 s later —
+                // re-run all of `AppRootView.body`: the root feed and every pushed destination
+                // rebuilt (and each rebuilt screen's `State(initialValue:)` built a view model), in
+                // exactly the frame the ticked row starts collapsing and the toast starts sliding
+                // up. Inside `AppSnackbarHost` the stack is a stored value, so a toast change re-runs
+                // only the host's body. Modifier order is unchanged: the namespace and the pop
+                // gesture below, then the host's overlay and animation, then the arm's `.transition`.
+                AppSnackbarHost(snackbarManager: container.snackbarManager) {
+                    NavigationStack(
+                        path: rootNavigationPath
+                    ) {
+                        TdayBackground {
+                            ZStack(alignment: .bottom) {
+                                switch rootFeedTab {
+                                case .scheduledTaskHome:
+                                    ScheduledTaskHomeScreen(
+                                        container: container,
+                                        onRootFeedTabSelected: handleRootFeedTabSelection,
+                                        showsRootControls: false,
+                                        // The live request id reaches the selected feed only, and
+                                        // that "only" is the whole of what this line says. It is
+                                        // NOT the mechanism that protects the hand-over, and it
+                                        // should not be read as one: this is a `switch rootFeedTab`
+                                        // arm, so it is built only while `rootFeedTab` already
+                                        // equals the tab it tests and the `0` branch is
+                                        // unreachable where it is written. What holds is the
+                                        // frozen render — the departing copy is the body it had
+                                        // before the tab changed, the same premise
+                                        // `TdayFeedDeparture` rests its z-order on, so its input
+                                        // never changes and its `.onChange(of:
+                                        // createTaskRequestID)` cannot fire. The sentinel is kept
+                                        // because it costs nothing and it is the right value
+                                        // under the other reading of that premise: both this
+                                        // screen's guard and `TodoListScreen`'s are on `> 0`, so
+                                        // a runtime that did re-render the removing copy would be
+                                        // handed `0` and refuse it. Android's twin really is
+                                        // structural — `AnimatedVisibility` recomposes its
+                                        // departing content with the new argument — so the two
+                                        // clients reach the same guarantee by different routes;
+                                        // see `presentPendingRootCreateTaskIfReady`.
+                                        createTaskRequestID: (rootFeedTab == .scheduledTaskHome
+                                            ? rootCreateTaskRequestID
+                                            : 0),
+                                        createTaskPrefill: rootCreateTaskPrefill,
+                                        onCreateTaskSheetClosed: { rootCreateTaskPrefill = nil },
+                                        scrollToTopRequestID: scheduledTaskHomeScrollToTopRequestID,
+                                        onRootDockCollapsedChange: { collapsed in
+                                            if rootChrome.dockCollapsed != collapsed {
+                                                rootChrome.dockCollapsed = collapsed
+                                            }
+                                        },
+                                        onRootControlsVisibleChange: { rootControlsVisible = $0 },
+                                        pullRefreshEnabled: !appViewModel.isLocalMode,
+                                        summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
+                                    ) { route in
+                                        handleRoute(route)
                                     }
-                                )
-                            } else if isVersionBlocking {
+                                    // The whole of the hand-over, both halves: this feed fades IN on
+                                    // `Enter` when it is the tab that was asked for and OUT on `Exit`
+                                    // when it is the tab being left, both over the one `Enter` length
+                                    // they share. That is the pairing web makes at a route change —
+                                    // `.tday-route-fade` on `--tday-ease-enter`, the outgoing
+                                    // `::view-transition-old(root)` on `--tday-ease-exit`, both at
+                                    // `--tday-duration-enter` — and it is why this is `.asymmetric`
+                                    // rather than the splash's two one-way arms: a root feed arrives
+                                    // AND leaves over the app's lifetime, so each direction has to
+                                    // carry its own curve on the one view. The departure is raised
+                                    // above the arrival by `TdayFeedDeparture`; web carries the same
+                                    // requirement as `z-index: 1` on its outgoing snapshot and says
+                                    // why there. The transaction these need is the `.animation(_:
+                                    // value: rootFeedTab)` below the stack.
+                                    .transition(.asymmetric(
+                                        insertion: .opacity.animation(
+                                            tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter))
+                                        ),
+                                        removal: .opacity
+                                            .animation(
+                                                tdayAnimation(TdayMotion.exit(duration: TdayMotion.Durations.enter))
+                                            )
+                                            .combined(with: .modifier(
+                                                active: TdayFeedDeparture(raised: true),
+                                                identity: TdayFeedDeparture(raised: false)
+                                            ))
+                                    ))
+                                case .floaterTaskHome:
+                                    TodoListScreen(
+                                        container: container,
+                                        mode: .floater,
+                                        listId: nil,
+                                        listName: nil,
+                                        highlightedTodoId: nil,
+                                        rootFeedTab: .floaterTaskHome,
+                                        onRootFeedTabSelected: handleRootFeedTabSelection,
+                                        showsRootControls: false,
+                                        pullRefreshEnabled: !appViewModel.isLocalMode,
+                                        usesRootFeedHeader: true,
+                                        // Gated on the selected tab for the reason written on the
+                                        // Scheduled feed's line above — including that the gate is a
+                                        // sentinel kept for the other reading of the frozen-render
+                                        // premise and is not itself the mechanism.
+                                        createTaskRequestID: (rootFeedTab == .floaterTaskHome
+                                            ? rootCreateTaskRequestID
+                                            : 0),
+                                        createTaskPrefill: rootCreateTaskPrefill,
+                                        onCreateTaskSheetClosed: { rootCreateTaskPrefill = nil },
+                                        scrollToTopRequestID: floaterTaskHomeScrollToTopRequestID,
+                                        onRootDockCollapsedChange: { collapsed in
+                                            if rootChrome.dockCollapsed != collapsed {
+                                                rootChrome.dockCollapsed = collapsed
+                                            }
+                                        },
+                                        onRootControlsVisibleChange: { rootControlsVisible = $0 },
+                                        onOpenFloaterList: { listId, listName in
+                                            // `.floaterFeed` is the id the list card beside it publishes,
+                                            // and the two have to agree or the push silently falls back to
+                                            // the stock slide — see `ZoomNavigation.swift`.
+                                            handleRoute(.floaterListTodos(listId: listId, listName: listName, origin: .floaterFeed))
+                                        },
+                                        onOpenSettings: {
+                                            handleRoute(.settings)
+                                        },
+                                        onOpenCompleted: {
+                                            // The Anytime feed's own Completed id, not the Scheduled
+                                            // board's — both feeds are mounted together during the tab
+                                            // crossfade, so the two tiles cannot share one.
+                                            handleRoute(.completed(origin: .floaterFeed))
+                                        },
+                                        summaryAvailable: !appViewModel.isLocalMode && !appViewModel.isOffline
+                                    )
+                                    // The same pairing as the Scheduled feed above, spelled once per
+                                    // arm because that is what a two-curve hand-over costs in
+                                    // SwiftUI — see the comment on the other arm, and
+                                    // `AppRootView`'s own note about the splash.
+                                    .transition(.asymmetric(
+                                        insertion: .opacity.animation(
+                                            tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter))
+                                        ),
+                                        removal: .opacity
+                                            .animation(
+                                                tdayAnimation(TdayMotion.exit(duration: TdayMotion.Durations.enter))
+                                            )
+                                            .combined(with: .modifier(
+                                                active: TdayFeedDeparture(raised: true),
+                                                identity: TdayFeedDeparture(raised: false)
+                                            ))
+                                    ))
+                                }
+
+                                if appViewModel.isWorkspaceAvailable, rootControlsVisible {
+                                    rootFloatingControls
+                                        // Above the feeds, explicitly rather than by declaration
+                                        // order, because the departing feed raises ITSELF to
+                                        // `zIndex(1)` for the whole of its removal — see
+                                        // `TdayFeedDeparture`. A sibling left at the `ZStack`'s
+                                        // implicit 0 would be painted under an opaque full-screen
+                                        // feed for those 200 ms: the pill the user just tapped and
+                                        // the create button gone at the first frame of every swap
+                                        // and fading back in with the screen the user left.
+                                        // Android carries the twin as `Modifier.zIndex(8f)` on
+                                        // both controls, against `0f`/`1f` on the feeds, and 8 is
+                                        // that number rather than a new one for the same question.
+                                        .zIndex(8)
+                                        // Down and out through the bottom edge, and back up the
+                                        // same way. The opacity half is load-bearing rather than
+                                        // decorative: `.move(edge:)` offsets by the view's own
+                                        // height, which clears the dock's box but not the home
+                                        // indicator strip it sits above, so the fade is what
+                                        // guarantees the control is gone rather than parked in
+                                        // it. Android pairs `slideOutVertically { it }` with a
+                                        // fade for the same reason. The travel answers to
+                                        // `rootControlsVisible` and to nothing else — the unlock
+                                        // that also inserts these controls is handed no animation
+                                        // below, for the reason written there.
+                                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                                }
+                            }
+                            // The dock's pill slides to the tab that was tapped and the feed under
+                            // it changed on the next frame: one gesture running at two speeds. The
+                            // two transitions above are inert without a transaction, and this is
+                            // it. Nothing in the body travels — the arriving feed is drawn in the
+                            // slot the leaving one had — so by the geometry rule this is not
+                            // Emphasis, and a tab handover is a rung the vocabulary names for it.
+                            //
+                            // `Enter`, and that is a reversal of what this swap used to say. The
+                            // `Quick`/`standard` pair it carried argued shorter-than-the-selector so
+                            // the body would not still be resolving after the control it answers had
+                            // landed; `docs/motion.md`'s `Scene` bullet had already answered that in
+                            // prose — "Nor is this rung for route or tab handovers: those are
+                            // `Enter` on both clients that have them" — and `Enter` keeps the
+                            // ordering that argument was about (200 ms of body against the
+                            // selector's own spring) while buying the one thing the old shape could
+                            // not express at all, which is that web's fade is TWO curves. The length
+                            // is named here, where the transaction is opened; the curves live
+                            // per-arm on the two `.transition`s above, exactly as this file already
+                            // argues for the splash. Android runs the same pairing.
+                            //
+                            // What used to hold the create-task hand-off together here was the
+                            // length itself: `presentPendingRootCreateTaskIfReady` waits 180 ms and
+                            // a 150 ms fade finished inside that, so a deep link that switched tab
+                            // and then asked for a sheet found one feed on screen. `Enter` is 200
+                            // and is not inside it, so the hand-off no longer leans on a sleep —
+                            // both feeds are handed the same request id only while ONE of them is
+                            // the selected tab, and the departing copy is handed the `0` sentinel
+                            // its own `.onChange` guard already refuses. See the two
+                            // `createTaskRequestID:` lines above.
+                            //
+                            // The floating controls are in the transaction too, which crosses their
+                            // accent over with the body instead of snapping it; the pill is a
+                            // `UISegmentedControl`, so its own indicator stays on UIKit's timing
+                            // rather than this one. Reduce Motion passes no animation at all: the
+                            // swap cuts to the arriving feed finished rather than holding it
+                            // half-faded (`docs/motion.md`'s fifth idiom rule), and because the
+                            // departing copy is only *raised* for the length of a transition that
+                            // does not play, it is gone in the frame the tab changes rather than
+                            // left opaque over the feed the user just asked for.
+                            .animation(
+                                tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter)),
+                                value: rootFeedTab
+                            )
+                            // The dock and the create button used to be nothing but the `if`
+                            // above: expanding the search field took them off the screen in the
+                            // frame the field grew into, leaving a hole where the chrome had
+                            // been and then putting the chrome back in it. The transition on the
+                            // controls is inert without a transaction, and this is that one.
+                            //
+                            // Travel, so Emphasis by the geometry rule — and Settle is the rung
+                            // spelled as a spring, the token whose own doc string names a dock
+                            // and a bar. One spec for both directions: the exit is the enter
+                            // played backwards, and a length of its own would read as two
+                            // gestures rather than one control getting out of the way. The first
+                            // idiom rule only forbids an exit that OUTLASTS its arrival, and
+                            // these cannot. Android drives the same two controls off the same
+                            // spring; web, having no spring runtime, spells it as the Gesture
+                            // easing on the Emphasis rung.
+                            //
+                            // Its own `.animation` rather than a second value on the one above,
+                            // because a tab swap and the chrome standing down are different
+                            // events that happen to share a container — folding them together
+                            // would put the dock's departure on the tab handover's clock.
+                            // Reduce Motion passes nil, so the controls are taken away and put
+                            // back finished (`docs/motion.md`'s fifth idiom rule).
+                            .animation(
+                                tdayAnimation(TdayMotion.settle),
+                                value: rootControlsVisible
+                            )
+                            // The other way these controls come and go: `isWorkspaceAvailable` in
+                            // the `if` above, which the unlock flips at the same moment as the
+                            // `showOnboardingOverlay` further down. That one opens a transaction
+                            // over this whole subtree, and a transaction is all a `.transition`
+                            // needs — so without this line the move above would ALSO play the
+                            // lock and unlock, travelling the dock and the button up from under
+                            // the bottom edge on the Quick rung, in the one handover where
+                            // nothing else on the screen moves at all.
+                            //
+                            // Handing that value no animation is how an insertion says it has no
+                            // before. Android says it in its own dialect: `RootFeedContent` is
+                            // composed fresh inside the arriving half of the lock Crossfade, and
+                            // `AnimatedVisibility` plays no enter for a `visible` that was
+                            // already true on its first composition, so the dock is simply drawn
+                            // in its slot while the wizard hands over above it. What fades on
+                            // either client is the wizard, not the chrome underneath it.
+                            //
+                            // It also settles a split this file already had: an unlock whose
+                            // version check is blocking leaves `showOnboardingOverlay` false on
+                            // both sides, so that unlock opened no transaction and the chrome
+                            // appeared finished, while an ordinary one animated it. The same
+                            // event cannot mean two things depending on a version number.
+                            .animation(nil, value: showOnboardingOverlay)
+                        }
+                        .blur(radius: showOnboardingOverlay ? 6 : 0)
+                        .scaleEffect(showOnboardingOverlay ? 0.992 : 1)
+                        .navigationBarBackButtonHidden(true)
+                        .toolbar(.hidden, for: .navigationBar)
+                        .navigationDestination(for: AppRoute.self) { route in
+                            // One site covers every push. `tdayZoomDestination` reads the route's
+                            // own source id, so the home tiles that publish one grow into their
+                            // screens and everything else falls through to the stock push without a
+                            // list here to keep in step with the one in `ZoomNavigation.swift`.
+                            destinationView(for: route)
+                                .tdayZoomDestination(route)
+                        }
+                        .onChange(of: appViewModel.navigationPath) { _, path in
+                            normalizeRootNavigationPath(path)
+                        }
+                        .onChange(of: appViewModel.offlineNoticeID) { _, _ in
+                            showOfflineToast()
+                        }
+                        .onChange(of: appViewModel.isOffline) { wasOffline, isOffline in
+                            if wasOffline && !isOffline {
+                                showBackOnlineToast()
+                            }
+                        }
+                        .overlay {
+                            if !appViewModel.isWorkspaceAvailable {
+                                let isVersionBlocking = appViewModel.versionCheckResult != .compatible
+
+                                if appViewModel.pendingApproval {
+                                    PendingApprovalView(
+                                        username: appViewModel.pendingApprovalUsername,
+                                        isChecking: appViewModel.isCheckingApproval,
+                                        onCheckStatus: {
+                                            await appViewModel.checkPendingApproval()
+                                        },
+                                        onUseDifferentAccount: {
+                                            authViewModel.clearStatus()
+                                            appViewModel.cancelPendingApproval()
+                                        }
+                                    )
+                                } else if isVersionBlocking {
+                                    UpdateRequiredView(
+                                        versionCheckResult: appViewModel.versionCheckResult,
+                                        onRetry: {
+                                            Task { await appViewModel.recheckVersion() }
+                                        }
+                                    )
+                                } else {
+                                    OnboardingWizardOverlay(
+                                        initialServerURL: appViewModel.serverURL,
+                                        serverErrorMessage: appViewModel.error,
+                                        serverCanResetTrust: appViewModel.canResetServerTrust,
+                                        pendingCertificateApproval: appViewModel.pendingCertificateApproval,
+                                        pendingApprovalMessage: appViewModel.pendingApprovalMessage,
+                                        authViewModel: authViewModel,
+                                        systemCredentialService: container.systemCredentialService,
+                                        onConnectServer: { rawURL in
+                                            await appViewModel.connectServer(rawURL: rawURL)
+                                        },
+                                        onResetServerTrust: { rawURL in
+                                            await appViewModel.resetTrustedServer(rawURL: rawURL)
+                                        },
+                                        onApproveCertificate: {
+                                            await appViewModel.approveServerCertificate()
+                                        },
+                                        onDismissCertificate: {
+                                            appViewModel.dismissCertificateApproval()
+                                        },
+                                        onLogin: { username, password, source in
+                                            let success = await authViewModel.login(username: username, password: password, source: source)
+                                            if success {
+                                                await appViewModel.refreshSession()
+                                            } else if authViewModel.pendingApproval {
+                                                appViewModel.enterPendingApproval(username: username, password: password)
+                                            }
+                                            return success
+                                        },
+                                        onRegister: { firstName, username, password, securityAnswers in
+                                            let success = await authViewModel.register(firstName: firstName, lastName: "", username: username, password: password, securityAnswers: securityAnswers)
+                                            if success {
+                                                if authViewModel.pendingApproval {
+                                                    appViewModel.enterPendingApproval(username: username, password: password)
+                                                } else {
+                                                    await appViewModel.refreshSession()
+                                                }
+                                            }
+                                            return success
+                                        },
+                                        onLoadSecurityQuestions: {
+                                            await authViewModel.loadAllSecurityQuestions()
+                                        },
+                                        onUseLocalMode: {
+                                            authViewModel.clearStatus()
+                                            appViewModel.clearPendingApprovalNotice()
+                                            await appViewModel.useLocalMode()
+                                        },
+                                        onClearAuthStatus: {
+                                            authViewModel.clearStatus()
+                                            appViewModel.clearPendingApprovalNotice()
+                                        }
+                                    )
+                                    .transition(.opacity)
+                                }
+                            }
+
+                            if appViewModel.authenticated && !appViewModel.isLocalMode && appViewModel.versionCheckResult != .compatible {
                                 UpdateRequiredView(
                                     versionCheckResult: appViewModel.versionCheckResult,
                                     onRetry: {
                                         Task { await appViewModel.recheckVersion() }
                                     }
                                 )
-                            } else {
-                                OnboardingWizardOverlay(
-                                    initialServerURL: appViewModel.serverURL,
-                                    serverErrorMessage: appViewModel.error,
-                                    serverCanResetTrust: appViewModel.canResetServerTrust,
-                                    pendingCertificateApproval: appViewModel.pendingCertificateApproval,
-                                    pendingApprovalMessage: appViewModel.pendingApprovalMessage,
+                            }
+
+                            if appViewModel.authenticated,
+                               !appViewModel.isLocalMode,
+                               appViewModel.versionCheckResult == .compatible,
+                               appViewModel.user?.requireSecurityQuestions == true {
+                                SecurityQuestionsGateView(
                                     authViewModel: authViewModel,
-                                    systemCredentialService: container.systemCredentialService,
-                                    onConnectServer: { rawURL in
-                                        await appViewModel.connectServer(rawURL: rawURL)
-                                    },
-                                    onResetServerTrust: { rawURL in
-                                        await appViewModel.resetTrustedServer(rawURL: rawURL)
-                                    },
-                                    onApproveCertificate: {
-                                        await appViewModel.approveServerCertificate()
-                                    },
-                                    onDismissCertificate: {
-                                        appViewModel.dismissCertificateApproval()
-                                    },
-                                    onLogin: { username, password, source in
-                                        let success = await authViewModel.login(username: username, password: password, source: source)
-                                        if success {
-                                            await appViewModel.refreshSession()
-                                        } else if authViewModel.pendingApproval {
-                                            appViewModel.enterPendingApproval(username: username, password: password)
-                                        }
-                                        return success
-                                    },
-                                    onRegister: { firstName, username, password, securityAnswers in
-                                        let success = await authViewModel.register(firstName: firstName, lastName: "", username: username, password: password, securityAnswers: securityAnswers)
-                                        if success {
-                                            if authViewModel.pendingApproval {
-                                                appViewModel.enterPendingApproval(username: username, password: password)
-                                            } else {
-                                                await appViewModel.refreshSession()
-                                            }
-                                        }
-                                        return success
-                                    },
-                                    onLoadSecurityQuestions: {
-                                        await authViewModel.loadAllSecurityQuestions()
-                                    },
-                                    onUseLocalMode: {
-                                        authViewModel.clearStatus()
-                                        appViewModel.clearPendingApprovalNotice()
-                                        await appViewModel.useLocalMode()
-                                    },
-                                    onClearAuthStatus: {
-                                        authViewModel.clearStatus()
-                                        appViewModel.clearPendingApprovalNotice()
+                                    onSaved: {
+                                        await appViewModel.refreshSession()
                                     }
                                 )
-                                .transition(.opacity)
                             }
                         }
-
-                        if appViewModel.authenticated && !appViewModel.isLocalMode && appViewModel.versionCheckResult != .compatible {
-                            UpdateRequiredView(
-                                versionCheckResult: appViewModel.versionCheckResult,
-                                onRetry: {
-                                    Task { await appViewModel.recheckVersion() }
-                                }
-                            )
-                        }
-
-                        if appViewModel.authenticated,
-                           !appViewModel.isLocalMode,
-                           appViewModel.versionCheckResult == .compatible,
-                           appViewModel.user?.requireSecurityQuestions == true {
-                            SecurityQuestionsGateView(
-                                authViewModel: authViewModel,
-                                onSaved: {
-                                    await appViewModel.refreshSession()
-                                }
-                            )
-                        }
-                    }
-                    // Locking and unlocking the app is one event with several surfaces in
-                    // it: the app behind goes out of focus and shrinks a thousandth, the
-                    // wizard covers it, and the floating controls that only exist for a
-                    // real workspace come and go underneath. The blur and the scale were
-                    // already animated, on a 220 ms of their own; the wizard carried no
-                    // `.transition` at all, so it cut in over a backdrop that was still
-                    // resolving. They need one transaction between them, and a transaction
-                    // reaches a `.transition` only from a modifier applied OUTSIDE the
-                    // `.overlay` that inserts it — which is why this sits below the overlay
-                    // rather than beside the blur it also drives. Absorbing that 220 is the
-                    // point: three surfaces of one event cannot keep separate clocks, and
-                    // the odd duration was never in the vocabulary to be kept. The wizard
-                    // is drawn where it will stay and the controls are put back in their
-                    // slot finished, so nothing in the handover travels; the 0.992 is the
-                    // blur's other half and not a geometry change — eight thousandths is a
-                    // focus cue, too small to read as a move, and it answers to the rung
-                    // the blur it accompanies is on. Those controls carry a move of their
-                    // own for when the search field takes their row, and they are held out
-                    // of this transaction (`.animation(nil, value:)` above) so it cannot
-                    // drive that move through an event nothing else moves in. So by the
-                    // geometry rule this is not Emphasis, and a whole-screen handover is
-                    // the Quick rung the vocabulary names for it. It stays on Quick while the
-                    // tab swap above has moved to `Enter`, and the two are different events:
-                    // that swap took up web's route fade, where the two-curve pairing IS the
-                    // read and the length is half of it, while this is a lock resolving over
-                    // a backdrop — one crossfade, no departing half, nothing for a longer
-                    // clock to serve. Standard is the curve because a crossfade runs
-                    // both halves off one clock and neither Enter nor Exit describes that,
-                    // and one animation covers both directions because the way in and the
-                    // way out are the same handover reversed. Android times the same moment
-                    // on this rung and curve; its third surface is a crossfade rather than
-                    // a fade-in, because it draws an inert placeholder feed under the
-                    // wizard where this one draws the real screens, and it has no scale
-                    // because its backdrop cue is a 14 dp blur that carries the focus
-                    // change on its own. Reduce Motion passes no animation: the app is
-                    // drawn unlocked and in focus, finished, rather than held mid-blur
-                    // (`docs/motion.md`'s fifth idiom rule).
-                    .animation(
-                        tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)),
-                        value: showOnboardingOverlay
-                    )
-                }
-                // Above the stack, so both ends read the same namespace: the root feed's
-                // tiles inside it, and the destinations `.navigationDestination` builds.
-                .environment(\.tdayZoomNamespace, zoomNamespace)
-                .navigationInteractivePopGesture()
-                // The snackbar overlays the NavigationStack itself, not the
-                // stack's root content: toasts scheduled while a destination
-                // is pushed (deleting a list or task from a pushed screen)
-                // must stay visible across pushes and pops. Attached to the
-                // root content they render into a covered view and never
-                // appear after navigating back.
-                .overlay(alignment: .bottom) {
-                    if let content = container.snackbarManager.content {
-                        AppSnackbar(content: content) {
-                            container.snackbarManager.dismiss()
-                        }
-                        .transition(
-                            tdayAnimation.transition(
-                                .move(edge: .bottom).combined(with: .opacity),
-                                reduced: .opacity
-                            )
+                        // Locking and unlocking the app is one event with several surfaces in
+                        // it: the app behind goes out of focus and shrinks a thousandth, the
+                        // wizard covers it, and the floating controls that only exist for a
+                        // real workspace come and go underneath. The blur and the scale were
+                        // already animated, on a 220 ms of their own; the wizard carried no
+                        // `.transition` at all, so it cut in over a backdrop that was still
+                        // resolving. They need one transaction between them, and a transaction
+                        // reaches a `.transition` only from a modifier applied OUTSIDE the
+                        // `.overlay` that inserts it — which is why this sits below the overlay
+                        // rather than beside the blur it also drives. Absorbing that 220 is the
+                        // point: three surfaces of one event cannot keep separate clocks, and
+                        // the odd duration was never in the vocabulary to be kept. The wizard
+                        // is drawn where it will stay and the controls are put back in their
+                        // slot finished, so nothing in the handover travels; the 0.992 is the
+                        // blur's other half and not a geometry change — eight thousandths is a
+                        // focus cue, too small to read as a move, and it answers to the rung
+                        // the blur it accompanies is on. Those controls carry a move of their
+                        // own for when the search field takes their row, and they are held out
+                        // of this transaction (`.animation(nil, value:)` above) so it cannot
+                        // drive that move through an event nothing else moves in. So by the
+                        // geometry rule this is not Emphasis, and a whole-screen handover is
+                        // the Quick rung the vocabulary names for it. It stays on Quick while the
+                        // tab swap above has moved to `Enter`, and the two are different events:
+                        // that swap took up web's route fade, where the two-curve pairing IS the
+                        // read and the length is half of it, while this is a lock resolving over
+                        // a backdrop — one crossfade, no departing half, nothing for a longer
+                        // clock to serve. Standard is the curve because a crossfade runs
+                        // both halves off one clock and neither Enter nor Exit describes that,
+                        // and one animation covers both directions because the way in and the
+                        // way out are the same handover reversed. Android times the same moment
+                        // on this rung and curve; its third surface is a crossfade rather than
+                        // a fade-in, because it draws an inert placeholder feed under the
+                        // wizard where this one draws the real screens, and it has no scale
+                        // because its backdrop cue is a 14 dp blur that carries the focus
+                        // change on its own. Reduce Motion passes no animation: the app is
+                        // drawn unlocked and in focus, finished, rather than held mid-blur
+                        // (`docs/motion.md`'s fifth idiom rule).
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)),
+                            value: showOnboardingOverlay
                         )
                     }
+                    // Above the stack, so both ends read the same namespace: the root feed's
+                    // tiles inside it, and the destinations `.navigationDestination` builds.
+                    .environment(\.tdayZoomNamespace, zoomNamespace)
+                    .navigationInteractivePopGesture()
                 }
-                // `.snappy(duration: 0.3)` was SwiftUI's own preset — `spring(duration:
-                // 0.3, bounce: 0.15)` — and the Snappy token is `response: 0.28,
-                // dampingFraction: 0.86`, the same bounce and the same perceptual length
-                // to within a frame. The literal was approximating this token, so naming
-                // it is not a retiming. What the site gained in 35a was the gate.
-                //
-                // 35a refused the whole thing, slide and fade together, and that was the
-                // wrong half of the judgement to make here. A toast is the one surface
-                // in this app with nothing around it to explain its arrival: no row
-                // closes over it, no scrim dims for it, and it carries an Undo the user
-                // has a few seconds to reach. Cut in and cut out, it reads as the screen
-                // glitching, and a user who did not happen to be looking at the bottom
-                // edge never learns it was there. So the travel goes — that is the
-                // amplitude, a full toast height up from off the screen — and the
-                // crossfade stays, on Enter, the rung for one element arriving with
-                // nothing arguing for another length. The finished state is still drawn
-                // either way, which is what the fifth idiom rule asks; what the fade
-                // adds is that the user can tell it apart from a redraw.
-                .animation(
-                    tdayAnimation(
-                        TdayMotion.snappy,
-                        reduced: TdayMotion.standard(duration: TdayMotion.Durations.enter)
-                    ),
-                    value: container.snackbarManager.content?.id
-                )
                 // The half that arrives, on `Enter` — the first screen settles in rather
                 // than stopping. Paired with the splash's `Exit` above and played in the
                 // one transaction below them both.
@@ -1108,9 +1095,12 @@ struct AppRootView: View {
 
     private var rootFloatingControls: some View {
         HStack(alignment: .bottom) {
-            RootFeedDock(
+            // The tab and the accent are still read here, in this body, so they stay inside
+            // the `ZStack`'s `.animation(_:value: rootFeedTab)` transaction and the accent
+            // keeps crossing over with the feed. Only the fold goes through the slot.
+            RootDockSlot(
+                chrome: rootChrome,
                 activeTab: rootFeedTab,
-                collapsed: rootDockCollapsed,
                 accentColor: rootCreateTaskFillColor,
                 onSelect: handleRootFeedTabSelection
             )
@@ -1275,6 +1265,116 @@ private struct ListWidgetSetupSheet: View {
     }
 }
 
+/// The home dock's fold, boxed so the one view that draws it is the one view that depends on it.
+///
+/// The same shape as `RootFeedHeaderScrollState`, for the same reason: the value is written from
+/// inside UIScrollView's contentOffset setter while the feed scrolls, and `AppRootView` — the view
+/// that owns it — has a body that rebuilds the active root feed and every pushed screen. Held there as
+/// plain `@State` and read in that body, each fold crossing re-ran all of it mid-scroll. Held here,
+/// only `RootDockSlot` reads `dockCollapsed`, so the crossing invalidates the dock and nothing else.
+@MainActor
+@Observable
+private final class RootChromeState {
+    var dockCollapsed = false
+}
+
+/// `RootFeedDock`, reading its fold out of `RootChromeState` in a body of its own.
+///
+/// Everything else the dock is handed — the tab, the accent, the selection handler — is still
+/// computed in `AppRootView.body` and passed down, so a tab swap still reaches the dock inside the
+/// `ZStack`'s `.animation(_:value: rootFeedTab)` transaction and the accent still crosses over with
+/// the feed. The fold never rode an `AppRootView` transaction: the dock animates it itself, on its
+/// own `.animation(_:value: isExpanded)` and its own Reduce Motion fallback, which this leaves as
+/// it was.
+private struct RootDockSlot: View {
+    let chrome: RootChromeState
+    let activeTab: RootFeedTab
+    let accentColor: Color
+    let onSelect: (RootFeedTab) -> Void
+
+    var body: some View {
+        RootFeedDock(
+            activeTab: activeTab,
+            collapsed: chrome.dockCollapsed,
+            accentColor: accentColor,
+            onSelect: onSelect
+        )
+    }
+}
+
+/// Hangs the toast over whatever it wraps — in practice the root `NavigationStack` — and is the only
+/// view whose body reads `SnackbarManager.content`.
+///
+/// `content` is a stored value built by `AppRootView.body`. When a toast is shown or dismissed,
+/// Observation re-runs this body alone and `content` is handed back unchanged, so the stack, the
+/// root feed and every pushed destination are not rebuilt; read in `AppRootView.body` directly, as
+/// it was, every toast (one per check-off and delete, plus its own dismissal) re-ran all of them in
+/// the frame the ticked row started collapsing.
+private struct AppSnackbarHost<Content: View>: View {
+    let snackbarManager: SnackbarManager
+    @ViewBuilder let content: Content
+
+    /// Resolved against the environment this host is placed in: inside `AppRootView`'s body, under
+    /// the provider `tdayAppTheme` installs there with the same `motionPreference` the scene's has.
+    @Environment(\.tdayAnimation) private var tdayAnimation
+
+    var body: some View {
+        content
+            // The snackbar overlays the NavigationStack itself, not the
+            // stack's root content: toasts scheduled while a destination
+            // is pushed (deleting a list or task from a pushed screen)
+            // must stay visible across pushes and pops. Attached to the
+            // root content they render into a covered view and never
+            // appear after navigating back.
+            .overlay(alignment: .bottom) {
+                if let toast = snackbarManager.content {
+                    // Dismissal names the toast it closes. A replacement keeps this view's
+                    // identity, so the replaced toast's timer and closures can still fire
+                    // for a moment after `show` swapped in the new one; captured per
+                    // render, the id turns those late calls into no-ops instead of
+                    // removing the toast that just arrived.
+                    AppSnackbar(content: toast) {
+                        snackbarManager.dismiss(id: toast.id)
+                    }
+                    .transition(
+                        tdayAnimation.transition(
+                            .move(edge: .bottom).combined(with: .opacity),
+                            reduced: .opacity
+                        )
+                    )
+                }
+            }
+            // `.snappy(duration: 0.3)` was SwiftUI's own preset — `spring(duration:
+            // 0.3, bounce: 0.15)` — and the Snappy token is `response: 0.28,
+            // dampingFraction: 0.86`, the same bounce and the same perceptual length
+            // to within a frame. The literal was approximating this token, so naming
+            // it is not a retiming. What the site gained in 35a was the gate.
+            //
+            // 35a refused the whole thing, slide and fade together, and that was the
+            // wrong half of the judgement to make here. A toast is the one surface
+            // in this app with nothing around it to explain its arrival: no row
+            // closes over it, no scrim dims for it, and it carries an Undo the user
+            // has a few seconds to reach. Cut in and cut out, it reads as the screen
+            // glitching, and a user who did not happen to be looking at the bottom
+            // edge never learns it was there. So the travel goes — that is the
+            // amplitude, a full toast height up from off the screen — and the
+            // crossfade stays, on Enter, the rung for one element arriving with
+            // nothing arguing for another length. The finished state is still drawn
+            // either way, which is what the fifth idiom rule asks; what the fade
+            // adds is that the user can tell it apart from a redraw.
+            //
+            // Still applied over the whole wrapped stack, as it was on `AppRootView`, so
+            // anything else that changes in the same transaction animates exactly as before.
+            .animation(
+                tdayAnimation(
+                    TdayMotion.snappy,
+                    reduced: TdayMotion.standard(duration: TdayMotion.Durations.enter)
+                ),
+                value: snackbarManager.content?.id
+            )
+    }
+}
+
 private struct AppSnackbar: View {
     let content: SnackbarManager.Content
     let onDismiss: () -> Void
@@ -1373,6 +1473,12 @@ private struct AppSnackbar: View {
         .task(id: content.id) {
             dragOffset = 0
             let seconds: UInt64 = content.action == nil ? 4 : 8
+            // A cancelled timer still dismisses, but by id (see `AppSnackbarHost`), so it can
+            // only close the toast it was started for. `show` replacing this toast changes the
+            // task id and cancels this task; its `onDismiss` names the replaced toast, so the
+            // newcomer stays. A view torn down under its toast (the language-change remount)
+            // still clears it, as it always did — so an Undo toast never outlives the 8.5 s
+            // commit in `UndoableDeleteScheduler` behind a restarted timer.
             try? await Task.sleep(nanoseconds: seconds * 1_000_000_000)
             onDismiss()
         }
