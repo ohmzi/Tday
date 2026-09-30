@@ -1229,8 +1229,18 @@ fun TodoListScreen( // skipcq: KT-R1006
             !suppressInitialTodayTimeline &&
             !scopedSearchActive &&
             uiState.completedTodayCount > 0
+    // The payoff answers to a CHANGE, never to arrival. `LaunchedEffect(isDayDone)` runs on
+    // the FIRST composition too, so opening a Today that was already finished an hour ago
+    // replayed a celebration the user had already been given — a buzz earned by nothing.
+    // Seeding `previousDayDone` from the current value makes that first pass a no-op, while
+    // the one case the payoff exists for — the last task going out under the user's thumb —
+    // is still a false->true flip observed while composed. iOS says the same thing through
+    // `showsDayDonePayoff` and an `.onChange(of:)` with no `initial:`.
+    var previousDayDone by remember { mutableStateOf(isDayDone) }
     LaunchedEffect(isDayDone) {
-        if (isDayDone) {
+        val justFinished = isDayDone && !previousDayDone
+        previousDayDone = isDayDone
+        if (justFinished) {
             TdayHaptics.completion(view)
         }
     }

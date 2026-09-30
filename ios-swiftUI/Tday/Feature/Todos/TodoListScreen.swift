@@ -1369,6 +1369,34 @@ struct TodoListScreen: View {
         hasNoPendingItems && !isEarlierSectionExpanded && !suppressEmptyStateForEarlierHandoff
     }
 
+    /// Whether the Day Done payoff — the completion haptic and the chime — is owed
+    /// right now.
+    ///
+    /// Split out of the illustration deliberately, and the split is the whole fix. The
+    /// payoff used to hang off the illustration's own `.onAppear`, which fires whenever
+    /// that view is INSERTED — and a view is inserted just as readily by arriving at a
+    /// Today that was already finished an hour ago as by finishing the last task while
+    /// looking at it. So opening the screen replayed a celebration the user had already
+    /// been given, which is the reported defect: a chime on open, earned by nothing.
+    ///
+    /// As a condition it can instead be watched for a CHANGE, and `.onChange(of:)`
+    /// without `initial:` does not fire on its first evaluation. Arriving already-done is
+    /// therefore silent, and the one case the payoff exists for — the last task going out
+    /// under the user's thumb — still fires, because that is a false→true transition
+    /// observed while the screen is mounted.
+    ///
+    /// The four leading terms mirror the illustration's own call site rather than
+    /// re-deriving it, so the payoff can never fire for a state the illustration is not
+    /// actually in.
+    private var showsDayDonePayoff: Bool {
+        showsEmptyStateIllustration
+            && pendingScopeAnswer == .empty
+            && !isFloaterTaskHomeScreen
+            && !isSearchingList
+            && viewModel.mode == .today
+            && viewModel.completedTodayCount > 0
+    }
+
     /// This screen's half of the celebration gate: gather the inputs, and hand
     /// the decision to `shouldCelebrateEmptyState`, which is where it is argued
     /// and where it is tested. Nothing is decided here on purpose — a `View`
@@ -1988,6 +2016,18 @@ struct TodoListScreen: View {
             closeFloaterTaskHomeSearch()
             showingCreateTask = true
         }
+        .onChange(of: showsDayDonePayoff) { _, owed in
+            guard owed else { return }
+            // Earlier folding shut hands the illustration back too (see
+            // `toggleEarlierSectionWithIllustrationHandoff`), and that return is not a
+            // fresh completion — it must not replay the payoff each time.
+            guard !suppressDayDoneFeedbackOnReturn else {
+                suppressDayDoneFeedbackOnReturn = false
+                return
+            }
+            HapticManager.completion()
+            SoundManager.taskCompleted()
+        }
         .onAppear {
             isScreenVisible = true
             onRootControlsVisibleChange(!(isFloaterTaskHomeScreen && floaterTaskHomeSearchExpanded))
@@ -2197,19 +2237,6 @@ struct TodoListScreen: View {
                 description: date.formatted(.dateTime.weekday(.wide).day().month(.wide)),
                 celebrate: celebratesEmptyState
             )
-            .onAppear {
-                // Earlier folding shut hands the illustration
-                // back too (see
-                // `toggleEarlierSectionWithIllustrationHandoff`),
-                // and that return is not a fresh completion —
-                // it must not replay the payoff each time.
-                guard !suppressDayDoneFeedbackOnReturn else {
-                    suppressDayDoneFeedbackOnReturn = false
-                    return
-                }
-                HapticManager.completion()
-                SoundManager.taskCompleted()
-            }
             .transition(emptyStateIllustrationTransition)
         } else {
             TdayEmptyState(
