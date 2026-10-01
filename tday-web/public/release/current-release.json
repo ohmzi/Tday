@@ -1,11 +1,11 @@
 {
-  "version": "0.7.48",
-  "publishedAt": "2026-10-01T05:44:48-04:00",
+  "version": "0.7.49",
+  "publishedAt": "2026-10-01T19:14:15-04:00",
   "notes": [
-    "Upgrade Gradle, Kotlin and backend/shared dependencies",
-    "Upgrade tday-web to zod 4",
-    "Upgrade Hilt, Room, SQLCipher, WorkManager and test libraries on Android"
+    "Fix the Kotlin DeepSource findings the cleanup introduced",
+    "Fix the four DeepSource findings the cleanup introduced",
+    "Fix blank Morning Sweep trash icon and translate the offline banner"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.48",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.47..v0.7.48"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.49",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.48..v0.7.49"
 }
