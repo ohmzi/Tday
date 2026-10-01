@@ -17,11 +17,6 @@ private enum ScheduledTaskHomeMetrics {
     static let tileWatermarkTrailingInset: CGFloat = 22
 }
 
-private func isScheduledTaskHomeDaytime(_ date: Date) -> Bool {
-    let hour = Calendar.current.component(.hour, from: date)
-    return (6..<18).contains(hour)
-}
-
 private func normalizedScheduledTaskHomeSearchQuery(_ value: String) -> String {
     value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
 }
@@ -222,7 +217,7 @@ struct ScheduledTaskHomeScreen: View {
 
             ZStack(alignment: .topLeading) {
                 TimelineView(.periodic(from: .now, by: 60)) { context in
-                    let daytime = isScheduledTaskHomeDaytime(context.date)
+                    let daytime = TdayTimeOfDay.isDaytime(context.date)
                     EmptyTaskWatermark(
                         systemName: daytime ? "sun.max.fill" : "moon.stars.fill",
                         accentColor: Color.tdayTodayBlue
