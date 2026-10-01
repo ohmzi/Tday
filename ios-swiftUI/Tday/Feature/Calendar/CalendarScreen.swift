@@ -2706,8 +2706,7 @@ private struct CalendarElasticTopBar: View {
                             CalendarTopBarButton(
                                 systemName: "magnifyingglass",
                                 assetName: "NavSearch",
-                                chrome: .outlined,
-                                tint: accentColor,
+                                chrome: .filled,
                                 action: onSearchOpen
                             )
                             .accessibilityLabel(Text(L("Search")))
@@ -2725,7 +2724,7 @@ private struct CalendarElasticTopBar: View {
                                 } else {
                                     CalendarTopBarButton(
                                         systemName: action.systemName,
-                                        chrome: action.usesCircularChrome ? .outlined : .plain,
+                                        chrome: action.usesCircularChrome ? .filled : .plain,
                                         tint: action.tint,
                                         action: action.action
                                     )
@@ -2957,7 +2956,6 @@ private struct CalendarTopBarButton: View {
     enum Chrome {
         case plain
         case filled
-        case outlined
     }
 
     let systemName: String
@@ -3010,26 +3008,24 @@ private struct CalendarTopBarButton: View {
                 .frame(width: TodoTimelineMetrics.topBarButtonFrame, height: TodoTimelineMetrics.topBarButtonFrame)
                 .background {
                     if chrome == .filled {
+                        // The material `TimelineTopBarButton` gives every other
+                        // screen's bar circle: fill, hairline and the shared lift.
                         Circle()
                             .fill(colors.surface)
-                    } else if chrome == .outlined {
-                        Circle()
-                            .fill(outlinedFillColor)
                             .overlay {
                                 Circle()
-                                    .stroke(outlinedBorderColor, lineWidth: 1)
+                                    .stroke(
+                                        colors.onSurface.opacity(
+                                            RootFeedHeroHeaderMetrics.barControlBorderOpacity
+                                        ),
+                                        lineWidth: 1
+                                    )
                             }
                     }
                 }
                 .contentShape(Circle())
         }
-        .buttonStyle(
-            TdayPressButtonStyle(
-                shadowColor: .black,
-                pressedShadowOpacity: chrome == .filled ? 0.09 : 0,
-                normalShadowOpacity: chrome == .filled ? 0.15 : 0
-            )
-        )
+        .buttonStyle(TdayToolbarButtonStyle(shadowsEnabled: chrome == .filled))
         .foregroundStyle(foregroundColor)
     }
 
@@ -3041,25 +3037,9 @@ private struct CalendarTopBarButton: View {
         switch chrome {
         case .filled:
             return colors.onSurface
-        case .outlined:
-            return tint ?? colors.onSurface
         case .plain:
             return tint ?? Color.accentColor
         }
-    }
-
-    private var outlinedFillColor: Color {
-        if let tint {
-            return tint.opacity(0.12)
-        }
-        return colors.background
-    }
-
-    private var outlinedBorderColor: Color {
-        if let tint {
-            return tint.opacity(0.48)
-        }
-        return colors.onSurface.opacity(0.2)
     }
 }
 
@@ -3160,13 +3140,10 @@ private struct CalendarTodayActionButton: View {
                     transaction.disablesAnimations = true
                 }
         }
-        .buttonStyle(
-            TdayPressButtonStyle(
-                shadowColor: .black,
-                pressedShadowOpacity: 0,
-                normalShadowOpacity: 0
-            )
-        )
+            // The bar's shared lift, as the search circle beside it wears. The accent
+            // stays on the ink alone — the one coloured thing in the bar — which is
+            // what Android's and web's Today pill do on the same material.
+        .buttonStyle(TdayToolbarButtonStyle())
         .foregroundStyle(tint ?? colors.onSurface)
     }
 
@@ -3191,11 +3168,11 @@ private struct CalendarTodayActionButton: View {
     }
 
     private var fillColor: Color {
-        (tint ?? colors.onSurface).opacity(0.12)
+        colors.surface
     }
 
     private var borderColor: Color {
-        (tint ?? colors.onSurface).opacity(0.48)
+        colors.onSurface.opacity(RootFeedHeroHeaderMetrics.barControlBorderOpacity)
     }
 }
 
