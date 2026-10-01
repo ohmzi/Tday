@@ -347,6 +347,29 @@ struct WidgetConfigurableListEntry: Codable, Equatable {
     let id: String
     let name: String
     let kind: String
+    /// The list's own glyph and colour, as the opaque KEYS the list stores ("work", "TEAL") —
+    /// never a resolved asset name or hex. A key is resolved by the reader, so the widget's
+    /// accent follows a palette or glyph-table revision the next time it renders; a value baked
+    /// in here would be frozen at write time, and nothing re-writes this file until the app's
+    /// cache changes. The resolvers are `tdayLucideListAsset` and `tdayListAccentColorOrNil`
+    /// (`Tday/UI/Theme/TdayListAccent.swift`), which the widget target compiles for this.
+    ///
+    /// Both OPTIONAL, and that is load-bearing twice over. A catalog written before these
+    /// fields existed still decodes — the synthesized decoder reads an absent optional as nil
+    /// — so a widget placed before this update keeps rendering its kind's accent instead of
+    /// going blank until the app next writes. And nil is also the live "this list has no
+    /// colour/glyph of its own" state: the reader falls back to the widget kind's accent rather
+    /// than inventing one.
+    let iconKey: String?
+    let colorKey: String?
+
+    init(id: String, name: String, kind: String, iconKey: String? = nil, colorKey: String? = nil) {
+        self.id = id
+        self.name = name
+        self.kind = kind
+        self.iconKey = iconKey
+        self.colorKey = colorKey
+    }
 }
 
 /// Writer for `WidgetSnapshotFileStore.listsFileName` (R7 configurable widgets): every todo
@@ -356,9 +379,17 @@ struct WidgetConfigurableListEntry: Codable, Equatable {
 /// task snapshots already use, per `WidgetSnapshotFileStore`'s doc comment.
 enum WidgetConfigurableListsStore {
     static func save(from state: OfflineSyncState) {
+        // `iconKey`/`color` go across RAW — not through `tdayResolvedListIconKey`, which would
+        // resolve the name-derived guess here. The guess belongs to the reader: it is display
+        // only (see that function's doc), and a guess written into a file read by another
+        // process is indistinguishable from a choice the user made.
         let entries =
-            state.lists.map { WidgetConfigurableListEntry(id: $0.id, name: $0.name, kind: "todo") } +
-            state.floaterLists.map { WidgetConfigurableListEntry(id: $0.id, name: $0.name, kind: "floater") }
+            state.lists.map {
+                WidgetConfigurableListEntry(id: $0.id, name: $0.name, kind: "todo", iconKey: $0.iconKey, colorKey: $0.color)
+            } +
+            state.floaterLists.map {
+                WidgetConfigurableListEntry(id: $0.id, name: $0.name, kind: "floater", iconKey: $0.iconKey, colorKey: $0.color)
+            }
         guard let data = try? JSONEncoder().encode(entries) else {
             return
         }
