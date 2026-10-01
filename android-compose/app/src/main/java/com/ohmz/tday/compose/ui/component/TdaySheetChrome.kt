@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -442,6 +443,12 @@ fun TdaySheetActionButton(
         },
         label = "tdaySheetActionButtonElevation",
     )
+    // The accent composited onto the control surface, not drawn beside it: the
+    // card casts its elevation shadow from this fill, so it has to stay opaque.
+    // Same 0.20 / 0.10 wash iOS puts under the 0.55 / 0.30 ring.
+    val tintedSurface = accentColor
+        .copy(alpha = if (enabled) 0.20f else 0.10f)
+        .compositeOver(TdaySheetDefaults.controlSurfaceColor())
 
     Card(
         modifier = modifier
@@ -477,7 +484,10 @@ fun TdaySheetActionButton(
         enabled = enabled,
         interactionSource = interactionSource,
         shape = TdaySheetDefaults.ControlShape,
-        colors = CardDefaults.cardColors(containerColor = TdaySheetDefaults.controlSurfaceColor()),
+        colors = CardDefaults.cardColors(
+            containerColor = tintedSurface,
+            disabledContainerColor = tintedSurface,
+        ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = elevation,
             pressedElevation = elevation,

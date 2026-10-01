@@ -32,7 +32,13 @@ export function SheetActionButton({
       aria-disabled={disabled}
       disabled={disabled}
       onClick={onClick}
-      style={{ borderColor: `rgba(${accentRgb}, ${disabled ? 0.3 : 0.6})` }}
+      style={{
+        borderColor: `rgba(${accentRgb}, ${disabled ? 0.3 : 0.6})`,
+        // The accent wash sits on top of `bg-card` as an image layer, so the
+        // card colour underneath stays opaque. Lighter than the ring, as on
+        // iOS and Android (0.20 / 0.10 under a 0.55 / 0.30 ring).
+        backgroundImage: `linear-gradient(rgba(${accentRgb}, ${disabled ? 0.1 : 0.2}), rgba(${accentRgb}, ${disabled ? 0.1 : 0.2}))`,
+      }}
       className={cn(
         "flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-[1.5px] bg-card text-foreground shadow-sm transition-all active:scale-95",
         disabled ? "opacity-55" : "hover:bg-card/80",
