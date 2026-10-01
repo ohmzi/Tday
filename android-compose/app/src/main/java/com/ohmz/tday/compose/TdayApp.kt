@@ -52,6 +52,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -61,7 +62,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -90,6 +91,7 @@ import com.ohmz.tday.compose.core.ui.LocalTdayTileSourceScope
 import com.ohmz.tday.compose.core.ui.SnackbarEvent
 import com.ohmz.tday.compose.core.ui.SnackbarKind
 import com.ohmz.tday.compose.core.ui.TaskSwipeSlot
+import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdayTileDestination
 import com.ohmz.tday.compose.core.ui.TdayTileTransitionLayout
@@ -141,7 +143,7 @@ import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeSource
 import io.sentry.android.navigation.SentryNavigationListener
 
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
@@ -179,6 +181,60 @@ private const val ARG_COMPLETED_SCOPE = "scope"
 // notification and the car surface all speak it.
 private const val CREATE_TARGET_TODAY = "today"
 private const val CREATE_TARGET_FLOATER = "floater"
+
+/**
+ * The nine screens a home tile or a list row opens — Today, Overdue, Scheduled, Priority, All,
+ * Completed, the calendar, a scheduled list and an Anytime list — by the route PATTERN each of
+ * them is registered under. Opening or closing one of them buzzes; see the back-stack observer in
+ * [TdayApp].
+ *
+ * Patterns compared whole, never by prefix: [AppRoute.FloaterTaskHome] is `"floater"` and
+ * [AppRoute.FloaterListTodos] is `"floater/list/{listId}/{listName}"`, so a prefix test would call
+ * the Anytime feed itself a list screen and buzz on a dock tap. `NavDestination.route` holds the
+ * pattern the destination was declared with, which is exactly what `AppRoute.route` holds, so
+ * equality is the whole test — and reading the strings off the route objects means no route
+ * pattern is spelled a second time here to drift from the graph.
+ *
+ * This is the set [TdayTileDestination] wraps in the graph below, i.e. the set
+ * `AppRoute.tileTransitionKey` answers a non-null key for. That `when` is exhaustive over the
+ * sealed class with no `else` and pinned by `TileTransitionKeyTest`, so a tenth tile screen cannot
+ * be added without answering there; adding it here is the other half of the same edit, and iOS's
+ * `AppRoute.isListScreenRoute` is the third.
+ */
+private val LIST_SCREEN_ROUTES: Set<String> = listOf(
+    AppRoute.TodayTodos,
+    AppRoute.OverdueTodos,
+    AppRoute.ScheduledTodos,
+    AppRoute.PriorityTodos,
+    AppRoute.AllTodos,
+    AppRoute.Completed,
+    AppRoute.Calendar,
+    AppRoute.ListTodos,
+    AppRoute.FloaterListTodos,
+).mapTo(mutableSetOf()) { it.route }
+
+/**
+ * How many list screens the back stack holds.
+ *
+ * A count rather than "is the top one a list screen", because a push that is not itself a list
+ * screen must not read as a close: Today opens Morning Sweep over itself and Today is still open
+ * underneath, and the user closed nothing.
+ */
+private fun List<NavBackStackEntry>.listScreenDepth(): Int =
+    count { it.destination.route in LIST_SCREEN_ROUTES }
+
+/**
+ * One bit, shared between the back-stack observer and the one flow that removes a list screen
+ * from the stack while OPENING another: the widget's "+" (see `finishCreateTodayFlow`), which pops
+ * back to `home` — taking whatever list screen was open with it — and then navigates to Today.
+ * Observed naively that is a close followed by an open; it is one open.
+ *
+ * Deliberately a plain holder and not a `MutableState`: it is written from a navigation callback
+ * and read from a coroutine, and nothing should recompose because a bit flipped.
+ */
+private class ListScreenCloseSuppressor {
+    var armed: Boolean = false
+}
 
 // KT-R1006 (cyclomatic complexity, reported at 20) is suppressed on this
 // declaration rather than fixed here. The three tile-zoom exceptions in the
@@ -365,6 +421,53 @@ fun TdayApp( // skipcq: KT-R1006
         isStartupSplashHeld = isStartupSplashHeld,
     )
 
+    // One buzz when a list screen opens, one when it closes — the back stack is the only place
+    // both are observable exactly once. The screens' own composables are not: a `composable { }`
+    // body is disposed on a configuration change and recomposed on every argument change, so a
+    // rotation would read as a close and an arrival, and `onBack` is bypassed entirely by system
+    // back, by the predictive-back edge swipe, and by `navigate { popUpTo }`.
+    //
+    // The view is this window's root. `performHapticFeedback` only needs a view to resolve the
+    // user's haptic setting against, and the screen that is handing over is in the middle of
+    // being replaced, so the stable root is the right one to ask.
+    val hapticView = LocalView.current
+    val listScreenCloseSuppressor = remember { ListScreenCloseSuppressor() }
+    LaunchedEffect(navController, hapticView) {
+        // `null` until the graph exists, and seeded from the first stack that does rather than
+        // from zero. The NavHost is not composed at all while the session splash is held, so this
+        // effect starts before there is any back stack — and the first stack to arrive after that
+        // is whatever Navigation RESTORED, which on a relaunch after process death can already
+        // have a list screen on top. Seeding from zero would buzz "a screen opened" at every cold
+        // launch back into one.
+        var previousDepth: Int? = navController.currentBackStack.value
+            .takeIf { it.isNotEmpty() }
+            ?.listScreenDepth()
+        navController.currentBackStack.collect { stack ->
+            // An empty stack is the absence of a graph, not a screen closing — and it is also the
+            // instant inside `popUpTo(graph.id) { inclusive = true }`, which empties the stack
+            // before putting `home` back. Holding `previousDepth` across it keeps that one
+            // navigation a single close rather than a close and an open.
+            if (stack.isEmpty()) return@collect
+            val depth = stack.listScreenDepth()
+            // Consumed first and unconditionally: the arm is set immediately before the pop it
+            // is about to excuse, so this emission is that pop whatever its shape. Leaving it
+            // set because `StateFlow` happened to conflate the pop and the push into one
+            // emission is how the bit would go on to eat an unrelated close later.
+            val wasClaimedByCreateFlow = listScreenCloseSuppressor.armed
+            listScreenCloseSuppressor.armed = false
+            val wasDepth = previousDepth
+            previousDepth = depth
+            if (wasDepth == null || wasDepth == depth) return@collect
+            // Read live, not off the captured `appUiState`: the session ending is exactly when
+            // this fires wrongly. A 401 drops the workspace and bounces the stack back to the
+            // sign-in overlay, and that is not the user closing a screen — it must not buzz
+            // beside the "session expired" toast.
+            if (!appViewModel.uiState.value.isWorkspaceAvailable) return@collect
+            if (depth < wasDepth && wasClaimedByCreateFlow) return@collect
+            TdayHaptics.screenChange(hapticView)
+        }
+    }
+
     HandleLaunchUpdateToast(
         appUiState = appUiState,
         releaseUiState = releaseUiState,
@@ -384,7 +487,7 @@ fun TdayApp( // skipcq: KT-R1006
 
     TdayTheme(themeMode = appUiState.themeMode) {
         // Blur source for the bottom toast: the whole nav content is captured so the
-        // toast's hazeChild can render a translucent frosted backdrop (matches iOS).
+        // toast's hazeBlur can render a translucent frosted backdrop (matches iOS).
         val hazeState = remember { HazeState() }
         Box(modifier = Modifier.fillMaxSize()) {
             // One provider for every contextual "?" help link (GuideHelpLink);
@@ -433,7 +536,7 @@ fun TdayApp( // skipcq: KT-R1006
                     NavHost(
                         navController = navController,
                         startDestination = AppRoute.Splash.route,
-                        modifier = Modifier.haze(hazeState),
+                        modifier = Modifier.hazeSource(hazeState),
                         // Crossfade, with no slide in it.
                         //
                         // Every screen draws its own toolbar at the same place in the same
@@ -521,6 +624,7 @@ fun TdayApp( // skipcq: KT-R1006
                             isLocalMode = { appUiState.isLocalMode },
                             onChangeRootFeedTab = ::selectRootFeedTab,
                             onRequestFloaterCreateTask = { pendingFloaterTaskHomeCreateTask = true },
+                            onSuppressNextListScreenClose = { listScreenCloseSuppressor.armed = true },
                         )
                         listRoutes(
                             navController = navController,
@@ -687,6 +791,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
     isLocalMode: () -> Boolean,
     onChangeRootFeedTab: (RootFeedTab) -> Unit,
     onRequestFloaterCreateTask: () -> Unit,
+    onSuppressNextListScreenClose: () -> Unit,
 ) {
     composable(
         route = AppRoute.TodayTodos.route,
@@ -717,6 +822,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
         isLocalMode = isLocalMode,
         onChangeRootFeedTab = onChangeRootFeedTab,
         onRequestFloaterCreateTask = onRequestFloaterCreateTask,
+        onSuppressNextListScreenClose = onSuppressNextListScreenClose,
     )
 
     composable(
@@ -827,6 +933,7 @@ private fun NavGraphBuilder.createTodayTodoRoute(
     isLocalMode: () -> Boolean,
     onChangeRootFeedTab: (RootFeedTab) -> Unit,
     onRequestFloaterCreateTask: () -> Unit,
+    onSuppressNextListScreenClose: () -> Unit,
 ) {
     composable(
         route = AppRoute.CreateTodayTodo.route,
@@ -854,6 +961,11 @@ private fun NavGraphBuilder.createTodayTodoRoute(
         } else {
             val finishCreateTodayFlow = {
                 onChangeRootFeedTab(RootFeedTab.SCHEDULED_TASK_HOME)
+                // The pop below unwinds to `home`, which takes with it any list screen the user
+                // had open when the widget's "+" arrived — and the navigate under it then opens
+                // Today. That is one screen opening, not a close followed by an open, so the
+                // close is claimed before it happens (see [ListScreenCloseSuppressor]).
+                onSuppressNextListScreenClose()
                 val returnedToScheduledTaskHome = navController.popBackStack(
                     route = AppRoute.ScheduledTaskHome.route,
                     inclusive = false,

@@ -18,17 +18,19 @@ import com.ohmz.tday.security.FieldEncryption
 import com.ohmz.tday.security.decryptRequired
 import com.ohmz.tday.security.encryptRequired
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.Op
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.or
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.update
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.core.Op
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.core.between
+import org.jetbrains.exposed.v1.core.inList
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.Duration
@@ -468,7 +470,7 @@ class FloaterServiceImpl(
 
     /** Floaters the user can see: their own, plus everything in lists shared with them. */
     private fun visibleFloaters(userId: String, sharedListIds: List<String>): Op<Boolean> =
-        Op.build {
+        run {
             if (sharedListIds.isEmpty()) {
                 Floaters.userID eq userId
             } else {
@@ -481,7 +483,7 @@ class FloaterServiceImpl(
      * they are an EDITOR. Viewers fail closed (0 rows matched).
      */
     private fun mutableFloaters(userId: String, editableListIds: List<String>): Op<Boolean> =
-        Op.build {
+        run {
             if (editableListIds.isEmpty()) {
                 Floaters.userID eq userId
             } else {

@@ -33,7 +33,7 @@ settings:
 packages:
   sentry-cocoa:
     url: https://github.com/getsentry/sentry-cocoa
-    from: 8.45.0
+    from: 9.30.0
 
 targets:
   Tday:
@@ -66,8 +66,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Tday/Tday.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 58
-        MARKETING_VERSION: 0.7.46
+        CURRENT_PROJECT_VERSION: 60
+        MARKETING_VERSION: 0.7.48
         SENTRY_DSN: ""
         SENTRY_TRACES_SAMPLE_RATE: "0.2"
         TARGETED_DEVICE_FAMILY: 1
@@ -82,11 +82,23 @@ targets:
         excludes:
           - Info.plist
       # App files the extension compiles as well: the day-window math, the List widget's setup
-      # picture (the app's setup sheet draws it too) and the raw motion values (the
-      # WidgetCheckHold beat), none of which pulls in anything app-only.
+      # picture (the app's setup sheet draws it too), the raw motion values (the WidgetCheckHold
+      # beat) and the list-accent resolvers — a list-scoped widget draws that list's own glyph
+      # and colour, which means resolving its icon key (including the name-derived guess, hence
+      # the inference rule and its generated table) and its colour key on this side. None of the
+      # five pulls in anything app-only.
       - path: Tday/Core/Widget/TodayWidgetDayWindow.swift
       - path: Tday/Core/Widget/ListWidgetSetupArt.swift
       - path: Tday/UI/Theme/TdayMotionGenerated.swift
+      - path: Tday/UI/Theme/TdayListAccent.swift
+      - path: Tday/UI/Theme/TdayListIconInference.swift
+      - path: Tday/UI/Theme/TdayListIconInferenceGenerated.swift
+    resources:
+      # The app's asset catalogue, so the extension can draw the shared Lucide glyphs.
+      # Without it the widget target has NO resources phase at all and `Image("Lucide…")`
+      # resolves to nothing — which is why the custom-list watermark could not be drawn
+      # from the list's own icon until this was added.
+      - path: Tday/Assets.xcassets
     settings:
       base:
         PRODUCT_NAME: TdayWidget
@@ -96,8 +108,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: TdayWidget/TdayWidget.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 58
-        MARKETING_VERSION: 0.7.46
+        CURRENT_PROJECT_VERSION: 60
+        MARKETING_VERSION: 0.7.48
         TARGETED_DEVICE_FAMILY: 1
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
@@ -118,8 +130,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: TdayShareExtension/TdayShareExtension.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 58
-        MARKETING_VERSION: 0.7.46
+        CURRENT_PROJECT_VERSION: 60
+        MARKETING_VERSION: 0.7.48
         TARGETED_DEVICE_FAMILY: 1
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
@@ -146,8 +158,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: TdayWatch/TdayWatch.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 58
-        MARKETING_VERSION: 0.7.46
+        CURRENT_PROJECT_VERSION: 60
+        MARKETING_VERSION: 0.7.48
         TARGETED_DEVICE_FAMILY: 4
         SKIP_INSTALL: YES
   # watchOS complication showing the remaining-task count on the watch face.
@@ -169,8 +181,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: TdayWatchWidget/TdayWatchWidget.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 58
-        MARKETING_VERSION: 0.7.46
+        CURRENT_PROJECT_VERSION: 60
+        MARKETING_VERSION: 0.7.48
         TARGETED_DEVICE_FAMILY: 4
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES

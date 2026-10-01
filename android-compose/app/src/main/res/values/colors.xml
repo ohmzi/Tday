@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="tday_white">#FFFFFFFF</color>
     <color name="ic_launcher_background">#FFFFFFFF</color>
     <color name="ic_launcher_surface">#FFFFFFFF</color>
     <color name="ic_launcher_outline">#FF387D7E</color>

@@ -17,7 +17,7 @@ async function patchTodo({ ghostTodo }: { ghostTodo: TodoItemType }) {
     instanceDate: ghostTodo.instanceDate,
   });
   if (!parsedObj.success) {
-    console.error(parsedObj.error.errors[0]);
+    console.error(parsedObj.error.issues[0]);
     return;
   }
   const todoId = canonicalTodoId(ghostTodo.id);

@@ -13,10 +13,10 @@ import com.ohmz.tday.db.tables.TodoInstances
 import com.ohmz.tday.shared.model.ImportRequest
 import com.ohmz.tday.shared.model.ShareRole
 import kotlinx.coroutines.runBlocking
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -193,7 +193,7 @@ class QueryShapesTest {
 
     // -- fixtures ----------------------------------------------------------------------------
 
-    private fun Transaction.insertList(id: String, owner: String) {
+    private fun JdbcTransaction.insertList(id: String, owner: String) {
         Lists.insert {
             it[Lists.id] = id
             it[Lists.name] = id
@@ -203,7 +203,7 @@ class QueryShapesTest {
         }
     }
 
-    private fun Transaction.insertFloaterList(id: String, owner: String) {
+    private fun JdbcTransaction.insertFloaterList(id: String, owner: String) {
         FloaterLists.insert {
             it[FloaterLists.id] = id
             it[FloaterLists.name] = id
@@ -213,7 +213,7 @@ class QueryShapesTest {
         }
     }
 
-    private fun Transaction.share(id: String, listId: String, user: String, role: ShareRole) {
+    private fun JdbcTransaction.share(id: String, listId: String, user: String, role: ShareRole) {
         ListShares.insert {
             it[ListShares.id] = id
             it[ListShares.listID] = listId
@@ -224,7 +224,7 @@ class QueryShapesTest {
         }
     }
 
-    private fun Transaction.floaterShare(id: String, listId: String, user: String, role: ShareRole) {
+    private fun JdbcTransaction.floaterShare(id: String, listId: String, user: String, role: ShareRole) {
         FloaterListShares.insert {
             it[FloaterListShares.id] = id
             it[FloaterListShares.listID] = listId
@@ -235,7 +235,7 @@ class QueryShapesTest {
         }
     }
 
-    private fun Transaction.insertFloater(id: String, owner: String, listId: String?, completed: Boolean) {
+    private fun JdbcTransaction.insertFloater(id: String, owner: String, listId: String?, completed: Boolean) {
         Floaters.insert {
             it[Floaters.id] = id
             it[Floaters.title] = id
@@ -249,7 +249,7 @@ class QueryShapesTest {
     }
 
     /** Raw SQL: `exdates` is a Postgres array and `priority` a Postgres enum, neither of which H2 binds. */
-    private fun Transaction.insertTodo(id: String, owner: String, title: String = id) {
+    private fun JdbcTransaction.insertTodo(id: String, owner: String, title: String = id) {
         exec(
             """
             INSERT INTO todos (id, title, "createdAt", "updatedAt", "userID", priority, due, exdates)
@@ -258,7 +258,7 @@ class QueryShapesTest {
         )
     }
 
-    private fun Transaction.insertInstance(id: String, todoId: String, overriddenTitle: String? = null) {
+    private fun JdbcTransaction.insertInstance(id: String, todoId: String, overriddenTitle: String? = null) {
         TodoInstances.insert {
             it[TodoInstances.id] = id
             it[TodoInstances.todoId] = todoId
@@ -268,7 +268,7 @@ class QueryShapesTest {
         }
     }
 
-    private fun Transaction.insertCompletedTodo(id: String, originalTodoId: String, owner: String) {
+    private fun JdbcTransaction.insertCompletedTodo(id: String, originalTodoId: String, owner: String) {
         CompletedTodos.insert {
             it[CompletedTodos.id] = id
             it[CompletedTodos.originalTodoID] = originalTodoId

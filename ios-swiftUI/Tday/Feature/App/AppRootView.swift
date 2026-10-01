@@ -69,6 +69,12 @@ struct AppRootView: View {
     @State private var showingListWidgetSetup = false
     @State private var scheduledTaskHomeScrollToTopRequestID = 0
     @State private var floaterTaskHomeScrollToTopRequestID = 0
+    // Armed by `selectRootFeedTab` and consumed by the next `navigationPath` change, which is
+    // the clear that call is about to perform. Landing on a root feed empties the stack, and an
+    // empty stack is indistinguishable from the user having popped the screen they were on — so
+    // without this a dock tap would fire a "you closed a screen" buzz on top of the `selection()`
+    // that `handleRootFeedTabSelection` already fired for the tab change itself.
+    @State private var suppressListScreenCloseHaptic = false
     // The dock's fold, in an `@Observable` box rather than plain `@State`, for the reason
     // `RootFeedHeaderScrollState` is one: the fold is written from inside UIScrollView's
     // contentOffset setter mid-drag, and as `@State` read by this body every fold crossing
@@ -427,7 +433,8 @@ struct AppRootView: View {
                             destinationView(for: route)
                                 .tdayZoomDestination(route)
                         }
-                        .onChange(of: appViewModel.navigationPath) { _, path in
+                        .onChange(of: appViewModel.navigationPath) { oldPath, path in
+                            reportListScreenHandover(from: oldPath, to: path)
                             normalizeRootNavigationPath(path)
                         }
                         .onChange(of: appViewModel.offlineNoticeID) { _, _ in
@@ -924,6 +931,14 @@ struct AppRootView: View {
     private func selectRootFeedTab(_ tab: RootFeedTab) {
         rootFeedTabWasChosen = true
         rootFeedTab = tab
+        // The clear below is a feed being CHOSEN, not a screen being closed — a dock tap, a
+        // deep link that names a feed, a create flow that has to land on one. Claim it here so
+        // the observer does not read it as a pop (see `suppressListScreenCloseHaptic`), and
+        // claim it only when a clear will actually publish a change: an arm that nothing
+        // consumes would swallow the next real close instead.
+        if !appViewModel.navigationPath.isEmpty {
+            suppressListScreenCloseHaptic = true
+        }
         appViewModel.navigationPath = []
     }
 
@@ -1067,6 +1082,49 @@ struct AppRootView: View {
         }
 
         return nil
+    }
+
+    /// Fires ``HapticManager/screenChange()`` once per list screen opened and once per list
+    /// screen closed, from the only place on this client where a push and a pop are each
+    /// observable exactly once.
+    ///
+    /// Not `.onAppear`/`.onDisappear` on the screens themselves: both root feeds are mounted
+    /// together for the duration of a tab crossfade, so those fire on tab changes and on sheet
+    /// dismissals as well as on navigation. Not the `rootNavigationPath` binding's setter
+    /// either — deep links and `AppViewModel.navigate(to:)` write the model directly and never
+    /// pass through it. The model's own change is the one event every route into the stack
+    /// shares.
+    ///
+    /// It counts list screens rather than comparing the top of the stack, because a push that
+    /// is not a list screen must not read as a close: Today pushing Morning Sweep over itself
+    /// leaves Today open, and the user did not close anything.
+    private func reportListScreenHandover(from oldPath: [AppRoute], to newPath: [AppRoute]) {
+        // Consumed first and unconditionally. The arm is set immediately before a write that is
+        // guaranteed to publish a change, so THIS call is that change, whatever its shape —
+        // leaving it set because the shape turned out not to be a close is how the flag would
+        // go on to eat an unrelated pop minutes later.
+        let wasClaimedByFeedChange = suppressListScreenCloseHaptic
+        // Written back only when it was actually set: `@State` does not dedupe, and this view is
+        // the root — an unconditional store would invalidate the whole body on every navigation
+        // for the sake of writing `false` over `false`.
+        if wasClaimedByFeedChange {
+            suppressListScreenCloseHaptic = false
+        }
+
+        let before = oldPath.filter { $0.isListScreenRoute }.count
+        let after = newPath.filter { $0.isListScreenRoute }.count
+        guard before != after else { return }
+
+        // `logout()` and `leaveLocalWorkspace()` set `authenticated = false` and then clear the
+        // path in the same synchronous turn, and `expireSession()` goes through `logout()`. So a
+        // 401 arriving while the user reads Today would otherwise buzz "you closed a screen"
+        // beside the "Your session expired" toast. The gate is `isWorkspaceAvailable` rather
+        // than `authenticated` because Local Mode runs with `authenticated` false and still
+        // navigates; `leaveLocalWorkspace()` drops both halves of it.
+        guard appViewModel.isWorkspaceAvailable else { return }
+
+        if after < before, wasClaimedByFeedChange { return }
+        HapticManager.screenChange()
     }
 
     private func normalizeRootNavigationPath(_ path: [AppRoute]) {
@@ -1792,6 +1850,27 @@ private extension AppRoute {
         case .createTodayTodo, .createFloaterTodo:
             return true
         default:
+            return false
+        }
+    }
+
+    /// One of the nine screens a home tile or a list row opens — the set whose arrival and
+    /// departure buzz (see `reportListScreenHandover`). It is the same nine cases
+    /// `AppRoute.zoomSourceID` can answer a non-nil tile id for, and the same nine Android wraps
+    /// in `TdayTileDestination`.
+    ///
+    /// Exhaustive on purpose, with no `default`: a tenth screen reachable from a tile has to
+    /// answer here or this file stops compiling. Settings, the release notes, the guide, Morning
+    /// Sweep and the password reset answer no because none of them is a list — they are pushed
+    /// from inside a screen rather than opened as one, and Morning Sweep in particular rides on
+    /// top of Today, which stays open underneath it.
+    var isListScreenRoute: Bool {
+        switch self {
+        case .todayTodos, .overdueTodos, .scheduledTodos, .allTodos, .priorityTodos,
+             .listTodos, .floaterListTodos, .completed, .calendar:
+            return true
+        case .scheduledTaskHome, .floaterTaskHome, .createTodayTodo, .createFloaterTodo,
+             .settings, .latestRelease, .helpGuide, .morningSweep, .forgotPassword:
             return false
         }
     }

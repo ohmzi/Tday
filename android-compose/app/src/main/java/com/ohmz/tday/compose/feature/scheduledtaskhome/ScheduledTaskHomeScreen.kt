@@ -150,6 +150,7 @@ import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskRowFirstLineAlignment
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.rememberTdayIsDaytime
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.scaledDelay
@@ -196,11 +197,9 @@ import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import com.ohmz.tday.shared.listicon.ListIconInference
 import com.ohmz.tday.shared.sort.TaskSortEngine
 import com.ohmz.tday.shared.sort.TaskSortKey
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -329,7 +328,6 @@ fun ScheduledTaskHomeScreen(
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
 ) {
-    val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -597,7 +595,11 @@ fun ScheduledTaskHomeScreen(
         containerColor = colorScheme.background,
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            val isDaytime = rememberIsDaytime()
+            // The watermark behind the board and the sun/moon in its header are now two
+            // reads of one band on one minute grid, so they cannot disagree about the
+            // hour. This screen used to carry its own copy of `6 until 18` on its own
+            // ticker, which is exactly how they could.
+            val isDaytime = rememberTdayIsDaytime()
             EmptyTaskWatermark(
                 imageVector = if (isDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
                     R.drawable.ic_lucide_moon
@@ -883,10 +885,11 @@ fun ScheduledTaskHomeScreen(
                                                 .fillMaxWidth()
                                                 .semantics(mergeDescendants = true) {}
                                                 .heightIn(min = MinTouchTargetSize)
-                                                .clickable {
-                                                    TdayHaptics.buttonPress(view)
-                                                    openTaskFromSearch(todo.id)
-                                                }
+                                                // Opening a result pushes the All Tasks route
+                                                // and nothing else, so the navigation haptic
+                                                // is the only one — see
+                                                // `ScheduledTaskHomeTodayCard`.
+                                                .clickable { openTaskFromSearch(todo.id) }
                                                 .padding(
                                                     horizontal = TdayDimens.SpacingLg,
                                                     vertical = SearchResultRowVerticalPadding,
@@ -1522,22 +1525,6 @@ private fun CreateListBottomSheet(
 }
 
 @Composable
-private fun rememberIsDaytime(): Boolean {
-    val hour = remember { mutableIntStateOf(LocalTime.now().hour) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            val now = LocalTime.now()
-            val millisToNextMinute = ((60 - now.second) * 1000L) - (now.nano / 1_000_000L)
-            delay(millisToNextMinute.coerceAtLeast(500L))
-            hour.intValue = LocalTime.now().hour
-        }
-    }
-
-    return hour.intValue in 6 until 18
-}
-
-@Composable
 private fun MyListsHeader(modifier: Modifier = Modifier) {
     val colorScheme = MaterialTheme.colorScheme
     Row(
@@ -1589,7 +1576,6 @@ private fun ScheduledTaskHomeTodayCard(
     tileTransitionKey: String? = null,
     onClick: () -> Unit,
 ) {
-    val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val dateLabel = remember { SCHEDULED_TASK_HOME_TODAY_DATE_FORMATTER.format(Instant.now()) }
     val color = Color(0xFF6EA8E1)
@@ -1606,10 +1592,13 @@ private fun ScheduledTaskHomeTodayCard(
                 .fillMaxWidth()
                 .semantics(mergeDescendants = true) {}
                 .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
-            onClick = {
-                TdayHaptics.buttonPress(view)
-                onClick()
-            },
+            // No `buttonPress` here, deliberately. This tile's entire effect is to push the
+            // Today route, and the handover fires the navigation haptic a frame later — so a
+            // tick at finger-up plus that pulse is two buzzes for one event, which the hand
+            // reads as a stutter rather than as feedback. A tap that only navigates is not a
+            // separate event from the navigation it causes; the destination owns the haptic.
+            // It also brings the tile level with iOS, whose tiles fire nothing of their own.
+            onClick = onClick,
             interactionSource = interactionSource,
             colors = CardDefaults.cardColors(containerColor = color),
             // The elevation is Material's to animate now. It was a third
@@ -2284,7 +2273,6 @@ private fun ListRow(
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val animatedCount by animateIntAsState(
         targetValue = count,
@@ -2312,10 +2300,8 @@ private fun ListRow(
                 .height(ListRowHeight)
                 .semantics(mergeDescendants = true) {}
                 .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
-            onClick = {
-                TdayHaptics.buttonPress(view)
-                onClick()
-            },
+            // Navigation-only tap, so no haptic of its own — see `ScheduledTaskHomeTodayCard`.
+            onClick = onClick,
             interactionSource = interactionSource,
             shape = RoundedCornerShape(TdayDimens.RadiusCard),
             colors = CardDefaults.cardColors(containerColor = containerColor),

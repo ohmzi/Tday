@@ -1,7 +1,7 @@
 package com.ohmz.tday.db.tables
 
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.javatime.datetime
 
 /**
  * Longer-lived path blocks for callers showing sustained abuse (see V22__abuse_blocks.sql).

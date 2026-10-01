@@ -21,14 +21,15 @@ import com.ohmz.tday.security.encryptRequired
 import com.ohmz.tday.shared.model.TaskStepDto
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.lessEq
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.Timestamp
@@ -631,7 +632,7 @@ class TodoServiceImpl(
 
     /** Todos the user can see: their own, plus everything in lists shared with them. */
     private fun visibleTodos(userId: String, sharedListIds: List<String>): Op<Boolean> =
-        Op.build {
+        run {
             if (sharedListIds.isEmpty()) {
                 Todos.userID eq userId
             } else {
@@ -645,7 +646,7 @@ class TodoServiceImpl(
      * behavior).
      */
     private fun mutableTodos(userId: String, editableListIds: List<String>): Op<Boolean> =
-        Op.build {
+        run {
             if (editableListIds.isEmpty()) {
                 Todos.userID eq userId
             } else {

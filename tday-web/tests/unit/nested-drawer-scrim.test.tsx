@@ -87,11 +87,16 @@ function holdClosedNodesLikeABrowser(): void {
   vi.spyOn(window, "getComputedStyle").mockImplementation(
     (element: Element, pseudo?: string | null) => {
       const computed = real(element, pseudo ?? undefined);
-      const state = element.getAttribute?.("data-state");
-      if (state !== "open" && state !== "closed") return computed;
+      const initialState = element.getAttribute?.("data-state");
+      if (initialState !== "open" && initialState !== "closed") return computed;
       return new Proxy(computed, {
         get: (target, key) => {
-          if (key === "animationName") return state === "open" ? "fadeIn" : "fadeOut";
+          // Read the state at access time, not at call time: Presence keeps the
+          // style object it was handed at mount and re-reads it on close, the way a
+          // browser's live CSSStyleDeclaration answers for whatever the node is now.
+          if (key === "animationName") {
+            return element.getAttribute("data-state") === "open" ? "fadeIn" : "fadeOut";
+          }
           const value = Reflect.get(target, key, target);
           return typeof value === "function" ? value.bind(target) : value;
         },

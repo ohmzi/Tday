@@ -34,7 +34,7 @@ async function postTodo({ todo }: { todo: TodoItemType }) {
   });
 
   if (!parsedObj.success) {
-    throw new Error(parsedObj.error.errors[0].message);
+    throw new Error(parsedObj.error.issues[0].message);
   }
 
   const res = await api.POST({

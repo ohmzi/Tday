@@ -51,7 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -231,7 +231,7 @@ internal class WidgetListPickerViewModel @Inject constructor(
     fun selectList(appWidgetId: Int, option: WidgetListOption, onDone: () -> Unit) {
         WidgetListSelectionStore(appContext).setSelection(
             appWidgetId,
-            WidgetListSelection(option.id, option.type, option.name),
+            WidgetListSelection(option.id, option.type, option.name, option.iconKey, option.colorKey),
         )
         viewModelScope.launch {
             runCatching {

@@ -152,7 +152,7 @@ object DatabaseModule {
                 Migration12To13(),
                 Migration13To14(),
             )
-            .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6)
+            .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6)
             .addCallback(ReleaseStagedMutationsOnOpen())
             // Safety net: callers should run DAO access off the main thread (see
             // OfflineCacheManager / repositories using Dispatchers.IO). Kept so a missed

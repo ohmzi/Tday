@@ -248,7 +248,7 @@ Server Mode replays pending mutations through `SyncManager`. Local Mode clears/i
 
 The list and floater-list create/update mutations carry the list's own fields beside `name`/`color`/`iconKey`: `reusable` (floater lists only), `defaultPriority`, and `defaultPriorityChanged`, which tells "clear the default" apart from "leave it alone". All three are nullable, and null means "not part of this mutation". Both clients persist them with the queued mutation — Android's `pending_mutations` Room table since schema v13 (`Migration12To13`), iOS's SwiftData `PendingMutationEntity` — because the queue is read back from storage before a replay, and a field the store dropped came back null: an offline "Reusable off" then replayed as "leave it alone", and the next sync switched it back on.
 
-`staged` (Android/iOS, default `false`) marks a `DELETE_LIST`/`DELETE_FLOATER_LIST` mutation written by the delayed-commit delete's stage step (`ListRepository.stageDeleteList`/`FloaterListRepository.stageDeleteList`) while the Undo toast is still open. A staged delete is never replayed to the server (the whole point of staging is that Undo needs no network trace), but it counts the same as a real pending delete for `SyncManager`'s merge-time resurrection guard, so a pull-to-refresh landing inside the undo window can't write the still-server-side list back into the cache. The commit step (`deleteList()`) replaces the staged marker with a normal pending mutation of the same kind; Undo removes the marker outright.
+`staged` (Android/iOS, default `false`) marks a mutation written by a delayed-commit action's stage step while the Undo toast is still open: `DELETE_LIST`/`DELETE_FLOATER_LIST` (`ListRepository.stageDeleteList`/`FloaterListRepository.stageDeleteList`) and the `COMPLETE_*`/`DELETE_*` mutations of the todo and floater actions. Both clients persist it — Android as a nullable `staged` column on `pending_mutations` since schema v14 (`Migration13To14`), iOS in SwiftData — because sync reads the queue back from storage: before the column existed, a sync that started inside the undo window saw an ordinary mutation and replayed it early, so Undo could no longer restore the row. A marker a dead process left behind is released when the Android database opens (`ReleaseStagedMutationsOnOpen`), so it replays on the next launch as it always did. A staged delete is never replayed to the server (the whole point of staging is that Undo needs no network trace), but it counts the same as a real pending delete for `SyncManager`'s merge-time resurrection guard, so a pull-to-refresh landing inside the undo window can't write the still-server-side list back into the cache. The commit step (`deleteList()`) replaces the staged marker with a normal pending mutation of the same kind; Undo removes the marker outright.
 
 ## Web Local Mode Workspace
 
@@ -339,6 +339,29 @@ Tables absent from the `createMissingTablesAndColumns` list (`user_api_keys`,
 whatever their migration created. Their declarations now state `CASCADE` to match, so adding one
 of them to that list cannot silently downgrade it.
 
+## Migrations on a Clean Install
+
+A clean install runs `DatabaseConfig.init()` against an empty database: Flyway's whole chain
+first, `SchemaUtils.createMissingTablesAndColumns` after. Tables that are only ever created by
+that Exposed call (everything but the ones a migration creates itself) therefore **do not exist
+while the migrations run** on a clean install, even though they always existed on a database that
+had booted before the migration shipped. Today that is at least `floaterproject`, `completedfloaters`
+and `floaters`.
+
+A migration that touches such a table must tolerate it being absent. The Kotlin declaration
+already carries the column or constraint, so on a clean install Exposed creates the table correctly
+afterwards and the migration has nothing to do:
+
+- `ALTER TABLE IF EXISTS <table> ...` for `ALTER` statements.
+- `UPDATE` / `INSERT` / `DELETE` have no `IF EXISTS`; wrap them in
+  `DO $$ BEGIN IF to_regclass('public.<table>') IS NOT NULL THEN ... END IF; END $$;`
+  (see V27 and V29).
+- `REFERENCES <table>(...)` inside a guarded `ALTER TABLE IF EXISTS` is skipped with the statement.
+
+V19, V27 and V31 each shipped without this and left every new self-hosted install unable to start.
+`FreshInstallMigrationTest` runs the real chain through `DatabaseConfig.init()` against an empty
+`postgres:15` and fails the next time it happens; it needs Docker and is skipped without it.
+
 ## Data Change Checklist
 
 When changing data shape:
@@ -346,6 +369,8 @@ When changing data shape:
 - Update shared DTOs and validators first when the contract crosses platforms.
 - Update Exposed tables and add a Flyway migration for backend persistence changes. If the change
   touches a foreign key, read "Foreign Keys: Flyway Writes Them, Exposed Owns Them" first.
+  If it touches a table Exposed creates after Flyway (`floaterproject`, `completedfloaters`, ...),
+  read "Migrations on a Clean Install" first.
 - Update Android Room entities, DAOs, mappers, cache records, and migration/version handling.
 - Update iOS SwiftData entities, mappers, cache records, and widget snapshot logic if affected.
 - Update REST docs in `docs/API_GUIDELINES.md`.

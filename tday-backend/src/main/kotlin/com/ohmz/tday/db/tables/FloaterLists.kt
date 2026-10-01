@@ -1,8 +1,9 @@
 package com.ohmz.tday.db.tables
 
 import com.ohmz.tday.db.enums.*
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.javatime.datetime
+import org.jetbrains.exposed.v1.core.isNotNull
 
 object FloaterLists : Table("FloaterProject") {
     val id = varchar("id", 30)

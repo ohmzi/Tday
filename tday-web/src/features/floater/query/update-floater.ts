@@ -31,7 +31,7 @@ export async function patchFloaterFields(fields: FloaterPatchFields) {
   });
 
   if (!parsedObj.success) {
-    throw new Error(parsedObj.error.errors[0].message);
+    throw new Error(parsedObj.error.issues[0].message);
   }
 
   await api.PATCH({

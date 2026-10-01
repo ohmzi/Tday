@@ -1,6 +1,31 @@
 import Foundation
 import SwiftUI
 
+/// The app's one day/night boundary: `[06:00, 18:00)` is day, everything else is
+/// night. Local hours, local calendar — the user's own clock, never UTC.
+///
+/// It lived as five identical copies of `(6..<18).contains(hour)`, one per screen
+/// that draws the sun/moon glyph, and that was survivable only while the boundary
+/// had no words attached to it. It does now: Today's hero reads "Tonight" after
+/// dark off exactly this predicate. A second copy is a second boundary waiting to
+/// drift, and the one bug this feature cannot be allowed to have is a title that
+/// disagrees with the glyph sitting next to it.
+///
+/// `TdayWidget/TodayTasksWidget.swift` necessarily keeps a copy of its own: the
+/// widget extension does not compile this file, and the handful of sources both
+/// targets share are Foundation-only by design (see `TodayWidgetDayWindow`). If
+/// this boundary ever moves, that copy has to move with it.
+enum TdayTimeOfDay {
+    /// The hour the day starts, and the hour it ends. Named rather than inlined so
+    /// the one place that can move the boundary is a place a reader can find.
+    static let dayStartHour = 6
+    static let dayEndHour = 18
+
+    static func isDaytime(_ date: Date = Date()) -> Bool {
+        (dayStartHour..<dayEndHour).contains(Calendar.current.component(.hour, from: date))
+    }
+}
+
 enum TodoListMode: String, Codable, CaseIterable, Hashable {
     case today = "TODAY"
     case overdue = "OVERDUE"
@@ -26,6 +51,28 @@ enum TodoListMode: String, Codable, CaseIterable, Hashable {
             return L("Floater")
         case .list:
             return L("List")
+        }
+    }
+
+    /// The name this mode wears after dark, or nil for a mode whose name does not
+    /// follow the clock — which is every mode but Today.
+    ///
+    /// Today's hero already swaps a sun for a moon at `TdayTimeOfDay`'s boundary,
+    /// and "Today" under a moon at 9pm reads as a screen that has gone stale
+    /// rather than one that meant it.
+    ///
+    /// Deliberately a SECOND value rather than a branch inside `title`: `title` is
+    /// read once and stored (`TodoListViewModel.title`, assigned at init and on a
+    /// list rename) while the hour keeps moving, so resolving it there would pin
+    /// the word to whenever the screen happened to be opened. Handing both names
+    /// to the view lets the view pick between them inside the same `TimelineView`
+    /// that redraws the glyph — so the word and the glyph can only flip together.
+    var nightTitle: String? {
+        switch self {
+        case .today:
+            return L("Tonight")
+        case .overdue, .scheduled, .all, .priority, .floater, .list:
+            return nil
         }
     }
 

@@ -95,7 +95,7 @@ fun needsDistributorChoice(distributors: UnifiedPushDistributorState): Boolean =
 
 /**
  * Note what is *not* an input: the in-app notification switch. The switch is honoured where it
- * belongs, in `UnifiedPushReceiver.onMessage`, which drops every user-visible push while it is
+ * belongs, in `UnifiedPushService.onMessage`, which drops every user-visible push while it is
  * off — and deliberately lets the silent `data-changed` ping through above that gate. Gating
  * registration on it as well would cost nothing in spam (there is none to prevent) and would
  * take the widget's only realtime path away from exactly the users who asked for silence, not

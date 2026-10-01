@@ -1,4 +1,5 @@
 import com.android.build.api.artifact.SingleArtifact
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
 plugins {
@@ -11,15 +12,9 @@ plugins {
     id("io.sentry.android.gradle")
 }
 
-// Several AndroidX artifacts' dependency metadata resolves kotlin-stdlib to
-// whatever the latest published release is (currently newer than this
-// project's pinned Kotlin plugin version above), which the older compiler
-// can't read ("compiled with an incompatible version of Kotlin"). Force it
-// back down to match so `./gradlew :app:compileDebugKotlin` builds at all —
-// pre-existing/unrelated to any one feature, found while working on notes.
-configurations.all {
-    resolutionStrategy {
-        force("org.jetbrains.kotlin:kotlin-stdlib:2.2.10")
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
@@ -118,7 +113,7 @@ if (isReleaseTaskRequested && !hasReleaseSigning && !allowDebugSignedRelease) {
 
 android {
     namespace = "com.ohmz.tday.compose"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.ohmz.tday.compose"
@@ -185,10 +180,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -216,7 +207,7 @@ ksp {
 dependencies {
     implementation(project(":shared"))
 
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     // On-device natural-language date parsing for the task-title field (offline,
     // no AI/network). Same engine the backend uses, so behaviour matches.
@@ -224,51 +215,56 @@ dependencies {
 
     // HTML sanitizer for the notes rich-text encoding — allow-lists the same
     // small tag set as tday-web's DOMParser-based sanitizer (see richNotes.ts).
-    implementation("org.jsoup:jsoup:1.23.1")
+    implementation("org.jsoup:jsoup:1.23.2")
 
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-ktx:1.19.1")
     // Per-app language override (AppCompatDelegate.setApplicationLocales); works
     // back to API 21 via the AppLocalesMetadataHolderService manifest hook.
-    implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.appcompat:appcompat:1.8.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    implementation("androidx.activity:activity-compose:1.13.0")
     // Installs the APK's baseline profile (src/main/baseline-prof.txt plus the libraries' own) on
     // first launch, for ART to compile at its next idle dexopt. Sideloaded APKs get no install-time
     // profile, so this is the only way it reaches them. Pinned because the 1.3.1 that arrives
     // transitively predates Android 14's ART and refuses to install anything there.
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
-    implementation("androidx.compose.ui:ui:1.7.6")
-    implementation("androidx.compose.material3:material3:1.3.1")
-    implementation("androidx.compose.material:material-icons-extended:1.7.6")
+    // The Compose BOM keeps every Compose artifact (including the ones only reached transitively, like
+    // foundation and animation) on one release; 2026.09.00 maps ui to 1.12.1 and material3 to 1.4.0.
+    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     // Backdrop blur for the bottom toast so it matches iOS's translucent
     // .ultraThinMaterial look (RenderEffect on API 31+, translucent fallback below).
-    implementation("dev.chrisbanes.haze:haze:1.2.2")
-    implementation("androidx.navigation:navigation-compose:2.8.5")
-    implementation("com.google.android.material:material:1.12.0")
+    implementation("dev.chrisbanes.haze:haze:2.0.1")
+    implementation("dev.chrisbanes.haze:haze-blur:2.0.1")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
+    implementation("com.google.android.material:material:1.14.0")
     implementation("androidx.credentials:credentials:1.6.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
 
-    implementation("com.google.dagger:hilt-android:2.57.2")
-    ksp("com.google.dagger:hilt-compiler:2.57.2")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    implementation("androidx.hilt:hilt-work:1.2.0")
-    ksp("androidx.hilt:hilt-compiler:1.2.0")
+    implementation("com.google.dagger:hilt-android:2.60.1")
+    ksp("com.google.dagger:hilt-compiler:2.60.1")
+    implementation("androidx.hilt:hilt-navigation-compose:1.4.0")
+    implementation("androidx.hilt:hilt-work:1.4.0")
+    ksp("androidx.hilt:hilt-compiler:1.4.0")
 
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
 
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
 
     // The offline cache holds task titles, notes and unsynced mutations, so it is encrypted at
     // rest with SQLCipher. androidx-compatible artifact (net.zetetic:sqlcipher-android) so it
     // plugs into Room's openHelperFactory directly. See DatabaseModule / DatabasePassphraseStore.
-    implementation("net.zetetic:sqlcipher-android:4.17.0")
-    implementation("androidx.sqlite:sqlite:2.4.0")
+    implementation("net.zetetic:sqlcipher-android:4.19.1")
+    implementation("androidx.sqlite:sqlite:2.7.1")
 
     // Optional, opt-in app lock (BiometricPrompt with device-credential fallback).
     implementation("androidx.biometric:biometric:1.1.0")
@@ -276,34 +272,43 @@ dependencies {
     // Widget task lists: RemoteCollectionItems, backported below API 31 by its own service.
     implementation("androidx.core:core-remoteviews:1.1.0")
 
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:okhttp-urlconnection:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-kotlinx-serialization:3.0.0")
+    implementation("com.squareup.okhttp3:okhttp:5.5.0")
+    implementation("com.squareup.okhttp3:okhttp-urlconnection:5.5.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
-    implementation("io.sentry:sentry-okhttp:8.13.0")
-    implementation("io.sentry:sentry-android-navigation:8.13.0")
+    implementation("io.sentry:sentry-okhttp:8.59.0")
+    implementation("io.sentry:sentry-android-navigation:8.59.0")
 
     implementation("androidx.security:security-crypto:1.1.0")
 
     // UnifiedPush: lets Server-Mode self-hosters receive server pushes through their
     // own distributor (e.g. ntfy) instead of FCM. Local reminders remain the default.
-    implementation("org.unifiedpush.android:connector:2.5.0")
+    //
+    // The connector's runtime dependency on the JVM `tink` collides with the `tink-android` that
+    // security-crypto brings: both define com.google.crypto.tink.*, which fails
+    // checkReleaseDuplicateClasses. tink-android is the one that has to stay (EncryptedSharedPreferences
+    // needs its Android keystore integration, which the JVM artifact lacks), and it carries every
+    // Tink class the connector calls (HybridDecrypt/HybridEncrypt and the subtle.* helpers; checked
+    // against the connector's bytecode), so the JVM copy is dropped rather than the other way round.
+    implementation("org.unifiedpush.android:connector:3.3.5") {
+        exclude(group = "com.google.crypto.tink", module = "tink")
+    }
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-    testImplementation("io.mockk:mockk:1.13.13")
-    testImplementation("app.cash.turbine:turbine:1.2.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("app.cash.turbine:turbine:1.2.1")
 
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.room:room-testing:2.6.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.6")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.7.6")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.7.6")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.room:room-testing:2.8.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
 val hasSentryAuth = !System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank()
@@ -320,7 +325,7 @@ sentry {
     }
     autoInstallation {
         enabled = true
-        sentryVersion = "8.13.0"
+        sentryVersion = "8.59.0"
     }
 }
 

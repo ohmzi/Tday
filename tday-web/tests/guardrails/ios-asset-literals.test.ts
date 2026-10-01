@@ -19,12 +19,12 @@ import { describe, expect, it } from "vitest";
  * families that `docs/ICONS.md` names — must be a directory `<name>.imageset` holding a
  * `Contents.json`.
  *
- * Which catalog a literal is checked against follows the project file rather than a guess. Exactly
- * two targets bundle one — the app (`Tday/Assets.xcassets`) and the watch app
- * (`TdayWatch/Assets.xcassets`). The widget, the watch complication and the share extension
- * bundle none, so an asset literal in their sources resolves to nothing at run time and is a
- * failure by itself; giving one of them a catalog is a deliberate pbxproj change that should
- * update `CATALOG_FOR_TARGET` below in the same commit.
+ * Which catalog a literal is checked against follows the project file rather than a guess. Three
+ * targets bundle one — the app and the widget, which both ship `Tday/Assets.xcassets` (the same
+ * file reference in `project.pbxproj`), and the watch app (`TdayWatch/Assets.xcassets`). The watch
+ * complication and the share extension bundle none, so an asset literal in their sources resolves
+ * to nothing at run time and is a failure by itself; giving one of them a catalog is a deliberate
+ * pbxproj change that should update `CATALOG_FOR_TARGET` below in the same commit.
  *
  * Deliberately out of scope, because a literal scan cannot see them and two other guardrails do:
  * `HelpGuideScreen.iconAsset` builds `"Lucide" + PascalCase(glyph)` at run time
@@ -45,7 +45,8 @@ const CATALOG_FOR_TARGET: Record<string, string | null> = {
   Tday: APP_CATALOG,
   TdayWatch: WATCH_CATALOG,
   TdayWatchWidget: null,
-  TdayWidget: null,
+  // Bundled since the widget started drawing list glyphs and feed watermarks from the Lucide set.
+  TdayWidget: APP_CATALOG,
   TdayShareExtension: null,
 };
 

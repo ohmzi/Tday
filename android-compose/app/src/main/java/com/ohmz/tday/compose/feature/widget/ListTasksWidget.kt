@@ -12,6 +12,7 @@ import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshot
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStore
+import com.ohmz.tday.compose.ui.theme.tdayListIconResForList
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -60,8 +61,29 @@ internal object ListTasksWidget {
         // A list deleted since it was picked is the same state as no list at all — the widget asks
         // for another — with a message that says why.
         val listMissing = snapshot?.listMissing == true
-        val visuals = listWidgetVisualsFor(selection?.listType?.takeUnless { listMissing })
-        val title = listWidgetTitleFor(appContext, selection?.takeUnless { listMissing }, snapshot, isAppLocked)
+        val liveSelection = selection?.takeUnless { listMissing }
+        val visuals = if (isAppLocked) {
+            // A chosen glyph hints at which of the user's lists this is, so the locked widget may
+            // not draw it — the same rule the title follows below. It does not fall back to the
+            // TYPE's mark either: that would put the Today sun on a widget that is not the Today
+            // feed. Locked, there is nothing to assert, so nothing is drawn.
+            listWidgetVisualsFor(liveSelection?.listType)
+                .copy(emptyWatermark = null, setupWatermark = null)
+        } else {
+            listWidgetVisualsFor(
+                listType = liveSelection?.listType,
+                // The cache's current key first, so changing a list's icon reaches the watermark
+                // on the next write; the pick-time key covers the window before that write lands,
+                // and an upgrade from a build that stored neither falls back to the name (see
+                // `listWidgetVisualsFor`).
+                listIconKey = snapshot?.listIconKey ?: liveSelection?.listIconKey,
+                listName = snapshot?.listName ?: liveSelection?.listName,
+                // Same precedence as the icon: the cache's current colour wins, so recolouring a
+                // list reaches its widget on the next write rather than waiting for a re-pick.
+                listColorKey = snapshot?.listColorKey ?: liveSelection?.listColorKey,
+            )
+        }
+        val title = listWidgetTitleFor(appContext, liveSelection, snapshot, isAppLocked)
         return if (selection == null || listMissing) {
             unconfiguredModel(appContext, appWidgetId, title, visuals, isAppLocked, listMissing)
         } else {
@@ -96,10 +118,53 @@ internal val UnconfiguredListWidgetVisuals = TaskWidgetVisuals(
     setupWatermark = null,
 )
 
-internal fun listWidgetVisualsFor(listType: WidgetListType?): TaskWidgetVisuals = when (listType) {
-    WidgetListType.FLOATER -> FloaterWidgetVisuals
-    WidgetListType.TODO -> todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour))
-    null -> UnconfiguredListWidgetVisuals
+/**
+ * A per-list instance's look: its list TYPE decides the "+" accent (what a tap creates — a
+ * scheduled task or a floater), and the list ITSELF decides the watermark.
+ *
+ * The watermark used to come from the type alone, which meant a widget scoped to a custom
+ * scheduled list painted the Today SUN — the global Today feed's mark — on a widget that is not
+ * that feed, and a custom floater list painted the root Anytime leaf. The rule this now follows is
+ * the one the in-app empty state already implements in `TodoListScreen.emptyStateSceneIconForMode`:
+ * Today is the sun or the moon, the ROOT Anytime feed is the leaf, and a list the user named gets
+ * the glyph that list shows everywhere else — resolved through the same
+ * [tdayListIconResForList], so a list that was never given an `iconKey` still gets its
+ * name-inferred glyph here rather than a generic fallback.
+ *
+ * With neither a key nor a name there is nothing to resolve a glyph FROM (a selection written
+ * before the key was stored, whose snapshot has not been rebuilt yet), so the instance keeps its
+ * type's mark for that render instead of asserting a default inbox glyph it was never given. The
+ * next snapshot write supplies the name and it settles on the right one.
+ */
+internal fun listWidgetVisualsFor(
+    listType: WidgetListType?,
+    listIconKey: String? = null,
+    listName: String? = null,
+    listColorKey: String? = null,
+): TaskWidgetVisuals {
+    if (listType == null) return UnconfiguredListWidgetVisuals
+    val isDaytime = taskWidgetIsDaytime(LocalTime.now().hour)
+    val base = when (listType) {
+        WidgetListType.FLOATER -> FloaterWidgetVisuals
+        WidgetListType.TODO -> todayWidgetVisuals(isDaytime)
+    }
+    if (listIconKey.isNullOrBlank() && listName.isNullOrBlank()) return base
+    // The list's glyph in the LIST's own colour, falling back to its type's accent only when the
+    // list has no colour. The type used to own the accent outright, which is why a red floater
+    // list wore the floater green: the glyph came from the list and the tint did not.
+    val listAccent = widgetListAccentFor(listColorKey)
+    val watermark = TaskWidgetWatermark(
+        drawable = tdayListIconResForList(listIconKey, listName),
+        tint = when (listType) {
+            WidgetListType.FLOATER -> R.color.tday_widget_floater_accent
+            WidgetListType.TODO -> todayWidgetAccentColor(isDaytime)
+        },
+        tintArgb = listAccent?.light,
+        // A shared Lucide glyph is white at full opacity, so the watermark weight the other
+        // drawables bake has to be applied here instead.
+        alpha = TaskWidgetWatermark.WATERMARK_ALPHA,
+    )
+    return base.copy(emptyWatermark = watermark, setupWatermark = watermark, accent = listAccent)
 }
 
 /**
@@ -135,7 +200,9 @@ private fun unconfiguredModel(
     isAppLocked: Boolean,
     listMissing: Boolean,
 ): TaskWidgetModel {
-    val tapIntent = if (isAppLocked) TodayTasksWidget.openIntent() else pickListIntent(appContext, appWidgetId)
+    // Locked: the app's front door and nothing more. Deep-linking to the chosen list would name
+    // it to whoever picked the phone up, which is the same rule the locked title follows.
+    val tapIntent = if (isAppLocked) TodayTasksWidget.launchIntent() else pickListIntent(appContext, appWidgetId)
     return TaskWidgetModel(
         title = title,
         state = if (isAppLocked) TaskWidgetContentState.LOCKED else TaskWidgetContentState.SETUP,

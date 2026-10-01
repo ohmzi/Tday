@@ -2,19 +2,19 @@ import { z } from "zod";
 
 export const todoSchema = z.object({
   title: z
-    .string({ message: "title cannot be left empty" })
+    .string({ error: "title cannot be left empty" })
     .trim()
-    .min(1, { message: "title cannot be left empty" }),
+    .min(1, { error: "title cannot be left empty" }),
   // Tasks without a description carry `null` (see TodoItemType). Allowing only
   // string | undefined caused reschedule/drag payloads built from a raw todo to
   // fail validation, so `patchTodo` silently skipped the PATCH (the move never
   // saved). The backend ignores a null description, leaving it unchanged.
   description: z.string().nullable().optional(),
   priority: z.enum(["Lowest", "Low", "Medium", "High"], {
-    errorMap: () => ({ message: "priority must be one of: lowest, low, medium, high" }),
+    error: "priority must be one of: lowest, low, medium, high",
   }),
   due: z
-    .date({ message: "end date is not identified" })
+    .date({ error: "end date is not identified" })
     .transform((d) => {
       const x = new Date(d);
       x.setSeconds(0, 0);
@@ -26,34 +26,34 @@ export const todoSchema = z.object({
 
 export const todoInstanceSchema = z.object({
   title: z
-    .string({ message: "title cannot be left empty" })
+    .string({ error: "title cannot be left empty" })
     .trim()
-    .min(1, { message: "title cannot be left empty" }),
+    .min(1, { error: "title cannot be left empty" }),
   // See todoSchema: a null description must validate so recurring-instance
   // reschedules from a raw todo aren't silently dropped.
   description: z.string().nullable().optional(),
   priority: z.enum(["Lowest", "Low", "Medium", "High"], {
-    errorMap: () => ({ message: "priority must be one of: lowest, low, medium, high" }),
+    error: "priority must be one of: lowest, low, medium, high",
   }),
   due: z
-    .date({ message: "end date is not identified" })
+    .date({ error: "end date is not identified" })
     .transform((d) => {
       const x = new Date(d);
       x.setSeconds(0, 0);
       return x;
     }),
-  instanceDate: z.date({ message: "instance date is not identified" }),
+  instanceDate: z.date({ error: "instance date is not identified" }),
   rrule: z.string().nullable(),
 });
 
 export const floaterSchema = z.object({
   title: z
-    .string({ message: "title cannot be left empty" })
+    .string({ error: "title cannot be left empty" })
     .trim()
-    .min(1, { message: "title cannot be left empty" }),
+    .min(1, { error: "title cannot be left empty" }),
   description: z.string().nullable().optional(),
   priority: z.enum(["Lowest", "Low", "Medium", "High"], {
-    errorMap: () => ({ message: "priority must be one of: lowest, low, medium, high" }),
+    error: "priority must be one of: lowest, low, medium, high",
   }),
   listID: z.string().nullable().optional(),
 });
@@ -76,11 +76,11 @@ const listColorValues = [
   "SLATE",
 ] as const;
 const listBaseSchema = z.object({
-  id: z.string({ message: "id cannot be left empty" }),
+  id: z.string({ error: "id cannot be left empty" }),
   name: z
-    .string({ message: "title cannot be left empty" })
+    .string({ error: "title cannot be left empty" })
     .trim()
-    .min(1, { message: "title cannot be left empty" }),
+    .min(1, { error: "title cannot be left empty" }),
   color: z.enum(listColorValues).nullable(),
   iconKey: z.string().trim().min(1).nullable().optional(),
 });

@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -173,6 +174,10 @@ fun TdayModalBottomSheet(
  * Status bar icons are forced light for the lifetime of the sheet, since the
  * scrim is dark in both themes and the app's normal dark-on-light icons would
  * otherwise be unreadable against it.
+ *
+ * Every caller's `DialogProperties` must also say `decorFitsSystemWindows = false`:
+ * Compose re-applies that property to the window, and its default of `true` both
+ * insets the content and leaves the navigation bar strip outside the scrim.
  */
 @Composable
 internal fun TdaySheetFullBleedWindow() {
@@ -238,7 +243,13 @@ fun <T> TdayCenteredSelectorDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            // The window is made full-bleed by TdaySheetFullBleedWindow below; leaving the
+            // property at its default lets the Dialog re-apply decorFitsSystemWindows = true
+            // and pad its content by the navigation bar, which un-dims the strip behind it.
+            decorFitsSystemWindows = false,
+        ),
     ) {
         TdaySheetFullBleedWindow()
 
@@ -442,6 +453,12 @@ fun TdaySheetActionButton(
         },
         label = "tdaySheetActionButtonElevation",
     )
+    // The accent composited onto the control surface, not drawn beside it: the
+    // card casts its elevation shadow from this fill, so it has to stay opaque.
+    // Same 0.20 / 0.10 wash iOS puts under the 0.55 / 0.30 ring.
+    val tintedSurface = accentColor
+        .copy(alpha = if (enabled) 0.20f else 0.10f)
+        .compositeOver(TdaySheetDefaults.controlSurfaceColor())
 
     Card(
         modifier = modifier
@@ -477,7 +494,10 @@ fun TdaySheetActionButton(
         enabled = enabled,
         interactionSource = interactionSource,
         shape = TdaySheetDefaults.ControlShape,
-        colors = CardDefaults.cardColors(containerColor = TdaySheetDefaults.controlSurfaceColor()),
+        colors = CardDefaults.cardColors(
+            containerColor = tintedSurface,
+            disabledContainerColor = tintedSurface,
+        ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = elevation,
             pressedElevation = elevation,

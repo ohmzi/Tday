@@ -61,8 +61,6 @@ object TdayDimens {
     val RootFeedDockOuterPaddingStart: Dp = ContentPaddingHorizontal
     val RootFeedDockOuterPaddingBottom: Dp = ContentPaddingHorizontal
     val RootFeedDockTabWidth: Dp = 112.dp
-    val RootFeedDockRadius: Dp = 25.dp
-    val RootFeedDockSelectorRadius: Dp = 20.dp
     val RootFeedDockSelectorInset: Dp = SpacingXxs
     val RootFeedDockSelectorElevation: Dp = SpacingLg
     val RootFeedDockIconSize: Dp = 22.dp

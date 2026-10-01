@@ -1,8 +1,9 @@
 package com.ohmz.tday.shared.summary
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 
@@ -414,13 +415,13 @@ object SummaryEngine {
     }
 
     private fun formatMonthDay(due: LocalDateTime, now: LocalDateTime, s: SummaryStrings): String {
-        val month = s.monthsShort.getOrElse(due.monthNumber - 1) { due.monthNumber.toString() }
+        val month = s.monthsShort.getOrElse(due.month.number - 1) { due.month.number.toString() }
         val sameYear = due.year == now.year
         val key = if (sameYear) "dateMonthDay" else "dateMonthDayYear"
         return s.t(
             key,
             mapOf(
-                "day" to due.dayOfMonth.toString(),
+                "day" to due.day.toString(),
                 "month" to month,
                 "year" to due.year.toString()
             )
@@ -466,15 +467,15 @@ object SummaryEngine {
     /** Calendar-day difference between [dueEpochMs] and [now], both zoned. */
     private fun dayDelta(dueEpochMs: Long, now: LocalDateTime, zone: TimeZone): Int {
         val due = Instant.fromEpochMilliseconds(dueEpochMs).toLocalDateTime(zone)
-        return due.date.toEpochDays() - now.date.toEpochDays()
+        return (due.date.toEpochDays() - now.date.toEpochDays()).toInt()
     }
 
     private fun LocalDateTime.toEpochMs(zone: TimeZone): Long =
         this.toInstant(zone).toEpochMilliseconds()
 
     private fun isoDate(dt: LocalDateTime): String {
-        val m = dt.monthNumber.toString().padStart(2, '0')
-        val d = dt.dayOfMonth.toString().padStart(2, '0')
+        val m = dt.month.number.toString().padStart(2, '0')
+        val d = dt.day.toString().padStart(2, '0')
         return "${dt.year}-$m-$d"
     }
 }

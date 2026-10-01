@@ -119,6 +119,27 @@ final class TodoListViewModel {
     var summaryConnectivityError = false
     var isSummarizing = false
 
+    /// `title` after dark, or nil where this screen's title does not follow the
+    /// clock. Today is the only scope that has one; see `TodoListMode.nightTitle`
+    /// for why the two names travel separately instead of `title` resolving itself.
+    ///
+    /// A named list suppresses it outright: a list the user called "Tonight Shift"
+    /// is a name, not a time of day, and `listName != nil` is what `title` itself
+    /// branches on at init.
+    var nightTitle: String? {
+        listName == nil ? mode.nightTitle : nil
+    }
+
+    /// `title` resolved against the clock, for the one caller that cannot sit
+    /// inside a `TimelineView`: the search placeholder, which is assembled into a
+    /// single string ("Search in Tonight") during a body pass. The hero takes
+    /// `nightTitle` raw instead, so it re-resolves on the same minute tick as the
+    /// sun/moon rather than on whenever the screen last re-rendered.
+    func resolvedTitle(at date: Date) -> String {
+        guard let nightTitle, !TdayTimeOfDay.isDaytime(date) else { return title }
+        return nightTitle
+    }
+
     private let listName: String?
     @ObservationIgnored nonisolated(unsafe) private var observationTask: Task<Void, Never>?
     /// Rows a completion took out of `items` because its stage was still queued

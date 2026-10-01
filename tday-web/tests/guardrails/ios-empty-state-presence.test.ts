@@ -137,7 +137,22 @@ describe("the iOS completed history's empty scene fades out instead of cutting",
   it("gives both empty scenes a transition", () => {
     // Deleting a character out of a query that matched nothing turns the no-match scene straight
     // back into rows. With no removal leg SwiftUI just stops drawing the scene on that frame.
-    expect(code.match(/\.transition\(completedEmptyStateTransition\)/g) ?? []).toHaveLength(2);
+    //
+    // Both scenes are drawn by `completedEmptyScene`, inside the one slot that places them below
+    // the hero and the tab strip, so the transition sits once on that slot and covers whichever
+    // scene is in it. On either scene it would be a transition on a child of a view that is
+    // itself being removed, and that never runs.
+    expect(code.match(/\.transition\(completedEmptyStateTransition\)/g) ?? []).toHaveLength(1);
+
+    const start = code.indexOf("private var completedEmptyScene: some View");
+    const end = code.indexOf("var body: some View", start);
+    const scene = code.slice(start, end);
+    expect(scene).toContain("searchEmptyState");
+    expect(scene).toContain("TdayEmptyState(");
+
+    expect(code).toMatch(
+      /GeometryReader \{[\s\S]*?completedEmptyScene[\s\S]*?\.transition\(completedEmptyStateTransition\)/,
+    );
   });
 
   it("leaves the insertion leg inert", () => {

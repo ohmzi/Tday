@@ -1,11 +1,6 @@
 import SwiftUI
 import UIKit
 
-private func isOnboardingDaytime(_ date: Date) -> Bool {
-    let hour = Calendar.current.component(.hour, from: date)
-    return (6..<18).contains(hour)
-}
-
 enum OnboardingStep: Equatable {
     case mode
     case server
@@ -249,7 +244,7 @@ struct OnboardingWizardOverlay: View {
     private var wizardCard: some View {
         VStack(alignment: .leading, spacing: Metrics.sectionSpacing) {
             HStack(spacing: 8) {
-                Image(systemName: isOnboardingDaytime(Date()) ? "sun.max.fill" : "moon.stars.fill")
+                Image(systemName: TdayTimeOfDay.isDaytime() ? "sun.max.fill" : "moon.stars.fill")
                     .font(.system(size: 25, weight: .regular))
                     .foregroundStyle(Color(red: 0.96, green: 0.77, blue: 0.26))
 

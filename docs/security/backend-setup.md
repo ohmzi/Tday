@@ -22,7 +22,7 @@ the code and scripts in this repo.
 - **Nothing else.** There is no Node, JDK or Gradle requirement on the host. By default compose
   pulls the released image `ghcr.io/ohmzi/tday:latest` (`docker-compose.yaml:67`), which is
   anonymously pullable. If you'd rather build it yourself, layer `docker-compose.build.yaml` and
-  everything still happens inside Docker: `node:20-alpine` builds the SPA,
+  everything still happens inside Docker: `node:24-alpine` builds the SPA,
   `eclipse-temurin:21-jdk-alpine` builds the fat jar, and the runtime stage is
   `eclipse-temurin:21-jre-alpine` running as a non-root `tday` user (`Dockerfile.backend:1,19,36-42`).
   Postgres is pinned to `postgres:15` (`docker-compose.yaml:3`).

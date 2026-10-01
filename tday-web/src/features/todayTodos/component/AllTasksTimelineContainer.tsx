@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarClock, Clock3, Flag, Layers, Search, Sun } from "lucide-react";
+import { CalendarClock, Clock3, Flag, Layers, Moon, Search, Sun } from "lucide-react";
 import NativePageHeader, { useNativePageBarSlots } from "@/components/app/NativePageHeader";
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import ScreenWatermark from "@/components/app/ScreenWatermark";
@@ -29,6 +29,7 @@ import {
   TODAY_EARLIER_EXIT_MS,
 } from "../lib/todayEarlierIllustration";
 import { useFadeUnmount } from "@/hooks/useFadeUnmount";
+import { useIsDaytime } from "@/hooks/useIsDaytime";
 import { useRowPlacement } from "@/hooks/useRowPlacement";
 import { DELAY_MS, DURATION_MS } from "@/lib/motion";
 import TodoMutationProvider from "@/providers/TodoMutationProvider";
@@ -73,12 +74,41 @@ const SCOPE_CONFIG: Record<
   TimelineScope,
   { icon: React.ElementType; heading: string; emptyTitle: string; emptyBody: string }
 > = {
+  // Today's row is kept only so this map stays total over `TimelineScope`; the
+  // scope actually reads `TODAY_SCOPE_COPY` below, which carries the night half.
   today: { icon: Sun, heading: "today", emptyTitle: "todayEmpty", emptyBody: "todayEmptyBody" },
   overdue: { icon: Clock3, heading: "Overdue", emptyTitle: "overdueEmpty", emptyBody: "overdueEmptyBody" },
   scheduled: { icon: CalendarClock, heading: "Scheduled", emptyTitle: "scheduledEmpty", emptyBody: "scheduledEmptyBody" },
   all: { icon: Layers, heading: "All Tasks", emptyTitle: "allTasksEmpty", emptyBody: "allTasksEmptyBody" },
   priority: { icon: Flag, heading: "priority", emptyTitle: "priorityEmpty", emptyBody: "priorityEmptyBody" },
 };
+
+// Today is the one scope whose own name changes during the day: after 18:00 the
+// screen is "Tonight", because that is what the user is actually looking at. The
+// whole scope renames together — title, search placeholder, watermark glyph, the
+// empty line and the Day Done payoff — rather than a title flipping while the
+// copy under it still says "today", which would read as a bug.
+//
+// The band is `isDaytimeNow`'s and is not re-derived here. It is the same
+// predicate that flips the root feed header's sun/moon mark, which is the point:
+// two boundaries would let a screen headed "Tonight" sit under a sun for an hour.
+// See `src/lib/timeOfDay.ts`.
+const TODAY_SCOPE_COPY = {
+  day: {
+    icon: Sun,
+    heading: "today",
+    emptyTitle: "todayEmpty",
+    emptyBody: "todayEmptyBody",
+    dayDoneTitle: "allDoneToday",
+  },
+  night: {
+    icon: Moon,
+    heading: "tonight",
+    emptyTitle: "tonightEmpty",
+    emptyBody: "tonightEmptyBody",
+    dayDoneTitle: "allDoneTonight",
+  },
+} as const;
 
 // Today/Priority headings are locale keys (translated); the rest are already
 // the display string in `SCOPE_CONFIG`.
@@ -120,7 +150,15 @@ const AllTasksTimelineContainer = ({
   const [dragActive, setDragActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const placementRef = useRowPlacement<HTMLDivElement>();
-  const { icon: ScopeIcon, emptyTitle, emptyBody, heading: scopeHeading } = SCOPE_CONFIG[scope];
+  // Only Today arms the clock — every other scope's name is fixed, and a screen
+  // that cannot change its wording has no business waking once a minute.
+  const isDaytime = useIsDaytime(scope === "today");
+  // Read unconditionally so `dayDoneTitle` is always a real key: Day Done can
+  // only ever be true on Today (`useTimelineEmptyState` gates it on the scope),
+  // so the other scopes never reach the string at all.
+  const todayCopy = TODAY_SCOPE_COPY[isDaytime ? "day" : "night"];
+  const { icon: ScopeIcon, emptyTitle, emptyBody, heading: scopeHeading } =
+    scope === "today" ? todayCopy : SCOPE_CONFIG[scope];
   const pageHeading = getPageHeading(scope, scopeHeading, appDict);
   const barSlots = useNativePageBarSlots();
   const focusedTaskId = searchParams.get(TODO_FOCUS_TASK_QUERY_PARAM);
@@ -449,6 +487,7 @@ const AllTasksTimelineContainer = ({
               locale={locale}
               emptyTitle={emptyTitle}
               emptyBody={emptyBody}
+              dayDoneTitle={todayCopy.dayDoneTitle}
               appDict={appDict}
             />
           )}

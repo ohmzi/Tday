@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import Placeholder from "@tiptap/extension-placeholder";
+import { Placeholder } from "@tiptap/extensions";
 import {
   Bold,
   Eraser,
@@ -107,8 +106,12 @@ export default function NotesField({
         code: false,
         dropcursor: false,
         gapcursor: false,
+        // StarterKit v3 bundles Link and ListKeymap on top of v2's set;
+        // links must stay out of the schema (see the comment above the
+        // component), and list keymap would change Backspace/Delete in lists.
+        link: false,
+        listKeymap: false,
       }),
-      Underline,
       Placeholder.configure({ placeholder }),
     ],
     content: decodeNotesToHtml(value),
@@ -140,7 +143,7 @@ export default function NotesField({
     if (value === lastEmittedRef.current) return;
     lastEmittedRef.current = value;
     const html = decodeNotesToHtml(value);
-    editor.commands.setContent(html);
+    editor.commands.setContent(html, { emitUpdate: false });
     setHasFormatting(htmlHasFormatting(html));
   }, [value, editor]);
 
@@ -153,7 +156,9 @@ export default function NotesField({
     // entirely (includeListPrefixes: false) rather than kept as text — the
     // user asked to clear formatting, not to keep a plain-text list.
     const plainText = htmlToPlainText(sanitizeHtml(editor.getHTML()), false);
-    editor.commands.setContent(decodeNotesToHtml(plainText), true);
+    editor.commands.setContent(decodeNotesToHtml(plainText), {
+      emitUpdate: true,
+    });
     setHasFormatting(false);
   }
 

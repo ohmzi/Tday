@@ -1,6 +1,6 @@
 package com.ohmz.tday.db
 
-import org.jetbrains.exposed.sql.Transaction
+import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 
 /**
  * The exact enum-type bootstrap [com.ohmz.tday.config.DatabaseConfig.init] runs in production
@@ -11,7 +11,7 @@ import org.jetbrains.exposed.sql.Transaction
  * Not part of [TestDatabase]: that object's `fresh()` is H2-specific (a `CREATE DOMAIN`
  * shim stands in for these types there), so a real-Postgres-only helper belongs on its own.
  */
-fun Transaction.bootstrapProductionPgEnums() {
+fun JdbcTransaction.bootstrapProductionPgEnums() {
     listOf(
         "\"UserRole\"" to listOf("ADMIN", "USER"),
         "\"ApprovalStatus\"" to listOf("APPROVED", "PENDING"),

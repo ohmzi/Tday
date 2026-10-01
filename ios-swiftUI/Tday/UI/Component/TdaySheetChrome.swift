@@ -92,7 +92,17 @@ struct TdaySheetActionButton: View {
                 .font(.system(size: TdaySheetMetrics.actionIconSize, weight: .semibold))
                 .foregroundStyle(colors.onSurface.opacity(isEnabled ? 1 : 0.55))
                 .frame(width: TdaySheetMetrics.actionSize, height: TdaySheetMetrics.actionSize)
-                .background(colors.bottomSheetControlSurface, in: Circle())
+            // The accent over the sheet's own control surface rather than in
+            // place of it: the wash is translucent and the press shadow is
+            // cast from the filled shape, so it needs an opaque base.
+            .background {
+                Circle()
+                    .fill(colors.bottomSheetControlSurface)
+                    .overlay {
+                        Circle()
+                            .fill(accentColor.opacity(isEnabled ? 0.2 : 0.1))
+                    }
+            }
                 .overlay {
                     Circle()
                         .stroke(accentColor.opacity(isEnabled ? 0.55 : 0.3), lineWidth: 1.5)

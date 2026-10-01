@@ -1,9 +1,9 @@
 package com.ohmz.tday.db.tables
 
 import com.ohmz.tday.db.enums.*
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.javatime.datetime
 
 object TodoInstances : Table("todo_instances") {
     val id = varchar("id", 30)

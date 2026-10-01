@@ -1,8 +1,8 @@
 package com.ohmz.tday.db.tables
 
 import com.ohmz.tday.db.enums.*
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.javatime.datetime
 
 object CompletedTodos : Table("CompletedTodo") {
     val id = varchar("id", 30)

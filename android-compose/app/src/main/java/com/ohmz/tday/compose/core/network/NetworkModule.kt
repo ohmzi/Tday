@@ -1,6 +1,5 @@
 package com.ohmz.tday.compose.core.network
 
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.core.data.SecureConfigStore
 import dagger.Module
@@ -16,6 +15,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
+import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.net.CookieManager
 import java.net.CookiePolicy
 import java.util.TimeZone
