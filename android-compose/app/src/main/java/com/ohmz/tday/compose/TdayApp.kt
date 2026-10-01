@@ -797,6 +797,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
         route = AppRoute.TodayTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/today" }),
     ) { entry ->
+        val onBack = rememberListBack(entry, navController, RootFeedTab.SCHEDULED_TASK_HOME, onChangeRootFeedTab)
         // The arriving half of a tile's zoom: the screen itself grows out of the tile it was
         // pressed on. Its shared-element key comes from this route, so the tile that pushed it
         // and this destination cannot be handed different answers, and the block's own
@@ -810,7 +811,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
         ) {
             TodosRoute(
                 mode = TodoListMode.TODAY,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 pullRefreshEnabled = !isLocalMode(),
                 summaryAvailable = !isLocalMode(),
             )
@@ -829,13 +830,14 @@ private fun NavGraphBuilder.todoScopeRoutes(
         route = AppRoute.OverdueTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/overdue" }),
     ) { entry ->
+        val onBack = rememberListBack(entry, navController, RootFeedTab.SCHEDULED_TASK_HOME, onChangeRootFeedTab)
         TdayTileDestination(
             route = AppRoute.OverdueTodos,
             fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             TodosRoute(
                 mode = TodoListMode.OVERDUE,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 onOpenMorningSweep = {
                     navController.navigate(AppRoute.MorningSweep.route) {
                         launchSingleTop = true
@@ -851,13 +853,14 @@ private fun NavGraphBuilder.todoScopeRoutes(
         route = AppRoute.ScheduledTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/scheduled" }),
     ) { entry ->
+        val onBack = rememberListBack(entry, navController, RootFeedTab.SCHEDULED_TASK_HOME, onChangeRootFeedTab)
         TdayTileDestination(
             route = AppRoute.ScheduledTodos,
             fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             TodosRoute(
                 mode = TodoListMode.SCHEDULED,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 pullRefreshEnabled = !isLocalMode(),
                 summaryAvailable = !isLocalMode(),
             )
@@ -877,6 +880,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
             navDeepLink { uriPattern = "tday://todos/all?highlightTodoId={highlightTodoId}" },
         ),
     ) { entry ->
+        val onBack = rememberListBack(entry, navController, RootFeedTab.SCHEDULED_TASK_HOME, onChangeRootFeedTab)
         val pendingSearchHighlightTodoId = remember(entry) {
             navController.previousBackStackEntry
                 ?.savedStateHandle
@@ -898,7 +902,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
             TodosRoute(
                 mode = TodoListMode.ALL,
                 highlightTodoId = highlightTodoId,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 pullRefreshEnabled = !isLocalMode(),
                 summaryAvailable = !isLocalMode(),
             )
@@ -909,13 +913,14 @@ private fun NavGraphBuilder.todoScopeRoutes(
         route = AppRoute.PriorityTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/priority" }),
     ) { entry ->
+        val onBack = rememberListBack(entry, navController, RootFeedTab.SCHEDULED_TASK_HOME, onChangeRootFeedTab)
         TdayTileDestination(
             route = AppRoute.PriorityTodos,
             fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             TodosRoute(
                 mode = TodoListMode.PRIORITY,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 pullRefreshEnabled = !isLocalMode(),
                 summaryAvailable = !isLocalMode(),
             )
@@ -1074,12 +1079,13 @@ private fun NavGraphBuilder.listRoutes(
 }
 
 /**
- * Back from a list screen, for the case where nothing sits under it: a list opened on its own —
- * from a List widget, a notification, a `tday://` link — is the only entry in the back stack, so
- * a pop had nowhere to go. The chevron did nothing and system back closed the app. There, back
- * goes to the list's own root feed (Scheduled or Anytime) instead, the screen a list opened from
- * inside the app returns to. Reached through the app, a list has home under it and back stays an
- * ordinary pop, predictive preview included — the handler below is off then.
+ * Back from a list screen, for the case where nothing sits under it: a list or scope screen
+ * (Today, Overdue, Scheduled, All, Priority) opened on its own — from a Today or List widget, a
+ * notification, a `tday://` link — is the only entry in the back stack, so a pop had nowhere to
+ * go. The chevron did nothing and system back closed the app. There, back goes to the screen's
+ * own root feed (Scheduled or Anytime) instead, the screen it opened from inside the app returns
+ * to. Reached through the app, it has home under it and back stays an ordinary pop, predictive
+ * preview included — the handler below is off then.
  *
  * Read from the live back stack for THIS entry, not "the previous entry" of whatever is on top:
  * a list still fading out after that navigation must not claim system back from the feed.
