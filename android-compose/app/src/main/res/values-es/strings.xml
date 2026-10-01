@@ -526,7 +526,9 @@
     <string name="widget_today_tasks_title_medium">Tareas de hoy - Mediano</string>
     <string name="widget_today_tasks_title_large">Tareas de hoy - Grande</string>
     <string name="widget_today_tasks_empty">No hay tareas que venzan hoy</string>
-    <string name="widget_today_tasks_empty_tonight">No hay tareas que venzan esta noche</string>
+    <string name="widget_tonight_tasks_title">Tareas de esta noche</string>
+    <string name="widget_tonight_tasks_empty">No hay tareas que venzan esta noche</string>
+    <string name="widget_tonight_all_done">Todo listo por esta noche</string>
     <string name="widget_today_tasks_add">Añade una para hoy</string>
     <string name="widget_today_tasks_add_tonight">Añade una para esta noche</string>
     <string name="widget_today_tasks_count">%1$d pendientes</string>

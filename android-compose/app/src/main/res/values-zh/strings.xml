@@ -525,7 +525,9 @@
     <string name="widget_today_tasks_title_medium">今天的任务 - 中</string>
     <string name="widget_today_tasks_title_large">今天的任务 - 大</string>
     <string name="widget_today_tasks_empty">今天没有到期任务</string>
-    <string name="widget_today_tasks_empty_tonight">今晚没有到期任务</string>
+    <string name="widget_tonight_tasks_title">今晚的任务</string>
+    <string name="widget_tonight_tasks_empty">今晚没有到期任务</string>
+    <string name="widget_tonight_all_done">今晚的任务全部完成</string>
     <string name="widget_today_tasks_add">添加一个今天的任务</string>
     <string name="widget_today_tasks_add_tonight">添加一个今晚的任务</string>
     <string name="widget_today_tasks_count">%1$d 个到期</string>

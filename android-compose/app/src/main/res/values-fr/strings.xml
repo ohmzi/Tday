@@ -526,7 +526,9 @@
     <string name="widget_today_tasks_title_medium">Tâches d\'aujourd\'hui - Moyen</string>
     <string name="widget_today_tasks_title_large">Tâches d\'aujourd\'hui - Grand</string>
     <string name="widget_today_tasks_empty">Aucune tâche due aujourd\'hui</string>
-    <string name="widget_today_tasks_empty_tonight">Aucune tâche due ce soir</string>
+    <string name="widget_tonight_tasks_title">Tâches de ce soir</string>
+    <string name="widget_tonight_tasks_empty">Aucune tâche due ce soir</string>
+    <string name="widget_tonight_all_done">Tout est fait pour ce soir</string>
     <string name="widget_today_tasks_add">Ajoutez-en une pour aujourd\'hui</string>
     <string name="widget_today_tasks_add_tonight">Ajoutez-en une pour ce soir</string>
     <string name="widget_today_tasks_count">%1$d dues</string>

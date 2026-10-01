@@ -526,7 +526,9 @@
     <string name="widget_today_tasks_title_medium">Attività di oggi - Medio</string>
     <string name="widget_today_tasks_title_large">Attività di oggi - Grande</string>
     <string name="widget_today_tasks_empty">Nessuna attività in scadenza oggi</string>
-    <string name="widget_today_tasks_empty_tonight">Nessuna attività in scadenza stasera</string>
+    <string name="widget_tonight_tasks_title">Attività di stasera</string>
+    <string name="widget_tonight_tasks_empty">Nessuna attività in scadenza stasera</string>
+    <string name="widget_tonight_all_done">Tutto fatto per stasera</string>
     <string name="widget_today_tasks_add">Aggiungine una per oggi</string>
     <string name="widget_today_tasks_add_tonight">Aggiungine una per stasera</string>
     <string name="widget_today_tasks_count">%1$d in scadenza</string>
