@@ -201,6 +201,18 @@ struct RootFeedDock: View {
         )
         .frame(width: RootFeedDockMetrics.width)
         .frame(height: RootFeedDockMetrics.height)
+        // The dock is a capsule, and until this line only HALF of it was. `collapsedButton`
+        // draws its own `Capsule` background, but the expanded control had no shape of its own
+        // and simply showed whatever corner `UISegmentedControl` felt like: a capsule from
+        // iOS 26, a modest rounded rectangle before it. So folding the dock open changed its
+        // silhouette on older systems, and the two halves of one control disagreed about what
+        // shape they were.
+        //
+        // Clipping in SwiftUI rather than reaching for the control's own radius: this is the
+        // same `Capsule` the collapsed half names, it is version-independent, and it cannot be
+        // undone by a future UIKit restyle. On iOS 26 it is a no-op over a shape that is
+        // already a capsule.
+        .clipShape(Capsule())
     }
 }
 
