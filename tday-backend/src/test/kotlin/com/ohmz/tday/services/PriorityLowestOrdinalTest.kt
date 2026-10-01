@@ -89,30 +89,18 @@ class PriorityLowestOrdinalTest {
 
     @BeforeEach
     fun setUp() {
-        // V19__floaterproject_reusable.sql ALTERs the "floaterproject" table without an
-        // `IF EXISTS` guard -- that table is entirely Exposed-owned (SchemaUtils, never a
-        // Flyway CREATE TABLE), so on the real server it has only ever existed because some
-        // earlier boot's DatabaseConfig.init() already ran Flyway-then-Exposed at least once
-        // before V19 shipped. A single, uninterrupted Flyway replay from a truly empty schema
-        // can't reproduce that -- it is not this migration's gap, or this test's, but it does
-        // mean a faithful "fresh database, real migration chain" proof has to reproduce the
-        // same two boots the real timeline had: migrate to the pre-V19 state, let Exposed
-        // create its tables (exactly as DatabaseConfig.init() does on every real boot), THEN
-        // continue the Flyway chain through V28 -- rather than asserting a single-pass replay
-        // that production itself has never actually relied on since before V19 existed.
-        runFlyway(targetVersion = "18")
-        connectAndBootstrapExposedTables()
-
+        // One uninterrupted Flyway replay from a truly empty schema, then the Exposed bootstrap
+        // -- the order DatabaseConfig.init() runs on a clean install (FreshInstallMigrationTest
+        // guards that path end to end). The migrations that touch Exposed-owned tables (V19, V27,
+        // V31) are guarded for exactly this case, so no pre-V19 Exposed boot is needed first.
         val flywayResult = runFlyway(targetVersion = null)
         assertTrue(
             flywayResult.migrations.any { it.version == "28" },
-            "expected V28 (add Lowest priority) to run; versions actually applied this phase: " +
+            "expected V28 (add Lowest priority) to run; versions actually applied: " +
                 flywayResult.migrations.map { it.version },
         )
 
-        // DatabaseConfig.init() runs this same Exposed bootstrap unconditionally after every
-        // Flyway migrate() call, migration count notwithstanding -- repeat it here so the final
-        // state matches a real second boot, even though every table already exists by now.
+        // DatabaseConfig.init() runs the Exposed bootstrap after Flyway migrate(): this is it.
         connectAndBootstrapExposedTables()
 
         TestDatabase.insertUser(USER_ID, username = "owner-priority-ordinal@tday.test")

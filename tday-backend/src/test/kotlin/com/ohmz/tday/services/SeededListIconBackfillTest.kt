@@ -35,10 +35,9 @@ import kotlin.test.assertTrue
  * from `classpath:db/migration`, with the baseline settings `DatabaseConfig.init()` uses,
  * against a disposable container -- which is what proves V29 applies cleanly on top of every
  * prior migration, rather than only asserting an end state some hand-written DDL produced.
- * The two-phase replay (migrate to 18, let Exposed create its tables, continue) is that
- * test's discovery, not a quirk of this one: `floaterproject` is Exposed-owned and V19
- * ALTERs it unguarded, so a single uninterrupted replay from an empty schema cannot reach
- * V29 at all.
+ * The phased replay (migrate to 28, let Exposed create its tables, seed, continue) is
+ * what lets this test seed `floaterproject` rows: that table is Exposed-owned, so it only
+ * exists once the Exposed bootstrap has run after Flyway.
  *
  * Seeding happens BETWEEN V28 and V29, which is the whole point. Rows inserted after the
  * chain finished would prove nothing about a migration that only ever sees rows written
@@ -79,10 +78,8 @@ class SeededListIconBackfillTest {
 
     @BeforeEach
     fun setUp() {
-        // See the class KDoc, and PriorityLowestOrdinalTest's setUp() for the long form:
-        // Exposed has to create floaterproject before V19's unguarded ALTER reaches it.
-        runFlyway(targetVersion = "18")
-        connectAndBootstrapExposedTables()
+        // See the class KDoc: floaterproject only exists after the Exposed bootstrap, and the
+        // seed rows have to be in place before V29 runs.
         runFlyway(targetVersion = "28")
         connectAndBootstrapExposedTables()
 
