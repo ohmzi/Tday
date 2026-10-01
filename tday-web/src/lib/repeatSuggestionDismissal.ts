@@ -14,9 +14,9 @@
 // dismissal check runs synchronously during render, and `crypto.subtle` does not
 // exist on a plain-http LAN deployment (see `isVaultCryptoAvailable`).
 
-import { hmac } from "@noble/hashes/hmac";
-import { sha256 } from "@noble/hashes/sha256";
-import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils";
+import { hmac } from "@noble/hashes/hmac.js";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils.js";
 
 const KEY = "tday.repeatSuggestion.dismissed";
 const MAX_ENTRIES = 200;

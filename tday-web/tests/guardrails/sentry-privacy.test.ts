@@ -135,9 +135,15 @@ describe("sentry privacy guardrails", () => {
       expect(content).toContain("isSendDefaultPii = false");
     });
 
-    it("web sets sendDefaultPii: false", () => {
+    it("web turns user info, cookies, query strings and bodies off in dataCollection", () => {
+      // Sentry 11 removed `sendDefaultPii`; its defaults collect all of these, so the
+      // privacy-first posture has to be spelled out in `dataCollection`.
       const content = readSource(webMain);
-      expect(content).toContain("sendDefaultPii: false");
+      expect(content).toContain("dataCollection:");
+      expect(content).toContain("userInfo: false");
+      expect(content).toContain("cookies: false");
+      expect(content).toContain("urlQueryParams: false");
+      expect(content).toContain("httpBodies: []");
     });
 
     it("android sets isSendDefaultPii = false", () => {
@@ -195,7 +201,9 @@ describe("sentry privacy guardrails", () => {
       const main = readSource(webMain);
       expect(main).toContain("beforeBreadcrumb: scrubSentryBreadcrumb");
       expect(main).toContain("breadcrumbsIntegration");
-      expect(main).toContain("console: false");
+      // Sentry 11 moved console breadcrumbs out of `breadcrumbsIntegration` into the
+      // separate default `Console` integration, so it is dropped by name.
+      expect(main).toContain('integration.name !== "Console"');
       expect(main).toContain("dom: false");
 
       const helper = readSource(webObservability);

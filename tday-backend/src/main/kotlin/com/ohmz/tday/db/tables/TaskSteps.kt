@@ -1,8 +1,8 @@
 package com.ohmz.tday.db.tables
 
-import org.jetbrains.exposed.sql.ReferenceOption
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.v1.core.ReferenceOption
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.javatime.datetime
 
 /**
  * Flat checklist steps inside a todo (R6-2). No nesting, no per-step dates —

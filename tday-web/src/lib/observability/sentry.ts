@@ -59,6 +59,13 @@ const STATIC_SEGMENTS = new Set([
   "probe",
 ]);
 
+/**
+ * Header-name fragments Sentry's `dataCollection.httpHeaders` is told to drop on top of
+ * its own built-in secret filter: network-identity headers that would re-introduce the IP
+ * address `beforeSend` strips. The same list `sendDefaultPii: false` applied in SDK 10.
+ */
+export const SENTRY_PII_HEADER_SNIPPETS = ["forwarded", "-ip", "remote-", "via", "-user"];
+
 const SENSITIVE_HEADERS = new Set([
   "authorization",
   "cookie",

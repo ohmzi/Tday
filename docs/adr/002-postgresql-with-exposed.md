@@ -20,7 +20,7 @@ For migrations:
 ## Decision
 
 - Keep **PostgreSQL 15** as the primary data store.
-- Use **JetBrains Exposed 0.57.0** (DSL/Table API) for type-safe database access.
+- Use **JetBrains Exposed** (DSL/Table API) for type-safe database access. Decided on 0.57.0; the codebase has since moved to 1.x and its `org.jetbrains.exposed.v1` packages.
 - Use **HikariCP** for connection pooling.
 - Use **Flyway** for schema migrations with `baselineOnMigrate=true`, a baseline version of `2` for legacy databases, and a checked-in full schema snapshot for clean installs.
 

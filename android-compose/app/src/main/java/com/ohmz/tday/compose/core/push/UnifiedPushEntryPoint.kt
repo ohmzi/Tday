@@ -7,7 +7,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 
-/** Hilt access for the UnifiedPush BroadcastReceiver (receivers can't use field injection here). */
+/** Hilt access for the UnifiedPush service, which is created by the connector library rather than injected. */
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface UnifiedPushEntryPoint {

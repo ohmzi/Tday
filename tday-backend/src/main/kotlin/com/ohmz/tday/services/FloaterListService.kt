@@ -20,9 +20,10 @@ import com.ohmz.tday.security.FieldEncryption
 import com.ohmz.tday.security.decryptRequired
 import com.ohmz.tday.shared.model.ShareRole
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -280,21 +281,15 @@ class FloaterListServiceImpl(
 
             if (floaterIds.isNotEmpty()) {
                 Floaters.deleteWhere {
-                    SqlExpressionBuilder.run {
-                        Floaters.id inList floaterIds
-                    }
+                    Floaters.id inList floaterIds
                 }
             }
 
             FloaterListShares.deleteWhere {
-                SqlExpressionBuilder.run {
-                    FloaterListShares.listID inList existingIds
-                }
+                FloaterListShares.listID inList existingIds
             }
             FloaterLists.deleteWhere {
-                SqlExpressionBuilder.run {
-                    (FloaterLists.userID eq userId) and (FloaterLists.id inList existingIds)
-                }
+                (FloaterLists.userID eq userId) and (FloaterLists.id inList existingIds)
             }
             existingIds
         }

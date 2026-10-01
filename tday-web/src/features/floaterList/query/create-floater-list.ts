@@ -31,7 +31,7 @@ export const useCreateFloaterList = () => {
           defaultPriority,
         });
         if (!parsedObj.success) {
-          throw new Error(parsedObj.error.errors[0].message);
+          throw new Error(parsedObj.error.issues[0].message);
         }
         const response = await api.POST({
           url: "/api/floaterList",

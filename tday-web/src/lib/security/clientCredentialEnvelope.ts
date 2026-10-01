@@ -1,7 +1,7 @@
-import { hmac } from "@noble/hashes/hmac";
-import { pbkdf2 } from "@noble/hashes/pbkdf2";
-import { sha256 } from "@noble/hashes/sha256";
-import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
+import { hmac } from "@noble/hashes/hmac.js";
+import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils.js";
 
 const CREDENTIAL_KEY_ENDPOINT = "/api/auth/credentials-key";
 const PASSWORD_PROOF_CHALLENGE_ENDPOINT = "/api/auth/login-challenge";

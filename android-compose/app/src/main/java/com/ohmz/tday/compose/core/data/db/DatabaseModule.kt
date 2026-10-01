@@ -120,7 +120,7 @@ object DatabaseModule {
                 Migration11To12(),
                 Migration12To13(),
             )
-            .fallbackToDestructiveMigrationFrom(1, 2, 3, 4, 5, 6)
+            .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6)
             // Safety net: callers should run DAO access off the main thread (see
             // OfflineCacheManager / repositories using Dispatchers.IO). Kept so a missed
             // path (e.g. a Glance widget) degrades to a slow query rather than crashing.

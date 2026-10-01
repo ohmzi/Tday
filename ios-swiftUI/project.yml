@@ -33,7 +33,7 @@ settings:
 packages:
   sentry-cocoa:
     url: https://github.com/getsentry/sentry-cocoa
-    from: 8.45.0
+    from: 9.30.0
 
 targets:
   Tday:

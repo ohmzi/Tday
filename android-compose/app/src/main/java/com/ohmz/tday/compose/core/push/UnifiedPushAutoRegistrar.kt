@@ -32,7 +32,7 @@ internal const val SIGN_OUT_UNSUBSCRIBE_TIMEOUT_MS = 3_000L
  *
  * Not a passive read: asking for the saved distributor is what makes the connector notice that
  * the package is gone, and noticing is what broadcasts UNREGISTERED — which is how an uninstall
- * reaches `UnifiedPushReceiver.onUnregistered` and gets the endpoint deleted from the backend.
+ * reaches `UnifiedPushService.onUnregistered` and gets the endpoint deleted from the backend.
  * Until now the only thing that ever asked was the Settings row, so a user who uninstalled their
  * distributor left the server POSTing at a dead URL until they happened to open Settings. Asking
  * on every sign-in and every foreground is what turns "uninstall the distributor" into an off
@@ -138,15 +138,15 @@ class UnifiedPushAutoRegistrar @Inject constructor(
             -> Unit
 
             is UnifiedPushRegistrationAction.SaveDistributorAndRegister -> runCatching {
-                // `registerApp` returns silently when no distributor has been SAVED — the save is
+                // `register` returns silently when no distributor has been SAVED — the save is
                 // not bookkeeping for the choice, it is the half of registration that makes the
                 // broadcast happen at all.
                 UnifiedPush.saveDistributor(context, action.distributor)
-                UnifiedPush.registerApp(context)
+                UnifiedPush.register(context)
             }.onFailure { Log.w(TAG, "Failed to register with a distributor: ${it.message}") }
 
             UnifiedPushRegistrationAction.RegisterWithSavedDistributor -> runCatching {
-                UnifiedPush.registerApp(context)
+                UnifiedPush.register(context)
             }.onFailure { Log.w(TAG, "Failed to re-register with the saved distributor: ${it.message}") }
 
             is UnifiedPushRegistrationAction.SubscribeStoredEndpoint -> subscribe(action)

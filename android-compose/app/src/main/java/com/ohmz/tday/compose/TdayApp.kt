@@ -63,7 +63,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -145,7 +145,7 @@ import com.ohmz.tday.compose.ui.theme.TdayFloaterAccent
 import com.ohmz.tday.compose.ui.theme.TdayTheme
 import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeSource
 import io.sentry.android.navigation.SentryNavigationListener
 
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
@@ -488,7 +488,7 @@ fun TdayApp( // skipcq: KT-R1006
 
     TdayTheme(themeMode = appUiState.themeMode) {
         // Blur source for the bottom toast: the whole nav content is captured so the
-        // toast's hazeChild can render a translucent frosted backdrop (matches iOS).
+        // toast's hazeBlur can render a translucent frosted backdrop (matches iOS).
         val hazeState = remember { HazeState() }
         Box(modifier = Modifier.fillMaxSize()) {
             // One provider for every contextual "?" help link (GuideHelpLink);
@@ -537,7 +537,7 @@ fun TdayApp( // skipcq: KT-R1006
                     NavHost(
                         navController = navController,
                         startDestination = AppRoute.Splash.route,
-                        modifier = Modifier.haze(hazeState),
+                        modifier = Modifier.hazeSource(hazeState),
                         // Crossfade, with no slide in it.
                         //
                         // Every screen draws its own toolbar at the same place in the same

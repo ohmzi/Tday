@@ -37,7 +37,7 @@ Layer `docker-compose.build.yaml` on top when you actually want to build.
 
 The Docker image (`Dockerfile.backend`) is a multi-stage build:
 
-1. **Stage 1 — Frontend** (`node:20-alpine`): `npm ci` + `npm run build` in `tday-web/` → static assets at `/web/dist`
+1. **Stage 1 — Frontend** (`node:24-alpine`): `npm ci` + `npm run build` in `tday-web/` → static assets at `/web/dist`
 2. **Stage 2 — Backend** (`eclipse-temurin:21-jdk-alpine`): Copies Docker-specific Gradle files from `docker/`, `shared/src`, and `tday-backend/src`, then runs `./gradlew :tday-backend:buildFatJar -x test`
 3. **Stage 3 — Runtime** (`eclipse-temurin:21-jre-alpine`): Non-root user `tday`, copies fat JAR to `app.jar` and static files to `/app/static`, sets `STATIC_FILES_DIR=/app/static`
 

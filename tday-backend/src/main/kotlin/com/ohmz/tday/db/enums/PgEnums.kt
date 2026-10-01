@@ -1,7 +1,7 @@
 package com.ohmz.tday.db.enums
 
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.Table
 import org.postgresql.util.PGobject
 
 typealias UserRole = com.ohmz.tday.shared.model.UserRole

@@ -10,12 +10,12 @@ import com.ohmz.tday.db.tables.UserPreferences
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.models.response.PreferencesResponse
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.update
 
 interface PreferencesService {
     suspend fun get(userId: String): Either<AppError, PreferencesResponse>

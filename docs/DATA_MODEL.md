@@ -339,6 +339,29 @@ Tables absent from the `createMissingTablesAndColumns` list (`user_api_keys`,
 whatever their migration created. Their declarations now state `CASCADE` to match, so adding one
 of them to that list cannot silently downgrade it.
 
+## Migrations on a Clean Install
+
+A clean install runs `DatabaseConfig.init()` against an empty database: Flyway's whole chain
+first, `SchemaUtils.createMissingTablesAndColumns` after. Tables that are only ever created by
+that Exposed call (everything but the ones a migration creates itself) therefore **do not exist
+while the migrations run** on a clean install, even though they always existed on a database that
+had booted before the migration shipped. Today that is at least `floaterproject`, `completedfloaters`
+and `floaters`.
+
+A migration that touches such a table must tolerate it being absent. The Kotlin declaration
+already carries the column or constraint, so on a clean install Exposed creates the table correctly
+afterwards and the migration has nothing to do:
+
+- `ALTER TABLE IF EXISTS <table> ...` for `ALTER` statements.
+- `UPDATE` / `INSERT` / `DELETE` have no `IF EXISTS`; wrap them in
+  `DO $$ BEGIN IF to_regclass('public.<table>') IS NOT NULL THEN ... END IF; END $$;`
+  (see V27 and V29).
+- `REFERENCES <table>(...)` inside a guarded `ALTER TABLE IF EXISTS` is skipped with the statement.
+
+V19, V27 and V31 each shipped without this and left every new self-hosted install unable to start.
+`FreshInstallMigrationTest` runs the real chain through `DatabaseConfig.init()` against an empty
+`postgres:15` and fails the next time it happens; it needs Docker and is skipped without it.
+
 ## Data Change Checklist
 
 When changing data shape:
@@ -346,6 +369,8 @@ When changing data shape:
 - Update shared DTOs and validators first when the contract crosses platforms.
 - Update Exposed tables and add a Flyway migration for backend persistence changes. If the change
   touches a foreign key, read "Foreign Keys: Flyway Writes Them, Exposed Owns Them" first.
+  If it touches a table Exposed creates after Flyway (`floaterproject`, `completedfloaters`, ...),
+  read "Migrations on a Clean Install" first.
 - Update Android Room entities, DAOs, mappers, cache records, and migration/version handling.
 - Update iOS SwiftData entities, mappers, cache records, and widget snapshot logic if affected.
 - Update REST docs in `docs/API_GUIDELINES.md`.

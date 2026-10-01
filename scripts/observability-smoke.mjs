@@ -84,7 +84,7 @@ contains(
 );
 contains(
   "tday-web/src/main.tsx",
-  /console:\s*false/,
+  /integration\.name\s*!==\s*"Console"/,
   "web Sentry must disable automatic console breadcrumbs",
 );
 contains(

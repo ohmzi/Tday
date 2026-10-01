@@ -254,17 +254,18 @@
             </intent-filter>
         </receiver>
 
-        <!-- UnifiedPush: the distributor delivers server pushes to this receiver. -->
-        <receiver
-            android:name=".core.push.UnifiedPushReceiver"
-            android:exported="true">
+        <!--
+            UnifiedPush: the distributor's broadcasts reach the connector library's own receiver,
+            which forwards each event to this service (the connector's PushService contract: not
+            exported, one PUSH_EVENT action).
+        -->
+        <service
+            android:name=".core.push.UnifiedPushService"
+            android:exported="false">
             <intent-filter>
-                <action android:name="org.unifiedpush.android.connector.MESSAGE" />
-                <action android:name="org.unifiedpush.android.connector.UNREGISTERED" />
-                <action android:name="org.unifiedpush.android.connector.NEW_ENDPOINT" />
-                <action android:name="org.unifiedpush.android.connector.REGISTRATION_FAILED" />
+                <action android:name="org.unifiedpush.android.connector.PUSH_EVENT" />
             </intent-filter>
-        </receiver>
+        </service>
 
         <provider
             android:name="androidx.startup.InitializationProvider"

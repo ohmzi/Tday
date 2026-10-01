@@ -2,7 +2,7 @@ package com.ohmz.tday.shared.summary
 
 import com.ohmz.tday.shared.floater.FloaterResting
 import com.ohmz.tday.shared.floater.FloaterRestingTier
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 

@@ -93,9 +93,10 @@ enum TdayTelemetry {
 
         let breadcrumb = Breadcrumb(level: level, category: category)
         breadcrumb.message = safeLabel(operation)
-        breadcrumb.data = Dictionary(uniqueKeysWithValues: data.map { key, value in
-            (key, safeDataValue(key: key, value: value))
-        })
+        // The `data` setter is deprecated in sentry-cocoa 9 (becomes read-only); set per key.
+        for (key, value) in data {
+            breadcrumb.setData(value: safeDataValue(key: key, value: value), key: key)
+        }
         SentrySDK.addBreadcrumb(breadcrumb)
     }
 

@@ -208,7 +208,7 @@ private fun <T> tdayTileCloseSpec(): FiniteAnimationSpec<T> = tween(
 /**
  * How the screen is fitted into the travelling rectangle.
  *
- * `ScaleToBounds` measures the screen ONCE, at its final size, and then only scales it into the
+ * `scaleToBounds` measures the screen ONCE, at its final size, and then only scales it into the
  * rectangle — the zoom iOS draws. `RemeasureToBounds` is the other answer and the wrong one for a
  * whole screen: it re-lays-out every frame at the rectangle's size, so the toolbar, rows and
  * empty state keep their own size inside a window that is still growing, which is what reads as
@@ -220,7 +220,7 @@ private fun <T> tdayTileCloseSpec(): FiniteAnimationSpec<T> = tween(
  * label the user pressed — with the overflow below trimmed by [TdayTileCornerClip].
  */
 private val TdayTileResizeMode: SharedTransitionScope.ResizeMode =
-    SharedTransitionScope.ResizeMode.ScaleToBounds(ContentScale.Crop, Alignment.TopCenter)
+    SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.Crop, Alignment.TopCenter)
 
 /**
  * The screen's opacity on the way in: over the first `Quick` of the spring, while the rectangle

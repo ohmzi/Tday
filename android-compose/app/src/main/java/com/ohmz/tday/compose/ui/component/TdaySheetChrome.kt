@@ -174,6 +174,10 @@ fun TdayModalBottomSheet(
  * Status bar icons are forced light for the lifetime of the sheet, since the
  * scrim is dark in both themes and the app's normal dark-on-light icons would
  * otherwise be unreadable against it.
+ *
+ * Every caller's `DialogProperties` must also say `decorFitsSystemWindows = false`:
+ * Compose re-applies that property to the window, and its default of `true` both
+ * insets the content and leaves the navigation bar strip outside the scrim.
  */
 @Composable
 internal fun TdaySheetFullBleedWindow() {
@@ -239,7 +243,13 @@ fun <T> TdayCenteredSelectorDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            // The window is made full-bleed by TdaySheetFullBleedWindow below; leaving the
+            // property at its default lets the Dialog re-apply decorFitsSystemWindows = true
+            // and pad its content by the navigation bar, which un-dims the strip behind it.
+            decorFitsSystemWindows = false,
+        ),
     ) {
         TdaySheetFullBleedWindow()
 
