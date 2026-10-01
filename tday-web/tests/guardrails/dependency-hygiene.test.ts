@@ -66,7 +66,6 @@ describe("dependency and configuration hygiene", () => {
       const REQUIRED_VARS = [
         "DATABASE_URL",
         "AUTH_SECRET",
-        "CRONJOB_SECRET",
         "OLLAMA_URL",
         "OLLAMA_MODEL",
         "AUTH_PBKDF2_ITERATIONS",

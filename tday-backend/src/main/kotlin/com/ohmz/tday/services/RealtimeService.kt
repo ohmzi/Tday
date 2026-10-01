@@ -31,7 +31,8 @@ class RealtimeServiceImpl : RealtimeService {
 /**
  * Fans a mutation's realtime event out to the acting user plus everyone who
  * collaborates with them through a shared list, and drops those users' cached
- * responses so the refetch the event triggers can't be served stale data.
+ * collaborator sets (the only thing [CacheService] holds) so the next fan-out
+ * resolves fresh share membership.
  *
  * The collaborator set is intentionally coarse (all share-connected users, not
  * just the touched list's members): it avoids threading a listId through every

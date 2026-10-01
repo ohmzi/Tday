@@ -29,6 +29,7 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.lowerCase
 import org.jetbrains.exposed.sql.or
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.stringLiteral
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -146,11 +147,23 @@ class ListShareServiceImpl(
     override suspend fun sharedListIdsFor(userId: String, type: ListType, editorOnly: Boolean): List<String> =
         newSuspendedTransaction(Dispatchers.IO) {
             when (type) {
-                ListType.SCHEDULED -> ListShares.selectAll().where { ListShares.userID eq userId }
-                    .filter { !editorOnly || it[ListShares.role] == ShareRole.EDITOR.name }
+                ListType.SCHEDULED -> ListShares.select(ListShares.listID)
+                    .where {
+                        if (editorOnly) {
+                            (ListShares.userID eq userId) and (ListShares.role eq ShareRole.EDITOR.name)
+                        } else {
+                            ListShares.userID eq userId
+                        }
+                    }
                     .map { it[ListShares.listID] }
-                ListType.FLOATER -> FloaterListShares.selectAll().where { FloaterListShares.userID eq userId }
-                    .filter { !editorOnly || it[FloaterListShares.role] == ShareRole.EDITOR.name }
+                ListType.FLOATER -> FloaterListShares.select(FloaterListShares.listID)
+                    .where {
+                        if (editorOnly) {
+                            (FloaterListShares.userID eq userId) and (FloaterListShares.role eq ShareRole.EDITOR.name)
+                        } else {
+                            FloaterListShares.userID eq userId
+                        }
+                    }
                     .map { it[FloaterListShares.listID] }
             }
         }

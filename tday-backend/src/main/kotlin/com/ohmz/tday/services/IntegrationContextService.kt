@@ -7,6 +7,8 @@ import com.ohmz.tday.shared.model.IntegrationApiKeyDto
 import com.ohmz.tday.shared.model.IntegrationCapabilitiesDto
 import com.ohmz.tday.shared.model.IntegrationContextResponse
 import com.ohmz.tday.shared.model.IntegrationUserDto
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -36,9 +38,17 @@ class IntegrationContextServiceImpl(
         timeZone: String?,
         apiKey: IntegrationApiKeyDto?,
     ): Either<AppError, IntegrationContextResponse> = either {
-        val profile = userService.getProfile(userId).bind()
-        val lists = listService.getAll(userId).bind()
-        val anytimeLists = floaterListService.getAll(userId).bind()
+        // Three independent read-only lookups, issued together. Results are bound in the
+        // original order, so the first failing read reports the same error.
+        val reads = coroutineScope {
+            val profileRead = async { userService.getProfile(userId) }
+            val listsRead = async { listService.getAll(userId) }
+            val anytimeListsRead = async { floaterListService.getAll(userId) }
+            Triple(profileRead.await(), listsRead.await(), anytimeListsRead.await())
+        }
+        val profile = reads.first.bind()
+        val lists = reads.second.bind()
+        val anytimeLists = reads.third.bind()
 
         IntegrationContextResponse(
             apiKey = apiKey,

@@ -140,7 +140,6 @@ class SecurityQuestionsRouteTest {
             setQuestionsCalls += 1
         }
 
-        override suspend fun questionsForUsername(rawUsername: String): List<SecurityQuestion> = error("unused")
         override suspend fun lookupQuestionsForUsername(rawUsername: String): List<SecurityQuestion>? = error("unused")
         override suspend fun verifyAnswers(rawUsername: String, answers: List<SecurityAnswerInput>): VerifyAnswersResult = error("unused")
         override suspend fun verifyAndReset(rawUsername: String, answers: List<SecurityAnswerInput>, newPassword: String): ResetOutcome = error("unused")
@@ -159,7 +158,6 @@ class SecurityQuestionsRouteTest {
         override suspend fun changePassword(userId: String, currentPassword: String, newPassword: String): Either<AppError, Boolean> = unused()
         override suspend fun register(fname: String, lname: String?, username: String, password: String, securityAnswers: List<SecurityAnswerInput>): Either<AppError, RegisterResult> = unused()
         override suspend fun findByUsername(username: String): Map<String, Any?>? = null
-        override suspend fun isAdmin(userId: String): Boolean = false
         override suspend fun usernameExists(username: String): Boolean = false
         override suspend fun updatePasswordHash(userId: String, newHash: String) = Unit
         override suspend fun requiresPasswordChange(userId: String): Boolean = false

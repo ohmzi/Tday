@@ -3,6 +3,8 @@ package com.ohmz.tday.mcp
 import arrow.core.Either
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.mcp.McpDates.toZone
+import com.ohmz.tday.models.response.CompletedFloaterResponse
+import com.ohmz.tday.models.response.CompletedTodoResponse
 import com.ohmz.tday.models.response.FloaterResponse
 import com.ohmz.tday.models.response.TodoResponse
 import com.ohmz.tday.services.CompletedFloaterService
@@ -16,6 +18,8 @@ import com.ohmz.tday.services.RecurrenceState
 import com.ohmz.tday.services.TodoService
 import com.ohmz.tday.shared.model.IntegrationApiKeyDto
 import com.ohmz.tday.shared.model.ListColor
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -112,24 +116,38 @@ class TdayMcpService(
             "view must be one of: ${TaskView.entries.joinToString(", ") { it.value }}.",
         )
 
+        // Only read the lists up front when a name has to be resolved; either way they are
+        // read once and reused for the list-name column below.
+        val resolvedLists = listName?.let { allLists(ctx.userId).orFailure { failure -> return failure } }
         val listFilter = listName?.let { requested ->
-            val candidates = allLists(ctx.userId).orFailure { return it }
+            val candidates = resolvedLists!!
             val lookup = McpListResolver.lookup(requested, candidates, namespace = null)
             lookup.match ?: return McpToolResult.ok(describeMiss(lookup, candidates))
         }
 
-        val tasks = mutableListOf<ResolvedTask>()
-
-        if (resolvedView.includesScheduled) {
-            val window = resolvedView.windowFor(zone, from, to)
+        val window = if (resolvedView.includesScheduled) {
+            resolvedView.windowFor(zone, from, to)
                 ?: return McpToolResult.failed("Could not read the from/to window. Use YYYY-MM-DD or YYYY-MM-DDTHH:mm.")
-            tasks += scheduledTasks(ctx, window, includeCompleted).orFailure { return it }
-        }
-        if (resolvedView.includesAnytime) {
-            tasks += anytimeTasks(ctx, includeCompleted).orFailure { return it }
+        } else {
+            null
         }
 
-        val listNames = listNamesById(ctx.userId).orFailure { return it }
+        // The scheduled read, the Anytime read and the list lookup are independent and
+        // read-only, so they run side by side; results are still inspected in the same order
+        // as before, so the first failing read reports the same error.
+        val (scheduledRead, anytimeRead, listsRead) = coroutineScope {
+            val scheduled = window?.let { async { scheduledTasks(ctx, it, includeCompleted) } }
+            val anytime = if (resolvedView.includesAnytime) async { anytimeTasks(ctx, includeCompleted) } else null
+            val lists = if (resolvedLists == null) async { allLists(ctx.userId) } else null
+            Triple(scheduled?.await(), anytime?.await(), lists?.await())
+        }
+
+        val tasks = mutableListOf<ResolvedTask>()
+        scheduledRead?.let { tasks += it.orFailure { failure -> return failure } }
+        anytimeRead?.let { tasks += it.orFailure { failure -> return failure } }
+
+        val lists = resolvedLists ?: listsRead!!.orFailure { return it }
+        val listNames = lists.associate { it.id to it.name }
         val filtered = tasks
             .filter { listFilter == null || it.listId == listFilter.id }
             .sortedWith(compareBy({ it.due ?: LocalDateTime.MAX }, { it.title }))
@@ -156,14 +174,33 @@ class TdayMcpService(
         if (terms.isEmpty()) return McpToolResult.failed("query must contain something to search for.")
 
         val zone = ctx.zone
+
+        // Five independent, read-only lookups: issue them together and inspect the results in
+        // the order the sequential version ran them, so the first failing read reports the same
+        // error. The completed histories are only read when they were asked for.
+        val reads = coroutineScope {
+            val timeline = async { todoService.getTimeline(ctx.userId, zone.id, DEFAULT_UPCOMING_DAYS) }
+            val floaters = async { floaterService.getAll(ctx.userId) }
+            val completedTodos = if (includeCompleted) async { completedTodoService.getAll(ctx.userId) } else null
+            val completedFloaters = if (includeCompleted) async { completedFloaterService.getAll(ctx.userId) } else null
+            val lists = async { allLists(ctx.userId) }
+            SearchReads(
+                timeline = timeline.await(),
+                floaters = floaters.await(),
+                completedTodos = completedTodos?.await(),
+                completedFloaters = completedFloaters?.await(),
+                lists = lists.await(),
+            )
+        }
+
         val matches = mutableListOf<ResolvedTask>()
-        matches += todoService.getTimeline(ctx.userId, zone.id, DEFAULT_UPCOMING_DAYS)
+        matches += reads.timeline
             .orFailure { return it }
             .map { it.toResolvedTask() }
-        matches += floaterService.getAll(ctx.userId).orFailure { return it }.map { it.toResolvedTask() }
+        matches += reads.floaters.orFailure { return it }.map { it.toResolvedTask() }
 
         if (includeCompleted) {
-            matches += completedTodoService.getAll(ctx.userId).orFailure { return it }.map {
+            matches += reads.completedTodos!!.orFailure { return it }.map {
                 ResolvedTask(
                     handle = TaskHandle.of(TaskKind.TODO, it.originalTodoID ?: it.id),
                     title = it.title,
@@ -174,7 +211,7 @@ class TdayMcpService(
                     listId = it.listID,
                 )
             }
-            matches += completedFloaterService.getAll(ctx.userId).orFailure { return it }.map {
+            matches += reads.completedFloaters!!.orFailure { return it }.map {
                 ResolvedTask(
                     handle = TaskHandle.of(TaskKind.FLOATER, it.originalFloaterID ?: it.id),
                     title = it.title,
@@ -189,7 +226,7 @@ class TdayMcpService(
             matches.removeAll { it.completed }
         }
 
-        val listNames = listNamesById(ctx.userId).orFailure { return it }
+        val listNames = reads.lists.orFailure { return it }.associate { it.id to it.name }
         val hits = matches
             .filter { task ->
                 val haystack = "${task.title} ${task.notes.orEmpty()}".lowercase()
@@ -615,11 +652,14 @@ class TdayMcpService(
         return Either.Right(scheduled + anytime)
     }
 
-    private suspend fun listNamesById(userId: String): Either<AppError, Map<String, String>> =
-        when (val result = allLists(userId)) {
-            is Either.Left -> result
-            is Either.Right -> Either.Right(result.value.associate { it.id to it.name })
-        }
+    /** The independent reads behind `searchTasks`, kept as Either so failures surface in a fixed order. */
+    private class SearchReads(
+        val timeline: Either<AppError, List<TodoResponse>>,
+        val floaters: Either<AppError, List<FloaterResponse>>,
+        val completedTodos: Either<AppError, List<CompletedTodoResponse>>?,
+        val completedFloaters: Either<AppError, List<CompletedFloaterResponse>>?,
+        val lists: Either<AppError, List<NamedList>>,
+    )
 
     /**
      * Turns a requested list into an id, or explains why it can't.

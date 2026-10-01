@@ -3,7 +3,6 @@ package com.ohmz.tday.services
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import arrow.core.raise.either
 import com.ohmz.tday.db.tables.CompletedTodos
 import com.ohmz.tday.db.enums.ListColor
 import com.ohmz.tday.db.enums.Priority
@@ -33,18 +32,11 @@ interface ListService {
     suspend fun getTodosForList(userId: String, listId: String): Either<AppError, List<ListTodoResponse>>
     suspend fun create(userId: String, name: String, color: String?, iconKey: String?, defaultPriority: String? = null): Either<AppError, ListResponse>
     suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, defaultPriority: String? = null, defaultPriorityChanged: Boolean? = null): Either<AppError, Unit>
-    suspend fun delete(userId: String, id: String): Either<AppError, Int>
-    suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>> = either {
-        ids.distinct().filter { it.isNotBlank() }.mapNotNull { id ->
-            val deletedCount = delete(userId, id).bind()
-            id.takeIf { deletedCount > 0 }
-        }
-    }
+    suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>>
 }
 
 class ListServiceImpl(
     private val fieldEncryption: FieldEncryption,
-    private val cache: CacheService,
     private val shareService: ListShareService,
     private val publisher: RealtimePublisher,
 ) : ListService {
@@ -66,9 +58,11 @@ class ListServiceImpl(
             val memberCounts: Map<String, Int> = if (listIds.isEmpty()) {
                 emptyMap()
             } else {
-                ListShares.selectAll().where { ListShares.listID inList listIds }
-                    .groupingBy { it[ListShares.listID] }
-                    .eachCount()
+                val shareCount = ListShares.listID.count()
+                ListShares.select(ListShares.listID, shareCount)
+                    .where { ListShares.listID inList listIds }
+                    .groupBy(ListShares.listID)
+                    .associate { it[ListShares.listID] to it[shareCount].toInt() }
             }
             val ownerIds = rows.map { it[Lists.userID] }.filter { it != userId }.distinct()
             val ownerUsernames: Map<String, String> = if (ownerIds.isEmpty()) {
@@ -160,7 +154,6 @@ class ListServiceImpl(
                 it[Lists.updatedAt] = now
             }
         }
-        cache.invalidateListCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.ListChanged(id))
         return ListResponse(
             id = id, name = name, color = color, iconKey = iconKey, defaultPriority = defaultPriority,
@@ -186,13 +179,9 @@ class ListServiceImpl(
                 it[Lists.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
-        cache.invalidateListCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.ListChanged(id))
         return Unit.right()
     }
-
-    override suspend fun delete(userId: String, id: String): Either<AppError, Int> =
-        deleteMany(userId, listOf(id)).map { it.size }
 
     override suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>> {
         val normalizedIds = ids.map(String::trim).filter(String::isNotEmpty).distinct()
@@ -264,9 +253,6 @@ class ListServiceImpl(
         }
 
         if (deletedIds.isNotEmpty()) {
-            cache.invalidateListCaches(userId)
-            cache.invalidateTodoCaches(userId)
-            cache.invalidateCompletedCaches(userId)
             publisher.publishTo(userId, recipients, DomainEvent.ListChanged())
         }
 

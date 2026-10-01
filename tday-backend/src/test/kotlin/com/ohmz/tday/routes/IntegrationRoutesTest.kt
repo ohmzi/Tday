@@ -206,7 +206,6 @@ class IntegrationRoutesTest {
         ): Either<AppError, RegisterResult> = Either.Left(AppError.Internal("unused"))
 
         override suspend fun findByUsername(username: String): Map<String, Any?>? = null
-        override suspend fun isAdmin(userId: String) = false
         override suspend fun usernameExists(username: String) = false
         override suspend fun updatePasswordHash(userId: String, newHash: String) = Unit
         override suspend fun requiresPasswordChange(userId: String) = false

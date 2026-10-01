@@ -592,8 +592,6 @@ class SessionAuthFlowTest {
 
         override suspend fun findByUsername(username: String): Map<String, Any?>? = loginUser
 
-        override suspend fun isAdmin(userId: String): Boolean = false
-
         override suspend fun usernameExists(username: String): Boolean = false
 
         override suspend fun updatePasswordHash(userId: String, newHash: String) = Unit

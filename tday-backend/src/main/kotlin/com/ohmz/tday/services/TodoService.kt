@@ -105,7 +105,6 @@ internal fun completionTargetFor(rrule: String?, instanceDate: LocalDateTime?): 
 
 class TodoServiceImpl(
     private val fieldEncryption: FieldEncryption,
-    private val cache: CacheService,
     private val shareService: ListShareService,
     private val publisher: RealtimePublisher,
 ) : TodoService {
@@ -137,7 +136,6 @@ class TodoServiceImpl(
                 it[Todos.exdates] = emptyList()
             }
         }
-        cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged(normalizedListID))
         return TodoResponse(
             id = id, title = title, description = description,
@@ -219,7 +217,6 @@ class TodoServiceImpl(
                 stmt[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
-        cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged(targetListId))
         return Unit.right()
     }
@@ -240,7 +237,6 @@ class TodoServiceImpl(
                 Todos.deleteWhere { Todos.id inList deletableIds }
             }
         }
-        cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return count.right()
     }
@@ -284,8 +280,6 @@ class TodoServiceImpl(
             is Either.Right -> result.value
         }
 
-        cache.invalidateTodoCaches(userId)
-        cache.invalidateFloaterCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())
         return FloaterResponse(
@@ -408,7 +402,6 @@ class TodoServiceImpl(
                 }
             }
         }
-        cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         publisher.publishToCollaborators(userId, DomainEvent.CompletedChanged())
         return Unit.right()
@@ -453,7 +446,6 @@ class TodoServiceImpl(
                 }
             }
         }
-        cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         publisher.publishToCollaborators(userId, DomainEvent.CompletedChanged())
         return Unit.right()
@@ -467,7 +459,6 @@ class TodoServiceImpl(
                 it[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
-        cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return Unit.right()
     }
@@ -480,7 +471,6 @@ class TodoServiceImpl(
                 it[Todos.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
-        cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return Unit.right()
     }
@@ -550,7 +540,6 @@ class TodoServiceImpl(
                 }
             }
         }
-        cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return Unit.right()
     }
@@ -576,7 +565,6 @@ class TodoServiceImpl(
                 ),
             )
         }
-        cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return Unit.right()
     }

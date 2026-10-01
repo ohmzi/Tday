@@ -333,7 +333,13 @@ private fun Route.todoUtilityRoutes(
                     ).right()
                 }
 
-                val todos = todoService.getTimeline(user.id, timeZone, 365).getOrNull() ?: emptyList()
+                // The Anytime scope summarizes floaters only; reading (and decrypting) the whole
+                // scheduled timeline for it would be work nothing downstream looks at.
+                val todos = if (scope.usesFloaters) {
+                    emptyList()
+                } else {
+                    todoService.getTimeline(user.id, timeZone, 365).getOrNull() ?: emptyList()
+                }
                 val floaters = if (scope.usesFloaters) {
                     floaterService.getAll(user.id).getOrNull() ?: emptyList()
                 } else {
@@ -645,6 +651,3 @@ internal fun parseTodoDateTime(value: String?): LocalDateTime? {
  */
 internal fun parseDueMinute(value: String?): LocalDateTime? =
     parseTodoDateTime(value)?.withSecond(0)?.withNano(0)
-
-/** Floor an already-parsed timestamp to the minute (equivalent of SQL date_trunc('minute')). */
-internal fun LocalDateTime.flooredToMinute(): LocalDateTime = withSecond(0).withNano(0)

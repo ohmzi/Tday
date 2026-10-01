@@ -29,10 +29,8 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm")
     implementation("io.ktor:ktor-client-core-jvm")
     implementation("io.ktor:ktor-client-cio-jvm")
-    implementation("io.ktor:ktor-client-content-negotiation-jvm")
 
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
-    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
 
@@ -52,7 +50,9 @@ dependencies {
     implementation("io.insert-koin:koin-logger-slf4j:4.0.4")
 
     implementation("io.arrow-kt:arrow-core:2.1.2")
-    implementation("io.arrow-kt:arrow-fx-coroutines:2.1.2")
+    // The backend imports kotlinx.coroutines directly. 1.10.2 used to arrive transitively through
+    // arrow-fx-coroutines; Ktor 3.0.3 alone resolves 1.9.0, so keep the runtime version explicit.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 
     implementation("io.konform:konform-jvm:0.11.1")
 
@@ -70,7 +70,6 @@ dependencies {
     // Real Postgres for the one property H2 cannot stand in for: partial
     // (filtered) unique indexes. See CompletedFloaterConcurrencyTest.
     testImplementation("org.testcontainers:postgresql:1.21.3")
-    testImplementation("org.testcontainers:junit-jupiter:1.21.3")
 }
 
 tasks.withType<Test> {

@@ -95,8 +95,8 @@ class CompletedFloaterConcurrencyTest {
     private val realtime = RealtimeServiceImpl()
     private val shareService = ListShareServiceImpl(cache, realtime, push)
     private val publisher = RealtimePublisher(realtime, shareService, cache, push)
-    private val floaterService: FloaterService = FloaterServiceImpl(PassthroughFieldEncryption, cache, shareService, publisher)
-    private val floaterListService: FloaterListService = FloaterListServiceImpl(PassthroughFieldEncryption, cache, shareService, publisher)
+    private val floaterService: FloaterService = FloaterServiceImpl(PassthroughFieldEncryption, shareService, publisher)
+    private val floaterListService: FloaterListService = FloaterListServiceImpl(PassthroughFieldEncryption, shareService, publisher)
 
     @BeforeEach
     fun setUp() {

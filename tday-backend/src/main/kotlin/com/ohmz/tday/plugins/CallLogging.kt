@@ -14,7 +14,8 @@ fun Application.configureCallLogging() {
         format { call ->
             val status = call.response.status()?.value ?: "?"
             val method = call.request.httpMethod.value
-            val route = TdayObservability.sanitizePath(call.request.path())
+            val route = call.attributes.getOrNull(sanitizedPathKey)
+                ?: TdayObservability.sanitizePath(call.request.path())
             val contentType = call.response.headers["Content-Type"] ?: "-"
             "$method $route -> $status ($contentType)"
         }

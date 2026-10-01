@@ -65,9 +65,16 @@ object TdayObservability {
     private val sensitiveLabelPattern =
         Regex("(https?://|wss?://|[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}|bearer\\s+|token=|password=|session=|cookie=|csrf)", RegexOption.IGNORE_CASE)
     private val tokenLikeLabelPattern = Regex("^[A-Za-z0-9_.:-]+$")
+    private val unsafeLabelCharPattern = Regex("[^A-Za-z0-9_.:-]")
+    private val placeholderSegmentPattern = Regex("^:[A-Za-z][A-Za-z0-9_]*$")
+    private val localeSegmentPattern = Regex("[a-z]{2}(-[A-Z]{2})?")
 
     fun routeTemplate(method: String, rawPath: String): String =
-        "${method.uppercase()} ${sanitizePath(rawPath)}"
+        routeTemplateFromSanitized(method, sanitizePath(rawPath))
+
+    /** [routeTemplate] for a caller that already ran [sanitizePath], so the path is parsed once. */
+    fun routeTemplateFromSanitized(method: String, sanitizedPath: String): String =
+        "${method.uppercase()} $sanitizedPath"
 
     fun sanitizePath(raw: String): String {
         val withoutQuery = raw.substringBefore('?').substringBefore('#')
@@ -94,7 +101,7 @@ object TdayObservability {
         if (sensitiveLabelPattern.containsMatchIn(value)) return "redacted"
         if (value.length > 24 && value.any(Char::isDigit) && tokenLikeLabelPattern.matches(value)) return "id"
         val normalized = value
-            .replace(Regex("[^A-Za-z0-9_.:-]"), "_")
+            .replace(unsafeLabelCharPattern, "_")
             .take(64)
         return normalized.ifBlank { "unknown" }
     }
@@ -144,9 +151,9 @@ object TdayObservability {
             .trim()
         return when {
             decoded.isBlank() -> ":value"
-            decoded.matches(Regex("^:[A-Za-z][A-Za-z0-9_]*$")) -> decoded
+            decoded.matches(placeholderSegmentPattern) -> decoded
             decoded in staticSegments -> decoded
-            decoded.matches(Regex("[a-z]{2}(-[A-Z]{2})?")) -> ":locale"
+            decoded.matches(localeSegmentPattern) -> ":locale"
             decoded.length > 24 -> ":id"
             decoded.any(Char::isDigit) -> ":id"
             decoded.contains('@') -> ":redacted"

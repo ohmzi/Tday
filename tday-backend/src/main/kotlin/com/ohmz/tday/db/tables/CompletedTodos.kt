@@ -3,7 +3,6 @@ package com.ohmz.tday.db.tables
 import com.ohmz.tday.db.enums.*
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.javatime.datetime
-import java.math.BigDecimal
 
 object CompletedTodos : Table("CompletedTodo") {
     val id = varchar("id", 30)

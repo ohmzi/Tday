@@ -14,6 +14,7 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.slf4j.LoggerFactory
@@ -76,7 +77,7 @@ class ReminderPushScheduler(
 
         // Non-recurring, incomplete todos whose due entered (windowStart, now].
         val dueTodos = newSuspendedTransaction(Dispatchers.IO) {
-            Todos.selectAll()
+            Todos.select(Todos.id, Todos.userID, Todos.title)
                 .where {
                     (Todos.completed eq false) and
                         Todos.rrule.isNull() and

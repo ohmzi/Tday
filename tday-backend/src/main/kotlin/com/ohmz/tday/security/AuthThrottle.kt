@@ -343,9 +343,6 @@ class AuthThrottleImpl(
             hash = clientSignals::hashSecurityValue,
         )
 
-    private fun makeSubject(action: ThrottleAction, dimension: ThrottleDimension, value: String): SubjectKey =
-        SubjectKey("${action.name}:${dimension.name}", clientSignals.hashSecurityValue("${dimension.name}:$value"), dimension)
-
     private suspend fun consumeRequestQuota(policy: Policy, subject: SubjectKey): ThrottleResult {
         val now = LocalDateTime.now(ZoneOffset.UTC)
         return newSuspendedTransaction(Dispatchers.IO) {

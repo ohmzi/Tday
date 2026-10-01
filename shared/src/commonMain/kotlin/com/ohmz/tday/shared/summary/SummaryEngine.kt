@@ -56,7 +56,7 @@ object SummaryEngine {
         // The weekly retrospective is a different shape from the forward-looking summary:
         // it reads the completed history rather than pending tasks.
         if (scope == SummaryScope.WEEK) {
-            return buildWeekReview(tasks, nowEpochMs, now, zone, strings)
+            return buildWeekReview(tasks, nowEpochMs, zone, strings)
         }
 
         val scoped = tasks
@@ -100,7 +100,6 @@ object SummaryEngine {
     private fun buildWeekReview(
         tasks: List<SummaryTaskInput>,
         nowEpochMs: Long,
-        now: LocalDateTime,
         zone: TimeZone,
         s: SummaryStrings,
     ): String {

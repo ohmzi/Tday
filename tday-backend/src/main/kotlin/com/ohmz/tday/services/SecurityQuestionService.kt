@@ -5,7 +5,6 @@ import com.ohmz.tday.db.tables.Users
 import com.ohmz.tday.db.util.CuidGenerator
 import com.ohmz.tday.models.request.SecurityAnswerInput
 import com.ohmz.tday.security.AuthUserCache
-import com.ohmz.tday.security.ClientSignals
 import com.ohmz.tday.security.PasswordService
 import com.ohmz.tday.security.SecurityQuestion
 import com.ohmz.tday.security.SecurityQuestions
@@ -43,9 +42,6 @@ data class SecurityQuestionStatus(
 )
 
 interface SecurityQuestionService {
-    /** Always returns exactly two questions: the user's real pair, or a stable decoy pair. */
-    suspend fun questionsForUsername(rawUsername: String): List<SecurityQuestion>
-
     /**
      * The account's full set of stored questions (2–3), or null when the username
      * doesn't exist / hasn't configured questions. Used by the reset wizard to (a)
@@ -77,32 +73,12 @@ interface SecurityQuestionService {
 class SecurityQuestionServiceImpl(
     private val passwordService: PasswordService,
     private val sessionControl: SessionControl,
-    private val clientSignals: ClientSignals,
     private val authUserCache: AuthUserCache,
 ) : SecurityQuestionService {
 
     // A throwaway hash so a missing/unconfigured account still pays the PBKDF2 cost,
     // keeping response timing indistinguishable from a real verification.
     private val dummyHash: String by lazy { passwordService.hashPassword("dummy-answer-for-timing") }
-
-    override suspend fun questionsForUsername(rawUsername: String): List<SecurityQuestion> {
-        val username = normalize(rawUsername)
-        val hashHex = clientSignals.hashSecurityValue("secq:$username")
-        val ids = newSuspendedTransaction(Dispatchers.IO) {
-            val userId = findUserId(username)
-            if (userId != null) {
-                val rows = UserSecurityQuestions.selectAll()
-                    .where { UserSecurityQuestions.userID eq userId }
-                    .map { it[UserSecurityQuestions.questionId] }
-                // Ask a stable 2 of the user's stored questions (handles legacy
-                // 2-question accounts and current 3-question accounts alike).
-                if (rows.size >= 2) SecurityQuestions.stableSubset(rows, hashHex, 2) else null
-            } else {
-                null
-            }
-        } ?: SecurityQuestions.decoyPair(hashHex)
-        return SecurityQuestions.questionsFor(ids)
-    }
 
     override suspend fun lookupQuestionsForUsername(rawUsername: String): List<SecurityQuestion>? {
         val username = normalize(rawUsername)
@@ -300,8 +276,4 @@ class SecurityQuestionServiceImpl(
     }
 
     private fun normalize(raw: String): String = raw.trim().lowercase()
-
-    private fun findUserId(normalizedUsername: String): String? =
-        Users.selectAll().where { Users.username.lowerCase() eq normalizedUsername }
-            .firstOrNull()?.get(Users.id)
 }

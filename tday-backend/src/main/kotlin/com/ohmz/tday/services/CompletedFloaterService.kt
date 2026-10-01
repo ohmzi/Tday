@@ -30,7 +30,6 @@ interface CompletedFloaterService {
 
 class CompletedFloaterServiceImpl(
     private val fieldEncryption: FieldEncryption,
-    private val cache: CacheService,
 ) : CompletedFloaterService {
     override suspend fun getAll(userId: String): Either<AppError, List<CompletedFloaterResponse>> {
         val floaters = newSuspendedTransaction(Dispatchers.IO) {
@@ -45,7 +44,6 @@ class CompletedFloaterServiceImpl(
         val count = newSuspendedTransaction(Dispatchers.IO) {
             CompletedFloaters.deleteWhere { CompletedFloaters.userID eq userId }
         }
-        cache.invalidateFloaterCaches(userId)
         return count.right()
     }
 
@@ -67,7 +65,6 @@ class CompletedFloaterServiceImpl(
             }
             CompletedFloaters.deleteWhere { (CompletedFloaters.id eq id) and (CompletedFloaters.userID eq userId) }
         }
-        cache.invalidateFloaterCaches(userId)
         return count.right()
     }
 
@@ -98,7 +95,6 @@ class CompletedFloaterServiceImpl(
             }
         }
         val count = result ?: return Either.Left(AppError.BadRequest("floater list not found"))
-        if (count > 0) cache.invalidateFloaterCaches(userId)
         return count.right()
     }
 
