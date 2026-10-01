@@ -23,7 +23,8 @@ contract, not to add more SDKs:
 - [Sentry data collected](https://docs.sentry.io/platforms/javascript/guides/react/data-management/data-collected/):
   Sentry can collect stack traces, runtime/device context, request URLs/query
   strings, headers, breadcrumbs, and console logs depending on SDK settings, so
-  T'Day keeps `sendDefaultPii = false`, strips IP fields in `beforeSend`, and
+  T'Day keeps `sendDefaultPii = false` (web: the equivalent `dataCollection`
+  block), strips IP fields in `beforeSend`, and
   sanitizes routes before adding breadcrumbs or transaction names.
 - [Sentry tracing and sampling](https://docs.sentry.io/platforms/javascript/guides/express/tracing/):
   tracing is useful for throughput/latency and distributed debugging, but
@@ -65,10 +66,10 @@ Every Sentry event may contain non-identifying diagnostics:
 |---------------|-------------|
 | Task, floater, list titles, descriptions, notes, or user text | Telemetry helpers sanitize breadcrumbs, paths, labels, and log messages |
 | Local Mode task/list/floater content | Local Mode breadcrumbs are structural only, such as `local_mode.enter` |
-| Email, username, display name, IP address | `sendDefaultPii = false`; `beforeSend` strips residual user/IP fields |
-| Cookies, auth headers, CSRF values, session IDs | Request bodies are not attached; web request headers/cookies are scrubbed |
+| Email, username, display name, IP address | `sendDefaultPii = false` on backend/Android/iOS and an explicit `dataCollection` block with `userInfo: false` on web (Sentry SDK 11 removed `sendDefaultPii`); `beforeSend` strips residual user/IP fields |
+| Cookies, auth headers, CSRF values, session IDs | Request bodies are not attached; web `dataCollection` sets `cookies: false`, `httpBodies: []` and `urlQueryParams: false`, and request headers are scrubbed |
 | Query strings and raw URLs | Route helpers remove queries and replace IDs with `:id` |
-| Console output and DOM click/key breadcrumbs | Web Sentry config disables console/DOM automatic breadcrumbs and filters remaining breadcrumbs through `beforeBreadcrumb` |
+| Console output and DOM click/key breadcrumbs | Web Sentry config removes the `Console` integration, disables DOM automatic breadcrumbs, and filters remaining breadcrumbs through `beforeBreadcrumb` |
 | Screen replay or recordings | Web replay sample rates remain `0`; mobile replay is not enabled |
 | Product analytics, engagement funnels, ad identifiers | No analytics SDKs are installed or allowed by guardrail tests |
 
