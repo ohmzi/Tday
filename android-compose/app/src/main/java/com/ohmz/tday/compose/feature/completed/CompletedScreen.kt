@@ -53,7 +53,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -69,8 +68,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -95,6 +94,7 @@ import com.ohmz.tday.compose.core.ui.TaskSwipeSlotBackHandler
 import com.ohmz.tday.compose.core.ui.TdayEmptyState
 import com.ohmz.tday.compose.core.ui.TdayFeedItemMotion
 import com.ohmz.tday.compose.core.ui.TdayHaptics
+import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
 import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.TdaySearchCapsule
@@ -116,10 +116,9 @@ import com.ohmz.tday.compose.core.ui.swipeSlotAfterRowDisclaim
 import com.ohmz.tday.compose.core.ui.taskCopyText
 import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
+import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
-import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
-import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.TdaySegmentedSlider
@@ -231,9 +230,12 @@ private enum class CompletedRestorePhase {
     Fading,
 }
 
+// The screen's state, list and the two tabs' scenes are read together in one body; DeepSource's
+// complexity count was already past its limit here, so the finding is suppressed, not split.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompletedScreen(
+    // skipcq: KT-R1006
     uiState: CompletedUiState,
     initialScope: CompletedScope,
     onBack: () -> Unit,
@@ -659,9 +661,11 @@ fun CompletedScreen(
                                     .fillMaxWidth()
                                     .layout { measurable, constraints ->
                                         val info = listState.layoutInfo
-                                        val own = info.visibleItemsInfo.firstOrNull { it.key == emptySceneKey }
+                                        val own =
+                                            info.visibleItemsInfo.firstOrNull { it.key == emptySceneKey }
                                         val top = own?.offset
-                                            ?: info.visibleItemsInfo.lastOrNull()?.let { it.offset + it.size }
+                                            ?: info.visibleItemsInfo.lastOrNull()
+                                                ?.let { it.offset + it.size }
                                             ?: 0
                                         val remaining =
                                             (info.viewportEndOffset - info.afterContentPadding - top)
