@@ -78,6 +78,9 @@ internal object ListTasksWidget {
                 // `listWidgetVisualsFor`).
                 listIconKey = snapshot?.listIconKey ?: liveSelection?.listIconKey,
                 listName = snapshot?.listName ?: liveSelection?.listName,
+                // Same precedence as the icon: the cache's current colour wins, so recolouring a
+                // list reaches its widget on the next write rather than waiting for a re-pick.
+                listColorKey = snapshot?.listColorKey ?: liveSelection?.listColorKey,
             )
         }
         val title = listWidgetTitleFor(appContext, liveSelection, snapshot, isAppLocked)
@@ -137,6 +140,7 @@ internal fun listWidgetVisualsFor(
     listType: WidgetListType?,
     listIconKey: String? = null,
     listName: String? = null,
+    listColorKey: String? = null,
 ): TaskWidgetVisuals {
     if (listType == null) return UnconfiguredListWidgetVisuals
     val isDaytime = taskWidgetIsDaytime(LocalTime.now().hour)
@@ -145,14 +149,17 @@ internal fun listWidgetVisualsFor(
         WidgetListType.TODO -> todayWidgetVisuals(isDaytime)
     }
     if (listIconKey.isNullOrBlank() && listName.isNullOrBlank()) return base
-    // The list's glyph in its type's accent: the accent is what ties the watermark to the "+"
-    // button and the row rings, and it is the only part of the look the type still owns.
+    // The list's glyph in the LIST's own colour, falling back to its type's accent only when the
+    // list has no colour. The type used to own the accent outright, which is why a red floater
+    // list wore the floater green: the glyph came from the list and the tint did not.
+    val listAccent = widgetListAccentFor(listColorKey)
     val watermark = TaskWidgetWatermark(
         drawable = tdayListIconResForList(listIconKey, listName),
         tint = when (listType) {
             WidgetListType.FLOATER -> R.color.tday_widget_floater_accent
             WidgetListType.TODO -> todayWidgetAccentColor(isDaytime)
         },
+        tintArgb = listAccent?.light,
         // A shared Lucide glyph is white at full opacity, so the watermark weight the other
         // drawables bake has to be applied here instead.
         alpha = TaskWidgetWatermark.WATERMARK_ALPHA,

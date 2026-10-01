@@ -13,6 +13,7 @@ import android.util.SizeF
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
+import androidx.annotation.ColorInt
 import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.IdRes
@@ -94,6 +95,16 @@ internal data class TaskWidgetWatermark(
     @ColorRes val tint: Int,
     /** 0..255, as `ImageView.setImageAlpha` takes it. */
     val alpha: Int = OPAQUE_ALPHA,
+    /**
+     * A resolved ARGB tint that WINS over [tint] when set.
+     *
+     * A list's colour arrives as a key the user picked, resolved through the app's own table —
+     * there is no `@ColorRes` for it, and minting one per palette entry would be a second table to
+     * keep in step. So the resource stays the KIND's fallback and this carries the list's own
+     * colour, which is the whole point: a red list must not wear the floater green just because it
+     * happens to be a floater list.
+     */
+    @ColorInt val tintArgb: Int? = null,
 ) {
     companion object {
         /** The weight a watermark is drawn at: 10% of full ink, matching the baked vectors. */
@@ -312,7 +323,12 @@ internal object TaskWidgetRemoteViews {
         setImageViewResource(viewId, watermark.drawable)
         // SRC_ATOP: the filter replaces the drawable's RGB and keeps its alpha, which is what lets
         // one call site serve both a pre-tinted watermark vector and a shared Lucide glyph.
-        setInt(viewId, "setColorFilter", ContextCompat.getColor(context, watermark.tint))
+        // The list's own colour when it has one, else the kind's. See `TaskWidgetWatermark.tintArgb`.
+        setInt(
+            viewId,
+            "setColorFilter",
+            watermark.tintArgb ?: ContextCompat.getColor(context, watermark.tint),
+        )
         setInt(viewId, "setImageAlpha", watermark.alpha)
     }
 

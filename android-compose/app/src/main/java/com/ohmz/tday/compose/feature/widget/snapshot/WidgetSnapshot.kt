@@ -94,6 +94,17 @@ internal data class WidgetSnapshot(
      * back to the name-inferred glyph (see `listWidgetVisualsFor`) rather than going blank.
      */
     val listIconKey: String? = null,
+    /**
+     * List widget only: the colour KEY the user gave that list ("PINK", "TEAL", …) — never a
+     * resolved hex. A key is opaque and enum-like, so it is safe to bake and is resolved per theme
+     * at render time through the app's own list-colour table (see `widgetListAccentFor`); a hex
+     * baked here would freeze the widget on whichever theme was active at the last cache write.
+     *
+     * Defaulted so a snapshot written before this field existed still decodes — such a snapshot
+     * reports no colour and the widget falls back to its KIND's accent, which is what those
+     * widgets showed anyway, rather than rendering a wrong colour.
+     */
+    val listColorKey: String? = null,
     /** List widget only: the chosen list no longer exists; the widget asks for another. */
     val listMissing: Boolean = false,
 )
