@@ -42,8 +42,15 @@ const ANDROID_VOCABULARY_FILE = path.join(
 );
 
 /**
- * The eight events, in declaration order. This list is the contract, not a summary of the
+ * The nine events, in declaration order. This list is the contract, not a summary of the
  * file: it is Android's `TdayHaptics` order, and both clients are asserted against it.
+ *
+ * A name is a four-place change — the iOS enum, `TdayHaptics.kt`, this array, and at least
+ * one call site per client — and all four have to land in one commit or this file goes red.
+ * `screenChange` is the ninth, and it is the shape of event that forced the rule to be
+ * written down: a list screen closing by edge swipe has no control to hang a haptic on, so
+ * reusing `buttonPress` for it would have named the event after a button that was never
+ * pressed.
  */
 const VOCABULARY = [
   "buttonPress",
@@ -54,6 +61,7 @@ const VOCABULARY = [
   "dragPickUp",
   "dragDrop",
   "reveal",
+  "screenChange",
 ];
 
 function walkFiles(dir: string, ext: string): string[] {
@@ -138,10 +146,10 @@ describeIOS("iOS haptic vocabulary", () => {
     expect(readSource(VOCABULARY_FILE)).toContain("enum HapticManager {");
   });
 
-  it("declares the eight events, and only those", () => {
+  it("declares the nine events, and only those", () => {
     expect(
       declaredVocabulary(readSource(VOCABULARY_FILE)),
-      "The vocabulary is a fixed list of events. Adding a ninth name means adding it on " +
+      "The vocabulary is a fixed list of events. Adding a tenth name means adding it on " +
         "Android too, in the same order, and this list with it.",
     ).toEqual(VOCABULARY);
   });
@@ -214,7 +222,7 @@ describeIOS("iOS haptic vocabulary", () => {
     if (!existsSync(ANDROID_VOCABULARY_FILE)) {
       // Android's half of this work lands in its own PR. Until it does there is nothing
       // to compare against, and the iOS list is already pinned by the test above.
-      expect(VOCABULARY.length).toBe(8);
+      expect(VOCABULARY.length).toBe(9);
       return;
     }
 
