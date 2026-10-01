@@ -2540,7 +2540,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             }
             if (todoIndex >= 0) {
                 val todo = section.items[todoIndex]
-                return itemIndex + todoIndex to "timeline-todo-${section.key}-${todo.id}"
+                return itemIndex + todoIndex to timelineTodoKey(section.key, todo.id)
             }
             itemIndex += section.items.size
         }
@@ -2554,7 +2554,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             }
             if (todoIndex >= 0) {
                 val todo = section.items[todoIndex]
-                return itemIndex + todoIndex to "timeline-todo-${section.key}-${todo.id}"
+                return itemIndex + todoIndex to timelineTodoKey(section.key, todo.id)
             }
             itemIndex += section.items.size
         }
@@ -4340,7 +4340,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                     collapsedSectionKeys = collapsedSectionKeys,
                 )
                 item(
-                    key = "timeline-todo-${section.key}-${todo.id}",
+                    key = timelineTodoKey(section.key, todo.id),
                     contentType = "timeline-todo",
                 ) {
                     val rowModifier =
@@ -6278,7 +6278,7 @@ private fun buildOverdueSections(
         ?.takeIf { it.isNotEmpty() }
         ?.let { todaysItems ->
             sections += TodoSection(
-                key = "day-$today",
+                key = daySectionKey(today),
                 title = DAY_SECTION_TITLE_TODAY,
                 items = todaysItems,
                 quickAddDefaults = quickAddDefaultsForDate(
@@ -6294,7 +6294,7 @@ private fun buildOverdueSections(
         .sortedDescending()
         .forEach { date ->
             sections += TodoSection(
-                key = "day-$date",
+                key = daySectionKey(date),
                 title = date.format(SCHEDULED_DAY_FORMATTER),
                 items = TaskSortEngine.sortedTodos(overdueByDate[date].orEmpty()) { it.toTaskSortKey() },
                 quickAddDefaults = null,
@@ -6427,14 +6427,14 @@ private fun buildScheduledSections(
     val sections = mutableListOf<TodoSection>()
     fun daySection(date: LocalDate, title: String): TodoSection {
         return TodoSection(
-            key = "day-$date",
+            key = daySectionKey(date),
             title = title,
             items = groupedByDate[date].orEmpty(),
             quickAddDefaults = quickAddDefaultsForDate(
                 date = date,
                 zoneId = zoneId,
             ),
-            targetDate = timelineRescheduleTargetDate("day-$date", today),
+            targetDate = timelineRescheduleTargetDate(daySectionKey(date), today),
         )
     }
 
@@ -6732,6 +6732,22 @@ private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter =
  * "Today" after dark. A row due this evening is still due today, and calling that group "Tonight"
  * would be a claim about which day the row is on.
  */
+/**
+ * A day section's key, built in one place because four call sites need the SAME string: the
+ * scheduled builder's two sections, the grouped builder's, and the reschedule target that is
+ * matched back against it. A key is an identity other code compares on, so a second spelling of
+ * it is not a style problem — it is two sections that look like one and behave like two.
+ */
+private fun daySectionKey(date: LocalDate): String = "day-$date"
+
+/**
+ * A timeline row's key. Three call sites: the two scroll-target lookups and the row itself, and
+ * the lookups only work because they build exactly what the row built. That is precisely the
+ * invariant a repeated template erodes.
+ */
+private fun timelineTodoKey(sectionKey: String, todoId: String): String =
+    "timeline-todo-$sectionKey-$todoId"
+
 private const val DAY_SECTION_TITLE_TODAY = "Today"
 
 private fun quickAddDefaultsForDate(
