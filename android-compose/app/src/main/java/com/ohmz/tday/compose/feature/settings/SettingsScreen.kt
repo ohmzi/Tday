@@ -328,7 +328,7 @@ fun SettingsScreen(
         // Window focus, not ON_RESUME. Both things that can change this answer take the window's
         // focus away and give it back, but only one of them is a lifecycle event: installing or
         // uninstalling a distributor happens in another app (resume, and focus), while this row's
-        // own Choose pill opens the connector's plain AlertDialog, which never moves the host
+        // own Choose pill opens an AlertDialog window, which never moves the host
         // Activity out of RESUMED. Keyed on resume alone, the row stayed on screen still asking a
         // question the user had just answered — the "I tapped it and nothing happened" shape that
         // got the old row deleted. `drop(1)` because the composition above already read the state
@@ -2671,18 +2671,17 @@ private fun QuietHoursTimeRow(label: String, value: String, onClick: () -> Unit)
  * [needsDistributorChoice]) and its own composition is gated on that, so it is never the "go
  * install ntfy" dead end the old UnifiedPush row was.
  *
- * The pill hands straight to the connector's chooser, which is a plain `AlertDialog` with no
- * result callback — so nothing here learns the answer directly. The caller watches window focus
- * instead: the dialog takes focus on open and hands it back on dismiss, and the re-read on its
- * return is what takes this row away the moment the question is answered. That matters more than
- * it looks: `registerAppWithDialog` only short-circuits once the distributor has ACKed, and the
- * dialog's own handler saves the distributor without setting that bit, so a second tap in a row
- * left on screen would re-open the picker over a choice already made.
+ * The pill opens [PushDistributorDialog], which saves the choice and registers with it but
+ * reports nothing back — so nothing here learns the answer directly. The caller watches window
+ * focus instead: the dialog takes focus on open and hands it back on dismiss, and the re-read on
+ * its return is what takes this row away the moment the question is answered. That matters more
+ * than it looks: the saved distributor has not ACKed yet when the dialog closes, so a row left
+ * on screen would invite a second pick over a choice already made.
  */
 @Composable
 private fun PushDistributorRow() {
     val colorScheme = MaterialTheme.colorScheme
-    val context = LocalContext.current
+    var showChooser by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -2713,10 +2712,69 @@ private fun PushDistributorRow() {
         SettingsPillButton(
             text = stringResource(R.string.settings_push_distributor_choose),
             icon = R.drawable.ic_lucide_cloud,
-            onClick = { UnifiedPush.registerAppWithDialog(context) },
+            onClick = { showChooser = true },
         )
     }
+    if (showChooser) {
+        PushDistributorDialog(onDismiss = { showChooser = false })
+    }
 }
+
+/**
+ * Lists the installed UnifiedPush distributors and registers with the one tapped. UnifiedPush 3
+ * dropped the connector's own `registerAppWithDialog`; its replacement, `tryPickDistributor`,
+ * needs a distributor that handles the `unifiedpush://link` deep link, so this keeps the old
+ * dialog's contract of working with any installed distributor. Saving the distributor is what
+ * [needsDistributorChoice] reads, and `register` is the half that makes the distributor answer
+ * with an endpoint.
+ */
+@Composable
+private fun PushDistributorDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val distributors = remember(context) { readUnifiedPushDistributorState(context).installed }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.settings_push_distributor_title),
+                fontWeight = FontWeight.ExtraBold,
+            )
+        },
+        text = {
+            Column {
+                distributors.forEach { distributor ->
+                    TextButton(
+                        onClick = {
+                            runCatching {
+                                UnifiedPush.saveDistributor(context, distributor)
+                                UnifiedPush.register(context)
+                            }
+                            onDismiss()
+                        },
+                    ) {
+                        Text(text = pushDistributorLabel(context, distributor))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        },
+    )
+}
+
+/** The distributor's app name, or its package name when the package manager will not say. */
+@Suppress("DEPRECATION") // the flags overload of getApplicationInfo needs API 33; minSdk is 26
+private fun pushDistributorLabel(context: Context, packageName: String): String =
+    runCatching {
+        val packageManager = context.packageManager
+        packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0))
+            .toString()
+    }.getOrDefault(packageName)
 
 @Composable
 private fun ReminderSelector(

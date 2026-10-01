@@ -21,22 +21,31 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.unifiedpush.android.connector.MessagingReceiver
+import org.unifiedpush.android.connector.FailedReason
+import org.unifiedpush.android.connector.PushService
+import org.unifiedpush.android.connector.data.PushEndpoint
+import org.unifiedpush.android.connector.data.PushMessage
 
 /**
  * Receives UnifiedPush lifecycle callbacks. On a new endpoint we register it with the
  * backend (Server Mode only) as an `unifiedpush` transport; incoming messages carry the
  * same ID-only payload the web push path uses and are shown as a local notification.
+ *
+ * A [PushService] rather than the connector's deprecated `MessagingReceiver`: the library's own
+ * broadcast receiver takes the distributor's broadcast off the main thread and hands each event
+ * to this service, so the work below runs with a bound component instead of inside a bare
+ * `onReceive`.
  */
-class UnifiedPushReceiver : MessagingReceiver() {
+class UnifiedPushService : PushService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val json = Json { ignoreUnknownKeys = true }
 
-    override fun onNewEndpoint(context: Context, endpoint: String, instance: String) {
-        val entry = entryPoint(context)
+    override fun onNewEndpoint(endpoint: PushEndpoint, instance: String) {
+        val endpointUrl = endpoint.url
+        val entry = entryPoint(applicationContext)
         // Only Server-Mode users have a backend to receive from.
         if (entry.serverConfigRepository().isLocalMode()) return
-        entry.unifiedPushStore().setEndpoint(endpoint)
+        entry.unifiedPushStore().setEndpoint(endpointUrl)
         // Sent from here as well as from UnifiedPushAutoRegistrar because this receiver may be
         // the only thing awake when a distributor rotates an endpoint. It cannot record WHICH
         // account the endpoint was accepted for — a broadcast receiver has no session in hand —
@@ -45,14 +54,14 @@ class UnifiedPushReceiver : MessagingReceiver() {
         scope.launch {
             runCatching {
                 entry.apiService().subscribePush(
-                    PushSubscribeRequest(endpoint = endpoint, transport = UNIFIEDPUSH_TRANSPORT),
+                    PushSubscribeRequest(endpoint = endpointUrl, transport = UNIFIEDPUSH_TRANSPORT),
                 )
             }.onFailure { Log.w(TAG, "Failed to register UnifiedPush endpoint: ${it.message}") }
         }
     }
 
-    override fun onUnregistered(context: Context, instance: String) {
-        val entry = entryPoint(context)
+    override fun onUnregistered(instance: String) {
+        val entry = entryPoint(applicationContext)
         val endpoint = entry.unifiedPushStore().getEndpoint() ?: return
         entry.unifiedPushStore().clear()
         scope.launch {
@@ -62,13 +71,16 @@ class UnifiedPushReceiver : MessagingReceiver() {
         }
     }
 
-    override fun onRegistrationFailed(context: Context, instance: String) {
-        Log.w(TAG, "UnifiedPush registration failed for instance $instance")
+    override fun onRegistrationFailed(reason: FailedReason, instance: String) {
+        Log.w(TAG, "UnifiedPush registration failed for instance $instance: $reason")
     }
 
-    override fun onMessage(context: Context, message: ByteArray, instance: String) {
+    override fun onMessage(message: PushMessage, instance: String) {
+        // The backend posts plain JSON, so `message.decrypted` is false here and `content` is the
+        // body as the distributor delivered it.
+        val context = applicationContext
         val payload = runCatching {
-            json.parseToJsonElement(message.toString(Charsets.UTF_8)).jsonObject
+            json.parseToJsonElement(message.content.toString(Charsets.UTF_8)).jsonObject
         }.getOrNull() ?: return
 
         fun field(name: String): String? =
@@ -138,7 +150,7 @@ class UnifiedPushReceiver : MessagingReceiver() {
         )
 
     private companion object {
-        const val TAG = "UnifiedPushReceiver"
+        const val TAG = "UnifiedPushService"
         const val DATA_CHANGED_TYPE = "data-changed"
     }
 }

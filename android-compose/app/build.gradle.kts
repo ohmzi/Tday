@@ -268,25 +268,25 @@ dependencies {
     // Widget task lists: RemoteCollectionItems, backported below API 31 by its own service.
     implementation("androidx.core:core-remoteviews:1.1.0")
 
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:okhttp-urlconnection:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-kotlinx-serialization:3.0.0")
+    implementation("com.squareup.okhttp3:okhttp:5.5.0")
+    implementation("com.squareup.okhttp3:okhttp-urlconnection:5.5.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
-    implementation("io.sentry:sentry-okhttp:8.13.0")
-    implementation("io.sentry:sentry-android-navigation:8.13.0")
+    implementation("io.sentry:sentry-okhttp:8.59.0")
+    implementation("io.sentry:sentry-android-navigation:8.59.0")
 
     implementation("androidx.security:security-crypto:1.1.0")
 
     // UnifiedPush: lets Server-Mode self-hosters receive server pushes through their
     // own distributor (e.g. ntfy) instead of FCM. Local reminders remain the default.
-    implementation("org.unifiedpush.android:connector:2.5.0")
+    implementation("org.unifiedpush.android:connector:3.3.5")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("app.cash.turbine:turbine:1.2.0")
 
@@ -311,7 +311,7 @@ sentry {
     }
     autoInstallation {
         enabled = true
-        sentryVersion = "8.13.0"
+        sentryVersion = "8.59.0"
     }
 }
 
