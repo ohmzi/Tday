@@ -234,8 +234,7 @@ private enum class CompletedRestorePhase {
 // complexity count was already past its limit here, so the finding is suppressed, not split.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CompletedScreen(
-    // skipcq: KT-R1006
+fun CompletedScreen(  // skipcq: KT-R1006
     uiState: CompletedUiState,
     initialScope: CompletedScope,
     onBack: () -> Unit,
