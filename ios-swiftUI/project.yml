@@ -82,11 +82,17 @@ targets:
         excludes:
           - Info.plist
       # App files the extension compiles as well: the day-window math, the List widget's setup
-      # picture (the app's setup sheet draws it too) and the raw motion values (the
-      # WidgetCheckHold beat), none of which pulls in anything app-only.
+      # picture (the app's setup sheet draws it too), the raw motion values (the WidgetCheckHold
+      # beat) and the list-accent resolvers — a list-scoped widget draws that list's own glyph
+      # and colour, which means resolving its icon key (including the name-derived guess, hence
+      # the inference rule and its generated table) and its colour key on this side. None of the
+      # five pulls in anything app-only.
       - path: Tday/Core/Widget/TodayWidgetDayWindow.swift
       - path: Tday/Core/Widget/ListWidgetSetupArt.swift
       - path: Tday/UI/Theme/TdayMotionGenerated.swift
+      - path: Tday/UI/Theme/TdayListAccent.swift
+      - path: Tday/UI/Theme/TdayListIconInference.swift
+      - path: Tday/UI/Theme/TdayListIconInferenceGenerated.swift
     settings:
       base:
         PRODUCT_NAME: TdayWidget
