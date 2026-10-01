@@ -53,7 +53,7 @@ Every Sentry event may contain non-identifying diagnostics:
 |------|---------|--------------|
 | Stack trace | `NullPointerException at TodoService.kt:42` | Finds the failing code path |
 | Release / build | `tday-ios@1.44.0`, dist `6` | Connects regressions to releases |
-| Runtime context | OS, browser, device model class | Reproduces platform-specific failures |
+| Runtime context | OS, browser, device model class; on iOS also coarse connection type (`wifi`, `cellular`, `none`) from sentry-cocoa 9.30 | Reproduces platform-specific failures, including offline/sync ones |
 | Sanitized route | `PATCH /api/todo/:id` | Shows failing surface without IDs or query strings |
 | HTTP status | `503` | Separates server, auth, and network failures |
 | Structural breadcrumbs | `sync.replay`, `server.probe`, `realtime.connect` | Reconstructs failure sequence |
