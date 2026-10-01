@@ -19,6 +19,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { api } from "@/lib/api-client";
 import { getErrorMessage } from "@/lib/error-message";
 import { getAppMode, setAppMode } from "@/lib/local/appMode";
+import { isDaytimeNow } from "@/lib/timeOfDay";
 import { createClientCredentialEnvelope } from "@/lib/security/clientCredentialEnvelope";
 import PendingApprovalScreen from "@/components/auth/PendingApprovalScreen";
 import AnimatedHeight from "@/components/ui/AnimatedHeight";
@@ -60,11 +61,6 @@ const USERNAME_REGEX = /^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$/;
 type RegisterResponse = {
   requiresApproval?: boolean;
 };
-
-function isDaytime(): boolean {
-  const hour = new Date().getHours();
-  return hour >= 6 && hour < 18;
-}
 
 export default function OnboardingWizard({
   initialMode = "signin",
@@ -113,7 +109,7 @@ export default function OnboardingWizard({
   const [checkingApproval, setCheckingApproval] = React.useState(false);
 
   const isCreating = mode === "create";
-  const daytime = isDaytime();
+  const daytime = isDaytimeNow();
 
   // Reopen the holding screen on load whenever a pending marker is present (survives
   // reload) or the post-redirect ?pending=1 hint is set.

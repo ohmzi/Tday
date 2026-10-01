@@ -29,6 +29,7 @@ export default function TimelineEmptyState({
   locale,
   emptyTitle,
   emptyBody,
+  dayDoneTitle = "allDoneToday",
   appDict,
 }: {
   icon: ElementType;
@@ -66,6 +67,14 @@ export default function TimelineEmptyState({
   locale: string;
   emptyTitle: string;
   emptyBody: string;
+  /**
+   * The `app` key for the Day Done headline. A prop and not a constant because
+   * the Today scope renames itself after 18:00 — "All done for tonight" — on the
+   * same boundary that flips the root feed header's sun/moon mark, and the caller
+   * is where that clock lives. Defaulted for the callers that pass
+   * `isDayDone={false}` and so never reach it.
+   */
+  dayDoneTitle?: string;
   appDict: (key: string) => string;
 }) {
   return (
@@ -78,7 +87,7 @@ export default function TimelineEmptyState({
         // not an absence, and the scope's own icon would undersell it.
         icon={isDayDone ? CheckCheck : icon}
         accentColor={accentColor}
-        title={isDayDone ? appDict("allDoneToday") : appDict(emptyTitle)}
+        title={isDayDone ? appDict(dayDoneTitle) : appDict(emptyTitle)}
         description={
           isDayDone
             ? new Intl.DateTimeFormat(locale, {
