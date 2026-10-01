@@ -78,7 +78,7 @@ function ignoredDirectoryRules(): { names: Set<string>; paths: Set<string> } {
     const line = raw.trim();
     if (line === "" || line.startsWith("#") || line.startsWith("!")) continue;
     if (!line.endsWith("/")) continue;
-    if (/[*?\[\]]/.test(line)) continue;
+    if (line.includes("*") || line.includes("?") || line.includes("[")) continue;
     const entry = line.replace(/^\/+/, "").replace(/\/+$/, "");
     if (entry === "") continue;
     if (entry.includes("/")) paths.add(entry);
