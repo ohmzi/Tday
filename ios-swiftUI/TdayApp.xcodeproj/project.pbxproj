@@ -1596,7 +1596,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayShareExtension/TdayShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1605,7 +1605,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.46;
+				MARKETING_VERSION = 0.7.47;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayShareExtension;
 				PRODUCT_NAME = TdayShareExtension;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1624,7 +1624,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayShareExtension/TdayShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1633,7 +1633,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.46;
+				MARKETING_VERSION = 0.7.47;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayShareExtension;
 				PRODUCT_NAME = TdayShareExtension;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1711,7 +1711,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
@@ -1721,7 +1721,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.46;
+				MARKETING_VERSION = 0.7.47;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios;
 				PRODUCT_NAME = Tday;
 				SDKROOT = iphoneos;
@@ -1740,7 +1740,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
@@ -1750,7 +1750,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.46;
+				MARKETING_VERSION = 0.7.47;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios;
 				PRODUCT_NAME = Tday;
 				SDKROOT = iphoneos;
@@ -1855,7 +1855,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1864,7 +1864,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.46;
+				MARKETING_VERSION = 0.7.47;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayTasksWidget;
 				PRODUCT_NAME = TdayWidget;
 				SDKROOT = iphoneos;
@@ -1882,7 +1882,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1891,7 +1891,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.46;
+				MARKETING_VERSION = 0.7.47;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayTasksWidget;
 				PRODUCT_NAME = TdayWidget;
 				SDKROOT = iphoneos;
@@ -1908,7 +1908,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TdayWatchWidget/TdayWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWatchWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1916,7 +1916,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.46;
+				MARKETING_VERSION = 0.7.47;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp.widget;
 				PRODUCT_NAME = TdayWatchWidget;
 				SDKROOT = watchos;
@@ -1937,7 +1937,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TdayWatchWidget/TdayWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWatchWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1945,7 +1945,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.46;
+				MARKETING_VERSION = 0.7.47;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp.widget;
 				PRODUCT_NAME = TdayWatchWidget;
 				SDKROOT = watchos;
@@ -1964,14 +1964,14 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TdayWatch/TdayWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWatch/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.46;
+				MARKETING_VERSION = 0.7.47;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp;
 				PRODUCT_NAME = TdayWatch;
 				SDKROOT = watchos;
@@ -1992,14 +1992,14 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TdayWatch/TdayWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 58;
+				CURRENT_PROJECT_VERSION = 59;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWatch/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.46;
+				MARKETING_VERSION = 0.7.47;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp;
 				PRODUCT_NAME = TdayWatch;
 				SDKROOT = watchos;
