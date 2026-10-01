@@ -1,11 +1,11 @@
 {
-  "version": "0.7.46",
-  "publishedAt": "2026-09-30T14:35:59-04:00",
+  "version": "0.7.47",
+  "publishedAt": "2026-10-01T02:31:13-04:00",
   "notes": [
-    "Smooth iOS transitions: stop root re-renders and main-thread cache reads",
-    "Stop drawing home under a landed tile zoom and ship a baseline profile",
-    "Load the list before its first frame so a tile zoom lands with every row"
+    "Fix the three CI failures, one of which was unfinished work",
+    "Give widget watermarks the right identity, and a Tonight title",
+    "Say Tonight on the web Today screen after 18:00"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.46",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.45..v0.7.46"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.7.47",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.46..v0.7.47"
 }
