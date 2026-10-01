@@ -283,7 +283,16 @@ dependencies {
 
     // UnifiedPush: lets Server-Mode self-hosters receive server pushes through their
     // own distributor (e.g. ntfy) instead of FCM. Local reminders remain the default.
-    implementation("org.unifiedpush.android:connector:3.3.5")
+    //
+    // The connector's runtime dependency on the JVM `tink` collides with the `tink-android` that
+    // security-crypto brings: both define com.google.crypto.tink.*, which fails
+    // checkReleaseDuplicateClasses. tink-android is the one that has to stay (EncryptedSharedPreferences
+    // needs its Android keystore integration, which the JVM artifact lacks), and it carries every
+    // Tink class the connector calls (HybridDecrypt/HybridEncrypt and the subtle.* helpers; checked
+    // against the connector's bytecode), so the JVM copy is dropped rather than the other way round.
+    implementation("org.unifiedpush.android:connector:3.3.5") {
+        exclude(group = "com.google.crypto.tink", module = "tink")
+    }
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
