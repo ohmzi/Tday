@@ -12,7 +12,11 @@ import {
 import { api } from "@/lib/api-client";
 import { cn, isSubmitEnter } from "@/lib/utils";
 import { hapticTick, hapticConfirm } from "@/lib/haptics";
-import { listColorMap } from "@/lib/listColorMap";
+import {
+  DEFAULT_SCHEDULED_LIST_COLOR,
+  DEFAULT_SCHEDULED_LIST_COLOR_OPTION,
+  listColorMap,
+} from "@/lib/listColorMap";
 import {
   DEFAULT_LIST_ICON_KEY,
   getListIcon,
@@ -95,7 +99,7 @@ export default function ListFormSheet({
   onOpenChange,
   list,
   initialName = "",
-  initialColor = "BLUE",
+  initialColor = DEFAULT_SCHEDULED_LIST_COLOR,
   initialIconKey = DEFAULT_LIST_ICON_KEY,
   onSaved,
   onManageMembers,
@@ -173,7 +177,7 @@ export default function ListFormSheet({
   }, [iconTouched, isEditing, name]);
 
   const selectedColor = useMemo(
-    () => listColorMap.find((option) => option.value === color) ?? listColorMap[4],
+    () => listColorMap.find((option) => option.value === color) ?? DEFAULT_SCHEDULED_LIST_COLOR_OPTION,
     [color],
   );
   const SelectedIcon = getListIcon(iconKey);
@@ -231,7 +235,7 @@ export default function ListFormSheet({
       const iconChanged = iconTouched && iconKey !== storedIconKey;
       if (
         normalizedName === normalizeListName(list.name) &&
-        color === (list.color ?? "BLUE") &&
+        color === (list.color ?? DEFAULT_SCHEDULED_LIST_COLOR) &&
         !iconChanged &&
         defaultPriority === (list.defaultPriority ?? null)
       ) {

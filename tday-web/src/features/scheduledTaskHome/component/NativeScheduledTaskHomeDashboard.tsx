@@ -20,6 +20,7 @@ import { getDisplayDate } from "@/lib/date/displayDate";
 import { Link, useLocale, usePathname, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { getListIconForList } from "@/lib/listIcons";
+import { DEFAULT_SCHEDULED_LIST_COLOR } from "@/lib/listColorMap";
 import type { ListColor } from "@/types";
 import { useRowPlacement } from "@/hooks/useRowPlacement";
 import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
@@ -322,7 +323,7 @@ export default function NativeScheduledTaskHomeDashboard() {
             </h2>
             <div className="space-y-2">
               {lists.map((list) => {
-                const accent = listColorCss[list.color ?? "PINK"];
+                const accent = listColorCss[list.color ?? DEFAULT_SCHEDULED_LIST_COLOR];
                 const ListIcon = getListIconForList(list);
 
                 return (

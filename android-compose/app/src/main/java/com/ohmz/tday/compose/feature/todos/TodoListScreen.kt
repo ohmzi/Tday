@@ -231,7 +231,8 @@ import com.ohmz.tday.compose.ui.priority.isImportantPriority
 import com.ohmz.tday.compose.ui.priority.isLowestPriority
 import com.ohmz.tday.compose.ui.priority.isUrgentPriority
 import com.ohmz.tday.compose.ui.priority.priorityDisplayLabelRes
-import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
+import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY
+import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTileAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -253,6 +254,7 @@ import com.ohmz.tday.compose.ui.theme.TdayTodoModeScheduledAccent
 import com.ohmz.tday.compose.ui.theme.TdayTodoModeTodayAccent
 import com.ohmz.tday.compose.ui.theme.isTdayListIconKeySupported
 import com.ohmz.tday.compose.ui.theme.normalizeTdayListColorKey
+import com.ohmz.tday.compose.ui.theme.tdayDefaultListColorKey
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayListIconForList
@@ -2333,7 +2335,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     var showSummarySheet by rememberSaveable(uiState.mode) { mutableStateOf(false) }
     var listSettingsTargetId by rememberSaveable { mutableStateOf<String?>(null) }
     var listSettingsName by rememberSaveable { mutableStateOf("") }
-    var listSettingsColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
+    var listSettingsColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY) }
     var listSettingsIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var listSettingsColorTouched by rememberSaveable { mutableStateOf(false) }
     var listSettingsIconTouched by rememberSaveable { mutableStateOf(false) }
@@ -2345,7 +2347,7 @@ fun TodoListScreen( // skipcq: KT-R1006
     // `listSettingsReusable`) since the row is shown for every list.
     var listSettingsDefaultPriority by rememberSaveable { mutableStateOf<String?>(null) }
     var createListName by rememberSaveable { mutableStateOf("") }
-    var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
+    var createListColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY) }
     var createListIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     var createListReusable by rememberSaveable { mutableStateOf(false) }
     var createListDefaultPriority by rememberSaveable { mutableStateOf<String?>(null) }
@@ -2503,7 +2505,10 @@ fun TodoListScreen( // skipcq: KT-R1006
                     } else {
                         listSettingsTargetId = selectedList.id
                         listSettingsName = selectedList.name
-                        listSettingsColor = normalizeTdayListColorKey(selectedList.color)
+                        listSettingsColor = normalizeTdayListColorKey(
+                            selectedList.color,
+                            defaultKey = tdayDefaultListColorKey(uiState.mode == TodoListMode.FLOATER),
+                        )
                         // Seeded from the same three sources the row resolves in, and in
                         // the same order, so the sheet opens showing the glyph that is
                         // already on screen. Seeding from the inference does not persist
@@ -3705,7 +3710,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                         createListDefaultPriority,
                     )
                     createListName = ""
-                    createListColor = TDAY_DEFAULT_LIST_COLOR_KEY
+                    createListColor = TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY
                     createListIconKey = TDAY_DEFAULT_LIST_ICON_KEY
                     createListIconTouched = false
                     createListReusable = false
@@ -4730,7 +4735,7 @@ private fun FloaterTaskHomeSearchResultsCard(
                         Icon(
                             imageVector = tdayListIconForList(listMeta?.iconKey, listMeta?.name),
                             contentDescription = null,
-                            tint = tdayListAccentColor(listMeta?.color).copy(alpha = 0.92f),
+                            tint = tdayListAccentColor(listMeta?.color, TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY).copy(alpha = 0.92f),
                             modifier = Modifier.size(SearchResultIconSize),
                         )
                         Column(modifier = Modifier.weight(1f)) {
@@ -4784,7 +4789,7 @@ private fun FloaterTaskHomeListRow(
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val accent = tdayListAccentColor(colorKey)
+    val accent = tdayListAccentColor(colorKey, TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY)
     val icon = tdayListIconForList(iconKey, name)
     val containerColor =
         lerpColor(colorScheme.surfaceVariant, accent, FLOATER_TASK_HOME_LIST_CONTAINER_COLOR_WEIGHT)
@@ -8103,7 +8108,7 @@ private fun modeAccentColor(
         TodoListMode.PRIORITY -> TdayTodoModePriorityAccent
         TodoListMode.FLOATER -> listColorKey
             ?.takeIf { it.isNotBlank() }
-            ?.let(::tdayListAccentColor)
+            ?.let { tdayListAccentColor(it, TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY) }
             ?: TdayFloaterAccent
         TodoListMode.LIST -> tdayListAccentColor(listColorKey)
     }

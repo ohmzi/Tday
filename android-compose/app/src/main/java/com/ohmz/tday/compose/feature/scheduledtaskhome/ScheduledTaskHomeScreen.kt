@@ -178,7 +178,7 @@ import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
-import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
+import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTileAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -361,7 +361,7 @@ fun ScheduledTaskHomeScreen(
         },
     )
     var listName by rememberSaveable { mutableStateOf("") }
-    var listColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
+    var listColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY) }
     var listIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     // The picker always has to PREVIEW something. Whether the user ever touched it is a
     // different fact, and until now nobody recorded it: the seeded default was posted
@@ -1080,7 +1080,7 @@ fun ScheduledTaskHomeScreen(
                 showCreateList = false
                 if (listCreated) {
                     listName = ""
-                    listColor = TDAY_DEFAULT_LIST_COLOR_KEY
+                    listColor = TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY
                     listIconKey = TDAY_DEFAULT_LIST_ICON_KEY
                     listIconTouched = false
                     listCreated = false

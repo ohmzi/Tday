@@ -3882,7 +3882,8 @@ private func calendarListAccentColor(for key: String?) -> Color {
     case "RED":
         return calendarHexColor(0xD97873)
     default:
-        return calendarHexColor(0xC987A5)
+        // The scheduled default (BLUE), as `tdayListAccentColor` falls back to.
+        return calendarHexColor(0x6F9FCE)
     }
 }
 

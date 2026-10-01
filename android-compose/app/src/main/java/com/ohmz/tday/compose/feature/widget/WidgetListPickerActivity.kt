@@ -67,6 +67,7 @@ import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotWriter
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayTheme
+import com.ohmz.tday.compose.ui.theme.tdayDefaultListColorKey
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForList
 import dagger.hilt.android.AndroidEntryPoint
@@ -356,7 +357,10 @@ private fun PickerSectionLabel(text: String) {
 private fun PickerListRow(option: WidgetListOption, selected: Boolean, onClick: () -> Unit) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
-    val accent = tdayListAccentColor(option.colorKey)
+    val accent = tdayListAccentColor(
+        option.colorKey,
+        tdayDefaultListColorKey(isFloater = option.type == WidgetListType.FLOATER),
+    )
     val container = lerp(MaterialTheme.colorScheme.surfaceVariant, accent, PICKER_ROW_ACCENT_WEIGHT)
     Row(
         modifier = Modifier

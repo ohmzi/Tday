@@ -1489,11 +1489,24 @@ struct CreateListSheet: View {
     var showsReusable: Bool = false
     let onSubmit: (String, String?, String?, Bool?, String?) -> Void
 
+    /// Seeds the colour per feed — SLATE for a scheduled list, GOLD for a floater one — which a
+    /// property initialiser cannot do, so the memberwise init is written out. The parameter
+    /// order is the one it replaces: `onSubmit` stays last so call sites keep their trailing
+    /// closure.
+    init(
+        showsReusable: Bool = false,
+        onSubmit: @escaping (String, String?, String?, Bool?, String?) -> Void
+    ) {
+        self.showsReusable = showsReusable
+        self.onSubmit = onSubmit
+        _color = State(initialValue: tdayDefaultListAccentColorKey(isFloater: showsReusable))
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var colors
 
     @State private var name = ""
-    @State private var color = "PINK"
+    @State private var color: String
     @State private var iconKey = "inbox"
     @State private var reusable = false
     /// Nil means "no default". Always sent on create — there is no saved list
@@ -1887,7 +1900,7 @@ private func scheduledTaskHomeListAccentColor(for key: String?) -> Color {
     default:
         normalizedKey = key
     }
-    return scheduledTaskHomeListColorOptions.first(where: { $0.key == normalizedKey })?.color ?? Color(hex: 0xE05299)
+    return scheduledTaskHomeListColorOptions.first(where: { $0.key == normalizedKey })?.color ?? tdayListAccentColor(colorKey: nil)
 }
 
 private func scheduledTaskHomeListSymbolName(for key: String?) -> String {

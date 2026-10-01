@@ -295,7 +295,7 @@ struct CreateTaskSheet: View {
                     valueLeading: lists.first(where: { $0.id == selectedListID }).map { list in
                         AnyView(
                             TdayListIcon(iconKey: list.iconKey, listName: list.name, size: 16)
-                                .foregroundStyle(createTaskSheetListSwatchColor(list.color))
+                                .foregroundStyle(createTaskSheetListSwatchColor(list.color, isFloater: !showScheduleControls))
                         )
                     },
                     onTap: { setActiveSelector(.list) }
@@ -710,7 +710,7 @@ struct CreateTaskSheet: View {
                         TdaySheetDivider(horizontalPadding: 20, opacity: 0.16)
                         TdayCenteredSelectorRow(
                             title: list.name,
-                            swatchColor: createTaskSheetListSwatchColor(list.color),
+                            swatchColor: createTaskSheetListSwatchColor(list.color, isFloater: !showScheduleControls),
                             selected: selectedListID == list.id
                         ) {
                             selectedListID = list.id
@@ -1216,7 +1216,10 @@ private func createTaskSheetResignKeyboard() {
     )
 }
 
-private func createTaskSheetListSwatchColor(_ raw: String?) -> Color {
+/// The muted swatch for a list's colour key. An absent or unknown key takes its feed's default —
+/// the BLUE swatch for a scheduled task, the TEAL one for a floater (`showScheduleControls` is
+/// what tells the two sheets apart) — in step with `tdayListAccentColor`'s own fallback.
+private func createTaskSheetListSwatchColor(_ raw: String?, isFloater: Bool = false) -> Color {
     switch raw?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() {
     case "PINK":
         return createTaskSheetHexColor(0xC987A5)
@@ -1249,7 +1252,7 @@ private func createTaskSheetListSwatchColor(_ raw: String?) -> Color {
     case "RED":
         return createTaskSheetHexColor(0xD97873)
     default:
-        return createTaskSheetHexColor(0xC987A5)
+        return createTaskSheetHexColor(isFloater ? 0x67AAA7 : 0x6F9FCE)
     }
 }
 

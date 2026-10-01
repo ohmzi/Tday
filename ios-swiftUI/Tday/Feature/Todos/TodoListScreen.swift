@@ -444,7 +444,7 @@ private struct FloaterTaskHomeSearchResultsCard: View {
                             let list = todo.listId.flatMap { listsByID[$0] }
                             HStack(spacing: 10) {
                                 TdayListIcon(iconKey: list?.iconKey, listName: list?.name, size: 17)
-                                    .foregroundStyle(todoListAccentColor(for: list?.color).opacity(0.92))
+                                    .foregroundStyle(todoListAccentColor(for: list?.color, isFloater: true).opacity(0.92))
                                     .frame(width: 18)
 
                                 VStack(alignment: .leading, spacing: 3) {
@@ -505,7 +505,7 @@ private struct FloaterTaskHomeListCard: View {
     }
 
     private var containerColor: Color {
-        todoBlendColor(colors.surfaceVariant, todoListAccentColor(for: list.color), amount: 0.66)
+        todoBlendColor(colors.surfaceVariant, todoListAccentColor(for: list.color, isFloater: true), amount: 0.66)
     }
 
     var body: some View {
@@ -3700,7 +3700,7 @@ struct TodoListScreen: View {
                     HStack(spacing: 8) {
                         if let listMeta, showListIndicator {
                             TdayListIcon(iconKey: listMeta.iconKey, listName: listMeta.name, size: TodoTimelineMetrics.minimalRowIndicatorSize)
-                                .foregroundStyle(todoListAccentColor(for: listMeta.color))
+                                .foregroundStyle(todoListAccentColor(for: listMeta.color, isFloater: viewModel.mode == .floater))
                         }
                         if let priorityIcon {
                             Image(systemName: priorityIcon)
@@ -5681,7 +5681,7 @@ private struct ListSettingsSheet: View {
     @Environment(\.tdayColors) private var tdayColors
 
     @State private var name = ""
-    @State private var color = "PINK"
+    @State private var color = tdayDefaultScheduledListAccentColorKey
     @State private var iconKey = "inbox"
     /// Seeded from the SAVED list on open, and always submitted when the row is
     /// shown — web's sheet posts `reusable` on every save, so an off-flip has to
@@ -5709,7 +5709,7 @@ private struct ListSettingsSheet: View {
     }
 
     private var accentColor: Color {
-        todoListAccentColor(for: color)
+        todoListAccentColor(for: color, isFloater: showsReusable)
     }
 
     private var maximumSheetHeight: CGFloat {
@@ -5964,7 +5964,7 @@ private struct ListSettingsSheet: View {
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .task {
             name = list?.name ?? ""
-            color = normalizedTodoListColorKey(list?.color)
+            color = normalizedTodoListColorKey(list?.color, isFloater: showsReusable)
             // Seeded from the same two sources the row resolves in, and in the same order,
             // so the sheet opens showing the glyph that is already on screen. Seeding from
             // the inference does not persist it: `iconTouched` stays false, and `submit()`
@@ -6829,7 +6829,7 @@ private func todoModeAccentColor(_ mode: TodoListMode, listColorKey: String?) ->
         return todoHexColor(0xE65E52)
     case .floater:
         if let listColorKey, !listColorKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return todoListAccentColor(for: listColorKey)
+            return todoListAccentColor(for: listColorKey, isFloater: true)
         }
         return todoHexColor(0x4D8F83)
     case .list:
@@ -6848,8 +6848,8 @@ private func todoModeAccentColor(_ mode: TodoListMode, listColorKey: String?) ->
 ///
 /// Kept as a function rather than replaced at its call sites because the name says WHAT is being
 /// asked for at thirty-odd of them, and `for:` reads better there than `colorKey:`.
-func todoListAccentColor(for key: String?) -> Color {
-    tdayListAccentColor(colorKey: key)
+func todoListAccentColor(for key: String?, isFloater: Bool = false) -> Color {
+    tdayListAccentColor(colorKey: key, isFloater: isFloater)
 }
 
 private func todoBlendColor(_ lhs: Color, _ rhs: Color, amount: CGFloat) -> Color {
@@ -6876,7 +6876,7 @@ private func todoBlendColor(_ lhs: Color, _ rhs: Color, amount: CGFloat) -> Colo
     )
 }
 
-private func normalizedTodoListColorKey(_ key: String?) -> String {
+private func normalizedTodoListColorKey(_ key: String?, isFloater: Bool = false) -> String {
     switch key {
     case "GREEN":
         return "LIME"
@@ -6885,7 +6885,7 @@ private func normalizedTodoListColorKey(_ key: String?) -> String {
     case let value? where todoListSettingsColorKeys.contains(value):
         return value
     default:
-        return "PINK"
+        return tdayDefaultListAccentColorKey(isFloater: isFloater)
     }
 }
 
