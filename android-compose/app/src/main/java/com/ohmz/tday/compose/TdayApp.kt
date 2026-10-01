@@ -49,7 +49,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -86,7 +85,6 @@ import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.core.navigation.CompletedScope
 import com.ohmz.tday.compose.core.navigation.isHomeTileArrival
 import com.ohmz.tday.compose.core.navigation.navigateFromHomeTile
-import com.ohmz.tday.compose.core.navigation.tileTransitionKey
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.LocalTdayTileSourceScope
 import com.ohmz.tday.compose.core.ui.SnackbarEvent
@@ -203,14 +201,15 @@ fun TdayApp( // skipcq: KT-R1006
     val startupTagline = rememberSaveable(splashTaglineOptions.contentHashCode()) {
         splashTaglineOptions.random()
     }
-    // A fresh instance every composition, which makes it the one unstable key of the memoized
-    // NavHost builder lambda below and so rebuilds the nav graph on every recomposition. That is
+    // Memoized on its only input. As a fresh instance every composition it was the one unstable
+    // key of the memoized NavHost builder lambda below, so the nav graph was rebuilt on every
+    // recomposition (every sync stamp, offline flip and queued mutation). That rebuild was
     // incidental, not load-bearing: nothing the graph hands a destination is a snapshot value, so
-    // no screen depends on the rebuild to see a change (see the note at the builder). Memoizing it
-    // is therefore safe, but it is a perf change rather than a fix and does not belong here.
-    val unauthenticatedScheduledTaskHomeUiState = unauthenticatedScheduledTaskHomeUiState(
-        lockedListName = stringResource(R.string.scheduled_task_home_locked_list_name),
-    )
+    // no screen depends on it to see a change (see the note at the builder).
+    val lockedListName = stringResource(R.string.scheduled_task_home_locked_list_name)
+    val unauthenticatedScheduledTaskHomeUiState = remember(lockedListName) {
+        unauthenticatedScheduledTaskHomeUiState(lockedListName = lockedListName)
+    }
     var hasDrawnStartupFrame by remember { mutableStateOf(false) }
     val currentOnFirstFrameDrawn by rememberUpdatedState(onFirstFrameDrawn)
 
@@ -1850,7 +1849,6 @@ private fun FloaterTaskHomeFeed(
         onOpenSettings = {
             navController.navigate(AppRoute.Settings.route)
         },
-        showRootFeedDock = false,
         showCreateTaskButton = false,
         hostSwipeSlot = swipeSlot,
         usesRootFeedHeader = true,
@@ -2399,15 +2397,10 @@ private fun TodosRoute(
     highlightTodoId: String? = null,
     listId: String? = null,
     listName: String? = null,
-    rootFeedTab: RootFeedTab? = null,
-    onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
-    showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
     /** See `TodoListScreen`'s parameter of the same name. */
     hostSwipeSlot: TaskSwipeSlot? = null,
     openCreateTaskOnStart: Boolean = false,
-    exitToLauncherOnBack: Boolean = false,
-    exitOnCreateTaskSheetDismiss: Boolean = false,
     onCreateTaskFlowFinished: () -> Unit = {},
     usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
@@ -2489,14 +2482,9 @@ private fun TodosRoute(
         onOpenSettings = onOpenSettings,
         onCreateList = viewModel::createList,
         onResetFloaterList = viewModel::resetFloaterList,
-        rootFeedTab = rootFeedTab,
-        onRootFeedTabSelected = onRootFeedTabSelected,
-        showRootFeedDock = showRootFeedDock,
         showCreateTaskButton = showCreateTaskButton,
         hostSwipeSlot = hostSwipeSlot,
         openCreateTaskOnStart = openCreateTaskOnStart,
-        exitToLauncherOnBack = exitToLauncherOnBack,
-        exitOnCreateTaskSheetDismiss = exitOnCreateTaskSheetDismiss,
         onCreateTaskFlowFinished = onCreateTaskFlowFinished,
         pullRefreshEnabled = rootPullRefreshEnabled,
         summaryAvailable = summaryAvailable,
@@ -2806,7 +2794,6 @@ private fun unauthenticatedScheduledTaskHomeUiState(lockedListName: String): Sch
             scheduledCount = 0,
             allCount = 0,
             priorityCount = 0,
-            floaterCount = 0,
             completedCount = 0,
             lists = listOf(
                 ListSummary(

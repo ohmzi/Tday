@@ -35,7 +35,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +48,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.model.TodoItem
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
@@ -74,7 +74,7 @@ fun MorningSweepScreen(
     onBack: () -> Unit,
     viewModel: MorningSweepViewModel = hiltViewModel(),
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var pickingDateForId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
@@ -319,8 +319,6 @@ private fun SweepAction(icon: Int, label: String, onClick: () -> Unit) {
         }
     }
 }
-
-private const val SWEEP_TITLE_COLLAPSE_DISTANCE_DP = 180f
 
 // What the sweep draws that the scale has no rung for. The card and the action rows corner on
 // `RadiusLg` and `RadiusMd` and inset on the spacing steps; these are the leftovers.

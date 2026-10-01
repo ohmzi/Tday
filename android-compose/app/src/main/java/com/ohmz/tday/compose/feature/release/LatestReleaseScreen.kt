@@ -8,7 +8,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +19,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -52,17 +50,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -72,9 +66,7 @@ import com.ohmz.tday.compose.core.data.server.VersionCheckResult
 import com.ohmz.tday.compose.core.ui.TdayHaptics
 import com.ohmz.tday.compose.core.ui.TdayHeroTitleBlock
 import com.ohmz.tday.compose.core.ui.TdayHeroToolbar
-import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.rememberScrollHeroTitleCollapse
-import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayStatusSuccess
 import kotlinx.coroutines.launch
@@ -122,14 +114,6 @@ private val ChangelogBulletSize = 5.dp
 private val BrowserCardRadius = 20.dp
 private val BrowserRowVerticalPadding = 15.dp
 private val BrowserRowIconSize = 18.dp
-
-// A `PressedSurfaceOffsetY` stood here, naming the 2 dp this header's buttons sank by. Its one
-// call site is gone: the button now presses through `Modifier.tdayPressable`, whose `offsetY`
-// already defaults to `TdayPress.SinkOffset` — the same 2 dp, named once for every surface
-// instead of once per screen.
-
-/** The back chevron outgrows IconLg because it is the only glyph inside a FabSize target. */
-private val BackButtonIconSize = 36.dp
 
 @Composable
 fun LatestReleaseScreen(
@@ -307,142 +291,6 @@ fun LatestReleaseScreen(
             backContentDescription = stringResource(R.string.action_back),
             modifier = Modifier.align(Alignment.TopStart),
         )
-        }
-    }
-}
-
-@Composable
-private fun ReleaseTopBar(
-    onBack: () -> Unit,
-    collapseProgress: Float,
-) {
-    val progress = collapseProgress.coerceIn(0f, 1f)
-    val titleHandoffPoint = 0.9f
-    val density = LocalDensity.current
-    val expandedTitleHeight = lerp(TdayDimens.ExpandedTitleHeight, TdayDimens.SpacingNone, progress)
-    val expandedTitleAlpha = ((titleHandoffPoint - progress) / titleHandoffPoint).coerceIn(0f, 1f)
-    val collapsedTitleAlpha =
-        ((progress - titleHandoffPoint) / (1f - titleHandoffPoint)).coerceIn(0f, 1f)
-    val collapsedTitleShiftY = with(density) {
-        (TdayDimens.CollapsedTitleShiftOffset * (1f - collapsedTitleAlpha)).toPx()
-    }
-    val expandedTitleShiftY = with(density) {
-        (-TdayDimens.ExpandedTitleShiftOffset * (1f - expandedTitleAlpha)).toPx()
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(
-                start = TdayDimens.ContentPaddingHorizontal,
-                end = TdayDimens.ContentPaddingHorizontal,
-                top = TdayDimens.TitleBarTopPadding,
-                bottom = TdayDimens.TitleBarBottomPadding,
-            ),
-    ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            ReleaseHeaderButton(
-                onClick = onBack,
-                icon = ImageVector.vectorResource(R.drawable.ic_lucide_chevron_left),
-                contentDescription = stringResource(R.string.action_back),
-                isBackButton = true,
-            )
-            if (collapsedTitleAlpha > 0.001f) {
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .graphicsLayer {
-                            alpha = collapsedTitleAlpha
-                            translationY = collapsedTitleShiftY
-                        },
-                ) {
-                    Text(
-                        text = stringResource(R.string.release_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(lerp(TdayDimens.SpacingXl, TdayDimens.SpacingNone, progress)))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(expandedTitleHeight),
-            contentAlignment = Alignment.BottomStart,
-        ) {
-            if (expandedTitleAlpha > 0.001f) {
-                Box(
-                    modifier = Modifier.graphicsLayer {
-                        alpha = expandedTitleAlpha
-                        translationY = expandedTitleShiftY
-                    },
-                ) {
-                    Text(
-                        text = stringResource(R.string.release_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReleaseHeaderButton(
-    onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    contentDescription: String,
-    isBackButton: Boolean = false,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val containerColor = if (isBackButton) {
-        if (isDarkTheme) colorScheme.surface.copy(alpha = 0.94f) else Color.White.copy(alpha = 0.96f)
-    } else {
-        colorScheme.background
-    }
-    val buttonBorder = if (isBackButton) {
-        null
-    } else {
-        BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.38f))
-    }
-    // Naming both branches showed them to be the same number; the condition was never a fork.
-    val buttonSize = TdayDimens.FabSize
-    val iconSize = if (isBackButton) BackButtonIconSize else TdayDimens.IconLg
-
-    Card(
-        modifier = Modifier
-            .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Bar),
-        onClick = {
-            TdayHaptics.buttonPress(view)
-            onClick()
-        },
-        interactionSource = interactionSource,
-        shape = CircleShape,
-        border = buttonBorder,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isBackButton) TdayDimens.FabElevation else TdayDimens.CardElevationDefault,
-            pressedElevation = if (isBackButton) TdayDimens.FabPressedElevation else TdayDimens.CardElevationDefault,
-        ),
-    ) {
-        Box(
-            modifier = Modifier.size(buttonSize),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = colorScheme.onSurface,
-                modifier = Modifier.size(iconSize),
-            )
         }
     }
 }
@@ -1238,5 +1086,3 @@ private sealed interface ApkInstallUiState {
 
     data object SignatureConflict : ApkInstallUiState
 }
-
-private const val RELEASE_TITLE_COLLAPSE_DISTANCE_DP = 180f

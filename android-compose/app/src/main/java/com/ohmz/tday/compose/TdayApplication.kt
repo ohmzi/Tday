@@ -35,7 +35,11 @@ class TdayApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var dayAheadPreferenceStore: DayAheadPreferenceStore
-    @Inject lateinit var calendarSyncManager: CalendarSyncManager
+    // Lazy so Application.onCreate does not construct the whole data layer (TodoRepository ->
+    // Retrofit/OkHttp/cookie + config stores, the SQLCipher-backed cache, ...) in a widget-only or
+    // alarm/boot-receiver process that never starts the calendar mirror. It is resolved once, in
+    // runDeferredStartup, which only MainActivity calls.
+    @Inject lateinit var calendarSyncManager: dagger.Lazy<CalendarSyncManager>
     private val deferredStartupRan = AtomicBoolean(false)
 
     // Resolved lazily through WidgetEntryPoint rather than an `@Inject lateinit` field, matching
@@ -132,7 +136,7 @@ class TdayApplication : Application(), Configuration.Provider {
         WorkManager.getInstance(this).cancelAllWorkByTag(LEGACY_GLANCE_SESSION_WORKER)
         // Opt-in and permission-gated internally, so this is a no-op until the user turns the
         // device-calendar mirror on.
-        calendarSyncManager.start()
+        calendarSyncManager.get().start()
     }
 
     private fun createNotificationChannels() {

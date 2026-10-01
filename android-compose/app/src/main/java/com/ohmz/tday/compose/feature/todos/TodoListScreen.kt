@@ -214,9 +214,7 @@ import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.core.ui.tdayTileTransitionSource
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
-import com.ohmz.tday.compose.ui.component.RootFeedDock
 import com.ohmz.tday.compose.ui.component.RootFeedDockCollapse
-import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
 import com.ohmz.tday.compose.ui.component.TdayModalBottomSheet
 import com.ohmz.tday.compose.ui.component.TdayPullToRefreshBox
@@ -257,7 +255,6 @@ import com.ohmz.tday.compose.ui.theme.normalizeTdayListColorKey
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayListIconForList
-import com.ohmz.tday.compose.ui.theme.tdayListIconResForKey
 import com.ohmz.tday.compose.ui.theme.tdayListIconResForList
 import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import com.ohmz.tday.shared.bulk.BulkAction
@@ -1001,20 +998,15 @@ fun TodoListScreen( // skipcq: KT-R1006
      * The twin of web's `resetFloaterList` header button in FloaterListContainer.
      */
     onResetFloaterList: (listId: String) -> Unit = {},
-    rootFeedTab: RootFeedTab? = null,
-    onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
-    showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
     /**
      * The swipe slot to use instead of one of this screen's own, for a host that
      * draws chrome outside this composable. Non-null exactly where
-     * `showRootFeedDock`/`showCreateTaskButton` are false and for the same
-     * reason — see the slot's own comment below, and `RootFeedContent`.
+     * `showCreateTaskButton` is false and for the same reason — see the slot's
+     * own comment below, and `RootFeedContent`.
      */
     hostSwipeSlot: TaskSwipeSlot? = null,
     openCreateTaskOnStart: Boolean = false,
-    exitToLauncherOnBack: Boolean = false,
-    exitOnCreateTaskSheetDismiss: Boolean = false,
     onCreateTaskFlowFinished: () -> Unit = {},
     pullRefreshEnabled: Boolean = true,
     summaryAvailable: Boolean = true,
@@ -1292,18 +1284,27 @@ fun TodoListScreen( // skipcq: KT-R1006
                 items = timelineItems,
                 earlierItems = uiState.earlierItems,
             ) != null
-    val timelineSections = remember(
-        uiState.mode,
-        timelineItems,
-        timelineDragActive,
-        uiState.earlierItems,
-    ) {
-        buildTimelineSections(
-            mode = uiState.mode,
-            items = timelineItems,
-            isDragActive = timelineDragActive,
-            earlierItems = uiState.earlierItems,
-        )
+    // With no scoped search and no drag, this is argument-for-argument the build `scopeSections`
+    // already did above (`timelineItems` is `uiState.items` itself then, and `isDragActive` is
+    // false), and `buildTimelineSections` is pure — so reuse it instead of grouping and sorting
+    // the same list twice per data change. Either condition makes the inputs differ, and the
+    // screen builds its own.
+    val timelineSections = if (!scopedSearchActive && !timelineDragActive) {
+        scopeSections
+    } else {
+        remember(
+            uiState.mode,
+            timelineItems,
+            timelineDragActive,
+            uiState.earlierItems,
+        ) {
+            buildTimelineSections(
+                mode = uiState.mode,
+                items = timelineItems,
+                isDragActive = timelineDragActive,
+                earlierItems = uiState.earlierItems,
+            )
+        }
     }
     val floaterTaskHomeListRows = remember(uiState.mode, uiState.listId, uiState.items, uiState.lists) {
         if (uiState.mode == TodoListMode.FLOATER && uiState.listId.isNullOrBlank()) {
@@ -2264,20 +2265,17 @@ fun TodoListScreen( // skipcq: KT-R1006
     BackHandler(enabled = floaterTaskHomeSearchExpanded) {
         closeFloaterTaskHomeSearch()
     }
-    BackHandler(enabled = exitToLauncherOnBack && !showCreateTaskSheet && !floaterTaskHomeSearchExpanded) {
-        onBack()
-    }
     // Registered last so back dismisses the field before it leaves the list.
     BackHandler(enabled = showScopedSearchField) {
         closeScopedSearch()
     }
     // Later registration wins in the back dispatcher, so this sits after the
-    // exit-to-launcher handler: back cancels the selection before it can leave
-    // the screen (or the app).
+    // search handlers: back cancels the selection before it can leave the
+    // screen (or the app).
     BackHandler(enabled = selectionActive) {
         exitSelection()
     }
-    // Last of the five, and that placement is the behaviour: later registration
+    // Last of the four, and that placement is the behaviour: later registration
     // wins, so a revealed row is the innermost state back can be in and the
     // first one it undoes. `!selectionActive` keeps it from outranking the
     // handler directly above -- see `TaskSwipeSlotBackHandler`.
@@ -3423,28 +3421,6 @@ fun TodoListScreen( // skipcq: KT-R1006
                 )
             }
 
-            if (showRootFeedDock && rootFeedTab != null && onRootFeedTabSelected != null &&
-                !selectionActive
-            ) {
-                RootFeedDock(
-                    activeTab = rootFeedTab,
-                    collapsed = dockCollapsed,
-                    onTabSelected = { tab ->
-                        if (tab == rootFeedTab && isFloaterTaskHomeScreen) {
-                            screenScope.launch {
-                                closeFloaterTaskHomeSearch()
-                                listState.animateScrollToItem(index = 0, scrollOffset = 0)
-                            }
-                        } else {
-                            onRootFeedTabSelected(tab)
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .zIndex(8f),
-                )
-            }
-
             if (selectionActive) {
                 BulkSelectionActionBar(
                     // Delete / Priority / Move go dark when the selection is
@@ -3496,13 +3472,9 @@ fun TodoListScreen( // skipcq: KT-R1006
             presentImmediately = openCreateTaskOnStart,
             onParseTaskTitleNlp = if (uiState.mode == TodoListMode.FLOATER) null else onParseTaskTitleNlp,
             onDismiss = {
-                if (exitOnCreateTaskSheetDismiss) {
-                    onBack()
-                } else {
-                    showCreateTaskSheet = false
-                    quickAddDueEpochMs = null
-                    onCreateTaskFlowFinished()
-                }
+                showCreateTaskSheet = false
+                quickAddDueEpochMs = null
+                onCreateTaskFlowFinished()
             },
             onCreateTask = onAddTask,
         )
@@ -4872,38 +4844,6 @@ private data class TodoTopBarAction(
     val contentDescription: String,
     val onClick: () -> Unit,
 )
-
-@Composable
-private fun TodayTitleLabel(
-    text: String,
-    color: Color,
-    icon: ImageVector?,
-    iconTint: Color,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(TdayDimens.IconMd),
-            )
-        }
-        Text(
-            text = text,
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.ExtraBold,
-            color = color,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
 
 @Composable
 private fun TodayHeaderButton(
@@ -6983,7 +6923,6 @@ private fun AllTaskSwipeRow(
         onComplete = onComplete,
         onDelete = onDelete,
         onInfo = onInfo,
-        keepCompletedInline = false,
         mode = TodoListMode.ALL,
         lists = lists,
         scopedListId = scopedListId,
@@ -6991,11 +6930,9 @@ private fun AllTaskSwipeRow(
         selectionActive = selectionActive,
         selected = selected,
         onToggleSelected = onToggleSelected,
-        showDueText = true,
         showDuePrefix = showDuePrefix,
         showDueDateInSubtitle = showDueDateInSubtitle,
         showDateDivider = showDateDivider,
-        useDelayedFadeCompletion = false,
         dragEnabled = dragEnabled,
         dragging = dragging,
         onDragStart = onDragStart,
@@ -7044,7 +6981,6 @@ private fun TodayTaskSwipeRow(
         onPromote = onPromote,
         onDemote = onDemote,
         onDefer = onDefer,
-        keepCompletedInline = false,
         mode = mode,
         lists = lists,
         scopedListId = scopedListId,
@@ -7053,11 +6989,9 @@ private fun TodayTaskSwipeRow(
         selectionActive = selectionActive,
         selected = selected,
         onToggleSelected = onToggleSelected,
-        showDueText = true,
         showDuePrefix = showDuePrefix,
         showDueDateInSubtitle = showDueDateInSubtitle,
         showDateDivider = showDateDivider,
-        useDelayedFadeCompletion = mode != TodoListMode.TODAY,
         dragEnabled = dragEnabled && !readOnly,
         dragging = dragging,
         onDragStart = onDragStart,
@@ -7076,7 +7010,6 @@ private fun SwipeTaskRow(
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onInfo: () -> Unit,
-    keepCompletedInline: Boolean,
     onPromote: (() -> Unit)? = null,
     onDemote: (() -> Unit)? = null,
     onDefer: (() -> Unit)? = null,
@@ -7092,12 +7025,9 @@ private fun SwipeTaskRow(
     selectionActive: Boolean = false,
     selected: Boolean = false,
     onToggleSelected: () -> Unit = {},
-    showDueText: Boolean,
     showDuePrefix: Boolean,
     showDueDateInSubtitle: Boolean = false,
     showDateDivider: Boolean = false,
-    useDelayedFadeCompletion: Boolean = false,
-    useFadeOnCompletion: Boolean = false,
     dragEnabled: Boolean = false,
     dragging: Boolean = false,
     onDragStart: ((Offset) -> Unit)? = null,
@@ -7164,8 +7094,6 @@ private fun SwipeTaskRow(
         swipeSlot.openId = swipeSlotAfterRowDisclaim(swipeSlot.openId, todo.id)
     }
     val highlightAnim = remember(todo.id) { Animatable(0f) }
-    val visuallyChecked = localChecked || (keepCompletedInline && todo.completed)
-    val visuallyStruck = localStruck || (keepCompletedInline && todo.completed)
     // Hoisted above the reveal's own animation because that is now one of its
     // callers: with the app's Reduce Motion switch on, a close draws its
     // finished state instead of springing to it. One read, two uses -- the
@@ -7227,7 +7155,7 @@ private fun SwipeTaskRow(
     val toggleTint by animateColorAsState(
         targetValue = if (selectionActive) {
             if (selected) colorScheme.primary else colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-        } else if (visuallyChecked) {
+        } else if (localChecked) {
             TASK_CHECKMARK_GREEN
         } else {
             colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
@@ -7243,7 +7171,7 @@ private fun SwipeTaskRow(
         label = "swipeTaskToggleTint",
     )
     val titleColor by animateColorAsState(
-        targetValue = if (visuallyStruck) {
+        targetValue = if (localStruck) {
             colorScheme.onSurface.copy(alpha = 0.78f)
         } else {
             colorScheme.onSurface
@@ -7260,7 +7188,7 @@ private fun SwipeTaskRow(
     )
     var titleLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
     var noteLayoutResult by remember(todo.id) { mutableStateOf<TextLayoutResult?>(null) }
-    val titleStrikeProgress = rememberTaskStrikeProgress(visuallyStruck, "swipeTaskTitleStrike")
+    val titleStrikeProgress = rememberTaskStrikeProgress(localStruck, "swipeTaskTitleStrike")
     val isOverdue = !todo.completed && todo.due?.isBefore(Instant.now()) == true
     val dueBodyText = todo.due?.let {
         if (showDueDateInSubtitle) {
@@ -7661,7 +7589,7 @@ private fun SwipeTaskRow(
                                     } else {
                                         ImageVector.vectorResource(R.drawable.ic_lucide_circle)
                                     }
-                                } else if (!visuallyChecked) {
+                                } else if (!localChecked) {
                                     ImageVector.vectorResource(R.drawable.ic_lucide_circle)
                                 } else {
                                     ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
@@ -7672,7 +7600,7 @@ private fun SwipeTaskRow(
                                     } else {
                                         stringResource(R.string.bulk_select_task)
                                     }
-                                } else if (visuallyChecked) {
+                                } else if (localChecked) {
                                     stringResource(R.string.label_completed)
                                 } else {
                                     stringResource(R.string.label_mark_complete)
@@ -7681,7 +7609,7 @@ private fun SwipeTaskRow(
                                 enabled = if (selectionActive) {
                                     true
                                 } else {
-                                    !visuallyChecked && !pendingCompletion && !readOnly
+                                    !localChecked && !pendingCompletion && !readOnly
                                 },
                                 onClick = {
                                     // One control, two events: in bulk-select mode this
@@ -7740,7 +7668,7 @@ private fun SwipeTaskRow(
                                     maxLines = Int.MAX_VALUE,
                                     onTextLayout = { titleLayoutResult = it },
                                 )
-                                if (showDueText && dueSubtitleText != null) {
+                                if (dueSubtitleText != null) {
                                     Text(
                                         text = dueSubtitleText,
                                         color = if (isOverdue) colorScheme.error else colorScheme.onSurfaceVariant.copy(alpha = 0.8f),

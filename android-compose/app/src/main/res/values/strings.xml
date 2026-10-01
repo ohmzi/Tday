@@ -14,7 +14,6 @@
     <string name="search_no_results_settings">No matching settings</string>
     <!-- The guide's own strings are codegen'd out of tday-web/messages, so a
          hand-written one has to live here or verifyGuideContent goes stale. -->
-    <string name="search_no_results_guide">No matching topics</string>
     <string name="action_create_task">Create task</string>
     <string name="action_create_list">Create list</string>
     <string name="action_edit">Edit</string>
@@ -56,13 +55,11 @@
     <string name="task_promote_failed">Could not schedule task</string>
     <string name="task_float_failed">Could not float task</string>
     <string name="action_complete">Complete</string>
-    <string name="action_more">More</string>
     <string name="action_more_options">More options</string>
     <string name="action_save">Save</string>
     <string name="action_save_task">Save task</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_done">Done</string>
-    <string name="action_create">Create</string>
     <string name="action_ok">OK</string>
     <string name="action_sign_out">Sign out</string>
     <string name="action_expand_section">Expand section</string>
@@ -78,7 +75,6 @@
 
     <!-- Scheduled task home screen -->
     <string name="scheduled_task_home_title">T\'Day</string>
-    <string name="scheduled_task_home_category_today">Today</string>
     <string name="scheduled_task_home_category_overdue">Overdue</string>
     <string name="scheduled_task_home_category_scheduled">Scheduled</string>
     <string name="scheduled_task_home_category_all">All</string>
@@ -87,7 +83,6 @@
     <string name="scheduled_task_home_category_calendar">Calendar</string>
     <string name="root_feed_tab_scheduled_task_home">Scheduled</string>
     <string name="root_feed_tab_floater">Floater</string>
-    <string name="scheduled_task_home_search_placeholder">Search</string>
     <string name="scheduled_task_home_search_no_results">No matching tasks</string>
     <string name="scheduled_task_home_my_lists">My Lists</string>
     <string name="scheduled_task_home_new_list">New list</string>
@@ -216,7 +211,6 @@
     <string name="settings_account_change_security_questions">Change</string>
     <string name="settings_account_security_questions_configured">Configured</string>
     <string name="settings_account_security_questions_not_configured">Not configured</string>
-    <string name="settings_account_security_questions_save">Save questions</string>
     <string name="settings_account_current_password_required">Enter your current password</string>
     <string name="settings_account_security_questions_updated">Security questions updated</string>
     <string name="settings_appearance">Appearance</string>
@@ -231,28 +225,22 @@
     <string name="settings_notifications_blocked">Notifications are off for T\'Day in Android settings.</string>
     <string name="settings_notifications_declined">Notifications weren\'t allowed, so T\'Day can\'t deliver reminders.</string>
     <string name="settings_ai_task_summary">Summary</string>
-    <string name="settings_saving_admin">Saving admin setting…</string>
-    <string name="settings_ai_unavailable_title">Summary unavailable</string>
     <string name="settings_default_reminder">Default reminder</string>
     <string name="settings_update_available_version">v%1$s available</string>
     <string name="settings_server_compatible">Compatible</string>
     <string name="settings_server_incompatible">Incompatible</string>
 
     <!-- Onboarding / wizard -->
-    <string name="onboarding_title">Set Up T\'Day</string>
-    <string name="onboarding_subtitle">Set up your workspace</string>
     <string name="onboarding_step_mode">Mode</string>
     <string name="onboarding_step_server">Server</string>
     <string name="onboarding_step_login">Login</string>
     <string name="onboarding_mode_title">Choose your setup</string>
     <string name="onboarding_mode_subtitle">Pick where T\'Day keeps your tasks.</string>
     <string name="onboarding_mode_server_title">Self-hosted server</string>
-    <string name="onboarding_mode_server_subtitle">Use accounts, sync, and your backend.</string>
     <string name="onboarding_mode_server_short_title">Self-hosted</string>
     <string name="onboarding_mode_server_short_subtitle">Accounts and sync</string>
     <string name="onboarding_mode_local_short_title">This device</string>
     <string name="onboarding_mode_local_short_subtitle">No login</string>
-    <string name="onboarding_mode_local_subtitle">No login. Data stays in app storage.</string>
     <string name="onboarding_server_hero_subtitle">Connect your T\'Day endpoint.</string>
     <string name="onboarding_server_url_label">Server URL</string>
     <string name="onboarding_server_url_placeholder">https://app.example.com</string>
@@ -265,14 +253,10 @@
     <string name="onboarding_connect">Connect</string>
     <string name="onboarding_connecting_title">Connecting to server…</string>
     <string name="onboarding_connecting_subtitle">Checking endpoint, TLS, and workspace settings</string>
-    <string name="onboarding_use_device_only">Use this device only</string>
     <string name="onboarding_username_label">Username</string>
     <string name="onboarding_password_label">Password</string>
     <string name="onboarding_sign_in">Sign in</string>
-    <string name="onboarding_login_hero_subtitle">Open your synced workspace.</string>
     <string name="onboarding_create_account">Create account</string>
-    <string name="onboarding_register_hero_subtitle">Create your server account.</string>
-    <string name="onboarding_change_server">Change server</string>
     <string name="onboarding_change_setup">Change setup</string>
     <string name="onboarding_first_name_label">First name</string>
     <string name="onboarding_confirm_password_label">Confirm password</string>
@@ -294,7 +278,6 @@
 
     <!-- Security questions -->
     <string name="security_questions_title">Security questions</string>
-    <string name="security_questions_subtitle">Choose three questions to verify it\'s you if you ever need to reset your password.</string>
     <string name="security_questions_question_1">Question 1</string>
     <string name="security_questions_question_2">Question 2</string>
     <string name="security_questions_question_3">Question 3</string>
@@ -315,9 +298,6 @@
     <!-- Forgot password -->
     <string name="forgot_password_entry">Forgot password?</string>
     <string name="forgot_password_title">Reset your password</string>
-    <string name="forgot_password_subtitle_username">Enter your username to answer your security questions.</string>
-    <string name="forgot_password_subtitle_challenge">Answer your security questions.</string>
-    <string name="forgot_password_subtitle_password">Choose a new password.</string>
     <string name="forgot_password_subtitle_locked">Too many incorrect attempts. You can request a password reset from an administrator.</string>
     <string name="forgot_password_subtitle_requested">Your request has been sent. An administrator will reset your password and share a temporary one with you.</string>
     <string name="forgot_password_username_required">Please enter your username</string>
@@ -341,7 +321,6 @@
     <string name="auth_password_manager_save_server_url_failed">Android Password Manager could not save this server URL. Check that a password manager is enabled.</string>
     <string name="auth_password_manager_save_login_failed">Android Password Manager could not save this login. Check that a password manager is enabled.</string>
     <string name="auth_error_incorrect_credentials">Incorrect username or password</string>
-    <string name="auth_error_server_unreachable">Cannot reach server. Check your server URL and try again.</string>
     <string name="error_cannot_reach">Can\'t reach the server. Check your internet connection and that the server address is correct.</string>
     <string name="error_server_unavailable">The server isn\'t responding right now — it may be down or restarting. If this keeps happening, contact your administrator.</string>
 
@@ -392,7 +371,6 @@
     <string name="todos_summary_close">Close summary</string>
     <string name="todos_summary_loading">Creating your task summary…</string>
     <string name="todos_summary_admin_disabled">Summary is disabled by admin</string>
-    <string name="todos_summary_modes_unavailable">Summary is available only for Today, Scheduled, All, and Priority</string>
     <string name="todos_summary_offline_unavailable">No summary available while offline.</string>
     <string name="summary_source_server">Server model</string>
     <string name="summary_source_local">Local model</string>
@@ -417,7 +395,6 @@
     <string name="share_role_owner">Owner</string>
     <string name="share_role_editor">Editor</string>
     <string name="share_role_viewer">Viewer</string>
-    <string name="share_task_chooser_title">Share task</string>
     <string name="share_due_label">Due: %1$s</string>
     <string name="share_priority_label">Priority: %1$s</string>
     <plurals name="share_task_count">
@@ -471,10 +448,6 @@
     <string name="completed_empty_body">Tick something off and it will land here.</string>
     <string name="completed_floater_empty">No finished floaters yet</string>
     <string name="completed_floater_empty_body">Tick something off in Floater and it will land here.</string>
-    <string name="completed_section_earlier">Earlier</string>
-    <string name="completed_section_today">Today</string>
-    <string name="completed_section_tomorrow">Tomorrow</string>
-    <string name="completed_section_rest_of">Rest of %1$s</string>
 
     <!-- Calendar screen -->
     <string name="calendar_title">Calendar</string>
@@ -483,7 +456,6 @@
     <string name="calendar_tasks_due">Tasks due %1$s</string>
     <string name="calendar_no_pending">No pending task due for this day</string>
     <string name="calendar_no_pending_body">Select another date on the calendar.</string>
-    <string name="calendar_completed_header">Completed:</string>
     <string name="calendar_prev_month">Previous month</string>
     <string name="calendar_next_month">Next month</string>
     <string name="calendar_prev_week">Previous week</string>
@@ -497,10 +469,6 @@
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Retry</string>
     <string name="action_undo">Undo</string>
-    <string name="offline_banner_title">You\'re offline</string>
-    <string name="offline_banner">Cached tasks are available. Changes will sync when connection returns.</string>
-    <string name="offline_banner_pending_one">1 change waiting to sync</string>
-    <string name="offline_banner_pending_many">%1$d changes waiting to sync</string>
     <string name="offline_toast">You\'re offline — changes will sync when your connection returns.</string>
     <string name="offline_toast_pending_one">You\'re offline — 1 change waiting to sync.</string>
     <string name="offline_toast_pending_many">You\'re offline — %1$d changes waiting to sync.</string>
@@ -515,18 +483,8 @@
     <string name="settings_workspace_delete_body">This permanently removes every task, list and completed entry stored on this device. There is no copy on a server — download your data first if you want to keep it.</string>
     <string name="settings_workspace_delete_done">Local data deleted.</string>
     <string name="settings_workspace_server_title">Server sync</string>
-    <string name="settings_sync_status_ready">Ready to sync</string>
-    <string name="settings_sync_status_syncing">Syncing now</string>
-    <string name="settings_sync_status_offline">Offline. Changes will sync when connection returns.</string>
-    <string name="settings_sync_status_pending">Waiting to sync</string>
-    <string name="settings_sync_status_synced">Synced</string>
     <string name="settings_sync_last_synced_label">Last synced</string>
     <string name="settings_sync_last_synced_never">Not yet</string>
-    <string name="settings_sync_last_attempt_label">Last attempt</string>
-    <string name="settings_sync_pending_label">Pending</string>
-    <string name="settings_sync_pending_none">No changes waiting</string>
-    <string name="settings_sync_pending_one">1 change waiting</string>
-    <string name="settings_sync_pending_many">%1$d changes waiting</string>
     <string name="settings_sync_now">Sync now</string>
     <string name="settings_sync_up_to_date">Up to date</string>
     <string name="settings_sync_offline_short">Offline</string>
@@ -548,23 +506,18 @@
     <string name="error_load_tasks_failed">Failed to load tasks.</string>
     <string name="error_create_task_failed">Could not create task.</string>
     <string name="error_update_task_failed">Could not update task.</string>
-    <string name="error_complete_task_failed">Could not complete task.</string>
     <string name="error_delete_task_failed">Could not delete task.</string>
     <string name="error_restore_task_failed">Could not restore task.</string>
     <string name="error_create_list_failed">Could not create list.</string>
     <string name="error_update_list_failed">Could not update list.</string>
     <string name="error_delete_list_failed">Could not delete list.</string>
     <string name="error_summarize_tasks_failed">Could not summarize tasks.</string>
-    <string name="error_load_admin_settings_failed">Could not load admin settings</string>
-    <string name="error_update_admin_settings_failed">Could not update admin settings</string>
     <string name="error_reset_trusted_server_failed">Could not reset trusted server.</string>
     <string name="error_connect_server_failed">Could not connect to server.</string>
     <string name="server_setup_error_probe_timeout">Server probe timed out. Check URL and network, then try again.</string>
     <string name="server_setup_error_invalid_url">Invalid server URL.</string>
     <string name="server_setup_error_insecure_transport">Use HTTPS for remote server URLs.</string>
     <string name="server_setup_error_not_tday_server">Server is reachable but does not appear to be a T\'Day server.</string>
-    <string name="server_setup_trust_refreshing">Saved server trust changed. Trying again with a refreshed certificate.</string>
-    <string name="server_setup_trust_refresh_failed">The app could not recover from a saved server trust mismatch automatically. Clear app storage or reinstall the app, then try again.</string>
     <string name="server_setup_trust_mismatch">This server\'s certificate does not match the one you trusted. Someone may be intercepting the connection. Only reset the trusted server if you changed the certificate yourself.</string>
     <string name="server_setup_trust_unknown">This server\'s certificate is not trusted by your device. Check its fingerprint before continuing.</string>
 
@@ -597,7 +550,6 @@
     <string name="widget_today_tasks_add">Add one for today</string>
     <string name="widget_today_tasks_count">%1$d due</string>
     <string name="widget_today_progress">%1$d of %2$d done</string>
-    <string name="widget_today_tasks_count_unit">due</string>
     <string name="widget_today_tasks_setup_title">Open T\'Day</string>
     <string name="widget_today_tasks_setup_message">Set up your workspace</string>
     <string name="widget_floater_tasks_description">Shows floater tasks at a glance</string>
@@ -608,7 +560,6 @@
     <string name="widget_floater_tasks_empty">No floater tasks</string>
     <string name="widget_floater_tasks_add">Add a floater</string>
     <string name="widget_floater_tasks_count">%1$d open</string>
-    <string name="widget_floater_tasks_count_unit">open</string>
     <string name="widget_locked_title">T\'Day is locked</string>
     <string name="widget_locked_message">Tasks are hidden while app lock is on</string>
     <string name="widget_loading">Loading tasks…</string>
@@ -627,11 +578,7 @@
     <string name="widget_list_picker_empty">Create a list in T\'Day, then tap this widget again.</string>
     <string name="widget_list_picker_section_todo">Scheduled lists</string>
     <string name="widget_list_picker_section_floater">Floater lists</string>
-    <string name="widget_list_picker_shared_label">Shared</string>
     <string name="widget_list_picker_selected">Currently selected</string>
-
-    <!-- Settings: updates -->
-    <string name="settings_check_updates">Check for updates</string>
 
     <!-- Latest release screen -->
     <string name="release_title">App Version</string>
@@ -658,9 +605,7 @@
     <string name="release_downloading_apk_progress">Downloading update… %1$d%%</string>
     <string name="release_preparing_update">Preparing update…</string>
     <string name="release_opening_installer">Opening Android installer…</string>
-    <string name="release_install_permission_required">Allow T\'Day to install updates from this source.</string>
     <string name="release_install_permission_return_hint">Allow T\'Day to install updates, then return here to continue automatically.</string>
-    <string name="release_install_permission_denied">Install permission is still disabled for T\'Day.</string>
     <string name="release_download_failed">Could not download the update. Please try again.</string>
     <string name="release_install_failed">Could not install the update.</string>
     <string name="release_install_cancelled">Installation was cancelled. Tap Download &amp; Install to try again.</string>
@@ -727,7 +672,6 @@
     <string name="settings_data_summary">%1$d tasks · %2$d lists · %3$d completed</string>
     <string name="settings_data_download">Download my data</string>
     <string name="settings_data_import">Import</string>
-    <string name="settings_data_import_local_hint">Sign in to a server to import a file.</string>
     <string name="settings_data_export_done">Your data file was saved.</string>
     <string name="settings_data_import_done">Import complete — added %1$d items.</string>
     <string name="settings_data_import_failed">Could not import that file.</string>
@@ -745,13 +689,10 @@
     <string name="settings_quiet_hours_end">End</string>
     <string name="settings_resting_floaters">Resting floaters</string>
     <string name="settings_calendar_sync">Add scheduled tasks to my calendar</string>
-    <string name="settings_calendar_sync_subtitle">Copies tasks with a date into a T\'Day calendar on this device. Anytime tasks stay out of it. Changes made in your calendar app are overwritten.</string>
     <string name="settings_calendar_sync_permission_denied">T\'Day needs calendar access to add your tasks.</string>
     <string name="settings_privacy">Privacy</string>
     <string name="settings_screenshot_protection">Hide content in screenshots</string>
-    <string name="settings_screenshot_protection_subtitle">Keeps task text out of screenshots, screen recordings and the app switcher</string>
     <string name="settings_app_lock">Require unlock to open T\'Day</string>
-    <string name="settings_app_lock_subtitle">Ask for your fingerprint, face or device PIN each time the app opens. Home-screen widgets hide your tasks while this is on.</string>
     <string name="settings_app_lock_unavailable">Set up a screen lock on this device first.</string>
     <string name="settings_legacy_cache_warning_title">Older data is not encrypted yet</string>
     <string name="settings_legacy_cache_warning_body">A cache file from an earlier version of T\'Day could not be moved into the encrypted database, so it is still readable on this device and may contain offline changes that never reached the server. Check that everything here also appears on your other devices, then reinstall T\'Day to remove the old file.</string>

@@ -81,10 +81,6 @@ class SecureConfigStore @Inject constructor(
         prefs.edit().putString(KEY_APP_DATA_MODE, mode.name).apply()
     }
 
-    fun clearAppDataMode() {
-        prefs.edit().remove(KEY_APP_DATA_MODE).apply()
-    }
-
     /**
      * Whether a local workspace was *left* rather than deleted, and is therefore still on
      * disk.
@@ -295,10 +291,6 @@ class SecureConfigStore @Inject constructor(
             .apply()
     }
 
-    fun clearListIconCache() {
-        prefs.edit().remove(KEY_LIST_ICON_MAP).apply()
-    }
-
     fun getListIcon(listId: String): String? {
         if (listId.isBlank()) return null
         val raw = prefs.getString(KEY_LIST_ICON_MAP, null).orEmpty()
@@ -343,10 +335,6 @@ class SecureConfigStore @Inject constructor(
 
     fun getOfflineSyncStateRaw(): String? {
         return prefs.getString(KEY_OFFLINE_SYNC_STATE, null)
-    }
-
-    fun saveOfflineSyncStateRaw(raw: String) {
-        prefs.edit().putString(KEY_OFFLINE_SYNC_STATE, raw).apply()
     }
 
     fun clearOfflineSyncState() {

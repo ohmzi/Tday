@@ -4,15 +4,11 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TodoDao {
     @Query("SELECT * FROM cached_todos")
     fun getAll(): List<CachedTodoEntity>
-
-    @Query("SELECT * FROM cached_todos")
-    fun observeAll(): Flow<List<CachedTodoEntity>>
 
     @Query("SELECT COUNT(*) FROM cached_todos")
     fun count(): Int
@@ -44,9 +40,6 @@ interface ListDao {
     @Query("SELECT * FROM cached_lists")
     fun getAll(): List<CachedListEntity>
 
-    @Query("SELECT * FROM cached_lists")
-    fun observeAll(): Flow<List<CachedListEntity>>
-
     @Query("SELECT COUNT(*) FROM cached_lists")
     fun count(): Int
 
@@ -76,9 +69,6 @@ interface FloaterListDao {
 interface CompletedDao {
     @Query("SELECT * FROM cached_completed")
     fun getAll(): List<CachedCompletedEntity>
-
-    @Query("SELECT * FROM cached_completed")
-    fun observeAll(): Flow<List<CachedCompletedEntity>>
 
     @Query("SELECT COUNT(*) FROM cached_completed")
     fun count(): Int

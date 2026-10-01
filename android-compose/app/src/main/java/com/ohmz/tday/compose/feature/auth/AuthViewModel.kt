@@ -60,17 +60,6 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun setError(message: String) {
-        _uiState.update {
-            it.copy(
-                errorMessage = message,
-                infoMessage = null,
-                pendingApproval = false,
-                isLoading = false,
-            )
-        }
-    }
-
     fun login(
         username: String,
         password: String,

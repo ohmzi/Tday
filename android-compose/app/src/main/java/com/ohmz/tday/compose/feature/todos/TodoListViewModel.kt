@@ -96,7 +96,6 @@ data class TodoListUiState(
     val aiSummaryConfigured: Boolean = false,
     val summaryText: String? = null,
     val summarySource: String? = null,
-    val summaryGeneratedAt: String? = null,
     val summaryError: String? = null,
     val summaryConnectivityError: Boolean = false,
     val isSummarizing: Boolean = false,
@@ -303,7 +302,6 @@ class TodoListViewModel @Inject constructor(
                 aiSummaryConfigured = settingsRepository.aiSummaryConfiguredSnapshot(),
                 summaryText = null,
                 summarySource = null,
-                summaryGeneratedAt = null,
                 summaryError = null,
                 summaryConnectivityError = false,
                 isSummarizing = false,
@@ -327,7 +325,6 @@ class TodoListViewModel @Inject constructor(
                 isSummarizing = true,
                 summaryText = null,
                 summarySource = null,
-                summaryGeneratedAt = null,
                 summaryError = null,
                 summaryConnectivityError = false,
             )
@@ -342,7 +339,6 @@ class TodoListViewModel @Inject constructor(
                         isSummarizing = false,
                         summaryText = response.summary,
                         summarySource = response.source,
-                        summaryGeneratedAt = response.generatedAt,
                         summaryError = null,
                     )
                 }
@@ -840,7 +836,7 @@ class TodoListViewModel @Inject constructor(
                     todoRepository.commitStagedFloaterCompletions(listOf(todo))
                 } else {
                     todoRepository.commitStagedTodoCompletions(listOf(todo))
-                    runCatching { reminderScheduler.rescheduleAll() }
+                    runCatching { reminderScheduler.rescheduleAllOffMain() }
                 }
             }
             val restoreRow: () -> Unit = {
@@ -888,7 +884,7 @@ class TodoListViewModel @Inject constructor(
                             todoRepository.undoStagedTodoCompletion(staged)
                             // Runs on the coordinator scope: this ViewModel may be
                             // gone by the time Undo restores a reminder-bearing task.
-                            runCatching { reminderScheduler.rescheduleAll() }
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
                             restoreRow()
                         },
                     )
@@ -942,7 +938,7 @@ class TodoListViewModel @Inject constructor(
                             todoRepository.undoStagedTodoDeletion(staged)
                             // Runs on the coordinator scope: this ViewModel may be
                             // gone by the time Undo restores a reminder-bearing task.
-                            runCatching { reminderScheduler.rescheduleAll() }
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
                         },
                     )
                 }
@@ -1063,11 +1059,11 @@ class TodoListViewModel @Inject constructor(
                             todoRepository.commitStagedTodoCompletions(todos)
                             // Runs on the coordinator scope: this ViewModel may be
                             // gone by the time the batch's reminders reschedule.
-                            runCatching { reminderScheduler.rescheduleAll() }
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
                         },
                         onUndo = {
                             todoRepository.undoStagedTodoCompletion(staged)
-                            runCatching { reminderScheduler.rescheduleAll() }
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
                             restoreRows()
                         },
                     )
@@ -1136,7 +1132,7 @@ class TodoListViewModel @Inject constructor(
                             // Runs on the coordinator scope: this ViewModel may
                             // be gone by the time Undo restores reminder-bearing
                             // tasks.
-                            runCatching { reminderScheduler.rescheduleAll() }
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
                         },
                     )
                 }
@@ -1513,7 +1509,7 @@ class TodoListViewModel @Inject constructor(
                         },
                         onUndo = {
                             listRepository.undoStagedListDeletion(staged)
-                            runCatching { reminderScheduler.rescheduleAll() }
+                            runCatching { reminderScheduler.rescheduleAllOffMain() }
                         },
                     )
                 }

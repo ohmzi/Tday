@@ -11,7 +11,6 @@
     <string name="action_search_in">Cerca in %1$s</string>
     <string name="search_no_results_body">Prova un\'altra parola o cancella la ricerca.</string>
     <string name="search_no_results_settings">Nessuna impostazione corrispondente</string>
-    <string name="search_no_results_guide">Nessun argomento corrispondente</string>
     <string name="action_create_task">Crea attività</string>
     <string name="action_create_list">Crea elenco</string>
     <string name="action_edit">Modifica</string>
@@ -53,13 +52,11 @@
     <string name="task_promote_failed">Impossibile pianificare l\'attività</string>
     <string name="task_float_failed">Impossibile far fluttuare l\'attività</string>
     <string name="action_complete">Completa</string>
-    <string name="action_more">Altro</string>
     <string name="action_more_options">Altre opzioni</string>
     <string name="action_save">Salva</string>
     <string name="action_save_task">Salva attività</string>
     <string name="action_cancel">Annulla</string>
     <string name="action_done">Fatto</string>
-    <string name="action_create">Crea</string>
     <string name="action_ok">OK</string>
     <string name="action_sign_out">Esci</string>
     <string name="action_expand_section">Espandi sezione</string>
@@ -75,7 +72,6 @@
 
     <!-- Scheduled task home screen -->
     <string name="scheduled_task_home_title">T\'Day</string>
-    <string name="scheduled_task_home_category_today">Oggi</string>
     <string name="scheduled_task_home_category_overdue">In ritardo</string>
     <string name="scheduled_task_home_category_scheduled">Programmate</string>
     <string name="scheduled_task_home_category_all">Tutte</string>
@@ -84,7 +80,6 @@
     <string name="scheduled_task_home_category_calendar">Calendario</string>
     <string name="root_feed_tab_scheduled_task_home">Programmate</string>
     <string name="root_feed_tab_floater">Senza data</string>
-    <string name="scheduled_task_home_search_placeholder">Cerca</string>
     <string name="scheduled_task_home_search_no_results">Nessuna attività corrispondente</string>
     <string name="scheduled_task_home_my_lists">I miei elenchi</string>
     <string name="scheduled_task_home_new_list">Nuovo elenco</string>
@@ -220,28 +215,22 @@
     <string name="settings_notifications_blocked">Le notifiche sono disattivate per T\'Day nelle impostazioni di Android.</string>
     <string name="settings_notifications_declined">Le notifiche non sono state consentite, quindi T\'Day non può inviare promemoria.</string>
     <string name="settings_ai_task_summary">Riepilogo</string>
-    <string name="settings_saving_admin">Salvataggio impostazione admin…</string>
-    <string name="settings_ai_unavailable_title">Riepilogo non disponibile</string>
     <string name="settings_default_reminder">Promemoria predefinito</string>
     <string name="settings_update_available_version">v%1$s disponibile</string>
     <string name="settings_server_compatible">Compatibile</string>
     <string name="settings_server_incompatible">Non compatibile</string>
 
     <!-- Onboarding / wizard -->
-    <string name="onboarding_title">Configura T\'Day</string>
-    <string name="onboarding_subtitle">Configura il tuo spazio di lavoro</string>
     <string name="onboarding_step_mode">Modalità</string>
     <string name="onboarding_step_server">Server</string>
     <string name="onboarding_step_login">Accesso</string>
     <string name="onboarding_mode_title">Scegli la tua configurazione</string>
     <string name="onboarding_mode_subtitle">Scegli dove T\'Day conserva le tue attività.</string>
     <string name="onboarding_mode_server_title">Server self-hosted</string>
-    <string name="onboarding_mode_server_subtitle">Usa account, sincronizzazione e il tuo backend.</string>
     <string name="onboarding_mode_server_short_title">Self-hosted</string>
     <string name="onboarding_mode_server_short_subtitle">Account e sincronizzazione</string>
     <string name="onboarding_mode_local_short_title">Questo dispositivo</string>
     <string name="onboarding_mode_local_short_subtitle">Nessun accesso</string>
-    <string name="onboarding_mode_local_subtitle">Nessun accesso. I dati restano nella memoria dell\'app.</string>
     <string name="onboarding_server_hero_subtitle">Connetti il tuo endpoint T\'Day.</string>
     <string name="onboarding_server_url_label">URL del server</string>
     <string name="onboarding_server_url_placeholder">https://app.example.com</string>
@@ -250,14 +239,10 @@
     <string name="onboarding_connect">Connetti</string>
     <string name="onboarding_connecting_title">Connessione al server…</string>
     <string name="onboarding_connecting_subtitle">Verifica di endpoint, TLS e impostazioni dello spazio di lavoro</string>
-    <string name="onboarding_use_device_only">Usa solo questo dispositivo</string>
     <string name="onboarding_username_label">Nome utente</string>
     <string name="onboarding_password_label">Password</string>
     <string name="onboarding_sign_in">Accedi</string>
-    <string name="onboarding_login_hero_subtitle">Apri il tuo spazio di lavoro sincronizzato.</string>
     <string name="onboarding_create_account">Crea account</string>
-    <string name="onboarding_register_hero_subtitle">Crea il tuo account sul server.</string>
-    <string name="onboarding_change_server">Cambia server</string>
     <string name="onboarding_change_setup">Cambia configurazione</string>
     <string name="onboarding_first_name_label">Nome</string>
     <string name="onboarding_confirm_password_label">Conferma password</string>
@@ -282,7 +267,6 @@
     <string name="auth_password_manager_save_server_url_failed">Il gestore password di Android non è riuscito a salvare questo URL del server. Verifica che un gestore password sia abilitato.</string>
     <string name="auth_password_manager_save_login_failed">Il gestore password di Android non è riuscito a salvare questo accesso. Verifica che un gestore password sia abilitato.</string>
     <string name="auth_error_incorrect_credentials">Nome utente o password errati</string>
-    <string name="auth_error_server_unreachable">Impossibile raggiungere il server. Controlla l\'URL del server e riprova.</string>
 
     <!-- Todo list screen -->
     <string name="todos_summarize">Riepiloga attività</string>
@@ -331,7 +315,6 @@
     <string name="todos_summary_close">Chiudi riepilogo</string>
     <string name="todos_summary_loading">Creazione del riepilogo delle attività…</string>
     <string name="todos_summary_admin_disabled">Il riepilogo è disabilitato dall\'admin</string>
-    <string name="todos_summary_modes_unavailable">Il riepilogo è disponibile solo per Oggi, Programmate, Tutte e Priorità</string>
     <string name="todos_summary_offline_unavailable">Nessun riepilogo disponibile offline.</string>
     <string name="todos_list_settings">Impostazioni elenco</string>
     <string name="reusable_list">Lista riutilizzabile</string>
@@ -354,7 +337,6 @@
     <string name="share_role_owner">Proprietario</string>
     <string name="share_role_editor">Editor</string>
     <string name="share_role_viewer">Visualizzatore</string>
-    <string name="share_task_chooser_title">Condividi attività</string>
     <string name="share_due_label">Scadenza: %1$s</string>
     <string name="share_priority_label">Priorità: %1$s</string>
     <plurals name="share_task_count">
@@ -407,10 +389,6 @@
     <string name="completed_empty_body">Segna qualcosa come fatto e finirà qui.</string>
     <string name="completed_floater_empty">Nessun elemento flottante completato</string>
     <string name="completed_floater_empty_body">Spunta qualcosa in Flottante e apparirà qui.</string>
-    <string name="completed_section_earlier">Prima</string>
-    <string name="completed_section_today">Oggi</string>
-    <string name="completed_section_tomorrow">Domani</string>
-    <string name="completed_section_rest_of">Resto di %1$s</string>
 
     <!-- Calendar screen -->
     <string name="calendar_title">Calendario</string>
@@ -419,7 +397,6 @@
     <string name="calendar_tasks_due">Attività in scadenza %1$s</string>
     <string name="calendar_no_pending">Nessuna attività in sospeso per questo giorno</string>
     <string name="calendar_no_pending_body">Seleziona un\'altra data nel calendario.</string>
-    <string name="calendar_completed_header">Completate:</string>
     <string name="calendar_prev_month">Mese precedente</string>
     <string name="calendar_next_month">Mese successivo</string>
     <string name="calendar_prev_week">Settimana precedente</string>
@@ -433,10 +410,6 @@
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Riprova</string>
     <string name="action_undo">Annulla</string>
-    <string name="offline_banner_title">Sei offline</string>
-    <string name="offline_banner">Le attività memorizzate nella cache sono disponibili. Le modifiche verranno sincronizzate al ritorno della connessione.</string>
-    <string name="offline_banner_pending_one">1 modifica in attesa di sincronizzazione</string>
-    <string name="offline_banner_pending_many">%1$d modifiche in attesa di sincronizzazione</string>
     <string name="settings_about">Informazioni</string>
     <string name="settings_workspace_local_title">Spazio di lavoro locale</string>
     <string name="settings_workspace_local_detail">Solo su questo dispositivo</string>
@@ -446,18 +419,8 @@
     <string name="settings_workspace_delete_body">Questa azione rimuove definitivamente tutte le attività, le liste e le voci completate salvate su questo dispositivo. Non esiste alcuna copia su un server: scarica prima i tuoi dati se vuoi conservarli.</string>
     <string name="settings_workspace_delete_done">Dati locali eliminati.</string>
     <string name="settings_workspace_server_title">Sincronizzazione server</string>
-    <string name="settings_sync_status_ready">Pronto per la sincronizzazione</string>
-    <string name="settings_sync_status_syncing">Sincronizzazione in corso</string>
-    <string name="settings_sync_status_offline">Offline. Le modifiche verranno sincronizzate al ritorno della connessione.</string>
-    <string name="settings_sync_status_pending">In attesa di sincronizzazione</string>
-    <string name="settings_sync_status_synced">Sincronizzato</string>
     <string name="settings_sync_last_synced_label">Ultima sincronizzazione</string>
     <string name="settings_sync_last_synced_never">Non ancora</string>
-    <string name="settings_sync_last_attempt_label">Ultimo tentativo</string>
-    <string name="settings_sync_pending_label">In sospeso</string>
-    <string name="settings_sync_pending_none">Nessuna modifica in attesa</string>
-    <string name="settings_sync_pending_one">1 modifica in attesa</string>
-    <string name="settings_sync_pending_many">%1$d modifiche in attesa</string>
     <string name="settings_sync_now">Sincronizza ora</string>
     <string name="settings_sync_up_to_date">Aggiornato</string>
     <string name="settings_sync_offline_short">Offline</string>
@@ -479,23 +442,18 @@
     <string name="error_load_tasks_failed">Caricamento delle attività non riuscito.</string>
     <string name="error_create_task_failed">Impossibile creare l\'attività.</string>
     <string name="error_update_task_failed">Impossibile aggiornare l\'attività.</string>
-    <string name="error_complete_task_failed">Impossibile completare l\'attività.</string>
     <string name="error_delete_task_failed">Impossibile eliminare l\'attività.</string>
     <string name="error_restore_task_failed">Impossibile ripristinare l\'attività.</string>
     <string name="error_create_list_failed">Impossibile creare l\'elenco.</string>
     <string name="error_update_list_failed">Impossibile aggiornare l\'elenco.</string>
     <string name="error_delete_list_failed">Impossibile eliminare l\'elenco.</string>
     <string name="error_summarize_tasks_failed">Impossibile riepilogare le attività.</string>
-    <string name="error_load_admin_settings_failed">Impossibile caricare le impostazioni admin</string>
-    <string name="error_update_admin_settings_failed">Impossibile aggiornare le impostazioni admin</string>
     <string name="error_reset_trusted_server_failed">Impossibile reimpostare il server attendibile.</string>
     <string name="error_connect_server_failed">Impossibile connettersi al server.</string>
     <string name="server_setup_error_probe_timeout">Tempo scaduto per la verifica del server. Controlla URL e rete, poi riprova.</string>
     <string name="server_setup_error_invalid_url">URL del server non valido.</string>
     <string name="server_setup_error_insecure_transport">Usa HTTPS per gli URL di server remoti.</string>
     <string name="server_setup_error_not_tday_server">Il server è raggiungibile ma non sembra essere un server T\'Day.</string>
-    <string name="server_setup_trust_refreshing">L\'attendibilità del server salvato è cambiata. Nuovo tentativo con un certificato aggiornato.</string>
-    <string name="server_setup_trust_refresh_failed">L\'app non è riuscita a ripristinare automaticamente una mancata corrispondenza di attendibilità del server salvato. Cancella la memoria dell\'app o reinstalla l\'app, poi riprova.</string>
 
     <string name="notification_channel_task_reminders_name">Promemoria attività</string>
     <string name="notification_channel_task_reminders_description">Promemoria per le prossime scadenze delle attività</string>
@@ -526,7 +484,6 @@
     <string name="widget_today_tasks_add">Aggiungine una per oggi</string>
     <string name="widget_today_tasks_count">%1$d in scadenza</string>
     <string name="widget_today_progress">%1$d di %2$d fatte</string>
-    <string name="widget_today_tasks_count_unit">in scadenza</string>
     <string name="widget_today_tasks_setup_title">Apri T\'Day</string>
     <string name="widget_today_tasks_setup_message">Configura il tuo spazio di lavoro</string>
     <string name="widget_floater_tasks_description">Mostra le attività senza data a colpo d\'occhio</string>
@@ -537,7 +494,6 @@
     <string name="widget_floater_tasks_empty">Nessuna attività senza data</string>
     <string name="widget_floater_tasks_add">Aggiungi un\'attività senza data</string>
     <string name="widget_floater_tasks_count">%1$d aperte</string>
-    <string name="widget_floater_tasks_count_unit">aperte</string>
     <string name="widget_loading">Caricamento attività…</string>
     <string name="widget_list_tasks_description">Mostra una lista a tua scelta a colpo d\'occhio</string>
     <string name="widget_list_tasks_title">Lista</string>
@@ -554,11 +510,7 @@
     <string name="widget_list_picker_empty">Crea una lista in T\'Day, poi tocca di nuovo questo widget.</string>
     <string name="widget_list_picker_section_todo">Liste pianificate</string>
     <string name="widget_list_picker_section_floater">Liste senza data</string>
-    <string name="widget_list_picker_shared_label">Condivisa</string>
     <string name="widget_list_picker_selected">Selezionata</string>
-
-    <!-- Settings: updates -->
-    <string name="settings_check_updates">Controlla aggiornamenti</string>
 
     <!-- Latest release screen -->
     <string name="release_title">Versione app</string>
@@ -585,9 +537,7 @@
     <string name="release_downloading_apk_progress">Download aggiornamento… %1$d%%</string>
     <string name="release_preparing_update">Preparazione aggiornamento…</string>
     <string name="release_opening_installer">Apertura dell\'installazione Android…</string>
-    <string name="release_install_permission_required">Consenti a T\'Day di installare aggiornamenti da questa sorgente.</string>
     <string name="release_install_permission_return_hint">Consenti a T\'Day di installare aggiornamenti, poi torna qui per continuare automaticamente.</string>
-    <string name="release_install_permission_denied">L\'autorizzazione all\'installazione è ancora disabilitata per T\'Day.</string>
     <string name="release_download_failed">Impossibile scaricare l\'aggiornamento. Riprova.</string>
     <string name="release_install_failed">Impossibile installare l\'aggiornamento.</string>
     <string name="release_install_cancelled">Installazione annullata. Tocca Scarica e installa per riprovare.</string>
@@ -663,11 +613,8 @@
     <string name="forgot_password_reset_failed">Le risposte non corrispondono. Riprova.</string>
     <string name="forgot_password_reset_failed_contact_admin">%1$s Contatta un amministratore per reimpostare la password.</string>
     <string name="forgot_password_reset_success">Password reimpostata. Accedi con la nuova password.</string>
-    <string name="forgot_password_subtitle_challenge">Rispondi alle tue domande di sicurezza.</string>
     <string name="forgot_password_subtitle_locked">Troppi tentativi errati. Puoi richiedere il ripristino della password a un amministratore.</string>
-    <string name="forgot_password_subtitle_password">Scegli una nuova password.</string>
     <string name="forgot_password_subtitle_requested">La tua richiesta è stata inviata. Un amministratore reimposterà la password e te ne fornirà una temporanea.</string>
-    <string name="forgot_password_subtitle_username">Inserisci il tuo nome utente per rispondere alle domande di sicurezza.</string>
     <string name="forgot_password_success_title">Password modificata</string>
     <string name="forgot_password_title">Reimposta la tua password</string>
     <string name="forgot_password_username_required">Inserisci il tuo nome utente</string>
@@ -695,14 +642,12 @@
     <string name="security_questions_question_3">Domanda 3</string>
     <string name="security_questions_save">Salva domande di sicurezza</string>
     <string name="security_questions_save_failed">Impossibile salvare le domande di sicurezza</string>
-    <string name="security_questions_subtitle">Scegli tre domande per verificare la tua identità se dovrai reimpostare la password.</string>
     <string name="security_questions_title">Domande di sicurezza</string>
     <string name="settings_account_change_security_questions">Modifica</string>
     <string name="settings_account_current_password_required">Inserisci la password attuale</string>
     <string name="settings_account_security_questions_configured">Configurate</string>
     <string name="settings_account_security_questions_label">Domande di sicurezza</string>
     <string name="settings_account_security_questions_not_configured">Non configurate</string>
-    <string name="settings_account_security_questions_save">Salva domande</string>
     <string name="settings_account_security_questions_updated">Domande di sicurezza aggiornate</string>
     <string name="summary_source_local">Modello locale</string>
     <string name="summary_source_server">Modello del server</string>
@@ -711,7 +656,6 @@
     <string name="settings_data_summary">%1$d attività · %2$d liste · %3$d completate</string>
     <string name="settings_data_download">Scarica i miei dati</string>
     <string name="settings_data_import">Importa</string>
-    <string name="settings_data_import_local_hint">Accedi a un server per importare un file.</string>
     <string name="settings_data_export_done">Il file dei tuoi dati è stato salvato.</string>
     <string name="settings_data_import_done">Importazione completata — aggiunti %1$d elementi.</string>
     <string name="settings_data_import_failed">Impossibile importare quel file.</string>

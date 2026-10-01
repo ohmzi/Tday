@@ -68,9 +68,6 @@ class ServerConfigRepository @Inject constructor(
         val backendVersion: String?,
     )
 
-    suspend fun saveServerUrl(rawUrl: String): Result<String> =
-        probeAndSave(rawUrl).map { it.serverUrl }
-
     suspend fun probeAndSave(rawUrl: String): Result<ProbeResult> = runCatching {
         val normalizedServerUrl = secureConfigStore.normalizeServerUrl(rawUrl)
             ?: throw ServerProbeException.InvalidUrl()

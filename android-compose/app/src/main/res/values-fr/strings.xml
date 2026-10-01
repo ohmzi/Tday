@@ -11,7 +11,6 @@
     <string name="action_search_in">Rechercher dans %1$s</string>
     <string name="search_no_results_body">Essayez un autre mot ou effacez la recherche.</string>
     <string name="search_no_results_settings">Aucun paramètre correspondant</string>
-    <string name="search_no_results_guide">Aucun sujet correspondant</string>
     <string name="action_create_task">Créer une tâche</string>
     <string name="action_create_list">Créer une liste</string>
     <string name="action_edit">Modifier</string>
@@ -53,13 +52,11 @@
     <string name="task_promote_failed">Impossible de planifier la tâche</string>
     <string name="task_float_failed">Impossible de laisser flotter la tâche</string>
     <string name="action_complete">Terminer</string>
-    <string name="action_more">Plus</string>
     <string name="action_more_options">Plus d\'options</string>
     <string name="action_save">Enregistrer</string>
     <string name="action_save_task">Enregistrer la tâche</string>
     <string name="action_cancel">Annuler</string>
     <string name="action_done">Terminé</string>
-    <string name="action_create">Créer</string>
     <string name="action_ok">OK</string>
     <string name="action_sign_out">Se déconnecter</string>
     <string name="action_expand_section">Développer la section</string>
@@ -75,7 +72,6 @@
 
     <!-- Scheduled task home screen -->
     <string name="scheduled_task_home_title">T\'Day</string>
-    <string name="scheduled_task_home_category_today">Aujourd\'hui</string>
     <string name="scheduled_task_home_category_overdue">En retard</string>
     <string name="scheduled_task_home_category_scheduled">Planifiées</string>
     <string name="scheduled_task_home_category_all">Toutes</string>
@@ -84,7 +80,6 @@
     <string name="scheduled_task_home_category_calendar">Calendrier</string>
     <string name="root_feed_tab_scheduled_task_home">Planifiées</string>
     <string name="root_feed_tab_floater">Sans date</string>
-    <string name="scheduled_task_home_search_placeholder">Rechercher</string>
     <string name="scheduled_task_home_search_no_results">Aucune tâche correspondante</string>
     <string name="scheduled_task_home_my_lists">Mes listes</string>
     <string name="scheduled_task_home_new_list">Nouvelle liste</string>
@@ -220,28 +215,22 @@
     <string name="settings_notifications_blocked">Les notifications sont désactivées pour T\'Day dans les paramètres Android.</string>
     <string name="settings_notifications_declined">Les notifications n\'ont pas été autorisées, T\'Day ne peut donc pas envoyer de rappels.</string>
     <string name="settings_ai_task_summary">Résumé</string>
-    <string name="settings_saving_admin">Enregistrement du paramètre administrateur…</string>
-    <string name="settings_ai_unavailable_title">Résumé indisponible</string>
     <string name="settings_default_reminder">Rappel par défaut</string>
     <string name="settings_update_available_version">v%1$s disponible</string>
     <string name="settings_server_compatible">Compatible</string>
     <string name="settings_server_incompatible">Incompatible</string>
 
     <!-- Onboarding / wizard -->
-    <string name="onboarding_title">Configurer T\'Day</string>
-    <string name="onboarding_subtitle">Configurez votre espace de travail</string>
     <string name="onboarding_step_mode">Mode</string>
     <string name="onboarding_step_server">Serveur</string>
     <string name="onboarding_step_login">Connexion</string>
     <string name="onboarding_mode_title">Choisissez votre configuration</string>
     <string name="onboarding_mode_subtitle">Choisissez où T\'Day conserve vos tâches.</string>
     <string name="onboarding_mode_server_title">Serveur auto-hébergé</string>
-    <string name="onboarding_mode_server_subtitle">Utilisez des comptes, la synchronisation et votre backend.</string>
     <string name="onboarding_mode_server_short_title">Auto-hébergé</string>
     <string name="onboarding_mode_server_short_subtitle">Comptes et synchronisation</string>
     <string name="onboarding_mode_local_short_title">Cet appareil</string>
     <string name="onboarding_mode_local_short_subtitle">Sans connexion</string>
-    <string name="onboarding_mode_local_subtitle">Sans connexion. Les données restent dans le stockage de l\'application.</string>
     <string name="onboarding_server_hero_subtitle">Connectez votre point d\'accès T\'Day.</string>
     <string name="onboarding_server_url_label">URL du serveur</string>
     <string name="onboarding_server_url_placeholder">https://app.example.com</string>
@@ -250,14 +239,10 @@
     <string name="onboarding_connect">Connecter</string>
     <string name="onboarding_connecting_title">Connexion au serveur…</string>
     <string name="onboarding_connecting_subtitle">Vérification du point d\'accès, du TLS et des paramètres de l\'espace de travail</string>
-    <string name="onboarding_use_device_only">Utiliser cet appareil uniquement</string>
     <string name="onboarding_username_label">Nom d\'utilisateur</string>
     <string name="onboarding_password_label">Mot de passe</string>
     <string name="onboarding_sign_in">Se connecter</string>
-    <string name="onboarding_login_hero_subtitle">Ouvrez votre espace de travail synchronisé.</string>
     <string name="onboarding_create_account">Créer un compte</string>
-    <string name="onboarding_register_hero_subtitle">Créez votre compte sur le serveur.</string>
-    <string name="onboarding_change_server">Changer de serveur</string>
     <string name="onboarding_change_setup">Changer de configuration</string>
     <string name="onboarding_first_name_label">Prénom</string>
     <string name="onboarding_confirm_password_label">Confirmer le mot de passe</string>
@@ -282,7 +267,6 @@
     <string name="auth_password_manager_save_server_url_failed">Le gestionnaire de mots de passe Android n\'a pas pu enregistrer cette URL de serveur. Vérifiez qu\'un gestionnaire de mots de passe est activé.</string>
     <string name="auth_password_manager_save_login_failed">Le gestionnaire de mots de passe Android n\'a pas pu enregistrer cette connexion. Vérifiez qu\'un gestionnaire de mots de passe est activé.</string>
     <string name="auth_error_incorrect_credentials">Nom d\'utilisateur ou mot de passe incorrect</string>
-    <string name="auth_error_server_unreachable">Serveur inaccessible. Vérifiez l\'URL de votre serveur et réessayez.</string>
 
     <!-- Todo list screen -->
     <string name="todos_summarize">Résumer les tâches</string>
@@ -331,7 +315,6 @@
     <string name="todos_summary_close">Fermer le résumé</string>
     <string name="todos_summary_loading">Création de votre résumé de tâches…</string>
     <string name="todos_summary_admin_disabled">Le résumé est désactivé par l\'administrateur</string>
-    <string name="todos_summary_modes_unavailable">Le résumé est disponible uniquement pour Aujourd\'hui, Planifiées, Toutes et Priorité</string>
     <string name="todos_summary_offline_unavailable">Aucun résumé disponible hors ligne.</string>
     <string name="todos_list_settings">Paramètres de la liste</string>
     <string name="reusable_list">Liste réutilisable</string>
@@ -354,7 +337,6 @@
     <string name="share_role_owner">Propriétaire</string>
     <string name="share_role_editor">Éditeur</string>
     <string name="share_role_viewer">Lecteur</string>
-    <string name="share_task_chooser_title">Partager la tâche</string>
     <string name="share_due_label">Échéance : %1$s</string>
     <string name="share_priority_label">Priorité : %1$s</string>
     <plurals name="share_task_count">
@@ -407,10 +389,6 @@
     <string name="completed_empty_body">Cochez une tâche et elle atterrira ici.</string>
     <string name="completed_floater_empty">Aucun élément flottant terminé</string>
     <string name="completed_floater_empty_body">Cochez un élément dans Flottant et il apparaîtra ici.</string>
-    <string name="completed_section_earlier">Plus tôt</string>
-    <string name="completed_section_today">Aujourd\'hui</string>
-    <string name="completed_section_tomorrow">Demain</string>
-    <string name="completed_section_rest_of">Reste de %1$s</string>
 
     <!-- Calendar screen -->
     <string name="calendar_title">Calendrier</string>
@@ -419,7 +397,6 @@
     <string name="calendar_tasks_due">Tâches dues le %1$s</string>
     <string name="calendar_no_pending">Aucune tâche en attente pour ce jour</string>
     <string name="calendar_no_pending_body">Sélectionnez une autre date dans le calendrier.</string>
-    <string name="calendar_completed_header">Terminées :</string>
     <string name="calendar_prev_month">Mois précédent</string>
     <string name="calendar_next_month">Mois suivant</string>
     <string name="calendar_prev_week">Semaine précédente</string>
@@ -433,10 +410,6 @@
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Réessayer</string>
     <string name="action_undo">Annuler</string>
-    <string name="offline_banner_title">Vous êtes hors ligne</string>
-    <string name="offline_banner">Les tâches en cache sont disponibles. Les modifications seront synchronisées au retour de la connexion.</string>
-    <string name="offline_banner_pending_one">1 modification en attente de synchronisation</string>
-    <string name="offline_banner_pending_many">%1$d modifications en attente de synchronisation</string>
     <string name="settings_about">À propos</string>
     <string name="settings_workspace_local_title">Espace de travail local</string>
     <string name="settings_workspace_local_detail">Sur cet appareil uniquement</string>
@@ -446,18 +419,8 @@
     <string name="settings_workspace_delete_body">Cela supprime définitivement toutes les tâches, listes et entrées terminées enregistrées sur cet appareil. Il n\'existe aucune copie sur un serveur — téléchargez vos données avant si vous voulez les conserver.</string>
     <string name="settings_workspace_delete_done">Données locales supprimées.</string>
     <string name="settings_workspace_server_title">Synchronisation serveur</string>
-    <string name="settings_sync_status_ready">Prêt à synchroniser</string>
-    <string name="settings_sync_status_syncing">Synchronisation en cours</string>
-    <string name="settings_sync_status_offline">Hors ligne. Les modifications seront synchronisées au retour de la connexion.</string>
-    <string name="settings_sync_status_pending">En attente de synchronisation</string>
-    <string name="settings_sync_status_synced">Synchronisé</string>
     <string name="settings_sync_last_synced_label">Dernière synchronisation</string>
     <string name="settings_sync_last_synced_never">Pas encore</string>
-    <string name="settings_sync_last_attempt_label">Dernière tentative</string>
-    <string name="settings_sync_pending_label">En attente</string>
-    <string name="settings_sync_pending_none">Aucune modification en attente</string>
-    <string name="settings_sync_pending_one">1 modification en attente</string>
-    <string name="settings_sync_pending_many">%1$d modifications en attente</string>
     <string name="settings_sync_now">Synchroniser maintenant</string>
     <string name="settings_sync_up_to_date">À jour</string>
     <string name="settings_sync_offline_short">Hors ligne</string>
@@ -479,23 +442,18 @@
     <string name="error_load_tasks_failed">Échec du chargement des tâches.</string>
     <string name="error_create_task_failed">Impossible de créer la tâche.</string>
     <string name="error_update_task_failed">Impossible de mettre à jour la tâche.</string>
-    <string name="error_complete_task_failed">Impossible de terminer la tâche.</string>
     <string name="error_delete_task_failed">Impossible de supprimer la tâche.</string>
     <string name="error_restore_task_failed">Impossible de restaurer la tâche.</string>
     <string name="error_create_list_failed">Impossible de créer la liste.</string>
     <string name="error_update_list_failed">Impossible de mettre à jour la liste.</string>
     <string name="error_delete_list_failed">Impossible de supprimer la liste.</string>
     <string name="error_summarize_tasks_failed">Impossible de résumer les tâches.</string>
-    <string name="error_load_admin_settings_failed">Impossible de charger les paramètres administrateur</string>
-    <string name="error_update_admin_settings_failed">Impossible de mettre à jour les paramètres administrateur</string>
     <string name="error_reset_trusted_server_failed">Impossible de réinitialiser le serveur de confiance.</string>
     <string name="error_connect_server_failed">Impossible de se connecter au serveur.</string>
     <string name="server_setup_error_probe_timeout">Le sondage du serveur a expiré. Vérifiez l\'URL et le réseau, puis réessayez.</string>
     <string name="server_setup_error_invalid_url">URL de serveur invalide.</string>
     <string name="server_setup_error_insecure_transport">Utilisez HTTPS pour les URL de serveur distantes.</string>
     <string name="server_setup_error_not_tday_server">Le serveur est accessible mais ne semble pas être un serveur T\'Day.</string>
-    <string name="server_setup_trust_refreshing">La confiance du serveur enregistrée a changé. Nouvelle tentative avec un certificat actualisé.</string>
-    <string name="server_setup_trust_refresh_failed">L\'application n\'a pas pu récupérer automatiquement d\'un conflit de confiance serveur enregistré. Effacez le stockage de l\'application ou réinstallez-la, puis réessayez.</string>
 
     <string name="notification_channel_task_reminders_name">Rappels de tâches</string>
     <string name="notification_channel_task_reminders_description">Rappels pour les échéances de tâches à venir</string>
@@ -526,7 +484,6 @@
     <string name="widget_today_tasks_add">Ajoutez-en une pour aujourd\'hui</string>
     <string name="widget_today_tasks_count">%1$d dues</string>
     <string name="widget_today_progress">%1$d sur %2$d terminées</string>
-    <string name="widget_today_tasks_count_unit">dues</string>
     <string name="widget_today_tasks_setup_title">Ouvrir T\'Day</string>
     <string name="widget_today_tasks_setup_message">Configurez votre espace de travail</string>
     <string name="widget_floater_tasks_description">Affiche les tâches sans date en un coup d\'œil</string>
@@ -537,7 +494,6 @@
     <string name="widget_floater_tasks_empty">Aucune tâche sans date</string>
     <string name="widget_floater_tasks_add">Ajouter une tâche sans date</string>
     <string name="widget_floater_tasks_count">%1$d ouvertes</string>
-    <string name="widget_floater_tasks_count_unit">ouvertes</string>
     <string name="widget_loading">Chargement des tâches…</string>
     <string name="widget_list_tasks_description">Affiche une liste de votre choix en un coup d\'œil</string>
     <string name="widget_list_tasks_title">Liste</string>
@@ -554,11 +510,7 @@
     <string name="widget_list_picker_empty">Créez une liste dans T\'Day, puis touchez à nouveau ce widget.</string>
     <string name="widget_list_picker_section_todo">Listes planifiées</string>
     <string name="widget_list_picker_section_floater">Listes sans date</string>
-    <string name="widget_list_picker_shared_label">Partagée</string>
     <string name="widget_list_picker_selected">Sélectionnée</string>
-
-    <!-- Settings: updates -->
-    <string name="settings_check_updates">Rechercher des mises à jour</string>
 
     <!-- Latest release screen -->
     <string name="release_title">Version de l\'application</string>
@@ -585,9 +537,7 @@
     <string name="release_downloading_apk_progress">Téléchargement de la mise à jour… %1$d%%</string>
     <string name="release_preparing_update">Préparation de la mise à jour…</string>
     <string name="release_opening_installer">Ouverture de l\'installateur Android…</string>
-    <string name="release_install_permission_required">Autorisez T\'Day à installer des mises à jour depuis cette source.</string>
     <string name="release_install_permission_return_hint">Autorisez T\'Day à installer des mises à jour, puis revenez ici pour continuer automatiquement.</string>
-    <string name="release_install_permission_denied">L\'autorisation d\'installation est toujours désactivée pour T\'Day.</string>
     <string name="release_download_failed">Impossible de télécharger la mise à jour. Veuillez réessayer.</string>
     <string name="release_install_failed">Impossible d\'installer la mise à jour.</string>
     <string name="release_install_cancelled">L\'installation a été annulée. Appuyez sur Télécharger &amp; installer pour réessayer.</string>
@@ -663,11 +613,8 @@
     <string name="forgot_password_reset_failed">Ces réponses ne correspondent pas. Veuillez réessayer.</string>
     <string name="forgot_password_reset_failed_contact_admin">%1$s Veuillez contacter un administrateur pour réinitialiser votre mot de passe.</string>
     <string name="forgot_password_reset_success">Mot de passe réinitialisé. Connectez-vous avec votre nouveau mot de passe.</string>
-    <string name="forgot_password_subtitle_challenge">Répondez à vos questions de sécurité.</string>
     <string name="forgot_password_subtitle_locked">Trop de tentatives incorrectes. Vous pouvez demander une réinitialisation du mot de passe à un administrateur.</string>
-    <string name="forgot_password_subtitle_password">Choisissez un nouveau mot de passe.</string>
     <string name="forgot_password_subtitle_requested">Votre demande a été envoyée. Un administrateur réinitialisera votre mot de passe et vous en communiquera un temporaire.</string>
-    <string name="forgot_password_subtitle_username">Saisissez votre nom d\'utilisateur pour répondre à vos questions de sécurité.</string>
     <string name="forgot_password_success_title">Mot de passe modifié</string>
     <string name="forgot_password_title">Réinitialisez votre mot de passe</string>
     <string name="forgot_password_username_required">Veuillez saisir votre nom d\'utilisateur</string>
@@ -695,14 +642,12 @@
     <string name="security_questions_question_3">Question 3</string>
     <string name="security_questions_save">Enregistrer les questions de sécurité</string>
     <string name="security_questions_save_failed">Échec de l\'enregistrement des questions de sécurité</string>
-    <string name="security_questions_subtitle">Choisissez trois questions pour vérifier votre identité si vous devez réinitialiser votre mot de passe.</string>
     <string name="security_questions_title">Questions de sécurité</string>
     <string name="settings_account_change_security_questions">Modifier</string>
     <string name="settings_account_current_password_required">Saisissez votre mot de passe actuel</string>
     <string name="settings_account_security_questions_configured">Configurées</string>
     <string name="settings_account_security_questions_label">Questions de sécurité</string>
     <string name="settings_account_security_questions_not_configured">Non configurées</string>
-    <string name="settings_account_security_questions_save">Enregistrer les questions</string>
     <string name="settings_account_security_questions_updated">Questions de sécurité mises à jour</string>
     <string name="summary_source_local">Modèle local</string>
     <string name="summary_source_server">Modèle du serveur</string>
@@ -711,7 +656,6 @@
     <string name="settings_data_summary">%1$d tâches · %2$d listes · %3$d terminées</string>
     <string name="settings_data_download">Télécharger mes données</string>
     <string name="settings_data_import">Importer</string>
-    <string name="settings_data_import_local_hint">Connectez-vous à un serveur pour importer un fichier.</string>
     <string name="settings_data_export_done">Votre fichier de données a été enregistré.</string>
     <string name="settings_data_import_done">Import terminé — %1$d éléments ajoutés.</string>
     <string name="settings_data_import_failed">Impossible d\'importer ce fichier.</string>

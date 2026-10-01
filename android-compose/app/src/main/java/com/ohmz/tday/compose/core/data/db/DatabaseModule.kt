@@ -127,28 +127,4 @@ object DatabaseModule {
             .allowMainThreadQueries()
             .build()
     }
-
-    @Provides
-    fun provideTodoDao(db: TdayDatabase): TodoDao = db.todoDao()
-
-    @Provides
-    fun provideFloaterDao(db: TdayDatabase): FloaterDao = db.floaterDao()
-
-    @Provides
-    fun provideListDao(db: TdayDatabase): ListDao = db.listDao()
-
-    @Provides
-    fun provideFloaterListDao(db: TdayDatabase): FloaterListDao = db.floaterListDao()
-
-    @Provides
-    fun provideCompletedDao(db: TdayDatabase): CompletedDao = db.completedDao()
-
-    @Provides
-    fun provideCompletedFloaterDao(db: TdayDatabase): CompletedFloaterDao = db.completedFloaterDao()
-
-    @Provides
-    fun provideMutationDao(db: TdayDatabase): MutationDao = db.mutationDao()
-
-    @Provides
-    fun provideSyncMetadataDao(db: TdayDatabase): SyncMetadataDao = db.syncMetadataDao()
 }

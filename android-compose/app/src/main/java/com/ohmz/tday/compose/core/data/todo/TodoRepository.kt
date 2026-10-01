@@ -1318,9 +1318,16 @@ class TodoRepository @Inject constructor(
         // Parsed entirely on-device (offline, no AI/network), so it also works in
         // local mode. `text` is passed raw so the matched-span offsets line up with
         // the title shown in the field for the highlight.
-        return runCatching {
-            OnDeviceTitleNlpParser.parse(text, referenceDueEpochMs)
-        }.getOrNull()
+        //
+        // Natty/ANTLR is CPU-heavy and callers (the create sheet's debounced title effect) are on
+        // Main, so hop to Default. `runCatching` stays INSIDE the hop so a cancelled caller (the
+        // next keystroke restarts the effect) still sees the CancellationException from
+        // `withContext` rather than having it swallowed into a `null` result.
+        return withContext(Dispatchers.Default) {
+            runCatching {
+                OnDeviceTitleNlpParser.parse(text, referenceDueEpochMs)
+            }.getOrNull()
+        }
     }
 
     private fun buildDashboardSummary(state: OfflineSyncState): DashboardSummary {
@@ -1329,12 +1336,10 @@ class TodoRepository @Inject constructor(
             .map(::todoFromCache)
             .filterNot { it.completed }
             .toList()
-        val activeFloaters = state.floaters
-            .asSequence()
-            .map(::floaterFromCache)
-            .filterNot { it.completed }
-            .toList()
-        val todayTodos = timelineTodos.filter(::isTodayTodo)
+        // Today's bounds once per build, not per element (see [isTodayTodo]).
+        val todayStart = Instant.ofEpochMilli(startOfTodayMillis())
+        val todayEnd = Instant.ofEpochMilli(endOfTodayMillis())
+        val todayTodos = timelineTodos.filter { isTodayTodo(it, todayStart, todayEnd) }
         val now = Instant.now()
         val scheduledTodos = timelineTodos.filter { isScheduledTodo(it, now) }
         val todoCountsByList = timelineTodos
@@ -1350,7 +1355,6 @@ class TodoRepository @Inject constructor(
             scheduledCount = scheduledTodos.size,
             allCount = timelineTodos.size,
             priorityCount = timelineTodos.count { isPriorityTodo(it.priority) },
-            floaterCount = activeFloaters.size,
             completedCount = state.completedItems.size,
             lists = lists,
         )
@@ -1379,7 +1383,12 @@ class TodoRepository @Inject constructor(
         // modified. Previously this returned raw cache order and only the list-screen section
         // builders re-sorted, so the scheduled task home feed ignored priority.
         return when (mode) {
-            TodoListMode.TODAY -> activeTodos.filter(::isTodayTodo).sortedAsTodos()
+            TodoListMode.TODAY -> {
+                // Today's bounds once per build, not per element (see [isTodayTodo]).
+                val todayStart = Instant.ofEpochMilli(startOfTodayMillis())
+                val todayEnd = Instant.ofEpochMilli(endOfTodayMillis())
+                activeTodos.filter { isTodayTodo(it, todayStart, todayEnd) }.sortedAsTodos()
+            }
             TodoListMode.OVERDUE -> activeTodos.filter { isOverdueTodo(it, now) }.sortedAsTodos()
             TodoListMode.ALL -> activeTodos.sortedAsTodos()
             TodoListMode.SCHEDULED -> activeTodos.filter { isScheduledTodo(it, now) }.sortedAsTodos()
@@ -1407,9 +1416,12 @@ class TodoRepository @Inject constructor(
         updatedAtEpochMs = updatedAt?.toEpochMilli(),
     )
 
-    private fun isTodayTodo(todo: TodoItem): Boolean {
-        val start = Instant.ofEpochMilli(startOfTodayMillis())
-        val end = Instant.ofEpochMilli(endOfTodayMillis())
+    /**
+     * [start]/[end] are the local day's inclusive bounds. Callers compute them once per build
+     * (`startOfTodayMillis`/`endOfTodayMillis`) rather than this recomputing two zoned clock
+     * reads for every element.
+     */
+    private fun isTodayTodo(todo: TodoItem, start: Instant, end: Instant): Boolean {
         val due = todo.due ?: return false
         return due >= start && due <= end
     }

@@ -30,13 +30,16 @@ class GitHubReleaseRepository @Inject constructor(
             .get()
             .build()
 
-        val response = client.newCall(request).execute()
-        if (!response.isSuccessful) {
-            throw RuntimeException("GitHub API returned ${response.code}")
+        // `use` closes the response on every path, including the non-2xx throw below, which
+        // otherwise leaked the connection until it was garbage collected.
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw RuntimeException("GitHub API returned ${response.code}")
+            }
+            val body = response.body?.string()
+                ?: throw RuntimeException("Empty response body")
+            json.decodeFromString<GitHubRelease>(body)
         }
-        val body = response.body?.string()
-            ?: throw RuntimeException("Empty response body")
-        json.decodeFromString<GitHubRelease>(body)
     }
 
     companion object {

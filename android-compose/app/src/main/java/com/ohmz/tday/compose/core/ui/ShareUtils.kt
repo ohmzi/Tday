@@ -48,18 +48,6 @@ fun taskCopyText(context: Context, todo: TodoItem): String =
 fun taskCopyText(context: Context, item: CompletedItem): String =
     taskCopyText(context, item.title, item.description, item.priority, item.due)
 
-fun shareTask(context: Context, todo: TodoItem) {
-    val text = taskCopyText(context, todo)
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, text)
-        putExtra(Intent.EXTRA_SUBJECT, todo.title)
-    }
-    context.startActivity(
-        Intent.createChooser(intent, context.getString(R.string.share_task_chooser_title)),
-    )
-}
-
 fun buildListShareText(context: Context, listName: String, items: List<TodoItem>): String {
     val parts = buildList {
         add(listName)

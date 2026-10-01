@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class ScheduledTaskHomeUiState(
@@ -40,7 +41,6 @@ data class ScheduledTaskHomeUiState(
         scheduledCount = 0,
         allCount = 0,
         priorityCount = 0,
-        floaterCount = 0,
         completedCount = 0,
         lists = emptyList(),
     ),
@@ -390,46 +390,6 @@ class ScheduledTaskHomeViewModel @Inject constructor(
         }
     }
 
-    fun toggleComplete(todo: TodoItem) {
-        val previousSearchable = _uiState.value.searchableTodos
-        _uiState.update { current ->
-            current.copy(
-                searchableTodos = current.searchableTodos.filterNot { it.id == todo.id },
-                errorMessage = null,
-            )
-        }
-        stageComplete(todo) {
-            _uiState.update { it.copy(searchableTodos = previousSearchable, errorMessage = null) }
-        }
-    }
-
-    fun delete(todo: TodoItem) {
-        val previousState = _uiState.value
-        _uiState.update { current ->
-            current.copy(
-                searchableTodos = current.searchableTodos.filterNot { it.id == todo.id },
-                errorMessage = null,
-            )
-        }
-
-        viewModelScope.launch {
-            // Delayed-commit delete: stage now (local-only removal), show the
-            // undoable toast, and let the coordinator run the real delete after
-            // the toast window — or restore the staged state on Undo.
-            runCatching {
-                todoRepository.stageDeleteTodo(todo)
-            }.onSuccess { staged ->
-                showUndoableTaskDelete(todo, staged)
-                rescheduleReminders()
-                refreshAfterMutation()
-            }.onFailure { error ->
-                _uiState.value = previousState.copy(
-                    errorMessage = mutationFailureMessage(error, R.string.error_delete_task_failed),
-                )
-            }
-        }
-    }
-
     private fun rescheduleReminders() {
         viewModelScope.launch(Dispatchers.Default) {
             runCatching { reminderScheduler.rescheduleAll() }
@@ -449,12 +409,17 @@ class ScheduledTaskHomeViewModel @Inject constructor(
     /** "Make this repeat?" — a preset RRULE when the completed history shows a steady
      * cadence for [title], else null. Feeds the create-sheet suggestion chip. */
     suspend fun suggestRepeatRrule(title: String): String? {
-        val completions = completedRepository.fetchCompletedItems().mapNotNull { item ->
-            item.completedAt?.let {
-                com.ohmz.tday.shared.nlp.RepeatSuggestionEngine.Completion(item.title, it.toEpochMilli())
+        // The history mapping (`fetchCompletedItems` maps every row on the caller's thread after
+        // its own IO hop) and the suggestion engine (one grammar parse per completion) are pure
+        // CPU work over the whole completed history; keep them off the caller's (Main) thread.
+        return withContext(Dispatchers.Default) {
+            val completions = completedRepository.fetchCompletedItems().mapNotNull { item ->
+                item.completedAt?.let {
+                    com.ohmz.tday.shared.nlp.RepeatSuggestionEngine.Completion(item.title, it.toEpochMilli())
+                }
             }
+            com.ohmz.tday.shared.nlp.RepeatSuggestionEngine.suggest(title, completions)
         }
-        return com.ohmz.tday.shared.nlp.RepeatSuggestionEngine.suggest(title, completions)
     }
 
     fun completeTodo(todo: TodoItem) {
@@ -509,11 +474,11 @@ class ScheduledTaskHomeViewModel @Inject constructor(
             onCommit = {
                 todoRepository.commitStagedTodoCompletions(listOf(todo))
                 // Runs on the coordinator scope: this ViewModel may be gone.
-                runCatching { reminderScheduler.rescheduleAll() }
+                runCatching { reminderScheduler.rescheduleAllOffMain() }
             },
             onUndo = {
                 todoRepository.undoStagedTodoCompletion(staged)
-                runCatching { reminderScheduler.rescheduleAll() }
+                runCatching { reminderScheduler.rescheduleAllOffMain() }
                 onUndo()
             },
         )
@@ -553,7 +518,7 @@ class ScheduledTaskHomeViewModel @Inject constructor(
                 todoRepository.undoStagedTodoDeletion(staged)
                 // Runs on the coordinator scope: this ViewModel may be gone by
                 // the time Undo restores a reminder-bearing task.
-                runCatching { reminderScheduler.rescheduleAll() }
+                runCatching { reminderScheduler.rescheduleAllOffMain() }
             },
         )
     }
