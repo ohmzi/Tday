@@ -92,8 +92,7 @@ class TdayMcpService(
         val candidates = allLists(ctx.userId).orFailure { return it }
         val lookup = McpListResolver.lookup(name, candidates, namespace)
 
-        if (lookup.found) {
-            val match = lookup.match!!
+        lookup.match?.let { match ->
             return McpToolResult.ok(
                 "Found \"${match.name}\" — ${match.namespace.indefinite} list (holds ${match.namespace.holds}). " +
                     "listId: ${match.id}",
@@ -119,10 +118,11 @@ class TdayMcpService(
         // Only read the lists up front when a name has to be resolved; either way they are
         // read once and reused for the list-name column below.
         val resolvedLists = listName?.let { allLists(ctx.userId).orFailure { failure -> return failure } }
-        val listFilter = listName?.let { requested ->
-            val candidates = resolvedLists!!
-            val lookup = McpListResolver.lookup(requested, candidates, namespace = null)
-            lookup.match ?: return McpToolResult.ok(describeMiss(lookup, candidates))
+        val listFilter = if (listName != null && resolvedLists != null) {
+            val lookup = McpListResolver.lookup(listName, resolvedLists, namespace = null)
+            lookup.match ?: return McpToolResult.ok(describeMiss(lookup, resolvedLists))
+        } else {
+            null
         }
 
         val window = if (resolvedView.includesScheduled) {
@@ -132,21 +132,21 @@ class TdayMcpService(
             null
         }
 
-        // The scheduled read, the Anytime read and the list lookup are independent and
-        // read-only, so they run side by side; results are still inspected in the same order
-        // as before, so the first failing read reports the same error.
-        val (scheduledRead, anytimeRead, listsRead) = coroutineScope {
-            val scheduled = window?.let { async { scheduledTasks(ctx, it, includeCompleted) } }
-            val anytime = if (resolvedView.includesAnytime) async { anytimeTasks(ctx, includeCompleted) } else null
-            val lists = if (resolvedLists == null) async { allLists(ctx.userId) } else null
-            Triple(scheduled?.await(), anytime?.await(), lists?.await())
-        }
+        // The reads run side by side (see readTaskSources) but are still inspected in the same
+        // order as before, so the first failing read reports the same error.
+        val reads = readTaskSources(
+            ctx,
+            window,
+            includeAnytime = resolvedView.includesAnytime,
+            includeCompleted = includeCompleted,
+            includeLists = resolvedLists == null,
+        )
 
         val tasks = mutableListOf<ResolvedTask>()
-        scheduledRead?.let { tasks += it.orFailure { failure -> return failure } }
-        anytimeRead?.let { tasks += it.orFailure { failure -> return failure } }
+        reads.scheduled?.let { tasks += it.orFailure { failure -> return failure } }
+        reads.anytime?.let { tasks += it.orFailure { failure -> return failure } }
 
-        val lists = resolvedLists ?: listsRead!!.orFailure { return it }
+        val lists = resolvedLists ?: reads.lists?.orFailure { failure -> return failure }.orEmpty()
         val listNames = lists.associate { it.id to it.name }
         val filtered = tasks
             .filter { listFilter == null || it.listId == listFilter.id }
@@ -200,7 +200,7 @@ class TdayMcpService(
         matches += reads.floaters.orFailure { return it }.map { it.toResolvedTask() }
 
         if (includeCompleted) {
-            matches += reads.completedTodos!!.orFailure { return it }.map {
+            matches += reads.completedTodos?.orFailure { return it }.orEmpty().map {
                 ResolvedTask(
                     handle = TaskHandle.of(TaskKind.TODO, it.originalTodoID ?: it.id),
                     title = it.title,
@@ -211,7 +211,7 @@ class TdayMcpService(
                     listId = it.listID,
                 )
             }
-            matches += reads.completedFloaters!!.orFailure { return it }.map {
+            matches += reads.completedFloaters?.orFailure { return it }.orEmpty().map {
                 ResolvedTask(
                     handle = TaskHandle.of(TaskKind.FLOATER, it.originalFloaterID ?: it.id),
                     title = it.title,
@@ -306,8 +306,8 @@ class TdayMcpService(
         }
 
         // Editing one occurrence of a series never touches the series itself.
-        if (args.occurrenceDate != null) {
-            return updateOccurrence(ctx, handle, args, due)
+        args.occurrenceDate?.let { occurrenceDate ->
+            return updateOccurrence(ctx, handle, args, occurrenceDate, due)
         }
 
         return when (handle.kind) {
@@ -401,8 +401,7 @@ class TdayMcpService(
         }
 
         val existing = McpListResolver.lookup(name, allLists(ctx.userId).orFailure { return it }, namespace)
-        if (existing.found) {
-            val match = existing.match!!
+        existing.match?.let { match ->
             return McpToolResult.ok(
                 "There is already ${namespace.indefinite} list called \"${match.name}\" — nothing was created. listId: ${match.id}",
             )
@@ -537,6 +536,7 @@ class TdayMcpService(
         ctx: McpCallContext,
         handle: TaskHandle,
         args: UpdateTaskArgs,
+        occurrenceDate: String,
         due: LocalDateTime?,
     ): McpToolResult {
         if (handle.kind != TaskKind.TODO) {
@@ -544,7 +544,7 @@ class TdayMcpService(
                 "Anytime tasks don't repeat, so there are no occurrences to edit. Call again without occurrenceDate.",
             )
         }
-        val instant = McpDates.parseDue(args.occurrenceDate!!, ctx.zone) ?: return badOccurrence(args.occurrenceDate)
+        val instant = McpDates.parseDue(occurrenceDate, ctx.zone) ?: return badOccurrence(occurrenceDate)
 
         val fields = mutableMapOf<String, Any?>()
         args.title?.let { fields["title"] = it }
@@ -652,8 +652,31 @@ class TdayMcpService(
         return Either.Right(scheduled + anytime)
     }
 
+    /**
+     * The independent, read-only lookups behind `listTasks`. Each one is absent (null) when the view
+     * does not need it; kept as Either so failures surface in a fixed order.
+     */
+    private class TaskSources(
+        val scheduled: Either<AppError, List<ResolvedTask>>?,
+        val anytime: Either<AppError, List<ResolvedTask>>?,
+        val lists: Either<AppError, List<NamedList>>?,
+    )
+
+    private suspend fun readTaskSources(
+        ctx: McpCallContext,
+        window: Window?,
+        includeAnytime: Boolean,
+        includeCompleted: Boolean,
+        includeLists: Boolean,
+    ): TaskSources = coroutineScope {
+        val scheduled = window?.let { async { scheduledTasks(ctx, it, includeCompleted) } }
+        val anytime = if (includeAnytime) async { anytimeTasks(ctx, includeCompleted) } else null
+        val lists = if (includeLists) async { allLists(ctx.userId) } else null
+        TaskSources(scheduled?.await(), anytime?.await(), lists?.await())
+    }
+
     /** The independent reads behind `searchTasks`, kept as Either so failures surface in a fixed order. */
-    private class SearchReads(
+    private data class SearchReads(
         val timeline: Either<AppError, List<TodoResponse>>,
         val floaters: Either<AppError, List<FloaterResponse>>,
         val completedTodos: Either<AppError, List<CompletedTodoResponse>>?,
@@ -670,7 +693,8 @@ class TdayMcpService(
     private suspend fun resolveTargetList(
         ctx: McpCallContext,
         listId: String?,
-        listName: String?,
+        // Both list arguments are optional on the tool call: null means "no list was requested".
+        listName: String?, // skipcq: KT-W1070
         namespace: ListNamespace,
         createIfMissing: Boolean,
     ): ListOutcome {
@@ -690,7 +714,9 @@ class TdayMcpService(
             return ListOutcome.Found(byId)
         }
 
-        val lookup = McpListResolver.lookup(listName!!, candidates, namespace)
+        // Both-null returned at the top, so a name is always present here.
+        val requestedName = listName ?: return ListOutcome.None
+        val lookup = McpListResolver.lookup(requestedName, candidates, namespace)
         lookup.match?.let { return ListOutcome.Found(it) }
         lookup.crossNamespace?.let { return ListOutcome.Stop(crossNamespaceResult(it, namespace)) }
 
@@ -699,10 +725,10 @@ class TdayMcpService(
         }
 
         val created = when (namespace) {
-            ListNamespace.SCHEDULED -> listService.create(ctx.userId, listName, null, null)
+            ListNamespace.SCHEDULED -> listService.create(ctx.userId, requestedName, null, null)
                 .map { NamedList(it.id, it.name, ListNamespace.SCHEDULED) }
 
-            ListNamespace.ANYTIME -> floaterListService.create(ctx.userId, listName, null, null, false)
+            ListNamespace.ANYTIME -> floaterListService.create(ctx.userId, requestedName, null, null, false)
                 .map { NamedList(it.id, it.name, ListNamespace.ANYTIME) }
         }
         return when (created) {

@@ -32,6 +32,7 @@ import org.koin.ktor.plugin.Koin
 import kotlin.test.assertEquals
 
 private const val TEST_USER_ID = "user_123"
+private const val UNUSED = "unused"
 private const val SECURITY_QUESTIONS_PATH = "/api/user/security-questions"
 
 // Three distinct valid questions with answers — passes SecurityQuestions.validateSelection(required = 3).
@@ -140,10 +141,10 @@ class SecurityQuestionsRouteTest {
             setQuestionsCalls += 1
         }
 
-        override suspend fun lookupQuestionsForUsername(rawUsername: String): List<SecurityQuestion>? = error("unused")
-        override suspend fun verifyAnswers(rawUsername: String, answers: List<SecurityAnswerInput>): VerifyAnswersResult = error("unused")
-        override suspend fun verifyAndReset(rawUsername: String, answers: List<SecurityAnswerInput>, newPassword: String): ResetOutcome = error("unused")
-        override suspend fun requestAdminReset(rawUsername: String) = error("unused")
+        override suspend fun lookupQuestionsForUsername(rawUsername: String): List<SecurityQuestion>? = error(UNUSED)
+        override suspend fun verifyAnswers(rawUsername: String, answers: List<SecurityAnswerInput>): VerifyAnswersResult = error(UNUSED)
+        override suspend fun verifyAndReset(rawUsername: String, answers: List<SecurityAnswerInput>, newPassword: String): ResetOutcome = error(UNUSED)
+        override suspend fun requestAdminReset(rawUsername: String) = error(UNUSED)
     }
 
     private class FakeUserService(private val verifyResult: Boolean) : UserService {

@@ -13,6 +13,9 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 
+private const val USER_ID = "u1"
+private const val GHOST_USER_ID = "ghost"
+
 class AuthUserCacheTest {
     private fun user(tokenVersion: Int = 1) = AuthCachedUser(
         role = "USER",
@@ -30,7 +33,7 @@ class AuthUserCacheTest {
 
         val callers = (1..8).map {
             async {
-                cache.getOrLoad("u1") {
+                cache.getOrLoad(USER_ID) {
                     loads.incrementAndGet()
                     gate.await()
                     loaded
@@ -44,7 +47,7 @@ class AuthUserCacheTest {
         assertEquals(1, loads.get())
         results.forEach { assertSame(loaded, it) }
         // The shared load populated the cache, so the next caller never loads.
-        assertSame(loaded, cache.getOrLoad("u1") { error("must be served from the cache") })
+        assertSame(loaded, cache.getOrLoad(USER_ID) { error("must be served from the cache") })
     }
 
     @Test
@@ -62,10 +65,10 @@ class AuthUserCacheTest {
     fun `a missing user is not cached`() = runBlocking {
         val cache = AuthUserCache()
         val loads = AtomicInteger()
-        assertNull(cache.getOrLoad("ghost") { loads.incrementAndGet(); null })
-        assertNull(cache.getOrLoad("ghost") { loads.incrementAndGet(); null })
+        assertNull(cache.getOrLoad(GHOST_USER_ID) { loads.incrementAndGet(); null })
+        assertNull(cache.getOrLoad(GHOST_USER_ID) { loads.incrementAndGet(); null })
         assertEquals(2, loads.get())
-        assertNull(cache.get("ghost"))
+        assertNull(cache.get(GHOST_USER_ID))
     }
 
     @Test
@@ -74,18 +77,18 @@ class AuthUserCacheTest {
         val gate = CompletableDeferred<Unit>()
         val stale = user(tokenVersion = 1)
 
-        val waiting = async { cache.getOrLoad("u1") { gate.await(); stale } }
+        val waiting = async { cache.getOrLoad(USER_ID) { gate.await(); stale } }
         repeat(20) { yield() }
 
-        cache.invalidate("u1")
+        cache.invalidate(USER_ID)
         gate.complete(Unit)
 
         assertSame(stale, waiting.await())
-        assertNull(cache.get("u1"), "a row read before the invalidation must not be cached")
+        assertNull(cache.get(USER_ID), "a row read before the invalidation must not be cached")
 
         // And a caller arriving after the invalidation reads fresh instead of joining the old load.
         val fresh = user(tokenVersion = 2)
-        assertSame(fresh, cache.getOrLoad("u1") { fresh })
+        assertSame(fresh, cache.getOrLoad(USER_ID) { fresh })
     }
 
     @Test
@@ -97,7 +100,7 @@ class AuthUserCacheTest {
         val callers = (1..3).map {
             async {
                 runCatching {
-                    cache.getOrLoad("u1") {
+                    cache.getOrLoad(USER_ID) {
                         loads.incrementAndGet()
                         gate.await()
                         error("database unavailable")
@@ -114,7 +117,7 @@ class AuthUserCacheTest {
         assertEquals(1, loads.get())
 
         val retryLoads = AtomicInteger()
-        val recovered = cache.getOrLoad("u1") { retryLoads.incrementAndGet(); user() }
+        val recovered = cache.getOrLoad(USER_ID) { retryLoads.incrementAndGet(); user() }
         assertNotNull(recovered)
         assertEquals(1, retryLoads.get(), "the failed load must not be reused")
     }

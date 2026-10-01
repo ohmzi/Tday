@@ -62,16 +62,16 @@ class QueryShapesTest {
     @Test
     fun `shared list ids can be narrowed to editor memberships for both list kinds`() = runBlocking {
         transaction(db) {
-            insertList("list_a", OWNER)
-            insertList("list_b", OWNER)
-            share("share_1", "list_a", EDITOR, ShareRole.EDITOR)
-            share("share_2", "list_b", EDITOR, ShareRole.VIEWER)
-            share("share_3", "list_a", VIEWER, ShareRole.VIEWER)
+            insertList(LIST_A, OWNER)
+            insertList(LIST_B, OWNER)
+            share("share_1", LIST_A, EDITOR, ShareRole.EDITOR)
+            share("share_2", LIST_B, EDITOR, ShareRole.VIEWER)
+            share("share_3", LIST_A, VIEWER, ShareRole.VIEWER)
 
-            insertFloaterList("flist_a", OWNER)
-            insertFloaterList("flist_b", OWNER)
-            floaterShare("fshare_1", "flist_a", EDITOR, ShareRole.VIEWER)
-            floaterShare("fshare_2", "flist_b", EDITOR, ShareRole.EDITOR)
+            insertFloaterList(FLIST_A, OWNER)
+            insertFloaterList(FLIST_B, OWNER)
+            floaterShare("fshare_1", FLIST_A, EDITOR, ShareRole.VIEWER)
+            floaterShare("fshare_2", FLIST_B, EDITOR, ShareRole.EDITOR)
         }
 
         val scheduledAll = shareService.sharedListIdsFor(EDITOR, ListType.SCHEDULED, editorOnly = false)
@@ -79,12 +79,12 @@ class QueryShapesTest {
         val floaterAll = shareService.sharedListIdsFor(EDITOR, ListType.FLOATER, editorOnly = false)
         val floaterEditable = shareService.sharedListIdsFor(EDITOR, ListType.FLOATER, editorOnly = true)
 
-        assertEquals(setOf("list_a", "list_b"), scheduledAll.toSet())
-        assertEquals(listOf("list_a"), scheduledEditable)
-        assertEquals(setOf("flist_a", "flist_b"), floaterAll.toSet())
-        assertEquals(listOf("flist_b"), floaterEditable)
+        assertEquals(setOf(LIST_A, LIST_B), scheduledAll.toSet())
+        assertEquals(listOf(LIST_A), scheduledEditable)
+        assertEquals(setOf(FLIST_A, FLIST_B), floaterAll.toSet())
+        assertEquals(listOf(FLIST_B), floaterEditable)
         // Another member's rows never leak into this user's answer.
-        assertEquals(listOf("list_a"), shareService.sharedListIdsFor(VIEWER, ListType.SCHEDULED, editorOnly = false))
+        assertEquals(listOf(LIST_A), shareService.sharedListIdsFor(VIEWER, ListType.SCHEDULED, editorOnly = false))
         assertTrue(shareService.sharedListIdsFor(VIEWER, ListType.SCHEDULED, editorOnly = true).isEmpty())
         assertTrue(shareService.sharedListIdsFor(STRANGER, ListType.FLOATER, editorOnly = false).isEmpty())
     }
@@ -92,56 +92,56 @@ class QueryShapesTest {
     @Test
     fun `list overview counts each lists members from the share rows`() = runBlocking {
         transaction(db) {
-            insertList("list_shared", OWNER)
-            insertList("list_private", OWNER)
-            share("share_1", "list_shared", EDITOR, ShareRole.EDITOR)
-            share("share_2", "list_shared", VIEWER, ShareRole.VIEWER)
+            insertList(LIST_SHARED, OWNER)
+            insertList(LIST_PRIVATE, OWNER)
+            share("share_1", LIST_SHARED, EDITOR, ShareRole.EDITOR)
+            share("share_2", LIST_SHARED, VIEWER, ShareRole.VIEWER)
         }
 
         val lists = (listService.getAll(OWNER) as Either.Right).value.associateBy { it.id }
 
-        assertEquals(2, lists.getValue("list_shared").memberCount)
-        assertTrue(lists.getValue("list_shared").isShared)
-        assertEquals(0, lists.getValue("list_private").memberCount)
-        assertEquals(false, lists.getValue("list_private").isShared)
+        assertEquals(2, lists.getValue(LIST_SHARED).memberCount)
+        assertTrue(lists.getValue(LIST_SHARED).isShared)
+        assertEquals(0, lists.getValue(LIST_PRIVATE).memberCount)
+        assertEquals(false, lists.getValue(LIST_PRIVATE).isShared)
     }
 
     @Test
     fun `floater list overview counts pending floaters and members per list`() = runBlocking {
         transaction(db) {
-            insertFloaterList("flist_busy", OWNER)
-            insertFloaterList("flist_done", OWNER)
-            insertFloaterList("flist_empty", OWNER)
-            insertFloater("f1", OWNER, "flist_busy", completed = false)
-            insertFloater("f2", OWNER, "flist_busy", completed = false)
-            insertFloater("f3", OWNER, "flist_busy", completed = true)
-            insertFloater("f4", OWNER, "flist_done", completed = true)
+            insertFloaterList(FLIST_BUSY, OWNER)
+            insertFloaterList(FLIST_DONE, OWNER)
+            insertFloaterList(FLIST_EMPTY, OWNER)
+            insertFloater("f1", OWNER, FLIST_BUSY, completed = false)
+            insertFloater("f2", OWNER, FLIST_BUSY, completed = false)
+            insertFloater("f3", OWNER, FLIST_BUSY, completed = true)
+            insertFloater("f4", OWNER, FLIST_DONE, completed = true)
             insertFloater("f5", OWNER, null, completed = false)
-            floaterShare("fshare_1", "flist_busy", EDITOR, ShareRole.EDITOR)
+            floaterShare("fshare_1", FLIST_BUSY, EDITOR, ShareRole.EDITOR)
         }
 
         val lists = (floaterListService.getAll(OWNER) as Either.Right).value.associateBy { it.id }
 
-        assertEquals(2, lists.getValue("flist_busy").todoCount)
-        assertEquals(0, lists.getValue("flist_done").todoCount)
-        assertEquals(0, lists.getValue("flist_empty").todoCount)
-        assertEquals(1, lists.getValue("flist_busy").memberCount)
-        assertEquals(0, lists.getValue("flist_empty").memberCount)
+        assertEquals(2, lists.getValue(FLIST_BUSY).todoCount)
+        assertEquals(0, lists.getValue(FLIST_DONE).todoCount)
+        assertEquals(0, lists.getValue(FLIST_EMPTY).todoCount)
+        assertEquals(1, lists.getValue(FLIST_BUSY).memberCount)
+        assertEquals(0, lists.getValue(FLIST_EMPTY).memberCount)
     }
 
     @Test
     fun `export carries only the callers todos and their instances`() = runBlocking {
         transaction(db) {
-            insertTodo("todo_mine", OWNER)
-            insertTodo("todo_theirs", STRANGER)
-            insertInstance("inst_mine", "todo_mine")
-            insertInstance("inst_theirs", "todo_theirs")
+            insertTodo(TODO_MINE, OWNER)
+            insertTodo(TODO_THEIRS, STRANGER)
+            insertInstance(INST_MINE, TODO_MINE)
+            insertInstance("inst_theirs", TODO_THEIRS)
         }
 
         val bundle = (exportService.exportAll(OWNER) as Either.Right).value
 
-        assertEquals(listOf("todo_mine"), bundle.todos.map { it.todo.id })
-        assertEquals(listOf("inst_mine"), bundle.todos.single().instances.map { it.id })
+        assertEquals(listOf(TODO_MINE), bundle.todos.map { it.todo.id })
+        assertEquals(listOf(INST_MINE), bundle.todos.single().instances.map { it.id })
 
         val empty = (exportService.exportAll(VIEWER) as Either.Right).value
         assertTrue(empty.todos.isEmpty())
@@ -152,10 +152,10 @@ class QueryShapesTest {
         transaction(db) {
             insertList("list_1", OWNER)
             insertFloaterList("flist_1", OWNER)
-            insertTodo("todo_1", OWNER)
-            insertInstance("inst_1", "todo_1")
+            insertTodo(TODO_ONE, OWNER)
+            insertInstance("inst_1", TODO_ONE)
             insertFloater("floater_1", OWNER, "flist_1", completed = false)
-            insertCompletedTodo("done_1", "todo_1", OWNER)
+            insertCompletedTodo("done_1", TODO_ONE, OWNER)
             // Same-shaped rows owned by somebody else must not count as the caller's.
             insertTodo("todo_other", STRANGER)
             insertInstance("inst_other", "todo_other")
@@ -177,10 +177,10 @@ class QueryShapesTest {
     @Test
     fun `calendar feed renders the owners overrides and nobody elses`() = runBlocking {
         transaction(db) {
-            insertTodo("todo_mine", OWNER, title = "Mine")
-            insertTodo("todo_theirs", STRANGER, title = "Theirs")
-            insertInstance("inst_mine", "todo_mine", overriddenTitle = "Mine, moved")
-            insertInstance("inst_theirs", "todo_theirs", overriddenTitle = "Theirs, moved")
+            insertTodo(TODO_MINE, OWNER, title = "Mine")
+            insertTodo(TODO_THEIRS, STRANGER, title = "Theirs")
+            insertInstance(INST_MINE, TODO_MINE, overriddenTitle = "Mine, moved")
+            insertInstance("inst_theirs", TODO_THEIRS, overriddenTitle = "Theirs, moved")
         }
         val token = (calendarFeed.generate(OWNER) as Either.Right).value.token
 
@@ -287,6 +287,19 @@ class QueryShapesTest {
         const val EDITOR = "user_editor"
         const val VIEWER = "user_viewer"
         const val STRANGER = "user_stranger"
+        const val FLIST_BUSY = "flist_busy"
+        const val LIST_A = "list_a"
+        const val LIST_SHARED = "list_shared"
+        const val TODO_MINE = "todo_mine"
+        const val FLIST_B = "flist_b"
+        const val TODO_THEIRS = "todo_theirs"
+        const val LIST_B = "list_b"
+        const val FLIST_A = "flist_a"
+        const val LIST_PRIVATE = "list_private"
+        const val FLIST_DONE = "flist_done"
+        const val FLIST_EMPTY = "flist_empty"
+        const val INST_MINE = "inst_mine"
+        const val TODO_ONE = "todo_1"
         val NOW: LocalDateTime = LocalDateTime.of(2026, 6, 1, 9, 0)
     }
 }

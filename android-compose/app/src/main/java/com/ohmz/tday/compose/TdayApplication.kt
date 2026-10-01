@@ -38,8 +38,9 @@ class TdayApplication : Application(), Configuration.Provider {
     // Lazy so Application.onCreate does not construct the whole data layer (TodoRepository ->
     // Retrofit/OkHttp/cookie + config stores, the SQLCipher-backed cache, ...) in a widget-only or
     // alarm/boot-receiver process that never starts the calendar mirror. It is resolved once, in
-    // runDeferredStartup, which only MainActivity calls.
-    @Inject lateinit var calendarSyncManager: dagger.Lazy<CalendarSyncManager>
+    // runDeferredStartup, which only MainActivity calls. `lateinit` is what Hilt field injection
+    // requires; the field is assigned during super.onCreate().
+    @Inject lateinit var calendarSyncManager: dagger.Lazy<CalendarSyncManager> // skipcq: KT-W1047
     private val deferredStartupRan = AtomicBoolean(false)
 
     // Resolved lazily through WidgetEntryPoint rather than an `@Inject lateinit` field, matching

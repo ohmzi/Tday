@@ -267,7 +267,11 @@ private fun Route.todoInstanceRoutes(todoService: TodoService) {
     }
 }
 
-private fun Route.todoUtilityRoutes(
+// A flat list of independent endpoint handlers (title NLP, AI summary and the rest of the todo
+// utilities): each branch is one endpoint's own input check or scope choice, so the cyclomatic
+// count measures how many endpoints live here, not tangled control flow. Splitting it would only
+// move the same registrations into more functions.
+private fun Route.todoUtilityRoutes( // skipcq: KT-R1006
     todoService: TodoService,
     floaterService: FloaterService,
     todoNlpService: TodoNlpService,

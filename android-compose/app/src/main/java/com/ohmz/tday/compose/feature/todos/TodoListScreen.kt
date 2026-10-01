@@ -7072,9 +7072,13 @@ private fun TodayTaskSwipeRow(
     )
 }
 
+// One composable row whose swipe reveal, drag, selection and staged-completion states all read and
+// write the same local state, so the cyclomatic count is the sum of those independent visual
+// states. Splitting it would mean threading that state through a holder, which is a behaviour
+// risk this cleanup does not take on.
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SwipeTaskRow(
+private fun SwipeTaskRow( // skipcq: KT-R1006
     todo: TodoItem,
     onComplete: () -> Unit,
     onDelete: () -> Unit,

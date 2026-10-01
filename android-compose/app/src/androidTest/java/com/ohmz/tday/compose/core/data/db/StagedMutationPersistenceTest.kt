@@ -28,7 +28,13 @@ import org.junit.runner.RunWith
 class StagedMutationPersistenceTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private lateinit var memory: TdayDatabase
+
+    // Nullable backing field + non-null accessor instead of `lateinit`: @Before opens it before any
+    // test body runs, but a missed setup then fails with this message and not an opaque
+    // UninitializedPropertyAccessException.
+    private var memoryOrNull: TdayDatabase? = null
+    private val memory: TdayDatabase
+        get() = checkNotNull(memoryOrNull) { "openInMemory() must run before memory is used" }
 
     @get:Rule
     val migrationHelper = MigrationTestHelper(
@@ -38,7 +44,7 @@ class StagedMutationPersistenceTest {
 
     @Before
     fun openInMemory() {
-        memory = Room.inMemoryDatabaseBuilder(context, TdayDatabase::class.java)
+        memoryOrNull = Room.inMemoryDatabaseBuilder(context, TdayDatabase::class.java)
             .allowMainThreadQueries()
             .build()
         context.deleteDatabase(RELEASE_DB)
@@ -47,7 +53,7 @@ class StagedMutationPersistenceTest {
 
     @After
     fun cleanUp() {
-        memory.close()
+        memoryOrNull?.close()
         context.deleteDatabase(RELEASE_DB)
         context.deleteDatabase(MIGRATION_DB)
     }
