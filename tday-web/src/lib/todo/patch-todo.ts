@@ -45,7 +45,7 @@ export async function patchTodo(
     // move over rows this schema rejects used to report `{failed: 0}` having
     // issued zero requests, and the only trace was a console warning. A bulk
     // action must never claim to have done something it did not send.
-    const issue = parsedObj.error.errors[0];
+    const issue = parsedObj.error.issues[0];
     throw new Error(`todo patch rejected: ${issue.path.join(".")} ${issue.message}`);
   }
 
