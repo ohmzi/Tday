@@ -1873,8 +1873,8 @@ fun TodoListScreen( // skipcq: KT-R1006
             // the middle of the screen with the list names below
             // it, rather than in a full-screen watermark overlay.
             item(
-                key = "floater-empty-message",
-                contentType = "floater-empty-message",
+                key = "floater-empty-message",  // skipcq: KT-W1042
+                contentType = "floater-empty-message",  // skipcq: KT-W1042
             ) {
                 // The preference, not the feed's first-frame guard:
                 // the exit below is paint the user can ask not to
@@ -2098,8 +2098,8 @@ fun TodoListScreen( // skipcq: KT-R1006
     val earlierSceneContent: (LazyListScope.() -> Unit)? = if (earlierScenePresent) {
         {
             item(
-                key = "today-earlier-empty-scene",
-                contentType = "today-earlier-empty-scene",
+                key = "today-earlier-empty-scene",  // skipcq: KT-W1042
+                contentType = "today-earlier-empty-scene",  // skipcq: KT-W1042
             ) {
                 // `timelineAnimationsEnabled` is the feed's first-frame guard,
                 // not the preference, so the scene asks the preference itself —
@@ -2936,8 +2936,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // hero's progress is read off the first item's offset.
                     if (usesRootFeedChrome) {
                         item(
-                            key = "root-feed-header-spacer",
-                            contentType = "root-feed-header-spacer",
+                            key = "root-feed-header-spacer",  // skipcq: KT-W1042
+                            contentType = "root-feed-header-spacer",  // skipcq: KT-W1042
                         ) {
                             // Reserves the pinned header's space. The feed
                             // scrolls behind the header, folding it down into
@@ -2958,8 +2958,8 @@ fun TodoListScreen( // skipcq: KT-R1006
 
                     if (showFloaterTaskHomeSearchResults) {
                         item(
-                            key = "root-floater-search-results",
-                            contentType = "root-floater-search-results",
+                            key = "root-floater-search-results",  // skipcq: KT-W1042
+                            contentType = "root-floater-search-results",  // skipcq: KT-W1042
                         ) {
                             FloaterTaskHomeSearchResultsCard(
                                 results = floaterTaskHomeSearchResults,
@@ -3015,8 +3015,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // same answer the Earlier scene below already gives.
                     if (taskFeedSkeletonMounted) {
                         item(
-                            key = "task-feed-skeleton",
-                            contentType = "task-feed-skeleton",
+                            key = "task-feed-skeleton",  // skipcq: KT-W1042
+                            contentType = "task-feed-skeleton",  // skipcq: KT-W1042
                         ) {
                             AnimatedVisibility(
                                 visible = taskFeedSkeletonVisible,
@@ -3043,8 +3043,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // than leaving its empty day headers standing, as on web.
                     if (scopedSearchHasNoResults) {
                         item(
-                            key = "scoped-search-no-results",
-                            contentType = "scoped-search-no-results",
+                            key = "scoped-search-no-results",  // skipcq: KT-W1042
+                            contentType = "scoped-search-no-results",  // skipcq: KT-W1042
                         ) {
                             Box(
                                 modifier = Modifier
@@ -4036,8 +4036,8 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
     // single-column layout instead of a 2-up grid.
     if (isFloaterTaskHomeScreen) {
         item(
-            key = "floater-completed-entry",
-            contentType = "floater-completed-entry",
+            key = "floater-completed-entry",  // skipcq: KT-W1042
+            contentType = "floater-completed-entry",  // skipcq: KT-W1042
         ) {
             // The empty scene above opens a near-half-screen gap
             // in the slot the last row leaves, and this tile and
@@ -6337,7 +6337,7 @@ private fun buildTodaySections(
     val sortedEarlier = TaskSortEngine.sortedTodos(earlierItems) { it.toTaskSortKey() }
     val earlierSection = TodoSection(
         key = EARLIER_SECTION_KEY,
-        title = "Earlier",
+        title = "Earlier",  // skipcq: KT-W1042
         items = sortedEarlier,
         quickAddDefaults = quickAddDefaultsForDate(
             date = today.minusDays(1),
@@ -6348,7 +6348,7 @@ private fun buildTodaySections(
 
     return listOf(
         TodoSection(
-            key = "today-morning",
+            key = "today-morning",  // skipcq: KT-W1042
             title = "Morning",
             items = sorted.filter { sectionOf(it) == TodaySectionSlot.MORNING },
             quickAddDefaults = quickAddDefaultsForTodaySection(
@@ -6359,7 +6359,7 @@ private fun buildTodaySections(
             targetHour = 9,
         ),
         TodoSection(
-            key = "today-afternoon",
+            key = "today-afternoon",  // skipcq: KT-W1042
             title = "Afternoon",
             items = sorted.filter { sectionOf(it) == TodaySectionSlot.AFTERNOON },
             quickAddDefaults = quickAddDefaultsForTodaySection(
@@ -6370,7 +6370,7 @@ private fun buildTodaySections(
             targetHour = 15,
         ),
         TodoSection(
-            key = "today-tonight",
+            key = "today-tonight",  // skipcq: KT-W1042
             title = "Tonight",
             items = sorted.filter { sectionOf(it) == TodaySectionSlot.TONIGHT },
             quickAddDefaults = quickAddDefaultsForTodaySection(
@@ -6461,7 +6461,7 @@ private fun buildScheduledSections(
         // place that decides whether an empty bucket is worth a header.
         TodoSection(
             key = EARLIER_SECTION_KEY,
-            title = "Earlier",
+            title = "Earlier",  // skipcq: KT-W1042
             items = earlierItems,
             quickAddDefaults = quickAddDefaultsForDate(
                 date = today.minusDays(1),
@@ -6497,14 +6497,14 @@ private fun buildScheduledSections(
     ) { it.toTaskSortKey() }
     val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
     sections += TodoSection(
-        key = "rest-$currentMonth",
+        key = "rest-$currentMonth",  // skipcq: KT-W1042
         title = "Rest of $monthName",
         items = restOfCurrentMonthItems,
         quickAddDefaults = quickAddDefaultsForDate(
             date = currentMonth.atEndOfMonth(),
             zoneId = zoneId,
         ),
-        targetDate = timelineRescheduleTargetDate("rest-$currentMonth", today),
+        targetDate = timelineRescheduleTargetDate("rest-$currentMonth", today),  // skipcq: KT-W1042
     )
 
     val futureMonthsWithData =
@@ -6524,14 +6524,14 @@ private fun buildScheduledSections(
             }.flatMap { (_, dayItems) -> dayItems.asSequence() }.toList(),
         ) { it.toTaskSortKey() }
         sections += TodoSection(
-            key = "month-$targetMonth",
+            key = "month-$targetMonth",  // skipcq: KT-W1042
             title = monthTitle(targetMonth, currentMonth.year),
             items = monthItems,
             quickAddDefaults = quickAddDefaultsForDate(
                 date = targetMonth.atDay(1),
                 zoneId = zoneId,
             ),
-            targetDate = timelineRescheduleTargetDate("month-$targetMonth", today),
+            targetDate = timelineRescheduleTargetDate("month-$targetMonth", today),  // skipcq: KT-W1042
         )
         targetMonth = targetMonth.plusMonths(1)
     }
@@ -6554,13 +6554,13 @@ private fun monthTitle(
 @Composable
 private fun localizedSectionTitle(section: TodoSection): String {
     return when {
-        section.key == "today-morning" -> stringResource(R.string.todos_section_morning)
-        section.key == "today-afternoon" -> stringResource(R.string.todos_section_afternoon)
-        section.key == "today-tonight" -> stringResource(R.string.todos_section_tonight)
+        section.key == "today-morning" -> stringResource(R.string.todos_section_morning)  // skipcq: KT-W1042
+        section.key == "today-afternoon" -> stringResource(R.string.todos_section_afternoon)  // skipcq: KT-W1042
+        section.key == "today-tonight" -> stringResource(R.string.todos_section_tonight)  // skipcq: KT-W1042
         section.key == EARLIER_SECTION_KEY -> stringResource(R.string.todos_section_earlier)
-        section.key.startsWith("day-") -> {
+        section.key.startsWith("day-") -> {  // skipcq: KT-W1042
             val zoneId = ZoneId.systemDefault()
-            val date = runCatching { LocalDate.parse(section.key.removePrefix("day-")) }.getOrNull()
+            val date = runCatching { LocalDate.parse(section.key.removePrefix("day-")) }.getOrNull()  // skipcq: KT-W1042
             val today = LocalDate.now(zoneId)
             when (date) {
                 today -> stringResource(R.string.todos_section_today)
@@ -6568,8 +6568,8 @@ private fun localizedSectionTitle(section: TodoSection): String {
                 else -> section.title
             }
         }
-        section.key.startsWith("rest-") -> {
-            val ymPart = section.key.removePrefix("rest-")
+        section.key.startsWith("rest-") -> {  // skipcq: KT-W1042
+            val ymPart = section.key.removePrefix("rest-")  // skipcq: KT-W1042
             val monthName = runCatching {
                 val ym = YearMonth.parse(ymPart)
                 ym.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
