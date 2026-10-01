@@ -656,7 +656,7 @@ class TdayMcpService(
      * The independent, read-only lookups behind `listTasks`. Each one is absent (null) when the view
      * does not need it; kept as Either so failures surface in a fixed order.
      */
-    private class TaskSources(
+    private data class TaskSources(
         val scheduled: Either<AppError, List<ResolvedTask>>?,
         val anytime: Either<AppError, List<ResolvedTask>>?,
         val lists: Either<AppError, List<NamedList>>?,
@@ -714,8 +714,8 @@ class TdayMcpService(
             return ListOutcome.Found(byId)
         }
 
-        // Both-null returned at the top, so a name is always present here.
-        val requestedName = listName ?: return ListOutcome.None
+        // Both-null returned at the top and an id returned above, so a name is always present here.
+        val requestedName = checkNotNull(listName) { "listName is present once no list id was given" }
         val lookup = McpListResolver.lookup(requestedName, candidates, namespace)
         lookup.match?.let { return ListOutcome.Found(it) }
         lookup.crossNamespace?.let { return ListOutcome.Stop(crossNamespaceResult(it, namespace)) }

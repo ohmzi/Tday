@@ -5,7 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.ohmz.tday.compose.core.calendar.CalendarSyncManager
+import com.ohmz.tday.compose.core.calendar.CalendarEntryPoint
 import com.ohmz.tday.compose.core.notification.DayAheadPreferenceStore
 import com.ohmz.tday.compose.core.notification.DayAheadScheduling
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -35,12 +35,16 @@ class TdayApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var dayAheadPreferenceStore: DayAheadPreferenceStore
-    // Lazy so Application.onCreate does not construct the whole data layer (TodoRepository ->
-    // Retrofit/OkHttp/cookie + config stores, the SQLCipher-backed cache, ...) in a widget-only or
-    // alarm/boot-receiver process that never starts the calendar mirror. It is resolved once, in
-    // runDeferredStartup, which only MainActivity calls. `lateinit` is what Hilt field injection
-    // requires; the field is assigned during super.onCreate().
-    @Inject lateinit var calendarSyncManager: dagger.Lazy<CalendarSyncManager> // skipcq: KT-W1047
+    // Resolved lazily through CalendarEntryPoint, like widgetRefresher below, so Application.onCreate
+    // does not construct the whole data layer (TodoRepository -> Retrofit/OkHttp/cookie + config
+    // stores, the SQLCipher-backed cache, ...) in a widget-only or alarm/boot-receiver process that
+    // never starts the calendar mirror. It is first used in runDeferredStartup, which only
+    // MainActivity calls.
+    private val calendarSyncManager by lazy {
+        EntryPointAccessors
+            .fromApplication(applicationContext, CalendarEntryPoint::class.java)
+            .calendarSyncManager()
+    }
     private val deferredStartupRan = AtomicBoolean(false)
 
     // Resolved lazily through WidgetEntryPoint rather than an `@Inject lateinit` field, matching
@@ -137,7 +141,7 @@ class TdayApplication : Application(), Configuration.Provider {
         WorkManager.getInstance(this).cancelAllWorkByTag(LEGACY_GLANCE_SESSION_WORKER)
         // Opt-in and permission-gated internally, so this is a no-op until the user turns the
         // device-calendar mirror on.
-        calendarSyncManager.get().start()
+        calendarSyncManager.start()
     }
 
     private fun createNotificationChannels() {
