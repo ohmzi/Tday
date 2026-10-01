@@ -17,11 +17,6 @@ private enum ScheduledTaskHomeMetrics {
     static let tileWatermarkTrailingInset: CGFloat = 22
 }
 
-private func isScheduledTaskHomeDaytime(_ date: Date) -> Bool {
-    let hour = Calendar.current.component(.hour, from: date)
-    return (6..<18).contains(hour)
-}
-
 private func normalizedScheduledTaskHomeSearchQuery(_ value: String) -> String {
     value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(with: .current)
 }
@@ -222,7 +217,7 @@ struct ScheduledTaskHomeScreen: View {
 
             ZStack(alignment: .topLeading) {
                 TimelineView(.periodic(from: .now, by: 60)) { context in
-                    let daytime = isScheduledTaskHomeDaytime(context.date)
+                    let daytime = TdayTimeOfDay.isDaytime(context.date)
                     EmptyTaskWatermark(
                         systemName: daytime ? "sun.max.fill" : "moon.stars.fill",
                         accentColor: Color.tdayTodayBlue
@@ -1885,23 +1880,15 @@ private struct CreateListSheetPriorityChip: View {
     }
 }
 
-private let scheduledTaskHomeListColorOptions: [ScheduledTaskHomeListColorOption] = [
-    ScheduledTaskHomeListColorOption(key: "PINK", color: Color(hex: 0xE05299)),
-    ScheduledTaskHomeListColorOption(key: "GOLD", color: Color(hex: 0xE8A530)),
-    ScheduledTaskHomeListColorOption(key: "DEEP_BLUE", color: Color(hex: 0x3C9ADD)),
-    ScheduledTaskHomeListColorOption(key: "CORAL", color: Color(hex: 0xE6664C)),
-    ScheduledTaskHomeListColorOption(key: "TEAL", color: Color(hex: 0x2EB8AC)),
-    ScheduledTaskHomeListColorOption(key: "SLATE", color: Color(hex: 0x3E4774)),
-    ScheduledTaskHomeListColorOption(key: "BLUE", color: Color(hex: 0x6EA8E1)),
-    ScheduledTaskHomeListColorOption(key: "PURPLE", color: Color(hex: 0x7D67B6)),
-    ScheduledTaskHomeListColorOption(key: "ROSE", color: Color(hex: 0xD1617D)),
-    ScheduledTaskHomeListColorOption(key: "LIGHT_RED", color: Color(hex: 0xE06C6C)),
-    ScheduledTaskHomeListColorOption(key: "BRICK", color: Color(hex: 0xC64C39)),
-    ScheduledTaskHomeListColorOption(key: "YELLOW", color: Color(hex: 0xE8BA30)),
-    ScheduledTaskHomeListColorOption(key: "LIME", color: Color(hex: 0x46B963)),
-    ScheduledTaskHomeListColorOption(key: "ORANGE", color: Color(hex: 0xE28736)),
-    ScheduledTaskHomeListColorOption(key: "RED", color: Color(hex: 0xDF3A3A)),
-]
+/// The swatches the list editor offers, in the palette's own order.
+///
+/// Built from `tdayListAccentColorKeys` rather than transcribed, so a colour added to the shared
+/// table appears here without anyone remembering to add it twice — and so a swatch can never show
+/// a shade the list itself will not be drawn in.
+private let scheduledTaskHomeListColorOptions: [ScheduledTaskHomeListColorOption] =
+    tdayListAccentColorKeys.map {
+        ScheduledTaskHomeListColorOption(key: $0, color: tdayListAccentColor(colorKey: $0))
+    }
 
 private let scheduledTaskHomeListIconOptions: [ScheduledTaskHomeListIconOption] = [
     ScheduledTaskHomeListIconOption(key: "inbox", symbolName: "tray.fill"),

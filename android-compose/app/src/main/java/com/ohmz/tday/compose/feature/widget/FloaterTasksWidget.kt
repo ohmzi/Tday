@@ -12,12 +12,23 @@ import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshot
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStore
 import java.util.Locale
 
+/**
+ * The leaf is the ROOT Anytime feed's mark, the same way the in-app empty state draws it only when
+ * no floater list is selected (`TodoListScreen.emptyStateSceneIconForMode`). A floater LIST
+ * instance of the List widget takes its own list's glyph instead — see `listWidgetVisualsFor`.
+ */
+private val FloaterWidgetWatermark = TaskWidgetWatermark(
+    drawable = R.drawable.widget_empty_watermark_floater,
+    // The accent the drawable already bakes; see TaskWidgetWatermark for why it is restated here.
+    tint = R.color.tday_widget_floater_accent,
+)
+
 /** Reused by `ListTasksWidget` for a floater-list instance — same undated shape as Floater. */
 internal val FloaterWidgetVisuals = TaskWidgetVisuals(
     addButtonBackground = R.drawable.widget_floater_add_button_background,
     addIcon = R.drawable.widget_add_icon_floater,
-    emptyWatermark = R.drawable.widget_empty_watermark_floater,
-    setupWatermark = R.drawable.widget_empty_watermark_floater,
+    emptyWatermark = FloaterWidgetWatermark,
+    setupWatermark = FloaterWidgetWatermark,
 )
 
 /** What a Floater widget instance shows right now. See [TodayTasksWidget] for the read rules. */

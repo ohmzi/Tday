@@ -205,7 +205,22 @@ fun TdayEmptyState(
                     modifier = Modifier
                         .offset(x = 24.dp, y = 24.dp)
                         .size(width = 130.dp, height = 88.dp)
-                        .shadow(elevation = 10.dp, shape = CardShape, clip = false)
+                        // Explicit shadow colours rather than the platform default, for the
+                        // reason the dock's selector gives on its own `.shadow`: the default
+                        // pair is tuned for an opaque Material surface, and on this near-white
+                        // page it diffuses until the card looks unlit. It also made the scene
+                        // CHANGE as it arrived — the whole column rises through a `graphicsLayer`
+                        // that scales 0.92 -> 1, and a shadow drawn inside a scaling layer is
+                        // compressed at the start and spread at the end, so it read heavy then
+                        // light. Pinning the colours settles it on the heavier end, which is the
+                        // one the scene was designed around.
+                        .shadow(
+                            elevation = EmptyStateCardElevation,
+                            shape = CardShape,
+                            clip = false,
+                            ambientColor = EmptyStateShadowAmbient,
+                            spotColor = EmptyStateShadowSpot,
+                        )
                         // NOT `colorScheme.surface`: under Material You that is the
                         // same value as `background`, so the card the whole scene is
                         // stacked around would vanish into the page and leave three
@@ -237,7 +252,13 @@ fun TdayEmptyState(
                         .size(GlyphCircle + GlyphRing * 2)
                         .background(colorScheme.background, CircleShape)
                         .padding(GlyphRing)
-                        .shadow(elevation = 12.dp, shape = CircleShape, clip = false)
+                        .shadow(
+                            elevation = EmptyStateMarkElevation,
+                            shape = CircleShape,
+                            clip = false,
+                            ambientColor = EmptyStateShadowAmbient,
+                            spotColor = EmptyStateShadowSpot,
+                        )
                         .background(accentColor, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -393,6 +414,27 @@ private const val EnterMillis = 520
 
 /** Material's emphasised decelerate: fast off the mark, settles rather than stops. */
 private val EnterEasing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+
+/**
+ * The card's lift, raised from 10.dp.
+ *
+ * Measured, and the first attempt went the WRONG WAY: passing a translucent shadow colour
+ * (Black at 0.18/0.22) looked like it would darken the shadow and in fact lightened it, because
+ * the platform already applies its own elevation-derived alpha and a translucent colour only
+ * multiplies that down. Opaque black is the densest the colour can be, so depth is the only
+ * remaining lever, and it is the elevation.
+ */
+private val EmptyStateCardElevation = 16.dp
+
+/** The mark stays two above the card, so it still reads as sitting proud of it. */
+private val EmptyStateMarkElevation = 18.dp
+
+/**
+ * The scene's shadow ink, named once because the card and the mark must agree: two shadows at
+ * different densities under one illustration read as two light sources.
+ */
+private val EmptyStateShadowAmbient = Color.Black
+private val EmptyStateShadowSpot = Color.Black
 
 private const val EnterStartScale = 0.92f
 private val EnterRise = 18.dp

@@ -324,29 +324,62 @@ private fun isDaytimeNow(): Boolean =
     isDaytimeHour(Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
 
 /**
- * Whether the time-of-day mark should be drawing a sun or a moon, re-read as the
- * clock moves.
+ * Floor under [millisToNextMarkTick], so a tick that fires a hair before its own
+ * boundary cannot come back with a zero wait and spin the loop.
+ */
+private const val MIN_MARK_CLOCK_WAIT_MS = 500L
+
+/**
+ * How long until the wall clock crosses the next [MARK_CLOCK_TICK_MS] boundary.
+ *
+ * The cadence is the same minute it has always been; what this changes is its phase.
+ * Each caller of [rememberTdayIsDaytime] gets its own ticker, and a period counted from
+ * whenever that composable happened to enter the composition put callers on unrelated
+ * minute grids — so at 18:00 the Today screen could sit for most of a minute reading
+ * "Tonight" under a sun, or the scheduled board draw a moon in its header over a sun
+ * watermark. Counting to the next multiple of the tick instead puts every ticker in the
+ * process on one grid, and the hour is then re-read by all of them in the same frame.
+ *
+ * [System.currentTimeMillis] rather than a [Calendar]: UTC epoch millis are
+ * minute-aligned exactly where local time is, because every real zone offset is a whole
+ * number of minutes.
+ */
+private fun millisToNextMarkTick(): Long =
+    (MARK_CLOCK_TICK_MS - (System.currentTimeMillis() % MARK_CLOCK_TICK_MS))
+        .coerceAtLeast(MIN_MARK_CLOCK_WAIT_MS)
+
+/**
+ * Whether the app should be wearing its day face or its night face right now, re-read
+ * as the clock moves.
  *
  * The hour used to be sampled inside a keyless `remember`, which on a header that is
  * never torn down means once per process: a session opened in the afternoon kept the
  * sun up all evening. iOS reads the same glyph off
- * `TimelineView(.periodic(from: .now, by: 60))`, so this polls on the same cadence
- * from the same unaligned start and lands on the same minute.
+ * `TimelineView(.periodic(from: .now, by: 60))`, so this polls on the same cadence and
+ * lands on the same minute.
  *
- * Nothing here animates, and nothing should. The glyph turns over once a day while
- * nobody is watching the header, and a crossfade would be a motion whose only effect
- * is to point at a change that carries nothing.
+ * `internal`, and no longer named for the root feed, because the day/night face is more
+ * than the glyph now: the Today screen's title reads "Tonight" after 18:00, and the
+ * only way a title and the sun beside it cannot disagree is for both to be the same
+ * `hour in 6..17` on the same ticker. A second copy of the band next to the title is
+ * precisely how the two drift apart. One band ([isDaytimeHour]), one cadence, every
+ * caller.
  *
- * @param active Whether this header's mark is the time-of-day one at all.
+ * Nothing here animates, and nothing should. The face turns over once a day while
+ * nobody is watching, and a crossfade would be a motion whose only effect is to point
+ * at a change that carries nothing.
+ *
+ * @param active Whether the caller's day/night face is live at all — a header whose
+ *   mark is the floater leaf has no hour to track, and should not hold a ticker open.
  * @return Whether the current hour is a daytime one.
  */
 @Composable
-private fun rememberRootFeedIsDaytime(active: Boolean): Boolean {
+internal fun rememberTdayIsDaytime(active: Boolean = true): Boolean {
     var isDaytime by remember { mutableStateOf(isDaytimeNow()) }
     LaunchedEffect(active) {
         if (!active) return@LaunchedEffect
         while (true) {
-            delay(MARK_CLOCK_TICK_MS)
+            delay(millisToNextMarkTick())
             isDaytime = isDaytimeNow()
         }
     }
@@ -599,7 +632,7 @@ private fun BoxScope.HeroMark(
     val collapse = metrics.stagger(progress, metrics.MarkCollapseEnd)
     val box = metrics.lerp(metrics.HeroMarkBox, metrics.CompactMarkBox, collapse)
     val centerY = metrics.lerp(metrics.HeroMarkCenterY, metrics.CompactRowCenterY, collapse)
-    val isDaytime = rememberRootFeedIsDaytime(active = mark == RootFeedHeroMark.TimeOfDay)
+    val isDaytime = rememberTdayIsDaytime(active = mark == RootFeedHeroMark.TimeOfDay)
     val markAlpha = searchClearAlpha(visible)
 
     val icon: ImageVector = when (mark) {

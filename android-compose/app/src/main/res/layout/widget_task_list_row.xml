@@ -53,7 +53,7 @@
         <TextView
             android:id="@+id/widget_row_time"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="20dp"
             android:layout_marginStart="6dp"
             android:background="@drawable/widget_due_chip"
             android:fontFamily="@font/nunito_app_medium"
@@ -61,9 +61,7 @@
             android:includeFontPadding="false"
             android:maxLines="1"
             android:paddingStart="7dp"
-            android:paddingTop="2dp"
             android:paddingEnd="7dp"
-            android:paddingBottom="2dp"
             android:textColor="@color/tday_widget_on_surface_variant"
             android:textSize="11sp"
             android:visibility="gone" />

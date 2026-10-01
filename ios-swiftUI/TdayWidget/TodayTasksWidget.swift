@@ -134,6 +134,14 @@ private struct TdayWidgetConfigurableListEntry: Codable {
     let id: String
     let name: String
     let kind: String
+    /// The list's own glyph and colour keys ("work", "TEAL"), resolved on this side — see the
+    /// writer's comment for why keys travel and values do not. Optional so a catalog the app
+    /// wrote before these fields existed still decodes: the synthesized decoder reads an absent
+    /// optional as nil, and nil means "fall back to this widget kind's accent", which is exactly
+    /// what the widget showed before. An already-placed widget therefore never goes blank on
+    /// upgrade; it keeps its old look until the app next writes the catalog.
+    let iconKey: String?
+    let colorKey: String?
 }
 
 /// A picked list is either a todo list (due-date-shaped widget content) or a floater list
@@ -173,6 +181,13 @@ struct TdayWidgetListEntity: AppEntity {
     let listId: String
     let name: String
     let kind: TdayWidgetListKind
+    /// The list's stored glyph and colour keys, carried so a list-scoped widget can draw the
+    /// list's own accent rather than its kind's. Not persisted with the configuration — iOS
+    /// stores only `id` and re-resolves through `TdayWidgetListEntityQuery`, so these are as
+    /// fresh as the catalog every time the widget renders, and recolouring a list in the app
+    /// recolours its widget on the next reload with no migration anywhere.
+    var iconKey: String? = nil
+    var colorKey: String? = nil
 
     /// Namespaced so a todo list and a floater list can never collide even if their raw ids
     /// ever did (local-mode ids already differ by prefix; server ids are independent UUID
@@ -214,8 +229,39 @@ struct TdayWidgetListEntityQuery: EntityQuery {
         }
         return entries.compactMap { entry in
             guard let kind = TdayWidgetListKind(rawValue: entry.kind) else { return nil }
-            return TdayWidgetListEntity(listId: entry.id, name: entry.name, kind: kind)
+            return TdayWidgetListEntity(
+                listId: entry.id,
+                name: entry.name,
+                kind: kind,
+                iconKey: entry.iconKey,
+                colorKey: entry.colorKey
+            )
         }
+    }
+}
+
+/// One list's accent as the widget draws it: the glyph for the watermark, and the colour that
+/// tints every accented element — watermark, "+" button, progress ring, weekday label.
+///
+/// The colour is `Color?` and not a defaulted `Color` on purpose. Nil here means "this list has
+/// no colour of its own", and the view then falls back to the widget KIND's accent — the Today
+/// blue or the floater green it already showed. Defaulting to pink inside this type would make
+/// a colourless list indistinguishable from a pink one and silently repaint every widget whose
+/// list predates list colours.
+///
+/// The glyph has no such nil case: `tdayLucideListAsset` answers the inbox for an unknown or
+/// absent key, which is a real glyph and a reasonable picture of "a list".
+private struct TdayWidgetListAccent {
+    let glyphAsset: String
+    let color: Color?
+
+    /// A list's name feeds `tdayResolvedListIconKey`, which guesses a glyph for a list whose
+    /// owner never picked one — the same resolution the app's own list rows use, so the glyph
+    /// on the home screen is the glyph in the app. Display only, as that function's doc
+    /// requires: nothing here is written back anywhere.
+    init(list: TdayWidgetListEntity) {
+        glyphAsset = tdayLucideListAsset(tdayResolvedListIconKey(list.iconKey, listName: list.name))
+        color = tdayListAccentColorOrNil(colorKey: list.colorKey)
     }
 }
 
@@ -568,8 +614,14 @@ private struct TodayTasksEntry: TimelineEntry {
     let taskCount: Int
     let rows: [WidgetTaskRowModel]
     let mode: TaskWidgetMode
+    /// The list this instance is scoped to, as a glyph and a colour — nil on the global feed and
+    /// on a locked widget, which deliberately gives nothing about a specific list away.
+    var accent: TdayWidgetListAccent? = nil
     /// The global Today feed only — a per-list or locked entry leaves these empty.
     var today: TodayHeaderContent? = nil
+    /// This gallery slot was pointed at one of the user's lists, so it is not the global feed its
+    /// kind is named after. See `TdayTasksWidgetContent.isListScoped`.
+    var isListScoped: Bool = false
 }
 
 /// What the global Today feed adds on top of a task list: the date-led header with its progress
@@ -904,7 +956,8 @@ private struct TodayTasksProvider: AppIntentTimelineProvider {
                 status: .locked,
                 taskCount: 0,
                 rows: [],
-                mode: list?.kind.mode ?? .today
+                mode: list?.kind.mode ?? .today,
+                isListScoped: list != nil
             )
         }
         if let list = configuration.list {
@@ -915,7 +968,8 @@ private struct TodayTasksProvider: AppIntentTimelineProvider {
                 status: content.status,
                 taskCount: content.taskCount,
                 rows: content.rows,
-                mode: content.mode
+                mode: content.mode,
+                accent: content.accent
             )
         }
         return Self.loadGlobalEntry(date: date)
@@ -976,7 +1030,10 @@ private struct TodayTasksProvider: AppIntentTimelineProvider {
         let calendar = Calendar.current
         let days = snapshot.coveredDays()
         let dayStart = Date(timeIntervalSince1970: TimeInterval(days[dayOffset].startEpochMs) / 1_000)
-        let emptyTitle: String? = done > 0 ? "All done for today" : nil
+        // Same evening rule as the title and the watermark: "tonight" once the moon is drawn.
+        let emptyTitle: String? = done > 0
+            ? (isTaskWidgetDaytime(date) ? "All done for today" : "All done for tonight")
+            : nil
         var preview: WidgetDayPreview?
         if taskCount == 0, overdueCount == 0, let next = snapshot.nextDayWithTasks(after: dayOffset) {
             let nextStart = Date(timeIntervalSince1970: TimeInterval(next.day.dayStartEpochMs) / 1_000)
@@ -1090,7 +1147,8 @@ private struct TodayTasksWidgetView: View {
             rows: entry.rows,
             date: entry.date,
             mode: entry.mode,
-            today: entry.today
+            today: entry.today,
+            listAccent: entry.accent
         )
     }
 }
@@ -1171,10 +1229,19 @@ private enum TaskWidgetMode {
     case today
     case floater
 
+    /// Where a tap on the widget's body goes: the feed the widget is SHOWING.
+    ///
+    /// `.today` used to answer `tday://home`, which lands on whatever the user set as their
+    /// default home screen — so the one widget whose whole subject is today was also the one that
+    /// would not take you there, while `.floater` beside it deep-linked correctly. Android had the
+    /// identical gap on the identical widget and is fixed in the same change.
+    ///
+    /// `todos/today` is `AppRoute.todayTodos`'s own `deepLinkPath`, so this cannot drift from the
+    /// route it names.
     var openURL: URL {
         switch self {
         case .today:
-            return URL(string: "tday://home")!
+            return URL(string: "tday://todos/today")!
         case .floater:
             return URL(string: "tday://floater")!
         }
@@ -1198,10 +1265,12 @@ private enum TaskWidgetMode {
         }
     }
 
-    var emptyTitle: String {
+    /// The evening says "tonight", on the same 6..<18 predicate that swaps the sun for the moon —
+    /// one boundary for the whole widget, never a second one of this line's own.
+    func emptyTitle(isDaytime: Bool) -> String {
         switch self {
         case .today:
-            return "No tasks due today"
+            return isDaytime ? "No tasks due today" : "No tasks due tonight"
         case .floater:
             return "No floater tasks"
         }
@@ -1216,12 +1285,22 @@ private enum TaskWidgetMode {
         }
     }
 
-    func emptyWatermarkSystemName(isDaytime: Bool) -> String {
+    /// The watermark glyph for a widget showing a whole FEED rather than one list: Today reads
+    /// the clock, Floater is always the leaf. A list-scoped widget overrides both with the
+    /// list's own glyph — see `TdayWidgetListAccent`.
+    ///
+    /// Lucide asset names, not SF Symbols. Previously `sun.max.fill` / `moon.stars.fill` /
+    /// `leaf`, which is why these three pictures CHANGE with this release: a list's glyph can
+    /// only come from the Lucide set (one icon source across web/Android/iOS — docs/ICONS.md),
+    /// and a widget that drew Lucide for a list and SF Symbols for a feed would have two
+    /// drawing styles in one gallery. Accepted deliberately.
+    func emptyWatermarkAsset(isDaytime: Bool) -> String {
         switch self {
         case .today:
-            return isDaytime ? "sun.max.fill" : "moon.stars.fill"
+            // LucideMoonStar does not exist in the catalogue; LucideMoon does.
+            return isDaytime ? "LucideSun" : "LucideMoon"
         case .floater:
-            return "leaf"
+            return "LucideLeaf"
         }
     }
 
@@ -1272,6 +1351,10 @@ private struct PerListWidgetContent {
     let taskCount: Int
     let rows: [WidgetTaskRowModel]
     let mode: TaskWidgetMode
+    /// Always set here — every path through this loader has a list — so each `PerListWidgetContent`
+    /// carries the accent beside the rows it was loaded for and no caller can hand on content
+    /// from one list with the accent of another.
+    let accent: TdayWidgetListAccent
 }
 
 private enum PerListWidgetContentLoader {
@@ -1291,22 +1374,23 @@ private enum PerListWidgetContentLoader {
     /// change. The window itself is the local day containing `date`, from the days the
     /// snapshot carries — the same rollover as the global feed.
     private static func loadTodoList(list: TdayWidgetListEntity, date: Date) -> PerListWidgetContent {
+        let accent = TdayWidgetListAccent(list: list)
         guard let snapshot = TodayTasksProvider.loadWidgetSnapshot() else {
-            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .today)
+            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .today, accent: accent)
         }
 
         let nowMs = Int64(date.timeIntervalSince1970 * 1_000)
         let days = snapshot.coveredDays()
         guard let dayOffset = TodayWidgetDayWindow.dayOffset(of: nowMs, in: days) else {
-            return PerListWidgetContent(title: list.name, status: .stale, taskCount: 0, rows: [], mode: .today)
+            return PerListWidgetContent(title: list.name, status: .stale, taskCount: 0, rows: [], mode: .today, accent: accent)
         }
         // A list is written whenever it has anything due before the last covered day ends, so a
         // missing slice means nothing due on this day either.
         guard let listSnapshot = snapshot.perList[list.listId] else {
-            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .today)
+            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .today, accent: accent)
         }
         guard let content = listSnapshot.content(dayOffset: dayOffset, dayEndEpochMs: days[dayOffset].endEpochMs) else {
-            return PerListWidgetContent(title: list.name, status: .stale, taskCount: 0, rows: [], mode: .today)
+            return PerListWidgetContent(title: list.name, status: .stale, taskCount: 0, rows: [], mode: .today, accent: accent)
         }
 
         let pending = WidgetPendingCompletionStore.pendingIds(kind: WidgetPendingCompletionStore.todoKind)
@@ -1329,7 +1413,8 @@ private enum PerListWidgetContentLoader {
             status: rows.isEmpty ? .empty : .tasks,
             taskCount: taskCount,
             rows: rows,
-            mode: .today
+            mode: .today,
+            accent: accent
         )
     }
 
@@ -1348,9 +1433,10 @@ private enum PerListWidgetContentLoader {
     /// A row due today shows its time; any other its day ("Sep 30"), since a bare time on next
     /// week's task would read as today's. Overdue is worked out against `date`, not stored.
     private static func loadWholeTodoList(list: TdayWidgetListEntity, date: Date) -> PerListWidgetContent {
+        let accent = TdayWidgetListAccent(list: list)
         guard let snapshot = TodayTasksProvider.loadWidgetSnapshot(),
               let listSnapshot = snapshot.openByList[list.listId] else {
-            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .today)
+            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .today, accent: accent)
         }
 
         let nowMs = Int64(date.timeIntervalSince1970 * 1_000)
@@ -1377,14 +1463,16 @@ private enum PerListWidgetContentLoader {
             status: rows.isEmpty ? .empty : .tasks,
             taskCount: taskCount,
             rows: rows,
-            mode: .today
+            mode: .today,
+            accent: accent
         )
     }
 
     private static func loadFloaterList(list: TdayWidgetListEntity, date: Date) -> PerListWidgetContent {
+        let accent = TdayWidgetListAccent(list: list)
         guard let snapshot = FloaterTasksProvider.loadWidgetSnapshot(),
               let listSnapshot = snapshot.perList[list.listId] else {
-            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .floater)
+            return PerListWidgetContent(title: list.name, status: .empty, taskCount: 0, rows: [], mode: .floater, accent: accent)
         }
 
         let nowMs = Int64(date.timeIntervalSince1970 * 1_000)
@@ -1407,7 +1495,8 @@ private enum PerListWidgetContentLoader {
             status: rows.isEmpty ? .empty : .tasks,
             taskCount: taskCount,
             rows: rows,
-            mode: .floater
+            mode: .floater,
+            accent: accent
         )
     }
 }
@@ -1423,6 +1512,11 @@ private struct TdayTasksWidgetContent: View {
     var today: TodayHeaderContent? = nil
     /// Where a List widget's taps go once it has a list; nil on every other widget.
     var listChrome: ListWidgetChrome? = nil
+    /// The list this instance is scoped to, as a glyph and a colour; nil on a whole-feed widget
+    /// and on a locked one. Set, it replaces the watermark glyph and — where the list has a
+    /// colour — every accent-tinted element in the widget, so the thing reads as that list end
+    /// to end rather than wearing the Today blue with a custom picture on it.
+    var listAccent: TdayWidgetListAccent? = nil
 
     @Environment(\.widgetFamily) private var family
     @Environment(\.widgetRenderingMode) private var renderingMode
@@ -1491,7 +1585,20 @@ private struct TdayTasksWidgetContent: View {
     /// A List widget holds every open task in its list, whatever day each is due, so it empties
     /// to "nothing left" and counts "open" whichever type the list is — not Today's "due today".
     private var emptyTitle: String {
-        listChrome == nil ? mode.emptyTitle : "Nothing left in this list"
+        listChrome == nil ? mode.emptyTitle(isDaytime: isDaytime) : "Nothing left in this list"
+    }
+
+    /// The header title for the layouts with no date block beside it (the locked and stale Today
+    /// states; every list-scoped and floater instance keeps its own title untouched).
+    ///
+    /// `title` for the global Today feed comes from the snapshot, which the app writes and so bakes
+    /// at whatever hour that write happened; the evening form has to be decided here, at render,
+    /// where `date` is the entry's own.
+    private var headerTitle: String {
+        guard listAccent == nil, mode == .today, !isDaytime else {
+            return title
+        }
+        return "Tonight's Tasks"
     }
 
     /// Where there is room, an empty Today previews its next day with tasks rather than centring
@@ -1512,17 +1619,34 @@ private struct TdayTasksWidgetContent: View {
 
     private func previewItems(_ today: TodayHeaderContent, _ preview: WidgetDayPreview) -> [WidgetListItem] {
         [
-            .message(id: "empty", text: today.emptyTitle ?? mode.emptyTitle),
+            .message(id: "empty", text: today.emptyTitle ?? mode.emptyTitle(isDaytime: isDaytime)),
             .section(id: "preview", text: preview.label)
         ] + preview.rows.map(WidgetListItem.task)
     }
 
+    /// The list's own colour where it has one, else the widget KIND's accent — the Today blue or
+    /// the floater green, which is what every widget showed before lists had a say.
+    ///
+    /// The fallback is not a cosmetic nicety: a list created before list colours existed, or one
+    /// whose stored key this build does not recognise, has no colour, and inventing one (pink,
+    /// or something derived from the name) would assert a choice the user never made. Nil means
+    /// nil all the way down from `TdayWidgetListAccent.color`.
     private var accentColor: Color {
-        mode.accentColor(renderingMode: renderingMode)
+        guard renderingMode == .fullColor, let listColor = listAccent?.color else {
+            // Accented/vibrant modes get no hue at all — the system tints the whole widget.
+            return mode.accentColor(renderingMode: renderingMode)
+        }
+        return listColor
     }
 
     private var secondaryTextColor: Color {
         renderingMode == .fullColor ? .secondary : .primary.opacity(0.72)
+    }
+
+    /// The ONE day/night decision this widget makes: the title, the empty line and the sun/moon all
+    /// read it, so they can never disagree about which half of the day it is.
+    private var isDaytime: Bool {
+        isTaskWidgetDaytime(date)
     }
 
     private var watermarkColor: Color {
@@ -1531,7 +1655,10 @@ private struct TdayTasksWidgetContent: View {
         }
         let color: Color
         switch mode {
-        case .today where !isTaskWidgetDaytime(date):
+        // The night-blue wash belongs to the TODAY feed, whose watermark is the moon. A list has
+        // one colour at every hour, so a list-scoped widget keeps it after dark rather than
+        // turning the user's teal into the small hours' blue.
+        case .today where !isTaskWidgetDaytime(date) && listAccent?.color == nil:
             color = .tdayTitleNight
         default:
             color = accentColor
@@ -1547,10 +1674,23 @@ private struct TdayTasksWidgetContent: View {
         colorScheme == .dark ? Color.tdayDarkSurface : Color.tdayLightSurface
     }
 
+    /// The list's own glyph when this instance is scoped to one, else the feed's — Today's sun or
+    /// moon, Floater's leaf. This is the whole answer to "which list is this widget": at a glance,
+    /// from across a home screen, the picture and the tint say it before the title is legible.
+    private var watermarkAsset: String {
+        listAccent?.glyphAsset ?? mode.emptyWatermarkAsset(isDaytime: isTaskWidgetDaytime(date))
+    }
+
     private var messageWatermark: some View {
         GeometryReader { proxy in
-            Image(systemName: mode.emptyWatermarkSystemName(isDaytime: isTaskWidgetDaytime(date)))
-                .font(.system(size: metrics.watermarkSize, weight: .regular))
+            // A Lucide template image, not an SF Symbol: sized by its FRAME rather than a font
+            // size, since an asset has no text metrics to scale from. The glyph therefore fills
+            // the square the symbol used to sit inside, which is why the watermark reads larger
+            // than it did — see `TaskWidgetMode.emptyWatermarkAsset`.
+            Image(watermarkAsset)
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
                 .foregroundStyle(watermarkColor)
                 .rotationEffect(.degrees(-7))
                 .frame(width: metrics.watermarkSize, height: metrics.watermarkSize)
@@ -1572,7 +1712,7 @@ private struct TdayTasksWidgetContent: View {
                 dateHeader(today)
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(title)
+                    Text(headerTitle)
                         .font(.system(size: family == .systemLarge ? 17 : 16, weight: .bold, design: .rounded))
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -1608,7 +1748,9 @@ private struct TdayTasksWidgetContent: View {
             .frame(minWidth: 28)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Today")
+                // Flips with the watermark, not on a boundary of its own: a header reading "Today"
+                // under a moon was the whole complaint.
+                Text(isDaytime ? "Today" : "Tonight")
                     .font(.system(size: family == .systemLarge ? 16 : 15, weight: .bold, design: .rounded))
                     .lineLimit(1)
                 if let countLabel = today.countLabel {
@@ -2132,6 +2274,9 @@ private struct FloaterTasksEntry: TimelineEntry {
     let taskCount: Int
     let rows: [WidgetTaskRowModel]
     let mode: TaskWidgetMode
+    /// The list this instance is scoped to, as a glyph and a colour — nil on the global feed and
+    /// on a locked widget, which deliberately gives nothing about a specific list away.
+    var accent: TdayWidgetListAccent? = nil
 }
 
 private struct FloaterTaskSnapshot: Codable, Identifiable {
@@ -2260,7 +2405,8 @@ private struct FloaterTasksProvider: AppIntentTimelineProvider {
                 status: content.status,
                 taskCount: content.taskCount,
                 rows: content.rows,
-                mode: content.mode
+                mode: content.mode,
+                accent: content.accent
             )
         }
         return Self.loadGlobalEntry()
@@ -2376,7 +2522,8 @@ private struct FloaterTasksWidgetView: View {
             taskCount: entry.taskCount,
             rows: entry.rows,
             date: entry.date,
-            mode: entry.mode
+            mode: entry.mode,
+            listAccent: entry.accent
         )
     }
 }
@@ -2445,6 +2592,9 @@ private struct ListTasksEntry: TimelineEntry {
     let rows: [WidgetTaskRowModel]
     let mode: TaskWidgetMode
     let chrome: ListWidgetChrome?
+    /// The list this instance is scoped to, as a glyph and a colour — nil on the global feed and
+    /// on a locked widget, which deliberately gives nothing about a specific list away.
+    var accent: TdayWidgetListAccent? = nil
 }
 
 private struct ListTasksProvider: AppIntentTimelineProvider {
@@ -2479,6 +2629,12 @@ private struct ListTasksProvider: AppIntentTimelineProvider {
         }
         // A list's NAME is user content, so the locked widget keeps the generic title — the same
         // rule Android's List widget follows. Checked before any snapshot is read.
+        //
+        // It drops the list's accent with it (no `accent:` below), and the glyph is the reason:
+        // for a list whose owner never picked one it is INFERRED from the name, so drawing it
+        // would publish a reading of the very string the generic title is withholding. The
+        // colour could have stayed, but a locked widget showing a list's colour under a generic
+        // title is a worse thing to explain than one that plainly falls back to its kind.
         guard !WidgetAppLockStore.isEnabled else {
             return ListTasksEntry(
                 date: date,
@@ -2498,7 +2654,8 @@ private struct ListTasksProvider: AppIntentTimelineProvider {
             taskCount: content.taskCount,
             rows: content.rows,
             mode: content.mode,
-            chrome: ListWidgetChrome(list: list)
+            chrome: ListWidgetChrome(list: list),
+            accent: content.accent
         )
     }
 }
@@ -2545,7 +2702,8 @@ private struct ListTasksWidgetView: View {
             rows: entry.rows,
             date: entry.date,
             mode: entry.mode,
-            listChrome: entry.chrome
+            listChrome: entry.chrome,
+            listAccent: entry.accent
         )
     }
 }

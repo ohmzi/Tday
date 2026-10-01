@@ -144,11 +144,18 @@ internal fun buildListWidgetSnapshot(
     }
 
     // Found by id in the list catalog of its own type; a list that is gone is reported as such
-    // rather than rendered as an empty list, so the widget can ask for another one.
-    val listName = when (listType) {
-        WidgetListType.TODO -> state.lists.firstOrNull { it.id == listId }?.name
-        WidgetListType.FLOATER -> state.floaterLists.firstOrNull { it.id == listId }?.name
+    // rather than rendered as an empty list, so the widget can ask for another one. Name and icon
+    // key are read as one pair from one record — the header takes the name and the watermark the
+    // key, and reading them separately would let a rename and an icon change land out of step.
+    val list = when (listType) {
+        WidgetListType.TODO -> state.lists.firstOrNull { it.id == listId }
+            ?.let { ListWidgetIdentity(it.name, it.iconKey, it.color) }
+        WidgetListType.FLOATER -> state.floaterLists.firstOrNull { it.id == listId }
+            ?.let { ListWidgetIdentity(it.name, it.iconKey, it.color) }
     }
+    val listName = list?.name
+    val listIconKey = list?.iconKey
+    val listColorKey = list?.colorKey
     if (listName == null) {
         return WidgetSnapshot(
             generatedAtEpochMs = nowEpochMs,
@@ -177,6 +184,8 @@ internal fun buildListWidgetSnapshot(
                 taskCount = tasks.size,
                 rows = tasks.take(taskLimit).map { it.toSnapshotRow(nowEpochMs) },
                 listName = listName,
+                listIconKey = listIconKey,
+                listColorKey = listColorKey,
             )
         }
 
@@ -197,6 +206,8 @@ internal fun buildListWidgetSnapshot(
                 taskCount = tasks.size,
                 rows = tasks.take(taskLimit).map { it.toSnapshotRow() },
                 listName = listName,
+                listIconKey = listIconKey,
+                listColorKey = listColorKey,
             )
         }
     }
@@ -269,3 +280,12 @@ internal fun widgetPriorityRingFor(priority: String): WidgetPriorityRing = when 
     isLowestPriority(priority) -> WidgetPriorityRing.LOWEST
     else -> WidgetPriorityRing.LOW
 }
+
+/**
+ * The identity half of a chosen list — what the widget's header, watermark and ACCENT come from, as
+ * opposed to its tasks. One lookup in the catalog of the matching type serves all three: the two
+ * cached record types (`CachedListRecord`, `CachedFloaterListRecord`) share no supertype, so
+ * without it each field would need its own `firstOrNull` over the same list — and a rename, an icon
+ * change and a recolour could land out of step with one another.
+ */
+private data class ListWidgetIdentity(val name: String, val iconKey: String?, val colorKey: String?)

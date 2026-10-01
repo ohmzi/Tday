@@ -178,16 +178,12 @@ enum RootFeedHeroHeaderMetrics {
         return t * t * t * t * (35 + (t * (-84 + (t * (70 - (20 * t))))))
     }
 
-    static func isDaytime(_ date: Date) -> Bool {
-        (6..<18).contains(Calendar.current.component(.hour, from: date))
-    }
-
     static func sunSymbolName(for date: Date) -> String {
-        isDaytime(date) ? "sun.max.fill" : "moon.stars.fill"
+        TdayTimeOfDay.isDaytime(date) ? "sun.max.fill" : "moon.stars.fill"
     }
 
     static func sunColor(for date: Date) -> Color {
-        isDaytime(date)
+        TdayTimeOfDay.isDaytime(date)
             ? Color(.sRGB, red: 244.0 / 255.0, green: 197.0 / 255.0, blue: 66.0 / 255.0, opacity: 1)
             : Color(.sRGB, red: 168.0 / 255.0, green: 184.0 / 255.0, blue: 232.0 / 255.0, opacity: 1)
     }

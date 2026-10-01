@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.ColorRes
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
@@ -27,13 +28,26 @@ import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
+/**
+ * The Today accent for [isDaytime] — the ink its sun/moon watermark bakes, and the ink a todo-list
+ * instance's own glyph borrows so the two watermark families read as the same mark.
+ */
+@ColorRes
+internal fun todayWidgetAccentColor(isDaytime: Boolean): Int =
+    if (isDaytime) R.color.tday_widget_today_accent else R.color.tday_widget_today_night_accent
+
 /** Reused by `ListTasksWidget` for a todo-list instance — same due-date shape as Today. */
 internal fun todayWidgetVisuals(isDaytime: Boolean): TaskWidgetVisuals {
-    val watermark = if (isDaytime) {
-        R.drawable.widget_empty_watermark_today
-    } else {
-        R.drawable.widget_empty_watermark_today_night
-    }
+    // Passing the accent the drawable already bakes keeps SRC_ATOP a no-op on these two: see
+    // TaskWidgetWatermark for why the tint travels with the drawable at all.
+    val watermark = TaskWidgetWatermark(
+        drawable = if (isDaytime) {
+            R.drawable.widget_empty_watermark_today
+        } else {
+            R.drawable.widget_empty_watermark_today_night
+        },
+        tint = todayWidgetAccentColor(isDaytime),
+    )
 
     return TaskWidgetVisuals(
         addButtonBackground = R.drawable.widget_add_button_background,
@@ -79,20 +93,29 @@ internal object TodayTasksWidget {
             details = "locked=$isAppLocked snapshotNull=${snapshot == null} stale=$snapshotStale",
         )
 
+        // The ONE day/night decision this widget makes, read once and handed to everything that
+        // follows from it — the title, the empty line and the sun/moon watermark all flip together
+        // at 18:00 because they share this flag rather than each re-asking the clock.
+        val isDaytime = taskWidgetIsDaytime(LocalTime.now().hour)
+
         val content = if (isAppLocked || snapshot == null || day == null) {
             null
         } else {
-            todayContent(appContext, snapshot, day, nowEpochMs, WidgetCheckOff.ids())
+            todayContent(appContext, snapshot, day, nowEpochMs, WidgetCheckOff.ids(), isDaytime)
         }
 
         return TaskWidgetModel(
-            title = appContext.getString(R.string.widget_today_tasks_title),
+            title = appContext.getString(
+                if (isDaytime) R.string.widget_today_tasks_title else R.string.widget_tonight_tasks_title,
+            ),
             state = todayContentState(isAppLocked, snapshot, nowEpochMs),
             countLabel = content?.countLabel,
             compactCountLabel = content?.compactCountLabel,
             setupTitle = appContext.getString(R.string.widget_today_tasks_setup_title),
             setupMessage = appContext.getString(R.string.widget_today_tasks_setup_message),
-            emptyTitle = content?.emptyTitle ?: appContext.getString(R.string.widget_today_tasks_empty),
+            emptyTitle = content?.emptyTitle ?: appContext.getString(
+                if (isDaytime) R.string.widget_today_tasks_empty else R.string.widget_tonight_tasks_empty,
+            ),
             lockedTitle = appContext.getString(R.string.widget_locked_title),
             lockedMessage = appContext.getString(R.string.widget_locked_message),
             loadingTitle = appContext.getString(R.string.widget_loading),
@@ -102,13 +125,34 @@ internal object TodayTasksWidget {
             dateBlock = content?.dateBlock,
             progress = content?.progress,
             // Follows the clock, so the day/night artwork turns over with it.
-            visuals = todayWidgetVisuals(taskWidgetIsDaytime(LocalTime.now().hour)),
+            visuals = todayWidgetVisuals(isDaytime),
             openIntent = openIntent(),
             addIntent = createIntent(appWidgetId),
         )
     }
 
-    fun openIntent(): Intent = Intent(Intent.ACTION_MAIN).apply {
+    /**
+     * Where a tap on this widget's body goes: TODAY's list, the thing the widget is showing.
+     *
+     * It used to be a bare `ACTION_MAIN` launcher intent, which opened whatever screen the user
+     * had set as their home — so the one widget whose whole subject is today was also the one
+     * that would not take you there, while the Floater and List widgets both deep-linked
+     * correctly. `tday://todos/today` is already registered on the `TodayTodos` route; this just
+     * uses it.
+     */
+    fun openIntent(): Intent = Intent(Intent.ACTION_VIEW, Uri.parse(TODAY_DEEP_LINK)).apply {
+        component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+
+    /**
+     * The app's front door, with no claim about where in it to land.
+     *
+     * Kept apart from [openIntent] for the one caller that wants exactly this: a LOCKED list
+     * widget, which must not deep-link anywhere, because the destination would say which list the
+     * instance holds to somebody who has not unlocked the device.
+     */
+    fun launchIntent(): Intent = Intent(Intent.ACTION_MAIN).apply {
         component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         addCategory(Intent.CATEGORY_LAUNCHER)
@@ -164,6 +208,7 @@ private fun todayContent(
     day: TodayWidgetDay,
     nowEpochMs: Long,
     checkingIds: Set<String>,
+    isDaytime: Boolean,
 ): TodayContent {
     val locale = Locale.getDefault()
     val zoneId = ZoneId.systemDefault()
@@ -183,8 +228,15 @@ private fun todayContent(
     val total = done + dueToday
     val dueLabel = String.format(locale, context.getString(R.string.widget_today_tasks_count), dueToday)
 
+    // Four lines, picked on the same 6..<18 predicate as the sun/moon watermark: the evening
+    // should never read "today" while the moon is drawn behind it.
     val emptyTitle = context.getString(
-        if (done > 0) R.string.todos_all_done_today else R.string.widget_today_tasks_empty,
+        when {
+            done > 0 && isDaytime -> R.string.todos_all_done_today
+            done > 0 -> R.string.widget_tonight_all_done
+            isDaytime -> R.string.widget_today_tasks_empty
+            else -> R.string.widget_tonight_tasks_empty
+        },
     )
     val dayStart = Instant.ofEpochMilli(day.dayStartEpochMs ?: nowEpochMs).atZone(zoneId).toLocalDate()
     val emptyPreview = if (day.taskCount == 0 && day.overdueCount == 0) {
@@ -206,7 +258,11 @@ private fun todayContent(
         dateBlock = TaskWidgetDateBlock(
             weekday = DateTimeFormatter.ofPattern("EEE", locale).format(dayStart),
             day = DateTimeFormatter.ofPattern("d", locale).format(dayStart),
-            title = context.getString(R.string.todos_title_today),
+            // The in-app screen's own title strings, so the widget's stacked header and the screen
+            // it opens never disagree about what the current block of the day is called.
+            title = context.getString(
+                if (isDaytime) R.string.todos_title_today else R.string.todos_section_tonight,
+            ),
         ),
         progress = TaskWidgetProgress(done = done, total = total).takeIf { total > 0 },
     )
@@ -315,3 +371,5 @@ private const val PREVIEW_LABEL_SLOT = 2
 
 internal fun dueTimeText(formatter: DateFormat, epochMs: Long): String =
     formatter.format(Date.from(Instant.ofEpochMilli(epochMs)))
+
+private const val TODAY_DEEP_LINK = "tday://todos/today"

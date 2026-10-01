@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -46,7 +45,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
@@ -158,8 +156,14 @@ object RootFeedDockCollapse {
  * [interactiveTimeoutMillis].
  */
 private const val RootFeedDockTapExpansionMs = 2_400L
-private val RootFeedDockShape = RoundedCornerShape(TdayDimens.RootFeedDockRadius)
-private val RootFeedDockSelectorShape = RoundedCornerShape(TdayDimens.RootFeedDockSelectorRadius)
+// Capsules, not fixed radii. The dock is 64dp tall and its selector a little less, so a 25dp
+// track corner and a 20dp selector corner are both short of half their own height — they read as
+// rounded rectangles, which is what iOS looked like before its own dock was redrawn and is the
+// difference the two clients were reported for. `CircleShape` is Compose's capsule: it rounds by
+// half the shorter side, so it stays a capsule if either dimension is ever retuned, which a
+// hard-coded dp cannot. iOS says the same thing with `Capsule()` in `Core/UI/RootFeedDock.swift`.
+private val RootFeedDockShape = CircleShape
+private val RootFeedDockSelectorShape = CircleShape
 
 @StringRes
 internal fun RootFeedTab.labelRes(): Int {
@@ -249,23 +253,17 @@ fun RootFeedDock(
         label = "rootFeedDockExpansion",
     )
     val colorScheme = MaterialTheme.colorScheme
-    val isDarkTheme = colorScheme.background.luminance() < 0.5f
-    val trackColor = colorScheme.surfaceVariant.copy(alpha = if (isDarkTheme) 0.76f else 0.68f)
-    val trackBorderColor = if (isDarkTheme) {
-        colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
-    } else {
-        colorScheme.surface.copy(alpha = 0.72f)
-    }
-    val selectorContainerColor = if (isDarkTheme) {
-        colorScheme.background.copy(alpha = 0.9f)
-    } else {
-        colorScheme.surface.copy(alpha = 0.98f)
-    }
-    val selectorBorderColor = if (isDarkTheme) {
-        colorScheme.onSurfaceVariant.copy(alpha = 0.24f)
-    } else {
-        colorScheme.onSurface.copy(alpha = 0.1f)
-    }
+    // The same two colours and the same nothing-else iOS uses (`Core/UI/RootFeedDock.swift`): a
+    // surfaceVariant track at 0.76 in both themes, and a FULLY OPAQUE surface thumb on it.
+    //
+    // The thumb used to be 0.98 in light and 0.9 in dark, and to carry a border, and the track
+    // carried one too. None of that is on iOS, and together they were the reported difference:
+    // two percent of a blue-grey track bleeding through white reads as off-white, the thumb's
+    // 10%-black outline reads as grey rather than crisp, and the track's own outline lightened
+    // its edge — so the Android control looked softer and bluer where iOS looked like a white
+    // pill on grey. The shapes already matched by then; this is the rest of the gap.
+    val trackColor = colorScheme.surfaceVariant.copy(alpha = 0.76f)
+    val selectorContainerColor = colorScheme.surface
     val labelTextStyle = MaterialTheme.typography.titleSmall.copy(
         fontSize = 15.sp,
         lineHeight = 20.sp,
@@ -316,11 +314,6 @@ fun RootFeedDock(
             .height(RootFeedDockHeight)
             .clip(RootFeedDockShape)
             .background(trackColor, RootFeedDockShape)
-            .border(
-                width = TdayDimens.BorderWidth,
-                color = trackBorderColor,
-                shape = RootFeedDockShape,
-            )
             .padding(RootFeedDockInnerPadding)
             .selectableGroup(),
     ) {
@@ -379,16 +372,12 @@ fun RootFeedDock(
                         spotColor = Color.Black.copy(alpha = 0.14f),
                     )
                     .clip(RootFeedDockSelectorShape)
+                    // One fill, and nothing on top of it. A 6% accent wash used to sit over the
+                    // white — which is most of why this thumb read as pale lavender where iOS's
+                    // reads as white — and a 10%-black border sat over that, which is why its
+                    // edge read as grey rather than crisp. iOS paints `colors.surface` and stops,
+                    // so this does too.
                     .background(selectorContainerColor, RootFeedDockSelectorShape)
-                    .background(
-                        TdayRootFeedAccent.copy(alpha = if (isDarkTheme) 0.04f else 0.06f),
-                        RootFeedDockSelectorShape,
-                    )
-                    .border(
-                        width = TdayDimens.BorderWidth,
-                        color = selectorBorderColor,
-                        shape = RootFeedDockSelectorShape,
-                    )
             )
 
             // The tab's tint, the create button's accent and the feed body underneath
