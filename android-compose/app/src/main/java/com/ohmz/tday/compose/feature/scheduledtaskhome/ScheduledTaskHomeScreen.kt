@@ -156,6 +156,7 @@ import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskRowFirstLineAlignment
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.rememberTdayIsDaytime
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.scaledDelay
@@ -203,11 +204,9 @@ import com.ohmz.tday.compose.ui.theme.tdayPriorityColor
 import com.ohmz.tday.shared.listicon.ListIconInference
 import com.ohmz.tday.shared.sort.TaskSortEngine
 import com.ohmz.tday.shared.sort.TaskSortKey
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -604,7 +603,11 @@ fun ScheduledTaskHomeScreen(
         containerColor = colorScheme.background,
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            val isDaytime = rememberIsDaytime()
+            // The watermark behind the board and the sun/moon in its header are now two
+            // reads of one band on one minute grid, so they cannot disagree about the
+            // hour. This screen used to carry its own copy of `6 until 18` on its own
+            // ticker, which is exactly how they could.
+            val isDaytime = rememberTdayIsDaytime()
             EmptyTaskWatermark(
                 imageVector = if (isDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
                     R.drawable.ic_lucide_moon
@@ -1526,22 +1529,6 @@ private fun CreateListBottomSheet(
             }
         }
     }
-}
-
-@Composable
-private fun rememberIsDaytime(): Boolean {
-    val hour = remember { mutableIntStateOf(LocalTime.now().hour) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            val now = LocalTime.now()
-            val millisToNextMinute = ((60 - now.second) * 1000L) - (now.nano / 1_000_000L)
-            delay(millisToNextMinute.coerceAtLeast(500L))
-            hour.intValue = LocalTime.now().hour
-        }
-    }
-
-    return hour.intValue in 6 until 18
 }
 
 @Composable

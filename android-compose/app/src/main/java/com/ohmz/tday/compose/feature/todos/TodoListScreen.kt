@@ -196,6 +196,7 @@ import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskRowFirstLineAlignment
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.rememberTdayIsDaytime
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTdayTaskRowSkeletonMounted
@@ -268,7 +269,6 @@ import com.ohmz.tday.shared.listicon.ListIconInference
 import com.ohmz.tday.shared.sort.TaskSortEngine
 import com.ohmz.tday.shared.sort.TaskSortKey
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -1128,7 +1128,12 @@ fun TodoListScreen( // skipcq: KT-R1006
     val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
-    val isTodayDaytime = rememberTodoRootIsDaytime()
+    // One read of the day/night face for this whole screen: the title ("Today" or
+    // "Tonight"), the sun/moon beside it, the empty-state watermark and the "all done"
+    // line all hang off this single value, so none of them can be showing a different
+    // hour than the others. The band and the ticker live in [rememberTdayIsDaytime] —
+    // this screen used to keep its own copy of both.
+    val isTodayDaytime = rememberTdayIsDaytime()
     if (isTodayDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
         R.drawable.ic_lucide_moon
     )
@@ -1145,6 +1150,20 @@ fun TodoListScreen( // skipcq: KT-R1006
     val isViewerList = isListDetailScreen && selectedList?.isViewer == true
     val usesRootFeedChrome =
         usesRootFeedHeader || isFloaterTaskHomeScreen
+    // The Today scope is the one screen whose name depends on the clock: after 18:00 it
+    // is "Tonight", on exactly the predicate that swaps the sun for the moon above it.
+    //
+    // Resolved here rather than in the ViewModel, which is where every other scope's
+    // title comes from: `load()` picks the title once, and the Today screen is not
+    // reloaded while it is open, so a title chosen there would still read "Today" at
+    // 22:00 under a moon. Here it is a composable read of [isTodayDaytime], and that
+    // state is re-read every minute, so the word turns over with the glyph while the
+    // screen is being looked at.
+    val displayTitle = if (uiState.mode == TodoListMode.TODAY && !isTodayDaytime) {
+        stringResource(R.string.todos_title_tonight)
+    } else {
+        uiState.title
+    }
     val titleColor = modeAccentColor(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
@@ -1240,9 +1259,17 @@ fun TodoListScreen( // skipcq: KT-R1006
         emptySceneIcon
     }
     val emptyStateSceneTitle = if (isDayDone) {
-        stringResource(R.string.todos_all_done_today)
+        if (isTodayDaytime) {
+            stringResource(R.string.todos_all_done_today)
+        } else {
+            stringResource(R.string.todos_all_done_tonight)
+        }
     } else {
-        emptyStateMessageForMode(mode = uiState.mode, isFloaterList = isListDetailScreen)
+        emptyStateMessageForMode(
+            mode = uiState.mode,
+            isFloaterList = isListDetailScreen,
+            isTodayDaytime = isTodayDaytime,
+        )
     }
     val emptyStateSceneDescription = if (isDayDone) {
         LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault()))
@@ -1938,6 +1965,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                             title = emptyStateMessageForMode(
                                 mode = uiState.mode,
                                 isFloaterList = isListDetailScreen,
+                                isTodayDaytime = isTodayDaytime,
                             ),
                             description = emptyStateDescriptionForMode(
                                 mode = uiState.mode,
@@ -2911,7 +2939,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                         }
                     } else if (usesTodayStyle) {
                         tdayHeroTitleItem(
-                            title = uiState.title,
+                            title = displayTitle,
                             icon = heroIcon,
                             accentColor = titleColor,
                             collapseProgress = heroCollapse.progress,
@@ -3247,7 +3275,7 @@ fun TodoListScreen( // skipcq: KT-R1006
 
             if (usesRootFeedChrome) {
                 RootFeedHeroHeader(
-                    title = uiState.title,
+                    title = displayTitle,
                     mark = if (isFloaterTaskHomeScreen) {
                         RootFeedHeroMark.FloaterLeaf
                     } else {
@@ -3288,7 +3316,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                 // Scaffold `topBar`, so the hero block below can scroll behind
                 // it instead of starting under it.
                 TdayHeroToolbar(
-                    title = uiState.title,
+                    title = displayTitle,
                     titleColor = titleColor,
                     collapseProgress = heroCollapse.progress,
                     // Gone while the field is up: a back chevron beside an
@@ -3388,7 +3416,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                                 // imply it is.
                                 placeholder = stringResource(
                                     R.string.action_search_in,
-                                    uiState.title,
+                                    displayTitle,
                                 ),
                                 modifier = Modifier
                                     .weight(1f)
@@ -4849,22 +4877,6 @@ private fun FloaterTaskHomeListRow(
             }
         }
     }
-}
-
-@Composable
-private fun rememberTodoRootIsDaytime(): Boolean {
-    var hour by remember { mutableStateOf(LocalTime.now().hour) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            val now = LocalTime.now()
-            val millisToNextMinute = ((60 - now.second) * 1000L) - (now.nano / 1_000_000L)
-            delay(millisToNextMinute.coerceAtLeast(500L))
-            hour = LocalTime.now().hour
-        }
-    }
-
-    return hour in 6 until 18
 }
 
 private data class TodoTopBarAction(
@@ -6567,11 +6579,23 @@ private fun localizedSectionTitle(section: TodoSection): String {
  * @param isFloaterList a floater screen opened on one list rather than the root
  *   feed. Both are [TodoListMode.FLOATER], but "No floater tasks" reads as if
  *   there were none anywhere when it is one list that is empty.
+ * @param isTodayDaytime the screen's one day/night read. Only [TodoListMode.TODAY]
+ *   consults it: an empty Today screen in the evening is empty of tonight's tasks, and
+ *   the line has to say the same word the title and the moon above it are saying.
  */
 @Composable
-private fun emptyStateMessageForMode(mode: TodoListMode, isFloaterList: Boolean): String {
+private fun emptyStateMessageForMode(
+    mode: TodoListMode,
+    isFloaterList: Boolean,
+    isTodayDaytime: Boolean,
+): String {
     return when (mode) {
-        TodoListMode.TODAY -> stringResource(R.string.todos_empty_today)
+        TodoListMode.TODAY -> if (isTodayDaytime) {
+            stringResource(R.string.todos_empty_today)
+        } else {
+            stringResource(R.string.todos_empty_tonight)
+        }
+
         TodoListMode.OVERDUE -> stringResource(R.string.todos_empty_overdue)
         TodoListMode.PRIORITY -> stringResource(R.string.todos_empty_priority)
         TodoListMode.FLOATER -> if (isFloaterList) {
