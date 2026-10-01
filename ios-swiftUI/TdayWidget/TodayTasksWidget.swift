@@ -1229,10 +1229,19 @@ private enum TaskWidgetMode {
     case today
     case floater
 
+    /// Where a tap on the widget's body goes: the feed the widget is SHOWING.
+    ///
+    /// `.today` used to answer `tday://home`, which lands on whatever the user set as their
+    /// default home screen — so the one widget whose whole subject is today was also the one that
+    /// would not take you there, while `.floater` beside it deep-linked correctly. Android had the
+    /// identical gap on the identical widget and is fixed in the same change.
+    ///
+    /// `todos/today` is `AppRoute.todayTodos`'s own `deepLinkPath`, so this cannot drift from the
+    /// route it names.
     var openURL: URL {
         switch self {
         case .today:
-            return URL(string: "tday://home")!
+            return URL(string: "tday://todos/today")!
         case .floater:
             return URL(string: "tday://floater")!
         }

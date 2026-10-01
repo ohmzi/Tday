@@ -200,7 +200,9 @@ private fun unconfiguredModel(
     isAppLocked: Boolean,
     listMissing: Boolean,
 ): TaskWidgetModel {
-    val tapIntent = if (isAppLocked) TodayTasksWidget.openIntent() else pickListIntent(appContext, appWidgetId)
+    // Locked: the app's front door and nothing more. Deep-linking to the chosen list would name
+    // it to whoever picked the phone up, which is the same rule the locked title follows.
+    val tapIntent = if (isAppLocked) TodayTasksWidget.launchIntent() else pickListIntent(appContext, appWidgetId)
     return TaskWidgetModel(
         title = title,
         state = if (isAppLocked) TaskWidgetContentState.LOCKED else TaskWidgetContentState.SETUP,

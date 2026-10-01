@@ -131,7 +131,28 @@ internal object TodayTasksWidget {
         )
     }
 
-    fun openIntent(): Intent = Intent(Intent.ACTION_MAIN).apply {
+    /**
+     * Where a tap on this widget's body goes: TODAY's list, the thing the widget is showing.
+     *
+     * It used to be a bare `ACTION_MAIN` launcher intent, which opened whatever screen the user
+     * had set as their home — so the one widget whose whole subject is today was also the one
+     * that would not take you there, while the Floater and List widgets both deep-linked
+     * correctly. `tday://todos/today` is already registered on the `TodayTodos` route; this just
+     * uses it.
+     */
+    fun openIntent(): Intent = Intent(Intent.ACTION_VIEW, Uri.parse(TODAY_DEEP_LINK)).apply {
+        component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+
+    /**
+     * The app's front door, with no claim about where in it to land.
+     *
+     * Kept apart from [openIntent] for the one caller that wants exactly this: a LOCKED list
+     * widget, which must not deep-link anywhere, because the destination would say which list the
+     * instance holds to somebody who has not unlocked the device.
+     */
+    fun launchIntent(): Intent = Intent(Intent.ACTION_MAIN).apply {
         component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         addCategory(Intent.CATEGORY_LAUNCHER)
@@ -350,3 +371,5 @@ private const val PREVIEW_LABEL_SLOT = 2
 
 internal fun dueTimeText(formatter: DateFormat, epochMs: Long): String =
     formatter.format(Date.from(Instant.ofEpochMilli(epochMs)))
+
+private const val TODAY_DEEP_LINK = "tday://todos/today"
