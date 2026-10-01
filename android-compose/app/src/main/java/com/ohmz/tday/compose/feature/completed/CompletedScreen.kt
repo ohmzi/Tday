@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -641,59 +642,94 @@ fun CompletedScreen(
                         // Keyed by tab as well as by kind: the two tabs' scenes carry
                         // different copy, and a lazy item that keeps its identity across a
                         // switch would hand the new tab the old one's title for a frame.
+                        val emptySceneKey = "completed-empty-${scope.wire}"
                         item(
-                            key = "completed-empty-${scope.wire}",
+                            key = emptySceneKey,
                             contentType = "completed-empty",
                         ) {
-                            if (searchActive) {
-                                TdayEmptyState(
-                                    icon = R.drawable.ic_lucide_search,
-                                    accentColor = COMPLETED_TITLE_COLOR,
-                                    title = stringResource(R.string.scheduled_task_home_search_no_results),
-                                    description = stringResource(R.string.search_no_results_body),
-                                    modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
-                                )
-                            } else {
-                                TdayEmptyState(
-                                    // The fallback for a badge drawn as an
-                                    // asset; `markContent` is what actually
-                                    // draws here. Kept in step with it so the
-                                    // two paths cannot silently diverge.
-                                    icon = R.drawable.ic_lucide_calendar_check,
-                                    // The tab's accent, not the page's slate —
-                                    // the mark's other two sites on this page
-                                    // (the hero and the watermark) are the tab's
-                                    // colour, and web draws all three of its own
-                                    // from the one accent. A slate disc under a
-                                    // tab-coloured mark was this page drawing its
-                                    // mark in two colours at once.
-                                    accentColor = activeScopeAccent,
-                                    // Two scenes, not one with a swapped word: web keeps a
-                                    // Floater empty state of its own
-                                    // (`completed.floaterEmpty` / `floaterEmptyBody`) beside
-                                    // the scheduled one, because "Tick something off and it
-                                    // will land here" is only half true on a tab where the
-                                    // way in is the Floater board rather than the schedule.
-                                    title = stringResource(
-                                        when (scope) {
-                                            CompletedScope.Tasks -> R.string.completed_empty
-                                            CompletedScope.Floater -> R.string.completed_floater_empty
-                                        },
-                                    ),
-                                    description = stringResource(
-                                        when (scope) {
-                                            CompletedScope.Tasks -> R.string.completed_empty_body
-                                            CompletedScope.Floater -> R.string.completed_floater_empty_body
-                                        },
-                                    ),
-                                    modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
-                                    markContent = {
-                                        CompletedMark(
-                                            size = COMPLETED_MARK_BADGE_SIZE,
-                                            scope = scope,
+                            // Centred in what is left under the tab strip, down to the
+                            // bottom of the list, rather than hugging the strip. The item
+                            // takes the room below its own top as its minimum height and
+                            // centres the scene in it; its top is the one thing that does
+                            // not depend on its height, so this settles in a frame. Read in
+                            // the layout phase, so a scroll re-measures this item and
+                            // recomposes nothing.
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .layout { measurable, constraints ->
+                                        val info = listState.layoutInfo
+                                        val own = info.visibleItemsInfo.firstOrNull { it.key == emptySceneKey }
+                                        val top = own?.offset
+                                            ?: info.visibleItemsInfo.lastOrNull()?.let { it.offset + it.size }
+                                            ?: 0
+                                        val remaining =
+                                            (info.viewportEndOffset - info.afterContentPadding - top)
+                                                .coerceAtLeast(0)
+                                        val placeable = measurable.measure(
+                                            constraints.copy(
+                                                minHeight = remaining.coerceIn(
+                                                    constraints.minHeight,
+                                                    constraints.maxHeight,
+                                                ),
+                                            ),
                                         )
+                                        layout(placeable.width, placeable.height) {
+                                            placeable.place(0, 0)
+                                        }
                                     },
-                                )
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (searchActive) {
+                                    TdayEmptyState(
+                                        icon = R.drawable.ic_lucide_search,
+                                        accentColor = COMPLETED_TITLE_COLOR,
+                                        title = stringResource(R.string.scheduled_task_home_search_no_results),
+                                        description = stringResource(R.string.search_no_results_body),
+                                        modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
+                                    )
+                                } else {
+                                    TdayEmptyState(
+                                        // The fallback for a badge drawn as an
+                                        // asset; `markContent` is what actually
+                                        // draws here. Kept in step with it so the
+                                        // two paths cannot silently diverge.
+                                        icon = R.drawable.ic_lucide_calendar_check,
+                                        // The tab's accent, not the page's slate —
+                                        // the mark's other two sites on this page
+                                        // (the hero and the watermark) are the tab's
+                                        // colour, and web draws all three of its own
+                                        // from the one accent. A slate disc under a
+                                        // tab-coloured mark was this page drawing its
+                                        // mark in two colours at once.
+                                        accentColor = activeScopeAccent,
+                                        // Two scenes, not one with a swapped word: web keeps a
+                                        // Floater empty state of its own
+                                        // (`completed.floaterEmpty` / `floaterEmptyBody`) beside
+                                        // the scheduled one, because "Tick something off and it
+                                        // will land here" is only half true on a tab where the
+                                        // way in is the Floater board rather than the schedule.
+                                        title = stringResource(
+                                            when (scope) {
+                                                CompletedScope.Tasks -> R.string.completed_empty
+                                                CompletedScope.Floater -> R.string.completed_floater_empty
+                                            },
+                                        ),
+                                        description = stringResource(
+                                            when (scope) {
+                                                CompletedScope.Tasks -> R.string.completed_empty_body
+                                                CompletedScope.Floater -> R.string.completed_floater_empty_body
+                                            },
+                                        ),
+                                        modifier = Modifier.padding(vertical = TdayDimens.Spacing3xl),
+                                        markContent = {
+                                            CompletedMark(
+                                                size = COMPLETED_MARK_BADGE_SIZE,
+                                                scope = scope,
+                                            )
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
