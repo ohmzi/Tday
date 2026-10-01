@@ -84,6 +84,9 @@ export default defineConfig({
       org: "tday-kb",
       project: "tday-web",
       authToken: process.env.SENTRY_AUTH_TOKEN,
+      // The app never turns the SDK's `debug` option on, so let the bundler drop
+      // the SDK's own debug logging paths (about 7 KB of the entry chunk).
+      bundleSizeOptimizations: { excludeDebugStatements: true },
     }),
   ],
   define: {

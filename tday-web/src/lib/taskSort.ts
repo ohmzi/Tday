@@ -111,16 +111,6 @@ export function compareFloaters(a: TaskSortKey, b: TaskSortKey): number {
   return compareId(a, b);
 }
 
-/** Non-mutating sort of todos by the fixed todo ordering. */
-export function sortTodos<T>(items: T[], key: (item: T) => TaskSortKey): T[] {
-  return items.slice().sort((a, b) => compareTodos(key(a), key(b)));
-}
-
-/** Non-mutating sort of floaters by the fixed floater ordering. */
-export function sortFloaters<T>(items: T[], key: (item: T) => TaskSortKey): T[] {
-  return items.slice().sort((a, b) => compareFloaters(key(a), key(b)));
-}
-
 /**
  * 0 = highest priority (sorts first). Tolerant of every priority spelling the app
  * stores: canonical Lowest/Low/Medium/High, the server/legacy vocabulary normal/

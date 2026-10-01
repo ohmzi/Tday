@@ -72,9 +72,6 @@ export const usePrioritizeTodo = () => {
 
         return { oldTodos, oldTimelineTodos };
       },
-      onSuccess: () => {
-        // queryClient.invalidateQueries({ queryKey: ["todo"] });
-      },
       onError: (error, _, context) => {
         queryClient.setQueryData(["todo"], context?.oldTodos);
         queryClient.setQueryData(["todoTimeline"], context?.oldTimelineTodos);

@@ -15,7 +15,6 @@ type NLPTitleInputProps = {
   title: string;
   setTitle: React.Dispatch<SetStateAction<string>>;
   setDateRange: React.Dispatch<SetStateAction<FormDateRange>>;
-  setListID?: React.Dispatch<SetStateAction<string | null>>;
   // Optional: capture "every day"/"weekly" → recurrence and "!"/"high" → priority
   // straight from the title. Omitted by surfaces that don't expose those fields.
   setPriority?: (priority: TodoPriority) => void;

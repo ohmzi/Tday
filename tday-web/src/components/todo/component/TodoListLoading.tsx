@@ -1,4 +1,3 @@
-import React from "react";
 import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
 import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
 import { cn } from "@/lib/utils";

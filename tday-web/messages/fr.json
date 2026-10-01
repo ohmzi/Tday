@@ -1,77 +1,4 @@
 {
-  "landingPage": {
-    "nav": {
-      "docs": "Documentation",
-      "docsShort": "Docs",
-      "login": "Se connecter"
-    },
-    "hero": {
-      "title": "T'Day",
-      "subtitle": "Un couteau suisse de la planification personnelle — avec un éditeur style Notion, des téléchargements de fichiers cryptés ultra-secrets, et une foule de petits extras géniaux !",
-      "readDocs": "Lire la documentation",
-      "start": "Commencer"
-    },
-    "localizationTitle": "support complet pour 11 langues",
-    "features": [
-      {
-        "tag": "01 / TÂCHES INTELLIGENTES",
-        "title": "Traitement du langage naturel",
-        "description": "Saisissez simplement vos tâches naturellement. Notre moteur NLP intelligent extrait automatiquement les dates, les heures et les durées de votre saisie.",
-        "bullets": [
-          "Détection instantanée de la date et de l'heure",
-          "Calcul automatique de la durée",
-          "Planification intelligente des rappels",
-          "Analyse syntaxique contextuelle"
-        ]
-      },
-      {
-        "tag": "02 / VISUALISATION",
-        "title": "Belle vue calendrier",
-        "description": "Consultez toutes vos tâches d'un coup d'œil. Le calendrier intégré offre une vue d'ensemble claire de votre emploi du temps avec des indicateurs visuels intuitifs.",
-        "bullets": [
-          "Vues mensuelle, hebdomadaire et quotidienne",
-          "Catégories de tâches avec code couleur",
-          "Réorganisation par glisser-déposer",
-          "Détection de conflits"
-        ]
-      },
-      {
-        "tag": "03 / NOTES RICHES",
-        "title": "Éditeur style Notion",
-        "description": "Capturez vos pensées avec un éditeur puissant et sans distraction. Formatez le texte, intégrez des médias et organisez vos idées sans effort.",
-        "bullets": [
-          "Prise en charge du Markdown",
-          "Formatage de texte riche",
-          "Coloration syntaxique des blocs de code",
-          "Listes à puces imbriquées"
-        ]
-      },
-      {
-        "tag": "04 / SÉCURITÉ",
-        "title": "Stockage crypté de bout en bout",
-        "description": "Vos fichiers sont protégés par un cryptage de qualité militaire. Stockez documents, images et pièces jointes en toute tranquillité.",
-        "bullets": [
-          "Cryptage AES-256",
-          "Architecture zero-knowledge",
-          "Partage de fichiers sécurisé",
-          "Sauvegardes automatiques"
-        ]
-      }
-    ],
-    "securityDemo": {
-      "title": "Passkey",
-      "subtitle": "Nous avons besoin de votre passkey pour décrypter vos fichiers",
-      "enter": "Entrer"
-    },
-    "errors": {
-      "fallback": "Un problème est survenu, mais ne vous inquiétez pas, nous avons envoyé un rapport d'erreur."
-    },
-    "footer": {
-      "privacyPolicy": "Politique de confidentialité",
-      "termsOfService": "Conditions d'utilisation",
-      "heroSubtitle": "La plateforme de gestion de tâches intelligente conçue pour ceux qui ne sont pas si sains d'esprit."
-    }
-  },
   "terms": {
     "title": "Conditions d'utilisation",
     "lastUpdated": "Dernière mise à jour : 19 janvier 2026",
@@ -173,80 +100,12 @@
       }
     }
   },
-  "login": {
-    "title": "Connexion",
-    "oauth": {
-      "orLogInWith": "ou connectez-vous avec",
-      "google": "Google",
-      "discord": "Discord"
-    },
-    "fields": {
-      "username": {
-        "placeholder": "Nom d'utilisateur*",
-        "error": "Veuillez saisir un nom d'utilisateur valide"
-      },
-      "password": {
-        "placeholder": "Entrez votre mot de passe*",
-        "error": "Veuillez entrer un mot de passe valide"
-      }
-    },
-    "showPassword": "Afficher le mot de passe",
-    "hidePassword": "Masquer le mot de passe",
-    "registerPrompt": "Vous n'avez pas de compte ?",
-    "registerLink": "S'inscrire",
-    "buttons": {
-      "login": "Se connecter"
-    },
-    "toasts": {
-      "googleError": "Nous n'avons pas pu vous connecter à Google pour le moment",
-      "discordError": "Nous n'avons pas pu vous connecter à Discord pour le moment",
-      "invalidCredentials": "Nom d'utilisateur ou mot de passe incorrect",
-      "genericError": "Nous ne pouvons pas vous connecter pour le moment"
-    }
-  },
-  "register": {
-    "title": "Créer un compte",
-    "loginPrompt": "Vous avez déjà un compte ?",
-    "loginLink": "Se connecter",
-    "oauth": {
-      "orRegisterWith": "ou inscrivez-vous avec",
-      "google": "Google",
-      "discord": "Discord"
-    },
-    "fields": {
-      "fname": {
-        "placeholder": "Prénom*",
-        "error": "Veuillez entrer votre prénom"
-      },
-      "lname": {
-        "placeholder": "Nom",
-        "error": "Veuillez entrer un nom valide"
-      },
-      "username": {
-        "placeholder": "Nom d'utilisateur*",
-        "error": "Veuillez saisir un nom d'utilisateur valide"
-      },
-      "password": {
-        "placeholder": "Entrez votre mot de passe*",
-        "error": "Veuillez entrer un mot de passe valide"
-      }
-    },
-    "buttons": {
-      "register": "Créer un compte"
-    },
-    "toasts": {
-      "googleError": "Nous n'avons pas pu vous connecter à Google pour le moment",
-      "discordError": "Nous n'avons pas pu vous connecter à Discord pour le moment",
-      "genericError": "Nous ne pouvons pas vous inscrire pour le moment"
-    }
-  },
   "app": {
     "agenda": "agenda",
     "scheduledTaskHome": "Planifié",
     "more": "Plus",
     "cancel": "Annuler",
     "save": "Enregistrer",
-    "clear": "Effacer",
     "clearSearch": "Effacer la recherche",
     "versionAvailableTitle": "Mise à jour disponible",
     "versionAvailableBody": "Une nouvelle version est prête à charger.",
@@ -260,12 +119,9 @@
     "day": "Jour",
     "week": "Semaine",
     "month": "Mois",
-    "year": "An",
     "duration": "Durée",
     "date": "Date",
     "durationMenu": {
-      "title": "Définir la durée",
-      "subTitle": "Appliqué à la date actuelle uniquement",
       "error": "Plage de dates invalide : l'heure de fin doit être après l'heure de début."
     },
     "priority": "Priorité",
@@ -298,15 +154,6 @@
     "everyYear": "Annuel",
     "weekdaysOnly": "Jours de semaine uniquement",
     "custom": "Personnalisé",
-    "customMenu": {
-      "title": "Répétition personnalisée",
-      "subTitle": "Configurer un calendrier de répétition personnalisé",
-      "every": "Tous les",
-      "on": "le",
-      "ends": "Se termine",
-      "never": "Jamais",
-      "onDate": "À la date (inclus)"
-    },
     "descPlaceholder": "description",
     "schedule": "Planifier",
     "scheduleOnHint": "La tâche a une échéance",
@@ -577,41 +424,6 @@
       "openPalette": "Palette de commandes",
       "showShortcuts": "Cet aperçu"
     }
-  },
-  "filterMenu": {
-    "sorting": "Tri",
-    "sort": "Trier",
-    "direction": "Direction",
-    "grouping": "Groupement",
-    "group": "Grouper",
-    "start Date": "Date de début",
-    "deadline": "Échéance",
-    "duration": "Durée",
-    "ascending": "Croissant",
-    "descending": "Décroissant",
-    "recurrence": "Récurrence",
-    "sortedBy": "Trié par",
-    "groupedBy": "Groupé par",
-    "none": "Aucun"
-  },
-  "projectMenu": {
-    "typeToSearch": "Taper pour rechercher",
-    "editColors": "Modifier les couleurs",
-    "red": "Rouge",
-    "orange": "Orange",
-    "yellow": "Jaune",
-    "lime": "Citron vert",
-    "blue": "Bleu",
-    "purple": "Violet",
-    "pink": "Rose",
-    "teal": "Sarcelle",
-    "coral": "Corail",
-    "gold": "Or",
-    "deepBlue": "Bleu profond",
-    "rose": "Rose",
-    "lightRed": "Rouge clair",
-    "brick": "Brique",
-    "slate": "Ardoise"
   },
   "scheduledTaskHome": {
     "tileScheduled": "Planifié",

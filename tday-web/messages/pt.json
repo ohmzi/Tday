@@ -1,77 +1,4 @@
 {
-  "landingPage": {
-    "nav": {
-      "docs": "Documentação",
-      "docsShort": "Docs",
-      "login": "Entrar"
-    },
-    "hero": {
-      "title": "T'Day",
-      "subtitle": "Um canivete suíço de planeamento pessoal — com um editor estilo Notion, carregamento de ficheiros encriptados ultra-secretos e muitos extras fantásticos!",
-      "readDocs": "Ler a documentação",
-      "start": "Começar"
-    },
-    "localizationTitle": "suporte total de localização para 11 idiomas",
-    "features": [
-      {
-        "tag": "01 / TAREFAS INTELIGENTES",
-        "title": "Processamento de linguagem natural",
-        "description": "Basta digitar as suas tarefas naturalmente. O nosso motor inteligente de NLP extrai automaticamente datas, horas e durações da sua escrita.",
-        "bullets": [
-          "Deteção instantânea de data e hora",
-          "Cálculo automático de duração",
-          "Agendamento inteligente de lembretes",
-          "Análise sensível ao contexto"
-        ]
-      },
-      {
-        "tag": "02 / VISUALIZAÇÃO",
-        "title": "Bela visualização de calendário",
-        "description": "Veja todas as suas tarefas num relance. O calendário integrado oferece uma visão clara do seu horário com indicadores visuais intuitivos.",
-        "bullets": [
-          "Visualizações mensal, semanal e diária",
-          "Categorias de tarefas codificadas por cores",
-          "Reagendamento por arrastar e soltar",
-          "Deteção de conflitos"
-        ]
-      },
-      {
-        "tag": "03 / NOTAS RICAS",
-        "title": "Editor estilo Notion",
-        "description": "Registe os seus pensamentos com um editor poderoso e sem distrações. Formate texto, incorpore media e organize as suas ideias sem esforço.",
-        "bullets": [
-          "Suporte para Markdown",
-          "Formatação de texto rico",
-          "Destaque de sintaxe em blocos de código",
-          "Listas de marcas aninhadas"
-        ]
-      },
-      {
-        "tag": "04 / SEGURANÇA",
-        "title": "Armazenamento encriptado de ponta a ponta",
-        "description": "Os seus ficheiros estão protegidos com encriptação de nível militar. Guarde documentos, imagens e anexos com total tranquilidade.",
-        "bullets": [
-          "Encriptação AES-256",
-          "Arquitetura de conhecimento zero",
-          "Partilha segura de ficheiros",
-          "Cópias de segurança automáticas"
-        ]
-      }
-    ],
-    "securityDemo": {
-      "title": "Passkey",
-      "subtitle": "Precisamos da sua passkey para desencriptar os seus ficheiros",
-      "enter": "Entrar"
-    },
-    "errors": {
-      "fallback": "Algo correu mal, mas não se preocupe, enviámos um relatório de erro."
-    },
-    "footer": {
-      "privacyPolicy": "Política de Privacidade",
-      "termsOfService": "Termos de Serviço",
-      "heroSubtitle": "A plataforma inteligente de gestão de tarefas construída para os não tão sãos."
-    }
-  },
   "terms": {
     "title": "Termos de Serviço",
     "lastUpdated": "Última atualização: 19 de janeiro de 2026",
@@ -173,80 +100,12 @@
       }
     }
   },
-  "login": {
-    "title": "Login",
-    "oauth": {
-      "orLogInWith": "ou entre com",
-      "google": "Google",
-      "discord": "Discord"
-    },
-    "fields": {
-      "username": {
-        "placeholder": "Nome de usuário*",
-        "error": "Insira um nome de usuário válido"
-      },
-      "password": {
-        "placeholder": "Introduza a sua palavra-passe*",
-        "error": "Por favor introduza uma palavra-passe válida"
-      }
-    },
-    "showPassword": "Mostrar palavra-passe",
-    "hidePassword": "Ocultar palavra-passe",
-    "registerPrompt": "Não tem uma conta?",
-    "registerLink": "Registar",
-    "buttons": {
-      "login": "Login"
-    },
-    "toasts": {
-      "googleError": "Não foi possível iniciar sessão no Google de momento",
-      "discordError": "Não foi possível iniciar sessão no Discord de momento",
-      "invalidCredentials": "Nome de usuário ou senha incorretos",
-      "genericError": "Não é possível iniciar sessão de momento"
-    }
-  },
-  "register": {
-    "title": "Criar uma conta",
-    "loginPrompt": "Já tem uma conta?",
-    "loginLink": "Login",
-    "oauth": {
-      "orRegisterWith": "ou registe-se com",
-      "google": "Google",
-      "discord": "Discord"
-    },
-    "fields": {
-      "fname": {
-        "placeholder": "Primeiro Nome*",
-        "error": "Por favor introduza o seu primeiro nome"
-      },
-      "lname": {
-        "placeholder": "Apelido",
-        "error": "Por favor introduza um apelido válido"
-      },
-      "username": {
-        "placeholder": "Nome de usuário*",
-        "error": "Insira um nome de usuário válido"
-      },
-      "password": {
-        "placeholder": "Introduza a sua palavra-passe*",
-        "error": "Por favor introduza uma palavra-passe válida"
-      }
-    },
-    "buttons": {
-      "register": "Criar uma Conta"
-    },
-    "toasts": {
-      "googleError": "Não foi possível iniciar sessão no Google de momento",
-      "discordError": "Não foi possível iniciar sessão no Discord de momento",
-      "genericError": "Não é possível registar-se de momento"
-    }
-  },
   "app": {
     "agenda": "agenda",
     "scheduledTaskHome": "Agendado",
     "more": "Mais",
     "cancel": "Cancelar",
     "save": "Guardar",
-    "clear": "Limpar",
     "clearSearch": "Limpar pesquisa",
     "versionAvailableTitle": "Atualização disponível",
     "versionAvailableBody": "Uma nova versão está pronta para carregar.",
@@ -260,12 +119,9 @@
     "day": "Dia",
     "week": "Semana",
     "month": "Mês",
-    "year": "Ano",
     "duration": "Duração",
     "date": "Data",
     "durationMenu": {
-      "title": "Definir duração",
-      "subTitle": "Aplicado apenas à data atual",
       "error": "Intervalo de datas inválido: A hora de fim deve ser após a hora de início."
     },
     "priority": "Prioridade",
@@ -298,15 +154,6 @@
     "everyYear": "Anual",
     "weekdaysOnly": "Apenas dias úteis",
     "custom": "Personalizado",
-    "customMenu": {
-      "title": "Repetição Personalizada",
-      "subTitle": "Configurar um plano de repetição personalizado",
-      "every": "A cada",
-      "on": "em",
-      "ends": "Termina",
-      "never": "Nunca",
-      "onDate": "Na Data (inclusive)"
-    },
     "descPlaceholder": "descrição",
     "schedule": "Agendar",
     "scheduleOnHint": "A tarefa tem data de vencimento",
@@ -577,41 +424,6 @@
       "openPalette": "Paleta de comandos",
       "showShortcuts": "Este resumo"
     }
-  },
-  "filterMenu": {
-    "sorting": "Ordenação",
-    "sort": "Ordenar",
-    "direction": "Direção",
-    "grouping": "Agrupamento",
-    "group": "Agrupar",
-    "start Date": "Data de Início",
-    "deadline": "Prazo",
-    "duration": "Duração",
-    "ascending": "Ascendente",
-    "descending": "Descendente",
-    "recurrence": "Recorrência",
-    "sortedBy": "Ordenado por",
-    "groupedBy": "Agrupado por",
-    "none": "Nenhum"
-  },
-  "projectMenu": {
-    "typeToSearch": "Digite para pesquisar",
-    "editColors": "Editar Cores",
-    "red": "Vermelho",
-    "orange": "Laranja",
-    "yellow": "Amarelo",
-    "lime": "Lima",
-    "blue": "Azul",
-    "purple": "Roxo",
-    "pink": "Rosa",
-    "teal": "Cerceta",
-    "coral": "Coral",
-    "gold": "Ouro",
-    "deepBlue": "Azul Profundo",
-    "rose": "Rosa",
-    "lightRed": "Vermelho Claro",
-    "brick": "Tijolo",
-    "slate": "Ardosia"
   },
   "scheduledTaskHome": {
     "tileScheduled": "Agendado",

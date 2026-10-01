@@ -1,27 +1,4 @@
 import { z } from "zod";
-export const registrationSchema = z.object({
-  fname: z
-    .string({ message: "name cannot be left empty" })
-    .trim()
-    .min(2, { message: "first name is atleast two characters" }),
-  lname: z.string().optional(),
-  username: z
-    .string({ message: "username cannot be left empty" })
-    .trim()
-    .toLowerCase()
-    .regex(/^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$/, {
-      message: "username is incorrect",
-    }),
-  password: z
-    .string({ message: "password cannot be empty" })
-    .min(8, { message: "password cannot be smaller than 8" })
-    .regex(/[A-Z]/, {
-      message: "password must have at least one uppercase letter",
-    })
-    .regex(/[\W_]/, {
-      message: "password must have at least one special character",
-    }),
-});
 
 export const todoSchema = z.object({
   title: z
@@ -115,22 +92,4 @@ export const listCreateSchema = listBaseSchema.pick({
   iconKey: z.string().trim().min(1).max(64).optional(),
   reusable: z.boolean().optional(),
   defaultPriority: z.enum(["Lowest", "Low", "Medium", "High"]).nullable().optional(),
-});
-
-export type ListColorType = (typeof listColorValues)[number];
-
-export const listPatchSchema = listBaseSchema.partial().extend({
-  name: z
-    .string({ message: "title cannot be left empty" })
-    .trim()
-    .min(1, { message: "title cannot be left empty" })
-    .optional(),
-  color: z.enum(listColorValues).optional(),
-  iconKey: z.string().trim().min(1).max(64).optional(),
-});
-
-export const userPreferencesSchema = z.object({
-  sortBy: z.enum(["due", "priority"]).nullable().optional(),
-  groupBy: z.enum(["due", "priority", "rrule", "list"]).nullable().optional(),
-  direction: z.enum(["Ascending", "Descending"]).nullable().optional(),
 });

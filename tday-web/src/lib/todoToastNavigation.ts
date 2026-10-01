@@ -52,11 +52,3 @@ export function getTodoDateSectionId(dayKey: string) {
 export function isTodoFocusDateKey(value: string | null | undefined): value is string {
   return Boolean(value && FOCUS_DATE_KEY_PATTERN.test(value));
 }
-
-export function formatTodoFocusDateLabel(dayKey: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(`${dayKey}T12:00:00`));
-}

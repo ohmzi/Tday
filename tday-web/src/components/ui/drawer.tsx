@@ -96,8 +96,8 @@ const Drawer = ({
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => {
   // vaul's root can be driven or left to itself, and the registry has to be
-  // right either way — `CustomRepeatDrawer` opens from a `DrawerTrigger` and
-  // passes no flag at all. Mirror every change vaul reports and defer to the
+  // right either way — a drawer can open from a `DrawerTrigger` and
+  // pass no flag at all. Mirror every change vaul reports and defer to the
   // caller's flag whenever there is one; `open` still goes to vaul untouched, so
   // which of the two is in charge is vaul's decision, not a second one made here.
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen ?? false);
@@ -130,8 +130,6 @@ Drawer.displayName = "Drawer"
 const DrawerTrigger = DrawerPrimitive.Trigger
 
 const DrawerPortal = DrawerPrimitive.Portal
-
-const DrawerClose = DrawerPrimitive.Close
 
 /**
  * Whether this scrim is the one dimming the page, or a second one over a page
@@ -382,7 +380,6 @@ DrawerDescription.displayName = DrawerPrimitive.Description.displayName
 export {
   Drawer,
   DrawerTrigger,
-  DrawerClose,
   DrawerContent,
   DrawerHeader,
   DrawerFooter,

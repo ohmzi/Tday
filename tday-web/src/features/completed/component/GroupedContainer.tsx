@@ -1,5 +1,4 @@
 import { CompletedTodoItemType } from "@/types";
-import React from "react";
 import { CompletedTodoItemContainer } from "./ItemContainer";
 import { useLocale } from "@/lib/navigation";
 

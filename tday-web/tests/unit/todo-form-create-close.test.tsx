@@ -126,18 +126,10 @@ vi.mock("@/features/guide/GuideHelpLink", () => ({
   GuideHelpLink: () => <div data-testid="guide-help-link" />,
 }));
 
-vi.mock("@/components/todo/component/TodoForm/ListDropdownMenu", () => ({
-  default: () => <div data-testid="todo-list-dropdown" />,
-}));
-
 vi.mock("@/components/ui/button", () => ({
   Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
   ),
-}));
-
-vi.mock("@/components/ui/lineSeparator", () => ({
-  default: () => <div data-testid="line-separator" />,
 }));
 
 import TodoForm from "@/components/todo/component/TodoForm/TodoForm";

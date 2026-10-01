@@ -116,11 +116,6 @@ export interface overridingInstance {
   overriddenPriority: "Lowest" | "Low" | "Medium" | "High" | null;
 }
 
-export interface recurringTodoItemType extends TodoItemType {
-  rrule: string;
-  instances: overridingInstance[];
-}
-
 export interface TodoApiItemType extends Omit<TodoItemType, "due"> {
   due: Date | null;
 }

@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { readFileSync } from "fs";
 import path from "path";
-import React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -185,7 +184,7 @@ describe("a drawer scrim over a drawer scrim", () => {
   });
 
   it("counts a drawer that opens from its own trigger", () => {
-    // `CustomRepeatDrawer` passes no open flag at all — it opens from a
+    // A drawer can pass no open flag at all — it opens from a
     // DrawerTrigger and lets vaul hold the state. The registry has to hear about
     // those too, or a confirm sheet over one would dim a page that is already dim.
     //

@@ -164,10 +164,27 @@ export function decodeNotesToHtml(value: string | null | undefined): string {
 // the editor (list rows, search, share text): real markup never leaks out,
 // but list bullets/numbers are kept as plain-text prefixes so the structure
 // still reads.
+//
+// The rich branch parses twice (`sanitizeHtml` then `htmlToPlainText`, each a
+// `DOMParser`) and runs for every task on every search keystroke, so its result
+// is memoized by the raw saved string. The function is pure, so a hit is always
+// the answer a fresh parse would give; the map is bounded (oldest entry out
+// first) so a long session cannot grow it without limit.
+const FLATTENED_NOTES_CACHE = new Map<string, string>();
+const FLATTENED_NOTES_CACHE_MAX = 500;
+
 export function flattenNotesToPlainText(value: string | null | undefined): string {
   if (!value) return "";
   if (isRichNotes(value)) {
-    return htmlToPlainText(sanitizeHtml(value.slice(RICH_NOTES_MARKER.length)));
+    const cached = FLATTENED_NOTES_CACHE.get(value);
+    if (cached !== undefined) return cached;
+    const flattened = htmlToPlainText(sanitizeHtml(value.slice(RICH_NOTES_MARKER.length)));
+    if (FLATTENED_NOTES_CACHE.size >= FLATTENED_NOTES_CACHE_MAX) {
+      const oldest = FLATTENED_NOTES_CACHE.keys().next();
+      if (!oldest.done) FLATTENED_NOTES_CACHE.delete(oldest.value);
+    }
+    FLATTENED_NOTES_CACHE.set(value, flattened);
+    return flattened;
   }
   return value;
 }

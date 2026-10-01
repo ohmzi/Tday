@@ -594,7 +594,7 @@ describe("motion reachability E — motion in a module nothing imports", () => {
    *
    * Note what is NOT in scope here: a module that is dead but declares no motion. That is a
    * dead-code question and this file only answers motion ones, which is why deleting the
-   * eleven below left `SidebarToggleContainer.tsx` and `carousel.tsx` where they are.
+   * eleven below once left two motion-free dead modules in place (since removed as dead code).
    */
   const ORPHANED_MOTION_ALLOWLIST: string[] = [];
 

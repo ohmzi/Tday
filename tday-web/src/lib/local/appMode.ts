@@ -59,14 +59,6 @@ export function setAppMode(mode: AppMode | null): void {
   notify();
 }
 
-/** Re-reads the flag from storage — used by tests and cross-tab `storage` events. */
-export function refreshAppMode(): void {
-  const next = readStoredMode();
-  if (next === currentMode) return;
-  currentMode = next;
-  notify();
-}
-
 export function subscribeToAppMode(listener: Listener): () => void {
   listeners.add(listener);
   return () => {

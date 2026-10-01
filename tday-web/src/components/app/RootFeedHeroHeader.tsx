@@ -125,15 +125,7 @@ function titleRooms(availableWidth: number) {
 
 export type RootFeedHeroMark = "timeOfDay" | "floaterLeaf";
 
-/**
- * The app's search field, in its open state. The root feeds fold theirs down
- * into a round button and so own the width themselves; anywhere else — the
- * guide — takes the chrome as-is at full width, so the two read as one control.
- */
-export const tdaySearchCapsuleClass =
-  "flex items-center gap-2 overflow-hidden rounded-full border border-white/70 bg-card/90 px-3 shadow-[0_14px_30px_-16px_hsl(var(--shadow)/0.6)] dark:border-white/10";
-
-/** Its inner parts, so a second field cannot drift from the first. */
+/** The inner parts of the app's search field, so a second field cannot drift from the first. */
 export const tdaySearchCapsuleIconClass = "h-5 w-5 shrink-0 text-muted-foreground";
 export const tdaySearchCapsuleInputClass =
   "h-full min-w-0 flex-1 bg-transparent text-base font-extrabold text-foreground outline-none placeholder:text-muted-foreground/50 md:text-sm";

@@ -1,7 +1,4 @@
-import {
-  LIST_ICON_EMITTABLE_KEYS,
-  LIST_ICON_KEY_BY_KEYWORD,
-} from "@/generated/list-icon-table";
+import { LIST_ICON_KEY_BY_KEYWORD } from "@/generated/list-icon-table";
 
 /**
  * Guesses a list's glyph from its name, for lists whose owner never picked one.
@@ -32,11 +29,6 @@ import {
  * default. Two DIFFERENT keys matching is also unsure — "Work Travel" gets nothing
  * rather than a coin toss decided by reading order.
  */
-
-/** Every key the table can emit, for the parity gate and for callers that validate. */
-export const inferableListIconKeys: ReadonlySet<string> = new Set(
-  LIST_ICON_EMITTABLE_KEYS,
-);
 
 /**
  * The title cut into lowercase alphanumeric runs.

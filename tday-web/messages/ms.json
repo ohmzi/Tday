@@ -1,77 +1,4 @@
 {
-  "landingPage": {
-    "nav": {
-      "docs": "Dokumentasi",
-      "docsShort": "Dokumen",
-      "login": "Log masuk"
-    },
-    "hero": {
-      "title": "T'Day",
-      "subtitle": "Pisau tentera Swiss untuk perancangan peribadi — dengan editor gaya Notion, muat naik fail disulitkan rahsia besar, dan pelbagai tambahan menarik!",
-      "readDocs": "Baca dokumentasi",
-      "start": "Mulakan"
-    },
-    "localizationTitle": "sokongan penyetempatan penuh untuk 11 bahasa",
-    "features": [
-      {
-        "tag": "01 / TUGASAN PINTAR",
-        "title": "Pemprosesan bahasa semula jadi",
-        "description": "Hanya taip tugasan anda secara semula jadi. Enjin NLP pintar kami secara automatik mengekstrak tarikh, masa, dan tempoh daripada input anda.",
-        "bullets": [
-          "Pengesanan tarikh dan masa segera",
-          "Pengiraan tempoh automatik",
-          "Penjadualan peringatan pintar",
-          "Penghuraian mengikut konteks"
-        ]
-      },
-      {
-        "tag": "02 / VISUALISASI",
-        "title": "Paparan kalendar yang cantik",
-        "description": "Lihat semua tugasan anda dengan sekali imbas. Kalendar bersepadu memberikan gambaran jelas tentang jadual anda dengan penunjuk visual yang intuitif.",
-        "bullets": [
-          "Paparan bulanan, mingguan, dan harian",
-          "Kategori tugasan berkod warna",
-          "Penjadualan semula seret-dan-lepas",
-          "Pengesanan konflik"
-        ]
-      },
-      {
-        "tag": "03 / NOTA KAYA",
-        "title": "Editor gaya Notion",
-        "description": "Rakam pemikiran anda dengan editor yang berkuasa dan bebas gangguan. Format teks, benam media, dan atur idea anda dengan mudah.",
-        "bullets": [
-          "Sokongan Markdown",
-          "Format teks kaya",
-          "Sorotan sintaks blok kod",
-          "Senarai peluru bersarang"
-        ]
-      },
-      {
-        "tag": "04 / KESELAMATAN",
-        "title": "Simpanan disulitkan hujung-ke-hujung",
-        "description": "Fail anda dilindungi dengan penyulitan gred tentera. Simpan dokumen, imej, dan lampiran dengan ketenangan fikiran sepenuhnya.",
-        "bullets": [
-          "Penyulitan AES-256",
-          "Seni bina pengetahuan-sifar",
-          "Perkongsian fail selamat",
-          "Sandaran automatik"
-        ]
-      }
-    ],
-    "securityDemo": {
-      "title": "Passkey",
-      "subtitle": "Kami memerlukan passkey anda untuk menyahsulit fail anda",
-      "enter": "Masuk"
-    },
-    "errors": {
-      "fallback": "Sesuatu telah berlaku, tetapi jangan risau, kami telah menghantar laporan ralat."
-    },
-    "footer": {
-      "privacyPolicy": "Dasar Privasi",
-      "termsOfService": "Syarat Perkhidmatan",
-      "heroSubtitle": "Platform pengurusan tugasan pintar yang dibina untuk mereka yang mencabar kewarasan."
-    }
-  },
   "terms": {
     "title": "Syarat Perkhidmatan",
     "lastUpdated": "Terakhir dikemas kini: 19 Januari 2026",
@@ -173,80 +100,12 @@
       }
     }
   },
-  "login": {
-    "title": "Log masuk",
-    "oauth": {
-      "orLogInWith": "atau log masuk dengan",
-      "google": "Google",
-      "discord": "Discord"
-    },
-    "fields": {
-      "username": {
-        "placeholder": "Nama pengguna*",
-        "error": "Sila masukkan nama pengguna yang sah"
-      },
-      "password": {
-        "placeholder": "Masukkan kata laluan anda*",
-        "error": "Sila masukkan kata laluan yang sah"
-      }
-    },
-    "showPassword": "Tunjuk kata laluan",
-    "hidePassword": "Sembunyi kata laluan",
-    "registerPrompt": "Tidak mempunyai akaun?",
-    "registerLink": "Daftar",
-    "buttons": {
-      "login": "Log masuk"
-    },
-    "toasts": {
-      "googleError": "Kami tidak dapat melog masuk anda ke Google pada masa ini",
-      "discordError": "Kami tidak dapat melog masuk anda ke Discord pada masa ini",
-      "invalidCredentials": "Nama pengguna atau kata laluan salah",
-      "genericError": "Kami tidak dapat melog masuk anda pada masa ini"
-    }
-  },
-  "register": {
-    "title": "Cipta akaun",
-    "loginPrompt": "Sudah mempunyai akaun?",
-    "loginLink": "Log masuk",
-    "oauth": {
-      "orRegisterWith": "atau daftar dengan",
-      "google": "Google",
-      "discord": "Discord"
-    },
-    "fields": {
-      "fname": {
-        "placeholder": "Nama Pertama*",
-        "error": "Sila masukkan nama pertama anda"
-      },
-      "lname": {
-        "placeholder": "Nama Belakang",
-        "error": "Sila masukkan nama belakang yang sah"
-      },
-      "username": {
-        "placeholder": "Nama pengguna*",
-        "error": "Sila masukkan nama pengguna yang sah"
-      },
-      "password": {
-        "placeholder": "Masukkan kata laluan anda*",
-        "error": "Sila masukkan kata laluan yang sah"
-      }
-    },
-    "buttons": {
-      "register": "Cipta Akaun"
-    },
-    "toasts": {
-      "googleError": "Kami tidak dapat melog masuk anda ke Google pada masa ini",
-      "discordError": "Kami tidak dapat melog masuk anda ke Discord pada masa ini",
-      "genericError": "Kami tidak dapat mendaftarkan anda pada masa ini"
-    }
-  },
   "app": {
     "agenda": "agenda",
     "scheduledTaskHome": "Dijadualkan",
     "more": "Lagi",
     "cancel": "Batal",
     "save": "Simpan",
-    "clear": "Kosongkan",
     "clearSearch": "Kosongkan carian",
     "versionAvailableTitle": "Kemas kini tersedia",
     "versionAvailableBody": "Versi baharu sedia dimuatkan.",
@@ -260,12 +119,9 @@
     "day": "Hari",
     "week": "Minggu",
     "month": "Bulan",
-    "year": "Tahun",
     "duration": "Tempoh",
     "date": "Tarikh",
     "durationMenu": {
-      "title": "Tetapkan tempoh",
-      "subTitle": "Digunakan untuk tarikh semasa sahaja",
       "error": "Julat tarikh tidak sah: Masa tamat mestilah selepas masa mula."
     },
     "priority": "Keutamaan",
@@ -298,15 +154,6 @@
     "everyYear": "Tahunan",
     "weekdaysOnly": "Hari bekerja sahaja",
     "custom": "Tersuai",
-    "customMenu": {
-      "title": "Ulang Tersuai",
-      "subTitle": "Tetapkan jadual ulang tersuai",
-      "every": "Setiap",
-      "on": "pada",
-      "ends": "Tamat",
-      "never": "Tidak pernah",
-      "onDate": "Pada Tarikh (inklusif)"
-    },
     "descPlaceholder": "keterangan",
     "schedule": "Jadualkan",
     "scheduleOnHint": "Tugas mempunyai tarikh akhir",
@@ -577,41 +424,6 @@
       "openPalette": "Palet perintah",
       "showShortcuts": "Ringkasan ini"
     }
-  },
-  "filterMenu": {
-    "sorting": "Isihan",
-    "sort": "Isih",
-    "direction": "Arah",
-    "grouping": "Pengelompokan",
-    "group": "Kumpul",
-    "start Date": "Tarikh Mula",
-    "deadline": "Tarikh Akhir",
-    "duration": "Tempoh",
-    "ascending": "Menaik",
-    "descending": "Menurun",
-    "recurrence": "Ulangan",
-    "sortedBy": "Diisih mengikut",
-    "groupedBy": "Dikumpul mengikut",
-    "none": "Tiada"
-  },
-  "projectMenu": {
-    "typeToSearch": "Taip untuk cari",
-    "editColors": "Edit Warna",
-    "red": "Merah",
-    "orange": "Oren",
-    "yellow": "Kuning",
-    "lime": "Limau",
-    "blue": "Biru",
-    "purple": "Ungu",
-    "pink": "Merah Jambu",
-    "teal": "Teal",
-    "coral": "Koral",
-    "gold": "Emas",
-    "deepBlue": "Biru Tua",
-    "rose": "Ros",
-    "lightRed": "Merah Muda",
-    "brick": "Bata",
-    "slate": "Slat"
   },
   "scheduledTaskHome": {
     "tileScheduled": "Dijadualkan",
