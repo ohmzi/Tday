@@ -86,6 +86,25 @@ internal data class WidgetSnapshot(
      * user's own text, not a localized string, so it is safe to bake where the Today title is not.
      */
     val listName: String? = null,
+    /**
+     * List widget only: the list's icon key as the cache has it now, so changing a list's icon
+     * reaches its widget's watermark on the next write. An opaque enum-like key, not user text, so
+     * it is safe to bake — and safe where [listName] is not, since the key alone names no list.
+     * Defaulted so a snapshot written before this existed still decodes; the watermark then falls
+     * back to the name-inferred glyph (see `listWidgetVisualsFor`) rather than going blank.
+     */
+    val listIconKey: String? = null,
+    /**
+     * List widget only: the colour KEY the user gave that list ("PINK", "TEAL", …) — never a
+     * resolved hex. A key is opaque and enum-like, so it is safe to bake and is resolved per theme
+     * at render time through the app's own list-colour table (see `widgetListAccentFor`); a hex
+     * baked here would freeze the widget on whichever theme was active at the last cache write.
+     *
+     * Defaulted so a snapshot written before this field existed still decodes — such a snapshot
+     * reports no colour and the widget falls back to its KIND's accent, which is what those
+     * widgets showed anyway, rather than rendering a wrong colour.
+     */
+    val listColorKey: String? = null,
     /** List widget only: the chosen list no longer exists; the widget asks for another. */
     val listMissing: Boolean = false,
 )

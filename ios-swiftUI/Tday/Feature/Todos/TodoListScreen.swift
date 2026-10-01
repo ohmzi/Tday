@@ -265,17 +265,12 @@ private enum EmptyStateIllustrationLayout {
 /// is still holding, and Snappy's 0.86 lets that gap overshoot visibly.
 private let todoDropPlaceholderAnimation = Animation.spring(response: 0.28, dampingFraction: 0.88, blendDuration: 0.02)
 
-private func isTodoRootDaytime(_ date: Date) -> Bool {
-    let hour = Calendar.current.component(.hour, from: date)
-    return (6..<18).contains(hour)
-}
-
 private func todoTimeOfDaySystemImage(for date: Date) -> String {
-    isTodoRootDaytime(date) ? "sun.max.fill" : "moon.stars.fill"
+    TdayTimeOfDay.isDaytime(date) ? "sun.max.fill" : "moon.stars.fill"
 }
 
 private func todoTimeOfDayIconColor(for date: Date) -> Color {
-    todoHexColor(isTodoRootDaytime(date) ? 0xF4C542 : 0xA8B8E8)
+    todoHexColor(TdayTimeOfDay.isDaytime(date) ? 0xF4C542 : 0xA8B8E8)
 }
 
 private func normalizedTodoSearchQuery(_ value: String) -> String {
@@ -1222,8 +1217,18 @@ struct TodoListScreen: View {
         showsListSearch && !normalizedListSearchQuery.isEmpty
     }
 
+    /// The scope the magnifier is searching, named the way the hero above it names
+    /// itself — so "Search in Tonight" sits under a hero that says Tonight, rather
+    /// than the two disagreeing about what screen this is.
+    ///
+    /// This one reads the clock at body-evaluation time rather than inside a
+    /// `TimelineView` like the hero does, because the result is baked into a single
+    /// formatted sentence rather than drawn as a word. That costs nothing real: the
+    /// placeholder is only visible while the field is up, and opening the field
+    /// flips `listSearchExpanded` and re-runs this pass. The hero is the surface
+    /// that has to be right without being touched, and it is.
     private var listSearchPlaceholder: String {
-        let name = (selectedListSummary?.name ?? viewModel.title)
+        let name = (selectedListSummary?.name ?? viewModel.resolvedTitle(at: Date()))
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return name.isEmpty ? L("Search") : L("Search in %@", name)
     }
@@ -1367,6 +1372,34 @@ struct TodoListScreen: View {
     /// there.
     private var showsEmptyStateIllustration: Bool {
         hasNoPendingItems && !isEarlierSectionExpanded && !suppressEmptyStateForEarlierHandoff
+    }
+
+    /// Whether the Day Done payoff — the completion haptic and the chime — is owed
+    /// right now.
+    ///
+    /// Split out of the illustration deliberately, and the split is the whole fix. The
+    /// payoff used to hang off the illustration's own `.onAppear`, which fires whenever
+    /// that view is INSERTED — and a view is inserted just as readily by arriving at a
+    /// Today that was already finished an hour ago as by finishing the last task while
+    /// looking at it. So opening the screen replayed a celebration the user had already
+    /// been given, which is the reported defect: a chime on open, earned by nothing.
+    ///
+    /// As a condition it can instead be watched for a CHANGE, and `.onChange(of:)`
+    /// without `initial:` does not fire on its first evaluation. Arriving already-done is
+    /// therefore silent, and the one case the payoff exists for — the last task going out
+    /// under the user's thumb — still fires, because that is a false→true transition
+    /// observed while the screen is mounted.
+    ///
+    /// The four leading terms mirror the illustration's own call site rather than
+    /// re-deriving it, so the payoff can never fire for a state the illustration is not
+    /// actually in.
+    private var showsDayDonePayoff: Bool {
+        showsEmptyStateIllustration
+            && pendingScopeAnswer == .empty
+            && !isFloaterTaskHomeScreen
+            && !isSearchingList
+            && viewModel.mode == .today
+            && viewModel.completedTodayCount > 0
     }
 
     /// This screen's half of the celebration gate: gather the inputs, and hand
@@ -1988,6 +2021,18 @@ struct TodoListScreen: View {
             closeFloaterTaskHomeSearch()
             showingCreateTask = true
         }
+        .onChange(of: showsDayDonePayoff) { _, owed in
+            guard owed else { return }
+            // Earlier folding shut hands the illustration back too (see
+            // `toggleEarlierSectionWithIllustrationHandoff`), and that return is not a
+            // fresh completion — it must not replay the payoff each time.
+            guard !suppressDayDoneFeedbackOnReturn else {
+                suppressDayDoneFeedbackOnReturn = false
+                return
+            }
+            HapticManager.completion()
+            SoundManager.taskCompleted()
+        }
         .onAppear {
             isScreenVisible = true
             onRootControlsVisibleChange(!(isFloaterTaskHomeScreen && floaterTaskHomeSearchExpanded))
@@ -2193,29 +2238,22 @@ struct TodoListScreen: View {
             TdayEmptyState(
                 assetName: "LucideCheckCheck",
                 accentColor: modeAccentColor,
-                title: L("All done for today"),
+                // `date` is the minute tick from `watermarkedModeContent`'s
+                // `TimelineView`, the same one the watermark's sun/moon is drawn
+                // from — so the payoff's wording crosses 18:00 with the glyph
+                // behind it and never a minute apart from it.
+                title: TdayTimeOfDay.isDaytime(date)
+                    ? L("All done for today")
+                    : L("All done for tonight"),
                 description: date.formatted(.dateTime.weekday(.wide).day().month(.wide)),
                 celebrate: celebratesEmptyState
             )
-            .onAppear {
-                // Earlier folding shut hands the illustration
-                // back too (see
-                // `toggleEarlierSectionWithIllustrationHandoff`),
-                // and that return is not a fresh completion —
-                // it must not replay the payoff each time.
-                guard !suppressDayDoneFeedbackOnReturn else {
-                    suppressDayDoneFeedbackOnReturn = false
-                    return
-                }
-                HapticManager.completion()
-                SoundManager.taskCompleted()
-            }
             .transition(emptyStateIllustrationTransition)
         } else {
             TdayEmptyState(
                 assetName: emptyStateAssetName,
                 accentColor: modeAccentColor,
-                title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen),
+                title: emptyTimelineTitle(for: viewModel.mode, isListDetail: isListDetailScreen, at: date),
                 description: emptyTimelineDescription(for: viewModel.mode, isListDetail: isListDetailScreen),
                 celebrate: celebratesEmptyState
             )
@@ -2272,6 +2310,7 @@ struct TodoListScreen: View {
     private var timelineTopInset: some View {
         if showsTimelineNavigationTopBar {
             let barTitle = viewModel.title
+            let barNightTitle = viewModel.nightTitle
             let barAccentColor = modeAccentColor
             let barActions = heroTopBarActions
             let barShowsTimeOfDayIcon = viewModel.mode == .today
@@ -2285,6 +2324,7 @@ struct TodoListScreen: View {
             TimelineCollapseProgressReader(scroll: timelineScroll) { progress in
                 TimelineTopBar(
                     title: barTitle,
+                    nightTitle: barNightTitle,
                     accentColor: barAccentColor,
                     collapseProgress: progress,
                     onBack: { dismiss() },
@@ -2340,6 +2380,7 @@ struct TodoListScreen: View {
     private var timelineHeroTitleRowBase: some View {
         // Read here and handed over by value, for the reason `timelineTopInset` gives.
         let rowTitle = viewModel.title
+        let rowNightTitle = viewModel.nightTitle
         let rowAccentColor = modeAccentColor
         let rowShowsTimeOfDayIcon = viewModel.mode == .today
         let rowMark = timelineHeroMark
@@ -2348,6 +2389,7 @@ struct TodoListScreen: View {
         return TimelineCollapseProgressReader(scroll: timelineScroll) { progress in
             TimelineExpandedTitleRow(
                 title: rowTitle,
+                nightTitle: rowNightTitle,
                 accentColor: rowAccentColor,
                 collapseProgress: rowPinnedExpanded ? 0 : progress,
                 showsTimeOfDayIcon: rowShowsTimeOfDayIcon,
@@ -4160,6 +4202,10 @@ struct TodoListScreen: View {
 
 struct TimelineTopBar: View {
     let title: String
+    /// Drawn instead of `title` after dark — see `TodoTimelineTitleLabel.nightTitle`,
+    /// which is where the clock is actually read. Only Today passes one; the six
+    /// other screens that wear this bar default it away.
+    let nightTitle: String?
     let accentColor: Color
     let collapseProgress: CGFloat
     let onBack: () -> Void
@@ -4191,6 +4237,7 @@ struct TimelineTopBar: View {
 
     init(
         title: String,
+        nightTitle: String? = nil,
         accentColor: Color,
         collapseProgress: CGFloat,
         onBack: @escaping () -> Void,
@@ -4211,6 +4258,7 @@ struct TimelineTopBar: View {
         onSelectionToggleAll: @escaping () -> Void = {}
     ) {
         self.title = title
+        self.nightTitle = nightTitle
         self.accentColor = accentColor
         self.collapseProgress = collapseProgress
         self.onBack = onBack
@@ -4250,6 +4298,7 @@ struct TimelineTopBar: View {
     private var titleContent: some View {
         TodoTimelineTitleLabel(
             title: title,
+            nightTitle: nightTitle,
             accentColor: accentColor,
             showsTimeOfDayIcon: showsTimeOfDayIcon
         )
@@ -4463,6 +4512,10 @@ struct TimelineTopBar: View {
 
 struct TimelineExpandedTitleRow: View {
     let title: String
+    /// Drawn instead of `title` after dark — see `TodoTimelineTitleLabel.nightTitle`.
+    /// The hero and the collapsed bar hand the pair to the same label, which is what
+    /// keeps the two halves of the collapse from reading differently mid-scroll.
+    let nightTitle: String?
     let accentColor: Color
     let collapseProgress: CGFloat
     let showsTimeOfDayIcon: Bool
@@ -4499,6 +4552,7 @@ struct TimelineExpandedTitleRow: View {
 
     init(
         title: String,
+        nightTitle: String? = nil,
         accentColor: Color,
         collapseProgress: CGFloat,
         showsTimeOfDayIcon: Bool = false,
@@ -4508,6 +4562,7 @@ struct TimelineExpandedTitleRow: View {
         markEchoColor: Color? = nil
     ) {
         self.title = title
+        self.nightTitle = nightTitle
         self.accentColor = accentColor
         self.collapseProgress = collapseProgress
         self.showsTimeOfDayIcon = showsTimeOfDayIcon
@@ -4559,6 +4614,7 @@ struct TimelineExpandedTitleRow: View {
 
             TodoTimelineTitleLabel(
                 title: title,
+                nightTitle: nightTitle,
                 accentColor: accentColor,
                 showsTimeOfDayIcon: showsTimeOfDayIcon
             )
@@ -4635,8 +4691,24 @@ struct TimelineExpandedTitleRow: View {
 
 private struct TodoTimelineTitleLabel: View {
     let title: String
+    /// The title to draw after dark instead of `title`, or nil for a screen whose
+    /// name does not follow the clock.
+    ///
+    /// This is why the choice is made HERE and not by the screen that owns the
+    /// title: the `TimelineView` below already exists to redraw the sun/moon every
+    /// minute, so resolving the word in the same closure off the same `context.date`
+    /// is what makes "Today under a moon" unrepresentable. Resolved anywhere
+    /// upstream it would be a second read of the clock, taken at a different
+    /// moment, that nothing re-runs at 18:00 while the screen sits open — which is
+    /// exactly the bug `TodoListViewModel.title` has as a stored property.
+    let nightTitle: String?
     let accentColor: Color
     let showsTimeOfDayIcon: Bool
+
+    private func resolvedTitle(at date: Date) -> String {
+        guard let nightTitle, !TdayTimeOfDay.isDaytime(date) else { return title }
+        return nightTitle
+    }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
@@ -4647,7 +4719,7 @@ private struct TodoTimelineTitleLabel: View {
                         .foregroundStyle(todoTimeOfDayIconColor(for: context.date))
                 }
 
-                Text(title)
+                Text(resolvedTitle(at: context.date))
                     .font(.tdayRounded(size: TodoTimelineMetrics.heroTitleSize, weight: .heavy))
                     .foregroundStyle(accentColor)
                     .lineLimit(1)
@@ -6664,10 +6736,15 @@ func priorityIndicatorSymbolName(_ priority: String) -> String? {
     return nil
 }
 
-private func emptyTimelineMessage(for mode: TodoListMode) -> String {
+/// Today's line follows the clock for the same reason its title does — the sun
+/// behind this very scene has already become a moon by then, and "No tasks for
+/// today" under a moon reads as yesterday's screen. `date` is the caller's minute
+/// tick (`watermarkedModeContent`'s `TimelineView`), not a fresh `Date()`, so the
+/// sentence and the watermark cross the boundary on the same frame.
+private func emptyTimelineMessage(for mode: TodoListMode, at date: Date = Date()) -> String {
     switch mode {
     case .today:
-        return L("No tasks for today")
+        return TdayTimeOfDay.isDaytime(date) ? L("No tasks for today") : L("No tasks for tonight")
     case .overdue:
         return L("No overdue tasks")
     case .scheduled:
@@ -6685,11 +6762,11 @@ private func emptyTimelineMessage(for mode: TodoListMode) -> String {
 
 /// The empty scene's title. Floater splits on whether a list is open: the root
 /// feed speaks about floaters at large, a list about its own.
-private func emptyTimelineTitle(for mode: TodoListMode, isListDetail: Bool) -> String {
+private func emptyTimelineTitle(for mode: TodoListMode, isListDetail: Bool, at date: Date = Date()) -> String {
     if mode == .floater, isListDetail {
         return L("No floaters in this list")
     }
-    return emptyTimelineMessage(for: mode)
+    return emptyTimelineMessage(for: mode, at: date)
 }
 
 /// The line under it — what to do about the emptiness, phrased per screen so an
@@ -6800,41 +6877,19 @@ private func todoModeAccentColor(_ mode: TodoListMode, listColorKey: String?) ->
     }
 }
 
+/// The list accent for a colour key, as every list-bearing screen draws it.
+///
+/// A thin name over `tdayListAccentColor(colorKey:)` rather than a table of its own. It used to
+/// carry its own copy of all fifteen values plus the two legacy aliases, and so did the Scheduled
+/// board's swatch picker, and so does the widget — three transcriptions of one palette, which is
+/// three chances for a list to be one colour in the app and another on the home screen. The shared
+/// table is the one the widget extension compiles, so this is now the same answer by construction
+/// instead of by a test refereeing three copies.
+///
+/// Kept as a function rather than replaced at its call sites because the name says WHAT is being
+/// asked for at thirty-odd of them, and `for:` reads better there than `colorKey:`.
 func todoListAccentColor(for key: String?) -> Color {
-    switch key {
-    case "PINK":
-        return todoHexColor(0xE05299)
-    case "GOLD":
-        return todoHexColor(0xE8A530)
-    case "DEEP_BLUE":
-        return todoHexColor(0x3C9ADD)
-    case "CORAL":
-        return todoHexColor(0xE6664C)
-    case "TEAL":
-        return todoHexColor(0x2EB8AC)
-    case "SLATE", "GRAY":
-        return todoHexColor(0x3E4774)
-    case "BLUE":
-        return todoHexColor(0x6EA8E1)
-    case "PURPLE":
-        return todoHexColor(0x7D67B6)
-    case "ROSE":
-        return todoHexColor(0xD1617D)
-    case "LIGHT_RED":
-        return todoHexColor(0xE06C6C)
-    case "BRICK":
-        return todoHexColor(0xC64C39)
-    case "YELLOW":
-        return todoHexColor(0xE8BA30)
-    case "LIME", "GREEN":
-        return todoHexColor(0x46B963)
-    case "ORANGE":
-        return todoHexColor(0xE28736)
-    case "RED":
-        return todoHexColor(0xDF3A3A)
-    default:
-        return todoHexColor(0xE05299)
-    }
+    tdayListAccentColor(colorKey: key)
 }
 
 private func todoBlendColor(_ lhs: Color, _ rhs: Color, amount: CGFloat) -> Color {

@@ -231,7 +231,7 @@ internal class WidgetListPickerViewModel @Inject constructor(
     fun selectList(appWidgetId: Int, option: WidgetListOption, onDone: () -> Unit) {
         WidgetListSelectionStore(appContext).setSelection(
             appWidgetId,
-            WidgetListSelection(option.id, option.type, option.name),
+            WidgetListSelection(option.id, option.type, option.name, option.iconKey, option.colorKey),
         )
         viewModelScope.launch {
             runCatching {

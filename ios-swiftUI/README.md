@@ -134,9 +134,12 @@ decodes schema version 3 snapshots and keeps a legacy fallback for older payload
 - Medium and large layouts show the title, neutral count text, a mode-accented native plus icon add
   target, and dense scan-first rows; compact layouts stay count-first and prioritize task titles
   over due-time detail.
-- All widget states keep a subtle oversized Today/Floater watermark in the background; the Today
-  watermark follows the app title icon rule, showing the sun from 6 AM to 5:59 PM and the moon at
-  night. Empty and setup states add centered message text over that persistent motif.
+- All widget states keep a subtle oversized watermark in the background, drawn from the shared Lucide
+  set (`docs/ICONS.md`) rather than SF Symbols, since a list's own glyph can only come from there and
+  one widget cannot carry two drawing styles. Whole-feed widgets show their feed's mark — Today
+  follows the app title icon rule, sun from 6 AM to 5:59 PM and moon at night; Floater is always the
+  leaf. A widget scoped to one list shows THAT list's glyph instead. Empty and setup states add
+  centered message text over that persistent motif.
 - Tapping Today widget content opens the app; tapping Floater widget content opens the Floater root.
 - The add actions open `tday://todos/create?target=today` or
   `tday://todos/create?target=floater`, select the matching root feed, and immediately start the
@@ -150,8 +153,17 @@ decodes schema version 3 snapshots and keeps a legacy fallback for older payload
 
 Widget UI should keep using system WidgetKit margins/backgrounds, removable container backgrounds, and
 tinted/accented rendering support while carrying T'Day identity through rounded typography, native
-add icons, persistent calm watermarks, and Today/Floater accent treatment reserved for the plus add
-button.
+add icons, persistent calm watermarks, and accent treatment reserved for the plus add button and the
+watermark.
+
+That accent is the LIST's colour on a widget scoped to one list, and the widget kind's otherwise. The
+colour and glyph travel to the extension as the opaque KEYS the list stores ("TEAL", "work") in
+`widget-lists-snapshot.json`, never as a hex or an asset name, and are resolved on the widget side by
+`Tday/UI/Theme/TdayListAccent.swift` — an app file the extension compiles, like
+`TodayWidgetDayWindow.swift`. Both keys are optional: a list with no colour, or a catalog written
+before the fields existed, falls back to the kind's accent, so no already-placed widget changes or
+blanks on upgrade. A locked widget drops the list accent along with the list's name, because a glyph
+the list never chose is inferred from that name.
 
 ### Per-list configuration (R7)
 
@@ -159,8 +171,9 @@ Both widget kinds are `AppIntentConfiguration`s: long-press ▸ Edit Widget (or 
 the user pick any one todo list or floater list via `TdayWidgetListEntity`/`TdayWidgetListEntityQuery`
 (`TdayWidget/TodayTasksWidget.swift`), backed by a lightweight catalog file
 (`widget-lists-snapshot.json`, written by `WidgetConfigurableListsStore`) so the extension never needs
-`AppContainer`/SwiftData. Leaving the picker unset keeps the ORIGINAL global feed — this is also what
-every widget placed before R7 falls back to.
+`AppContainer`/SwiftData. Each catalog row carries the list's id, name, kind and its glyph/colour keys.
+Leaving the picker unset keeps the ORIGINAL global feed — this is also what every widget placed before
+R7 falls back to.
 
 The picked list's TYPE, not the gallery slot it came from, decides the rendered shape: a todo list
 always renders due-date-shaped (due times, overdue tinted red); a floater list always renders

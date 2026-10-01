@@ -288,6 +288,7 @@
     <string name="todos_summarize">Resumir tareas</string>
     <string name="todos_title_tasks">Tareas</string>
     <string name="todos_title_today">Hoy</string>
+    <string name="todos_title_tonight">Esta noche</string>
     <string name="todos_title_overdue">Vencidas</string>
     <string name="todos_title_scheduled">Programadas</string>
     <string name="todos_title_all_tasks">Todas las tareas</string>
@@ -295,7 +296,9 @@
     <string name="todos_title_floater">Flotante</string>
     <string name="todos_title_list">Lista</string>
     <string name="todos_empty_today">No hay tareas para hoy</string>
+    <string name="todos_empty_tonight">No hay tareas para esta noche</string>
     <string name="todos_all_done_today">Todo listo por hoy</string>
+    <string name="todos_all_done_tonight">Todo listo por esta noche</string>
     <string name="todos_empty_overdue">No hay tareas vencidas</string>
     <string name="todos_empty_priority">No hay tareas prioritarias</string>
     <string name="todos_empty_scheduled">No hay tareas programadas</string>
@@ -523,7 +526,11 @@
     <string name="widget_today_tasks_title_medium">Tareas de hoy - Mediano</string>
     <string name="widget_today_tasks_title_large">Tareas de hoy - Grande</string>
     <string name="widget_today_tasks_empty">No hay tareas que venzan hoy</string>
+    <string name="widget_tonight_tasks_title">Tareas de esta noche</string>
+    <string name="widget_tonight_tasks_empty">No hay tareas que venzan esta noche</string>
+    <string name="widget_tonight_all_done">Todo listo por esta noche</string>
     <string name="widget_today_tasks_add">Añade una para hoy</string>
+    <string name="widget_today_tasks_add_tonight">Añade una para esta noche</string>
     <string name="widget_today_tasks_count">%1$d pendientes</string>
     <string name="widget_today_progress">%1$d de %2$d hechas</string>
     <string name="widget_today_tasks_count_unit">pendientes</string>

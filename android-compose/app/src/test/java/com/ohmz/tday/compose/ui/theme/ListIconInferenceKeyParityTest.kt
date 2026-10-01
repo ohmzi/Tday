@@ -19,7 +19,7 @@ import org.junit.Test
  *
  * The second test goes wider than this module on purpose. The three icon tables
  * (Android's [TdayListIconOptions], `tday-web/src/lib/listIcons.ts`,
- * `ios-swiftUI/Tday/UI/Theme/TdayTheme.swift`) hold the same 68 keys today by hand and
+ * `ios-swiftUI/Tday/UI/Theme/TdayListAccent.swift`) hold the same 68 keys today by hand and
  * by luck — nothing has ever enforced it. The moment the inference table starts
  * emitting keys, that coincidence becomes load-bearing: a key present on Android and
  * missing on iOS means the same list shows a briefcase on the phone and an inbox on
@@ -101,7 +101,10 @@ class ListIconInferenceKeyParityTest {
             .map { match -> match.groupValues[1].ifEmpty { TDAY_DEFAULT_LIST_ICON_KEY } }
             .toSet()
 
-        val iosTable = repoFile("ios-swiftUI/Tday/UI/Theme/TdayTheme.swift")
+        // The table moved out of TdayTheme.swift when the widget extension needed it:
+        // TdayTheme is SwiftUI-heavy and an app extension cannot compile it, so the resolver
+        // lives in a file both iOS targets build. The table is unchanged; this follows it.
+        val iosTable = repoFile("ios-swiftUI/Tday/UI/Theme/TdayListAccent.swift")
             .readText()
             .substringAfter("tdayLucideListAssetTable: [String: String] = [")
             .substringBefore("\n]")

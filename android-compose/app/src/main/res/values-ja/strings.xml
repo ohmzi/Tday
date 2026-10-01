@@ -288,6 +288,7 @@
     <string name="todos_summarize">タスクを要約</string>
     <string name="todos_title_tasks">タスク</string>
     <string name="todos_title_today">今日</string>
+    <string name="todos_title_tonight">今夜</string>
     <string name="todos_title_overdue">期限超過</string>
     <string name="todos_title_scheduled">予定</string>
     <string name="todos_title_all_tasks">すべてのタスク</string>
@@ -295,7 +296,9 @@
     <string name="todos_title_floater">フローター</string>
     <string name="todos_title_list">リスト</string>
     <string name="todos_empty_today">今日のタスクはありません</string>
+    <string name="todos_empty_tonight">今夜のタスクはありません</string>
     <string name="todos_all_done_today">今日のタスクはすべて完了</string>
+    <string name="todos_all_done_tonight">今夜のタスクはすべて完了</string>
     <string name="todos_empty_overdue">期限超過のタスクはありません</string>
     <string name="todos_empty_priority">優先タスクはありません</string>
     <string name="todos_empty_scheduled">予定されたタスクはありません</string>
@@ -522,7 +525,11 @@
     <string name="widget_today_tasks_title_medium">今日のタスク - 中</string>
     <string name="widget_today_tasks_title_large">今日のタスク - 大</string>
     <string name="widget_today_tasks_empty">今日期限のタスクはありません</string>
+    <string name="widget_tonight_tasks_title">今夜のタスク</string>
+    <string name="widget_tonight_tasks_empty">今夜期限のタスクはありません</string>
+    <string name="widget_tonight_all_done">今夜のタスクはすべて完了</string>
     <string name="widget_today_tasks_add">今日のタスクを追加</string>
+    <string name="widget_today_tasks_add_tonight">今夜のタスクを追加</string>
     <string name="widget_today_tasks_count">%1$d件期限</string>
     <string name="widget_today_progress">%2$d件中%1$d件完了</string>
     <string name="widget_today_tasks_count_unit">期限</string>

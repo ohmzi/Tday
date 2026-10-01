@@ -7,6 +7,24 @@ import UIKit
 /// first row an id and ask for it.
 private let completedTimelineScrollTopID = "completed-timeline-scroll-top"
 
+/// How much of the list's top the hero row and the tab strip fill, summed from the
+/// two rows' own reports so the empty scene can stand below them. The same machinery
+/// as `TodoListScreen`'s `EmptyStateReservedTopHeightPreferenceKey`, spelled again for
+/// the reason the transition below is: it is a private type in another file.
+private struct CompletedEmptyStateReservedTopHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value += nextValue()
+    }
+}
+
+/// A floor under the room the scene centres in once the reserved height is taken
+/// off the frame — roughly `TdayEmptyState`'s own natural height with headroom — so
+/// a very short window or extreme Dynamic Type crowds the scene rather than pushing
+/// its centre off the bottom edge.
+private let completedEmptyStateMinimumRemainder: CGFloat = 240
+
 private enum CompletedRestorePhase {
     case completed
     case unchecked
@@ -96,6 +114,11 @@ struct CompletedScreen: View {
     private var isFloaterTab: Bool {
         scope == .floaterFeed
     }
+
+    /// Measured, not guessed: the hero row's and the tab strip's own heights, which the
+    /// empty scene reserves so it stands below them. See
+    /// `CompletedEmptyStateReservedTopHeightKey`.
+    @State private var emptyStateReservedTopHeight: CGFloat = 0
 
     /// Which tab, as an opaque discriminator for the section identity.
     ///
@@ -275,95 +298,126 @@ struct CompletedScreen: View {
         static let duration: Double = 0.22
     }
 
+    /// The empty scene for whichever answer is showing, placed by the overlay below.
+    @ViewBuilder
+    private var completedEmptyScene: some View {
+        if isSearching {
+            searchEmptyState
+        } else {
+            TdayEmptyState(
+                // The fallback for a badge drawn as an asset;
+                // `markContent` is what actually draws here.
+                assetName: "LucideCalendarCheck",
+                // The tab's accent, for the watermark's reason in `body`.
+                accentColor: activeScopeAccent,
+                // Two scenes, not one with a swapped word: web keeps a
+                // Floater empty state of its own beside the scheduled
+                // one, because "Tick something off and it will land
+                // here" is only half true on a tab whose way in is the
+                // Floater board rather than the schedule.
+                title: L(
+                    isFloaterTab
+                        ? "No finished floaters yet"
+                        : "No completed tasks"
+                ),
+                description: L(
+                    isFloaterTab
+                        ? "Tick something off in Floater and it will land here."
+                        : "Tick something off and it will land here."
+                ),
+                markContent: AnyView(CompletedMark(
+                    variant: isFloaterTab ? .floater : .scheduled,
+                    size: CompletedMark.badgeGlyphSize,
+                    tint: colors.onPrimary
+                ))
+            )
+                // This scene is decoration: nothing in it is
+                // tappable, and the overlay it sits in spans the
+                // whole screen. Left hit-testable it would answer
+                // for every touch the history beneath it should have
+                // had — the list's own scroll, and with it the hero
+                // title's collapse, which `timelineHeroTitleRow`
+                // reads off that scroll. The search scene opposite
+                // keeps its hits because it owns a button; this one
+                // has nothing to defend.
+                //
+                // It is *not* about the refresh gesture, whatever
+                // this comment used to say: `pullRefreshEnabled`
+                // defaults to false and `AppRootView` builds this
+                // screen without it, so the `tdayPullToRefresh` in
+                // the body above is wired to nothing and there is no
+                // drag here to protect. That claim cost one verifier
+                // pass a wrong conclusion, so it is written down
+                // rather than left to be re-derived.
+                .allowsHitTesting(false)
+        }
+    }
+
     var body: some View {
         completedTimelineContent
-            .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
-                await viewModel.refresh(userInitiated: true)
-            }
-            .background(colors.background)
-            .overlay {
-                // No blanket `allowsHitTesting(false)` here any more: the watermark
-                // turns its own hits off, and the search empty state has a button
-                // that has to stay tappable.
-                ZStack {
-                    EmptyTaskWatermark(
-                        // Both glyph names are what a watermark drawn as an
-                        // asset would use, and are kept in step with
-                        // `markContent`; the mark itself is the composite.
-                        // `systemName` is already dead on the asset path —
-                        // `assetName` wins — and stays only because it is not
-                        // optional.
-                        systemName: "checkmark",
-                        // The tab's accent, not the page's slate. The watermark is
-                        // the same mark at another size, and it and the badge were
-                        // the two sites still wearing the page's slate while the
-                        // hero wore the tab's colour — this page drawing its own
-                        // mark in two colours at once. Web draws all three of its
-                        // own mark sites from the one accent.
-                        accentColor: activeScopeAccent,
-                        assetName: "LucideCalendarCheck",
-                        // No internal fade to carry any more: the mark itself is
-                        // now always drawn fully opaque, and `EmptyTaskWatermark`
-                        // is what dims it — its own 0.10 `watermarkColor` fade,
-                        // applied uniformly over whatever `markContent` draws.
-                        markContent: AnyView(CompletedMark(
-                            variant: isFloaterTab ? .floater : .scheduled,
-                            size: EmptyTaskWatermark.markGlyphSize
-                        ))
-                    )
-                    if showsCompletedEmptyState {
-                        if isSearching {
-                            searchEmptyState
-                                .transition(completedEmptyStateTransition)
-                        } else {
-                            TdayEmptyState(
-                                // The fallback for a badge drawn as an asset;
-                                // `markContent` is what actually draws here.
-                                assetName: "LucideCalendarCheck",
-                                // The tab's accent, for the watermark's reason above.
-                                accentColor: activeScopeAccent,
-                                // Two scenes, not one with a swapped word: web keeps a
-                                // Floater empty state of its own beside the scheduled
-                                // one, because "Tick something off and it will land
-                                // here" is only half true on a tab whose way in is the
-                                // Floater board rather than the schedule.
-                                title: L(
-                                    isFloaterTab
-                                        ? "No finished floaters yet"
-                                        : "No completed tasks"
-                                ),
-                                description: L(
-                                    isFloaterTab
-                                        ? "Tick something off in Floater and it will land here."
-                                        : "Tick something off and it will land here."
-                                ),
-                                markContent: AnyView(CompletedMark(
-                                    variant: isFloaterTab ? .floater : .scheduled,
-                                    size: CompletedMark.badgeGlyphSize,
-                                    tint: colors.onPrimary
-                                ))
-                            )
-                            // This scene is decoration: nothing in it is
-                            // tappable, and the overlay it sits in spans the
-                            // whole screen. Left hit-testable it would answer
-                            // for every touch the history beneath it should have
-                            // had — the list's own scroll, and with it the hero
-                            // title's collapse, which `timelineHeroTitleRow`
-                            // reads off that scroll. The search scene opposite
-                            // keeps its hits because it owns a button; this one
-                            // has nothing to defend.
-                            //
-                            // It is *not* about the refresh gesture, whatever
-                            // this comment used to say: `pullRefreshEnabled`
-                            // defaults to false and `AppRootView` builds this
-                            // screen without it, so the `tdayPullToRefresh` in
-                            // the body above is wired to nothing and there is no
-                            // drag here to protect. That claim cost one verifier
-                            // pass a wrong conclusion, so it is written down
-                            // rather than left to be re-derived.
-                            .allowsHitTesting(false)
-                            .transition(completedEmptyStateTransition)
+        .onPreferenceChange(CompletedEmptyStateReservedTopHeightKey.self) { height in
+            emptyStateReservedTopHeight = height
+        }
+        .tdayPullToRefresh(isRefreshing: viewModel.isLoading, isEnabled: pullRefreshEnabled) {
+            await viewModel.refresh(userInitiated: true)
+        }
+        .background(colors.background)
+        .overlay {
+            // No blanket `allowsHitTesting(false)` here any more: the watermark
+            // turns its own hits off, and the search empty state has a button
+            // that has to stay tappable.
+            ZStack {
+                EmptyTaskWatermark(
+                    // Both glyph names are what a watermark drawn as an
+                    // asset would use, and are kept in step with
+                    // `markContent`; the mark itself is the composite.
+                    // `systemName` is already dead on the asset path —
+                    // `assetName` wins — and stays only because it is not
+                    // optional.
+                    systemName: "checkmark",
+                    // The tab's accent, not the page's slate. The watermark is
+                    // the same mark at another size, and it and the badge were
+                    // the two sites still wearing the page's slate while the
+                    // hero wore the tab's colour — this page drawing its own
+                    // mark in two colours at once. Web draws all three of its
+                    // own mark sites from the one accent.
+                    accentColor: activeScopeAccent,
+                    assetName: "LucideCalendarCheck",
+                    // No internal fade to carry any more: the mark itself is
+                    // now always drawn fully opaque, and `EmptyTaskWatermark`
+                    // is what dims it — its own 0.10 `watermarkColor` fade,
+                    // applied uniformly over whatever `markContent` draws.
+                    markContent: AnyView(CompletedMark(
+                        variant: isFloaterTab ? .floater : .scheduled,
+                        size: EmptyTaskWatermark.markGlyphSize
+                    ))
+                )
+                if showsCompletedEmptyState {
+                    // Centred in what is left BELOW the hero and the tab strip,
+                    // not in the full frame: on a phone this height the frame's
+                    // centre falls on the strip, and the scene drew over it.
+                    // The reservation is measured off the two rows themselves —
+                    // see `CompletedEmptyStateReservedTopHeightKey`.
+                    GeometryReader { proxy in
+                        let reservedTop = min(
+                            emptyStateReservedTopHeight,
+                            max(0, proxy.size.height - completedEmptyStateMinimumRemainder)
+                        )
+                        VStack(spacing: 0) {
+                            Color.clear.frame(height: reservedTop)
+                            Spacer(minLength: 0)
+                            completedEmptyScene
+                            Spacer(minLength: 0)
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    // Through the home-indicator strip, so "the room below the tabs"
+                    // runs to the bottom of the screen and the scene centres in that,
+                    // not in a frame that stops short of it. Only the container
+                    // region: the keyboard still shortens the frame, which keeps the
+                    // search scene clear of it.
+                    .ignoresSafeArea(.container, edges: .bottom)
+                    .transition(completedEmptyStateTransition)
                     }
                 }
                 // The transaction the removal leg above runs in. The scene
@@ -634,6 +688,15 @@ struct CompletedScreen: View {
             .frame(width: 0, height: 0)
         }
         .onVerticalScrollSnap(collapseDistance: TodoTimelineMetrics.titleCollapseDistance)
+        // Reports the row's rendered height, so the empty scene can reserve it.
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: CompletedEmptyStateReservedTopHeightKey.self,
+                    value: proxy.size.height
+                )
+            }
+        }
         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
@@ -656,6 +719,18 @@ struct CompletedScreen: View {
                 scope = next
             }
         )
+            // The strip's own height plus the row insets around it, which the row's
+            // content does not include but the scene still has to clear.
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: CompletedEmptyStateReservedTopHeightKey.self,
+                    value: proxy.size.height
+                        + CompletedScopeTabsMetrics.topSpacing
+                        + CompletedScopeTabsMetrics.bottomSpacing
+                )
+            }
+        }
         .listRowInsets(EdgeInsets(top: CompletedScopeTabsMetrics.topSpacing, leading: TodoTimelineMetrics.horizontalPadding, bottom: CompletedScopeTabsMetrics.bottomSpacing, trailing: TodoTimelineMetrics.horizontalPadding))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)

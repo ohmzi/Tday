@@ -1,5 +1,6 @@
 import { Moon, Sun } from "lucide-react";
 import { Link, usePathname } from "@/lib/navigation";
+import { isDaytimeNow } from "@/lib/timeOfDay";
 import { cn } from "@/lib/utils";
 
 export default function NativeAppBrandButton({
@@ -9,8 +10,12 @@ export default function NativeAppBrandButton({
 }) {
   const pathname = usePathname();
   const isHome = pathname.includes("/app/tday");
-  const currentHour = new Date().getHours();
-  const isDaytime = currentHour >= 6 && currentHour < 18;
+  // Read at render and not on a clock: this button only ever sits on a header
+  // that is itself re-rendered by navigation, and it is not the surface the
+  // day/night boundary is judged on — the root feed's mark is, and that one has
+  // the timer (`useIsDaytime`). Same band either way, which is the point of
+  // importing it rather than writing the hours again.
+  const isDaytime = isDaytimeNow();
 
   return (
     <Link

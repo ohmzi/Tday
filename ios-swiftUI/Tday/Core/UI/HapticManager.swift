@@ -1,6 +1,6 @@
 import UIKit
 
-/// The app's haptic vocabulary — eight names for eight *events*, not eight waveforms.
+/// The app's haptic vocabulary — nine names for nine *events*, not nine waveforms.
 ///
 /// Before this file described events, it described places. Eleven functions were named
 /// after where they were called from — `buttonTap`, `gentleTap`, `sheetConfirm`,
@@ -18,7 +18,7 @@ import UIKit
 /// ### The names
 ///
 /// `buttonPress` · `selection` · `toggle` · `completion` · `destructive` · `dragPickUp` ·
-/// `dragDrop` · `reveal`
+/// `dragDrop` · `reveal` · `screenChange`
 ///
 /// They are Android's names (`core/ui/TdayHaptics.kt`), for the same events, in the same
 /// order, so a reviewer comparing the two clients compares events rather than translating
@@ -149,5 +149,24 @@ enum HapticManager {
         let generator = UIImpactFeedbackGenerator(style: .rigid)
         generator.prepare()
         generator.impactOccurred(intensity: 0.7)
+    }
+
+    /// A list screen handed over: Today, Scheduled, Priority, Overdue, All, Completed, the
+    /// calendar, a list or an Anytime list, opened or closed. One name for both directions,
+    /// fired by the navigation itself rather than by any control, because a close by
+    /// edge-swipe has no control to hang it on — which is also why ``buttonPress()`` is the
+    /// wrong name for this and why the name had to be added.
+    ///
+    /// `.soft` at 0.8 intensity — the one cushioned texture in the set, chosen because this
+    /// is the most frequent event in the app after a plain tap and a sharp buzz on every
+    /// screen the user walks through would wear out fast. Opening and closing deliberately
+    /// feel the SAME: the screen that just arrived or left already says which way it went,
+    /// so a directional pair here would spend the only other soft texture on information the
+    /// hand does not need. (Android: `GESTURE_END` — a tap and an edge-swipe are both
+    /// gestures, and the handover is where each of them ends.)
+    static func screenChange() {
+        let generator = UIImpactFeedbackGenerator(style: .soft)
+        generator.prepare()
+        generator.impactOccurred(intensity: 0.8)
     }
 }

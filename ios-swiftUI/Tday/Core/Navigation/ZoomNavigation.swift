@@ -225,11 +225,75 @@ private struct TdayZoomDestinationModifier: ViewModifier {
     @Environment(\.tdayZoomNamespace) private var zoomNamespace
     @Environment(\.tdayAnimation) private var tdayAnimation
 
+    /// The alpha the arriving screen starts at, and why it is not zero.
+    ///
+    /// Measured on iOS 18.6 rather than chosen: starting at `0` does NOT give a
+    /// see-through rect. UIKit composites the growing destination over an opaque
+    /// backing for the first part of the flight, so a fully transparent screen reads as
+    /// a blank WHITE card growing out of the tile — which is worse than the opaque
+    /// screen it replaced, because at least that one had content in it. A partial alpha
+    /// composites the way the request assumes: at this value the pressed tile, the
+    /// neighbouring tiles and the dock all read through the arriving screen.
+    ///
+    /// Not a motion token. It is an opacity, not a duration, delay, easing or spring, so
+    /// it is outside the vocabulary `MotionTokens.kt` carries — see `docs/motion.md`.
+    private enum TdayZoomArrival {
+        static let startingOpacity: Double = 0.35
+    }
+
+    /// False for the screen's first frame, flipped once on appear.
+    ///
+    /// A CLOCK, BECAUSE THERE IS NOTHING ELSE TO READ. Nothing in this view can see the
+    /// push's progress: UIKit drives it on the hosting view's layer, SwiftUI reports the
+    /// destination at its SETTLED position for the whole animation, and the pushed view is
+    /// clipped to its own bounds mid-flight — so `GeometryReader`, `visualEffect` and
+    /// preferences are all equally blind, and there is no transaction for a `.transition`
+    /// to ride. `onAppear` therefore fires at layout rather than at the transition's first
+    /// frame, which is why the wait below is short: it has to be over before the rect is
+    /// large, or the hold stops showing the tile through the arriving screen and starts
+    /// showing the whole home feed through it — the dock and the create button included.
+    @State private var arrived = false
+
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(iOS 18.0, *) {
             if let zoomNamespace, let sourceID = route.zoomSourceID, tdayAnimation.isEnabled {
-                content.navigationTransition(.zoom(sourceID: sourceID, in: zoomNamespace))
+                // The zoom is a transition, not a dismissal, and `navigationZoomDismissRefusal()`
+                // below is the whole of that distinction. Setting `preferredTransition = .zoom(…)` — which
+                // is what this modifier lowers to — also makes UIKit install a
+                // `_UIDismissInteraction` on the pushed controller, and that interaction ships
+                // three ways out: a downward content swipe, a pinch, and a leading-edge pan.
+                // Only the third is a back gesture anyone asked for. The other two close a list
+                // screen on a gesture the rest of this app spends on scrolling, and the
+                // reported defect is exactly that.
+                //
+                // The refusal sits INSIDE this branch on purpose. It cannot be reached on
+                // iOS 17, where there is no zoom and no interaction to refuse, and it cannot
+                // be reached under Reduce Motion, where `tdayAnimation.isEnabled` is false and
+                // `preferredTransition` is never set — so it needs no availability or gate of
+                // its own, and it adds no second `#available` block for
+                // `tests/guardrails/launch-handover.test.ts` to count.
+                //
+                // It is applied BEFORE `.navigationTransition` so the configurator is part of
+                // the content the transition is attached to, and so this call site keeps the
+                // one-line-after-the-branch shape the corner fix on the source half assumes.
+                content
+                    .opacity(arrived ? 1 : TdayZoomArrival.startingOpacity)
+                    .animation(
+                        tdayAnimation(
+                            TdayMotion.enter(duration: TdayMotion.Durations.quick)
+                                // How long the tile keeps the rect to itself before the screen
+                                // starts arriving in it. Not a token — see `docs/motion.md`: it
+                                // is a wait, so `Delays` is where it would live, and it is
+                                // spelled as `Durations.quick` here only until the shape is
+                                // settled and the rung can be promoted with Android's twin.
+                                .delay(TdayMotion.Durations.quick)
+                        ),
+                        value: arrived
+                    )
+                    .navigationZoomDismissRefusal()
+                    .navigationTransition(.zoom(sourceID: sourceID, in: zoomNamespace))
+                    .onAppear { arrived = true }
             } else {
                 content
             }

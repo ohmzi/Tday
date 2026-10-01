@@ -75,7 +75,11 @@ function sharedPairs(): Array<[string, string]> {
 describe("the iOS list-icon inference reads one shared table", () => {
   const IOS_GENERATED = "ios-swiftUI/Tday/UI/Theme/TdayListIconInferenceGenerated.swift";
   const IOS_MATCHER = "ios-swiftUI/Tday/UI/Theme/TdayListIconInference.swift";
-  const IOS_ASSETS = "ios-swiftUI/Tday/UI/Theme/TdayTheme.swift";
+  // The iconKey -> Lucide table moved out of TdayTheme.swift when the widget extension
+  // needed it: TdayTheme.swift is SwiftUI-heavy and cannot be compiled by an app
+  // extension, so the resolver lives in a file both targets build. The table itself is
+  // unchanged -- this constant follows it rather than the table being duplicated.
+  const IOS_ASSETS = "ios-swiftUI/Tday/UI/Theme/TdayListAccent.swift";
   const IOS_PICKER = "ios-swiftUI/Tday/Feature/Todos/TodoListScreen.swift";
 
   /** `"groceries": "cart",` inside the generated `iconKeyByKeyword` literal. */

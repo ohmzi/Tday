@@ -196,6 +196,7 @@ import com.ohmz.tday.compose.core.ui.rememberSystemMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTaskRowFirstLineAlignment
 import com.ohmz.tday.compose.core.ui.rememberTaskStrikeProgress
 import com.ohmz.tday.compose.core.ui.rememberTaskSwipeRevealState
+import com.ohmz.tday.compose.core.ui.rememberTdayIsDaytime
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.core.ui.rememberTdayMotionScale
 import com.ohmz.tday.compose.core.ui.rememberTdayTaskRowSkeletonMounted
@@ -268,7 +269,6 @@ import com.ohmz.tday.shared.listicon.ListIconInference
 import com.ohmz.tday.shared.sort.TaskSortEngine
 import com.ohmz.tday.shared.sort.TaskSortKey
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -1128,7 +1128,12 @@ fun TodoListScreen( // skipcq: KT-R1006
     val zoneId = remember { ZoneId.systemDefault() }
     val selectedList = uiState.lists.firstOrNull { it.id == uiState.listId }
     val selectedListColorKey = selectedList?.color
-    val isTodayDaytime = rememberTodoRootIsDaytime()
+    // One read of the day/night face for this whole screen: the title ("Today" or
+    // "Tonight"), the sun/moon beside it, the empty-state watermark and the "all done"
+    // line all hang off this single value, so none of them can be showing a different
+    // hour than the others. The band and the ticker live in [rememberTdayIsDaytime] —
+    // this screen used to keep its own copy of both.
+    val isTodayDaytime = rememberTdayIsDaytime()
     if (isTodayDaytime) ImageVector.vectorResource(R.drawable.ic_lucide_sun) else ImageVector.vectorResource(
         R.drawable.ic_lucide_moon
     )
@@ -1145,6 +1150,20 @@ fun TodoListScreen( // skipcq: KT-R1006
     val isViewerList = isListDetailScreen && selectedList?.isViewer == true
     val usesRootFeedChrome =
         usesRootFeedHeader || isFloaterTaskHomeScreen
+    // The Today scope is the one screen whose name depends on the clock: after 18:00 it
+    // is "Tonight", on exactly the predicate that swaps the sun for the moon above it.
+    //
+    // Resolved here rather than in the ViewModel, which is where every other scope's
+    // title comes from: `load()` picks the title once, and the Today screen is not
+    // reloaded while it is open, so a title chosen there would still read "Today" at
+    // 22:00 under a moon. Here it is a composable read of [isTodayDaytime], and that
+    // state is re-read every minute, so the word turns over with the glyph while the
+    // screen is being looked at.
+    val displayTitle = if (uiState.mode == TodoListMode.TODAY && !isTodayDaytime) {
+        stringResource(R.string.todos_title_tonight)
+    } else {
+        uiState.title
+    }
     val titleColor = modeAccentColor(
         mode = uiState.mode,
         listColorKey = selectedListColorKey,
@@ -1229,8 +1248,18 @@ fun TodoListScreen( // skipcq: KT-R1006
             !suppressInitialTodayTimeline &&
             !scopedSearchActive &&
             uiState.completedTodayCount > 0
+    // The payoff answers to a CHANGE, never to arrival. `LaunchedEffect(isDayDone)` runs on
+    // the FIRST composition too, so opening a Today that was already finished an hour ago
+    // replayed a celebration the user had already been given — a buzz earned by nothing.
+    // Seeding `previousDayDone` from the current value makes that first pass a no-op, while
+    // the one case the payoff exists for — the last task going out under the user's thumb —
+    // is still a false->true flip observed while composed. iOS says the same thing through
+    // `showsDayDonePayoff` and an `.onChange(of:)` with no `initial:`.
+    var previousDayDone by remember { mutableStateOf(isDayDone) }
     LaunchedEffect(isDayDone) {
-        if (isDayDone) {
+        val justFinished = isDayDone && !previousDayDone
+        previousDayDone = isDayDone
+        if (justFinished) {
             TdayHaptics.completion(view)
         }
     }
@@ -1240,9 +1269,17 @@ fun TodoListScreen( // skipcq: KT-R1006
         emptySceneIcon
     }
     val emptyStateSceneTitle = if (isDayDone) {
-        stringResource(R.string.todos_all_done_today)
+        if (isTodayDaytime) {
+            stringResource(R.string.todos_all_done_today)
+        } else {
+            stringResource(R.string.todos_all_done_tonight)
+        }
     } else {
-        emptyStateMessageForMode(mode = uiState.mode, isFloaterList = isListDetailScreen)
+        emptyStateMessageForMode(
+            mode = uiState.mode,
+            isFloaterList = isListDetailScreen,
+            isTodayDaytime = isTodayDaytime,
+        )
     }
     val emptyStateSceneDescription = if (isDayDone) {
         LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault()))
@@ -1836,8 +1873,8 @@ fun TodoListScreen( // skipcq: KT-R1006
             // the middle of the screen with the list names below
             // it, rather than in a full-screen watermark overlay.
             item(
-                key = "floater-empty-message",
-                contentType = "floater-empty-message",
+                key = "floater-empty-message",  // skipcq: KT-W1042
+                contentType = "floater-empty-message",  // skipcq: KT-W1042
             ) {
                 // The preference, not the feed's first-frame guard:
                 // the exit below is paint the user can ask not to
@@ -1938,6 +1975,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                             title = emptyStateMessageForMode(
                                 mode = uiState.mode,
                                 isFloaterList = isListDetailScreen,
+                                isTodayDaytime = isTodayDaytime,
                             ),
                             description = emptyStateDescriptionForMode(
                                 mode = uiState.mode,
@@ -2060,8 +2098,8 @@ fun TodoListScreen( // skipcq: KT-R1006
     val earlierSceneContent: (LazyListScope.() -> Unit)? = if (earlierScenePresent) {
         {
             item(
-                key = "today-earlier-empty-scene",
-                contentType = "today-earlier-empty-scene",
+                key = "today-earlier-empty-scene",  // skipcq: KT-W1042
+                contentType = "today-earlier-empty-scene",  // skipcq: KT-W1042
             ) {
                 // `timelineAnimationsEnabled` is the feed's first-frame guard,
                 // not the preference, so the scene asks the preference itself —
@@ -2502,7 +2540,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             }
             if (todoIndex >= 0) {
                 val todo = section.items[todoIndex]
-                return itemIndex + todoIndex to "timeline-todo-${section.key}-${todo.id}"
+                return itemIndex + todoIndex to timelineTodoKey(section.key, todo.id)
             }
             itemIndex += section.items.size
         }
@@ -2516,7 +2554,7 @@ fun TodoListScreen( // skipcq: KT-R1006
             }
             if (todoIndex >= 0) {
                 val todo = section.items[todoIndex]
-                return itemIndex + todoIndex to "timeline-todo-${section.key}-${todo.id}"
+                return itemIndex + todoIndex to timelineTodoKey(section.key, todo.id)
             }
             itemIndex += section.items.size
         }
@@ -2898,8 +2936,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // hero's progress is read off the first item's offset.
                     if (usesRootFeedChrome) {
                         item(
-                            key = "root-feed-header-spacer",
-                            contentType = "root-feed-header-spacer",
+                            key = "root-feed-header-spacer",  // skipcq: KT-W1042
+                            contentType = "root-feed-header-spacer",  // skipcq: KT-W1042
                         ) {
                             // Reserves the pinned header's space. The feed
                             // scrolls behind the header, folding it down into
@@ -2911,7 +2949,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                         }
                     } else if (usesTodayStyle) {
                         tdayHeroTitleItem(
-                            title = uiState.title,
+                            title = displayTitle,
                             icon = heroIcon,
                             accentColor = titleColor,
                             collapseProgress = heroCollapse.progress,
@@ -2920,8 +2958,8 @@ fun TodoListScreen( // skipcq: KT-R1006
 
                     if (showFloaterTaskHomeSearchResults) {
                         item(
-                            key = "root-floater-search-results",
-                            contentType = "root-floater-search-results",
+                            key = "root-floater-search-results",  // skipcq: KT-W1042
+                            contentType = "root-floater-search-results",  // skipcq: KT-W1042
                         ) {
                             FloaterTaskHomeSearchResultsCard(
                                 results = floaterTaskHomeSearchResults,
@@ -2977,8 +3015,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // same answer the Earlier scene below already gives.
                     if (taskFeedSkeletonMounted) {
                         item(
-                            key = "task-feed-skeleton",
-                            contentType = "task-feed-skeleton",
+                            key = "task-feed-skeleton",  // skipcq: KT-W1042
+                            contentType = "task-feed-skeleton",  // skipcq: KT-W1042
                         ) {
                             AnimatedVisibility(
                                 visible = taskFeedSkeletonVisible,
@@ -3005,8 +3043,8 @@ fun TodoListScreen( // skipcq: KT-R1006
                     // than leaving its empty day headers standing, as on web.
                     if (scopedSearchHasNoResults) {
                         item(
-                            key = "scoped-search-no-results",
-                            contentType = "scoped-search-no-results",
+                            key = "scoped-search-no-results",  // skipcq: KT-W1042
+                            contentType = "scoped-search-no-results",  // skipcq: KT-W1042
                         ) {
                             Box(
                                 modifier = Modifier
@@ -3247,7 +3285,7 @@ fun TodoListScreen( // skipcq: KT-R1006
 
             if (usesRootFeedChrome) {
                 RootFeedHeroHeader(
-                    title = uiState.title,
+                    title = displayTitle,
                     mark = if (isFloaterTaskHomeScreen) {
                         RootFeedHeroMark.FloaterLeaf
                     } else {
@@ -3288,7 +3326,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                 // Scaffold `topBar`, so the hero block below can scroll behind
                 // it instead of starting under it.
                 TdayHeroToolbar(
-                    title = uiState.title,
+                    title = displayTitle,
                     titleColor = titleColor,
                     collapseProgress = heroCollapse.progress,
                     // Gone while the field is up: a back chevron beside an
@@ -3388,7 +3426,7 @@ fun TodoListScreen( // skipcq: KT-R1006
                                 // imply it is.
                                 placeholder = stringResource(
                                     R.string.action_search_in,
-                                    uiState.title,
+                                    displayTitle,
                                 ),
                                 modifier = Modifier
                                     .weight(1f)
@@ -3998,8 +4036,8 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
     // single-column layout instead of a 2-up grid.
     if (isFloaterTaskHomeScreen) {
         item(
-            key = "floater-completed-entry",
-            contentType = "floater-completed-entry",
+            key = "floater-completed-entry",  // skipcq: KT-W1042
+            contentType = "floater-completed-entry",  // skipcq: KT-W1042
         ) {
             // The empty scene above opens a near-half-screen gap
             // in the slot the last row leaves, and this tile and
@@ -4022,6 +4060,9 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
                 iconRes = R.drawable.ic_lucide_circle_check_big,
                 watermarkRes = R.drawable.ic_lucide_circle_check_big,
                 title = stringResource(R.string.scheduled_task_home_category_completed),
+                // One row, glyph beside the word, as iOS draws this tile — the
+                // stacked form is the 2-up grid's, and this one is full width.
+                inlineIcon = true,
                 onClick = onOpenCompleted,
             )
         }
@@ -4302,7 +4343,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                     collapsedSectionKeys = collapsedSectionKeys,
                 )
                 item(
-                    key = "timeline-todo-${section.key}-${todo.id}",
+                    key = timelineTodoKey(section.key, todo.id),
                     contentType = "timeline-todo",
                 ) {
                     val rowModifier =
@@ -4849,22 +4890,6 @@ private fun FloaterTaskHomeListRow(
             }
         }
     }
-}
-
-@Composable
-private fun rememberTodoRootIsDaytime(): Boolean {
-    var hour by remember { mutableStateOf(LocalTime.now().hour) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            val now = LocalTime.now()
-            val millisToNextMinute = ((60 - now.second) * 1000L) - (now.nano / 1_000_000L)
-            delay(millisToNextMinute.coerceAtLeast(500L))
-            hour = LocalTime.now().hour
-        }
-    }
-
-    return hour in 6 until 18
 }
 
 private data class TodoTopBarAction(
@@ -6256,8 +6281,8 @@ private fun buildOverdueSections(
         ?.takeIf { it.isNotEmpty() }
         ?.let { todaysItems ->
             sections += TodoSection(
-                key = "day-$today",
-                title = "Today",
+                key = daySectionKey(today),
+                title = DAY_SECTION_TITLE_TODAY,
                 items = todaysItems,
                 quickAddDefaults = quickAddDefaultsForDate(
                     date = today,
@@ -6272,7 +6297,7 @@ private fun buildOverdueSections(
         .sortedDescending()
         .forEach { date ->
             sections += TodoSection(
-                key = "day-$date",
+                key = daySectionKey(date),
                 title = date.format(SCHEDULED_DAY_FORMATTER),
                 items = TaskSortEngine.sortedTodos(overdueByDate[date].orEmpty()) { it.toTaskSortKey() },
                 quickAddDefaults = null,
@@ -6315,7 +6340,7 @@ private fun buildTodaySections(
     val sortedEarlier = TaskSortEngine.sortedTodos(earlierItems) { it.toTaskSortKey() }
     val earlierSection = TodoSection(
         key = EARLIER_SECTION_KEY,
-        title = "Earlier",
+        title = "Earlier",  // skipcq: KT-W1042
         items = sortedEarlier,
         quickAddDefaults = quickAddDefaultsForDate(
             date = today.minusDays(1),
@@ -6326,7 +6351,7 @@ private fun buildTodaySections(
 
     return listOf(
         TodoSection(
-            key = "today-morning",
+            key = "today-morning",  // skipcq: KT-W1042
             title = "Morning",
             items = sorted.filter { sectionOf(it) == TodaySectionSlot.MORNING },
             quickAddDefaults = quickAddDefaultsForTodaySection(
@@ -6337,7 +6362,7 @@ private fun buildTodaySections(
             targetHour = 9,
         ),
         TodoSection(
-            key = "today-afternoon",
+            key = "today-afternoon",  // skipcq: KT-W1042
             title = "Afternoon",
             items = sorted.filter { sectionOf(it) == TodaySectionSlot.AFTERNOON },
             quickAddDefaults = quickAddDefaultsForTodaySection(
@@ -6348,7 +6373,7 @@ private fun buildTodaySections(
             targetHour = 15,
         ),
         TodoSection(
-            key = "today-tonight",
+            key = "today-tonight",  // skipcq: KT-W1042
             title = "Tonight",
             items = sorted.filter { sectionOf(it) == TodaySectionSlot.TONIGHT },
             quickAddDefaults = quickAddDefaultsForTodaySection(
@@ -6405,14 +6430,14 @@ private fun buildScheduledSections(
     val sections = mutableListOf<TodoSection>()
     fun daySection(date: LocalDate, title: String): TodoSection {
         return TodoSection(
-            key = "day-$date",
+            key = daySectionKey(date),
             title = title,
             items = groupedByDate[date].orEmpty(),
             quickAddDefaults = quickAddDefaultsForDate(
                 date = date,
                 zoneId = zoneId,
             ),
-            targetDate = timelineRescheduleTargetDate("day-$date", today),
+            targetDate = timelineRescheduleTargetDate(daySectionKey(date), today),
         )
     }
 
@@ -6439,7 +6464,7 @@ private fun buildScheduledSections(
         // place that decides whether an empty bucket is worth a header.
         TodoSection(
             key = EARLIER_SECTION_KEY,
-            title = "Earlier",
+            title = "Earlier",  // skipcq: KT-W1042
             items = earlierItems,
             quickAddDefaults = quickAddDefaultsForDate(
                 date = today.minusDays(1),
@@ -6455,7 +6480,7 @@ private fun buildScheduledSections(
         earlierSection?.let { sections += it }
     }
 
-    sections += daySection(today, "Today")
+    sections += daySection(today, DAY_SECTION_TITLE_TODAY)
     if (!placesEarlierBeforeToday) {
         earlierSection?.let { sections += it }
     }
@@ -6475,14 +6500,14 @@ private fun buildScheduledSections(
     ) { it.toTaskSortKey() }
     val monthName = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
     sections += TodoSection(
-        key = "rest-$currentMonth",
+        key = "rest-$currentMonth",  // skipcq: KT-W1042
         title = "Rest of $monthName",
         items = restOfCurrentMonthItems,
         quickAddDefaults = quickAddDefaultsForDate(
             date = currentMonth.atEndOfMonth(),
             zoneId = zoneId,
         ),
-        targetDate = timelineRescheduleTargetDate("rest-$currentMonth", today),
+        targetDate = timelineRescheduleTargetDate("rest-$currentMonth", today),  // skipcq: KT-W1042
     )
 
     val futureMonthsWithData =
@@ -6502,14 +6527,14 @@ private fun buildScheduledSections(
             }.flatMap { (_, dayItems) -> dayItems.asSequence() }.toList(),
         ) { it.toTaskSortKey() }
         sections += TodoSection(
-            key = "month-$targetMonth",
+            key = "month-$targetMonth",  // skipcq: KT-W1042
             title = monthTitle(targetMonth, currentMonth.year),
             items = monthItems,
             quickAddDefaults = quickAddDefaultsForDate(
                 date = targetMonth.atDay(1),
                 zoneId = zoneId,
             ),
-            targetDate = timelineRescheduleTargetDate("month-$targetMonth", today),
+            targetDate = timelineRescheduleTargetDate("month-$targetMonth", today),  // skipcq: KT-W1042
         )
         targetMonth = targetMonth.plusMonths(1)
     }
@@ -6532,13 +6557,13 @@ private fun monthTitle(
 @Composable
 private fun localizedSectionTitle(section: TodoSection): String {
     return when {
-        section.key == "today-morning" -> stringResource(R.string.todos_section_morning)
-        section.key == "today-afternoon" -> stringResource(R.string.todos_section_afternoon)
-        section.key == "today-tonight" -> stringResource(R.string.todos_section_tonight)
+        section.key == "today-morning" -> stringResource(R.string.todos_section_morning)  // skipcq: KT-W1042
+        section.key == "today-afternoon" -> stringResource(R.string.todos_section_afternoon)  // skipcq: KT-W1042
+        section.key == "today-tonight" -> stringResource(R.string.todos_section_tonight)  // skipcq: KT-W1042
         section.key == EARLIER_SECTION_KEY -> stringResource(R.string.todos_section_earlier)
-        section.key.startsWith("day-") -> {
+        section.key.startsWith("day-") -> {  // skipcq: KT-W1042
             val zoneId = ZoneId.systemDefault()
-            val date = runCatching { LocalDate.parse(section.key.removePrefix("day-")) }.getOrNull()
+            val date = runCatching { LocalDate.parse(section.key.removePrefix("day-")) }.getOrNull()  // skipcq: KT-W1042
             val today = LocalDate.now(zoneId)
             when (date) {
                 today -> stringResource(R.string.todos_section_today)
@@ -6546,8 +6571,8 @@ private fun localizedSectionTitle(section: TodoSection): String {
                 else -> section.title
             }
         }
-        section.key.startsWith("rest-") -> {
-            val ymPart = section.key.removePrefix("rest-")
+        section.key.startsWith("rest-") -> {  // skipcq: KT-W1042
+            val ymPart = section.key.removePrefix("rest-")  // skipcq: KT-W1042
             val monthName = runCatching {
                 val ym = YearMonth.parse(ymPart)
                 ym.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
@@ -6567,11 +6592,23 @@ private fun localizedSectionTitle(section: TodoSection): String {
  * @param isFloaterList a floater screen opened on one list rather than the root
  *   feed. Both are [TodoListMode.FLOATER], but "No floater tasks" reads as if
  *   there were none anywhere when it is one list that is empty.
+ * @param isTodayDaytime the screen's one day/night read. Only [TodoListMode.TODAY]
+ *   consults it: an empty Today screen in the evening is empty of tonight's tasks, and
+ *   the line has to say the same word the title and the moon above it are saying.
  */
 @Composable
-private fun emptyStateMessageForMode(mode: TodoListMode, isFloaterList: Boolean): String {
+private fun emptyStateMessageForMode(
+    mode: TodoListMode,
+    isFloaterList: Boolean,
+    isTodayDaytime: Boolean,
+): String {
     return when (mode) {
-        TodoListMode.TODAY -> stringResource(R.string.todos_empty_today)
+        TodoListMode.TODAY -> if (isTodayDaytime) {
+            stringResource(R.string.todos_empty_today)
+        } else {
+            stringResource(R.string.todos_empty_tonight)
+        }
+
         TodoListMode.OVERDUE -> stringResource(R.string.todos_empty_overdue)
         TodoListMode.PRIORITY -> stringResource(R.string.todos_empty_priority)
         TodoListMode.FLOATER -> if (isFloaterList) {
@@ -6689,6 +6726,32 @@ private fun emptyStateIconForMode(
 
 private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEE MMM d", Locale.getDefault())
+
+/**
+ * The date-group header for the current day, named once because two call sites build it — the
+ * scheduled feed's own day section and the grouped builder below.
+ *
+ * Deliberately NOT the Today/Tonight screen title: this groups rows by CALENDAR DAY, so it stays
+ * "Today" after dark. A row due this evening is still due today, and calling that group "Tonight"
+ * would be a claim about which day the row is on.
+ */
+/**
+ * A day section's key, built in one place because four call sites need the SAME string: the
+ * scheduled builder's two sections, the grouped builder's, and the reschedule target that is
+ * matched back against it. A key is an identity other code compares on, so a second spelling of
+ * it is not a style problem — it is two sections that look like one and behave like two.
+ */
+private fun daySectionKey(date: LocalDate): String = "day-$date"
+
+/**
+ * A timeline row's key. Three call sites: the two scroll-target lookups and the row itself, and
+ * the lookups only work because they build exactly what the row built. That is precisely the
+ * invariant a repeated template erodes.
+ */
+private fun timelineTodoKey(sectionKey: String, todoId: String): String =
+    "timeline-todo-$sectionKey-$todoId"
+
+private const val DAY_SECTION_TITLE_TODAY = "Today"
 
 private fun quickAddDefaultsForDate(
     date: LocalDate,
