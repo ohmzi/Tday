@@ -30,7 +30,6 @@ interface CompletedTodoService {
 
 class CompletedTodoServiceImpl(
     private val fieldEncryption: FieldEncryption,
-    private val cache: CacheService,
 ) : CompletedTodoService {
     override suspend fun getAll(userId: String): Either<AppError, List<CompletedTodoResponse>> {
         val todos = newSuspendedTransaction(Dispatchers.IO) {
@@ -45,7 +44,6 @@ class CompletedTodoServiceImpl(
         val count = newSuspendedTransaction(Dispatchers.IO) {
             CompletedTodos.deleteWhere { CompletedTodos.userID eq userId }
         }
-        cache.invalidateCompletedCaches(userId)
         return count.right()
     }
 
@@ -53,7 +51,6 @@ class CompletedTodoServiceImpl(
         val count = newSuspendedTransaction(Dispatchers.IO) {
             CompletedTodos.deleteWhere { (CompletedTodos.id eq id) and (CompletedTodos.userID eq userId) }
         }
-        cache.invalidateCompletedCaches(userId)
         return count.right()
     }
 
@@ -86,7 +83,6 @@ class CompletedTodoServiceImpl(
             }
         }
         val count = result ?: return Either.Left(AppError.BadRequest("list not found", "listID"))
-        if (count > 0) cache.invalidateCompletedCaches(userId)
         return count.right()
     }
 

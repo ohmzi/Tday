@@ -5,7 +5,6 @@ protocol AuthRepositoryServicing: AnyObject {
     func login(username: String, password: String) async -> AuthResult
     func register(firstName: String, lastName: String, username: String, password: String, securityAnswers: [SecurityAnswerInput]) async -> RegisterOutcome
     func fetchAllSecurityQuestions() async throws -> [SecurityQuestion]
-    func fetchQuestionsForUsername(_ username: String) async throws -> [SecurityQuestion]
     func lookupQuestions(_ username: String) async -> LookupQuestionsOutcome
     func verifyAnswers(username: String, answers: [SecurityAnswerInput]) async -> VerifyAnswersOutcome
     func resetPassword(username: String, answers: [SecurityAnswerInput], newPassword: String) async -> PasswordResetResult
@@ -19,7 +18,6 @@ protocol AuthRepositoryServicing: AnyObject {
     @MainActor func clearSessionOnly()
     @MainActor func clearAllLocalUserDataForUnauthenticatedState()
     func getLastUsername() -> String?
-    func lastUsername() -> String?
 }
 
 struct RestoredSession {
@@ -196,11 +194,6 @@ final class AuthRepository: AuthRepositoryServicing {
         try await api.getAllSecurityQuestions().questions
     }
 
-    func fetchQuestionsForUsername(_ username: String) async throws -> [SecurityQuestion] {
-        let normalized = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return try await api.getSecurityQuestions(username: normalized).questions
-    }
-
     func resetPassword(username: String, answers: [SecurityAnswerInput], newPassword: String) async -> PasswordResetResult {
         do {
             _ = try await api.resetPassword(
@@ -331,10 +324,6 @@ final class AuthRepository: AuthRepositoryServicing {
 
     func getLastUsername() -> String? {
         secureStore.loadLastUsername()
-    }
-
-    func lastUsername() -> String? {
-        getLastUsername()
     }
 
     private func cacheSessionUser(_ user: SessionUser?) {

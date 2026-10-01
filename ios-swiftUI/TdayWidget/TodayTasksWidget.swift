@@ -1276,15 +1276,6 @@ private enum TaskWidgetMode {
         }
     }
 
-    var emptySubtitle: String {
-        switch self {
-        case .today:
-            return "Add one for today"
-        case .floater:
-            return "Add a floater"
-        }
-    }
-
     /// The watermark glyph for a widget showing a whole FEED rather than one list: Today reads
     /// the clock, Floater is always the leaf. A list-scoped widget overrides both with the
     /// list's own glyph — see `TdayWidgetListAccent`.

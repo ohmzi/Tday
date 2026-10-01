@@ -255,11 +255,6 @@ class ListRoutesTest {
             defaultPriorityChanged: Boolean?,
         ): Either<com.ohmz.tday.domain.AppError, Unit> = Unit.right()
 
-        override suspend fun delete(
-            userId: String,
-            id: String,
-        ): Either<com.ohmz.tday.domain.AppError, Int> = 1.right()
-
         override suspend fun deleteMany(
             userId: String,
             ids: List<String>,

@@ -96,10 +96,6 @@ fun normalizeTdayListColorKey(colorKey: String?): String {
     return normalizeTdayListColorKeyOrNull(colorKey) ?: TDAY_DEFAULT_LIST_COLOR_KEY
 }
 
-fun isTdayListColorKeySupported(colorKey: String): Boolean {
-    return normalizeTdayListColorKeyOrNull(colorKey) != null
-}
-
 private fun normalizeTdayListColorKeyOrNull(colorKey: String?): String? {
     val candidate = colorKey
         ?.trim()

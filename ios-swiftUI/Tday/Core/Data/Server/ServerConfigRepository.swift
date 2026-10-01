@@ -77,23 +77,6 @@ final class ServerConfigRepository {
         var trustFailed: Bool = false
     }
 
-    func saveServerURL(rawURL: String) async throws -> MobileProbeResponse {
-        let result = try await probe(rawURL: rawURL)
-        let response = result.response
-        guard response.service.compare("tday", options: .caseInsensitive) == .orderedSame,
-              response.version == "1" else {
-            throw ServerProbeError.notTdayServer
-        }
-        serverURLState.currentURL = result.serverURL
-        persistRuntimeServerURL()
-        return response
-    }
-
-    func saveServerURL(_ rawURL: String) async throws -> String {
-        _ = try await saveServerURL(rawURL: rawURL)
-        return getServerURL()?.absoluteString ?? rawURL
-    }
-
     func probeAndSave(_ rawURL: String) async throws -> ProbeResult {
         let result = try await probe(rawURL: rawURL)
         let response = result.response

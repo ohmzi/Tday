@@ -247,7 +247,6 @@ export default function NativeFloaterTaskHomeDashboard() {
             {!floaterLoading && sortedFloaters.length > 0 ? (
               <FloaterGroup
                 floaters={sortedFloaters}
-                reorderable={false}
                 className="tday-content-enter"
               />
             ) : null}

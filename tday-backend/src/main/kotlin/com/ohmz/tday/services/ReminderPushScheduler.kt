@@ -20,6 +20,7 @@ import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.jdbc.select
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.LocalDateTime
@@ -80,7 +81,7 @@ class ReminderPushScheduler(
 
         // Non-recurring, incomplete todos whose due entered (windowStart, now].
         val dueTodos = newSuspendedTransaction(Dispatchers.IO) {
-            Todos.selectAll()
+            Todos.select(Todos.id, Todos.userID, Todos.title)
                 .where {
                     (Todos.completed eq false) and
                         Todos.rrule.isNull() and

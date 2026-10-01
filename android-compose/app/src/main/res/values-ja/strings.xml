@@ -11,7 +11,6 @@
     <string name="action_search_in">%1$sを検索</string>
     <string name="search_no_results_body">別の言葉を試すか、検索をクリアしてください。</string>
     <string name="search_no_results_settings">一致する設定はありません</string>
-    <string name="search_no_results_guide">一致するトピックはありません</string>
     <string name="action_create_task">タスクを作成</string>
     <string name="action_create_list">リストを作成</string>
     <string name="action_edit">編集</string>
@@ -53,13 +52,11 @@
     <string name="task_promote_failed">タスクを予定できませんでした</string>
     <string name="task_float_failed">タスクをフロートできませんでした</string>
     <string name="action_complete">完了</string>
-    <string name="action_more">もっと見る</string>
     <string name="action_more_options">その他のオプション</string>
     <string name="action_save">保存</string>
     <string name="action_save_task">タスクを保存</string>
     <string name="action_cancel">キャンセル</string>
     <string name="action_done">完了</string>
-    <string name="action_create">作成</string>
     <string name="action_ok">OK</string>
     <string name="action_sign_out">サインアウト</string>
     <string name="action_expand_section">セクションを展開</string>
@@ -75,7 +72,6 @@
 
     <!-- Scheduled task home screen -->
     <string name="scheduled_task_home_title">T\'Day</string>
-    <string name="scheduled_task_home_category_today">今日</string>
     <string name="scheduled_task_home_category_overdue">期限超過</string>
     <string name="scheduled_task_home_category_scheduled">予定</string>
     <string name="scheduled_task_home_category_all">すべて</string>
@@ -84,7 +80,6 @@
     <string name="scheduled_task_home_category_calendar">カレンダー</string>
     <string name="root_feed_tab_scheduled_task_home">予定</string>
     <string name="root_feed_tab_floater">フローター</string>
-    <string name="scheduled_task_home_search_placeholder">検索</string>
     <string name="scheduled_task_home_search_no_results">一致するタスクはありません</string>
     <string name="scheduled_task_home_my_lists">マイリスト</string>
     <string name="scheduled_task_home_new_list">新しいリスト</string>
@@ -220,28 +215,22 @@
     <string name="settings_notifications_blocked">Android の設定で T\'Day の通知がオフになっています。</string>
     <string name="settings_notifications_declined">通知が許可されなかったため、T\'Day はリマインダーを配信できません。</string>
     <string name="settings_ai_task_summary">要約</string>
-    <string name="settings_saving_admin">管理者設定を保存中…</string>
-    <string name="settings_ai_unavailable_title">要約は利用できません</string>
     <string name="settings_default_reminder">デフォルトのリマインダー</string>
     <string name="settings_update_available_version">v%1$s が利用可能</string>
     <string name="settings_server_compatible">互換性あり</string>
     <string name="settings_server_incompatible">互換性なし</string>
 
     <!-- Onboarding / wizard -->
-    <string name="onboarding_title">T\'Day をセットアップ</string>
-    <string name="onboarding_subtitle">ワークスペースをセットアップ</string>
     <string name="onboarding_step_mode">モード</string>
     <string name="onboarding_step_server">サーバー</string>
     <string name="onboarding_step_login">ログイン</string>
     <string name="onboarding_mode_title">セットアップを選択</string>
     <string name="onboarding_mode_subtitle">T\'Day がタスクを保存する場所を選びます。</string>
     <string name="onboarding_mode_server_title">セルフホストサーバー</string>
-    <string name="onboarding_mode_server_subtitle">アカウント、同期、独自のバックエンドを使用。</string>
     <string name="onboarding_mode_server_short_title">セルフホスト</string>
     <string name="onboarding_mode_server_short_subtitle">アカウントと同期</string>
     <string name="onboarding_mode_local_short_title">このデバイス</string>
     <string name="onboarding_mode_local_short_subtitle">ログイン不要</string>
-    <string name="onboarding_mode_local_subtitle">ログイン不要。データはアプリ内に保存されます。</string>
     <string name="onboarding_server_hero_subtitle">T\'Day のエンドポイントに接続します。</string>
     <string name="onboarding_server_url_label">サーバー URL</string>
     <string name="onboarding_server_url_placeholder">https://app.example.com</string>
@@ -250,14 +239,10 @@
     <string name="onboarding_connect">接続</string>
     <string name="onboarding_connecting_title">サーバーに接続中…</string>
     <string name="onboarding_connecting_subtitle">エンドポイント、TLS、ワークスペース設定を確認中</string>
-    <string name="onboarding_use_device_only">このデバイスのみを使用</string>
     <string name="onboarding_username_label">ユーザー名</string>
     <string name="onboarding_password_label">パスワード</string>
     <string name="onboarding_sign_in">サインイン</string>
-    <string name="onboarding_login_hero_subtitle">同期されたワークスペースを開きます。</string>
     <string name="onboarding_create_account">アカウントを作成</string>
-    <string name="onboarding_register_hero_subtitle">サーバーアカウントを作成します。</string>
-    <string name="onboarding_change_server">サーバーを変更</string>
     <string name="onboarding_change_setup">セットアップを変更</string>
     <string name="onboarding_first_name_label">名</string>
     <string name="onboarding_confirm_password_label">パスワードの確認</string>
@@ -282,7 +267,6 @@
     <string name="auth_password_manager_save_server_url_failed">Android パスワードマネージャーがこのサーバー URL を保存できませんでした。パスワードマネージャーが有効か確認してください。</string>
     <string name="auth_password_manager_save_login_failed">Android パスワードマネージャーがこのログインを保存できませんでした。パスワードマネージャーが有効か確認してください。</string>
     <string name="auth_error_incorrect_credentials">ユーザー名またはパスワードが正しくありません</string>
-    <string name="auth_error_server_unreachable">サーバーに接続できません。サーバー URL を確認して再試行してください。</string>
 
     <!-- Todo list screen -->
     <string name="todos_summarize">タスクを要約</string>
@@ -334,7 +318,6 @@
     <string name="todos_summary_close">要約を閉じる</string>
     <string name="todos_summary_loading">タスクの要約を作成中…</string>
     <string name="todos_summary_admin_disabled">要約は管理者により無効化されています</string>
-    <string name="todos_summary_modes_unavailable">要約は今日、予定、すべて、優先でのみ利用できます</string>
     <string name="todos_summary_offline_unavailable">オフライン中は要約を利用できません。</string>
     <string name="todos_list_settings">リスト設定</string>
     <string name="reusable_list">再利用リスト</string>
@@ -357,7 +340,6 @@
     <string name="share_role_owner">オーナー</string>
     <string name="share_role_editor">編集者</string>
     <string name="share_role_viewer">閲覧者</string>
-    <string name="share_task_chooser_title">タスクを共有</string>
     <string name="share_due_label">期限: %1$s</string>
     <string name="share_priority_label">優先度: %1$s</string>
     <plurals name="share_task_count">
@@ -409,10 +391,6 @@
     <string name="completed_empty_body">タスクを完了すると、ここに表示されます。</string>
     <string name="completed_floater_empty">完了したフローターはまだありません</string>
     <string name="completed_floater_empty_body">フローターで何かにチェックを入れると、ここに表示されます。</string>
-    <string name="completed_section_earlier">それ以前</string>
-    <string name="completed_section_today">今日</string>
-    <string name="completed_section_tomorrow">明日</string>
-    <string name="completed_section_rest_of">%1$s の残り</string>
 
     <!-- Calendar screen -->
     <string name="calendar_title">カレンダー</string>
@@ -421,7 +399,6 @@
     <string name="calendar_tasks_due">%1$s 期限のタスク</string>
     <string name="calendar_no_pending">この日に期限の未完了タスクはありません</string>
     <string name="calendar_no_pending_body">カレンダーで別の日付を選択してください。</string>
-    <string name="calendar_completed_header">完了済み:</string>
     <string name="calendar_prev_month">前の月</string>
     <string name="calendar_next_month">次の月</string>
     <string name="calendar_prev_week">前の週</string>
@@ -435,10 +412,6 @@
     <!-- Error handling / retry / offline -->
     <string name="action_retry">再試行</string>
     <string name="action_undo">元に戻す</string>
-    <string name="offline_banner_title">オフラインです</string>
-    <string name="offline_banner">キャッシュされたタスクを利用できます。接続が回復すると変更が同期されます。</string>
-    <string name="offline_banner_pending_one">1件の変更が同期待ちです</string>
-    <string name="offline_banner_pending_many">%1$d件の変更が同期待ちです</string>
     <string name="settings_about">アプリ情報</string>
     <string name="settings_workspace_local_title">ローカルワークスペース</string>
     <string name="settings_workspace_local_detail">このデバイスのみ</string>
@@ -448,18 +421,8 @@
     <string name="settings_workspace_delete_body">この端末に保存されているすべてのタスク・リスト・完了記録を完全に削除します。サーバー上に控えはありません。残しておきたい場合は、先にデータをダウンロードしてください。</string>
     <string name="settings_workspace_delete_done">ローカルデータを削除しました。</string>
     <string name="settings_workspace_server_title">サーバー同期</string>
-    <string name="settings_sync_status_ready">同期の準備完了</string>
-    <string name="settings_sync_status_syncing">同期中</string>
-    <string name="settings_sync_status_offline">オフライン。接続が回復すると変更が同期されます。</string>
-    <string name="settings_sync_status_pending">同期待ち</string>
-    <string name="settings_sync_status_synced">同期済み</string>
     <string name="settings_sync_last_synced_label">最終同期</string>
     <string name="settings_sync_last_synced_never">まだありません</string>
-    <string name="settings_sync_last_attempt_label">最終試行</string>
-    <string name="settings_sync_pending_label">保留中</string>
-    <string name="settings_sync_pending_none">変更待ちはありません</string>
-    <string name="settings_sync_pending_one">1件の変更が待機中</string>
-    <string name="settings_sync_pending_many">%1$d件の変更が待機中</string>
     <string name="settings_sync_now">今すぐ同期</string>
     <string name="settings_sync_up_to_date">最新です</string>
     <string name="settings_sync_offline_short">オフライン</string>
@@ -481,23 +444,18 @@
     <string name="error_load_tasks_failed">タスクの読み込みに失敗しました。</string>
     <string name="error_create_task_failed">タスクを作成できませんでした。</string>
     <string name="error_update_task_failed">タスクを更新できませんでした。</string>
-    <string name="error_complete_task_failed">タスクを完了できませんでした。</string>
     <string name="error_delete_task_failed">タスクを削除できませんでした。</string>
     <string name="error_restore_task_failed">タスクを復元できませんでした。</string>
     <string name="error_create_list_failed">リストを作成できませんでした。</string>
     <string name="error_update_list_failed">リストを更新できませんでした。</string>
     <string name="error_delete_list_failed">リストを削除できませんでした。</string>
     <string name="error_summarize_tasks_failed">タスクを要約できませんでした。</string>
-    <string name="error_load_admin_settings_failed">管理者設定を読み込めませんでした</string>
-    <string name="error_update_admin_settings_failed">管理者設定を更新できませんでした</string>
     <string name="error_reset_trusted_server_failed">信頼済みサーバーをリセットできませんでした。</string>
     <string name="error_connect_server_failed">サーバーに接続できませんでした。</string>
     <string name="server_setup_error_probe_timeout">サーバーの確認がタイムアウトしました。URL とネットワークを確認して再試行してください。</string>
     <string name="server_setup_error_invalid_url">無効なサーバー URL です。</string>
     <string name="server_setup_error_insecure_transport">リモートサーバー URL には HTTPS を使用してください。</string>
     <string name="server_setup_error_not_tday_server">サーバーに接続できますが、T\'Day サーバーではないようです。</string>
-    <string name="server_setup_trust_refreshing">保存されたサーバーの信頼が変更されました。更新された証明書で再試行します。</string>
-    <string name="server_setup_trust_refresh_failed">保存されたサーバーの信頼の不一致から自動的に回復できませんでした。アプリのストレージを消去するか、アプリを再インストールして再試行してください。</string>
 
     <string name="notification_channel_task_reminders_name">タスクリマインダー</string>
     <string name="notification_channel_task_reminders_description">今後のタスク期限のリマインダー</string>
@@ -532,7 +490,6 @@
     <string name="widget_today_tasks_add_tonight">今夜のタスクを追加</string>
     <string name="widget_today_tasks_count">%1$d件期限</string>
     <string name="widget_today_progress">%2$d件中%1$d件完了</string>
-    <string name="widget_today_tasks_count_unit">期限</string>
     <string name="widget_today_tasks_setup_title">T\'Day を開く</string>
     <string name="widget_today_tasks_setup_message">ワークスペースをセットアップ</string>
     <string name="widget_floater_tasks_description">フローータスクを一目で表示</string>
@@ -543,7 +500,6 @@
     <string name="widget_floater_tasks_empty">フローータスクはありません</string>
     <string name="widget_floater_tasks_add">フローターを追加</string>
     <string name="widget_floater_tasks_count">%1$d件未完了</string>
-    <string name="widget_floater_tasks_count_unit">未完了</string>
     <string name="widget_loading">タスクを読み込み中…</string>
     <string name="widget_list_tasks_description">選んだリストをひと目で表示します</string>
     <string name="widget_list_tasks_title">リスト</string>
@@ -560,11 +516,7 @@
     <string name="widget_list_picker_empty">T\'Day でリストを作成してから、もう一度このウィジェットをタップしてください。</string>
     <string name="widget_list_picker_section_todo">予定リスト</string>
     <string name="widget_list_picker_section_floater">フローターリスト</string>
-    <string name="widget_list_picker_shared_label">共有</string>
     <string name="widget_list_picker_selected">選択中</string>
-
-    <!-- Settings: updates -->
-    <string name="settings_check_updates">更新を確認</string>
 
     <!-- Latest release screen -->
     <string name="release_title">アプリバージョン</string>
@@ -591,9 +543,7 @@
     <string name="release_downloading_apk_progress">更新をダウンロード中… %1$d%%</string>
     <string name="release_preparing_update">更新を準備中…</string>
     <string name="release_opening_installer">Android インストーラーを開いています…</string>
-    <string name="release_install_permission_required">T\'Day がこのソースから更新をインストールすることを許可してください。</string>
     <string name="release_install_permission_return_hint">T\'Day が更新をインストールすることを許可し、ここに戻ると自動的に続行します。</string>
-    <string name="release_install_permission_denied">T\'Day のインストール権限がまだ無効です。</string>
     <string name="release_download_failed">更新をダウンロードできませんでした。もう一度お試しください。</string>
     <string name="release_install_failed">更新をインストールできませんでした。</string>
     <string name="release_install_cancelled">インストールがキャンセルされました。「ダウンロード &amp; インストール」をタップして再試行してください。</string>
@@ -669,11 +619,8 @@
     <string name="forgot_password_reset_failed">回答が一致しませんでした。もう一度お試しください。</string>
     <string name="forgot_password_reset_failed_contact_admin">%1$s パスワードのリセットは管理者に連絡してください。</string>
     <string name="forgot_password_reset_success">パスワードをリセットしました。新しいパスワードでサインインしてください。</string>
-    <string name="forgot_password_subtitle_challenge">セキュリティの質問に答えてください。</string>
     <string name="forgot_password_subtitle_locked">間違った試行が多すぎます。管理者にパスワードのリセットを依頼できます。</string>
-    <string name="forgot_password_subtitle_password">新しいパスワードを選んでください。</string>
     <string name="forgot_password_subtitle_requested">リクエストを送信しました。管理者がパスワードをリセットし、一時パスワードを共有します。</string>
-    <string name="forgot_password_subtitle_username">ユーザー名を入力してセキュリティの質問に答えてください。</string>
     <string name="forgot_password_success_title">パスワードを変更しました</string>
     <string name="forgot_password_title">パスワードをリセット</string>
     <string name="forgot_password_username_required">ユーザー名を入力してください</string>
@@ -701,14 +648,12 @@
     <string name="security_questions_question_3">質問3</string>
     <string name="security_questions_save">セキュリティの質問を保存</string>
     <string name="security_questions_save_failed">セキュリティの質問を保存できませんでした</string>
-    <string name="security_questions_subtitle">パスワードのリセット時に本人確認に使う3つの質問を選んでください。</string>
     <string name="security_questions_title">セキュリティの質問</string>
     <string name="settings_account_change_security_questions">変更</string>
     <string name="settings_account_current_password_required">現在のパスワードを入力してください</string>
     <string name="settings_account_security_questions_configured">設定済み</string>
     <string name="settings_account_security_questions_label">セキュリティの質問</string>
     <string name="settings_account_security_questions_not_configured">未設定</string>
-    <string name="settings_account_security_questions_save">質問を保存</string>
     <string name="settings_account_security_questions_updated">セキュリティの質問を更新しました</string>
     <string name="summary_source_local">ローカルモデル</string>
     <string name="summary_source_server">サーバーモデル</string>
@@ -717,7 +662,6 @@
     <string name="settings_data_summary">タスク %1$d · リスト %2$d · 完了 %3$d</string>
     <string name="settings_data_download">データをダウンロード</string>
     <string name="settings_data_import">インポート</string>
-    <string name="settings_data_import_local_hint">ファイルをインポートするにはサーバーにサインインしてください。</string>
     <string name="settings_data_export_done">データファイルを保存しました。</string>
     <string name="settings_data_import_done">インポート完了 — %1$d 件を追加しました。</string>
     <string name="settings_data_import_failed">このファイルをインポートできませんでした。</string>

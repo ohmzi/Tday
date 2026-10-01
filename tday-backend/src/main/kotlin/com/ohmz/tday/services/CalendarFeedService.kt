@@ -20,6 +20,8 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.inSubQuery
+import org.jetbrains.exposed.v1.jdbc.select
 import org.slf4j.LoggerFactory
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -164,15 +166,25 @@ class CalendarFeedServiceImpl(
 
     /** Loads a user's dated todos + occurrence overrides and renders them as ICS. */
     private fun buildIcs(userId: String, stampUtc: LocalDateTime): String {
-        val todoRows = Todos.selectAll().where { Todos.userID eq userId }.toList()
-        val todoIds = todoRows.map { it[Todos.id] }.toSet()
+        // Only the columns the feed renders.
+        val todoRows = Todos.select(
+            Todos.id,
+            Todos.title,
+            Todos.description,
+            Todos.timeZone,
+            Todos.due,
+            Todos.rrule,
+            Todos.exdates,
+        ).where { Todos.userID eq userId }.toList()
 
         // Overrides (moved/renamed single occurrences) keyed by their original occurrence
         // date, so each becomes a RECURRENCE-ID VEVENT rather than an EXDATE.
         val overridesByTodo = mutableMapOf<String, MutableList<ResultRowOverride>>()
-        if (todoIds.isNotEmpty()) {
+        if (todoRows.isNotEmpty()) {
             TodoInstances.selectAll()
-                .where { TodoInstances.todoId inList todoIds }
+                .where {
+                    TodoInstances.todoId inSubQuery Todos.select(Todos.id).where { Todos.userID eq userId }
+                }
                 .forEach { row ->
                     val over = ResultRowOverride(
                         todoId = row[TodoInstances.todoId],

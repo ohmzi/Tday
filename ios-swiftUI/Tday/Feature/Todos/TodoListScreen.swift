@@ -4850,21 +4850,6 @@ private struct TimelineTopBarButton: View {
     }
 }
 
-private struct TimelineScrollOffsetTrackingRow: View {
-    let onChange: (CGFloat) -> Void
-
-    @Environment(\.tdayColors) private var colors
-
-    var body: some View {
-        TimelineScrollOffsetObserver(onChange: onChange)
-            .frame(height: 0)
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(colors.background)
-            .listRowSeparator(.hidden)
-            .allowsHitTesting(false)
-    }
-}
-
 /// The pinned-bar screens' scroll offset, boxed so a scroll frame redraws only the two views
 /// that draw the title collapse: `TimelineTopBar` and `TimelineExpandedTitleRow`, each reached
 /// through `TimelineCollapseProgressReader`.
@@ -5727,10 +5712,6 @@ private struct ListSettingsSheet: View {
         todoListAccentColor(for: color)
     }
 
-    private var selectedSymbolName: String {
-        todoListSymbolName(for: iconKey)
-    }
-
     private var maximumSheetHeight: CGFloat {
         max(1, UIScreen.main.bounds.height * ListSettingsSheetMetrics.maximumHeightFraction)
     }
@@ -6163,27 +6144,6 @@ private struct TodoRescheduleDrop: Equatable {
     let todo: TodoItem
     let targetDate: Date?
     let targetHour: Int?
-}
-
-private struct ScheduledDragModifier: ViewModifier {
-    let enabled: Bool
-    let todo: TodoItem
-    let onDragStart: () -> Void
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if enabled {
-            content.onDrag {
-                HapticManager.dragPickUp()
-                onDragStart()
-                TodoTaskDragSession.shared.todo = todo
-                TodoTaskDragSession.shared.handledDropSignature = nil
-                return NSItemProvider(object: todo.id as NSString)
-            }
-        } else {
-            content
-        }
-    }
 }
 
 private struct ScheduledTodoDropDelegate: DropDelegate {

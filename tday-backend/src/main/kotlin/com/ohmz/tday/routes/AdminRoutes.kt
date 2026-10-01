@@ -1,6 +1,5 @@
 package com.ohmz.tday.routes
 
-import arrow.core.raise.either
 import com.ohmz.tday.di.inject
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth

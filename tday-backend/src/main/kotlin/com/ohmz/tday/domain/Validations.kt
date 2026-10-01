@@ -7,7 +7,6 @@ import com.ohmz.tday.models.request.*
 import io.konform.validation.Validation
 import io.konform.validation.constraints.maxLength
 import io.konform.validation.constraints.minLength
-import io.konform.validation.constraints.pattern
 
 fun <T> Validation<T>.validateOrFail(value: T): Either<AppError, T> {
     val result = this(value)
@@ -179,18 +178,5 @@ val validateCreateFloaterList = Validation<FloaterListCreateRequest> {
 val validatePatchFloaterList = Validation<FloaterListPatchRequest> {
     FloaterListPatchRequest::id {
         minLength(1) hint "List id is required"
-    }
-}
-
-val validateRegister = Validation<RegisterRequest> {
-    RegisterRequest::fname {
-        minLength(2) hint "First name must be at least two characters"
-    }
-    RegisterRequest::username {
-        pattern("^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$") hint
-            "Username must be 3-30 characters using letters, numbers, . _ - and start/end alphanumeric"
-    }
-    RegisterRequest::password {
-        minLength(8) hint "Password must be at least 8 characters"
     }
 }

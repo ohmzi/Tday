@@ -19,6 +19,8 @@ import java.util.TimeZone
  * absolute moment, which the create form converts to a UTC ISO string on save.
  */
 object OnDeviceTitleNlpParser {
+    private val collapseSpaces = Regex("\\s{2,}")
+
     fun parse(text: String, referenceEpochMs: Long): TodoTitleNlpResponse? {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return null
@@ -78,7 +80,7 @@ object OnDeviceTitleNlpParser {
 
         val before = text.substring(0, matchStart)
         val after = text.substring((matchStart + matchedText.length).coerceAtMost(text.length))
-        val dateStripped = "$before$after".replace(Regex("\\s{2,}"), " ").trim()
+        val dateStripped = "$before$after".replace(collapseSpaces, " ").trim()
         // Recurrence/priority are stripped from the date-cleaned title; the highlight
         // span (matchStart/matchedText) still points at the date phrase in the raw text.
         val grammar = RecurrencePriorityGrammar.parse(dateStripped)

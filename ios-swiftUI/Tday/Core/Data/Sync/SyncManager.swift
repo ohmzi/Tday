@@ -241,10 +241,6 @@ final class SyncManager {
         self.secureStore = secureStore
     }
 
-    func hasPendingMutations() -> Bool {
-        !isLocalMode && !cacheManager.loadOfflineState().pendingMutations.isEmpty
-    }
-
     var isLocalMode: Bool {
         secureStore.isLocalMode()
     }
@@ -711,11 +707,17 @@ final class SyncManager {
             }
         )
         var generated: [PendingMutationRecord] = []
+        // `RemoteSnapshot`'s `*UpdatedAt*` properties rebuild their dictionary on every
+        // access, so read each once here instead of once per local record in the loops below.
+        let remoteTodoUpdatedAt = remote.todoUpdatedAtByCanonical
+        let remoteFloaterUpdatedAt = remote.floaterUpdatedAtByCanonical
+        let remoteListUpdatedAt = remote.listUpdatedAtByID
+        let remoteFloaterListUpdatedAt = remote.floaterListUpdatedAtByID
 
         for todo in localState.todos
             where !todo.canonicalId.hasPrefix(LOCAL_TODO_PREFIX) &&
                 !pendingTodoTargets.contains(todo.canonicalId) {
-            guard let remoteUpdatedAt = remote.todoUpdatedAtByCanonical[todo.canonicalId], todo.updatedAtEpochMs > remoteUpdatedAt else {
+            guard let remoteUpdatedAt = remoteTodoUpdatedAt[todo.canonicalId], todo.updatedAtEpochMs > remoteUpdatedAt else {
                 continue
             }
             let mutation = PendingMutationRecord(
@@ -744,7 +746,7 @@ final class SyncManager {
         for floater in localState.floaters
             where !floater.canonicalId.hasPrefix(LOCAL_FLOATER_PREFIX) &&
                 !pendingFloaterTargets.contains(floater.canonicalId) {
-            guard let remoteUpdatedAt = remote.floaterUpdatedAtByCanonical[floater.canonicalId], floater.updatedAtEpochMs > remoteUpdatedAt else {
+            guard let remoteUpdatedAt = remoteFloaterUpdatedAt[floater.canonicalId], floater.updatedAtEpochMs > remoteUpdatedAt else {
                 continue
             }
             let mutation = PendingMutationRecord(
@@ -771,7 +773,7 @@ final class SyncManager {
         }
 
         for list in localState.lists where !list.id.hasPrefix(LOCAL_LIST_PREFIX) && !pendingListTargets.contains(list.id) {
-            guard let remoteUpdatedAt = remote.listUpdatedAtByID[list.id], list.updatedAtEpochMs > remoteUpdatedAt else {
+            guard let remoteUpdatedAt = remoteListUpdatedAt[list.id], list.updatedAtEpochMs > remoteUpdatedAt else {
                 continue
             }
             let mutation = PendingMutationRecord(
@@ -800,7 +802,7 @@ final class SyncManager {
         }
 
         for list in localState.floaterLists where !list.id.hasPrefix(LOCAL_FLOATER_LIST_PREFIX) && !pendingFloaterListTargets.contains(list.id) {
-            guard let remoteUpdatedAt = remote.floaterListUpdatedAtByID[list.id], list.updatedAtEpochMs > remoteUpdatedAt else {
+            guard let remoteUpdatedAt = remoteFloaterListUpdatedAt[list.id], list.updatedAtEpochMs > remoteUpdatedAt else {
                 continue
             }
             let mutation = PendingMutationRecord(

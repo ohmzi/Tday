@@ -15,14 +15,6 @@ final class ThemeStore {
         defaults.set(mode.rawValue, forKey: key)
     }
 
-    func themeMode() -> AppThemeMode {
-        load()
-    }
-
-    func saveThemeMode(_ mode: AppThemeMode) {
-        save(mode)
-    }
-
     func clear() {
         defaults.removeObject(forKey: key)
     }

@@ -625,5 +625,3 @@ private fun guideIconRes(name: String): Int = when (name) {
     "wifi-off" -> R.drawable.ic_lucide_wifi_off
     else -> R.drawable.ic_lucide_book
 }
-
-private const val GUIDE_TITLE_COLLAPSE_DISTANCE_DP = 180f

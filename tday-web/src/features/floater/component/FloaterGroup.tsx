@@ -6,8 +6,7 @@ import FloaterItemContainer from "./FloaterItemContainer";
 /**
  * Floater order is now FIXED (priority → most-recently-modified → id, shared with every
  * platform and the widgets), so drag-to-reorder is retired here — the displayed order always
- * mirrors the incoming sort. The reorder mutation (`reorder-floater`) is intentionally left
- * in the codebase but unused. `reorderable` is still accepted for call-site compatibility.
+ * mirrors the incoming sort.
  */
 export default function FloaterGroup({
   floaters,
@@ -18,7 +17,6 @@ export default function FloaterGroup({
   floaters: FloaterItemType[];
   className?: string;
   highlightedFloaterId?: string | null;
-  reorderable?: boolean;
   readOnly?: boolean;
 }) {
   // Same travel the scheduled rows get, for the same reason: priority is the sort's

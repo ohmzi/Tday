@@ -31,6 +31,7 @@ object RecurrencePriorityGrammar {
 
     private val priorityPhrase = Regex("""\b(high|medium|low)\s+priority\b""", RegexOption.IGNORE_CASE)
     private val priorityTrailing = Regex("""\s+(high|medium|low)\s*$""", RegexOption.IGNORE_CASE)
+    private val collapseSpaces = Regex("""\s{2,}""")
 
     fun parse(text: String): RecurrencePriorityResult {
         var working = text
@@ -70,7 +71,7 @@ object RecurrencePriorityGrammar {
             }
         }
 
-        val cleanTitle = working.replace(Regex("""\s{2,}"""), " ").trim()
+        val cleanTitle = working.replace(collapseSpaces, " ").trim()
         return RecurrencePriorityResult(cleanTitle = cleanTitle, rrule = rrule, priority = priority)
     }
 

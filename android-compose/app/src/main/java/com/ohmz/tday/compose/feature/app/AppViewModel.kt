@@ -77,8 +77,6 @@ data class AppUiState(
     // and by enterLocalWorkspace(), and never written back — see [SessionResolution].
     val sessionResolution: SessionResolution = SessionResolution.UNKNOWN,
     val authenticated: Boolean = false,
-    val requiresServerSetup: Boolean = false,
-    val requiresLogin: Boolean = false,
     val serverUrl: String? = null,
     val dataMode: AppDataMode = AppDataMode.UNSET,
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
@@ -106,7 +104,6 @@ data class AppUiState(
     val pendingMutationCount: Int = 0,
     val lastSuccessfulSyncEpochMs: Long = 0L,
     val lastSyncAttemptEpochMs: Long = 0L,
-    val offlineNoticeId: Long = 0L,
     // Bumped by manual syncs (Settings "Sync now" + pull-to-refresh) so the connectivity
     // toast force-shows every time it applies, bypassing the offline-transition gate.
     val manualNoticePulse: Int = 0,
@@ -163,25 +160,6 @@ private data class SyncMetadataSnapshot(
     val lastSyncAttemptEpochMs: Long,
 )
 
-internal const val OFFLINE_NOTICE_COOLDOWN_MS = 10 * 60 * 1000L
-
-internal class OfflineNoticeCooldown(
-    private val nowMillis: () -> Long = { System.currentTimeMillis() },
-) {
-    private var lastNoticeShownAtMs: Long? = null
-
-    fun shouldShowNotice(): Boolean {
-        val now = nowMillis()
-        val lastShownAt = lastNoticeShownAtMs
-        if (lastShownAt != null && now - lastShownAt < OFFLINE_NOTICE_COOLDOWN_MS) {
-            return false
-        }
-
-        lastNoticeShownAtMs = now
-        return true
-    }
-}
-
 /** Outcome of an inline account edit (display name / password change). */
 sealed interface ProfileEditResult {
     data object Success : ProfileEditResult
@@ -224,7 +202,6 @@ class AppViewModel @Inject constructor(
     // ran it, see observeOfflineSyncSuccesses), by a return to the foreground, and by sign-out.
     // Only touched on the main dispatcher.
     private val _consecutiveSyncFailures = MutableStateFlow(0)
-    private val offlineNoticeCooldown = OfflineNoticeCooldown()
 
     // The silent pending-approval re-login runs at most once per process (first launch),
     // so an explicit logout is never undone by a later bootstrap.
@@ -280,8 +257,6 @@ class AppViewModel @Inject constructor(
                         loading = false,
                         sessionResolution = SessionResolution.RESOLVED,
                         authenticated = false,
-                        requiresServerSetup = true,
-                        requiresLogin = false,
                         serverUrl = null,
                         dataMode = AppDataMode.UNSET,
                         user = null,
@@ -313,16 +288,12 @@ class AppViewModel @Inject constructor(
 
             if (sessionResult != null) {
                 val sessionUser = sessionResult.user
-                val shouldShowOfflineNotice = sessionResult.isOffline &&
-                        offlineNoticeCooldown.shouldShowNotice()
                 val syncMetadata = syncMetadataSnapshot(AppDataMode.SERVER)
                 _uiState.update {
                     it.copy(
                         loading = false,
                         sessionResolution = SessionResolution.RESOLVED,
                         authenticated = true,
-                        requiresServerSetup = false,
-                        requiresLogin = false,
                         // Approval came through: clear the holding screen in the same
                         // update that flips `authenticated`, so login never flashes.
                         pendingApproval = false,
@@ -344,11 +315,6 @@ class AppViewModel @Inject constructor(
                         pendingMutationCount = syncMetadata.pendingMutationCount,
                         lastSuccessfulSyncEpochMs = syncMetadata.lastSuccessfulSyncEpochMs,
                         lastSyncAttemptEpochMs = syncMetadata.lastSyncAttemptEpochMs,
-                        offlineNoticeId = if (shouldShowOfflineNotice) {
-                            it.offlineNoticeId + 1L
-                        } else {
-                            it.offlineNoticeId
-                        },
                         versionCheckResult = vs.versionCheckResult,
                         backendVersion = vs.backendVersion,
                         requiredUpdateRelease = vs.requiredUpdateRelease,
@@ -365,8 +331,6 @@ class AppViewModel @Inject constructor(
                         loading = false,
                         sessionResolution = SessionResolution.RESOLVED,
                         authenticated = false,
-                        requiresServerSetup = false,
-                        requiresLogin = false,
                         serverUrl = serverConfigRepository.getServerUrl(),
                         dataMode = AppDataMode.SERVER,
                         user = null,
@@ -412,8 +376,6 @@ class AppViewModel @Inject constructor(
                         loading = false,
                         sessionResolution = SessionResolution.RESOLVED,
                         authenticated = false,
-                        requiresServerSetup = false,
-                        requiresLogin = false,
                         pendingApproval = true,
                         pendingApprovalUsername = pendingUser,
                         isCheckingApproval = false,
@@ -436,8 +398,6 @@ class AppViewModel @Inject constructor(
                     loading = false,
                     sessionResolution = SessionResolution.RESOLVED,
                     authenticated = false,
-                    requiresServerSetup = false,
-                    requiresLogin = true,
                     pendingApproval = false,
                     serverUrl = serverConfigRepository.getServerUrl(),
                     dataMode = AppDataMode.SERVER,
@@ -462,7 +422,6 @@ class AppViewModel @Inject constructor(
                 pendingApproval = true,
                 pendingApprovalUsername = username,
                 authenticated = false,
-                requiresLogin = false,
                 isCheckingApproval = false,
             )
         }
@@ -495,7 +454,7 @@ class AppViewModel @Inject constructor(
     fun cancelPendingApproval() {
         authRepository.clearPendingApproval()
         _uiState.update {
-            it.copy(pendingApproval = false, pendingApprovalUsername = null, requiresLogin = true)
+            it.copy(pendingApproval = false, pendingApprovalUsername = null)
         }
     }
 
@@ -533,8 +492,6 @@ class AppViewModel @Inject constructor(
                 loading = false,
                 sessionResolution = SessionResolution.RESOLVED,
                 authenticated = false,
-                requiresServerSetup = false,
-                requiresLogin = false,
                 serverUrl = null,
                 dataMode = AppDataMode.LOCAL,
                 user = null,
@@ -782,12 +739,8 @@ class AppViewModel @Inject constructor(
                 data = mapOf("phase" to "success", "version" to probeResult.versionCheck::class.simpleName),
             )
             val versionResult = probeResult.versionCheck
-            val isBlocking = versionResult is VersionCheckResult.AppUpdateRequired ||
-                versionResult is VersionCheckResult.ServerUpdateRequired
             _uiState.update {
                 it.copy(
-                    requiresServerSetup = false,
-                    requiresLogin = !isBlocking,
                     serverUrl = probeResult.serverUrl,
                     dataMode = AppDataMode.SERVER,
                     error = null,
@@ -911,8 +864,6 @@ class AppViewModel @Inject constructor(
                 it.copy(
                     authenticated = false,
                     dataMode = AppDataMode.UNSET,
-                    requiresServerSetup = true,
-                    requiresLogin = false,
                     user = null,
                     error = null,
                 )
@@ -936,8 +887,6 @@ class AppViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     authenticated = false,
-                    requiresServerSetup = true,
-                    requiresLogin = false,
                     pendingApproval = false,
                     pendingApprovalUsername = null,
                     isCheckingApproval = false,
@@ -980,8 +929,6 @@ class AppViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     authenticated = false,
-                    requiresLogin = true,
-                    requiresServerSetup = false,
                     user = null,
                     error = null,
                     loading = false,
@@ -1023,7 +970,6 @@ class AppViewModel @Inject constructor(
                         suppressAuthenticationExpired = true,
                     )
             val offlineReason = offlineReasonFor(isOffline, syncError)
-            val shouldShowOfflineNotice = isOffline && offlineNoticeCooldown.shouldShowNotice()
             val syncMetadata = syncMetadataSnapshot(AppDataMode.SERVER)
             _uiState.update {
                 it.copy(
@@ -1036,11 +982,6 @@ class AppViewModel @Inject constructor(
                         it.manualNoticePulse + 1
                     } else {
                         it.manualNoticePulse
-                    },
-                    offlineNoticeId = if (shouldShowOfflineNotice) {
-                        it.offlineNoticeId + 1L
-                    } else {
-                        it.offlineNoticeId
                     },
                     pendingMutationCount = syncMetadata.pendingMutationCount,
                     lastSuccessfulSyncEpochMs = syncMetadata.lastSuccessfulSyncEpochMs,
@@ -1105,7 +1046,6 @@ class AppViewModel @Inject constructor(
 
             syncAndUpdateOfflineState(
                 replayPending = true,
-                showOfflineNotice = true,
                 connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
                 suppressAuthenticationExpired = true,
             )
@@ -1129,12 +1069,6 @@ class AppViewModel @Inject constructor(
         dayAheadPreferenceStore.setOption(option)
         _uiState.update { it.copy(selectedDayAhead = option) }
         DayAheadScheduling.scheduleNext(appContext, option)
-    }
-
-    fun rescheduleReminders() {
-        viewModelScope.launch(backgroundDispatcher) {
-            runCatching { reminderScheduler.rescheduleAll() }
-        }
     }
 
     fun clearPendingApprovalNotice() {
@@ -1221,7 +1155,6 @@ class AppViewModel @Inject constructor(
 
     private suspend fun syncAndUpdateOfflineState(
         replayPending: Boolean,
-        showOfflineNotice: Boolean = false,
         connectionProbeTimeoutMs: Long? = null,
         markOfflineOnConnectivityFailure: Boolean = true,
         suppressAuthenticationExpired: Boolean = false,
@@ -1246,10 +1179,6 @@ class AppViewModel @Inject constructor(
         val shouldDeferOfflineState = syncError != null &&
                 isLikelyConnectivityIssue(syncError) &&
                 !markOfflineOnConnectivityFailure
-        val shouldShowOfflineNotice = isOffline &&
-                showOfflineNotice &&
-                !shouldDeferOfflineState &&
-                offlineNoticeCooldown.shouldShowNotice()
         val syncMetadata = syncMetadataSnapshot(AppDataMode.SERVER)
         _uiState.update {
             it.copy(
@@ -1266,11 +1195,6 @@ class AppViewModel @Inject constructor(
                     shouldDeferOfflineState -> it.offlineReason
                     isOffline -> offlineReason
                     else -> ConnectionFailureKind.NONE
-                },
-                offlineNoticeId = if (shouldShowOfflineNotice) {
-                    it.offlineNoticeId + 1L
-                } else {
-                    it.offlineNoticeId
                 },
                 pendingMutationCount = syncMetadata.pendingMutationCount,
                 lastSuccessfulSyncEpochMs = syncMetadata.lastSuccessfulSyncEpochMs,
@@ -1309,8 +1233,6 @@ class AppViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 authenticated = true,
-                requiresServerSetup = false,
-                requiresLogin = false,
                 serverUrl = serverConfigRepository.getServerUrl(),
                 dataMode = AppDataMode.SERVER,
                 user = restoredSession.user,
@@ -1479,7 +1401,6 @@ class AppViewModel @Inject constructor(
                 if (_uiState.value.authenticated) {
                     syncAndUpdateOfflineState(
                         replayPending = true,
-                        showOfflineNotice = true,
                         connectionProbeTimeoutMs = SyncManager.USER_REFRESH_CONNECTION_TIMEOUT_MS,
                         suppressAuthenticationExpired = true,
                     )

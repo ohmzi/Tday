@@ -68,7 +68,7 @@ function subscribe(onChange: () => void): () => void {
  * media query flips.
  *
  * `useSyncExternalStore` rather than a `useState` seeded in an effect — the same
- * choice `useAppMode` and `bulk-selection-signal` already made — so the first
+ * choice `useIsLocalMode` and `bulk-selection-signal` already made — so the first
  * render already has the real answer instead of one frame of the wrong one, and
  * so the server snapshot is a named third argument rather than a `typeof window`
  * branch inside a render.

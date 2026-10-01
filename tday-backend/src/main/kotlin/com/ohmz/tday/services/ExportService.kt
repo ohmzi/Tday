@@ -45,6 +45,8 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.inSubQuery
+import org.jetbrains.exposed.v1.jdbc.select
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDateTime
@@ -67,11 +69,10 @@ class ExportServiceImpl(
     override suspend fun exportAll(userId: String): Either<AppError, TdayExport> {
         val bundle = newSuspendedTransaction(Dispatchers.IO) {
             val todoRows = Todos.selectAll().where { Todos.userID eq userId }.toList()
-            val todoIds = todoRows.map { it[Todos.id] }
-            val instancesByTodo = if (todoIds.isEmpty()) {
+            val instancesByTodo = if (todoRows.isEmpty()) {
                 emptyMap()
             } else {
-                TodoInstances.selectAll().where { TodoInstances.todoId inList todoIds }
+                TodoInstances.selectAll().where { TodoInstances.todoId inSubQuery ownTodoIds(userId) }
                     .groupBy({ it[TodoInstances.todoId] }, { it.toInstanceDto() })
             }
 
@@ -341,15 +342,18 @@ class ExportServiceImpl(
         val existingFloaterListIds: Set<String>,
     )
 
+    /** The caller's own todo ids as a subquery, so instance lookups never bind one parameter per todo. */
+    private fun ownTodoIds(userId: String) = Todos.select(Todos.id).where { Todos.userID eq userId }
+
     private fun readImportContext(userId: String): ImportContext {
-        val listIds = Lists.selectAll().where { Lists.userID eq userId }.map { it[Lists.id] }
-        val floaterListIds = FloaterLists.selectAll().where { FloaterLists.userID eq userId }
+        val listIds = Lists.select(Lists.id).where { Lists.userID eq userId }.map { it[Lists.id] }
+        val floaterListIds = FloaterLists.select(FloaterLists.id).where { FloaterLists.userID eq userId }
             .map { it[FloaterLists.id] }
-        val todoIds = Todos.selectAll().where { Todos.userID eq userId }.map { it[Todos.id] }
+        val todoIds = Todos.select(Todos.id).where { Todos.userID eq userId }.map { it[Todos.id] }
         val instanceIds = if (todoIds.isEmpty()) {
             emptyList()
         } else {
-            TodoInstances.selectAll().where { TodoInstances.todoId inList todoIds }
+            TodoInstances.select(TodoInstances.id).where { TodoInstances.todoId inSubQuery ownTodoIds(userId) }
                 .map { it[TodoInstances.id] }
         }
         val existing = buildSet {
@@ -357,10 +361,13 @@ class ExportServiceImpl(
             addAll(floaterListIds)
             addAll(todoIds)
             addAll(instanceIds)
-            addAll(Floaters.selectAll().where { Floaters.userID eq userId }.map { it[Floaters.id] })
-            addAll(CompletedTodos.selectAll().where { CompletedTodos.userID eq userId }.map { it[CompletedTodos.id] })
+            addAll(Floaters.select(Floaters.id).where { Floaters.userID eq userId }.map { it[Floaters.id] })
             addAll(
-                CompletedFloaters.selectAll().where { CompletedFloaters.userID eq userId }
+                CompletedTodos.select(CompletedTodos.id).where { CompletedTodos.userID eq userId }
+                    .map { it[CompletedTodos.id] },
+            )
+            addAll(
+                CompletedFloaters.select(CompletedFloaters.id).where { CompletedFloaters.userID eq userId }
                     .map { it[CompletedFloaters.id] },
             )
         }

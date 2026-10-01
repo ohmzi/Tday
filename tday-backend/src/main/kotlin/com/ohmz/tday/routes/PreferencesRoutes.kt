@@ -1,6 +1,5 @@
 package com.ohmz.tday.routes
 
-import arrow.core.right
 import arrow.core.raise.either
 import com.ohmz.tday.db.enums.DefaultHomeScreen
 import com.ohmz.tday.db.enums.Direction

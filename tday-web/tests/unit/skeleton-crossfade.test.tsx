@@ -23,7 +23,6 @@
  * ships it.
  */
 
-import React from "react";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { act, cleanup, render } from "@testing-library/react";

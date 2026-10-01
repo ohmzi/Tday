@@ -8,6 +8,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.sentry.okhttp.SentryOkHttpInterceptor
 import kotlinx.serialization.json.Json
+import okhttp3.Dispatcher
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.JavaNetCookieJar
 import okhttp3.MediaType.Companion.toMediaType
@@ -25,6 +26,9 @@ import javax.net.ssl.TrustManager
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+
+    /** Matches the 8-way parallel fetch in `SyncManager.fetchRemoteSnapshot`, with headroom. */
+    private const val MAX_REQUESTS_PER_HOST = 10
 
     @Provides
     @Singleton
@@ -61,6 +65,10 @@ object NetworkModule {
         }
 
         val client = OkHttpClient.Builder()
+            // A sync fans out 8 parallel GETs at the one self-hosted host; OkHttp's default of 5
+            // per host would queue the other 3 behind them for an extra round trip. The request
+            // count the server sees is unchanged, only how many are in flight at once.
+            .dispatcher(Dispatcher().apply { maxRequestsPerHost = MAX_REQUESTS_PER_HOST })
             .cookieJar(JavaNetCookieJar(cookieManager))
             .sslSocketFactory(sslContext.socketFactory, serverTrustManager)
             // NextAuth callback responses may issue absolute redirects; keep auth flow

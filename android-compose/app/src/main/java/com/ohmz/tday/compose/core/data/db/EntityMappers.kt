@@ -201,6 +201,7 @@ fun PendingMutationRecord.toEntity() = PendingMutationEntity(
     reusable = reusable,
     defaultPriority = defaultPriority,
     defaultPriorityChanged = defaultPriorityChanged,
+    staged = staged,
 )
 
 fun PendingMutationEntity.toRecord() = PendingMutationRecord(
@@ -223,4 +224,5 @@ fun PendingMutationEntity.toRecord() = PendingMutationRecord(
     reusable = reusable,
     defaultPriority = defaultPriority,
     defaultPriorityChanged = defaultPriorityChanged,
+    staged = staged ?: false,
 )

@@ -1,6 +1,5 @@
 package com.ohmz.tday.shared.guide.export
 
-import com.ohmz.tday.shared.guide.GuideBlock
 import com.ohmz.tday.shared.guide.GuideCatalog
 import com.ohmz.tday.shared.guide.GuideDeepLink
 import com.ohmz.tday.shared.guide.GuidePlatform

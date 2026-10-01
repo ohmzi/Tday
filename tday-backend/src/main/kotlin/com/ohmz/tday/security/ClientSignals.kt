@@ -24,6 +24,8 @@ class ClientSignalsImpl(config: AppConfig) : ClientSignals {
         }
     }
 
+    private val hashKey: SecretKeySpec by lazy { SecretKeySpec(hashSecret.toByteArray(Charsets.UTF_8), "HmacSHA256") }
+
     override fun getClientIp(request: ApplicationRequest): String {
         request.headers["cf-connecting-ip"]?.trim()?.ifEmpty { null }?.let { return it }
 
@@ -48,7 +50,7 @@ class ClientSignalsImpl(config: AppConfig) : ClientSignals {
 
     override fun hashSecurityValue(raw: String): String {
         val mac = Mac.getInstance("HmacSHA256")
-        mac.init(SecretKeySpec(hashSecret.toByteArray(Charsets.UTF_8), "HmacSHA256"))
+        mac.init(hashKey)
         return mac.doFinal(raw.toByteArray(Charsets.UTF_8)).toHex()
     }
 }

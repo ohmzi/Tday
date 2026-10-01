@@ -34,45 +34,4 @@ struct ShareSheet {
     static func taskShareText(_ item: CompletedItem) -> String {
         taskShareText(title: item.title, description: item.description, due: item.due, priority: item.priority)
     }
-
-    static func shareTask(_ todo: TodoItem) {
-        presentShareSheet(items: [taskShareText(todo)])
-    }
-
-    static func shareList(name: String, items: [TodoItem]) {
-        var parts: [String] = [name]
-        parts.append(String(repeating: "—", count: min(name.count, 20)))
-        for todo in items {
-            let bullet = todo.completed ? "✓" : "○"
-            parts.append("\(bullet) \(todo.title)")
-        }
-        parts.append("")
-        parts.append("\(items.count) task\(items.count != 1 ? "s" : "")")
-        let text = parts.joined(separator: "\n")
-        presentShareSheet(items: [text])
-    }
-
-    private static func presentShareSheet(items: [Any]) {
-        guard let windowScene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first,
-              let rootVC = windowScene.windows.first?.rootViewController else {
-            return
-        }
-        let activityVC = UIActivityViewController(activityItems: items, applicationActivities: nil)
-
-        // Find the topmost presented VC
-        var topVC = rootVC
-        while let presented = topVC.presentedViewController {
-            topVC = presented
-        }
-
-        if let popover = activityVC.popoverPresentationController {
-            popover.sourceView = topVC.view
-            popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: topVC.view.bounds.midY, width: 0, height: 0)
-            popover.permittedArrowDirections = []
-        }
-
-        topVC.present(activityVC, animated: true)
-    }
 }

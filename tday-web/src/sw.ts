@@ -82,8 +82,7 @@ const apiCacheConfig = {
 registerRoute(
   ({ url }) =>
     url.pathname.startsWith("/api/todo") ||
-    url.pathname.startsWith("/api/floater") ||
-    url.pathname.startsWith("/api/floater-list"),
+    url.pathname.startsWith("/api/floater"),
   new NetworkFirst(apiCacheConfig),
 );
 

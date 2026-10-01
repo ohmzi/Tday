@@ -11,7 +11,6 @@
     <string name="action_search_in">Искать в %1$s</string>
     <string name="search_no_results_body">Попробуйте другое слово или очистите поиск.</string>
     <string name="search_no_results_settings">Подходящих настроек нет</string>
-    <string name="search_no_results_guide">Подходящих тем нет</string>
     <string name="action_create_task">Создать задачу</string>
     <string name="action_create_list">Создать список</string>
     <string name="action_edit">Изменить</string>
@@ -53,13 +52,11 @@
     <string name="task_promote_failed">Не удалось запланировать задачу</string>
     <string name="task_float_failed">Не удалось отпустить задачу</string>
     <string name="action_complete">Завершить</string>
-    <string name="action_more">Ещё</string>
     <string name="action_more_options">Дополнительно</string>
     <string name="action_save">Сохранить</string>
     <string name="action_save_task">Сохранить задачу</string>
     <string name="action_cancel">Отмена</string>
     <string name="action_done">Готово</string>
-    <string name="action_create">Создать</string>
     <string name="action_ok">ОК</string>
     <string name="action_sign_out">Выйти</string>
     <string name="action_expand_section">Развернуть раздел</string>
@@ -75,7 +72,6 @@
 
     <!-- Scheduled task home screen -->
     <string name="scheduled_task_home_title">T\'Day</string>
-    <string name="scheduled_task_home_category_today">Сегодня</string>
     <string name="scheduled_task_home_category_overdue">Просроченные</string>
     <string name="scheduled_task_home_category_scheduled">Запланированные</string>
     <string name="scheduled_task_home_category_all">Все</string>
@@ -84,7 +80,6 @@
     <string name="scheduled_task_home_category_calendar">Календарь</string>
     <string name="root_feed_tab_scheduled_task_home">Запланированные</string>
     <string name="root_feed_tab_floater">Без срока</string>
-    <string name="scheduled_task_home_search_placeholder">Поиск</string>
     <string name="scheduled_task_home_search_no_results">Совпадений не найдено</string>
     <string name="scheduled_task_home_my_lists">Мои списки</string>
     <string name="scheduled_task_home_new_list">Новый список</string>
@@ -220,28 +215,22 @@
     <string name="settings_notifications_blocked">Уведомления для T\'Day отключены в настройках Android.</string>
     <string name="settings_notifications_declined">Уведомления не разрешены, поэтому T\'Day не может отправлять напоминания.</string>
     <string name="settings_ai_task_summary">Сводка</string>
-    <string name="settings_saving_admin">Сохранение настройки администратора…</string>
-    <string name="settings_ai_unavailable_title">Сводка недоступна</string>
     <string name="settings_default_reminder">Напоминание по умолчанию</string>
     <string name="settings_update_available_version">Доступна v%1$s</string>
     <string name="settings_server_compatible">Совместим</string>
     <string name="settings_server_incompatible">Несовместим</string>
 
     <!-- Onboarding / wizard -->
-    <string name="onboarding_title">Настройка T\'Day</string>
-    <string name="onboarding_subtitle">Настройте своё рабочее пространство</string>
     <string name="onboarding_step_mode">Режим</string>
     <string name="onboarding_step_server">Сервер</string>
     <string name="onboarding_step_login">Вход</string>
     <string name="onboarding_mode_title">Выберите настройку</string>
     <string name="onboarding_mode_subtitle">Выберите, где T\'Day хранит ваши задачи.</string>
     <string name="onboarding_mode_server_title">Собственный сервер</string>
-    <string name="onboarding_mode_server_subtitle">Аккаунты, синхронизация и ваш бэкенд.</string>
     <string name="onboarding_mode_server_short_title">Self-hosted</string>
     <string name="onboarding_mode_server_short_subtitle">Аккаунты и синхронизация</string>
     <string name="onboarding_mode_local_short_title">Это устройство</string>
     <string name="onboarding_mode_local_short_subtitle">Без входа</string>
-    <string name="onboarding_mode_local_subtitle">Без входа. Данные хранятся в приложении.</string>
     <string name="onboarding_server_hero_subtitle">Подключите ваш сервер T\'Day.</string>
     <string name="onboarding_server_url_label">URL сервера</string>
     <string name="onboarding_server_url_placeholder">https://app.example.com</string>
@@ -250,14 +239,10 @@
     <string name="onboarding_connect">Подключиться</string>
     <string name="onboarding_connecting_title">Подключение к серверу…</string>
     <string name="onboarding_connecting_subtitle">Проверка сервера, TLS и настроек рабочего пространства</string>
-    <string name="onboarding_use_device_only">Использовать только это устройство</string>
     <string name="onboarding_username_label">Имя пользователя</string>
     <string name="onboarding_password_label">Пароль</string>
     <string name="onboarding_sign_in">Войти</string>
-    <string name="onboarding_login_hero_subtitle">Откройте синхронизированное рабочее пространство.</string>
     <string name="onboarding_create_account">Создать аккаунт</string>
-    <string name="onboarding_register_hero_subtitle">Создайте аккаунт на сервере.</string>
-    <string name="onboarding_change_server">Сменить сервер</string>
     <string name="onboarding_change_setup">Изменить настройку</string>
     <string name="onboarding_first_name_label">Имя</string>
     <string name="onboarding_confirm_password_label">Подтвердите пароль</string>
@@ -282,7 +267,6 @@
     <string name="auth_password_manager_save_server_url_failed">Менеджер паролей Android не смог сохранить этот URL сервера. Убедитесь, что менеджер паролей включён.</string>
     <string name="auth_password_manager_save_login_failed">Менеджер паролей Android не смог сохранить этот вход. Убедитесь, что менеджер паролей включён.</string>
     <string name="auth_error_incorrect_credentials">Неверное имя пользователя или пароль</string>
-    <string name="auth_error_server_unreachable">Сервер недоступен. Проверьте URL сервера и повторите попытку.</string>
 
     <!-- Todo list screen -->
     <string name="todos_summarize">Сводка по задачам</string>
@@ -334,7 +318,6 @@
     <string name="todos_summary_close">Закрыть сводку</string>
     <string name="todos_summary_loading">Создание сводки по задачам…</string>
     <string name="todos_summary_admin_disabled">Сводка отключена администратором</string>
-    <string name="todos_summary_modes_unavailable">Сводка доступна только для разделов «Сегодня», «Запланированные», «Все» и «Приоритет»</string>
     <string name="todos_summary_offline_unavailable">Сводка недоступна в офлайн-режиме.</string>
     <string name="todos_list_settings">Настройки списка</string>
     <string name="reusable_list">Многоразовый список</string>
@@ -357,7 +340,6 @@
     <string name="share_role_owner">Владелец</string>
     <string name="share_role_editor">Редактор</string>
     <string name="share_role_viewer">Читатель</string>
-    <string name="share_task_chooser_title">Поделиться задачей</string>
     <string name="share_due_label">Срок: %1$s</string>
     <string name="share_priority_label">Приоритет: %1$s</string>
     <plurals name="share_task_count">
@@ -412,10 +394,6 @@
     <string name="completed_empty_body">Отметьте задачу выполненной — она появится здесь.</string>
     <string name="completed_floater_empty">Пока нет завершённых плавающих задач</string>
     <string name="completed_floater_empty_body">Отметьте что-нибудь как выполненное во «Плавающих», и оно появится здесь.</string>
-    <string name="completed_section_earlier">Ранее</string>
-    <string name="completed_section_today">Сегодня</string>
-    <string name="completed_section_tomorrow">Завтра</string>
-    <string name="completed_section_rest_of">Остаток %1$s</string>
 
     <!-- Calendar screen -->
     <string name="calendar_title">Календарь</string>
@@ -424,7 +402,6 @@
     <string name="calendar_tasks_due">Задачи на %1$s</string>
     <string name="calendar_no_pending">На этот день нет невыполненных задач</string>
     <string name="calendar_no_pending_body">Выберите другую дату в календаре.</string>
-    <string name="calendar_completed_header">Завершено:</string>
     <string name="calendar_prev_month">Предыдущий месяц</string>
     <string name="calendar_next_month">Следующий месяц</string>
     <string name="calendar_prev_week">Предыдущая неделя</string>
@@ -438,10 +415,6 @@
     <!-- Error handling / retry / offline -->
     <string name="action_retry">Повторить</string>
     <string name="action_undo">Отменить</string>
-    <string name="offline_banner_title">Вы офлайн</string>
-    <string name="offline_banner">Доступны кэшированные задачи. Изменения синхронизируются при восстановлении связи.</string>
-    <string name="offline_banner_pending_one">1 изменение ожидает синхронизации</string>
-    <string name="offline_banner_pending_many">%1$d изменений ожидают синхронизации</string>
     <string name="settings_about">О приложении</string>
     <string name="settings_workspace_local_title">Локальное пространство</string>
     <string name="settings_workspace_local_detail">Только на этом устройстве</string>
@@ -451,18 +424,8 @@
     <string name="settings_workspace_delete_body">Это навсегда удалит все задачи, списки и завершённые записи, сохранённые на этом устройстве. Копии на сервере нет — сначала скачайте свои данные, если хотите их сохранить.</string>
     <string name="settings_workspace_delete_done">Локальные данные удалены.</string>
     <string name="settings_workspace_server_title">Синхронизация с сервером</string>
-    <string name="settings_sync_status_ready">Готово к синхронизации</string>
-    <string name="settings_sync_status_syncing">Синхронизация</string>
-    <string name="settings_sync_status_offline">Офлайн. Изменения синхронизируются при восстановлении связи.</string>
-    <string name="settings_sync_status_pending">Ожидание синхронизации</string>
-    <string name="settings_sync_status_synced">Синхронизировано</string>
     <string name="settings_sync_last_synced_label">Последняя синхронизация</string>
     <string name="settings_sync_last_synced_never">Ещё не было</string>
-    <string name="settings_sync_last_attempt_label">Последняя попытка</string>
-    <string name="settings_sync_pending_label">Ожидает</string>
-    <string name="settings_sync_pending_none">Нет ожидающих изменений</string>
-    <string name="settings_sync_pending_one">1 изменение ожидает</string>
-    <string name="settings_sync_pending_many">%1$d изменений ожидают</string>
     <string name="settings_sync_now">Синхронизировать</string>
     <string name="settings_sync_up_to_date">Актуально</string>
     <string name="settings_sync_offline_short">Офлайн</string>
@@ -484,23 +447,18 @@
     <string name="error_load_tasks_failed">Не удалось загрузить задачи.</string>
     <string name="error_create_task_failed">Не удалось создать задачу.</string>
     <string name="error_update_task_failed">Не удалось обновить задачу.</string>
-    <string name="error_complete_task_failed">Не удалось завершить задачу.</string>
     <string name="error_delete_task_failed">Не удалось удалить задачу.</string>
     <string name="error_restore_task_failed">Не удалось восстановить задачу.</string>
     <string name="error_create_list_failed">Не удалось создать список.</string>
     <string name="error_update_list_failed">Не удалось обновить список.</string>
     <string name="error_delete_list_failed">Не удалось удалить список.</string>
     <string name="error_summarize_tasks_failed">Не удалось создать сводку задач.</string>
-    <string name="error_load_admin_settings_failed">Не удалось загрузить настройки администратора</string>
-    <string name="error_update_admin_settings_failed">Не удалось обновить настройки администратора</string>
     <string name="error_reset_trusted_server_failed">Не удалось сбросить доверенный сервер.</string>
     <string name="error_connect_server_failed">Не удалось подключиться к серверу.</string>
     <string name="server_setup_error_probe_timeout">Истекло время проверки сервера. Проверьте URL и сеть, затем повторите попытку.</string>
     <string name="server_setup_error_invalid_url">Неверный URL сервера.</string>
     <string name="server_setup_error_insecure_transport">Используйте HTTPS для удалённых URL сервера.</string>
     <string name="server_setup_error_not_tday_server">Сервер доступен, но, похоже, не является сервером T\'Day.</string>
-    <string name="server_setup_trust_refreshing">Сохранённое доверие к серверу изменилось. Повторная попытка с обновлённым сертификатом.</string>
-    <string name="server_setup_trust_refresh_failed">Приложению не удалось автоматически восстановиться после несоответствия сохранённого доверия к серверу. Очистите хранилище приложения или переустановите его, затем повторите попытку.</string>
 
     <string name="notification_channel_task_reminders_name">Напоминания о задачах</string>
     <string name="notification_channel_task_reminders_description">Напоминания о приближающихся сроках задач</string>
@@ -535,7 +493,6 @@
     <string name="widget_today_tasks_add_tonight">Добавьте на вечер</string>
     <string name="widget_today_tasks_count">%1$d на сегодня</string>
     <string name="widget_today_progress">Готово %1$d из %2$d</string>
-    <string name="widget_today_tasks_count_unit">на сегодня</string>
     <string name="widget_today_tasks_setup_title">Открыть T\'Day</string>
     <string name="widget_today_tasks_setup_message">Настройте рабочее пространство</string>
     <string name="widget_floater_tasks_description">Показывает задачи без срока с первого взгляда</string>
@@ -546,7 +503,6 @@
     <string name="widget_floater_tasks_empty">Нет задач без срока</string>
     <string name="widget_floater_tasks_add">Добавьте задачу без срока</string>
     <string name="widget_floater_tasks_count">%1$d открыто</string>
-    <string name="widget_floater_tasks_count_unit">открыто</string>
     <string name="widget_loading">Загрузка задач…</string>
     <string name="widget_list_tasks_description">Показывает выбранный вами список</string>
     <string name="widget_list_tasks_title">Список</string>
@@ -563,11 +519,7 @@
     <string name="widget_list_picker_empty">Создайте список в T\'Day, затем снова нажмите на этот виджет.</string>
     <string name="widget_list_picker_section_todo">Запланированные списки</string>
     <string name="widget_list_picker_section_floater">Списки без срока</string>
-    <string name="widget_list_picker_shared_label">Общий</string>
     <string name="widget_list_picker_selected">Выбран</string>
-
-    <!-- Settings: updates -->
-    <string name="settings_check_updates">Проверить обновления</string>
 
     <!-- Latest release screen -->
     <string name="release_title">Версия приложения</string>
@@ -594,9 +546,7 @@
     <string name="release_downloading_apk_progress">Загрузка обновления… %1$d%%</string>
     <string name="release_preparing_update">Подготовка обновления…</string>
     <string name="release_opening_installer">Открытие установщика Android…</string>
-    <string name="release_install_permission_required">Разрешите T\'Day устанавливать обновления из этого источника.</string>
     <string name="release_install_permission_return_hint">Разрешите T\'Day устанавливать обновления, затем вернитесь сюда для автоматического продолжения.</string>
-    <string name="release_install_permission_denied">Разрешение на установку для T\'Day всё ещё отключено.</string>
     <string name="release_download_failed">Не удалось скачать обновление. Повторите попытку.</string>
     <string name="release_install_failed">Не удалось установить обновление.</string>
     <string name="release_install_cancelled">Установка была отменена. Нажмите «Скачать и установить», чтобы повторить попытку.</string>
@@ -672,11 +622,8 @@
     <string name="forgot_password_reset_failed">Ответы не совпали. Попробуйте ещё раз.</string>
     <string name="forgot_password_reset_failed_contact_admin">%1$s Обратитесь к администратору, чтобы сбросить пароль.</string>
     <string name="forgot_password_reset_success">Пароль сброшен. Войдите с новым паролем.</string>
-    <string name="forgot_password_subtitle_challenge">Ответьте на контрольные вопросы.</string>
     <string name="forgot_password_subtitle_locked">Слишком много неверных попыток. Вы можете запросить сброс пароля у администратора.</string>
-    <string name="forgot_password_subtitle_password">Выберите новый пароль.</string>
     <string name="forgot_password_subtitle_requested">Запрос отправлен. Администратор сбросит пароль и сообщит вам временный.</string>
-    <string name="forgot_password_subtitle_username">Введите имя пользователя, чтобы ответить на контрольные вопросы.</string>
     <string name="forgot_password_success_title">Пароль изменён</string>
     <string name="forgot_password_title">Сброс пароля</string>
     <string name="forgot_password_username_required">Введите имя пользователя</string>
@@ -704,14 +651,12 @@
     <string name="security_questions_question_3">Вопрос 3</string>
     <string name="security_questions_save">Сохранить контрольные вопросы</string>
     <string name="security_questions_save_failed">Не удалось сохранить контрольные вопросы</string>
-    <string name="security_questions_subtitle">Выберите три вопроса для подтверждения личности при сбросе пароля.</string>
     <string name="security_questions_title">Контрольные вопросы</string>
     <string name="settings_account_change_security_questions">Изменить</string>
     <string name="settings_account_current_password_required">Введите текущий пароль</string>
     <string name="settings_account_security_questions_configured">Настроены</string>
     <string name="settings_account_security_questions_label">Контрольные вопросы</string>
     <string name="settings_account_security_questions_not_configured">Не настроены</string>
-    <string name="settings_account_security_questions_save">Сохранить вопросы</string>
     <string name="settings_account_security_questions_updated">Контрольные вопросы обновлены</string>
     <string name="summary_source_local">Локальная модель</string>
     <string name="summary_source_server">Серверная модель</string>
@@ -720,7 +665,6 @@
     <string name="settings_data_summary">%1$d задач · %2$d списков · %3$d завершено</string>
     <string name="settings_data_download">Скачать мои данные</string>
     <string name="settings_data_import">Импорт</string>
-    <string name="settings_data_import_local_hint">Войдите на сервер, чтобы импортировать файл.</string>
     <string name="settings_data_export_done">Файл с вашими данными сохранён.</string>
     <string name="settings_data_import_done">Импорт завершён — добавлено элементов: %1$d.</string>
     <string name="settings_data_import_failed">Не удалось импортировать этот файл.</string>

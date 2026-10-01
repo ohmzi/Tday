@@ -73,7 +73,6 @@ object TdayDimens {
     val PullRefreshDotMaxHeight: Dp = 30.dp
     val PullRefreshDotSpacing: Dp = 10.dp
     val PullRefreshContainerCornerRadius: Dp = 29.dp
-    val PullRefreshContentOffset: Dp = 132.dp
     val PullRefreshElevation: Dp = 18.dp
     val PullRefreshSweepInset: Dp = 11.dp
     val PullRefreshSweepHeight: Dp = 40.dp
@@ -82,15 +81,7 @@ object TdayDimens {
 
     // List item spacing
     val ListItemSpacing: Dp = 8.dp
-    val ListItemSpacingTodayStyle: Dp = 18.dp
 
     // Bottom spacer (scroll past FAB)
     val BottomScrollSpacer: Dp = 96.dp
-
-    // Title bar
-    val ExpandedTitleHeight: Dp = 56.dp
-    val TitleBarTopPadding: Dp = 6.dp
-    val TitleBarBottomPadding: Dp = 2.dp
-    val CollapsedTitleShiftOffset: Dp = 12.dp
-    val ExpandedTitleShiftOffset: Dp = 10.dp
 }

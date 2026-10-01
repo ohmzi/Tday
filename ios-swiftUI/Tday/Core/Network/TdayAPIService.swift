@@ -24,10 +24,6 @@ struct APIError: Error, LocalizedError, Equatable {
     var errorDescription: String? {
         message
     }
-
-    static func makeDecoder() -> JSONDecoder {
-        .tdayDecoder
-    }
 }
 
 private struct ServerErrorResponse: Decodable {
@@ -176,10 +172,6 @@ final class TdayAPIService {
         configuration.cancelTrustEnrollment(host: host)
     }
 
-    func probeServer(at url: URL) async throws -> MobileProbeResponse {
-        try await probeServer(url: url)
-    }
-
     func probeServer(url: URL) async throws -> MobileProbeResponse {
         try await request(
             path: url.absoluteString,
@@ -320,40 +312,12 @@ final class TdayAPIService {
         try await request(path: "/api/todo/summary", method: "POST", body: payload, responseType: TodoSummaryResponse.self)
     }
 
-    func parseTodoTitleNlp(payload: TodoTitleNlpRequest) async throws -> TodoTitleNlpResponse {
-        try await request(path: "/api/todo/nlp", method: "POST", body: payload, responseType: TodoTitleNlpResponse.self)
-    }
-
     func createTodo(payload: CreateTodoRequest) async throws -> CreateTodoResponse {
         try await request(path: "/api/todo", method: "POST", body: payload, responseType: CreateTodoResponse.self)
     }
 
     func createFloater(payload: CreateFloaterRequest) async throws -> CreateFloaterResponse {
         try await request(path: "/api/floater", method: "POST", body: payload, responseType: CreateFloaterResponse.self)
-    }
-
-    func patchTodo(payload: UpdateTodoRequest) async throws -> MessageResponse {
-        try await patchTodoByBody(payload: payload)
-    }
-
-    func deleteTodo(payload: DeleteTodoRequest) async throws -> MessageResponse {
-        try await deleteTodoByBody(payload: payload)
-    }
-
-    func completeTodo(payload: TodoCompleteRequest) async throws -> MessageResponse {
-        try await completeTodoByBody(payload: payload)
-    }
-
-    func uncompleteTodo(payload: TodoUncompleteRequest) async throws -> MessageResponse {
-        try await uncompleteTodoByBody(payload: payload)
-    }
-
-    func prioritizeTodo(payload: TodoPrioritizeRequest) async throws -> MessageResponse {
-        try await prioritizeTodoByBody(payload: payload)
-    }
-
-    func deleteTodoInstance(payload: TodoInstanceDeleteRequest) async throws -> MessageResponse {
-        try await deleteTodoInstanceByBody(payload: payload)
     }
 
     func patchTodoByBody(payload: UpdateTodoRequest) async throws -> MessageResponse {
@@ -400,10 +364,6 @@ final class TdayAPIService {
 
     // MARK: - Task steps (R6-2)
 
-    func getTaskSteps(todoId: String) async throws -> TaskStepsResponse {
-        try await request(path: "/api/todo/\(todoId)/steps", method: "GET", responseType: TaskStepsResponse.self)
-    }
-
     func createTaskStep(payload: CreateTaskStepRequest) async throws -> TaskStepMutationResponse {
         try await request(path: "/api/todo/steps", method: "POST", body: payload, responseType: TaskStepMutationResponse.self)
     }
@@ -428,22 +388,6 @@ final class TdayAPIService {
         try await request(path: "/api/todo/prioritize", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }
 
-    func reorderTodos(payload: [ReorderItemRequest]) async throws -> MessageResponse {
-        try await request(path: "/api/todo/reorder", method: "PATCH", body: payload, responseType: MessageResponse.self)
-    }
-
-    func getOverdueTodos(start: Int64, end: Int64) async throws -> TodosResponse {
-        try await request(
-            path: "/api/todo/overdue",
-            method: "GET",
-            queryItems: [
-                URLQueryItem(name: "start", value: String(start)),
-                URLQueryItem(name: "end", value: String(end)),
-            ],
-            responseType: TodosResponse.self
-        )
-    }
-
     func patchTodoInstanceByBody(payload: TodoInstancePatchRequest) async throws -> MessageResponse {
         try await request(path: "/api/todo/instance", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }
@@ -464,10 +408,6 @@ final class TdayAPIService {
         try await request(path: "/api/completedTodo", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }
 
-    func patchCompletedTodo(payload: UpdateCompletedTodoRequest) async throws -> MessageResponse {
-        try await patchCompletedTodoByBody(payload: payload)
-    }
-
     func deleteCompletedTodoByBody(payload: DeleteCompletedTodoRequest) async throws -> MessageResponse {
         try await request(path: "/api/completedTodo", method: "DELETE", body: payload, responseType: MessageResponse.self)
     }
@@ -480,36 +420,12 @@ final class TdayAPIService {
         try await request(path: "/api/completedFloater", method: "DELETE", body: payload, responseType: MessageResponse.self)
     }
 
-    func deleteCompletedTodo(payload: DeleteCompletedTodoRequest) async throws -> MessageResponse {
-        try await deleteCompletedTodoByBody(payload: payload)
-    }
-
     func getLists() async throws -> ListsResponse {
         try await request(path: "/api/list", method: "GET", responseType: ListsResponse.self)
     }
 
     func getFloaterLists() async throws -> FloaterListsResponse {
         try await request(path: "/api/floaterList", method: "GET", responseType: FloaterListsResponse.self)
-    }
-
-    func getListTodos(listID: String, start: Int64, end: Int64) async throws -> ListDetailResponse {
-        try await request(
-            path: "/api/list/\(listID)",
-            method: "GET",
-            queryItems: [
-                URLQueryItem(name: "start", value: String(start)),
-                URLQueryItem(name: "end", value: String(end)),
-            ],
-            responseType: ListDetailResponse.self
-        )
-    }
-
-    func getFloaterListTodos(listID: String) async throws -> FloaterListDetailResponse {
-        try await request(
-            path: "/api/floaterList/\(listID)",
-            method: "GET",
-            responseType: FloaterListDetailResponse.self
-        )
     }
 
     func createList(payload: CreateListRequest) async throws -> CreateListResponse {
@@ -528,10 +444,6 @@ final class TdayAPIService {
         try await request(path: "/api/floaterList", method: "PATCH", body: payload, responseType: MessageResponse.self)
     }
 
-    func patchList(payload: UpdateListRequest) async throws -> MessageResponse {
-        try await patchListByBody(payload: payload)
-    }
-
     func deleteListByBody(payload: DeleteListRequest) async throws -> DeleteListResponse {
         try await request(path: "/api/list", method: "DELETE", body: payload, responseType: DeleteListResponse.self)
     }
@@ -543,10 +455,6 @@ final class TdayAPIService {
     /// Reset a reusable floater list — un-completes all its floaters.
     func resetFloaterList(id: String) async throws -> MessageResponse {
         try await request(path: "/api/floaterList/\(id)/reset", method: "POST", responseType: MessageResponse.self)
-    }
-
-    func deleteList(payload: DeleteListRequest) async throws -> DeleteListResponse {
-        try await deleteListByBody(payload: payload)
     }
 
     // MARK: List sharing (membersBase = "list" or "floaterList")
@@ -594,10 +502,6 @@ final class TdayAPIService {
 
     func postImport(payload: ImportRequest) async throws -> ImportResponse {
         try await request(path: "/api/import", method: "POST", body: payload, responseType: ImportResponse.self)
-    }
-
-    func getUserDetails() async throws -> UserResponse {
-        try await request(path: "/api/user", method: "GET", responseType: UserResponse.self)
     }
 
     func patchUserProfile(payload: UpdateProfileRequest) async throws -> [String: String] {

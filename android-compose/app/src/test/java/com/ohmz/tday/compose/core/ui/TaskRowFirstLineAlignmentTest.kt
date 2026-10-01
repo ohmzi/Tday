@@ -199,9 +199,9 @@ class TaskRowFirstLineAlignmentTest {
      * The arithmetic above is worth nothing if a screen quietly goes back to centring, and
      * "everywhere" was the whole of the request: a fix applied to the screen in the report
      * and to no other leaves the same defect in eight more places. So the rows are pinned
-     * by file AND BY COUNT, which is the part a membership test cannot do: `CalendarScreen`
-     * draws two of these rows, and a file-level `contains("Alignment.Top")` is satisfied by
-     * the first of them no matter what the second does. That is not hypothetical — it is
+     * by file AND BY COUNT, which is the part a membership test cannot do: `TodoListScreen`
+     * draws three of these rows, and a file-level `contains("Alignment.Top")` is satisfied by
+     * the first of them no matter what the others do. That is not hypothetical — it is
      * how a half-converted completed row shipped past this test once already.
      */
     @Test
@@ -210,7 +210,7 @@ class TaskRowFirstLineAlignmentTest {
             "core/ui/TdayTaskRowSkeleton.kt" to 1,
             "feature/todos/TodoListScreen.kt" to 3,
             "feature/completed/CompletedScreen.kt" to 1,
-            "feature/calendar/CalendarScreen.kt" to 2,
+            "feature/calendar/CalendarScreen.kt" to 1,
             "feature/scheduledtaskhome/ScheduledTaskHomeScreen.kt" to 1,
             "feature/car/CarTaskSurfaceScreen.kt" to 1,
         )
@@ -289,7 +289,7 @@ class TaskRowFirstLineAlignmentTest {
         assertEquals(
             "the trailing-mark scan found a different number of marks than the tree has. " +
                 "Update the count with the row that gained or lost one",
-            7,
+            5,
             checked,
         )
     }

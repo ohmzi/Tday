@@ -68,8 +68,8 @@ authSecret  = secret("AUTH_SECRET",  "AUTH_SECRET_FILE")  ?: error("AUTH_SECRET 
 `tday-backend/src/main/kotlin/com/ohmz/tday/config/AppConfig.kt:90-93`. Every other setting in that
 file has a default (`env(key, default)`, `envInt(key, default)`) or is nullable. Notably **not**
 required: `DATA_ENCRYPTION_KEY`, `TDAY_ENV`, `CORS_ALLOWED_ORIGINS`, the VAPID keys, `OLLAMA_URL`,
-`APPLE_TEAM_ID`, every `AUTH_LIMIT_*` / `AUTH_LOCKOUT_*` knob. `CRONJOB_SECRET` still appears in
-`.env.example:35` and in existing `.env.docker` files but **nothing in the backend reads it** — a
+`APPLE_TEAM_ID`, every `AUTH_LIMIT_*` / `AUTH_LOCKOUT_*` knob. `CRONJOB_SECRET` was removed from
+`.env.example` but may still appear in existing `.env.docker` files; **nothing in the backend reads it** — a
 grep for `CRONJOB` across `tday-backend/src/` returns nothing, and the only other hits in the repo
 are docs plus one web guardrail test. It can be deleted.
 
@@ -101,10 +101,10 @@ happens below that. `DATABASE_URL` accepts either a `postgresql://user:pass@host
 Eight secrets can alternatively be read from a file via `<NAME>_FILE` (`AppConfig.kt:208-222`) for
 Docker/Kubernetes secret mounts: `DATABASE_URL`, `AUTH_SECRET`, `AUTH_CREDENTIALS_PRIVATE_KEY`,
 `DATA_ENCRYPTION_KEY`, `DATA_ENCRYPTION_KEYS`, `TDAY_PROBE_ENCRYPTION_KEY`, `VAPID_PUBLIC_KEY`,
-`VAPID_PRIVATE_KEY`. Two `_FILE` names documented in `.env.example` have **no reader in the code**
-— `CRONJOB_SECRET_FILE` (`.env.example:48`) and `DATA_ENCRYPTION_AAD_FILE` (`.env.example:178`);
-`DATA_ENCRYPTION_AAD` is read by a plain `env()` call (`AppConfig.kt:107`). Following either
-comment yields a silently unset value. Nothing in compose wires up Docker secrets, so by default
+`VAPID_PRIVATE_KEY`. Two `_FILE` names that older `.env.example` versions documented have **no reader in the code**
+— `CRONJOB_SECRET_FILE` and `DATA_ENCRYPTION_AAD_FILE`;
+`DATA_ENCRYPTION_AAD` is read by a plain `env()` call (`AppConfig.kt:114`). Following either
+comment in an old `.env.docker` yields a silently unset value. Nothing in compose wires up Docker secrets, so by default
 every secret reaches the backend as a process environment variable — readable by anyone who can
 run `docker inspect tday_backend` or read `/proc/<pid>/environ` on the host.
 

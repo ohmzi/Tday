@@ -610,65 +610,6 @@
         }
       }
     },
-    "%lld changes waiting to sync" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld Änderungen warten auf Synchronisierung"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld cambios esperando sincronización"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld modifications en attente de synchronisation"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld modifiche in attesa di sincronizzazione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld件の変更が同期待ちです"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld perubahan menunggu penyegerakan"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld alterações aguardando sincronização"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld изменений ожидают синхронизации"
-          }
-        },
-        "zh" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 项更改等待同步"
-          }
-        }
-      }
-    },
     "%lld tasks" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -842,65 +783,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1 项更改待处理"
-          }
-        }
-      }
-    },
-    "1 change waiting to sync" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 Änderung wartet auf Synchronisierung"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 cambio esperando sincronización"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 modification en attente de synchronisation"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 modifica in attesa di sincronizzazione"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1件の変更が同期待ちです"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 perubahan menunggu penyegerakan"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 alteração aguardando sincronização"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 изменение ожидает синхронизации"
-          }
-        },
-        "zh" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 项更改等待同步"
           }
         }
       }
@@ -25252,61 +25134,179 @@
         }
       }
     },
-    "You're offline" : {
-      "extractionState" : "stale",
+    "You're offline — %lld changes waiting to sync." : {
+      "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sie sind offline"
+            "value" : "Du bist offline — %lld Änderungen warten auf Synchronisierung."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Estás sin conexión"
+            "value" : "Estás sin conexión: %lld cambios esperan sincronizarse."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vous êtes hors ligne"
+            "value" : "Vous êtes hors ligne — %lld modifications en attente de synchronisation."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sei offline"
+            "value" : "Sei offline: %lld modifiche in attesa di sincronizzazione."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オフラインです"
+            "value" : "オフラインです。%lld件の変更が同期待ちです。"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anda di luar talian"
+            "value" : "Anda di luar talian — %lld perubahan menunggu penyegerakan."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Você está offline"
+            "value" : "Você está offline — %lld alterações aguardando sincronização."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Вы не в сети"
+            "value" : "Вы офлайн — %lld изменений ждут синхронизации."
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "您处于离线状态"
+            "value" : "你已离线——%lld 个更改等待同步。"
+          }
+        }
+      }
+    },
+    "You're offline — 1 change waiting to sync." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist offline — 1 Änderung wartet auf Synchronisierung."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estás sin conexión: 1 cambio espera sincronizarse."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous êtes hors ligne — 1 modification en attente de synchronisation."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sei offline: 1 modifica in attesa di sincronizzazione."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフラインです。1件の変更が同期待ちです。"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda di luar talian — 1 perubahan menunggu penyegerakan."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você está offline — 1 alteração aguardando sincronização."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы офлайн — 1 изменение ждёт синхронизации."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你已离线——1 个更改等待同步。"
+          }
+        }
+      }
+    },
+    "You're offline — changes will sync when your connection returns." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist offline — Änderungen werden synchronisiert, sobald die Verbindung zurück ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estás sin conexión: los cambios se sincronizarán cuando vuelva la conexión."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous êtes hors ligne — les modifications seront synchronisées au retour de la connexion."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sei offline: le modifiche verranno sincronizzate quando tornerà la connessione."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフラインです。接続が戻ると変更が同期されます。"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anda di luar talian — perubahan akan disegerakkan apabila sambungan kembali."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você está offline — as alterações serão sincronizadas quando a conexão voltar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы офлайн — изменения синхронизируются, когда появится подключение."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你已离线——恢复连接后将同步更改。"
           }
         }
       }
