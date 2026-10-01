@@ -233,8 +233,10 @@ fun RootCreateTaskButton(
     }
 }
 
+// One composable on purpose: the thumb, the labels and the collapse share one set of animated
+// values, so splitting it would only thread them through parameters. Complexity left as is.
 @Composable
-fun RootFeedDock(
+fun RootFeedDock(  // skipcq: KT-R1006
     activeTab: RootFeedTab,
     collapsed: Boolean,
     onTabSelected: (RootFeedTab) -> Unit,
