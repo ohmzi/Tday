@@ -34,6 +34,40 @@ class ListIconInferenceTest {
             "Passwords" to "key",
             "Dog" to "pets",
             "Birthday" to "cake",
+            // Generic names people file lists under, one or more per icon. "Video Games" and
+            // "Auto Repair" are here on purpose: `video` and `auto` are NOT keywords, because each
+            // would pair with a word of another icon and turn a clear title into a refusal.
+            "Weather" to "umbrella",
+            "Hotel Booking" to "flight",
+            "Restaurants" to "food",
+            "Coffee" to "drink",
+            "Investments" to "money",
+            "Insurance" to "bank",
+            "Software" to "code",
+            "Friends" to "chat",
+            "Appointments" to "calendar",
+            "Habits" to "schedule",
+            "Urgent" to "flag",
+            "Pantry" to "inventory",
+            "Sunset" to "sun",
+            "Campfire" to "fire",
+            "Swimming" to "drop",
+            "Wedding" to "heart",
+            "Mom" to "family",
+            "Crafts" to "palette",
+            "Medications" to "health",
+            "Concerts" to "music",
+            "Essays" to "edit",
+            "Contracts" to "document",
+            "Resources" to "bookmark",
+            "Learning" to "school",
+            "Community" to "city",
+            "Bus" to "train",
+            "Fishing" to "boat",
+            "Parking" to "car",
+            "Lawn Care" to "eco",
+            "Video Games" to "game",
+            "Auto Repair" to "tools",
         )
 
         assertEquals(
@@ -151,6 +185,23 @@ class ListIconInferenceTest {
             .filterValues { it.size > 1 }
 
         assertEquals(emptyMap(), duplicates, "a keyword claimed by two icon keys")
+    }
+
+    /**
+     * Every icon the matcher can emit carries at least five words.
+     *
+     * The basic name for the thing and the generic words people actually file lists under —
+     * "Gym", "Workout", "Yoga" — because an icon with two keywords only ever fires for the
+     * two people who happened to spell it that way. A floor, not a target: it cannot say the
+     * words are the RIGHT ones, only that no icon has been left to a single spelling.
+     */
+    @Test
+    fun `every icon the matcher can emit has at least five keywords`() {
+        val thin = ListIconInference.keywordTable
+            .filterValues { words -> words.size < 5 }
+            .mapValues { (_, words) -> words.size }
+
+        assertEquals(emptyMap(), thin, "icons with fewer than five keywords")
     }
 
     @Test
