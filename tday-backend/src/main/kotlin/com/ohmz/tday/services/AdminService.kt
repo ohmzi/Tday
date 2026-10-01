@@ -14,11 +14,12 @@ import com.ohmz.tday.models.response.AdminUserResponse
 import com.ohmz.tday.security.PasswordService
 import com.ohmz.tday.security.SessionControl
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.exceptions.ExposedSQLException
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
 import org.postgresql.util.PSQLException
 import org.slf4j.LoggerFactory
 import java.security.SecureRandom

@@ -20,10 +20,11 @@ import com.ohmz.tday.models.response.ListTodoResponse
 import com.ohmz.tday.security.FieldEncryption
 import com.ohmz.tday.security.decryptRequired
 import com.ohmz.tday.shared.model.ShareRole
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.core.eq
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -228,37 +229,25 @@ class ListServiceImpl(
                 .map { it[Todos.id] }
             if (todoIds.isNotEmpty()) {
                 CompletedTodos.deleteWhere {
-                    SqlExpressionBuilder.run {
-                        (CompletedTodos.listID inList existingIds) or (CompletedTodos.originalTodoID inList todoIds)
-                    }
+                    (CompletedTodos.listID inList existingIds) or (CompletedTodos.originalTodoID inList todoIds)
                 }
                 TodoInstances.deleteWhere {
-                    SqlExpressionBuilder.run {
-                        TodoInstances.todoId inList todoIds
-                    }
+                    TodoInstances.todoId inList todoIds
                 }
                 Todos.deleteWhere {
-                    SqlExpressionBuilder.run {
-                        Todos.id inList todoIds
-                    }
+                    Todos.id inList todoIds
                 }
             } else {
                 CompletedTodos.deleteWhere {
-                    SqlExpressionBuilder.run {
-                        CompletedTodos.listID inList existingIds
-                    }
+                    CompletedTodos.listID inList existingIds
                 }
             }
 
             ListShares.deleteWhere {
-                SqlExpressionBuilder.run {
-                    ListShares.listID inList existingIds
-                }
+                ListShares.listID inList existingIds
             }
             Lists.deleteWhere {
-                SqlExpressionBuilder.run {
-                    (Lists.userID eq userId) and (Lists.id inList existingIds)
-                }
+                (Lists.userID eq userId) and (Lists.id inList existingIds)
             }
             existingIds
         }

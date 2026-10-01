@@ -11,14 +11,15 @@ import com.ohmz.tday.security.SecurityQuestion
 import com.ohmz.tday.security.SecurityQuestions
 import com.ohmz.tday.security.SessionControl
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.SqlExpressionBuilder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.lowerCase
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.core.lowerCase
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.core.plus
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -169,9 +170,7 @@ class SecurityQuestionServiceImpl(
 
             if (!valid) {
                 Users.update({ Users.id eq userId }) {
-                    with(SqlExpressionBuilder) {
-                        it[Users.securityQuestionFailCount] = Users.securityQuestionFailCount + 1
-                    }
+                    it[Users.securityQuestionFailCount] = Users.securityQuestionFailCount + 1
                     it[Users.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
                 }
             }
@@ -242,9 +241,7 @@ class SecurityQuestionServiceImpl(
                 ResetOutcome.SUCCESS to userId
             } else {
                 Users.update({ Users.id eq userId }) {
-                    with(SqlExpressionBuilder) {
-                        it[Users.securityQuestionFailCount] = Users.securityQuestionFailCount + 1
-                    }
+                    it[Users.securityQuestionFailCount] = Users.securityQuestionFailCount + 1
                     it[Users.updatedAt] = now
                 }
                 ResetOutcome.FAILED to null

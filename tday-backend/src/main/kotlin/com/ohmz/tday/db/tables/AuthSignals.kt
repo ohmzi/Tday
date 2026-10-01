@@ -1,7 +1,7 @@
 package com.ohmz.tday.db.tables
 
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.javatime.datetime
 
 object AuthSignals : Table("AuthSignal") {
     val id = varchar("id", 30)

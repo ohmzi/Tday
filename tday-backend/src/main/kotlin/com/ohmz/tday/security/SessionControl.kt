@@ -3,10 +3,10 @@ package com.ohmz.tday.security
 import com.ohmz.tday.db.tables.Users
 import com.ohmz.tday.services.UserApiKeyService
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.SqlExpressionBuilder
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.core.plus
 
 interface SessionControl {
     /**
@@ -30,9 +30,7 @@ class SessionControlImpl(
         if (userId.isBlank()) return
         newSuspendedTransaction(Dispatchers.IO) {
             Users.update({ Users.id eq userId }) {
-                with(SqlExpressionBuilder) {
-                    it[Users.tokenVersion] = Users.tokenVersion + 1
-                }
+                it[Users.tokenVersion] = Users.tokenVersion + 1
             }
         }
         if (revokeApiKeys) {

@@ -1,6 +1,6 @@
 package com.ohmz.tday.db.tables
 
-import org.jetbrains.exposed.sql.ColumnType
+import org.jetbrains.exposed.v1.core.ColumnType
 import java.sql.Timestamp
 import java.time.LocalDateTime
 
