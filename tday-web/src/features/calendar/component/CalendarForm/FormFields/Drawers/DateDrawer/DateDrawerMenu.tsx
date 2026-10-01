@@ -95,17 +95,20 @@ export function DateDrawerMenu({ dateRange, setDateRange }: { dateRange: DrawerD
             <Calendar
                 className="w-full px-4"
                 classNames={{
-                    months: "w-full",
+                    months: "relative w-full",
                     month: "w-full space-y-4 ",
-                    table: "w-full table-fixed",
-                    head_row: "w-full",
-                    head_cell: "pb-2 text-muted-foreground font-normal text-xs",
-                    row: "w-full",
-                    cell: "w-11 h-11",
-                    day: "w-11 h-11 text-sm text-foreground/80",
-                    nav_button:
+                    month_caption: "flex justify-center items-center h-11 pt-1",
+                    nav: "absolute inset-x-0 top-1 flex items-center justify-between px-1",
+                    month_grid: "w-full table-fixed",
+                    weekdays: "w-full",
+                    weekday: "pb-2 text-muted-foreground font-normal text-xs",
+                    week: "w-full",
+                    day: "w-11 h-11",
+                    day_button: "w-11 h-11 text-sm text-foreground/80",
+                    button_previous:
                         "z-50 w-10 h-10 rounded-full flex items-center justify-center bg-popover/60 hover:bg-popover-accent backdrop-blur-sm",
-                    nav: "w-10 h-10"
+                    button_next:
+                        "z-50 w-10 h-10 rounded-full flex items-center justify-center bg-popover/60 hover:bg-popover-accent backdrop-blur-sm",
                 }}
                 mode="range"
                 defaultMonth={dateRange.from}

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
@@ -7,6 +7,16 @@ import { buttonVariants } from "@/components/ui/button";
 
 type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
+const CHEVRONS = {
+  up: ChevronUp,
+  down: ChevronDown,
+  left: ChevronLeft,
+  right: ChevronRight,
+} as const;
+
+// react-day-picker 10 puts every state class (`selected`, `today`, `range_*`, ...) on the day's
+// `<td>`, while the visible disc has always been the `<button>` inside it. The `[&>button]:`
+// variants below carry the old button-level styling over to the new structure.
 function Calendar({
   className,
   classNames,
@@ -19,45 +29,48 @@ function Calendar({
       className={cn("p-3", className)}
       classNames={{
         months:
-          "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 text-sm",
+          "relative w-fit flex flex-col gap-4 sm:flex-row text-sm",
         month: "space-y-4 text-foreground",
-        caption: "flex justify-center pt-1 relative items-center",
+        month_caption: "flex justify-center pt-1 items-center",
         caption_label: "text-sm font-medium text-foreground",
-        nav: "space-x-1 flex items-center",
-        nav_button: cn(
+        nav: "absolute inset-x-0 top-0 flex items-center justify-between px-1",
+        button_previous: cn(
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-foreground",
         ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-y-1",
-        head_row: "flex",
-        head_cell: "text-muted-foreground rounded-md w-full font-normal text-xs",
-        row: "flex w-full mt-2",
-        cell: "h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md  [&:has([aria-selected].day-outside)]:bg-accent/50  first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-        day: cn(
-          buttonVariants({ variant: "ghost" }),
-          "h-8 w-8 p-0 font-normal aria-selected:opacity-100 text-xs text-foreground ",
+        button_next: cn(
+          buttonVariants({ variant: "outline" }),
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-foreground",
         ),
-        day_range_start: "!bg-calendar--lime font-bold! text-sm! text-foreground relative z-10 rounded-full!",
-        day_range_end: "!bg-calendar--lime font-bold! text-sm! text-foreground  relative z-10",
-        day_selected:
-          " bg-primary rounded-full! text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent text-accent-foreground",
-        day_outside:
-          "day-outside text-muted-foreground aria-selected:bg-accent/50 aria-selected:text-muted-foreground",
-        day_disabled: "text-muted-foreground opacity-50",
-        day_range_middle: "rounded-full! bg-popover-border! aria-selected:bg-lime aria-selected:text-white",
-        day_hidden: "invisible",
+        month_grid: "w-full border-collapse space-y-1",
+        weekdays: "flex",
+        weekday: "text-muted-foreground rounded-md w-full font-normal text-xs",
+        week: "flex w-full mt-2",
+        day: "h-8 w-8 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+        day_button: cn(
+          buttonVariants({ variant: "ghost" }),
+          "h-8 w-8 p-0 font-normal text-xs text-foreground",
+        ),
+        range_start:
+          "[&>button]:!bg-calendar--lime [&>button]:font-bold! [&>button]:text-sm! [&>button]:text-foreground relative z-10 [&>button]:rounded-full!",
+        range_end:
+          "[&>button]:!bg-calendar--lime [&>button]:font-bold! [&>button]:text-sm! [&>button]:text-foreground relative z-10",
+        selected:
+          "[&>button]:bg-primary [&>button]:rounded-full! [&>button]:text-primary-foreground [&>button]:hover:bg-primary [&>button]:hover:text-primary-foreground [&>button]:focus:bg-primary [&>button]:focus:text-primary-foreground",
+        today: "[&>button]:bg-accent [&>button]:text-accent-foreground",
+        outside:
+          "text-muted-foreground [&>button]:text-muted-foreground",
+        disabled: "text-muted-foreground opacity-50",
+        range_middle:
+          "[&>button]:rounded-full! [&>button]:bg-popover-border! [&>button]:text-white",
+        hidden: "invisible",
         ...classNames,
       }}
       components={{
-        IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("h-4 w-4 pointer-events-none", className)} {...props} />
-        ),
-        IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("h-4 w-4 pointer-events-none", className)} {...props} />
-        ),
+        Chevron: ({ className, orientation }) => {
+          const Icon = CHEVRONS[orientation ?? "right"];
+          return <Icon className={cn("h-4 w-4 pointer-events-none", className)} />;
+        },
       }}
       {...props}
     />
