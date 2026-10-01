@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@radix-ui/react-dropdown-menu";
+/** Placeholder card shown while the task form sheet's code loads (the `Suspense` fallback in `TaskFormSheet`). */
 const TodoFormLoading = () => {
   return (
     <div className="box-border flex h-fit w-full flex-col gap-4 rounded-lg border border-border/70 bg-card p-4 shadow-[0_8px_24px_hsl(var(--shadow)/0.11)]">

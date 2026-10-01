@@ -263,7 +263,7 @@ describe("iOS asset-name literals resolve to an imageset", () => {
     });
     expect(
       problems,
-      `asset names with nothing behind them render blank — point each at an existing imageset ` +
+      "asset names with nothing behind them render blank — point each at an existing imageset " +
         `(docs/ICONS.md lists the shared glyphs) or add one:\n${problems.join("\n")}`,
     ).toEqual([]);
   });

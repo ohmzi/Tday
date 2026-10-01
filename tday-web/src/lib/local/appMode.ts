@@ -59,6 +59,7 @@ export function setAppMode(mode: AppMode | null): void {
   notify();
 }
 
+/** Calls `listener` after every change to the app mode; returns the function that unsubscribes it. */
 export function subscribeToAppMode(listener: Listener): () => void {
   listeners.add(listener);
   return () => {
