@@ -199,6 +199,11 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // The exported Room schemas, so the migration test can build an old version of the database.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 // Export the Room schema so future version bumps can ship real Migration objects
@@ -294,6 +299,7 @@ dependencies {
     testImplementation("app.cash.turbine:turbine:1.2.0")
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.room:room-testing:2.6.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.6")
     debugImplementation("androidx.compose.ui:ui-tooling:1.7.6")

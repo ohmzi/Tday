@@ -37,6 +37,37 @@ class PendingMutationEntityRoundTripTest {
         assertNull(untouched.defaultPriorityChanged)
     }
 
+    @Test
+    fun `a staged marker is still staged after the Room row`() {
+        // SyncManager reads its queue from the database, so a marker whose flag the row drops is
+        // replayed to the server inside the Undo window it exists to protect.
+        val marker = PendingMutationRecord(
+            mutationId = "m-staged",
+            kind = MutationKind.COMPLETE_TODO,
+            targetId = "t-1",
+            timestampEpochMs = 2_000L,
+            completed = true,
+            staged = true,
+        )
+
+        val restored = marker.toEntity().toRecord()
+
+        assertEquals(true, restored.staged)
+        assertEquals(marker, restored)
+    }
+
+    @Test
+    fun `an ordinary mutation does not come back staged`() {
+        val ordinary = PendingMutationRecord(
+            mutationId = "m-plain",
+            kind = MutationKind.DELETE_LIST,
+            targetId = "l-1",
+            timestampEpochMs = 3_000L,
+        )
+
+        assertEquals(false, ordinary.toEntity().toRecord().staged)
+    }
+
     private fun listEdit(reusable: Boolean?, defaultPriority: String?, defaultPriorityChanged: Boolean?) =
         PendingMutationRecord(
             mutationId = "m-1",
