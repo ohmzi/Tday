@@ -14,6 +14,7 @@ import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import androidx.annotation.ColorRes
+import androidx.annotation.DrawableRes
 import androidx.annotation.IdRes
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -70,16 +71,50 @@ internal enum class TaskWidgetLayout {
     TALL,
 }
 
+/**
+ * The glyph drawn large and faint behind a widget's content, with the ink it is drawn in.
+ *
+ * The colour and the alpha travel WITH the drawable because the two families of watermark this app
+ * draws disagree about who owns them. The three `widget_empty_watermark_*` vectors bake their
+ * kind's accent at 10% into the asset itself; a per-list watermark is an `ic_lucide_*` glyph
+ * shared with the in-app list rows and the icon picker, which is white at full opacity precisely
+ * because every other call site tints it. Rather than fork ~70 Lucide glyphs into pre-tinted
+ * widget copies, [TaskWidgetRemoteViews] applies [tint] and [alpha] to whichever drawable it is
+ * handed: a baked one passes its own accent and [OPAQUE_ALPHA], which `setColorFilter`'s SRC_ATOP
+ * leaves pixel-identical (it replaces RGB with the same RGB, and preserves the drawable's own
+ * alpha), while a shared glyph passes that accent with [WATERMARK_ALPHA] and lands at the same
+ * 10% weight.
+ *
+ * Both are applied on EVERY render that shows a watermark, never only when they change: the host
+ * re-applies actions onto a live view tree (see [setVisible]'s note), so a colour filter one
+ * render left behind would otherwise tint the next render's drawable.
+ */
+internal data class TaskWidgetWatermark(
+    @DrawableRes val drawable: Int,
+    @ColorRes val tint: Int,
+    /** 0..255, as `ImageView.setImageAlpha` takes it. */
+    val alpha: Int = OPAQUE_ALPHA,
+) {
+    companion object {
+        /** The weight a watermark is drawn at: 10% of full ink, matching the baked vectors. */
+        const val WATERMARK_ALPHA = 26
+
+        /** "Change nothing" — for a drawable that already bakes its own alpha. */
+        const val OPAQUE_ALPHA = 255
+    }
+}
+
 internal data class TaskWidgetVisuals(
     val addButtonBackground: Int,
     val addIcon: Int,
     // Nullable so a widget that does not yet KNOW which kind it is can decline to draw one. Every
-    // watermark this app ships is a kind-specific glyph in that kind's accent (the Today sun, the
-    // Floater leaf) filling most of the widget, so picking one is an assertion about the
-    // instance's identity — see ListTasksWidget's UnconfiguredListWidgetVisuals. A null renders
-    // the same way LOADING already does: no watermark, just the header and the message.
-    val emptyWatermark: Int?,
-    val setupWatermark: Int?,
+    // watermark this app draws is a glyph in an accent colour filling most of the widget — the
+    // Today sun or moon, the Floater leaf, or a chosen list's own icon — so picking one is an
+    // assertion about the instance's identity; see ListTasksWidget's
+    // UnconfiguredListWidgetVisuals. A null renders the same way LOADING already does: no
+    // watermark, just the header and the message.
+    val emptyWatermark: TaskWidgetWatermark?,
+    val setupWatermark: TaskWidgetWatermark?,
 )
 
 internal data class TaskWidgetRow(
@@ -242,7 +277,7 @@ internal object TaskWidgetRemoteViews {
             val bucketWatermarkId = taskWidgetWatermarkViewId(bucket)
             setVisible(bucketWatermarkId, watermark != null && bucketWatermarkId == watermarkId)
         }
-        if (watermark != null) setImageViewResource(watermarkId, watermark)
+        if (watermark != null) applyWatermark(context, watermarkId, watermark)
 
         applyHeader(context, appWidgetId, model, compact, shape.narrow)
 
@@ -260,6 +295,25 @@ internal object TaskWidgetRemoteViews {
         } else {
             applyMessage(model, compact)
         }
+    }
+
+    /**
+     * The watermark's drawable, ink and weight, in that order, on the one bucket showing it.
+     *
+     * `setColorFilter(int)` and `setImageAlpha(int)` are both `@RemotableViewMethod` on
+     * `ImageView`, reached here through [RemoteViews.setInt] because `RemoteViews` has no typed
+     * wrapper for either. The filter colour is resolved against THIS process' configuration rather
+     * than passed as a resource id: these three accents are single-value colours with no
+     * day/night variants to re-resolve (the Today watermark's night form is a different drawable,
+     * picked from the clock, not from the theme), so the API-31+ `setColorStateList` route would
+     * buy nothing and would not exist on minSdk 26 anyway.
+     */
+    private fun RemoteViews.applyWatermark(context: Context, @IdRes viewId: Int, watermark: TaskWidgetWatermark) {
+        setImageViewResource(viewId, watermark.drawable)
+        // SRC_ATOP: the filter replaces the drawable's RGB and keeps its alpha, which is what lets
+        // one call site serve both a pre-tinted watermark vector and a shared Lucide glyph.
+        setInt(viewId, "setColorFilter", ContextCompat.getColor(context, watermark.tint))
+        setInt(viewId, "setImageAlpha", watermark.alpha)
     }
 
     private fun RemoteViews.applyHeader(

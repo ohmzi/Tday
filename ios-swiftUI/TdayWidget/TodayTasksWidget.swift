@@ -570,6 +570,9 @@ private struct TodayTasksEntry: TimelineEntry {
     let mode: TaskWidgetMode
     /// The global Today feed only — a per-list or locked entry leaves these empty.
     var today: TodayHeaderContent? = nil
+    /// This gallery slot was pointed at one of the user's lists, so it is not the global feed its
+    /// kind is named after. See `TdayTasksWidgetContent.isListScoped`.
+    var isListScoped: Bool = false
 }
 
 /// What the global Today feed adds on top of a task list: the date-led header with its progress
@@ -904,7 +907,8 @@ private struct TodayTasksProvider: AppIntentTimelineProvider {
                 status: .locked,
                 taskCount: 0,
                 rows: [],
-                mode: list?.kind.mode ?? .today
+                mode: list?.kind.mode ?? .today,
+                isListScoped: list != nil
             )
         }
         if let list = configuration.list {
@@ -915,7 +919,8 @@ private struct TodayTasksProvider: AppIntentTimelineProvider {
                 status: content.status,
                 taskCount: content.taskCount,
                 rows: content.rows,
-                mode: content.mode
+                mode: content.mode,
+                isListScoped: true
             )
         }
         return Self.loadGlobalEntry(date: date)
@@ -976,7 +981,10 @@ private struct TodayTasksProvider: AppIntentTimelineProvider {
         let calendar = Calendar.current
         let days = snapshot.coveredDays()
         let dayStart = Date(timeIntervalSince1970: TimeInterval(days[dayOffset].startEpochMs) / 1_000)
-        let emptyTitle: String? = done > 0 ? "All done for today" : nil
+        // Same evening rule as the title and the watermark: "tonight" once the moon is drawn.
+        let emptyTitle: String? = done > 0
+            ? (isTaskWidgetDaytime(date) ? "All done for today" : "All done for tonight")
+            : nil
         var preview: WidgetDayPreview?
         if taskCount == 0, overdueCount == 0, let next = snapshot.nextDayWithTasks(after: dayOffset) {
             let nextStart = Date(timeIntervalSince1970: TimeInterval(next.day.dayStartEpochMs) / 1_000)
@@ -1090,7 +1098,8 @@ private struct TodayTasksWidgetView: View {
             rows: entry.rows,
             date: entry.date,
             mode: entry.mode,
-            today: entry.today
+            today: entry.today,
+            isListScoped: entry.isListScoped
         )
     }
 }
@@ -1198,10 +1207,12 @@ private enum TaskWidgetMode {
         }
     }
 
-    var emptyTitle: String {
+    /// The evening says "tonight", on the same 6..<18 predicate that swaps the sun for the moon —
+    /// one boundary for the whole widget, never a second one of this line's own.
+    func emptyTitle(isDaytime: Bool) -> String {
         switch self {
         case .today:
-            return "No tasks due today"
+            return isDaytime ? "No tasks due today" : "No tasks due tonight"
         case .floater:
             return "No floater tasks"
         }
@@ -1423,6 +1434,12 @@ private struct TdayTasksWidgetContent: View {
     var today: TodayHeaderContent? = nil
     /// Where a List widget's taps go once it has a list; nil on every other widget.
     var listChrome: ListWidgetChrome? = nil
+    /// True when this instance is scoped to ONE of the user's own lists — the List widget with a
+    /// list picked, or a Today/Floater gallery instance the user pointed at a list. It is then
+    /// neither the global Today feed nor the root Anytime feed, which is what `watermarkSymbol`
+    /// turns on. Not derivable from `listChrome` (only the List widget carries one) nor from
+    /// `today` (nil on the global feed too, while locked or stale).
+    var isListScoped: Bool = false
 
     @Environment(\.widgetFamily) private var family
     @Environment(\.widgetRenderingMode) private var renderingMode
@@ -1430,8 +1447,8 @@ private struct TdayTasksWidgetContent: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            if !isChoosingList {
-                messageWatermark
+            if !isChoosingList, let symbol = watermarkSymbol {
+                messageWatermark(symbol)
             }
 
             switch status {
@@ -1491,7 +1508,20 @@ private struct TdayTasksWidgetContent: View {
     /// A List widget holds every open task in its list, whatever day each is due, so it empties
     /// to "nothing left" and counts "open" whichever type the list is — not Today's "due today".
     private var emptyTitle: String {
-        listChrome == nil ? mode.emptyTitle : "Nothing left in this list"
+        listChrome == nil ? mode.emptyTitle(isDaytime: isDaytime) : "Nothing left in this list"
+    }
+
+    /// The header title for the layouts with no date block beside it (the locked and stale Today
+    /// states; every list-scoped and floater instance keeps its own title untouched).
+    ///
+    /// `title` for the global Today feed comes from the snapshot, which the app writes and so bakes
+    /// at whatever hour that write happened; the evening form has to be decided here, at render,
+    /// where `date` is the entry's own.
+    private var headerTitle: String {
+        guard !isListScoped, mode == .today, !isDaytime else {
+            return title
+        }
+        return "Tonight's Tasks"
     }
 
     /// Where there is room, an empty Today previews its next day with tasks rather than centring
@@ -1512,7 +1542,7 @@ private struct TdayTasksWidgetContent: View {
 
     private func previewItems(_ today: TodayHeaderContent, _ preview: WidgetDayPreview) -> [WidgetListItem] {
         [
-            .message(id: "empty", text: today.emptyTitle ?? mode.emptyTitle),
+            .message(id: "empty", text: today.emptyTitle ?? mode.emptyTitle(isDaytime: isDaytime)),
             .section(id: "preview", text: preview.label)
         ] + preview.rows.map(WidgetListItem.task)
     }
@@ -1525,13 +1555,19 @@ private struct TdayTasksWidgetContent: View {
         renderingMode == .fullColor ? .secondary : .primary.opacity(0.72)
     }
 
+    /// The ONE day/night decision this widget makes: the title, the empty line and the sun/moon all
+    /// read it, so they can never disagree about which half of the day it is.
+    private var isDaytime: Bool {
+        isTaskWidgetDaytime(date)
+    }
+
     private var watermarkColor: Color {
         guard renderingMode == .fullColor else {
             return .primary.opacity(0.08)
         }
         let color: Color
         switch mode {
-        case .today where !isTaskWidgetDaytime(date):
+        case .today where !isDaytime:
             color = .tdayTitleNight
         default:
             color = accentColor
@@ -1547,9 +1583,29 @@ private struct TdayTasksWidgetContent: View {
         colorScheme == .dark ? Color.tdayDarkSurface : Color.tdayLightSurface
     }
 
-    private var messageWatermark: some View {
+    /// Which glyph, if any, this instance may assert behind its content.
+    ///
+    /// The watermark is an identity claim, not decoration: the sun and the moon are the GLOBAL
+    /// Today feed's mark and the leaf is the root Anytime feed's. A widget scoped to one of the
+    /// user's scheduled lists is neither, so it used to paint Today's sun over a list that has
+    /// nothing to do with today — the same mistake Android's `UnconfiguredListWidgetVisuals`
+    /// documents on its own side. It should paint that LIST's icon instead, which this extension
+    /// cannot do yet: the widget target has no Resources build phase, so none of the shared
+    /// `Lucide*.imageset` assets are in its bundle (see this strand's notes). Until they are, it
+    /// draws nothing rather than something untrue.
+    ///
+    /// A floater-scoped instance keeps the leaf: unlike Today's sun, the leaf marks the Anytime
+    /// task TYPE, which a floater list genuinely is, so it says nothing false.
+    private var watermarkSymbol: String? {
+        if isListScoped, mode == .today {
+            return nil
+        }
+        return mode.emptyWatermarkSystemName(isDaytime: isDaytime)
+    }
+
+    private func messageWatermark(_ systemName: String) -> some View {
         GeometryReader { proxy in
-            Image(systemName: mode.emptyWatermarkSystemName(isDaytime: isTaskWidgetDaytime(date)))
+            Image(systemName: systemName)
                 .font(.system(size: metrics.watermarkSize, weight: .regular))
                 .foregroundStyle(watermarkColor)
                 .rotationEffect(.degrees(-7))
@@ -1572,7 +1628,7 @@ private struct TdayTasksWidgetContent: View {
                 dateHeader(today)
             } else {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(title)
+                    Text(headerTitle)
                         .font(.system(size: family == .systemLarge ? 17 : 16, weight: .bold, design: .rounded))
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -1608,7 +1664,9 @@ private struct TdayTasksWidgetContent: View {
             .frame(minWidth: 28)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Today")
+                // Flips with the watermark, not on a boundary of its own: a header reading "Today"
+                // under a moon was the whole complaint.
+                Text(isDaytime ? "Today" : "Tonight")
                     .font(.system(size: family == .systemLarge ? 16 : 15, weight: .bold, design: .rounded))
                     .lineLimit(1)
                 if let countLabel = today.countLabel {
@@ -2132,6 +2190,8 @@ private struct FloaterTasksEntry: TimelineEntry {
     let taskCount: Int
     let rows: [WidgetTaskRowModel]
     let mode: TaskWidgetMode
+    /// See the Today twin's field of the same name.
+    var isListScoped: Bool = false
 }
 
 private struct FloaterTaskSnapshot: Codable, Identifiable {
@@ -2249,7 +2309,8 @@ private struct FloaterTasksProvider: AppIntentTimelineProvider {
                 status: .locked,
                 taskCount: 0,
                 rows: [],
-                mode: list?.kind.mode ?? .floater
+                mode: list?.kind.mode ?? .floater,
+                isListScoped: list != nil
             )
         }
         if let list = configuration.list {
@@ -2260,7 +2321,8 @@ private struct FloaterTasksProvider: AppIntentTimelineProvider {
                 status: content.status,
                 taskCount: content.taskCount,
                 rows: content.rows,
-                mode: content.mode
+                mode: content.mode,
+                isListScoped: true
             )
         }
         return Self.loadGlobalEntry()
@@ -2376,7 +2438,8 @@ private struct FloaterTasksWidgetView: View {
             taskCount: entry.taskCount,
             rows: entry.rows,
             date: entry.date,
-            mode: entry.mode
+            mode: entry.mode,
+            isListScoped: entry.isListScoped
         )
     }
 }
@@ -2545,7 +2608,9 @@ private struct ListTasksWidgetView: View {
             rows: entry.rows,
             date: entry.date,
             mode: entry.mode,
-            listChrome: entry.chrome
+            listChrome: entry.chrome,
+            // `chrome` is exactly "this instance has a list", so it is also the scoping answer.
+            isListScoped: entry.chrome != nil
         )
     }
 }

@@ -522,6 +522,9 @@
     <string name="widget_today_tasks_title_medium">Tugasan Hari Ini - Sederhana</string>
     <string name="widget_today_tasks_title_large">Tugasan Hari Ini - Besar</string>
     <string name="widget_today_tasks_empty">Tiada tugasan untuk hari ini</string>
+    <string name="widget_tonight_tasks_title">Tugasan malam ini</string>
+    <string name="widget_tonight_tasks_empty">Tiada tugasan untuk malam ini</string>
+    <string name="widget_tonight_all_done">Semua selesai untuk malam ini</string>
     <string name="widget_today_tasks_add">Tambah satu untuk hari ini</string>
     <string name="widget_today_tasks_count">%1$d perlu disiapkan</string>
     <string name="widget_today_progress">%1$d daripada %2$d selesai</string>

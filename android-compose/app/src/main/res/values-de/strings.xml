@@ -523,6 +523,9 @@
     <string name="widget_today_tasks_title_medium">Heutige Aufgaben - Mittel</string>
     <string name="widget_today_tasks_title_large">Heutige Aufgaben - Groß</string>
     <string name="widget_today_tasks_empty">Heute keine Aufgaben fällig</string>
+    <string name="widget_tonight_tasks_title">Aufgaben für heute Abend</string>
+    <string name="widget_tonight_tasks_empty">Heute Abend keine Aufgaben fällig</string>
+    <string name="widget_tonight_all_done">Alles erledigt für heute Abend</string>
     <string name="widget_today_tasks_add">Eine für heute hinzufügen</string>
     <string name="widget_today_tasks_count">%1$d fällig</string>
     <string name="widget_today_progress">%1$d von %2$d erledigt</string>

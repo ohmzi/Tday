@@ -523,6 +523,9 @@
     <string name="widget_today_tasks_title_medium">Tarefas de hoje - Médio</string>
     <string name="widget_today_tasks_title_large">Tarefas de hoje - Grande</string>
     <string name="widget_today_tasks_empty">Nenhuma tarefa para hoje</string>
+    <string name="widget_tonight_tasks_title">Tarefas de hoje à noite</string>
+    <string name="widget_tonight_tasks_empty">Nenhuma tarefa para hoje à noite</string>
+    <string name="widget_tonight_all_done">Tudo feito por hoje à noite</string>
     <string name="widget_today_tasks_add">Adicione uma para hoje</string>
     <string name="widget_today_tasks_count">%1$d a vencer</string>
     <string name="widget_today_progress">%1$d de %2$d concluídas</string>

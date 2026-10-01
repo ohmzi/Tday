@@ -11,6 +11,11 @@ internal data class WidgetListSelection(
      *  carries the cache's current name (`WidgetSnapshot.listName`), which it does from the first
      *  write after the pick — so a rename reaches the header without picking the list again. */
     val listName: String,
+    /** The icon the list had when it was picked, playing the same role for the watermark that
+     *  [listName] plays for the header: the fallback until the list's snapshot carries the cache's
+     *  current key (`WidgetSnapshot.listIconKey`). Null for a selection written before this was
+     *  stored — `listWidgetVisualsFor` then infers the glyph from the name. */
+    val listIconKey: String? = null,
 )
 
 /**
@@ -35,7 +40,10 @@ internal class WidgetListSelectionStore(context: Context) {
         val typeRaw = preferences.getString(keyListType(appWidgetId), null) ?: return null
         val listType = runCatching { WidgetListType.valueOf(typeRaw) }.getOrNull() ?: return null
         val listName = preferences.getString(keyListName(appWidgetId), null).orEmpty()
-        return WidgetListSelection(listId, listType, listName)
+        // Absent for every selection stored before the watermark needed it, which is exactly the
+        // "null means never chosen" the icon resolver already handles — no migration needed.
+        val listIconKey = preferences.getString(keyListIconKey(appWidgetId), null)
+        return WidgetListSelection(listId, listType, listName, listIconKey)
     }
 
     fun setSelection(appWidgetId: Int, selection: WidgetListSelection) {
@@ -44,6 +52,7 @@ internal class WidgetListSelectionStore(context: Context) {
             .putString(keyListId(appWidgetId), selection.listId)
             .putString(keyListType(appWidgetId), selection.listType.name)
             .putString(keyListName(appWidgetId), selection.listName)
+            .putString(keyListIconKey(appWidgetId), selection.listIconKey)
             .putStringSet(KEY_KNOWN_IDS, knownIds)
             .apply()
     }
@@ -55,6 +64,7 @@ internal class WidgetListSelectionStore(context: Context) {
             .remove(keyListId(appWidgetId))
             .remove(keyListType(appWidgetId))
             .remove(keyListName(appWidgetId))
+            .remove(keyListIconKey(appWidgetId))
             .putStringSet(KEY_KNOWN_IDS, knownIds)
             .apply()
     }
@@ -74,6 +84,7 @@ internal class WidgetListSelectionStore(context: Context) {
     private fun keyListId(appWidgetId: Int) = "list_id_$appWidgetId"
     private fun keyListType(appWidgetId: Int) = "list_type_$appWidgetId"
     private fun keyListName(appWidgetId: Int) = "list_name_$appWidgetId"
+    private fun keyListIconKey(appWidgetId: Int) = "list_icon_key_$appWidgetId"
 
     private companion object {
         const val PREF_NAME = "tday_widget_list_selection_prefs"
