@@ -1236,11 +1236,12 @@ struct AppRootView: View {
                 listId: listId
             )
         }
-        // A list opened from outside — a List widget, a notification — lands on its own root
-        // feed first, so back returns to Scheduled or Anytime by the list's type rather than to
-        // whichever feed happened to be showing. Android does the same (`rememberListBack`).
+        // A list or scope screen opened from outside — a Today or List widget, a notification —
+        // lands on its own root feed first, so back returns to Scheduled or Anytime by the
+        // screen's type rather than to whichever feed happened to be showing. Android does the
+        // same (`rememberListBack`).
         switch route {
-        case .listTodos:
+        case .listTodos, .todayTodos, .overdueTodos, .scheduledTodos, .allTodos, .priorityTodos:
             selectRootFeedTab(.scheduledTaskHome)
         case .floaterListTodos:
             selectRootFeedTab(.floaterTaskHome)
