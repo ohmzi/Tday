@@ -40,11 +40,17 @@ Image("ActionEdit")
 
 ## Adding a new icon
 
-1. Find the glyph on lucide.dev and copy its SVG (or read `tday-web/node_modules/lucide-react/dist/esm/icons/<glyph>.js` for the exact path nodes).
+1. Find the glyph on lucide.dev and copy its SVG (or read `tday-web/node_modules/lucide-react/dist/esm/icons/<glyph>.mjs` for the exact path nodes — they sit under `__iconData.node`).
 2. Web: import the `lucide-react` component.
 3. Android: add `ic_lucide_<glyph>.xml` (paths only), render via `painterResource`.
 4. iOS: add a `<Name>.imageset` template SVG, render via `Image("<Name>")` + `.renderingMode(.template)`.
 5. Keep the three in sync — same glyph everywhere.
+
+## Lucide versions and glyph drift
+
+Web runs `lucide-react` 1.x. Lucide 1.0 removed its brand glyphs, so the one the web app still needs (GitHub, on the version page) is a local `createLucideIcon` wrapper in `tday-web/src/components/ui/GithubIcon.tsx` with the old 0.475 geometry.
+
+The Android drawables and iOS imagesets below were traced from `lucide-react` 0.475. Between 0.475 and 1.x Lucide re-drew or shifted many glyphs (most by a pixel or two; `trash` also gained its two inner bars, and `dumbbell`/`key` were redrawn), so those web glyphs no longer match their native twins exactly. When you touch a shared glyph on any platform, re-trace all three from the 1.x geometry rather than mixing versions.
 
 ## Current shared glyphs
 
