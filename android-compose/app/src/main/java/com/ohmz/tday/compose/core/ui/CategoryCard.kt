@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,6 +30,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
@@ -48,6 +50,10 @@ import androidx.compose.ui.unit.dp
  * The Card keeps its own modifier chain and its own sizing, so the wrapper is layout-
  * neutral: the Box takes the same slot the Card used to, and its height is still the
  * Card's.
+ *
+ * [inlineIcon] is the full-width form a single-column feed uses: a 70dp row with the glyph
+ * beside the title on one line, as iOS's `FloaterTaskHomeCompletedCard` and web's tile draw
+ * it. The default is the 2-up grid tile, glyph over title with room for a [count].
  */
 @Composable
 fun CategoryCard(
@@ -58,6 +64,7 @@ fun CategoryCard(
     title: String,
     count: Int? = null,
     tileTransitionKey: String? = null,
+    inlineIcon: Boolean = false,
     onClick: () -> Unit,
 ) {
     val view = LocalView.current
@@ -93,6 +100,7 @@ fun CategoryCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .then(if (inlineIcon) Modifier.height(InlineCardHeight) else Modifier)
                     .drawWithCache {
                         val iconSideGlow = Brush.radialGradient(
                             colors = listOf(
@@ -143,41 +151,74 @@ fun CategoryCard(
                     }
                 }
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
+                if (inlineIcon) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .matchParentSize()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            painter = painterResource(iconRes),
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(26.dp),
-                        )
-                        if (count != null) {
-                            Text(
-                                text = count.toString(),
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = Color.White,
-                                fontWeight = FontWeight.Black,
+                        Box(
+                            modifier = Modifier.size(32.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(iconRes),
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp),
                             )
                         }
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                painter = painterResource(iconRes),
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(26.dp),
+                            )
+                            if (count != null) {
+                                Text(
+                                    text = count.toString(),
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Black,
+                                )
+                            }
+                        }
 
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+/** The full-width tile's height — iOS's `minHeight: 70, maxHeight: 70` and web's `h-[70px]`. */
+private val InlineCardHeight = 70.dp
