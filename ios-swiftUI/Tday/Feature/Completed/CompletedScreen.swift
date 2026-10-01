@@ -411,6 +411,12 @@ struct CompletedScreen: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
+                    // Through the home-indicator strip, so "the room below the tabs"
+                    // runs to the bottom of the screen and the scene centres in that,
+                    // not in a frame that stops short of it. Only the container
+                    // region: the keyboard still shortens the frame, which keeps the
+                    // search scene clear of it.
+                    .ignoresSafeArea(.container, edges: .bottom)
                     .transition(completedEmptyStateTransition)
                     }
                 }

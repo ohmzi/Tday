@@ -4060,6 +4060,9 @@ private fun LazyListScope.floaterTaskHomeRootFeedContent(
                 iconRes = R.drawable.ic_lucide_circle_check_big,
                 watermarkRes = R.drawable.ic_lucide_circle_check_big,
                 title = stringResource(R.string.scheduled_task_home_category_completed),
+                // One row, glyph beside the word, as iOS draws this tile — the
+                // stacked form is the 2-up grid's, and this one is full width.
+                inlineIcon = true,
                 onClick = onOpenCompleted,
             )
         }
