@@ -1,11 +1,11 @@
 {
-  "version": "0.7.47",
+  "version": "0.7.48",
   "compatibility": {
     "mode": "exact",
     "updateRequired": true
   },
   "ios": {
-    "buildNumber": 59,
+    "buildNumber": 60,
     "updateUrl": "https://testflight.apple.com/join/paKSyGAG"
   }
 }
