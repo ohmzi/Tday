@@ -40,10 +40,18 @@ ALTER TABLE IF EXISTS completedfloaters
 -- list correlation, so a list deleted the day after this migration ships
 -- still converges its undos correctly instead of landing every one of them
 -- in a separate recreated list.
-UPDATE completedfloaters
-SET "originalListID" = "projectID"
-WHERE "originalListID" IS NULL
-  AND "projectID" IS NOT NULL;
+-- UPDATE has no IF EXISTS, so the guard is a to_regclass test (the same one V29 uses). On a
+-- database whose first-ever boot is still in progress the table does not exist yet and there
+-- are no rows to backfill.
+DO $$
+BEGIN
+    IF to_regclass('public.completedfloaters') IS NOT NULL THEN
+        UPDATE completedfloaters
+        SET "originalListID" = "projectID"
+        WHERE "originalListID" IS NULL
+          AND "projectID" IS NOT NULL;
+    END IF;
+END $$;
 
 ALTER TABLE IF EXISTS completedfloaters
     DROP CONSTRAINT IF EXISTS fk_completedfloaters_projectid__id;
