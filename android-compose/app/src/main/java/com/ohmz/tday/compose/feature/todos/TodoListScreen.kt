@@ -4593,7 +4593,13 @@ private fun TdayConfirmationDialog(
 
     Dialog(
         onDismissRequest = onDismissRequest,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            // The window is made full-bleed by TdaySheetFullBleedWindow below; leaving the
+            // property at its default lets the Dialog re-apply decorFitsSystemWindows = true
+            // and pad its content by the navigation bar, which un-dims the strip behind it.
+            decorFitsSystemWindows = false,
+        ),
     ) {
         TdaySheetFullBleedWindow()
 
