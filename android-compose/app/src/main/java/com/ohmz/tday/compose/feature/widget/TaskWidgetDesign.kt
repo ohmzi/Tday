@@ -91,6 +91,16 @@ internal enum class TaskWidgetLayout {
  * re-applies actions onto a live view tree (see [setVisible]'s note), so a colour filter one
  * render left behind would otherwise tint the next render's drawable.
  */
+/**
+ * `RemoteViews` dispatches these by NAME, reflectively, in the HOST's process at render time — so
+ * each is a contract with a real `@RemotableViewMethod` on `View`/`ImageView` rather than a string
+ * this file is free to spell as it likes. Named once because a typo in one of several copies does
+ * not fail the build: it fails silently on somebody's launcher, which is the worst place to find
+ * out.
+ */
+private const val METHOD_SET_BACKGROUND_RESOURCE = "setBackgroundResource"
+private const val METHOD_SET_COLOR_FILTER = "setColorFilter"
+
 internal data class TaskWidgetWatermark(
     @DrawableRes val drawable: Int,
     @ColorRes val tint: Int,
@@ -337,7 +347,7 @@ internal object TaskWidgetRemoteViews {
         // The list's own colour when it has one, else the kind's. See `TaskWidgetWatermark.tintArgb`.
         setInt(
             viewId,
-            "setColorFilter",
+            METHOD_SET_COLOR_FILTER,
             watermark.tintArgb ?: ContextCompat.getColor(context, watermark.tint),
         )
         setInt(viewId, "setImageAlpha", watermark.alpha)
@@ -377,11 +387,11 @@ internal object TaskWidgetRemoteViews {
     private fun RemoteViews.applyAddButtonAccent(visuals: TaskWidgetVisuals) {
         val accent = visuals.accent
         if (accent == null) {
-            setInt(R.id.widget_add, "setBackgroundResource", visuals.addButtonBackground)
+            setInt(R.id.widget_add, METHOD_SET_BACKGROUND_RESOURCE, visuals.addButtonBackground)
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            setInt(R.id.widget_add, "setBackgroundResource", R.drawable.widget_add_button_background_list)
+            setInt(R.id.widget_add, METHOD_SET_BACKGROUND_RESOURCE, R.drawable.widget_add_button_background_list)
             setColorStateList(
                 R.id.widget_add,
                 "setBackgroundTintList",
@@ -395,8 +405,8 @@ internal object TaskWidgetRemoteViews {
                 ColorStateList.valueOf(accent.night),
             )
         } else {
-            setInt(R.id.widget_add, "setBackgroundResource", visuals.addButtonBackground)
-            setInt(R.id.widget_add_icon, "setColorFilter", accent.light)
+            setInt(R.id.widget_add, METHOD_SET_BACKGROUND_RESOURCE, visuals.addButtonBackground)
+            setInt(R.id.widget_add_icon, METHOD_SET_COLOR_FILTER, accent.light)
         }
     }
 
@@ -544,7 +554,7 @@ internal object TaskWidgetRemoteViews {
             )
             setInt(
                 R.id.widget_row_time,
-                "setBackgroundResource",
+                METHOD_SET_BACKGROUND_RESOURCE,
                 if (row.overdueTrailing) R.drawable.widget_due_chip_overdue else R.drawable.widget_due_chip,
             )
         }
