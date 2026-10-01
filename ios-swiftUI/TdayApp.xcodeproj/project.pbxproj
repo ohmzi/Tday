@@ -114,6 +114,7 @@
 		B10000000000000000000024 /* CarTaskIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* CarTaskIntents.swift */; };
 		B10000000000000000000025 /* CarTaskModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* CarTaskModelsTests.swift */; };
 		B34A31B1812FC676A3AC1871 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DCE08ADACC8F11CE2113C13B /* Assets.xcassets */; };
+		D4A100000000000000000031 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DCE08ADACC8F11CE2113C13B /* Assets.xcassets */; };
 		B4995200636F408E4296FF0D /* ApiModelContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 629820F1BA29236313992076 /* ApiModelContractTests.swift */; };
 		B5C6D7E8F9A000000000B201 /* AppLocale.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5C6D7E8F9A000000000F201 /* AppLocale.swift */; };
 		B5D28682AD0623E39CCD4F8E /* CompleteTodoUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70F09E74879D0AAABCF70E20 /* CompleteTodoUseCase.swift */; };
@@ -1203,6 +1204,7 @@
 			buildPhases = (
 				D4A100000000000000000017 /* Sources */,
 				D4A100000000000000000018 /* Frameworks */,
+				D4A100000000000000000030 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -1373,6 +1375,14 @@
 				7D4A9E1400000000000000C2 /* TaskSwipeRevealDetentTests.swift in Sources */,
 				7D4A9E1400000000000000C4 /* TaskSwipeDismissPolicyTests.swift in Sources */,
 				494E748270A233BECED5A359 /* TodayTasksWidgetSnapshotStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D4A100000000000000000030 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D4A100000000000000000031 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

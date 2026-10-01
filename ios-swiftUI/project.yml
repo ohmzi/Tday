@@ -87,6 +87,12 @@ targets:
       - path: Tday/Core/Widget/TodayWidgetDayWindow.swift
       - path: Tday/Core/Widget/ListWidgetSetupArt.swift
       - path: Tday/UI/Theme/TdayMotionGenerated.swift
+    resources:
+      # The app's asset catalogue, so the extension can draw the shared Lucide glyphs.
+      # Without it the widget target has NO resources phase at all and `Image("Lucide…")`
+      # resolves to nothing — which is why the custom-list watermark could not be drawn
+      # from the list's own icon until this was added.
+      - path: Tday/Assets.xcassets
     settings:
       base:
         PRODUCT_NAME: TdayWidget
