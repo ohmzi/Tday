@@ -1207,15 +1207,6 @@ private enum TaskWidgetMode {
         }
     }
 
-    var emptySubtitle: String {
-        switch self {
-        case .today:
-            return "Add one for today"
-        case .floater:
-            return "Add a floater"
-        }
-    }
-
     func emptyWatermarkSystemName(isDaytime: Bool) -> String {
         switch self {
         case .today:

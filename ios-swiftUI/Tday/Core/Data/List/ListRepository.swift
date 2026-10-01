@@ -27,10 +27,6 @@ final class ListRepository {
         self.syncManager = syncManager
     }
 
-    func fetchLists() -> [ListSummary] {
-        buildLists(from: cacheManager.loadOfflineState())
-    }
-
     /// Off `cacheManager.cachedState`, the in-memory mirror: `CompletedViewModel` and
     /// `CalendarViewModel` read this in the synchronous hydrate their initializers run in
     /// the screen's first body pass (the frame the tile zoom draws first), and again on

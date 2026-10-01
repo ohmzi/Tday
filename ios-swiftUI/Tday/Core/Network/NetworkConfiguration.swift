@@ -287,10 +287,6 @@ final class NetworkConfiguration: NSObject, URLSessionDelegate {
         return enrollmentExpectations.removeValue(forKey: host.lowercased())
     }
 
-    func clearCookies() {
-        cookieStore.clearAll()
-    }
-
     func syncPersistedAuthCookie() {
         cookieStore.syncPersistedAuthCookie()
     }

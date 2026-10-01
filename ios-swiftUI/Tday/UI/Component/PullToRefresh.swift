@@ -481,17 +481,6 @@ private struct PullRefreshOffsetObserver: UIViewRepresentable {
     }
 }
 
-struct ScrollBounceDisablerRow: View {
-    var body: some View {
-        VerticalScrollBounceDisabler()
-            .frame(height: 0)
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .allowsHitTesting(false)
-    }
-}
-
 extension View {
     @ViewBuilder
     func disableVerticalScrollBounce(_ isDisabled: Bool = true) -> some View {
@@ -500,10 +489,6 @@ extension View {
         } else {
             self
         }
-    }
-
-    func onVerticalScrollOffsetChange(_ onChange: @escaping (CGFloat) -> Void) -> some View {
-        background(VerticalScrollOffsetObserver(onChange: onChange))
     }
 
     func onVerticalScrollSnap(collapseDistance: CGFloat) -> some View {
@@ -621,53 +606,6 @@ private struct VerticalScrollBounceDisabler: UIViewRepresentable {
                 isClamping = true
                 scrollView.contentOffset = CGPoint(x: scrollView.contentOffset.x, y: minY)
                 isClamping = false
-            }
-        }
-    }
-}
-
-private struct VerticalScrollOffsetObserver: UIViewRepresentable {
-    let onChange: (CGFloat) -> Void
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onChange: onChange)
-    }
-
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
-        view.isUserInteractionEnabled = false
-        return view
-    }
-
-    func updateUIView(_ uiView: UIView, context: Context) {
-        context.coordinator.onChange = onChange
-        DispatchQueue.main.async {
-            context.coordinator.attach(to: uiView)
-        }
-    }
-
-    final class Coordinator {
-        var onChange: (CGFloat) -> Void
-        private weak var observedScrollView: UIScrollView?
-        private var observation: NSKeyValueObservation?
-
-        init(onChange: @escaping (CGFloat) -> Void) {
-            self.onChange = onChange
-        }
-
-        func attach(to view: UIView) {
-            guard let scrollView = view.enclosingScrollView() else {
-                return
-            }
-
-            guard observedScrollView !== scrollView else {
-                return
-            }
-
-            observedScrollView = scrollView
-            observation = scrollView.observe(\.contentOffset, options: [.initial, .new]) { [weak self] scrollView, _ in
-                let normalizedOffset = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
-                self?.onChange(max(normalizedOffset, 0))
             }
         }
     }

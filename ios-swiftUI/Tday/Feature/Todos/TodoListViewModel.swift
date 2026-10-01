@@ -225,10 +225,6 @@ final class TodoListViewModel {
         isSummarizing = false
     }
 
-    func dismissSummaryConnectivityError() {
-        summaryConnectivityError = false
-    }
-
     func addTask(_ payload: CreateTaskPayload) async {
         TdayTelemetry.addBreadcrumb("task.create", data: taskTelemetryData(mode: mode, payload: payload))
         do {

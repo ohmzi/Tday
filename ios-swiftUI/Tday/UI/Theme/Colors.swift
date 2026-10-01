@@ -47,6 +47,4 @@ extension Color {
     static let tdayLightForeground = Color(red: 0.11, green: 0.14, blue: 0.20)
     static let tdayLightMuted = Color(red: 0.36, green: 0.40, blue: 0.49)
     static let tdayLightError = Color(red: 0.73, green: 0.10, blue: 0.10)
-
-    static let tdayAccent = Color.tdayLightAccent
 }

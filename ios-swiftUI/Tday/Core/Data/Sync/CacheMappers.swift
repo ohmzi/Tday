@@ -147,25 +147,6 @@ func todoTimelineSortPrecedes(_ lhs: TodoItem, _ rhs: TodoItem) -> Bool {
     TaskSortEngine.precedesTodo(taskSortKey(lhs), taskSortKey(rhs))
 }
 
-func completedMergeKey(originalTodoId: String?, fallbackId: String, instanceDateEpochMs: Int64?) -> String {
-    guard let originalTodoId else {
-        return "completed-id::\(fallbackId)"
-    }
-    return "completed-original::\(originalTodoId)::\(instanceDateEpochMs.map(String.init) ?? "root")"
-}
-
-func completedMergeKey(record: CachedCompletedRecord) -> String {
-    completedMergeKey(originalTodoId: record.originalTodoId, fallbackId: record.id, instanceDateEpochMs: record.instanceDateEpochMs)
-}
-
-func completedMergeKey(item: CompletedItem) -> String {
-    completedMergeKey(
-        originalTodoId: item.originalTodoId,
-        fallbackId: item.id,
-        instanceDateEpochMs: item.instanceDate.map { Int64($0.timeIntervalSince1970 * 1000.0) }
-    )
-}
-
 func mapTodoDTO(_ dto: TodoDTO) -> TodoItem {
     let explicitInstanceDate = parseOptionalDate(dto.instanceDate)
     let instanceDate = explicitInstanceDate ?? instanceDateFromTodoID(dto.id)

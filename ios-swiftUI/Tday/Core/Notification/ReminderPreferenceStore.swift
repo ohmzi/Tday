@@ -16,14 +16,6 @@ final class ReminderPreferenceStore {
         defaults.set(option.rawValue, forKey: reminderKey)
     }
 
-    func defaultReminder() -> ReminderOption {
-        getDefaultReminder()
-    }
-
-    func saveDefaultReminder(_ option: ReminderOption) {
-        setDefaultReminder(option)
-    }
-
     func markNotified(taskID: String) {
         guard !taskID.isEmpty else {
             return

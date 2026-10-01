@@ -30,10 +30,6 @@ final class FloaterListRepository {
         self.syncManager = syncManager
     }
 
-    func fetchLists() -> [ListSummary] {
-        buildLists(from: cacheManager.loadOfflineState())
-    }
-
     /// Off `cacheManager.cachedState`, the in-memory mirror, for the reason on
     /// `ListRepository.fetchListsSnapshot` (here the one reader is `CompletedViewModel`'s
     /// hydrate). `buildLists` re-applies `orderFloaterListsLikeWeb`, so, as there, the

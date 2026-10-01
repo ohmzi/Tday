@@ -12,10 +12,6 @@ final class CompletedRepository {
         self.syncManager = syncManager
     }
 
-    func fetchCompletedItems() -> [CompletedItem] {
-        cacheManager.loadOfflineState().completedItems.map(completedFromCache)
-    }
-
     /// Off `cacheManager.cachedState`, the in-memory mirror, not a fresh
     /// `loadOfflineState()`: `CompletedViewModel` and `CalendarViewModel` call this from
     /// their synchronous hydrate. That hydrate runs once in the screen's first body pass,

@@ -1363,11 +1363,6 @@ final class AppViewModel {
         await refreshGitHubReleases()
     }
 
-    func checkForUpdate() async {
-        TdayTelemetry.addBreadcrumb("update.check", data: ["scope": "release"])
-        await refreshGitHubReleases()
-    }
-
     private func refreshGitHubReleases() async {
         isReleaseLoading = latestRelease == nil && currentRelease == nil
         releaseError = nil

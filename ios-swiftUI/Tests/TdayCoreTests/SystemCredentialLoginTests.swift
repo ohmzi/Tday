@@ -242,10 +242,6 @@ private final class FakeAuthRepository: AuthRepositoryServicing {
         []
     }
 
-    func fetchQuestionsForUsername(_ username: String) async throws -> [SecurityQuestion] {
-        []
-    }
-
     func lookupQuestions(_ username: String) async -> LookupQuestionsOutcome {
         .notFound
     }
@@ -285,10 +281,6 @@ private final class FakeAuthRepository: AuthRepositoryServicing {
     func clearAllLocalUserDataForUnauthenticatedState() {}
 
     func getLastUsername() -> String? {
-        storedLastEmail
-    }
-
-    func lastUsername() -> String? {
         storedLastEmail
     }
 }
