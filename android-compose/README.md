@@ -54,7 +54,7 @@ android-compose/app/src/main/java/com/ohmz/tday/compose/
 ## Run
 
 1. Open `android-compose/` in Android Studio.
-2. Ensure Android SDK 35 is installed.
+2. Ensure the Android SDK 37 platform is installed (`compileSdk`; Gradle can fetch it once the SDK licenses are accepted). `targetSdk` stays at 35.
 3. Run on emulator/device.
 
 Useful command-line checks:
