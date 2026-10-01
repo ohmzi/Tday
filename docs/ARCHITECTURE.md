@@ -243,7 +243,7 @@ The primary error path uses the `AppError` sealed interface with `Either<AppErro
 
 ### Stack
 
-- **React 18** with **TypeScript 5** bundled by **Vite 6**
+- **React 19** with **TypeScript 6** bundled by **Vite 8** (Rolldown), tested with **Vitest 4**
 - **React Router 7** with locale-prefixed URLs (`/:locale/app/*`)
 - **TanStack React Query 5** for server state
 - **Tailwind CSS 4** with Radix UI primitives (shadcn-style)
@@ -556,7 +556,7 @@ The v1 mobile widget surface is intentionally narrow and action-oriented. Widget
 
 In production, `Dockerfile.backend` produces a single container:
 
-1. **Stage 1** (Node 20): Builds `tday-web` static assets (`npm ci && npm run build`)
+1. **Stage 1** (Node 20, 20.19+ for Vite 8): Builds `tday-web` static assets (`npm ci && npm run build`)
 2. **Stage 2** (JDK 21): Builds Ktor fat JAR (`./gradlew :tday-backend:buildFatJar`)
 3. **Stage 3** (JRE 21 Alpine): Runs the JAR with static files at `STATIC_FILES_DIR=/app/static`
 
