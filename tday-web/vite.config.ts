@@ -92,7 +92,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   server: {
@@ -106,13 +106,23 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
-    rollupOptions: {
+    // Vite 8 bundles with Rolldown, which has no object-form `manualChunks`; the same
+    // vendor split is expressed as `codeSplitting` groups matched on the package path.
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          "vendor-react": ["react", "react-dom"],
-          "vendor-icons": ["lucide-react"],
-          "vendor-date": ["date-fns"],
-          "vendor-i18n": ["i18next", "react-i18next"],
+        codeSplitting: {
+          groups: [
+            {
+              name: "vendor-react",
+              test: /node_modules[\\/](?:react|react-dom|scheduler)[\\/]/,
+            },
+            { name: "vendor-icons", test: /node_modules[\\/]lucide-react[\\/]/ },
+            { name: "vendor-date", test: /node_modules[\\/]date-fns[\\/]/ },
+            {
+              name: "vendor-i18n",
+              test: /node_modules[\\/](?:i18next|react-i18next|html-parse-stringify|void-elements)[\\/]/,
+            },
+          ],
         },
       },
     },
