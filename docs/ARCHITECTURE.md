@@ -556,7 +556,7 @@ The v1 mobile widget surface is intentionally narrow and action-oriented. Widget
 
 In production, `Dockerfile.backend` produces a single container:
 
-1. **Stage 1** (Node 20, 20.19+ for Vite 8): Builds `tday-web` static assets (`npm ci && npm run build`)
+1. **Stage 1** (Node 24, which Vite 8 and Vitest 5 require at 22.12+): Builds `tday-web` static assets (`npm ci && npm run build`)
 2. **Stage 2** (JDK 21): Builds Ktor fat JAR (`./gradlew :tday-backend:buildFatJar`)
 3. **Stage 3** (JRE 21 Alpine): Runs the JAR with static files at `STATIC_FILES_DIR=/app/static`
 

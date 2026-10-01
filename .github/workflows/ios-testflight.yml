@@ -166,7 +166,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 20
+          node-version: 24
 
       # A tag whose name does not match the manifest it points at is not one of our releases —
       # a re-pushed legacy v1.x tag, or a hand-cut tag. Refuse it here rather than archiving it.
