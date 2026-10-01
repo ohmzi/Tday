@@ -336,7 +336,6 @@ fun ScheduledTaskHomeScreen(
     onRootDockCollapsedChange: (Boolean) -> Unit = {},
     onRootControlsVisibleChange: (Boolean) -> Unit = {},
 ) {
-    val view = LocalView.current
     val colorScheme = MaterialTheme.colorScheme
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -890,10 +889,11 @@ fun ScheduledTaskHomeScreen(
                                                 .fillMaxWidth()
                                                 .semantics(mergeDescendants = true) {}
                                                 .heightIn(min = MinTouchTargetSize)
-                                                .clickable {
-                                                    TdayHaptics.buttonPress(view)
-                                                    openTaskFromSearch(todo.id)
-                                                }
+                                                // Opening a result pushes the All Tasks route
+                                                // and nothing else, so the navigation haptic
+                                                // is the only one — see
+                                                // `ScheduledTaskHomeTodayCard`.
+                                                .clickable { openTaskFromSearch(todo.id) }
                                                 .padding(
                                                     horizontal = TdayDimens.SpacingLg,
                                                     vertical = SearchResultRowVerticalPadding,
@@ -1596,7 +1596,6 @@ private fun ScheduledTaskHomeTodayCard(
     tileTransitionKey: String? = null,
     onClick: () -> Unit,
 ) {
-    val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val dateLabel = remember { SCHEDULED_TASK_HOME_TODAY_DATE_FORMATTER.format(Instant.now()) }
     val color = Color(0xFF6EA8E1)
@@ -1613,10 +1612,13 @@ private fun ScheduledTaskHomeTodayCard(
                 .fillMaxWidth()
                 .semantics(mergeDescendants = true) {}
                 .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Card),
-            onClick = {
-                TdayHaptics.buttonPress(view)
-                onClick()
-            },
+            // No `buttonPress` here, deliberately. This tile's entire effect is to push the
+            // Today route, and the handover fires the navigation haptic a frame later — so a
+            // tick at finger-up plus that pulse is two buzzes for one event, which the hand
+            // reads as a stutter rather than as feedback. A tap that only navigates is not a
+            // separate event from the navigation it causes; the destination owns the haptic.
+            // It also brings the tile level with iOS, whose tiles fire nothing of their own.
+            onClick = onClick,
             interactionSource = interactionSource,
             colors = CardDefaults.cardColors(containerColor = color),
             // The elevation is Material's to animate now. It was a third
@@ -2292,7 +2294,6 @@ private fun ListRow(
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val animatedCount by animateIntAsState(
         targetValue = count,
@@ -2320,10 +2321,8 @@ private fun ListRow(
                 .height(ListRowHeight)
                 .semantics(mergeDescendants = true) {}
                 .tdayPressable(interactionSource, scale = TdayMotionTokens.PressScales.Row),
-            onClick = {
-                TdayHaptics.buttonPress(view)
-                onClick()
-            },
+            // Navigation-only tap, so no haptic of its own — see `ScheduledTaskHomeTodayCard`.
+            onClick = onClick,
             interactionSource = interactionSource,
             shape = RoundedCornerShape(TdayDimens.RadiusCard),
             colors = CardDefaults.cardColors(containerColor = containerColor),
