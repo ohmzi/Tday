@@ -12,7 +12,11 @@ import {
 import { api } from "@/lib/api-client";
 import { cn, isSubmitEnter } from "@/lib/utils";
 import { hapticTick, hapticConfirm } from "@/lib/haptics";
-import { listColorMap } from "@/lib/listColorMap";
+import {
+  DEFAULT_SCHEDULED_LIST_COLOR,
+  DEFAULT_SCHEDULED_LIST_COLOR_OPTION,
+  listColorMap,
+} from "@/lib/listColorMap";
 import {
   DEFAULT_LIST_ICON_KEY,
   getListIcon,
@@ -51,10 +55,12 @@ type ListFormSheetProps = {
   onShareList?: () => void;
 };
 
+/** The name as it is saved: surrounding whitespace trimmed. */
 function normalizeListName(value: string) {
   return value.trim();
 }
 
+/** Sends an edited list to `PATCH /api/list` and resolves once the server has accepted it. */
 async function patchList({
   id,
   name,
@@ -90,12 +96,16 @@ async function patchList({
   });
 }
 
+/**
+ * The create / edit sheet for a scheduled list: name, color, icon and default priority, plus sharing
+ * and delete when an existing list is open.
+ */
 export default function ListFormSheet({
   open,
   onOpenChange,
   list,
   initialName = "",
-  initialColor = "BLUE",
+  initialColor = DEFAULT_SCHEDULED_LIST_COLOR,
   initialIconKey = DEFAULT_LIST_ICON_KEY,
   onSaved,
   onManageMembers,
@@ -117,6 +127,7 @@ export default function ListFormSheet({
    */
   const previewIconKeyFor = (listName: string) =>
     normalizeListIconKey(inferListIconKey(listName) ?? initialIconKey);
+  /** The icon the picker opens on: the list's own when editing, the name-derived or default one when creating. */
   const seedIconKey = () =>
     list ? resolveListIconKey(list) : previewIconKeyFor(initialName);
 
@@ -173,12 +184,13 @@ export default function ListFormSheet({
   }, [iconTouched, isEditing, name]);
 
   const selectedColor = useMemo(
-    () => listColorMap.find((option) => option.value === color) ?? listColorMap[4],
+    () => listColorMap.find((option) => option.value === color) ?? DEFAULT_SCHEDULED_LIST_COLOR_OPTION,
     [color],
   );
   const SelectedIcon = getListIcon(iconKey);
   const nameColorClass = selectedColor.tailwind.replace("bg-", "text-");
 
+  /** Refetches everything a list change can alter: list metadata and the todo, timeline, overdue and completed queries. */
   const invalidateListQueries = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["listMetaData"] }),
@@ -214,6 +226,7 @@ export default function ListFormSheet({
   const saving = createLoading || updateListMutation.isPending;
   const canSubmit = Boolean(normalizeListName(name)) && !saving;
 
+  /** Saves the sheet: updates the list when editing, creates it otherwise. A blank name is rejected inline. */
   const handleSubmit = async () => {
     const normalizedName = normalizeListName(name);
     if (!normalizedName) {
@@ -231,7 +244,7 @@ export default function ListFormSheet({
       const iconChanged = iconTouched && iconKey !== storedIconKey;
       if (
         normalizedName === normalizeListName(list.name) &&
-        color === (list.color ?? "BLUE") &&
+        color === (list.color ?? DEFAULT_SCHEDULED_LIST_COLOR) &&
         !iconChanged &&
         defaultPriority === (list.defaultPriority ?? null)
       ) {
@@ -273,14 +286,17 @@ export default function ListFormSheet({
     }
   };
 
+  // The sheet is a stack of independent cards (name, color, icon, priority, sharing), each holding its
+  // own row of controls, so the JSX is structurally deeper than the lint limit. Flattening a level
+  // would change which element scrolls and clips, so the finding is suppressed on the root element.
   return (
-    <AppBottomSheet
+    <AppBottomSheet // skipcq: JS-0415
       variant="native"
       open={open}
       onOpenChange={onOpenChange}
       title={isEditing ? appDict("listSettings") : appDict("newList")}
       onClose={() => onOpenChange(false)}
-      onConfirm={() => void handleSubmit()}
+      onConfirm={handleSubmit}
       confirmDisabled={!canSubmit}
       confirmLabel={appDict("save")}
       closeLabel={appDict("cancel")}
@@ -306,7 +322,7 @@ export default function ListFormSheet({
                 // Enter is the header ✓. With nothing to save it just dismisses
                 // the keyboard.
                 event.preventDefault();
-                if (canSubmit) void handleSubmit();
+                if (canSubmit) handleSubmit();
                 else event.currentTarget.blur();
               }}
               placeholder={appDict("listName")}

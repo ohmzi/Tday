@@ -35,6 +35,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTrans
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.jdbc.select
 import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -148,11 +149,23 @@ class ListShareServiceImpl(
     override suspend fun sharedListIdsFor(userId: String, type: ListType, editorOnly: Boolean): List<String> =
         newSuspendedTransaction(Dispatchers.IO) {
             when (type) {
-                ListType.SCHEDULED -> ListShares.selectAll().where { ListShares.userID eq userId }
-                    .filter { !editorOnly || it[ListShares.role] == ShareRole.EDITOR.name }
+                ListType.SCHEDULED -> ListShares.select(ListShares.listID)
+                    .where {
+                        if (editorOnly) {
+                            (ListShares.userID eq userId) and (ListShares.role eq ShareRole.EDITOR.name)
+                        } else {
+                            ListShares.userID eq userId
+                        }
+                    }
                     .map { it[ListShares.listID] }
-                ListType.FLOATER -> FloaterListShares.selectAll().where { FloaterListShares.userID eq userId }
-                    .filter { !editorOnly || it[FloaterListShares.role] == ShareRole.EDITOR.name }
+                ListType.FLOATER -> FloaterListShares.select(FloaterListShares.listID)
+                    .where {
+                        if (editorOnly) {
+                            (FloaterListShares.userID eq userId) and (FloaterListShares.role eq ShareRole.EDITOR.name)
+                        } else {
+                            FloaterListShares.userID eq userId
+                        }
+                    }
                     .map { it[FloaterListShares.listID] }
             }
         }

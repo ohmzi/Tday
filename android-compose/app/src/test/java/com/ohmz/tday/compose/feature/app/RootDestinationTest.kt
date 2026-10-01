@@ -26,13 +26,7 @@ class RootDestinationTest {
             AppUiState(),
             AppUiState(loading = true, authenticated = false),
             AppUiState(loading = false, authenticated = false),
-            AppUiState(loading = true, authenticated = false, requiresServerSetup = true),
-            AppUiState(
-                loading = true,
-                authenticated = false,
-                requiresLogin = true,
-                dataMode = AppDataMode.SERVER,
-            ),
+            AppUiState(loading = true, authenticated = false, dataMode = AppDataMode.SERVER),
         )
 
         unresolved.forEach { state ->
@@ -70,13 +64,11 @@ class RootDestinationTest {
         val noServer = AppUiState(
             loading = false,
             authenticated = false,
-            requiresServerSetup = true,
             sessionResolution = SessionResolution.RESOLVED,
         )
         val signInRequired = AppUiState(
             loading = false,
             authenticated = false,
-            requiresLogin = true,
             dataMode = AppDataMode.SERVER,
             sessionResolution = SessionResolution.RESOLVED,
         )

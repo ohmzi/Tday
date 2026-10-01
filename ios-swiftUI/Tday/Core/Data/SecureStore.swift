@@ -219,18 +219,6 @@ final class SecureStore {
         loadRuntimeServerURL()?.absoluteString ?? loadPersistedServerURL()?.absoluteString
     }
 
-    @discardableResult
-    func saveServerURL(rawURL: String, persist: Bool) throws -> String {
-        guard let normalized = normalizeServerURL(rawURL) else {
-            throw APIError(message: "Enter a valid server URL", statusCode: nil)
-        }
-        defaults.set(normalized.absoluteString, forKey: runtimeServerURLKey)
-        if persist {
-            savePersistedServerURL(normalized)
-        }
-        return normalized.absoluteString
-    }
-
     func persistRuntimeServerURL() throws {
         guard let runtime = loadRuntimeServerURL() else {
             return
@@ -244,10 +232,6 @@ final class SecureStore {
 
     func clearAllLocalData() {
         clearAllUserValues()
-    }
-
-    func lastUsername() -> String? {
-        loadLastUsername()
     }
 
     func loadPersistedAuthSessionCookieData() -> Data? {
@@ -295,27 +279,6 @@ final class SecureStore {
         components.query = nil
         components.fragment = nil
         return components.url
-    }
-
-    func buildAbsoluteAppURL(path: String) -> URL? {
-        guard let serverURLString = serverURL(), let baseURL = URL(string: serverURLString) else {
-            return nil
-        }
-        return baseURL.appending(path: path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
-    }
-
-    func serverTrustKey(for rawURL: String) -> String? {
-        guard let normalized = normalizeServerURL(rawURL), let host = normalized.host else {
-            return nil
-        }
-        if let port = normalized.port {
-            return "\(host.lowercased()):\(port)"
-        }
-        return host.lowercased()
-    }
-
-    func saveTrustedFingerprint(_ fingerprint: String, serverTrustKey: String) {
-        saveTrustedFingerprint(fingerprint, for: serverTrustKey)
     }
 
     func saveListIcon(_ iconKey: String, for listId: String) {

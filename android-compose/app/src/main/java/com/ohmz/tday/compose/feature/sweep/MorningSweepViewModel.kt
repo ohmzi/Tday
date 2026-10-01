@@ -61,7 +61,7 @@ class MorningSweepViewModel @Inject constructor(
         advancePast(todo)
         viewModelScope.launch {
             runCatching { todoRepository.moveTodo(todo, movedDuePreservingTime(due, targetDate)) }
-            runCatching { reminderScheduler.rescheduleAll() }
+            runCatching { reminderScheduler.rescheduleAllOffMain() }
         }
     }
 
@@ -95,7 +95,7 @@ class MorningSweepViewModel @Inject constructor(
                     val due = todo.due ?: continue
                     runCatching { todoRepository.moveTodo(todo, movedDuePreservingTime(due, today)) }
                 }
-                runCatching { reminderScheduler.rescheduleAll() }
+                runCatching { reminderScheduler.rescheduleAllOffMain() }
             },
             onUndo = {
                 _uiState.update { it.copy(cards = swept) }

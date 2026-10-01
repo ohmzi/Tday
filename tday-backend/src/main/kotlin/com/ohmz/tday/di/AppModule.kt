@@ -104,15 +104,15 @@ val serviceModule = module {
     single<CacheService> { CacheServiceImpl() }
     single<ListShareService> { ListShareServiceImpl(get(), get(), get()) }
     single { RealtimePublisher(get(), get(), get(), get()) }
-    single<TodoService> { TodoServiceImpl(get(), get(), get(), get()) }
-    single<FloaterService> { FloaterServiceImpl(get(), get(), get(), get()) }
-    single<ListService> { ListServiceImpl(get(), get(), get(), get()) }
-    single<FloaterListService> { FloaterListServiceImpl(get(), get(), get(), get()) }
+    single<TodoService> { TodoServiceImpl(get(), get(), get()) }
+    single<FloaterService> { FloaterServiceImpl(get(), get(), get()) }
+    single<ListService> { ListServiceImpl(get(), get(), get()) }
+    single<FloaterListService> { FloaterListServiceImpl(get(), get(), get()) }
     single<UserService> { UserServiceImpl(get()) }
-    single<SecurityQuestionService> { SecurityQuestionServiceImpl(get(), get(), get(), get()) }
-    single<CompletedTodoService> { CompletedTodoServiceImpl(get(), get()) }
-    single<TaskStepService> { TaskStepServiceImpl(get(), get(), get()) }
-    single<CompletedFloaterService> { CompletedFloaterServiceImpl(get(), get()) }
+    single<SecurityQuestionService> { SecurityQuestionServiceImpl(get(), get(), get()) }
+    single<CompletedTodoService> { CompletedTodoServiceImpl(get()) }
+    single<TaskStepService> { TaskStepServiceImpl(get(), get()) }
+    single<CompletedFloaterService> { CompletedFloaterServiceImpl(get()) }
     single<ExportService> { ExportServiceImpl(get(), get(), get()) }
     single<PreferencesService> { PreferencesServiceImpl() }
     single<TodoSummaryService> { TodoSummaryServiceImpl(get()) }

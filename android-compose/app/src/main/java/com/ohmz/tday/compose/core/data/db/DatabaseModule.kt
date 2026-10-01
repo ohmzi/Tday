@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.core.data.db
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.ohmz.tday.compose.core.data.SecureConfigStore
@@ -72,6 +73,36 @@ private class Migration12To13 : Migration(12, 13) {
     }
 }
 
+// v14: PendingMutationRecord.staged on the pending-mutation queue. Nullable and default-less like
+// v13's columns, so existing rows carry NULL, which the mapper reads as "not staged". A pre-v14
+// queue cannot hold a live marker anyway: the flag was never written, so nothing was staged.
+internal class Migration13To14 : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE pending_mutations ADD COLUMN staged INTEGER")
+    }
+}
+
+/**
+ * Releases the staged markers a dead process left behind.
+ *
+ * A staged mutation is a placeholder for the length of an Undo window, and the commit (or the
+ * Undo) that clears it runs in the process that staged it. Now that the flag is persisted, a
+ * process killed inside the window would keep it forever: SyncManager skips staged mutations, so
+ * the user's complete or delete would never reach the server. Before the flag was persisted that
+ * leftover simply replayed on the next launch, and the user's action was honoured; this puts that
+ * outcome back.
+ *
+ * `onOpen` runs once each time the database is opened, before the query that triggered the open
+ * returns, and a Hilt singleton opens it once per process. So no marker the live process wrote
+ * can be touched here (it has not written one yet), and `OfflineCacheManager`'s in-memory mirror
+ * keeps its markers for as long as the process lives, which is what the Undo window needs.
+ */
+internal class ReleaseStagedMutationsOnOpen : RoomDatabase.Callback() {
+    override fun onOpen(db: SupportSQLiteDatabase) {
+        db.execSQL("UPDATE pending_mutations SET staged = 0 WHERE staged = 1")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -119,36 +150,14 @@ object DatabaseModule {
                 Migration10To11(),
                 Migration11To12(),
                 Migration12To13(),
+                Migration13To14(),
             )
             .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5, 6)
+            .addCallback(ReleaseStagedMutationsOnOpen())
             // Safety net: callers should run DAO access off the main thread (see
             // OfflineCacheManager / repositories using Dispatchers.IO). Kept so a missed
             // path (e.g. a Glance widget) degrades to a slow query rather than crashing.
             .allowMainThreadQueries()
             .build()
     }
-
-    @Provides
-    fun provideTodoDao(db: TdayDatabase): TodoDao = db.todoDao()
-
-    @Provides
-    fun provideFloaterDao(db: TdayDatabase): FloaterDao = db.floaterDao()
-
-    @Provides
-    fun provideListDao(db: TdayDatabase): ListDao = db.listDao()
-
-    @Provides
-    fun provideFloaterListDao(db: TdayDatabase): FloaterListDao = db.floaterListDao()
-
-    @Provides
-    fun provideCompletedDao(db: TdayDatabase): CompletedDao = db.completedDao()
-
-    @Provides
-    fun provideCompletedFloaterDao(db: TdayDatabase): CompletedFloaterDao = db.completedFloaterDao()
-
-    @Provides
-    fun provideMutationDao(db: TdayDatabase): MutationDao = db.mutationDao()
-
-    @Provides
-    fun provideSyncMetadataDao(db: TdayDatabase): SyncMetadataDao = db.syncMetadataDao()
 }

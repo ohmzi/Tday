@@ -23,14 +23,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -448,17 +450,20 @@ fun TdayTaskRowSkeleton(
     // Branching over composing-and-ignoring: at scale 0 the transition's frame loop
     // still asks for every frame it is never going to use, on the one device that
     // asked for less. Not composing it leaves nothing to skip to the wrong end of.
-    val pulseAlpha = if (frozen != null) {
-        frozen
+    //
+    // Held as a State and only READ inside each bar's `graphicsLayer` block, so a frame of the
+    // pulse invalidates the draw phase of the bars rather than recomposing the row — which would
+    // otherwise run once per frame per skeleton row while the main thread is busy loading.
+    val pulseAlpha: State<Float> = if (frozen != null) {
+        rememberUpdatedState(frozen)
     } else {
         val transition = rememberInfiniteTransition(label = "taskRowSkeleton")
-        val animated by transition.animateFloat(
+        transition.animateFloat(
             initialValue = TdayTaskRowSkeleton.RestingAlpha,
             targetValue = TdayTaskRowSkeleton.DimmedAlpha,
             animationSpec = TdayTaskRowSkeleton.pulse(),
             label = "taskRowSkeletonPulse",
         )
-        animated
     }
     val fill = colorScheme.surfaceVariant
     // The rows this stands in for — see the KDoc for which they now are — hang
@@ -507,7 +512,7 @@ fun TdayTaskRowSkeleton(
                 Box(
                     modifier = Modifier
                         .size(TdayTaskRowMetrics.CheckGlyphSize)
-                        .alpha(pulseAlpha)
+                        .graphicsLayer { alpha = pulseAlpha.value }
                         .background(fill, CircleShape),
                 )
             }
@@ -560,7 +565,7 @@ private fun SkeletonTextBar(
     style: TextStyle,
     widthFraction: Float,
     fill: Color,
-    alpha: Float,
+    alpha: State<Float>,
 ) {
     val density = LocalDensity.current
     val lineHeight = spDimension(density, style.lineHeight, FallbackLineHeight)
@@ -575,7 +580,7 @@ private fun SkeletonTextBar(
             modifier = Modifier
                 .fillMaxWidth(widthFraction)
                 .height(barHeight)
-                .alpha(alpha)
+                .graphicsLayer { this.alpha = alpha.value }
                 .background(fill, RoundedCornerShape(percent = 50)),
         )
     }

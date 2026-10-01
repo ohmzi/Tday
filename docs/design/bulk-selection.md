@@ -183,7 +183,7 @@ Concretely:
   **Deselect all** into a synonym for Cancel even though the copy table lists them as
   two separate controls. Exit only when rows actually dropped out and nothing is left.
 - Exit also on: Cancel, system back (Android `BackHandler`, registered *after* the
-  existing exit-to-launcher handler so it wins — Compose dispatches to the most
+  screen's other back handlers so it wins — Compose dispatches to the most
   recently added enabled callback, which is why the search handler in that file is
   likewise "registered last so back dismisses the field before it leaves the list"),
   Escape (web), navigating away, and
@@ -253,8 +253,8 @@ use.
 The `instanceDate` half is not a formality. No screen this feature runs on shows a
 recurring *occurrence* today: `TodoService.getTimeline` deliberately emits "one row per
 recurring template, not one per persisted instance", `toTodoResponse()` never sets
-`instanceDate`, `/api/list/:id` does not either, and web's `generateTodosFromRRule` is
-not wired to any screen. So in practice every recurring row a bulk selection can reach
+`instanceDate`, `/api/list/:id` does not either, and the web client no longer
+expands recurrences itself (that lives in the backend's `RecurrenceExpander`). So in practice every recurring row a bulk selection can reach
 has `instanceDate == null` and is skipped by all four actions. If a future change starts
 rendering real occurrences, they become bulk-completable automatically and nothing else
 has to move.
@@ -390,16 +390,16 @@ a bespoke mechanism; it is one more reason the cap exists.
 - Picker: the platform's existing single-choice priority selector — Android
   `TdayCenteredSelectorDialog`, iOS `TdayCenteredSelectorCard` + `TdayCenteredSelectorRow`
   (the `CreateTaskSheet.selectorOverlay(for: .priority)` presentation), web
-  `PriorityDropdownMenu`. Options are the canonical `Low` / `Medium` / `High` values
+  `TodoFormSelectors` (the task form's priority selector). Options are the canonical `Low` / `Medium` / `High` values
   with the Normal / Important / Urgent labels.
 - No confirmation, no toast on success.
 - Prefer the **dedicated** prioritize path over a whole-record PATCH:
   - web: `usePrioritizeTodo` / `usePrioritizeListTodo` already exist, are already wired
     into `TodoMutationProvider`, and are currently consumed by no UI — use them.
-  - iOS: `TodoRepository.setPriority` exists with zero call sites, but
-    `updateSimpleTodoMutation` optimistically maps `nextState.todos` only and never
-    `nextState.floaters`. Either fix that mapping or route floaters through
-    `updateFloater`; do not ship the optimistic gap.
+  - iOS: `TodoRepository.setPriority` (and its `updateSimpleTodoMutation` helper) were
+    removed as dead code. The helper optimistically mapped `nextState.todos` only and never
+    `nextState.floaters`, so route priority changes through `updateTodo` / `updateFloater`
+    (or rebuild a dedicated path that maps both); do not ship that optimistic gap.
   - Android: `MutationKind.SET_PRIORITY` has a complete, unused replay implementation in
     `SyncManager`. Using it is the lighter path; `updateTodo` with a rebuilt payload is
     the acceptable fallback.
@@ -407,8 +407,8 @@ a bespoke mechanism; it is one more reason the cap exists.
 
 ### 4.5 Move to another list
 
-- Target picker: the platform's existing list picker — web `ListDropdownMenu` (already
-  excludes `VIEWER` lists), Android/iOS `TdayCenteredSelectorDialog` /
+- Target picker: the platform's existing list picker — web `TodoFormSelectors`'s list
+  selector (exclude `VIEWER` lists), Android/iOS `TdayCenteredSelectorDialog` /
   `TdayCenteredSelectorCard` built like the create/edit sheet's list selector, with the
   "No list" row (`listID: ""` clears the list; the backend maps blank to null).
 - **Never offer a cross-silo target.** Scheduled tasks move between scheduled lists
@@ -546,8 +546,8 @@ and confirmation copy must match across all three (AGENTS.md Cross-Platform UX R
   `ic_lucide_circle` / `ic_lucide_circle_check_big` pair already in that composable.
 - Selection top bar: reuse the `titleSuppressed`-style takeover on `TdayHeroToolbar`
   (count as the title, back = cancel, actions = Select all / Deselect all). Hide the FAB
-  while selecting. Add `BackHandler(enabled = selectionActive)` **after** the existing
-  exit-to-launcher handler — the back dispatcher runs the most recently added enabled
+  while selecting. Add `BackHandler(enabled = selectionActive)` **after** the screen's
+  other back handlers — the back dispatcher runs the most recently added enabled
   callback, so "registered last" is what makes selection win (§2.5).
 - ViewModel: four new methods taking `List<TodoItem>`, each making exactly **one**
   coordinator call for the whole batch, modelled on
@@ -721,7 +721,7 @@ owns its own guide update.
    real mitigation.
 2. **`["floaterList", id]` cache-shape inconsistency on web** (§7.1) — blocks bulk on
    web floater lists.
-3. **iOS `TodoRepository.setPriority` never updates `nextState.floaters`** (§4.4).
+3. **iOS has no dedicated priority mutation that updates `nextState.floaters`** (§4.4) — the old `TodoRepository.setPriority` was removed as dead code and only ever mapped todos.
 4. **Batch `ids` on `DELETE /api/todo`** — only if the cap starts hurting (§1).
 5. **"No list" only clears if the client sends `""`, never `null`.** `TodoRoutes` does
    `body.listID?.let { fields["listID"] = it.takeIf { it.isNotBlank() } }`, so a null

@@ -17,6 +17,8 @@ data class PasswordProofChallengePayload(
     val expiresAt: String,
 )
 
+private val proofHexPattern = Regex("^[0-9a-f]+$")
+
 interface PasswordProof {
     fun normalizeUsername(value: String?): String?
     fun issueChallenge(username: String, storedPasswordHash: String?): PasswordProofChallengePayload
@@ -130,7 +132,7 @@ class PasswordProofImpl(
 
     private fun normalizeProofHex(raw: String): String? {
         val normalized = raw.trim().lowercase()
-        if (!Regex("^[0-9a-f]+$").matches(normalized)) return null
+        if (!proofHexPattern.matches(normalized)) return null
         if (normalized.length % 2 != 0) return null
         return normalized
     }

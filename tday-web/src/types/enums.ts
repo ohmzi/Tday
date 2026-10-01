@@ -20,13 +20,3 @@ export enum DefaultHomeScreen {
   scheduled = "scheduled",
   floater = "floater",
 }
-
-export enum UserRole {
-  USER = "USER",
-  ADMIN = "ADMIN",
-}
-
-export enum ApprovalStatus {
-  PENDING = "PENDING",
-  APPROVED = "APPROVED",
-}

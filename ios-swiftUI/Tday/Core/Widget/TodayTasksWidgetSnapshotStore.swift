@@ -939,12 +939,6 @@ enum FloaterTasksWidgetSnapshotStore {
         )
     }
 
-    /// See `TodayTasksWidgetSnapshotStore.saveTodayTasks`: returns once the snapshot is written,
-    /// and is ordered with every other snapshot write on `WidgetSnapshotWriter`'s queue.
-    static func saveFloaterTasks(from state: OfflineSyncState) {
-        WidgetSnapshotWriter.shared.runNow { writeFloaterTasks(from: state) }
-    }
-
     /// The write itself. `fileprivate` for the same reason as the Today store's twin.
     fileprivate static func writeFloaterTasks(from state: OfflineSyncState) {
         let snapshot = makeSnapshot(from: state)

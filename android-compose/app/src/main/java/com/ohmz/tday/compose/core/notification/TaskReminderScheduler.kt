@@ -13,6 +13,9 @@ import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 @Singleton
 class TaskReminderScheduler @Inject constructor(
@@ -50,6 +53,22 @@ class TaskReminderScheduler @Inject constructor(
             data = mapOf("scheduledCount" to scheduledCodes.size),
         )
         Log.d(LOG_TAG, "Scheduled ${scheduledCodes.size} task reminders")
+    }
+
+    /**
+     * [rescheduleAll] hopped off the caller's thread, for suspend callers that may be running on
+     * Main (the undo-window commit/undo callbacks run on the coordinator's `MainScope`).
+     *
+     * [rescheduleAll] is a full cache read plus a PendingIntent/AlarmManager binder round trip per
+     * tracked reminder, so its cost scales with the task count. It is the same work in the same
+     * order, only on [Dispatchers.Default]; no caller reads a result. `NonCancellable` keeps the
+     * old blocking call's guarantee that, once a caller reaches this line, the pass runs to
+     * completion even if the caller's scope (e.g. a cleared ViewModel) is cancelled meanwhile.
+     *
+     * Receivers and workers that already run on a background thread keep calling [rescheduleAll].
+     */
+    suspend fun rescheduleAllOffMain() {
+        withContext(Dispatchers.Default + NonCancellable) { rescheduleAll() }
     }
 
     fun cancelAll() {

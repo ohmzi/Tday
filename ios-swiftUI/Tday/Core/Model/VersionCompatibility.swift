@@ -1,10 +1,5 @@
 import Foundation
 
-struct VersionCompatibility: Equatable {
-    let appVersion: String
-    let updateRequired: Bool
-}
-
 enum VersionCheckResult: Equatable {
     case compatible
     case appUpdateRequired(requiredVersion: String)

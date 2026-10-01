@@ -82,8 +82,21 @@ let tdayListAccentColorKeys: [String] = [
     "ROSE", "LIGHT_RED", "BRICK", "YELLOW", "LIME", "ORANGE", "RED",
 ]
 
-/// Mirrors Android's `TDAY_DEFAULT_LIST_COLOR_KEY`.
-let tdayDefaultListAccentColorKey = "PINK"
+/// The colour a new list starts with, and the one a list with no stored colour is drawn in, per
+/// feed — the pair Android carries as `TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY` /
+/// `TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY` and web as `DEFAULT_SCHEDULED_LIST_COLOR` /
+/// `DEFAULT_FLOATER_LIST_COLOR`.
+///
+/// Each is a soft cousin of its feed's identity colour: BLUE beside the Today tile's blue, TEAL
+/// beside the Floater's sage/teal. A list row blends the key 66 % into the surface, so they read
+/// as a pale sky and a pale mint rather than as the saturated keys. Existing palette keys, not
+/// new ones — the colour is a Postgres enum on the server, so a new key is a migration.
+let tdayDefaultScheduledListAccentColorKey = "BLUE"
+let tdayDefaultFloaterListAccentColorKey = "TEAL"
+
+func tdayDefaultListAccentColorKey(isFloater: Bool) -> String {
+    isFloater ? tdayDefaultFloaterListAccentColorKey : tdayDefaultScheduledListAccentColorKey
+}
 
 private let tdayListAccentRGBByKey: [String: UInt32] = [
     "PINK": 0xE05299,
@@ -118,10 +131,12 @@ func tdayListAccentColorOrNil(colorKey: String?) -> Color? {
     return tdaySRGB(rgb)
 }
 
-/// The list's colour, defaulting to pink — for a caller with nothing else to show.
-func tdayListAccentColor(colorKey: String?) -> Color {
+/// The list's colour, defaulting to its feed's default — for a caller with nothing else to show.
+func tdayListAccentColor(colorKey: String?, isFloater: Bool = false) -> Color {
     tdayListAccentColorOrNil(colorKey: colorKey)
-        ?? tdaySRGB(tdayListAccentRGBByKey[tdayDefaultListAccentColorKey] ?? 0xE05299)
+        ?? tdaySRGB(
+            tdayListAccentRGBByKey[tdayDefaultListAccentColorKey(isFloater: isFloater)] ?? 0x6EA8E1
+        )
 }
 
 /// The canonical spelling of a stored colour key, or nil when it names no colour.

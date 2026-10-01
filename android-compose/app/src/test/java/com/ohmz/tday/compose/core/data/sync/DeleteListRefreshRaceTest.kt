@@ -16,7 +16,6 @@ import com.ohmz.tday.compose.core.model.ListsResponse
 import com.ohmz.tday.compose.core.model.PreferencesResponse
 import com.ohmz.tday.compose.core.model.TodosResponse
 import com.ohmz.tday.compose.core.network.TdayApiService
-import com.ohmz.tday.compose.feature.widget.WidgetRefresher
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

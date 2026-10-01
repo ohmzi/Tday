@@ -1,77 +1,4 @@
 {
-  "landingPage": {
-    "nav": {
-      "docs": "Documentation",
-      "docsShort": "Docs",
-      "login": "Log in"
-    },
-    "hero": {
-      "title": "T'Day",
-      "subtitle": "A swiss army knife of a personal planner — with a Notion-style editor, calendar view, customizable pages to organize your todos, and a bunch of nifty extras!",
-      "readDocs": "Read the docs",
-      "start": "Get Started"
-    },
-    "localizationTitle": "full localization support for 11 locales",
-    "features": [
-      {
-        "tag": "01 / SMART TASKS",
-        "title": "Natural language processing",
-        "description": "Simply type your tasks naturally. Our intelligent NLP engine automatically extracts dates, times, and durations from your input.",
-        "bullets": [
-          "Instant date and time detection",
-          "Automatic duration calculation",
-          "Smart reminder scheduling",
-          "Context-aware parsing"
-        ]
-      },
-      {
-        "tag": "02 / VISUALIZATION",
-        "title": "Beautiful calendar view",
-        "description": "See all your tasks at a glance. The integrated calendar provides a clear overview of your schedule with intuitive visual indicators.",
-        "bullets": [
-          "Monthly, weekly, and daily views",
-          "Color-coded task categories",
-          "Drag-and-drop rescheduling",
-          "Conflict detection"
-        ]
-      },
-      {
-        "tag": "03 / RICH NOTES",
-        "title": "Notion-style editor",
-        "description": "Capture your thoughts with a powerful, distraction-free editor. Format text, embed media, and organize your ideas effortlessly.",
-        "bullets": [
-          "Markdown support",
-          "Rich text formatting",
-          "Code block syntax highlighting",
-          "Nested bullet lists"
-        ]
-      },
-      {
-        "tag": "04 / SECURITY",
-        "title": "End-to-end encrypted storage",
-        "description": "Your files are protected with military-grade encryption. Store documents, images, and attachments with complete peace of mind.",
-        "bullets": [
-          "AES-256 encryption",
-          "Zero-knowledge architecture",
-          "Secure file sharing",
-          "Automatic backups"
-        ]
-      }
-    ],
-    "securityDemo": {
-      "title": "Passkey",
-      "subtitle": "We need your passkey to decrypt your files",
-      "enter": "Enter"
-    },
-    "errors": {
-      "fallback": "Something went wrong, but don't worry, we sent an error report."
-    },
-    "footer": {
-      "privacyPolicy": "Privacy Policy",
-      "termsOfService": "Terms of Service",
-      "heroSubtitle": "The intelligent task management platform built for the not so sane."
-    }
-  },
   "terms": {
     "title": "Terms of Service",
     "lastUpdated": "Last updated: January 19, 2026",
@@ -173,80 +100,12 @@
       }
     }
   },
-  "login": {
-    "title": "Login",
-    "oauth": {
-      "orLogInWith": "or log in with",
-      "google": "Google",
-      "discord": "Discord"
-    },
-    "fields": {
-      "username": {
-        "placeholder": "Username*",
-        "error": "Please enter a valid username"
-      },
-      "password": {
-        "placeholder": "Enter your password*",
-        "error": "Please enter a valid password"
-      }
-    },
-    "showPassword": "Show password",
-    "hidePassword": "Hide password",
-    "registerPrompt": "Do not have an account?",
-    "registerLink": "Register",
-    "buttons": {
-      "login": "Login"
-    },
-    "toasts": {
-      "googleError": "We could not sign you in to Google at the moment",
-      "discordError": "We could not sign you in to Discord at the moment",
-      "invalidCredentials": "Invalid username or password",
-      "genericError": "We cannot log you in at this moment"
-    }
-  },
-  "register": {
-    "title": "Create an account",
-    "loginPrompt": "Already have an account?",
-    "loginLink": "Login",
-    "oauth": {
-      "orRegisterWith": "or register with",
-      "google": "Google",
-      "discord": "Discord"
-    },
-    "fields": {
-      "fname": {
-        "placeholder": "First Name*",
-        "error": "Please enter your first name"
-      },
-      "lname": {
-        "placeholder": "Last Name",
-        "error": "Please enter a valid last name"
-      },
-      "username": {
-        "placeholder": "Username*",
-        "error": "Please enter a valid username"
-      },
-      "password": {
-        "placeholder": "Enter your password*",
-        "error": "Please enter a valid password"
-      }
-    },
-    "buttons": {
-      "register": "Create an Account"
-    },
-    "toasts": {
-      "googleError": "We could not sign you in to Google at the moment",
-      "discordError": "We could not sign you in to Discord at the moment",
-      "genericError": "We cannot register you at this moment"
-    }
-  },
   "app": {
     "agenda": "agenda",
     "scheduledTaskHome": "Scheduled",
     "more": "More",
     "cancel": "Cancel",
     "save": "Save",
-    "clear": "Clear",
     "clearSearch": "Clear search",
     "versionAvailableTitle": "Update available",
     "versionAvailableBody": "A new version is ready to load.",
@@ -261,12 +120,9 @@
     "day": "Day",
     "week": "Week",
     "month": "Month",
-    "year": "Year",
     "duration": "Duration",
     "date": "Date",
     "durationMenu": {
-      "title": "Set duration",
-      "subTitle": "Applied to the current date only",
       "error": "Invalid date range: End time must be after start time."
     },
     "priority": "Priority",
@@ -299,15 +155,6 @@
     "everyYear": "Yearly",
     "weekdaysOnly": "Weekdays only",
     "custom": "Custom",
-    "customMenu": {
-      "title": "Custom Repeat",
-      "subTitle": "Set up a custom repeat schedule",
-      "every": "Every",
-      "on": "on",
-      "ends": "Ends",
-      "never": "Never",
-      "onDate": "On Date (inclusive)"
-    },
     "descPlaceholder": "description",
     "schedule": "Schedule",
     "scheduleOnHint": "Task has a due date",
@@ -581,41 +428,6 @@
       "openPalette": "Command palette",
       "showShortcuts": "This overview"
     }
-  },
-  "filterMenu": {
-    "sorting": "Sorting",
-    "sort": "Sort",
-    "direction": "Direction",
-    "grouping": "Grouping",
-    "group": "Group",
-    "start Date": "Start Date",
-    "deadline": "Deadline",
-    "duration": "Duration",
-    "ascending": "Ascending",
-    "descending": "Descending",
-    "recurrence": "Recurrence",
-    "sortedBy": "Sorted by",
-    "groupedBy": "Grouped by",
-    "none": "None"
-  },
-  "projectMenu": {
-    "typeToSearch": "Type to search",
-    "editColors": "Edit Colors",
-    "red": "Red",
-    "orange": "Orange",
-    "yellow": "Yellow",
-    "lime": "Lime",
-    "blue": "Blue",
-    "purple": "Purple",
-    "pink": "Pink",
-    "teal": "Teal",
-    "coral": "Coral",
-    "gold": "Gold",
-    "deepBlue": "Deep Blue",
-    "rose": "Rose",
-    "lightRed": "Light Red",
-    "brick": "Brick",
-    "slate": "Slate"
   },
   "scheduledTaskHome": {
     "tileScheduled": "Scheduled",

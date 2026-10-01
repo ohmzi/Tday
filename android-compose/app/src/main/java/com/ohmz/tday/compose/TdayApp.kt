@@ -49,7 +49,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -87,7 +86,6 @@ import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.core.navigation.CompletedScope
 import com.ohmz.tday.compose.core.navigation.isHomeTileArrival
 import com.ohmz.tday.compose.core.navigation.navigateFromHomeTile
-import com.ohmz.tday.compose.core.navigation.tileTransitionKey
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.LocalTdayTileSourceScope
 import com.ohmz.tday.compose.core.ui.SnackbarEvent
@@ -259,14 +257,15 @@ fun TdayApp( // skipcq: KT-R1006
     val startupTagline = rememberSaveable(splashTaglineOptions.contentHashCode()) {
         splashTaglineOptions.random()
     }
-    // A fresh instance every composition, which makes it the one unstable key of the memoized
-    // NavHost builder lambda below and so rebuilds the nav graph on every recomposition. That is
+    // Memoized on its only input. As a fresh instance every composition it was the one unstable
+    // key of the memoized NavHost builder lambda below, so the nav graph was rebuilt on every
+    // recomposition (every sync stamp, offline flip and queued mutation). That rebuild was
     // incidental, not load-bearing: nothing the graph hands a destination is a snapshot value, so
-    // no screen depends on the rebuild to see a change (see the note at the builder). Memoizing it
-    // is therefore safe, but it is a perf change rather than a fix and does not belong here.
-    val unauthenticatedScheduledTaskHomeUiState = unauthenticatedScheduledTaskHomeUiState(
-        lockedListName = stringResource(R.string.scheduled_task_home_locked_list_name),
-    )
+    // no screen depends on it to see a change (see the note at the builder).
+    val lockedListName = stringResource(R.string.scheduled_task_home_locked_list_name)
+    val unauthenticatedScheduledTaskHomeUiState = remember(lockedListName) {
+        unauthenticatedScheduledTaskHomeUiState(lockedListName = lockedListName)
+    }
     var hasDrawnStartupFrame by remember { mutableStateOf(false) }
     val currentOnFirstFrameDrawn by rememberUpdatedState(onFirstFrameDrawn)
 
@@ -798,6 +797,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
         route = AppRoute.TodayTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/today" }),
     ) { entry ->
+        val onBack = rememberListBack(entry, navController, RootFeedTab.SCHEDULED_TASK_HOME, onChangeRootFeedTab)
         // The arriving half of a tile's zoom: the screen itself grows out of the tile it was
         // pressed on. Its shared-element key comes from this route, so the tile that pushed it
         // and this destination cannot be handed different answers, and the block's own
@@ -811,7 +811,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
         ) {
             TodosRoute(
                 mode = TodoListMode.TODAY,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 pullRefreshEnabled = !isLocalMode(),
                 summaryAvailable = !isLocalMode(),
             )
@@ -830,13 +830,14 @@ private fun NavGraphBuilder.todoScopeRoutes(
         route = AppRoute.OverdueTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/overdue" }),
     ) { entry ->
+        val onBack = rememberListBack(entry, navController, RootFeedTab.SCHEDULED_TASK_HOME, onChangeRootFeedTab)
         TdayTileDestination(
             route = AppRoute.OverdueTodos,
             fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             TodosRoute(
                 mode = TodoListMode.OVERDUE,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 onOpenMorningSweep = {
                     navController.navigate(AppRoute.MorningSweep.route) {
                         launchSingleTop = true
@@ -852,13 +853,14 @@ private fun NavGraphBuilder.todoScopeRoutes(
         route = AppRoute.ScheduledTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/scheduled" }),
     ) { entry ->
+        val onBack = rememberListBack(entry, navController, RootFeedTab.SCHEDULED_TASK_HOME, onChangeRootFeedTab)
         TdayTileDestination(
             route = AppRoute.ScheduledTodos,
             fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             TodosRoute(
                 mode = TodoListMode.SCHEDULED,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 pullRefreshEnabled = !isLocalMode(),
                 summaryAvailable = !isLocalMode(),
             )
@@ -878,6 +880,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
             navDeepLink { uriPattern = "tday://todos/all?highlightTodoId={highlightTodoId}" },
         ),
     ) { entry ->
+        val onBack = rememberListBack(entry, navController, RootFeedTab.SCHEDULED_TASK_HOME, onChangeRootFeedTab)
         val pendingSearchHighlightTodoId = remember(entry) {
             navController.previousBackStackEntry
                 ?.savedStateHandle
@@ -899,7 +902,7 @@ private fun NavGraphBuilder.todoScopeRoutes(
             TodosRoute(
                 mode = TodoListMode.ALL,
                 highlightTodoId = highlightTodoId,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 pullRefreshEnabled = !isLocalMode(),
                 summaryAvailable = !isLocalMode(),
             )
@@ -910,13 +913,14 @@ private fun NavGraphBuilder.todoScopeRoutes(
         route = AppRoute.PriorityTodos.route,
         deepLinks = listOf(navDeepLink { uriPattern = "tday://todos/priority" }),
     ) { entry ->
+        val onBack = rememberListBack(entry, navController, RootFeedTab.SCHEDULED_TASK_HOME, onChangeRootFeedTab)
         TdayTileDestination(
             route = AppRoute.PriorityTodos,
             fromHomeTile = rememberHomeTileOrigin(entry),
         ) {
             TodosRoute(
                 mode = TodoListMode.PRIORITY,
-                onBack = { navController.popBackStack() },
+                onBack = onBack,
                 pullRefreshEnabled = !isLocalMode(),
                 summaryAvailable = !isLocalMode(),
             )
@@ -1075,12 +1079,13 @@ private fun NavGraphBuilder.listRoutes(
 }
 
 /**
- * Back from a list screen, for the case where nothing sits under it: a list opened on its own —
- * from a List widget, a notification, a `tday://` link — is the only entry in the back stack, so
- * a pop had nowhere to go. The chevron did nothing and system back closed the app. There, back
- * goes to the list's own root feed (Scheduled or Anytime) instead, the screen a list opened from
- * inside the app returns to. Reached through the app, a list has home under it and back stays an
- * ordinary pop, predictive preview included — the handler below is off then.
+ * Back from a list screen, for the case where nothing sits under it: a list or scope screen
+ * (Today, Overdue, Scheduled, All, Priority) opened on its own — from a Today or List widget, a
+ * notification, a `tday://` link — is the only entry in the back stack, so a pop had nowhere to
+ * go. The chevron did nothing and system back closed the app. There, back goes to the screen's
+ * own root feed (Scheduled or Anytime) instead, the screen it opened from inside the app returns
+ * to. Reached through the app, it has home under it and back stays an ordinary pop, predictive
+ * preview included — the handler below is off then.
  *
  * Read from the live back stack for THIS entry, not "the previous entry" of whatever is on top:
  * a list still fading out after that navigation must not claim system back from the feed.
@@ -1962,7 +1967,6 @@ private fun FloaterTaskHomeFeed(
         onOpenSettings = {
             navController.navigate(AppRoute.Settings.route)
         },
-        showRootFeedDock = false,
         showCreateTaskButton = false,
         hostSwipeSlot = swipeSlot,
         usesRootFeedHeader = true,
@@ -2511,15 +2515,10 @@ private fun TodosRoute(
     highlightTodoId: String? = null,
     listId: String? = null,
     listName: String? = null,
-    rootFeedTab: RootFeedTab? = null,
-    onRootFeedTabSelected: ((RootFeedTab) -> Unit)? = null,
-    showRootFeedDock: Boolean = true,
     showCreateTaskButton: Boolean = true,
     /** See `TodoListScreen`'s parameter of the same name. */
     hostSwipeSlot: TaskSwipeSlot? = null,
     openCreateTaskOnStart: Boolean = false,
-    exitToLauncherOnBack: Boolean = false,
-    exitOnCreateTaskSheetDismiss: Boolean = false,
     onCreateTaskFlowFinished: () -> Unit = {},
     usesRootFeedHeader: Boolean = false,
     createTaskRequestKey: Int = 0,
@@ -2601,14 +2600,9 @@ private fun TodosRoute(
         onOpenSettings = onOpenSettings,
         onCreateList = viewModel::createList,
         onResetFloaterList = viewModel::resetFloaterList,
-        rootFeedTab = rootFeedTab,
-        onRootFeedTabSelected = onRootFeedTabSelected,
-        showRootFeedDock = showRootFeedDock,
         showCreateTaskButton = showCreateTaskButton,
         hostSwipeSlot = hostSwipeSlot,
         openCreateTaskOnStart = openCreateTaskOnStart,
-        exitToLauncherOnBack = exitToLauncherOnBack,
-        exitOnCreateTaskSheetDismiss = exitOnCreateTaskSheetDismiss,
         onCreateTaskFlowFinished = onCreateTaskFlowFinished,
         pullRefreshEnabled = rootPullRefreshEnabled,
         summaryAvailable = summaryAvailable,
@@ -2918,7 +2912,6 @@ private fun unauthenticatedScheduledTaskHomeUiState(lockedListName: String): Sch
             scheduledCount = 0,
             allCount = 0,
             priorityCount = 0,
-            floaterCount = 0,
             completedCount = 0,
             lists = listOf(
                 ListSummary(

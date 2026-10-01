@@ -4,11 +4,6 @@ import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.core.security.ProbeCompatibilityPayload
 import com.ohmz.tday.compose.feature.release.compareVersions
 
-data class VersionCompatibility(
-    val appVersion: String,
-    val updateRequired: Boolean,
-)
-
 sealed class VersionCheckResult {
     data object Compatible : VersionCheckResult()
 

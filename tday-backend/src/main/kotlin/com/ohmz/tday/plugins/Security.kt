@@ -37,6 +37,7 @@ import kotlinx.serialization.json.buildJsonObject
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.select
 import org.koin.ktor.ext.inject
 
 private const val EVENT_DETAIL_USER_ID = "userId"
@@ -68,8 +69,6 @@ fun ApplicationCall.authUser(): JwtUserClaims? = attributes.getOrNull(AuthUserKe
 
 fun ApplicationCall.resolvedApiKey(): ResolvedApiKey? = attributes.getOrNull(ResolvedApiKeyKey)
 
-fun ApplicationCall.apiKeyScope(): ApiKeyScope? = resolvedApiKey()?.scope
-
 private fun isSafeMethod(method: HttpMethod): Boolean =
     method == HttpMethod.Get || method == HttpMethod.Head || method == HttpMethod.Options
 
@@ -86,9 +85,6 @@ private fun isSafeMethod(method: HttpMethod): Boolean =
  * Matches the exact path only — nothing under `/api` is affected.
  */
 private fun isScopeExemptPath(path: String): Boolean = path.trimEnd('/') == MCP_PATH
-
-fun ApplicationCall.requireUser(): JwtUserClaims =
-    authUser() ?: throw IllegalStateException("Authentication required")
 
 fun Application.configureSecurity() {
     val config by inject<com.ohmz.tday.config.AppConfig>()
@@ -337,12 +333,20 @@ private fun resolveSessionToken(call: ApplicationCall): String? {
 private suspend fun loadCachedAuthUser(
     authUserCache: AuthUserCache,
     userId: String
-): AuthCachedUser? {
-    authUserCache.get(userId)?.let { return it }
+): AuthCachedUser? = authUserCache.getOrLoad(userId) {
+    // Only the columns the auth cache carries: skips the password hash, the wrapped key
+    // and the unbounded profile image that `selectAll()` would drag over on every miss.
     val dbUser = newSuspendedTransaction(Dispatchers.IO) {
-        Users.selectAll().where { Users.id eq userId }.firstOrNull()
-    } ?: return null
-    val fetched = AuthCachedUser(
+        Users.select(
+            Users.role,
+            Users.approvalStatus,
+            Users.tokenVersion,
+            Users.timeZone,
+            Users.requirePasswordChange,
+            Users.requireSecurityQuestions,
+        ).where { Users.id eq userId }.firstOrNull()
+    } ?: return@getOrLoad null
+    AuthCachedUser(
         role = dbUser[Users.role].name,
         approvalStatus = dbUser[Users.approvalStatus].name,
         tokenVersion = dbUser[Users.tokenVersion],
@@ -350,8 +354,6 @@ private suspend fun loadCachedAuthUser(
         requirePasswordChange = dbUser[Users.requirePasswordChange],
         requireSecurityQuestions = dbUser[Users.requireSecurityQuestions],
     )
-    authUserCache.put(userId, fetched)
-    return fetched
 }
 
 private fun securityEventPath(call: ApplicationCall): String =

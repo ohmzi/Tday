@@ -42,7 +42,6 @@ interface TaskStepService {
 
 class TaskStepServiceImpl(
     private val fieldEncryption: FieldEncryption,
-    private val cache: CacheService,
     private val publisher: RealtimePublisher,
 ) : TaskStepService {
 
@@ -137,7 +136,6 @@ class TaskStepServiceImpl(
             .limit(1).any()
 
     private suspend fun notifyChange(userId: String) {
-        cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
     }
 

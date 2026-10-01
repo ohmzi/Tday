@@ -1,6 +1,5 @@
 package com.ohmz.tday.security
 
-import com.ohmz.tday.config.AppConfig
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

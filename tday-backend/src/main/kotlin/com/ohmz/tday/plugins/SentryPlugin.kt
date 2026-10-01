@@ -11,11 +11,16 @@ import io.sentry.TransactionOptions
 
 private val sentryTransactionKey = AttributeKey<ITransaction>("SentryTransaction")
 
+/** The request path after [TdayObservability.sanitizePath], computed once per call for telemetry and logging. */
+internal val sanitizedPathKey = AttributeKey<String>("SanitizedRequestPath")
+
 val SentryRequestPlugin = createApplicationPlugin(name = "SentryRequestPlugin") {
     onCall { call ->
-        val routeTemplate = TdayObservability.routeTemplate(
+        val sanitizedPath = TdayObservability.sanitizePath(call.request.path())
+        call.attributes.put(sanitizedPathKey, sanitizedPath)
+        val routeTemplate = TdayObservability.routeTemplateFromSanitized(
             call.request.httpMethod.value,
-            call.request.path(),
+            sanitizedPath,
         )
         val transaction = Sentry.startTransaction(
             routeTemplate,
@@ -28,7 +33,7 @@ val SentryRequestPlugin = createApplicationPlugin(name = "SentryRequestPlugin") 
             category = "http",
             data = mapOf(
                 "method" to call.request.httpMethod.value,
-                "route" to TdayObservability.sanitizePath(call.request.path()),
+                "route" to sanitizedPath,
             ),
         )
     }

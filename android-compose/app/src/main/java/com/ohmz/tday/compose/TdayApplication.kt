@@ -5,7 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.ohmz.tday.compose.core.calendar.CalendarSyncManager
+import com.ohmz.tday.compose.core.calendar.CalendarEntryPoint
 import com.ohmz.tday.compose.core.notification.DayAheadPreferenceStore
 import com.ohmz.tday.compose.core.notification.DayAheadScheduling
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -35,7 +35,16 @@ class TdayApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var dayAheadPreferenceStore: DayAheadPreferenceStore
-    @Inject lateinit var calendarSyncManager: CalendarSyncManager
+    // Resolved lazily through CalendarEntryPoint, like widgetRefresher below, so Application.onCreate
+    // does not construct the whole data layer (TodoRepository -> Retrofit/OkHttp/cookie + config
+    // stores, the SQLCipher-backed cache, ...) in a widget-only or alarm/boot-receiver process that
+    // never starts the calendar mirror. It is first used in runDeferredStartup, which only
+    // MainActivity calls.
+    private val calendarSyncManager by lazy {
+        EntryPointAccessors
+            .fromApplication(applicationContext, CalendarEntryPoint::class.java)
+            .calendarSyncManager()
+    }
     private val deferredStartupRan = AtomicBoolean(false)
 
     // Resolved lazily through WidgetEntryPoint rather than an `@Inject lateinit` field, matching

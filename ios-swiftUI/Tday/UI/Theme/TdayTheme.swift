@@ -370,22 +370,6 @@ struct EmptyTaskWatermark: View {
     }
 }
 
-
-
-struct TdayCardModifier: ViewModifier {
-    @Environment(\.tdayColors) private var colors
-
-    func body(content: Content) -> some View {
-        content
-            .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(colors.cardStroke, lineWidth: 1)
-            )
-    }
-}
-
 private struct TdayAppThemeModifier: ViewModifier {
     let themeMode: AppThemeMode
 
@@ -417,10 +401,6 @@ private struct TdayAppThemeModifier: ViewModifier {
 }
 
 extension View {
-    func tdayCard() -> some View {
-        modifier(TdayCardModifier())
-    }
-
     func tdayAppTheme(themeMode: AppThemeMode, reduceMotion: Bool) -> some View {
         modifier(TdayAppThemeModifier(themeMode: themeMode, reduceMotion: reduceMotion))
     }

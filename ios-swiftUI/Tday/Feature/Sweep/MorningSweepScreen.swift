@@ -130,7 +130,7 @@ struct MorningSweepScreen: View {
                 advance(past: card)
                 Task { try? await container.todoRepository.demoteTodo(card) }
             }
-            sweepAction(title: L("Let it go"), assetName: "LucideTrash") {
+            sweepAction(title: L("Let it go"), assetName: "ActionDelete") {
                 advance(past: card)
                 Task { try? await container.todoRepository.deleteTodo(card) }
             }

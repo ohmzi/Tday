@@ -61,18 +61,6 @@ final class TodoRepository {
         self.syncManager = syncManager
     }
 
-    func fetchDashboardSummary() -> DashboardSummary {
-        buildDashboardSummary(from: cacheManager.loadOfflineState())
-    }
-
-    func fetchDashboardSummarySnapshot() -> DashboardSummary {
-        buildDashboardSummary(from: cacheManager.loadOfflineState())
-    }
-
-    func fetchTodos(mode: TodoListMode, listId: String? = nil) -> [TodoItem] {
-        buildTodos(from: cacheManager.loadOfflineState(), mode: mode, listId: listId)
-    }
-
     // The `*Snapshot` reads below build off `cacheManager.cachedState`, the persisted state's
     // in-memory mirror, rather than a fresh `loadOfflineState()`. Their hot callers are the one
     // view-model build each screen does in its first body pass (the frame the tile zoom draws
@@ -792,8 +780,8 @@ final class TodoRepository {
 
     /// Bulk sibling of `stageCompleteTodo(_:)`: folds the whole selection into
     /// ONE cache write and returns one combined snapshot, so completing 100
-    /// rows costs one full-cache rewrite here instead of 100 — see the note
-    /// above `completeTodos(_:)` for why that matters.
+    /// rows costs one full-cache rewrite here instead of 100 — see the "Bulk
+    /// (multi-select) actions" note below for why that matters.
     func stageCompleteTodos(_ todos: [TodoItem]) async -> StagedTodoCompletion {
         var staged = StagedTodoCompletion(todos: [], completedItems: [], pendingMutations: [])
         guard !todos.isEmpty else {
@@ -1140,14 +1128,6 @@ final class TodoRepository {
         }
     }
 
-    func setPinned(_ todo: TodoItem, pinned: Bool) async throws {
-        try await updateSimpleTodoMutation(todo, kind: .setPinned, pinned: pinned, priority: nil)
-    }
-
-    func setPriority(_ todo: TodoItem, priority: String) async throws {
-        try await updateSimpleTodoMutation(todo, kind: .setPriority, pinned: nil, priority: normalizedPriority(priority))
-    }
-
     func summarizeTodos(mode: TodoListMode, listId: String? = nil) async throws -> TodoSummaryResponse {
         if syncManager.isLocalMode {
             throw APIError(message: "Summary is unavailable in local mode", statusCode: nil)
@@ -1188,32 +1168,6 @@ final class TodoRepository {
     // (§4.1): those three have no per-occurrence route and would silently act on
     // the whole series. Bulk complete keeps them and carries each occurrence's
     // `instanceDate`, which the backend needs or it writes a phantom history row.
-
-    func completeTodos(_ todos: [TodoItem]) async throws {
-        guard !todos.isEmpty else { return }
-        let now = Date().epochMilliseconds
-        _ = try await cacheManager.updateOfflineState { state in
-            var nextState = state
-            for todo in todos {
-                nextState = self.applyingCompletion(of: todo, to: nextState, now: now)
-            }
-            return nextState
-        }
-        try await syncAfterMutation()
-    }
-
-    func completeFloaters(_ floaters: [TodoItem]) async throws {
-        guard !floaters.isEmpty else { return }
-        let now = Date().epochMilliseconds
-        _ = try await cacheManager.updateOfflineState { state in
-            var nextState = state
-            for floater in floaters {
-                nextState = self.applyingFloaterCompletion(of: floater, to: nextState, now: now)
-            }
-            return nextState
-        }
-        try await syncAfterMutation()
-    }
 
     /// Commit half of a staged bulk delete. The prune re-runs as a no-op on rows
     /// `stageDeleteTodos(_:)` already removed; what it adds is the queued
@@ -1322,8 +1276,8 @@ final class TodoRepository {
 
     /// `staged` marks the queued `COMPLETE_TODO`/`COMPLETE_TODO_INSTANCE` so the
     /// replay pass refuses to send it (see `PendingMutationRecord.staged`): the
-    /// delayed-commit paths set it, the immediate ones (`completeTodo(_:)`,
-    /// `completeTodos(_:)`) do not.
+    /// delayed-commit paths (`stageCompleteTodos(_:)`) set it, the immediate one
+    /// (`completeTodo(_:)`) does not.
     private func applyingCompletion(of todo: TodoItem, to state: OfflineSyncState, now: Int64, staged: Bool = false) -> OfflineSyncState {
         let instanceDateEpochMs = todo.instanceDateEpochMilliseconds
         let mutationKind: MutationKind = todo.isRecurring && instanceDateEpochMs != nil ? .completeTodoInstance : .completeTodo
@@ -1707,83 +1661,6 @@ final class TodoRepository {
             completed: completed,
             listId: record.listId,
             updatedAtEpochMs: updatedAtEpochMs
-        )
-    }
-
-    private func updateSimpleTodoMutation(_ todo: TodoItem, kind: MutationKind, pinned: Bool?, priority: String?) async throws {
-        let now = Date().epochMilliseconds
-        _ = try await cacheManager.updateOfflineState { state in
-            var nextState = state
-            nextState.todos = state.todos.map { current in
-                guard current.canonicalId == todo.canonicalId && current.instanceDateEpochMs == todo.instanceDateEpochMilliseconds else {
-                    return current
-                }
-                return CachedTodoRecord(
-                    id: current.id,
-                    canonicalId: current.canonicalId,
-                    title: current.title,
-                    description: current.description,
-                    priority: priority ?? current.priority,
-                    dueEpochMs: current.dueEpochMs,
-                    rrule: current.rrule,
-                    instanceDateEpochMs: current.instanceDateEpochMs,
-                    pinned: pinned ?? current.pinned,
-                    completed: current.completed,
-                    listId: current.listId,
-                    updatedAtEpochMs: now
-                )
-            }
-            nextState.pendingMutations.removeAll { $0.kind == kind && $0.targetId == todo.canonicalId && $0.instanceDateEpochMs == todo.instanceDateEpochMilliseconds }
-            nextState.pendingMutations.append(
-                PendingMutationRecord(
-                    mutationId: UUID().uuidString,
-                    kind: kind,
-                    targetId: todo.canonicalId,
-                    timestampEpochMs: now,
-                    title: nil,
-                    description: nil,
-                    priority: priority,
-                    dueEpochMs: nil,
-                    rrule: nil,
-                    listId: nil,
-                    pinned: pinned,
-                    completed: nil,
-                    instanceDateEpochMs: todo.instanceDateEpochMilliseconds,
-                    name: nil,
-                    color: nil,
-                    iconKey: nil
-                )
-            )
-            return nextState
-        }
-        if syncManager.isLocalMode {
-            return
-        }
-        let result = await syncManager.syncCachedData(force: true, replayPendingMutations: true)
-        if case let .failure(error) = result, isLikelyUnrecoverableMutationError(error) {
-            throw error
-        }
-    }
-
-    private func buildDashboardSummary(from state: OfflineSyncState) -> DashboardSummary {
-        let timelineTodos = state.todos.map(todoFromCache).filter { !$0.completed && $0.due != nil }
-        let floaters = state.floaters.map(floaterFromCache).filter { !$0.completed }
-        let now = Date()
-        let todayTodos = timelineTodos.filter { isTodayTodo($0, now: now) }
-        let scheduledTodos = timelineTodos.filter { isScheduledTodo($0, now: now) }
-        let todoCountsByList = Dictionary(grouping: timelineTodos, by: \.listId).mapValues(\.count)
-        let lists = orderListsLikeWeb(state.lists).map { list in
-            listFromCache(list, todoCountOverride: todoCountsByList[list.id] ?? 0)
-        }
-
-        return DashboardSummary(
-            todayCount: todayTodos.count,
-            scheduledCount: scheduledTodos.count,
-            allCount: timelineTodos.count,
-            priorityCount: timelineTodos.filter { isPriorityTodo($0.priority) }.count,
-            floaterCount: floaters.count,
-            completedCount: state.completedItems.count,
-            lists: lists
         )
     }
 

@@ -6,11 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.cache.FirstAnswerSignal
 import com.ohmz.tday.compose.core.data.cache.OfflineCacheManager
-import com.ohmz.tday.compose.core.data.completed.CompletedRepository
 import com.ohmz.tday.compose.core.data.list.ListRepository
 import com.ohmz.tday.compose.core.data.sync.SyncManager
 import com.ohmz.tday.compose.core.data.todo.TodoRepository
-import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TaskRescheduleScope
@@ -45,7 +43,6 @@ data class CalendarUiState(
     val hasHydratedSnapshot: Boolean = false,
     val firstAnswerLanded: Boolean = false,
     val items: List<TodoItem> = emptyList(),
-    val completedItems: List<CompletedItem> = emptyList(),
     val lists: List<ListSummary> = emptyList(),
     val errorMessage: String? = null,
 )
@@ -53,7 +50,6 @@ data class CalendarUiState(
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
-    private val completedRepository: CompletedRepository,
     private val listRepository: ListRepository,
     private val syncManager: SyncManager,
     private val cacheManager: OfflineCacheManager,
@@ -89,7 +85,6 @@ class CalendarViewModel @Inject constructor(
                 firstAnswerLanded = firstAnswerSignal.hasLanded(),
                 items = todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL)
                     .filter { it.due != null },
-                completedItems = completedRepository.fetchCompletedItemsSnapshot(),
                 lists = listRepository.fetchListsSnapshot(),
                 errorMessage = null,
             )
@@ -168,21 +163,15 @@ class CalendarViewModel @Inject constructor(
         runCatching {
             val todos =
                 todoRepository.fetchTodosSnapshot(mode = TodoListMode.ALL).filter { it.due != null }
-            val completedItems = completedRepository.fetchCompletedItemsSnapshot()
             val lists = listRepository.fetchListsSnapshot()
-            Triple(todos, completedItems, lists)
-        }.onSuccess { (todos, completedItems, lists) ->
+            Pair(todos, lists)
+        }.onSuccess { (todos, lists) ->
             _uiState.update { current ->
                 current.copy(
                     isLoading = false,
                     hasHydratedSnapshot = true,
                     firstAnswerLanded = firstAnswerSignal.hasLanded(),
                     items = if (current.items == todos) current.items else todos,
-                    completedItems = if (current.completedItems == completedItems) {
-                        current.completedItems
-                    } else {
-                        completedItems
-                    },
                     lists = if (current.lists == lists) current.lists else lists,
                     errorMessage = null,
                 )
@@ -224,19 +213,13 @@ class CalendarViewModel @Inject constructor(
                 }
                 val todos =
                     todoRepository.fetchTodos(mode = TodoListMode.ALL).filter { it.due != null }
-                val completedItems = completedRepository.fetchCompletedItems()
                 val lists = listRepository.fetchLists()
-                Triple(todos, completedItems, lists)
-            }.onSuccess { (todos, completedItems, lists) ->
+                Pair(todos, lists)
+            }.onSuccess { (todos, lists) ->
                 _uiState.update { current ->
                     current.copy(
                         isLoading = false,
                         items = if (current.items == todos) current.items else todos,
-                        completedItems = if (current.completedItems == completedItems) {
-                            current.completedItems
-                        } else {
-                            completedItems
-                        },
                         lists = if (current.lists == lists) current.lists else lists,
                         errorMessage = null,
                     )
@@ -297,13 +280,13 @@ class CalendarViewModel @Inject constructor(
                     message = appContext.getString(R.string.task_completed_toast),
                     onCommit = {
                         todoRepository.commitStagedTodoCompletions(listOf(todo))
-                        runCatching { reminderScheduler.rescheduleAll() }
+                        runCatching { reminderScheduler.rescheduleAllOffMain() }
                     },
                     onUndo = {
                         todoRepository.undoStagedTodoCompletion(staged)
                         // Runs on the coordinator scope: this ViewModel may be
                         // gone by the time Undo restores a reminder-bearing task.
-                        runCatching { reminderScheduler.rescheduleAll() }
+                        runCatching { reminderScheduler.rescheduleAllOffMain() }
                         _uiState.update { it.copy(items = previousItems, errorMessage = null) }
                     },
                 )
@@ -314,35 +297,6 @@ class CalendarViewModel @Inject constructor(
                         errorMessage = mutationFailureMessage(
                             error,
                             R.string.error_update_task_failed,
-                        ),
-                    )
-                }
-            }
-        }
-    }
-
-    fun uncomplete(item: CompletedItem) {
-        val previousCompletedItems = _uiState.value.completedItems
-        TdayTelemetry.addBreadcrumb("calendar.task.restore", data = calendarTelemetryData())
-        _uiState.update { current ->
-            current.copy(
-                completedItems = current.completedItems.filterNot { it.id == item.id },
-                errorMessage = null,
-            )
-        }
-        viewModelScope.launch {
-            runCatching {
-                completedRepository.uncomplete(item)
-            }.onSuccess {
-                rescheduleReminders()
-                loadInternal(forceSync = false, showLoading = false)
-            }.onFailure { error ->
-                _uiState.update { current ->
-                    current.copy(
-                        completedItems = previousCompletedItems,
-                        errorMessage = mutationFailureMessage(
-                            error,
-                            R.string.error_restore_task_failed
                         ),
                     )
                 }
@@ -477,7 +431,7 @@ class CalendarViewModel @Inject constructor(
                         todoRepository.undoStagedTodoDeletion(staged)
                         // Runs on the coordinator scope: this ViewModel may be gone
                         // by the time Undo restores a reminder-bearing task.
-                        runCatching { reminderScheduler.rescheduleAll() }
+                        runCatching { reminderScheduler.rescheduleAllOffMain() }
                     },
                 )
                 rescheduleReminders()
@@ -506,7 +460,6 @@ class CalendarViewModel @Inject constructor(
         val data = mutableMapOf<String, Any?>(
             "surface" to "calendar",
             "scheduled_items" to _uiState.value.items.size,
-            "completed_items" to _uiState.value.completedItems.size,
         )
         if (payload != null) {
             data["has_due"] = payload.due != null

@@ -27,6 +27,7 @@ object RepeatSuggestionEngine {
     const val MIN_COMPLETIONS = 3
     private const val MS_PER_DAY = 86_400_000.0
     private const val SAME_DAY_INTERVAL_DAYS = 0.25
+    private val collapseSpaces = Regex("""\s{2,}""")
 
     /**
      * Returns a preset RRULE to suggest for [currentTitle], or null when there's no
@@ -60,7 +61,7 @@ object RepeatSuggestionEngine {
     fun normalize(title: String): String =
         RecurrencePriorityGrammar.parse(title).cleanTitle
             .lowercase()
-            .replace(Regex("""\s{2,}"""), " ")
+            .replace(collapseSpaces, " ")
             .trim()
 
     private fun medianOf(values: List<Double>): Double {

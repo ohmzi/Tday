@@ -1,6 +1,5 @@
 import type { ListColor } from "@/types";
 import type { NativeRouteId } from "@/components/app/nativeRouteConfig";
-import { isNativeRouteActive, nativeRoutes } from "@/components/app/nativeRouteConfig";
 
 export const nativeScreenAccentColors: Record<NativeRouteId, string> = {
   today: "#6EA8E1",
@@ -44,33 +43,6 @@ export function activeFloaterListIdFromPath(pathname: string) {
   const markerIndex = pathname.indexOf(marker);
   if (markerIndex === -1) return null;
   return pathname.slice(markerIndex + marker.length).split("/")[0] || null;
-}
-
-export function resolveNativeScreenAccent(pathname: string, listColor?: ListColor | null) {
-  if (pathname.includes("/app/floater")) {
-    return { color: nativeScreenAccentColors.floater, routeId: "floater" as const };
-  }
-
-  if (pathname.includes("/app/list/") && listColor) {
-    return {
-      color: listColorAccentColors[listColor] ?? nativeScreenAccentColors.all,
-      routeId: null as NativeRouteId | null,
-    };
-  }
-
-  if (pathname.includes("/app/admin")) {
-    return { color: nativeScreenAccentColors.settings, routeId: "settings" as const };
-  }
-
-  const activeRoute = nativeRoutes.find((route) => isNativeRouteActive(pathname, route));
-  if (activeRoute) {
-    return {
-      color: nativeScreenAccentColors[activeRoute.id],
-      routeId: activeRoute.id,
-    };
-  }
-
-  return { color: nativeScreenAccentColors.all, routeId: null };
 }
 
 export const timelineScopeAccentColors = {

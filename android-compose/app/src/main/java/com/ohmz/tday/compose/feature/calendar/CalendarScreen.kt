@@ -70,7 +70,6 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -110,7 +109,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.ohmz.tday.compose.R
-import com.ohmz.tday.compose.core.model.CompletedItem
 import com.ohmz.tday.compose.core.model.CreateTaskPayload
 import com.ohmz.tday.compose.core.model.ListSummary
 import com.ohmz.tday.compose.core.model.TaskRescheduleScope
@@ -918,7 +916,6 @@ fun CalendarScreen(
                                     today = today,
                                     tasksByDate = plottedTasksByDate,
                                     canGoPrevDay = canNavigateTo(selectedDate.minusDays(1)),
-                                    canSelectDate = ::canNavigateTo,
                                     todayJumpRequest = todayJumpRequest,
                                     onTodayJumpHandled = ::clearTodayJumpRequest,
                                     onSelectDate = ::selectDate,
@@ -1788,7 +1785,6 @@ private fun CalendarDayCard(
     today: LocalDate,
     tasksByDate: Map<LocalDate, List<TodoItem>>,
     canGoPrevDay: Boolean,
-    canSelectDate: (LocalDate) -> Boolean,
     todayJumpRequest: CalendarTodayJumpRequest?,
     onTodayJumpHandled: (Int) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
@@ -3373,265 +3369,6 @@ private fun CalendarTodoRow(
 }
 
 @Composable
-private fun CalendarCompletedTodoRow(
-    item: CompletedItem,
-    lists: List<ListSummary>,
-    onUndoComplete: () -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val view = LocalView.current
-    val coroutineScope = rememberCoroutineScope()
-    var pendingUncomplete by remember(item.id) { mutableStateOf(false) }
-    var unstruck by remember(item.id) { mutableStateOf(false) }
-    var fading by remember(item.id) { mutableStateOf(false) }
-    val showCompletedState = !pendingUncomplete
-    val showStrikethrough = !unstruck
-    val restoreMotionEnabled = rememberTdayMotionEnabled()
-    // Gated like the beats in front of it. The last leg of the restore is timed
-    // against this fade, so a fade still running while its own wait had been zeroed
-    // would pull the row out of the list at full opacity — exactly the pop that leg
-    // exists to prevent.
-    val rowAlpha by animateFloatAsState(
-        targetValue = if (fading) 0f else 1f,
-        animationSpec = if (restoreMotionEnabled) {
-            tween(
-                durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-                easing = TdayMotionTokens.Easings.Standard,
-            )
-        } else {
-            snap()
-        },
-        label = "calendarCompletedRestoreAlpha",
-    )
-    val rowOffsetY by animateDpAsState(
-        targetValue = if (fading) {
-            CalendarTaskCompletionRiseOffsetY
-        } else {
-            TdayDimens.SpacingNone
-        },
-        animationSpec = if (restoreMotionEnabled) {
-            tween(
-                durationMillis = CALENDAR_TASK_COMPLETION_FADE_MS.toInt(),
-                easing = TdayMotionTokens.Easings.Standard,
-            )
-        } else {
-            snap()
-        },
-        label = "calendarCompletedRestoreOffsetY",
-    )
-    // Un-completing is the check-off played backwards, and the rule retracts the
-    // way it swept. `animateFloatAsState` starts AT its target, so a row that was
-    // already complete when the screen opened is simply drawn struck — the sweep
-    // only ever plays for the tap that asked for it.
-    val titleStrikeProgress =
-        rememberTaskStrikeProgress(showStrikethrough, "calendarCompletedTitleStrike")
-    var titleLayoutResult by remember(item.id) { mutableStateOf<TextLayoutResult?>(null) }
-    // Same three legs as the check-off, so the same clock. See [scaledDelay].
-    val restoreMotionScale = rememberTdayMotionScale()
-    val restoreToggleTint by animateColorAsState(
-        targetValue = if (showCompletedState) {
-            TdayTaskCompleteAccent
-        } else {
-            colorScheme.onSurfaceVariant.copy(alpha = 0.78f)
-        },
-        animationSpec = if (restoreMotionEnabled) {
-            tween(
-                durationMillis = TdayMotionTokens.Durations.Quick,
-                easing = TdayMotionTokens.Easings.Standard,
-            )
-        } else {
-            snap()
-        },
-        label = "calendarCompletedToggleTint",
-    )
-    val restoreTitleColor by animateColorAsState(
-        targetValue = if (showStrikethrough) {
-            colorScheme.onSurface.copy(alpha = 0.78f)
-        } else {
-            colorScheme.onSurface
-        },
-        animationSpec = if (restoreMotionEnabled) {
-            tween(
-                durationMillis = TdayMotionTokens.Durations.Emphasis,
-                easing = TdayMotionTokens.Easings.Standard,
-            )
-        } else {
-            snap()
-        },
-        label = "calendarCompletedTitleColor",
-    )
-    val dueText = item.due
-        ?.let {
-            DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
-                .withZone(ZoneId.systemDefault()).format(it)
-        }
-    val listMeta = item.resolveListSummary(lists)
-    val listIndicatorColor = listMeta?.color?.let(::tdayListAccentColor)
-        ?: item.listColor?.let(::tdayListAccentColor)
-        ?: colorScheme.onSurfaceVariant.copy(alpha = 0.86f)
-    val showListIndicator = !item.listName.isNullOrBlank() || listMeta != null
-    val priorityIcon = priorityIconFor(item.priority)
-    val showPriorityIcon = priorityIcon != null
-    val rowShape = RoundedCornerShape(TdayDimens.RadiusRow)
-    // Same row, same derivation — see the pending row above.
-    val firstLine = rememberTaskRowFirstLineAlignment(
-        titleStyle = MaterialTheme.typography.titleMedium,
-        controlHeight = CalendarCompletionToggleTouchTarget,
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                alpha = rowAlpha
-                translationY = rowOffsetY.toPx()
-            }
-            .semantics(mergeDescendants = true) { },
-        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingXs),
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(CalendarTaskRowHeight),
-            shape = rowShape,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-            elevation = CardDefaults.cardElevation(defaultElevation = TdayDimens.CardElevationDefault),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    // Same stacking as the pending row above, for the same reason.
-                    .wrapContentHeight(Alignment.CenterVertically)
-                    .padding(horizontal = TdayDimens.SpacingXs, vertical = TdayDimens.SpacingXxs),
-                verticalAlignment = Alignment.Top,
-            ) {
-                CalendarCompletionToggleIcon(
-                    // Same bullet rule as the pending row above.
-                    modifier = Modifier.padding(
-                        top = firstLine.topInsetFor(CalendarCompletionToggleTouchTarget),
-                    ),
-                    imageVector = if (showCompletedState) {
-                        ImageVector.vectorResource(R.drawable.ic_lucide_circle_check_big)
-                    } else {
-                        ImageVector.vectorResource(R.drawable.ic_lucide_circle)
-                    },
-                    contentDescription = stringResource(R.string.label_undo_complete),
-                    tint = restoreToggleTint,
-                    enabled = !pendingUncomplete,
-                    onClick = {
-                        TdayHaptics.toggle(view, on = false)
-                        pendingUncomplete = true
-                        // The check-off's own beats, run backwards. This row used to
-                        // keep a third set — 180 / 180 — so undoing a completion took
-                        // a different length of time from making one, on the same
-                        // screen, through the same control.
-                        coroutineScope.launch {
-                            scaledDelay(
-                                CALENDAR_TASK_COMPLETION_CHECK_TO_STRIKE_MS,
-                                restoreMotionScale,
-                            )
-                            unstruck = true
-                            scaledDelay(
-                                CALENDAR_TASK_COMPLETION_STRIKE_TO_FADE_MS,
-                                restoreMotionScale,
-                            )
-                            fading = true
-                            scaledDelay(
-                                CALENDAR_TASK_COMPLETION_FADE_MS,
-                                restoreMotionScale,
-                            )
-                            onUndoComplete()
-                        }
-                    },
-                )
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(
-                            start = CalendarTaskRowTitleStartPadding,
-                            top = firstLine.titleTopInset,
-                        ),
-                ) {
-                    Text(
-                        text = item.title,
-                        modifier = Modifier.taskStrikethrough(
-                            progress = titleStrikeProgress,
-                            layout = titleLayoutResult,
-                            color = restoreTitleColor,
-                            thickness = TdayDimens.BorderWidthThick,
-                        ),
-                        color = restoreTitleColor,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        maxLines = 2,
-                        onTextLayout = { titleLayoutResult = it },
-                    )
-                    dueText?.let { text ->
-                        Text(
-                            text = text,
-                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                }
-                if (showPriorityIcon) {
-                    Row(
-                        modifier = Modifier.padding(
-                            // Annotations on the task, so they read with its first
-                            // line — the same call the pending row's marks take, and
-                            // the same one this row's toggle now takes at the other
-                            // end. Centring them against a top-stacked row would have
-                            // pinned them to its top edge, 15 dp above the line.
-                            top = firstLine.topInsetFor(CalendarRowTrailingIconSize),
-                            end = TdayDimens.Spacing3xl,
-                        ),
-                        horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingMd),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (showListIndicator) {
-                            Icon(
-                                imageVector = tdayListIconForList(listMeta?.iconKey, listMeta?.name),
-                                contentDescription = stringResource(R.string.label_task_list),
-                                tint = listIndicatorColor,
-                                modifier = Modifier.size(CalendarRowTrailingIconSize),
-                            )
-                        }
-                        Icon(
-                            imageVector = priorityIcon
-                                ?: ImageVector.vectorResource(R.drawable.ic_lucide_flag),
-                            contentDescription = stringResource(R.string.label_priority_task),
-                            tint = tdayPriorityColor(item.priority),
-                            modifier = Modifier.size(CalendarRowTrailingIconSize),
-                        )
-                    }
-                } else if (showListIndicator) {
-                    Icon(
-                        imageVector = tdayListIconForList(listMeta?.iconKey, listMeta?.name),
-                        contentDescription = stringResource(R.string.label_task_list),
-                        tint = listIndicatorColor,
-                        modifier = Modifier
-                            .padding(
-                                // Same first line as the branch above.
-                                top = firstLine.topInsetFor(CalendarRowTrailingIconSize),
-                                end = TdayDimens.Spacing3xl,
-                            )
-                            .size(CalendarRowTrailingIconSize),
-                    )
-                }
-            }
-        }
-
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(TdayDimens.BorderWidth)
-                .background(colorScheme.outlineVariant.copy(alpha = 0.55f)),
-        )
-    }
-}
-
-@Composable
 private fun CalendarSwipeActionButton(
     icon: ImageVector,
     contentDescription: String,
@@ -3806,11 +3543,6 @@ private fun priorityIconFor(priority: String): ImageVector? {
         "high", "urgent", "important" -> ImageVector.vectorResource(R.drawable.ic_lucide_flag_filled)
         else -> null
     }
-}
-
-private fun CompletedItem.resolveListSummary(lists: List<ListSummary>): ListSummary? {
-    val name = listName?.trim()?.lowercase(Locale.getDefault()) ?: return null
-    return lists.firstOrNull { it.name.trim().lowercase(Locale.getDefault()) == name }
 }
 
 private val WEEKDAY_HEADERS = listOf("S", "M", "T", "W", "T", "F", "S")

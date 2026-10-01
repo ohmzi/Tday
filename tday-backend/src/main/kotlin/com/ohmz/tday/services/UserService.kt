@@ -36,7 +36,6 @@ interface UserService {
     suspend fun verifyCurrentPassword(userId: String, password: String): Either<AppError, Boolean>
     suspend fun register(fname: String, lname: String?, username: String, password: String, securityAnswers: List<SecurityAnswerInput>): Either<AppError, RegisterResult>
     suspend fun findByUsername(username: String): Map<String, Any?>?
-    suspend fun isAdmin(userId: String): Boolean
     suspend fun usernameExists(username: String): Boolean
     suspend fun updatePasswordHash(userId: String, newHash: String)
     suspend fun requiresPasswordChange(userId: String): Boolean
@@ -194,11 +193,6 @@ class UserServiceImpl(private val passwordService: PasswordService) : UserServic
                 "timeZone" to it[Users.timeZone],
             )
         }
-    }
-
-    override suspend fun isAdmin(userId: String): Boolean = newSuspendedTransaction(Dispatchers.IO) {
-        val user = Users.selectAll().where { Users.id eq userId }.firstOrNull() ?: return@newSuspendedTransaction false
-        user[Users.role] == UserRole.ADMIN && user[Users.approvalStatus] == ApprovalStatus.APPROVED
     }
 
     override suspend fun usernameExists(username: String): Boolean = newSuspendedTransaction(Dispatchers.IO) {

@@ -8,7 +8,6 @@ typealias AppSettingsResponse = com.ohmz.tday.shared.model.AppSettingsResponse
 typealias TodosResponse = com.ohmz.tday.shared.model.TodosResponse
 typealias TodoSummaryRequest = com.ohmz.tday.shared.model.TodoSummaryRequest
 typealias TodoSummaryResponse = com.ohmz.tday.shared.model.TodoSummaryResponse
-typealias TodoTitleNlpRequest = com.ohmz.tday.shared.model.TodoTitleNlpRequest
 typealias TodoTitleNlpResponse = com.ohmz.tday.shared.model.TodoTitleNlpResponse
 typealias CreateTodoRequest = com.ohmz.tday.shared.model.CreateTodoRequest
 typealias TodoDto = com.ohmz.tday.shared.model.TodoDto
@@ -24,8 +23,6 @@ typealias DeleteFloaterRequest = com.ohmz.tday.shared.model.DeleteFloaterRequest
 typealias FloaterCompleteRequest = com.ohmz.tday.shared.model.FloaterCompleteRequest
 typealias FloaterUncompleteRequest = com.ohmz.tday.shared.model.FloaterUncompleteRequest
 typealias FloaterUncompleteResponse = com.ohmz.tday.shared.model.FloaterUncompleteResponse
-typealias FloaterPrioritizeRequest = com.ohmz.tday.shared.model.FloaterPrioritizeRequest
-typealias FloaterReorderRequest = com.ohmz.tday.shared.model.FloaterReorderRequest
 typealias PromoteFloaterRequest = com.ohmz.tday.shared.model.PromoteFloaterRequest
 typealias PromoteFloaterResponse = com.ohmz.tday.shared.model.PromoteFloaterResponse
 typealias DemoteTodoResponse = com.ohmz.tday.shared.model.DemoteTodoResponse
@@ -38,7 +35,6 @@ typealias ListsResponse = com.ohmz.tday.shared.model.ListsResponse
 typealias CreateListRequest = com.ohmz.tday.shared.model.CreateListRequest
 typealias ListDto = com.ohmz.tday.shared.model.ListDto
 typealias CreateListResponse = com.ohmz.tday.shared.model.CreateListResponse
-typealias ListDetailResponse = com.ohmz.tday.shared.model.ListDetailResponse
 typealias UpdateListRequest = com.ohmz.tday.shared.model.UpdateListRequest
 typealias DeleteListRequest = com.ohmz.tday.shared.model.DeleteListRequest
 typealias DeleteListResponse = com.ohmz.tday.shared.model.DeleteListResponse
@@ -46,7 +42,6 @@ typealias FloaterListsResponse = com.ohmz.tday.shared.model.FloaterListsResponse
 typealias CreateFloaterListRequest = com.ohmz.tday.shared.model.CreateFloaterListRequest
 typealias FloaterListDto = com.ohmz.tday.shared.model.FloaterListDto
 typealias CreateFloaterListResponse = com.ohmz.tday.shared.model.CreateFloaterListResponse
-typealias FloaterListDetailResponse = com.ohmz.tday.shared.model.FloaterListDetailResponse
 typealias UpdateFloaterListRequest = com.ohmz.tday.shared.model.UpdateFloaterListRequest
 typealias DeleteFloaterListRequest = com.ohmz.tday.shared.model.DeleteFloaterListRequest
 typealias DeleteFloaterListResponse = com.ohmz.tday.shared.model.DeleteFloaterListResponse
@@ -60,7 +55,6 @@ typealias UpdateCompletedFloaterRequest = com.ohmz.tday.shared.model.UpdateCompl
 typealias DeleteCompletedFloaterRequest = com.ohmz.tday.shared.model.DeleteCompletedFloaterRequest
 typealias PreferencesResponse = com.ohmz.tday.shared.model.PreferencesResponse
 typealias PreferencesDto = com.ohmz.tday.shared.model.PreferencesDto
-typealias ShareRole = com.ohmz.tday.shared.model.ShareRole
 typealias ListMemberDto = com.ohmz.tday.shared.model.ListMemberDto
 typealias ListMembersResponse = com.ohmz.tday.shared.model.ListMembersResponse
 typealias AddMemberRequest = com.ohmz.tday.shared.model.AddMemberRequest
@@ -69,8 +63,6 @@ typealias UpdateMemberRoleRequest = com.ohmz.tday.shared.model.UpdateMemberRoleR
 typealias RemoveMemberRequest = com.ohmz.tday.shared.model.RemoveMemberRequest
 typealias UserSearchResponse = com.ohmz.tday.shared.model.UserSearchResponse
 typealias UserSearchResultDto = com.ohmz.tday.shared.model.UserSearchResultDto
-typealias TaskStepDto = com.ohmz.tday.shared.model.TaskStepDto
-typealias TaskStepsResponse = com.ohmz.tday.shared.model.TaskStepsResponse
 typealias CreateTaskStepRequest = com.ohmz.tday.shared.model.CreateTaskStepRequest
 typealias ToggleTaskStepRequest = com.ohmz.tday.shared.model.ToggleTaskStepRequest
 typealias DeleteTaskStepRequest = com.ohmz.tday.shared.model.DeleteTaskStepRequest
@@ -200,31 +192,6 @@ data class CredentialsCallbackRequest(
     val csrfToken: String? = null,
     val redirect: String? = null,
     val callbackUrl: String? = null,
-)
-
-@Serializable
-data class TodoInstanceRequest(
-    val instanceDate: String? = null,
-)
-
-@Serializable
-data class ReorderItemRequest(
-    val id: String,
-    val order: Int,
-)
-
-@Serializable
-data class UserResponse(
-    val message: String? = null,
-    val queriedUser: QueriedUser? = null,
-)
-
-@Serializable
-data class QueriedUser(
-    val maxStorage: String? = null,
-    val usedStoraged: String? = null,
-    val enableEncryption: Boolean = true,
-    val protectedSymmetricKey: String? = null,
 )
 
 @Serializable

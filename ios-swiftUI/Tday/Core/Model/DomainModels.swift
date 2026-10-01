@@ -276,25 +276,6 @@ func movedDueToTimeOfDay(
     return calendar.date(from: components)
 }
 
-func movedTaskPayload(
-    todo: TodoItem,
-    targetDay: Date,
-    calendar: Calendar = .current
-) -> CreateTaskPayload? {
-    guard let due = todo.due,
-          let movedDue = movedDuePreservingTime(due: due, targetDay: targetDay, calendar: calendar) else {
-        return nil
-    }
-    return CreateTaskPayload(
-        title: todo.title,
-        description: todo.description,
-        priority: todo.priority,
-        due: movedDue,
-        rrule: todo.rrule,
-        listId: todo.listId
-    )
-}
-
 func timelineRescheduleTargetDate(
     sectionId: String,
     today: Date = Date(),
@@ -539,8 +520,6 @@ struct TimelineSection<Item: Identifiable & Hashable>: Identifiable, Hashable {
     let items: [Item]
     let isCollapsible: Bool
 }
-
-typealias TodoSection = TimelineSection<TodoItem>
 
 extension Date {
     var epochMilliseconds: Int64 {

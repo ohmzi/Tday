@@ -23,7 +23,6 @@
  * while that block waits its turn.
  */
 
-import React from "react";
 import { cleanup, render } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";

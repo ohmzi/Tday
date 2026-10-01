@@ -188,10 +188,6 @@ final class FloaterListReusableContractTests: XCTestCase {
 }
 
 final class TaskStepMutationSerializationTests: XCTestCase {
-    private func makeJSON() -> JSONEncoder {
-        JSONEncoder()
-    }
-
     func testStepMutationsRoundTripWithPayloadFields() throws {
         let state = OfflineSyncState(
             pendingMutations: [

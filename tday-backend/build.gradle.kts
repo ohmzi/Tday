@@ -29,10 +29,8 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm")
     implementation("io.ktor:ktor-client-core-jvm")
     implementation("io.ktor:ktor-client-cio-jvm")
-    implementation("io.ktor:ktor-client-content-negotiation-jvm")
 
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
-    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
 
@@ -52,7 +50,6 @@ dependencies {
     implementation("io.insert-koin:koin-logger-slf4j:4.2.2")
 
     implementation("io.arrow-kt:arrow-core:2.2.3")
-    implementation("io.arrow-kt:arrow-fx-coroutines:2.2.3")
 
     implementation("io.konform:konform-jvm:0.11.1")
 
@@ -74,7 +71,6 @@ dependencies {
     // Real Postgres for the one property H2 cannot stand in for: partial
     // (filtered) unique indexes. See CompletedFloaterConcurrencyTest.
     testImplementation("org.testcontainers:testcontainers-postgresql:2.0.5")
-    testImplementation("org.testcontainers:testcontainers-junit-jupiter:2.0.5")
 }
 
 tasks.withType<Test> {

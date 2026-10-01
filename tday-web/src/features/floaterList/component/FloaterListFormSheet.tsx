@@ -10,7 +10,11 @@ import { api } from "@/lib/api-client";
 import { usePathname, useRouter } from "@/lib/navigation";
 import { cn, isSubmitEnter } from "@/lib/utils";
 import { hapticTick, hapticConfirm } from "@/lib/haptics";
-import { listColorMap } from "@/lib/listColorMap";
+import {
+  DEFAULT_FLOATER_LIST_COLOR,
+  DEFAULT_FLOATER_LIST_COLOR_OPTION,
+  listColorMap,
+} from "@/lib/listColorMap";
 import {
   DEFAULT_LIST_ICON_KEY,
   getListIcon,
@@ -106,7 +110,7 @@ export default function FloaterListFormSheet({
   onOpenChange,
   list,
   initialName = "",
-  initialColor = "TEAL",
+  initialColor = DEFAULT_FLOATER_LIST_COLOR,
   initialIconKey = DEFAULT_LIST_ICON_KEY,
   onSaved,
   onManageMembers,
@@ -177,7 +181,7 @@ export default function FloaterListFormSheet({
   }, [iconTouched, isEditing, name]);
 
   const selectedColor = useMemo(
-    () => listColorMap.find((option) => option.value === color) ?? listColorMap[7],
+    () => listColorMap.find((option) => option.value === color) ?? DEFAULT_FLOATER_LIST_COLOR_OPTION,
     [color],
   );
   const SelectedIcon = getListIcon(iconKey);
@@ -271,7 +275,7 @@ export default function FloaterListFormSheet({
       const iconChanged = iconTouched && iconKey !== storedIconKey;
       if (
         normalizedName === normalizeListName(list.name) &&
-        color === (list.color ?? "TEAL") &&
+        color === (list.color ?? DEFAULT_FLOATER_LIST_COLOR) &&
         !iconChanged &&
         reusable === (list.reusable ?? false) &&
         defaultPriority === (list.defaultPriority ?? null)

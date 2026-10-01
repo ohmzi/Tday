@@ -204,8 +204,6 @@ object TdayHeroTitleMetrics {
      * top of the mark.
      */
     const val ContentFadeGain = 8f
-
-    fun lerp(from: Dp, to: Dp, fraction: Float): Dp = from + ((to - from) * fraction)
 }
 
 /** Septic smootherstep over an arbitrary window, for the legs that do not start at 0. */

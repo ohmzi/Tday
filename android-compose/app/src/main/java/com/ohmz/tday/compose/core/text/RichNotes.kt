@@ -116,6 +116,21 @@ fun decodeNotesToHtml(value: String?): String {
     return value.split("\n").joinToString("") { line -> "<p>${escapeHtml(line)}</p>" }
 }
 
+// Memo for [flattenNotesToPlainText]'s rich branch. That branch is two Jsoup parses (sanitize,
+// then flatten) and the function is called un-remembered from row bodies that recompose per
+// animation frame and from search loops over every task per keystroke. It is pure, so a hit
+// returns exactly what a recompute would. Bounded LRU (an access-ordered LinkedHashMap, so reads
+// mutate it and take the lock) rather than android.util.LruCache, to keep this file
+// JVM-unit-testable. The parse runs outside the lock; two threads racing on one miss both compute
+// the same value.
+private const val FLATTENED_NOTES_CACHE_MAX_ENTRIES = 256
+
+private val flattenedNotesCache =
+    object : LinkedHashMap<String, String>(FLATTENED_NOTES_CACHE_MAX_ENTRIES, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>): Boolean =
+            size > FLATTENED_NOTES_CACHE_MAX_ENTRIES
+    }
+
 // Saved string → flattened plain text, for anywhere notes are shown outside
 // the editor (list rows, search, share text): real markup never leaks out,
 // but list bullets/numbers are kept as plain-text prefixes so the structure
@@ -123,7 +138,10 @@ fun decodeNotesToHtml(value: String?): String {
 fun flattenNotesToPlainText(value: String?): String {
     if (value.isNullOrEmpty()) return ""
     if (isRichNotes(value)) {
-        return htmlToPlainText(sanitizeHtml(value.removePrefix(RICH_NOTES_MARKER)))
+        synchronized(flattenedNotesCache) { flattenedNotesCache[value] }?.let { return it }
+        val flattened = htmlToPlainText(sanitizeHtml(value.removePrefix(RICH_NOTES_MARKER)))
+        synchronized(flattenedNotesCache) { flattenedNotesCache[value] = flattened }
+        return flattened
     }
     return value
 }

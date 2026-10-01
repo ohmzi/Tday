@@ -1,4 +1,3 @@
-import React from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import UserCardLoading from "./UserCardLoading";
 import { cn } from "@/lib/utils";

@@ -832,15 +832,6 @@ struct AuthRedirectResponse: Codable {
     let code: String?
 }
 
-typealias TodoDto = TodoDTO
-typealias FloaterDto = FloaterDTO
-typealias ListDto = ListDTO
-typealias FloaterListDto = FloaterListDTO
-typealias CompletedTodoDto = CompletedTodoDTO
-typealias CompletedFloaterDto = CompletedFloaterDTO
-typealias PreferencesDto = PreferencesDTO
-typealias AuthCallbackResponse = AuthRedirectResponse
-
 extension UpdateProfileRequest {
     init(name: String) {
         self.init(name: name, image: nil)

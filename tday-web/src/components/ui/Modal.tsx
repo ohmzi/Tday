@@ -66,33 +66,6 @@ const Modal = ({
     );
 };
 
-const ModalClose = ({
-    children,
-    className
-}: {
-    children: React.ReactNode,
-    className?: string
-}) => {
-    const context = useContext(ModalContext);
-
-    if (!context) {
-        throw new Error("ModalClose must be used within a Modal");
-    }
-
-    const { setIsOpen } = context;
-
-    return (
-        <div
-            className={cn("cursor-pointer w-fit", className)}
-            onClick={() => setIsOpen(false)}
-        >
-            {children}
-        </div>
-    );
-};
-
-
-
 const ModalOverlay = ({ children }: { children: React.ReactElement }) => {
 
     const context = useContext(ModalContext);
@@ -183,5 +156,5 @@ const ModalFooter = ({ children, className = "" }: { children: React.ReactNode, 
     </div>
 );
 
-export { Modal, ModalContent, ModalDescription, ModalFooter, ModalHeader, ModalOverlay, ModalTitle, ModalClose }
+export { Modal, ModalContent, ModalDescription, ModalFooter, ModalHeader, ModalOverlay, ModalTitle }
 

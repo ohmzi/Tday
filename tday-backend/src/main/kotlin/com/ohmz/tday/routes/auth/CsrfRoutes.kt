@@ -3,11 +3,14 @@ package com.ohmz.tday.routes.auth
 import com.ohmz.tday.domain.respondRateLimit
 import com.ohmz.tday.security.AuthThrottle
 import com.ohmz.tday.security.ThrottleAction
+import com.ohmz.tday.security.toHex
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import com.ohmz.tday.di.inject
 import java.security.SecureRandom
+
+private val csrfRandom = SecureRandom()
 
 fun Route.csrfRoutes() {
     val authThrottle by inject<AuthThrottle>()
@@ -24,8 +27,7 @@ fun Route.csrfRoutes() {
                 return@get
             }
 
-            val token = ByteArray(32).also { SecureRandom().nextBytes(it) }
-                .joinToString("") { "%02x".format(it) }
+            val token = ByteArray(32).also { csrfRandom.nextBytes(it) }.toHex()
             call.respond(HttpStatusCode.OK, mapOf("csrfToken" to token))
         }
     }

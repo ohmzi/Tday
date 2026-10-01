@@ -60,10 +60,24 @@ final class TdayListAccentTests: XCTestCase {
         XCTAssertNil(tdayNormalizedListAccentColorKeyOrNil("CHARTREUSE"))
     }
 
-    func testDefaultingResolverFallsBackToPink() {
-        assertSameColor(tdayListAccentColor(colorKey: nil), todoListAccentColor(for: "PINK"), "nil")
-        assertSameColor(tdayListAccentColor(colorKey: "CHARTREUSE"), todoListAccentColor(for: "PINK"), "unknown")
-        XCTAssertEqual(tdayDefaultListAccentColorKey, "PINK")
+    func testDefaultingResolverFallsBackToTheFeedsDefault() {
+        // Scheduled lists fall back to BLUE, floater lists to TEAL.
+        assertSameColor(tdayListAccentColor(colorKey: nil), todoListAccentColor(for: "BLUE"), "nil")
+        assertSameColor(tdayListAccentColor(colorKey: "CHARTREUSE"), todoListAccentColor(for: "BLUE"), "unknown")
+        assertSameColor(
+            tdayListAccentColor(colorKey: nil, isFloater: true),
+            todoListAccentColor(for: "TEAL"),
+            "nil floater"
+        )
+        assertSameColor(
+            tdayListAccentColor(colorKey: "CHARTREUSE", isFloater: true),
+            todoListAccentColor(for: "TEAL"),
+            "unknown floater"
+        )
+        XCTAssertEqual(tdayDefaultScheduledListAccentColorKey, "BLUE")
+        XCTAssertEqual(tdayDefaultFloaterListAccentColorKey, "TEAL")
+        XCTAssertEqual(tdayDefaultListAccentColorKey(isFloater: false), "BLUE")
+        XCTAssertEqual(tdayDefaultListAccentColorKey(isFloater: true), "TEAL")
     }
 
     /// `tdayLucideListAsset` moved out of `TdayTheme.swift` so the widget extension could compile

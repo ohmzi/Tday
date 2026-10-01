@@ -32,7 +32,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -65,7 +64,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -85,7 +83,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -93,14 +90,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -184,7 +178,7 @@ import com.ohmz.tday.compose.ui.component.TdaySheetCard
 import com.ohmz.tday.compose.ui.component.TdaySheetDefaults
 import com.ohmz.tday.compose.ui.component.TdaySheetHeader
 import com.ohmz.tday.compose.ui.component.TdaySheetSectionTitle
-import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_COLOR_KEY
+import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY
 import com.ohmz.tday.compose.ui.theme.TDAY_DEFAULT_LIST_ICON_KEY
 import com.ohmz.tday.compose.ui.theme.TdayCompletedTileAccent
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -196,7 +190,6 @@ import com.ohmz.tday.compose.ui.theme.TdaySwipeDeleteBackground
 import com.ohmz.tday.compose.ui.theme.TdaySwipeEditBackground
 import com.ohmz.tday.compose.ui.theme.TdayTaskCompleteAccent
 import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
-import com.ohmz.tday.compose.ui.theme.TdayTitleIconNightAccent
 import com.ohmz.tday.compose.ui.theme.tdayListAccentColor
 import com.ohmz.tday.compose.ui.theme.tdayListIconForKey
 import com.ohmz.tday.compose.ui.theme.tdayListIconForList
@@ -368,7 +361,7 @@ fun ScheduledTaskHomeScreen(
         },
     )
     var listName by rememberSaveable { mutableStateOf("") }
-    var listColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_COLOR_KEY) }
+    var listColor by rememberSaveable { mutableStateOf(TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY) }
     var listIconKey by rememberSaveable { mutableStateOf(TDAY_DEFAULT_LIST_ICON_KEY) }
     // The picker always has to PREVIEW something. Whether the user ever touched it is a
     // different fact, and until now nobody recorded it: the seeded default was posted
@@ -1087,7 +1080,7 @@ fun ScheduledTaskHomeScreen(
                 showCreateList = false
                 if (listCreated) {
                     listName = ""
-                    listColor = TDAY_DEFAULT_LIST_COLOR_KEY
+                    listColor = TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY
                     listIconKey = TDAY_DEFAULT_LIST_ICON_KEY
                     listIconTouched = false
                     listCreated = false
@@ -2173,8 +2166,7 @@ private fun CategoryGrid(
     onOpenCompleted: () -> Unit,
     onOpenCalendar: () -> Unit,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    val completedColor = completedTileColor(colorScheme)
+    val completedColor = completedTileColor()
     // The six tiles are the source half of six zooms, and each key comes from the route its
     // click already opens — the one table both ends read, so a tile re-pointed at a
     // different route cannot end up growing out of a rectangle it never came from. The key
@@ -2251,7 +2243,7 @@ private fun CategoryGrid(
             CategoryCard(
                 modifier = Modifier.weight(1f),
                 tileTransitionKey = calendarKey,
-                color = calendarTileColor(colorScheme),
+                color = calendarTileColor(),
                 iconRes = R.drawable.ic_lucide_calendar_1,
                 watermarkRes = R.drawable.ic_lucide_calendar_1,
                 title = stringResource(R.string.scheduled_task_home_category_calendar),
@@ -2262,9 +2254,9 @@ private fun CategoryGrid(
     }
 }
 
-private fun completedTileColor(colorScheme: ColorScheme): Color = TdayCompletedTileAccent
+private fun completedTileColor(): Color = TdayCompletedTileAccent
 
-private fun calendarTileColor(colorScheme: ColorScheme): Color {
+private fun calendarTileColor(): Color {
     return Color(0xFF9A89D2)
 }
 

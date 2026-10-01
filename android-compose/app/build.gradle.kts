@@ -190,6 +190,11 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // The exported Room schemas, so the migration test can build an old version of the database.
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 // Export the Room schema so future version bumps can ship real Migration objects
@@ -232,7 +237,6 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
     implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     // Backdrop blur for the bottom toast so it matches iOS's translucent
@@ -300,6 +304,7 @@ dependencies {
     testImplementation("app.cash.turbine:turbine:1.2.1")
 
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.room:room-testing:2.8.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")

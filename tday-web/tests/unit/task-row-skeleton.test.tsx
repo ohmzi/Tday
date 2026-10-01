@@ -21,7 +21,6 @@
  * this suite green while the skeleton it pins started lying.
  */
 
-import React from "react";
 import { cleanup, render } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";

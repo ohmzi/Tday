@@ -1478,86 +1478,6 @@ private struct ScheduledTaskHomeListButtonStyle: ButtonStyle {
     }
 }
 
-private struct ScheduledTaskHomeTdayLogoMark: View {
-    var body: some View {
-        GeometryReader { proxy in
-            let size = min(proxy.size.width, proxy.size.height)
-            let stroke = size * 0.085
-            let ringWidth = size * 0.16
-            let paperWidth = size * 0.64
-            let paperHeight = size * 0.72
-            let paperX = size * 0.18
-            let paperY = size * 0.18
-            let headerHeight = size * 0.2
-
-            ZStack {
-                RoundedRectangle(cornerRadius: size * 0.14, style: .continuous)
-                    .fill(Color(hex: 0x90D5D2))
-                    .frame(width: paperWidth, height: paperHeight)
-                    .offset(x: paperX - (size / 2) + (paperWidth / 2), y: paperY - (size / 2) + (paperHeight / 2))
-
-                RoundedRectangle(cornerRadius: size * 0.14, style: .continuous)
-                    .fill(.white)
-                    .frame(width: paperWidth, height: paperHeight - headerHeight)
-                    .offset(x: paperX - (size / 2) + (paperWidth / 2), y: (paperY + headerHeight) - (size / 2) + ((paperHeight - headerHeight) / 2))
-
-                RoundedRectangle(cornerRadius: size * 0.14, style: .continuous)
-                    .stroke(Color(hex: 0x2D6B6B), lineWidth: stroke)
-                    .frame(width: paperWidth, height: paperHeight)
-                    .offset(x: paperX - (size / 2) + (paperWidth / 2), y: paperY - (size / 2) + (paperHeight / 2))
-
-                Rectangle()
-                    .fill(Color(hex: 0x2D6B6B))
-                    .frame(width: paperWidth, height: stroke * 0.66)
-                    .offset(x: paperX - (size / 2) + (paperWidth / 2), y: (paperY + headerHeight) - (size / 2))
-
-                ForEach([0.28, 0.5, 0.72], id: \.self) { fraction in
-                    Path { path in
-                        let x = size * CGFloat(fraction)
-                        path.move(to: CGPoint(x: x, y: size * 0.16))
-                        path.addLine(to: CGPoint(x: x, y: size * 0.03))
-                        path.addArc(
-                            center: CGPoint(x: x + ringWidth * 0.35, y: size * 0.16),
-                            radius: ringWidth * 0.5,
-                            startAngle: .degrees(180),
-                            endAngle: .degrees(0),
-                            clockwise: false
-                        )
-                        path.addLine(to: CGPoint(x: x + ringWidth * 0.7, y: size * 0.16))
-                    }
-                    .stroke(Color(hex: 0x2D6B6B), style: StrokeStyle(lineWidth: stroke, lineCap: .round))
-                }
-
-                VStack(spacing: size * 0.06) {
-                    ForEach(0..<4, id: \.self) { row in
-                        HStack(spacing: size * 0.06) {
-                            VStack(alignment: .leading, spacing: size * 0.03) {
-                                Capsule()
-                                    .fill(Color(hex: 0xC4C4C4))
-                                    .frame(width: size * 0.16, height: stroke * 0.55)
-                                Capsule()
-                                    .fill(Color(hex: 0xC4C4C4))
-                                    .frame(width: size * 0.11, height: stroke * 0.55)
-                            }
-
-                            HStack(spacing: size * 0.025) {
-                                ForEach(0..<3, id: \.self) { _ in
-                                    RoundedRectangle(cornerRadius: size * 0.018, style: .continuous)
-                                        .fill(Color(hex: 0xE85B6F))
-                                        .frame(width: size * 0.08, height: size * 0.09)
-                                }
-                            }
-                        }
-                    }
-                }
-                .offset(x: size * 0.08, y: size * 0.18)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .aspectRatio(1, contentMode: .fit)
-    }
-}
-
 struct CreateListSheet: View {
     /// True only where the list being created is a floater list, which is the
     /// only kind that can be reused: web's create sheet hosts the Reusable switch,
@@ -1569,11 +1489,24 @@ struct CreateListSheet: View {
     var showsReusable: Bool = false
     let onSubmit: (String, String?, String?, Bool?, String?) -> Void
 
+    /// Seeds the colour per feed — SLATE for a scheduled list, GOLD for a floater one — which a
+    /// property initialiser cannot do, so the memberwise init is written out. The parameter
+    /// order is the one it replaces: `onSubmit` stays last so call sites keep their trailing
+    /// closure.
+    init(
+        showsReusable: Bool = false,
+        onSubmit: @escaping (String, String?, String?, Bool?, String?) -> Void
+    ) {
+        self.showsReusable = showsReusable
+        self.onSubmit = onSubmit
+        _color = State(initialValue: tdayDefaultListAccentColorKey(isFloater: showsReusable))
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tdayColors) private var colors
 
     @State private var name = ""
-    @State private var color = "PINK"
+    @State private var color: String
     @State private var iconKey = "inbox"
     @State private var reusable = false
     /// Nil means "no default". Always sent on create — there is no saved list
@@ -1599,10 +1532,6 @@ struct CreateListSheet: View {
 
     private var accentColor: Color {
         scheduledTaskHomeListAccentColor(for: color)
-    }
-
-    private var selectedSymbolName: String {
-        scheduledTaskHomeListSymbolName(for: iconKey)
     }
 
     private var maximumSheetHeight: CGFloat {
@@ -1971,7 +1900,7 @@ private func scheduledTaskHomeListAccentColor(for key: String?) -> Color {
     default:
         normalizedKey = key
     }
-    return scheduledTaskHomeListColorOptions.first(where: { $0.key == normalizedKey })?.color ?? Color(hex: 0xE05299)
+    return scheduledTaskHomeListColorOptions.first(where: { $0.key == normalizedKey })?.color ?? tdayListAccentColor(colorKey: nil)
 }
 
 private func scheduledTaskHomeListSymbolName(for key: String?) -> String {

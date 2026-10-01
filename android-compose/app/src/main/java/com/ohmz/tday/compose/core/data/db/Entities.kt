@@ -143,6 +143,13 @@ data class PendingMutationEntity(
     val reusable: Boolean? = null,
     val defaultPriority: String? = null,
     val defaultPriorityChanged: Boolean? = null,
+    // The non-replayable placeholder a delayed-commit complete/delete parks in the queue for the
+    // length of its Undo window (v14; see PendingMutationRecord.staged). SyncManager starts every
+    // pass from a database read, so a flag this row dropped meant a sync inside the window replayed
+    // the mutation, and a later Undo restored a task the server had already completed or deleted.
+    // Nullable like the v13 columns: a pre-v14 row has no value, and the mapper reads null as false.
+    // A marker that outlives its process is released by ReleaseStagedMutationsOnOpen.
+    val staged: Boolean? = null,
 )
 
 @Entity(tableName = "sync_metadata")

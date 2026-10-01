@@ -10,7 +10,6 @@ enum TdaySheetMetrics {
     static let actionIconSize: CGFloat = 22
     static let cardCornerRadius: CGFloat = 28
     static let overlayCornerRadius: CGFloat = 30
-    static let selectorCornerRadius: CGFloat = 32
     static let sheetCornerRadius: CGFloat = 34
     static let closeAccent = Color(red: 227.0 / 255.0, green: 90.0 / 255.0, blue: 90.0 / 255.0)
     static let confirmAccent = Color(red: 47.0 / 255.0, green: 163.0 / 255.0, blue: 91.0 / 255.0)

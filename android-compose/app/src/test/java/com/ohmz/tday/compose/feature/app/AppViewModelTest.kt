@@ -153,8 +153,6 @@ class AppViewModelTest {
         assertTrue(viewModel.uiState.value.isLocalMode)
         assertTrue(viewModel.uiState.value.isWorkspaceAvailable)
         assertFalse(viewModel.uiState.value.authenticated)
-        assertFalse(viewModel.uiState.value.requiresServerSetup)
-        assertFalse(viewModel.uiState.value.requiresLogin)
         assertEquals(0, viewModel.uiState.value.pendingMutationCount)
         assertTrue(viewModel.uiState.value.syncStatus.isLocalMode)
         assertEquals(0L, viewModel.uiState.value.syncStatus.lastSuccessfulSyncEpochMs)
@@ -443,7 +441,6 @@ class AppViewModelTest {
 
         val state = viewModel.uiState.value
         assertFalse(state.authenticated)
-        assertTrue(state.requiresLogin)
         assertFalse(state.isOffline)
         assertEquals(null, state.user)
         coVerify { authRepository.logout() }
@@ -601,7 +598,6 @@ class AppViewModelTest {
 
         val state = viewModel.uiState.value
         assertFalse(state.loading)
-        assertTrue(state.requiresServerSetup)
         assertEquals(SessionResolution.RESOLVED, state.sessionResolution)
         assertEquals(RootDestination.ONBOARDING, state.rootDestination)
         coVerify(exactly = 0) { authRepository.restoreSessionForBootstrap() }
@@ -618,7 +614,6 @@ class AppViewModelTest {
 
         val state = viewModel.uiState.value
         assertFalse(state.loading)
-        assertTrue(state.requiresLogin)
         assertEquals(SessionResolution.RESOLVED, state.sessionResolution)
         assertEquals(RootDestination.ONBOARDING, state.rootDestination)
     }
@@ -842,21 +837,6 @@ class AppViewModelTest {
                 connectionProbeTimeoutMs = null,
             )
         }
-    }
-
-    @Test
-    fun `offline notice cooldown suppresses repeat notices for ten minutes`() {
-        var now = 1_000L
-        val cooldown = OfflineNoticeCooldown { now }
-
-        assertTrue(cooldown.shouldShowNotice())
-        assertFalse(cooldown.shouldShowNotice())
-
-        now += OFFLINE_NOTICE_COOLDOWN_MS - 1
-        assertFalse(cooldown.shouldShowNotice())
-
-        now += 1
-        assertTrue(cooldown.shouldShowNotice())
     }
 
     private fun pendingMutation(id: String): PendingMutationRecord =

@@ -83,10 +83,6 @@ final class AuthViewModel {
 
     // MARK: - Forgot password
 
-    func fetchQuestionsForUsername(_ username: String) async -> [SecurityQuestion]? {
-        try? await authRepository.fetchQuestionsForUsername(username)
-    }
-
     func lookupQuestions(_ username: String) async -> LookupQuestionsOutcome {
         await authRepository.lookupQuestions(username)
     }

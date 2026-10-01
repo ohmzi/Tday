@@ -51,7 +51,6 @@ interface FloaterService {
 
 class FloaterServiceImpl(
     private val fieldEncryption: FieldEncryption,
-    private val cache: CacheService,
     private val shareService: ListShareService,
     private val publisher: RealtimePublisher,
 ) : FloaterService {
@@ -80,7 +79,6 @@ class FloaterServiceImpl(
                 it[Floaters.updatedAt] = now
             }
         }
-        cache.invalidateFloaterCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged(normalizedListID))
         return FloaterResponse(
             id = id,
@@ -132,7 +130,6 @@ class FloaterServiceImpl(
                 stmt[Floaters.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
-        cache.invalidateFloaterCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged(targetListId))
         return Unit.right()
     }
@@ -145,7 +142,6 @@ class FloaterServiceImpl(
             }
             Floaters.deleteWhere { (Floaters.id eq id) and mutableFloaters(userId, editableListIds) }
         }
-        cache.invalidateFloaterCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())
         return count.right()
     }
@@ -195,7 +191,6 @@ class FloaterServiceImpl(
                 it[Floaters.updatedAt] = now
             }
         }
-        cache.invalidateFloaterCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())
         publisher.publishToCollaborators(userId, DomainEvent.CompletedChanged())
         return Unit.right()
@@ -265,8 +260,6 @@ class FloaterServiceImpl(
             recreateFromCompletedRow(userId, floaterId, completedRow!!)
         } ?: return Either.Left(AppError.NotFound("nothing to restore for this floater"))
 
-        cache.invalidateFloaterCaches(userId)
-        if (outcome.listRecreated) cache.invalidateFloaterListCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())
         publisher.publishToCollaborators(userId, DomainEvent.CompletedChanged())
         if (outcome.listRecreated) publisher.publishToCollaborators(userId, DomainEvent.FloaterListChanged())
@@ -384,7 +377,6 @@ class FloaterServiceImpl(
                 it[Floaters.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
-        cache.invalidateFloaterCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())
         return Unit.right()
     }
@@ -397,7 +389,6 @@ class FloaterServiceImpl(
                 it[Floaters.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
-        cache.invalidateFloaterCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())
         return Unit.right()
     }
@@ -440,8 +431,6 @@ class FloaterServiceImpl(
             floater
         } ?: return Either.Left(AppError.NotFound("floater not found"))
 
-        cache.invalidateFloaterCaches(userId)
-        cache.invalidateTodoCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged())
         publisher.publishToCollaborators(userId, DomainEvent.TodoChanged())
         return TodoResponse(

@@ -277,8 +277,8 @@ class McpTestWorld(
             defaultPriority: String?, defaultPriorityChanged: Boolean?,
         ) = Unit.right()
 
-        override suspend fun delete(userId: String, id: String): Either<AppError, Int> =
-            (if (lists.remove(id) != null) 1 else 0).right()
+        override suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>> =
+            ids.distinct().filter { lists.remove(it) != null }.right()
     }
 
     val floaterListService: FloaterListService = object : FloaterListService {
@@ -304,8 +304,8 @@ class McpTestWorld(
 
         override suspend fun resetFloaters(userId: String, listId: String) = 0.right()
 
-        override suspend fun delete(userId: String, id: String): Either<AppError, Int> =
-            (if (floaterLists.remove(id) != null) 1 else 0).right()
+        override suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>> =
+            ids.distinct().filter { floaterLists.remove(it) != null }.right()
     }
 
     val completedTodoService: CompletedTodoService = object : CompletedTodoService {

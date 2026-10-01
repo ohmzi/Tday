@@ -1,77 +1,4 @@
 {
-  "landingPage": {
-    "nav": {
-      "docs": "ドキュメント",
-      "docsShort": "ドキュメント",
-      "login": "ログイン"
-    },
-    "hero": {
-      "title": "T'Day",
-      "subtitle": "Notionスタイルのエディタ、極秘の暗号化ファイルアップロード、そしてたくさんの便利な機能を備えた個人プランナーの「スイスアーミーナイフ」です！",
-      "readDocs": "ドキュメントを読む",
-      "start": "始める"
-    },
-    "localizationTitle": "11の言語に対応",
-    "features": [
-      {
-        "tag": "01 / スマートタスク",
-        "title": "自然言語処理",
-        "description": "タスクを自然な言葉で入力するだけです。インテリジェントなNLPエンジンが、入力内容から日付、時間、期間を自動的に抽出します。",
-        "bullets": [
-          "即時の日付と時刻の検出",
-          "期間の自動計算",
-          "スマートなリマインダー設定",
-          "コンテキストを考慮した解析"
-        ]
-      },
-      {
-        "tag": "02 / 視覚化",
-        "title": "美しいカレンダー表示",
-        "description": "すべてのタスクを一目で確認。統合されたカレンダーは、直感的なビジュアルインジケーターでスケジュールの明確な概要を提供します。",
-        "bullets": [
-          "月、週、日単位の表示",
-          "色分けされたタスクカテゴリ",
-          "ドラッグ＆ドロップによるスケジュール変更",
-          "競合の検出"
-        ]
-      },
-      {
-        "tag": "03 / リッチノート",
-        "title": "Notionスタイルのエディタ",
-        "description": "強力で集中を妨げないエディタで考えをキャプチャ。テキストの書式設定、メディアの埋め込み、アイデアの整理を簡単に行えます。",
-        "bullets": [
-          "Markdown対応",
-          "リッチテキスト形式",
-          "コードブロックの構文強調表示",
-          "入れ子構造の箇条書きリスト"
-        ]
-      },
-      {
-        "tag": "04 / セキュリティ",
-        "title": "エンドツーエンドの暗号化ストレージ",
-        "description": "ファイルは軍用レベルの暗号化で保護されます。ドキュメント、画像、添付ファイルを完全に安心して保存できます。",
-        "bullets": [
-          "AES-256 暗号化",
-          "ゼロ知識（Zero-knowledge）アーキテクチャ",
-          "安全なファイル共有",
-          "自動バックアップ"
-        ]
-      }
-    ],
-    "securityDemo": {
-      "title": "パスキー",
-      "subtitle": "ファイルの復号化にはパスキーが必要です",
-      "enter": "入力"
-    },
-    "errors": {
-      "fallback": "問題が発生しましたが、ご安心ください。エラーレポートを送信しました。"
-    },
-    "footer": {
-      "privacyPolicy": "プライバシーポリシー",
-      "termsOfService": "利用規約",
-      "heroSubtitle": "少し「正気（sane）」ではない人のために作られた、インテリジェントなタスク管理プラットフォーム。"
-    }
-  },
   "terms": {
     "title": "利用規約",
     "lastUpdated": "最終更新日: 2026年1月19日",
@@ -173,80 +100,12 @@
       }
     }
   },
-  "login": {
-    "title": "ログイン",
-    "oauth": {
-      "orLogInWith": "または以下でログイン",
-      "google": "Google",
-      "discord": "Discord"
-    },
-    "fields": {
-      "username": {
-        "placeholder": "ユーザー名*",
-        "error": "有効なユーザー名を入力してください"
-      },
-      "password": {
-        "placeholder": "パスワードを入力してください*",
-        "error": "有効なパスワードを入力してください"
-      }
-    },
-    "showPassword": "パスワードを表示",
-    "hidePassword": "パスワードを非表示",
-    "registerPrompt": "アカウントをお持ちでないですか？",
-    "registerLink": "新規登録",
-    "buttons": {
-      "login": "ログイン"
-    },
-    "toasts": {
-      "googleError": "現在、Googleでサインインできませんでした",
-      "discordError": "現在、Discordでサインインできませんでした",
-      "invalidCredentials": "ユーザー名またはパスワードが正しくありません",
-      "genericError": "現在ログインできません"
-    }
-  },
-  "register": {
-    "title": "アカウント作成",
-    "loginPrompt": "すでにアカウントをお持ちですか？",
-    "loginLink": "ログイン",
-    "oauth": {
-      "orRegisterWith": "または以下で登録",
-      "google": "Google",
-      "discord": "Discord"
-    },
-    "fields": {
-      "fname": {
-        "placeholder": "名前（名）*",
-        "error": "名前を入力してください"
-      },
-      "lname": {
-        "placeholder": "苗字（姓）",
-        "error": "有効な苗字を入力してください"
-      },
-      "username": {
-        "placeholder": "ユーザー名*",
-        "error": "有効なユーザー名を入力してください"
-      },
-      "password": {
-        "placeholder": "パスワードを入力してください*",
-        "error": "有効なパスワードを入力してください"
-      }
-    },
-    "buttons": {
-      "register": "アカウントを作成"
-    },
-    "toasts": {
-      "googleError": "現在、Googleでサインインできませんでした",
-      "discordError": "現在、Discordでサインインできませんでした",
-      "genericError": "現在登録できません"
-    }
-  },
   "app": {
     "agenda": "アジェンダ",
     "scheduledTaskHome": "予定",
     "more": "その他",
     "cancel": "キャンセル",
     "save": "保存",
-    "clear": "クリア",
     "clearSearch": "検索をクリア",
     "versionAvailableTitle": "更新があります",
     "versionAvailableBody": "新しいバージョンを読み込めます。",
@@ -261,12 +120,9 @@
     "day": "日",
     "week": "週",
     "month": "月",
-    "year": "年",
     "duration": "期間",
     "date": "日付",
     "durationMenu": {
-      "title": "期間を設定",
-      "subTitle": "現在の日付にのみ適用されます",
       "error": "無効な日付範囲：終了時間は開始時間より後である必要があります。"
     },
     "priority": "優先度",
@@ -299,15 +155,6 @@
     "everyYear": "毎年",
     "weekdaysOnly": "平日のみ",
     "custom": "カスタム",
-    "customMenu": {
-      "title": "カスタム繰り返し",
-      "subTitle": "カスタムの繰り返しスケジュールを設定",
-      "every": "繰り返し間隔：",
-      "on": "実行日：",
-      "ends": "終了",
-      "never": "なし",
-      "onDate": "指定日まで（を含む）"
-    },
     "descPlaceholder": "説明",
     "schedule": "スケジュール",
     "scheduleOnHint": "タスクに期限があります",
@@ -581,41 +428,6 @@
       "openPalette": "コマンドパレット",
       "showShortcuts": "この一覧"
     }
-  },
-  "filterMenu": {
-    "sorting": "並び替え",
-    "sort": "ソート",
-    "direction": "昇順/降順",
-    "grouping": "グループ化",
-    "group": "グループ",
-    "start Date": "開始日",
-    "deadline": "期限",
-    "duration": "期間",
-    "ascending": "昇順",
-    "descending": "降順",
-    "recurrence": "繰り返し",
-    "sortedBy": "ソート順：",
-    "groupedBy": "グループ化：",
-    "none": "なし"
-  },
-  "projectMenu": {
-    "typeToSearch": "入力して検索",
-    "editColors": "色を編集",
-    "red": "レッド",
-    "orange": "オレンジ",
-    "yellow": "イエロー",
-    "lime": "ライム",
-    "blue": "ブルー",
-    "purple": "パープル",
-    "pink": "ピンク",
-    "teal": "ティール",
-    "coral": "コーラル",
-    "gold": "ゴールド",
-    "deepBlue": "ディープブルー",
-    "rose": "ローズ",
-    "lightRed": "ライトレッド",
-    "brick": "ブリック",
-    "slate": "スレート"
   },
   "scheduledTaskHome": {
     "tileScheduled": "予定",

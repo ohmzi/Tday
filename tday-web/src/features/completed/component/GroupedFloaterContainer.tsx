@@ -1,5 +1,4 @@
 import { CompletedFloaterItemType } from "@/types";
-import React from "react";
 import { CompletedFloaterItemContainer } from "./CompletedFloaterItemContainer";
 import { useLocale } from "@/lib/navigation";
 

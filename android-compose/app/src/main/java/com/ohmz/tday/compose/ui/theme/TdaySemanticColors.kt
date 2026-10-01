@@ -14,7 +14,26 @@ data class TdayListColorOption(
     val color: Color,
 )
 
-const val TDAY_DEFAULT_LIST_COLOR_KEY = "PINK"
+/**
+ * The colour a NEW list starts with, and the one a list or task with no stored colour is drawn in,
+ * per feed. Each default is a soft cousin of its feed's own identity colour, close enough to
+ * belong to it and different enough not to be mistaken for the built-in tiles:
+ *
+ *  - Scheduled: BLUE, a lighter sibling of the Today tile's blue ([TdayTodoModeTodayAccent]).
+ *  - Floater: TEAL, the aqua-green nearest [TdayFloaterAccent]'s sage/teal.
+ *
+ * Both come out pastel where it matters: a list row is the key blended 66 % into the surface, so
+ * BLUE reads as a pale sky and TEAL as a pale mint rather than as the saturated key itself.
+ *
+ * Existing palette keys, not new ones: the colour is the Postgres `ProjectColor` enum, so a new
+ * key is a server migration. Keys, not hexes, so a list is the same colour on every client; iOS
+ * (`tdayDefaultListAccentColorKey`) and web (`DEFAULT_*_LIST_COLOR`) carry the same pair.
+ */
+const val TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY = "BLUE"
+const val TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY = "TEAL"
+
+fun tdayDefaultListColorKey(isFloater: Boolean): String =
+    if (isFloater) TDAY_DEFAULT_FLOATER_LIST_COLOR_KEY else TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY
 
 val TdayPriorityHigh = Color(0xFFFF3B30)
 val TdayPriorityMedium = Color(0xFFFF9500)
@@ -82,9 +101,12 @@ fun tdayPriorityColor(priority: String): Color {
     }
 }
 
-fun tdayListAccentColor(colorKey: String?): Color {
+fun tdayListAccentColor(
+    colorKey: String?,
+    defaultKey: String = TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY,
+): Color {
     return tdayListAccentColorOrNull(colorKey)
-        ?: TdayListColorMap.getValue(TDAY_DEFAULT_LIST_COLOR_KEY)
+        ?: TdayListColorMap.getValue(defaultKey)
 }
 
 fun tdayListAccentColorOrNull(colorKey: String?): Color? {
@@ -92,12 +114,11 @@ fun tdayListAccentColorOrNull(colorKey: String?): Color? {
     return TdayListColorMap[normalizedKey]
 }
 
-fun normalizeTdayListColorKey(colorKey: String?): String {
-    return normalizeTdayListColorKeyOrNull(colorKey) ?: TDAY_DEFAULT_LIST_COLOR_KEY
-}
-
-fun isTdayListColorKeySupported(colorKey: String): Boolean {
-    return normalizeTdayListColorKeyOrNull(colorKey) != null
+fun normalizeTdayListColorKey(
+    colorKey: String?,
+    defaultKey: String = TDAY_DEFAULT_SCHEDULED_LIST_COLOR_KEY,
+): String {
+    return normalizeTdayListColorKeyOrNull(colorKey) ?: defaultKey
 }
 
 private fun normalizeTdayListColorKeyOrNull(colorKey: String?): String? {

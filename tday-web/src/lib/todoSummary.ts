@@ -1,6 +1,6 @@
 import { TodoItemType } from "@/types";
-import { differenceInCalendarDays, endOfDay, format, startOfDay } from "date-fns";
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { differenceInCalendarDays, format, startOfDay } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import i18n from "@/i18n";
 import { getDateFnsLocale } from "@/lib/date/dateFnsLocale";
 
@@ -11,73 +11,10 @@ function st(key: string, options?: Record<string, unknown>): string {
   return i18n.t(`summary:${key}`, options ?? {}) as string;
 }
 
-export type TodoSummaryMode = "today" | "scheduled" | "all" | "priority";
-
-type SummaryContext = {
-  mode: TodoSummaryMode;
-  todos: TodoItemType[];
-  timeZone: string;
-  now?: Date;
-};
-
-const PRIORITY_ALIASES = new Set(["medium", "high", "important", "urgent"]);
 const DUE_WINDOW_DAY_RANGE = 3;
 
 function normalizePriority(priority: string | null | undefined): string {
   return (priority ?? "Low").trim();
-}
-
-function isPriorityTodo(priority: string | null | undefined): boolean {
-  const normalized = (priority ?? "").trim().toLowerCase();
-  return PRIORITY_ALIASES.has(normalized);
-}
-
-function getTodayBounds(now: Date, timeZone: string): { start: Date; end: Date } {
-  const zonedNow = toZonedTime(now, timeZone);
-  const start = fromZonedTime(startOfDay(zonedNow), timeZone);
-  const end = fromZonedTime(endOfDay(zonedNow), timeZone);
-  return { start, end };
-}
-
-export function filterTodosForSummaryMode({
-  mode,
-  todos,
-  timeZone,
-  now = new Date(),
-}: SummaryContext): TodoItemType[] {
-  const activeTodos = todos.filter((todo) => !todo.completed);
-  const { start, end } = getTodayBounds(now, timeZone);
-
-  const filtered = (() => {
-    if (mode === "all") {
-      return activeTodos;
-    }
-
-    if (mode === "scheduled") {
-      return activeTodos.filter((todo) => todo.due >= now);
-    }
-
-    if (mode === "priority") {
-      return activeTodos.filter((todo) => isPriorityTodo(todo.priority));
-    }
-
-    return activeTodos.filter((todo) => todo.due >= start && todo.due <= end);
-  })();
-
-  return filtered.sort((a, b) => a.due.getTime() - b.due.getTime());
-}
-
-function modeLabel(mode: TodoSummaryMode): string {
-  switch (mode) {
-    case "today":
-      return "Today";
-    case "scheduled":
-      return "Scheduled";
-    case "priority":
-      return "Priority";
-    case "all":
-      return "All Tasks";
-  }
 }
 
 function priorityRank(priority: string | null | undefined): number {
@@ -100,12 +37,6 @@ function summaryPriorityLabel(priority: string | null | undefined): "high" | "me
     return "medium";
   }
   return "low";
-}
-
-function urgencyStyle(priorityLabel: SummaryTaskCandidate["priorityLabel"]): string {
-  if (priorityLabel === "high") return "urgent";
-  if (priorityLabel === "medium") return "important";
-  return "routine";
 }
 
 function dueDayDelta(due: Date, now: Date, timeZone: string): number {
@@ -357,82 +288,4 @@ export function buildSummaryTaskCandidates(
     dueDayDelta: dayDelta,
     isOverdue: dueEpochMs < nowMs,
   }));
-}
-
-export function buildSummaryPrompt({
-  mode,
-  todos,
-  timeZone,
-  now = new Date(),
-}: SummaryContext): string {
-  const candidates = buildSummaryTaskCandidates(todos, { now, timeZone });
-  if (candidates.length === 0) {
-    return [
-      "You are writing a short planning note for a todo app.",
-      `Screen: ${modeLabel(mode)}`,
-      `Timezone: ${timeZone}`,
-      `Current time: ${now.toISOString()}`,
-      "",
-      "Return ONLY valid JSON with no extra text:",
-      '{"startId":null,"thenIds":[]}',
-    ].join("\n");
-  }
-
-  return [
-    "You are writing a short planning note for a todo app.",
-    `Screen: ${modeLabel(mode)}`,
-    `Timezone: ${timeZone}`,
-    `Current time: ${now.toISOString()}`,
-    "",
-    "Return ONLY valid JSON.",
-    "Schema:",
-    '{"startId":"T1","thenIds":["T2","T3"],"summary":"Start with ..."}',
-    "Rules:",
-    "- Plan by day order: overdue first, then today, then future dates.",
-    "- If multiple tasks share the same day, list higher-urgency tasks first even if their due time is later.",
-    "- Keep thenIds aligned with that ordering.",
-    "- Use only IDs from the task list.",
-    "- thenIds may include any number of IDs.",
-    "- summary should be natural-sounding English, easy to read aloud.",
-    "- summary must consider all tasks shown in this view, not just the first few.",
-    "- Write as a chronological plan, for example: Start with ..., Next up ..., Then ..., Later on [date] ....",
-    "- Do not start with generic strategy lines like 'Handle the most urgent work first'.",
-    "- summary should mention due timing in plain language (today/tomorrow/date). Use past tense ('was due') for overdue tasks.",
-    "- Use morning/afternoon/night only for tasks due within 3 days of now; for tasks farther away, treat them as all-day.",
-    "- Convey urgency through ordering and due timing, not labels.",
-    "- Keep phrasing conversational and avoid parenthetical '(...due ...)' technical pointers.",
-    "- Avoid explicit labels like 'high priority' or 'medium priority'.",
-    "- If multiple tasks share the same day, avoid repeating that date phrase for each task.",
-    "- Do not include markdown or extra keys.",
-    "- No prose, no markdown, no code fences.",
-    "",
-    "Tasks:",
-    ...candidates.map((task) => {
-      const overdueTag = task.isOverdue ? ", OVERDUE" : "";
-      return `- ${task.id}: ${task.title} (${urgencyStyle(task.priorityLabel)}, ${task.dueLabel}${overdueTag})`;
-    }),
-  ].join("\n");
-}
-
-export function buildFallbackSummary({
-  todos,
-  timeZone,
-  now = new Date(),
-}: SummaryContext): string {
-  if (todos.length === 0) {
-    return st("clearForNow");
-  }
-
-  const candidates = buildSummaryTaskCandidates(todos, { now, timeZone });
-  const focusCandidate = candidates[0];
-  if (!focusCandidate) {
-    return st("clearForNow");
-  }
-  const nextTasks = candidates.slice(1);
-  const overdueCount = todos.filter((todo) => todo.due < now).length;
-  return buildReadableTaskSummary({
-    startTask: focusCandidate,
-    thenTasks: nextTasks,
-    overdueCount,
-  });
 }

@@ -83,7 +83,7 @@ Always return a JSON object with a `message` field. Validation errors may includ
 }
 ```
 
-Malformed JSON/request bodies return `400` with `message: "Invalid request body"`. Error responses are produced by `respondAppError()` from the `withAuth` helper, or by `StatusPages` for malformed requests and unhandled exceptions. The legacy `ApiException` hierarchy is deprecated — new code should use `Either<AppError, T>` exclusively.
+Malformed JSON/request bodies return `400` with `message: "Invalid request body"`. Error responses are produced by `respondAppError()` from the `withAuth` helper, or by `StatusPages` for malformed requests and unhandled exceptions. Handlers return `Either<AppError, T>`.
 
 ## HTTP Status Codes
 

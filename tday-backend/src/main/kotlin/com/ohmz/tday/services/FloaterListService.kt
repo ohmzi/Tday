@@ -3,7 +3,6 @@ package com.ohmz.tday.services
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
-import arrow.core.raise.either
 import com.ohmz.tday.db.enums.ListColor
 import com.ohmz.tday.db.enums.Priority
 import com.ohmz.tday.db.tables.CompletedFloaters
@@ -34,18 +33,11 @@ interface FloaterListService {
     suspend fun create(userId: String, name: String, color: String?, iconKey: String?, reusable: Boolean = false, defaultPriority: String? = null): Either<AppError, FloaterListResponse>
     suspend fun update(userId: String, id: String, name: String?, color: String?, iconKey: String?, reusable: Boolean? = null, defaultPriority: String? = null, defaultPriorityChanged: Boolean? = null): Either<AppError, Unit>
     suspend fun resetFloaters(userId: String, listId: String): Either<AppError, Int>
-    suspend fun delete(userId: String, id: String): Either<AppError, Int>
-    suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>> = either {
-        ids.distinct().filter { it.isNotBlank() }.mapNotNull { id ->
-            val deletedCount = delete(userId, id).bind()
-            id.takeIf { deletedCount > 0 }
-        }
-    }
+    suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>>
 }
 
 class FloaterListServiceImpl(
     private val fieldEncryption: FieldEncryption,
-    private val cache: CacheService,
     private val shareService: ListShareService,
     private val publisher: RealtimePublisher,
 ) : FloaterListService {
@@ -69,19 +61,22 @@ class FloaterListServiceImpl(
             val counts: Map<String, Int> = if (listIds.isEmpty()) {
                 emptyMap()
             } else {
+                val floaterCount = Floaters.listID.count()
                 Floaters
-                    .select(Floaters.listID)
+                    .select(Floaters.listID, floaterCount)
                     .where { (Floaters.listID inList listIds) and (Floaters.completed eq false) }
-                    .mapNotNull { it[Floaters.listID] }
-                    .groupingBy { it }
-                    .eachCount()
+                    .groupBy(Floaters.listID)
+                    .mapNotNull { row -> row[Floaters.listID]?.let { it to row[floaterCount].toInt() } }
+                    .toMap()
             }
             val memberCounts: Map<String, Int> = if (listIds.isEmpty()) {
                 emptyMap()
             } else {
-                FloaterListShares.selectAll().where { FloaterListShares.listID inList listIds }
-                    .groupingBy { it[FloaterListShares.listID] }
-                    .eachCount()
+                val shareCount = FloaterListShares.listID.count()
+                FloaterListShares.select(FloaterListShares.listID, shareCount)
+                    .where { FloaterListShares.listID inList listIds }
+                    .groupBy(FloaterListShares.listID)
+                    .associate { it[FloaterListShares.listID] to it[shareCount].toInt() }
             }
             val ownerIds = rows.map { it[FloaterLists.userID] }.filter { it != userId }.distinct()
             val ownerUsernames: Map<String, String> = if (ownerIds.isEmpty()) {
@@ -172,7 +167,6 @@ class FloaterListServiceImpl(
                 it[FloaterLists.updatedAt] = now
             }
         }
-        cache.invalidateFloaterListCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterListChanged(id))
         return FloaterListResponse(
             id = id,
@@ -206,7 +200,6 @@ class FloaterListServiceImpl(
                 it[FloaterLists.updatedAt] = LocalDateTime.now(ZoneOffset.UTC)
             }
         }
-        cache.invalidateFloaterListCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterListChanged(id))
         return Unit.right()
     }
@@ -232,15 +225,10 @@ class FloaterListServiceImpl(
             }
             floaterIds.size
         }
-        cache.invalidateFloaterCaches(userId)
-        cache.invalidateFloaterListCaches(userId)
         publisher.publishToCollaborators(userId, DomainEvent.FloaterChanged(listId))
         publisher.publishToCollaborators(userId, DomainEvent.CompletedChanged())
         return count.right()
     }
-
-    override suspend fun delete(userId: String, id: String): Either<AppError, Int> =
-        deleteMany(userId, listOf(id)).map { it.size }
 
     override suspend fun deleteMany(userId: String, ids: List<String>): Either<AppError, List<String>> {
         val normalizedIds = ids.map(String::trim).filter(String::isNotEmpty).distinct()
@@ -295,7 +283,6 @@ class FloaterListServiceImpl(
         }
 
         if (deletedIds.isNotEmpty()) {
-            cache.invalidateFloaterListCaches(userId)
             publisher.publishTo(userId, recipients, DomainEvent.FloaterListChanged())
         }
 

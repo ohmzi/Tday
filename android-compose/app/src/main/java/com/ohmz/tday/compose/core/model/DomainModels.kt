@@ -99,22 +99,6 @@ fun movedDueToTimeOfDay(
     return ZonedDateTime.of(date, LocalTime.of(hour, 0), zoneId).toInstant()
 }
 
-fun createMovedTaskPayload(
-    todo: TodoItem,
-    targetDate: LocalDate,
-    zoneId: ZoneId = ZoneId.systemDefault(),
-): CreateTaskPayload {
-    val due = todo.due ?: ZonedDateTime.now(zoneId).toInstant()
-    return CreateTaskPayload(
-        title = todo.title,
-        description = todo.description,
-        priority = todo.priority,
-        due = movedDuePreservingTime(due, targetDate, zoneId),
-        rrule = todo.rrule,
-        listId = todo.listId,
-    )
-}
-
 fun timelineRescheduleTargetDate(
     sectionKey: String,
     today: LocalDate = LocalDate.now(),
@@ -184,7 +168,6 @@ data class DashboardSummary(
     val scheduledCount: Int,
     val allCount: Int,
     val priorityCount: Int,
-    val floaterCount: Int,
     val completedCount: Int,
     val lists: List<ListSummary>,
 )

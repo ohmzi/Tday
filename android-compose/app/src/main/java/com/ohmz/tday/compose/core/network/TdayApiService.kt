@@ -18,7 +18,6 @@ import com.ohmz.tday.compose.core.model.CreateTodoResponse
 import com.ohmz.tday.compose.core.model.DeleteTaskStepRequest
 import com.ohmz.tday.compose.core.model.ReorderTaskStepsRequest
 import com.ohmz.tday.compose.core.model.TaskStepMutationResponse
-import com.ohmz.tday.compose.core.model.TaskStepsResponse
 import com.ohmz.tday.compose.core.model.ToggleTaskStepRequest
 import com.ohmz.tday.compose.core.model.CredentialKeyResponse
 import com.ohmz.tday.compose.core.model.CredentialsCallbackRequest
@@ -33,14 +32,10 @@ import com.ohmz.tday.compose.core.model.DeleteListResponse
 import com.ohmz.tday.compose.core.model.DeleteTodoRequest
 import com.ohmz.tday.compose.core.model.DemoteTodoResponse
 import com.ohmz.tday.compose.core.model.FloaterCompleteRequest
-import com.ohmz.tday.compose.core.model.FloaterListDetailResponse
 import com.ohmz.tday.compose.core.model.FloaterListsResponse
-import com.ohmz.tday.compose.core.model.FloaterPrioritizeRequest
-import com.ohmz.tday.compose.core.model.FloaterReorderRequest
 import com.ohmz.tday.compose.core.model.FloaterUncompleteRequest
 import com.ohmz.tday.compose.core.model.FloaterUncompleteResponse
 import com.ohmz.tday.compose.core.model.FloatersResponse
-import com.ohmz.tday.compose.core.model.ListDetailResponse
 import com.ohmz.tday.compose.core.model.ListMembersResponse
 import com.ohmz.tday.compose.core.model.ListsResponse
 import com.ohmz.tday.compose.core.model.MessageResponse
@@ -54,7 +49,6 @@ import com.ohmz.tday.compose.core.model.PromoteFloaterResponse
 import com.ohmz.tday.compose.core.model.RegisterRequest
 import com.ohmz.tday.compose.core.model.RegisterResponse
 import com.ohmz.tday.compose.core.model.RemoveMemberRequest
-import com.ohmz.tday.compose.core.model.ReorderItemRequest
 import com.ohmz.tday.compose.core.model.RequestAdminResetRequest
 import com.ohmz.tday.compose.core.model.SecurityQuestionStatusResponse
 import com.ohmz.tday.compose.core.model.SecurityQuestionsResponse
@@ -66,8 +60,6 @@ import com.ohmz.tday.compose.core.model.TodoInstanceUpdateRequest
 import com.ohmz.tday.compose.core.model.TodoPrioritizeRequest
 import com.ohmz.tday.compose.core.model.TodoSummaryRequest
 import com.ohmz.tday.compose.core.model.TodoSummaryResponse
-import com.ohmz.tday.compose.core.model.TodoTitleNlpRequest
-import com.ohmz.tday.compose.core.model.TodoTitleNlpResponse
 import com.ohmz.tday.compose.core.model.TodoUncompleteRequest
 import com.ohmz.tday.compose.core.model.TodosResponse
 import com.ohmz.tday.compose.core.model.UpdateCompletedFloaterRequest
@@ -78,7 +70,6 @@ import com.ohmz.tday.compose.core.model.UpdateListRequest
 import com.ohmz.tday.compose.core.model.UpdateMemberRoleRequest
 import com.ohmz.tday.compose.core.model.UpdateProfileRequest
 import com.ohmz.tday.compose.core.model.UpdateTodoRequest
-import com.ohmz.tday.compose.core.model.UserResponse
 import com.ohmz.tday.compose.core.model.UserSearchResponse
 import com.ohmz.tday.compose.core.model.VerifySecurityAnswersRequest
 import com.ohmz.tday.compose.core.model.VerifySecurityAnswersResponse
@@ -174,11 +165,6 @@ interface TdayApiService {
         @Body payload: TodoSummaryRequest,
     ): Response<TodoSummaryResponse>
 
-    @POST("/api/todo/nlp")
-    suspend fun parseTodoTitleNlp(
-        @Body payload: TodoTitleNlpRequest,
-    ): Response<TodoTitleNlpResponse>
-
     @POST("/api/todo")
     suspend fun createTodo(
         @Body payload: CreateTodoRequest,
@@ -225,16 +211,6 @@ interface TdayApiService {
         @Body payload: FloaterUncompleteRequest,
     ): Response<FloaterUncompleteResponse>
 
-    @PATCH("/api/floater/prioritize")
-    suspend fun prioritizeFloaterByBody(
-        @Body payload: FloaterPrioritizeRequest,
-    ): Response<MessageResponse>
-
-    @PATCH("/api/floater/reorder")
-    suspend fun reorderFloater(
-        @Body payload: FloaterReorderRequest,
-    ): Response<MessageResponse>
-
     @PATCH("/api/todo")
     suspend fun patchTodoByBody(
         @Body payload: UpdateTodoRequest,
@@ -244,11 +220,6 @@ interface TdayApiService {
     suspend fun deleteTodoByBody(
         @Body payload: DeleteTodoRequest,
     ): Response<MessageResponse>
-
-    @GET("/api/todo/{todoId}/steps")
-    suspend fun getTaskSteps(
-        @Path("todoId") todoId: String,
-    ): Response<TaskStepsResponse>
 
     @POST("/api/todo/steps")
     suspend fun createTaskStep(
@@ -284,17 +255,6 @@ interface TdayApiService {
     suspend fun prioritizeTodoByBody(
         @Body payload: TodoPrioritizeRequest,
     ): Response<MessageResponse>
-
-    @PATCH("/api/todo/reorder")
-    suspend fun reorderTodos(
-        @Body payload: List<ReorderItemRequest>,
-    ): Response<MessageResponse>
-
-    @GET("/api/todo/overdue")
-    suspend fun getOverdueTodos(
-        @Query("start") start: Long,
-        @Query("end") end: Long,
-    ): Response<TodosResponse>
 
     @PATCH("/api/todo/instance")
     suspend fun patchTodoInstanceByBody(
@@ -334,13 +294,6 @@ interface TdayApiService {
 
     @GET("/api/list")
     suspend fun getLists(): Response<ListsResponse>
-
-    @GET("/api/list/{id}")
-    suspend fun getListTodos(
-        @Path("id") listId: String,
-        @Query("start") start: Long,
-        @Query("end") end: Long,
-    ): Response<ListDetailResponse>
 
     @POST("/api/list")
     suspend fun createList(
@@ -387,11 +340,6 @@ interface TdayApiService {
 
     @GET("/api/floaterList")
     suspend fun getFloaterLists(): Response<FloaterListsResponse>
-
-    @GET("/api/floaterList/{id}")
-    suspend fun getFloaterListTodos(
-        @Path("id") listId: String,
-    ): Response<FloaterListDetailResponse>
 
     @POST("/api/floaterList")
     suspend fun createFloaterList(
@@ -461,9 +409,6 @@ interface TdayApiService {
     suspend fun patchPreferences(
         @Body payload: PreferencesDto,
     ): Response<PreferencesResponse>
-
-    @GET("/api/user")
-    suspend fun getUserDetails(): Response<UserResponse>
 
     @PATCH("/api/user/profile")
     suspend fun patchUserProfile(

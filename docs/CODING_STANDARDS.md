@@ -103,7 +103,7 @@ const label = new Date(date).toLocaleDateString("en", { weekday: "short" });
 // In TodoDueDate.tsx:
 const label = new Date(date).toLocaleDateString("en", { weekday: "short" });
 
-// Good: extracted to lib/formatDayAbbr.ts, imported in both
+// Good: extracted once into a shared helper under lib/ (illustrative name), imported in both
 import { formatDayAbbr } from "@/lib/formatDayAbbr";
 const label = formatDayAbbr(date);
 ```
@@ -253,7 +253,7 @@ All user-facing strings must live in a single centralized source — never inlin
 | Files (components) | `PascalCase` | `TodoCard.tsx`, `Sidebar.tsx` |
 | Interfaces | `PascalCase` | `TodoItemType`, `ListItemMetaType` |
 | Types (unions/mapped) | `PascalCase` | `Priority`, `ApprovalStatus` |
-| Functions | `camelCase` | `fetchTodos`, `formatDayAbbr` |
+| Functions | `camelCase` | `fetchTodos`, `getDayLabel` |
 | Constants | `UPPER_SNAKE_CASE` | `PUBLIC_API_PREFIXES`, `DEFAULT_LOCALE` |
 | React hooks | `camelCase` with `use` prefix | `useToast`, `useWindowSize` |
 | Environment variables | `UPPER_SNAKE_CASE` | `VITE_API_URL` |
@@ -348,7 +348,7 @@ All visual tokens are defined as CSS custom properties in `src/globals.css` and 
 All user-facing strings live in the i18n locale bundles (`tday-web/messages/<lng>.json`, imported statically by `tday-web/src/i18n.ts`) and are accessed via **i18next**. Never hardcode display text in components or pages.
 
 - Use `useTranslation(namespace)` in components to get a `t` function.
-- Organize keys by feature namespace (e.g., `"landingPage"`, `"todoList"`, `"settings"`).
+- Organize keys by feature namespace (e.g., `"today"`, `"completed"`, `"settings"`).
 - When adding a new feature, add keys to the bundled English source first and keep all 10 locale bundles in parity (`tests/guardrails/i18n-parity.test.ts` enforces matching keys).
 
 ```typescript
@@ -561,7 +561,7 @@ Spacer(Modifier.height(96.dp))
 | Content padding | `ContentPaddingHorizontal` (18), `ContentPaddingVertical` (14) |
 | Corner radii | `RadiusSm` (8), `RadiusMd` (14), `RadiusLg` (18), `RadiusXl` (24), `RadiusSheet` (34), `RadiusFull` (999) |
 | Icon sizes | `IconSm` (20), `IconMd` (26), `IconLg` (28), `IconXl` (30) |
-| Component sizes | `FabSize` (56), `PullRefreshIndicator` (26), `BorderWidth` (1), `BorderWidthThick` (1.5) |
+| Component sizes | `FabSize` (56), `PullRefreshContainerHeight` (58), `BorderWidth` (1), `BorderWidthThick` (1.5) |
 
 ### String Management (Android)
 

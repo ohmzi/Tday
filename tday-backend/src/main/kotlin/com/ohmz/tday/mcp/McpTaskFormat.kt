@@ -67,7 +67,6 @@ object McpDates {
     val FLOOR: LocalDateTime = LocalDateTime.of(1970, 1, 1, 0, 0)
 
     private val DISPLAY = DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm", Locale.ENGLISH)
-    private val DISPLAY_DATE = DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.ENGLISH)
 
     fun zoneOf(timeZone: String?): ZoneId =
         runCatching { ZoneId.of(timeZone?.trim().orEmpty().ifEmpty { "UTC" }) }.getOrDefault(ZoneOffset.UTC)
@@ -104,8 +103,6 @@ object McpDates {
         val parsed = parseWireFormat(utcWallClock) ?: return "no date"
         return parsed.toZone(zone).format(DISPLAY)
     }
-
-    fun displayDate(local: LocalDateTime): String = local.format(DISPLAY_DATE)
 
     /** Read the API's own wire format (with or without seconds, with or without an offset). */
     fun parseWireFormat(value: String?): LocalDateTime? {
