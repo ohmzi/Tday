@@ -233,11 +233,11 @@ Route Handler
     │
     └── StatusPages plugin catches exceptions
             │
-            ├── ApiException (deprecated) → JSON { message, code } + HTTP status
+            ├── Malformed request body → 400 "Invalid request body"
             └── Unknown error → 500 + generic message
 ```
 
-The primary error path uses the `AppError` sealed interface with `Either<AppError, T>` from Arrow. The legacy `ApiException` hierarchy is `@Deprecated` and will be removed in a future release. `StatusPages.kt` handles both paths. Internal details are never exposed to clients.
+The primary error path uses the `AppError` sealed interface with `Either<AppError, T>` from Arrow. `StatusPages.kt` handles malformed requests and unhandled exceptions. Internal details are never exposed to clients.
 
 ## Web Architecture (Vite + React)
 
@@ -304,7 +304,7 @@ Self-hosted goes directly to Login with the Server chip already completed.
 
 In Local Mode the browser is the workspace:
 
-- `lib/local/appMode.ts` holds the mode flag; `hooks/useAppMode.ts` exposes it to React.
+- `lib/local/appMode.ts` holds the mode flag; `hooks/useAppMode.ts` exposes it to React (`useIsLocalMode`).
 - `lib/api-client.ts` routes every `/api/*` call to `lib/local/localApi.ts` instead of
   `fetch`. The local handlers answer with the *same* DTO shapes the Ktor routes return,
   so React Query, the feature hooks, and the optimistic-update paths are untouched by
@@ -515,7 +515,7 @@ The backend exposes a `WS /ws` WebSocket endpoint for authenticated users. Domai
 
 - 10 locales: `en`, `es`, `fr`, `de`, `it`, `pt`, `ru`, `zh`, `ja`, `ms` (`SUPPORTED_LOCALES` in `tday-web/src/i18n.ts`).
 - Managed via **i18next** + **react-i18next** with path-based locale detection.
-- All ten bundles are imported statically from `tday-web/messages/<lng>.json` and handed to i18next as `resources`, so every locale is translated offline with no locale HTTP fetch. English is the `fallbackLng`; `i18next-http-backend` is present in `package.json` but is deliberately not wired up.
+- All ten bundles are imported statically from `tday-web/messages/<lng>.json` and handed to i18next as `resources`, so every locale is translated offline with no locale HTTP fetch. English is the `fallbackLng`.
 - Routes are prefixed with `/:locale/` via React Router.
 
 ## AI Integration

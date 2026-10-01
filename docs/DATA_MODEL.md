@@ -30,7 +30,7 @@ This document describes the durable and local data structures that define T'Day.
 | Floater list share | `FloaterListShares` (`floater_list_shares`) | Same share DTOs as scheduled lists | EDITOR/VIEWER membership on a floater list. |
 | Completed floater | `CompletedFloaters` | `CompletedFloaterDto` | Completion history for floaters; survives the source list being deleted (`listDeleted`), and undo recreates it under its original name/color — see `docs/design/completed-floaters-durability.md`. |
 | Preferences | `UserPreferences` | `PreferencesDto`, `PreferencesResponse` | Per-user sorting/grouping/direction preferences, plus `aiSummaryEnabled` and `defaultHomeScreen` (`"scheduled"` \| `"floater"` — which root feed opens on a fresh cold launch; defaults to `"scheduled"`). |
-| App config | `AppConfigs` | `AppSettingsResponse`, `AdminSettingsResponse` | Public/admin app settings such as Summary availability. |
+| App config | _(no table — `appconfig` was dropped in V13)_ | `AppSettingsResponse` | Public app settings such as Summary availability, served from `AppSettingsRoutes`. |
 | File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. |
 | Event/auth logs | `EventLogs`, `AuthThrottles`, `AuthSignals`, `VerificationTokens`, `CronLogs` | Internal models | Security, throttling, verification, diagnostics, and operational state. |
 

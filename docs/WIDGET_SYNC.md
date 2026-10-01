@@ -98,9 +98,10 @@ TdayWatchWidget/
 └── TdayWatchComplication.swift         ← the watch complication (out of scope for this doc)
 ```
 
-The write chokepoint is `Tday/Core/Data/Cache/OfflineCacheManager.swift`: `saveOfflineState` calls
-`TodayTasksWidgetSnapshotStore.saveTodayTasks(from:)` / `FloaterTasksWidgetSnapshotStore.saveFloaterTasks(from:)`
-directly — there is no separate "reload helper" class. Both `save*Tasks` calls are **conditional**:
+The write chokepoint is `Tday/Core/Data/Cache/OfflineCacheManager.swift`: `saveOfflineState` hands the state to
+`WidgetSnapshotWriter.shared.submit(_:)` (a latest-wins serial queue), which runs
+`TodayTasksWidgetSnapshotStore.writeTodayTasks(from:)` / `FloaterTasksWidgetSnapshotStore.writeFloaterTasks(from:)`
+off the main thread — there is no separate "reload helper" class. Both `write*Tasks` calls are **conditional**:
 they skip the file write and the `WidgetCenter.reloadTimelines` call when the snapshot's *displayed*
 content (everything but `generatedAtEpochMs`) hasn't changed. That's the opposite of the Android
 refresher's deliberately-unconditional stance (see its KDoc) — the two platforms made different
@@ -132,8 +133,8 @@ reliability/efficiency trade-offs at this same point in the pipeline.
 
 - App Groups are already enabled on the main app target and the `TdayWidget` / `TdayWatchWidget`
   extensions, group id `group.com.ohmz.tday`.
-- `OfflineCacheManager.saveOfflineState` is the single chokepoint: it calls both snapshot stores'
-  `save*Tasks(from:)` directly — no call from `ScheduledTaskHomeViewModel` / `TodoListViewModel` needed.
+- `OfflineCacheManager.saveOfflineState` is the single chokepoint: it hands the state to
+  `WidgetSnapshotWriter.submit` (→ both snapshot stores' `write*Tasks(from:)`) — no call from `ScheduledTaskHomeViewModel` / `TodoListViewModel` needed.
 - `AppRootView`'s `.onChange(of: scenePhase)` calls `WidgetBackgroundRefresh.scheduleNext()` on
   `.background` / `.inactive` (arms the ~30-min fallback task) and drains any queued widget
   completions (`todoRepository.drainWidgetCompletions()`) on `.active` and on cold launch.
@@ -270,11 +271,11 @@ repository.createTodo(payload)  /  createFloater(payload)
         │                         id's own kind ──▶ updateAppWidget ──▶ widget repaints ~instantly
         │
         └─[iOS]──────▶  OfflineCacheManager.saveOfflineState(state)
-                          ├─ TodayTasksWidgetSnapshotStore.saveTodayTasks(from: state)     ← conditional: skipped if content unchanged
+                          ├─ WidgetSnapshotWriter.shared.submit(state)  →  TodayTasksWidgetSnapshotStore.writeTodayTasks(from:)  ← conditional: skipped if content unchanged
                           │    ├─ WidgetSnapshotFileStore.write(...)                        (App Group, protected-until-first-unlock)
                           │    ├─ WidgetCenter.reloadTimelines(ofKind: "TodayTasksWidget")
                           │    └─ WatchSessionManager.shared.syncTodaySnapshot()
-                          └─ FloaterTasksWidgetSnapshotStore.saveFloaterTasks(from: state)  ← same, kind "FloaterTasksWidget"
+                          └─ (same queue)  →  FloaterTasksWidgetSnapshotStore.writeFloaterTasks(from:)  ← same, kind "FloaterTasksWidget"
 ```
 
 Android's widget-native + button skips the in-app form entirely: `WidgetCreateTaskActivity`

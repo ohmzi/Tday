@@ -198,7 +198,7 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
-      # TZ=UTC matches `pr-gate.yml:79`. Several suites assert on formatted dates, and a
+      # TZ=UTC matches `pr-gate.yml:101`. Several suites assert on formatted dates, and a
       # runner in another zone would fail them for a reason that has nothing to do with the
       # change under test.
       #

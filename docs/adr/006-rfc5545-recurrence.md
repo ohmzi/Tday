@@ -29,4 +29,4 @@ Users need repeating tasks (daily, weekly, monthly, custom patterns). Options:
 
 - **Positive**: Flexible recurrence, future calendar export/import compatibility, per-instance overrides.
 - **Negative**: RRULE expansion logic is complex and requires focused backend route/service coverage plus web/mobile tests for recurrence editing, movement, completion, and instance deletion behavior. Instance materialization adds database writes.
-- **Trade-off**: The legacy `RepeatInterval` enum still exists in the database schema for backward compatibility but new features use RRULE.
+- **Trade-off**: A simpler legacy `RepeatInterval` enum (daily/weekly/monthly/weekdays) used to exist in the shared module; it was never persisted and has been removed. Recurrence is RRULE only.

@@ -1279,7 +1279,7 @@ This mechanism only takes effect once a device has loaded **one** build that con
 - **Keep `version.json` uncacheable.** Don't add `json` to the SW `globPatterns`, and keep the `NetworkOnly` route + the `no-store` header.
 - **New static assets:** content-hashed output goes under `/assets/**` (immutable) automatically; anything you drop in `tday-web/public/` is non-hashed and gets the 1h default — bump its handling in `cacheControlFor` if it needs different behavior.
 - **Tuning:** poll cadence is `CHECK_INTERVAL_MS` in `useVersionGate.ts`; the toast UX is in `VersionGate.tsx`.
-- **Safari/WebKit:** Safari has never shipped `requestIdleCallback` and only added `structuredClone` in 15.4 — guard browser globals with `typeof x === "function"` fallbacks (see `usePrefetchRoutes.ts`, `mergeInstanceAndTodo.ts`). A WebKit-only crash surfaces as the `RouteErrorPage`/`ErrorBoundary` screen; both expose an "Error details" expander, and both route stale-chunk errors through the auto-reload.
+- **Safari/WebKit:** Safari has never shipped `requestIdleCallback` and only added `structuredClone` in 15.4 — guard browser globals with `typeof x === "function"` fallbacks (see `usePrefetchRoutes.ts`). A WebKit-only crash surfaces as the `RouteErrorPage`/`ErrorBoundary` screen; both expose an "Error details" expander, and both route stale-chunk errors through the auto-reload.
 
 ### Key files
 
