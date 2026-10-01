@@ -22,7 +22,10 @@ export function useIsDaytime(enabled = true): boolean {
   const [isDaytime, setIsDaytime] = useState(isDaytimeNow);
 
   useEffect(() => {
-    if (!enabled) return;
+    // `undefined`, not a bare `return`: this effect returns a cleanup on its other path, and a
+    // function that returns a value on one branch and nothing on another is the inconsistency
+    // static analysis flags — rightly, since the two shapes read as a mistake.
+    if (!enabled) return undefined;
     // Re-read on arm as well as on tick: `enabled` flipping on (or the component
     // remounting) is the one moment the initial state can already be wrong.
     setIsDaytime(isDaytimeNow());

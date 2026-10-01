@@ -164,7 +164,7 @@ internal fun listWidgetVisualsFor(
         // drawables bake has to be applied here instead.
         alpha = TaskWidgetWatermark.WATERMARK_ALPHA,
     )
-    return base.copy(emptyWatermark = watermark, setupWatermark = watermark)
+    return base.copy(emptyWatermark = watermark, setupWatermark = watermark, accent = listAccent)
 }
 
 /**

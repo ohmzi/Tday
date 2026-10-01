@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Build
 import android.os.Bundle
 import android.text.SpannableString
@@ -126,6 +127,16 @@ internal data class TaskWidgetVisuals(
     // watermark, just the header and the message.
     val emptyWatermark: TaskWidgetWatermark?,
     val setupWatermark: TaskWidgetWatermark?,
+    /**
+     * The chosen list's own colour, when this instance shows one and that list has a colour.
+     *
+     * Null on the Today and Floater feeds, and on a list with no colour of its own — both then
+     * wear the kind's accent, which is what every list widget showed before list colours reached
+     * them. Set, it reaches the "+" button as well as the watermark: a widget that is one list's
+     * should read as that list end to end rather than carrying its icon on another identity's
+     * chrome.
+     */
+    val accent: WidgetListAccent? = null,
 )
 
 internal data class TaskWidgetRow(
@@ -347,10 +358,46 @@ internal object TaskWidgetRemoteViews {
         applyHeaderText(model, compact, dateBlock)
         applyProgress(model.progress?.takeIf { dateBlock != null && it.total > 0 })
 
-        setInt(R.id.widget_add, "setBackgroundResource", model.visuals.addButtonBackground)
+        applyAddButtonAccent(model.visuals)
         setImageViewResource(R.id.widget_add_icon, model.visuals.addIcon)
         setContentDescription(R.id.widget_add, model.addLabel)
         setOnClickPendingIntent(R.id.widget_add, activityIntent(context, appWidgetId, model.addIntent))
+    }
+
+    /**
+     * The "+" button in the list's colour where there is one, else in its kind's.
+     *
+     * Two routes, because the useful one is API 31+. There, `setColorStateList` hands the host BOTH
+     * resolved colours and lets it pick, which is the only way a widget follows a day/night flip
+     * this app's process may never be alive to see — so the button takes the list's wash over the
+     * white pill `widget_add_button_background_list` draws purely to be tinted. Below 31 the
+     * background stays the kind's rather than a white pill nothing tints, and only the glyph takes
+     * the colour through `setColorFilter`, which is remotable all the way down to this app's floor.
+     */
+    private fun RemoteViews.applyAddButtonAccent(visuals: TaskWidgetVisuals) {
+        val accent = visuals.accent
+        if (accent == null) {
+            setInt(R.id.widget_add, "setBackgroundResource", visuals.addButtonBackground)
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            setInt(R.id.widget_add, "setBackgroundResource", R.drawable.widget_add_button_background_list)
+            setColorStateList(
+                R.id.widget_add,
+                "setBackgroundTintList",
+                ColorStateList.valueOf(accent.lightWash),
+                ColorStateList.valueOf(accent.nightWash),
+            )
+            setColorStateList(
+                R.id.widget_add_icon,
+                "setImageTintList",
+                ColorStateList.valueOf(accent.light),
+                ColorStateList.valueOf(accent.night),
+            )
+        } else {
+            setInt(R.id.widget_add, "setBackgroundResource", visuals.addButtonBackground)
+            setInt(R.id.widget_add_icon, "setColorFilter", accent.light)
+        }
     }
 
     /** The header's title and count: stacked under [dateBlock] when there is one, else in a row. */
