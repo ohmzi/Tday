@@ -2187,3 +2187,43 @@ animates.
       Why:    confirmed with frame logs and 10× frame captures on an emulator; whether the first
               frame's extra cache read shows as a stall before a large workspace's zoom starts is
               only visible on a slower phone.
+
+- [ ] **PR 32j · ios · The zoom's other two exits are gone, the back gesture is not** — an iPhone on
+      iOS 18.x, animations on, Reduce Motion off.
+      Do:     open a tile screen. Swipe down from the middle of it. Swipe down starting at the very
+              top of the list, so the drag begins as an over-scroll. Pinch in. Then pop with the
+              chevron, push again, and swipe down a second time. Finally pop with a full left-edge
+              swipe.
+      Watch:  every downward drag and the pinch do nothing at all — the list scrolls, or nothing
+              moves. Both pops still shrink the screen back into the tile it came from.
+      Fails:  any downward drag that starts peeling the screen off; the SECOND push's swipe-down
+              working when the first did not; a left-edge swipe that no longer pops, or that pops as
+              a flat slide instead of a zoom.
+      Also:   the same six gestures on a screen opened from the Anytime feed's list cards and from
+              the Completed tile, which take the same modifier.
+      Why:    verified on an iOS 18.6 simulator, including the second push, so the mechanism is
+              settled. What a device adds is the gestures a thumb actually makes — a slow diagonal
+              from the left edge is the one that could be mistaken for the swipe the fix disables.
+
+- [ ] **PR 32j · ios · A tile screen arrives through its tile rather than over it** — an iPhone on
+      iOS 18.x, light theme and then dark, animations on.
+      Do:     open each of the six board tiles, the Today card, a custom list row, the Anytime feed's
+              list cards and Completed, watching the first third of each open.
+      Watch:  the tile's own colour reads through the screen while the rect is still small, then the
+              themed surface commits before the rect stops growing. In dark mode the surface that
+              commits is the dark one.
+      Fails:  a blank white (or black) card growing out of the tile with nothing in it — that is the
+              zero-alpha shape this row exists to avoid, and it means the floor did not take; the
+              screen still opaque at tile size, which is the old behaviour; the hold running so long
+              that the whole home feed is visible through a nearly full-screen sheet.
+      Also:   the corner. Home's dock and create button are drawn under every pushed destination and
+              WILL read through the arriving screen for about a tenth of a second, so there are
+              briefly two create buttons in that corner. Call it if it reads as a glitch rather than
+              as depth — the fix is to duck the root controls while a zoom-sourced route is on the
+              path, and it is deliberately not in this change.
+      Also:   turn Reduce Motion ON and repeat one open. There should be no zoom and no hold at all,
+              just the stock push with the screen finished on arrival.
+      Why:    the shape was captured frame by frame on an iOS 18.6 simulator and the alpha floor is a
+              measured value, not a chosen one. What a simulator cannot say is whether the hold reads
+              as intent or as a flicker on a real display, and whether the extra compositing pass
+              shows as a dropped frame on an older phone.
