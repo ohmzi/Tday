@@ -163,10 +163,14 @@ final class TdayListAccentTests: XCTestCase {
         guard let lhs else {
             return XCTFail("\(label): shared table has no colour for a key the app resolves")
         }
-        var lhsRGBA: [CGFloat] = [0, 0, 0, 0]
-        var rhsRGBA: [CGFloat] = [0, 0, 0, 0]
-        UIColor(lhs).getRed(&lhsRGBA[0], green: &lhsRGBA[1], blue: &lhsRGBA[2], alpha: &lhsRGBA[3])
-        UIColor(rhs).getRed(&rhsRGBA[0], green: &rhsRGBA[1], blue: &rhsRGBA[2], alpha: &rhsRGBA[3])
+        // Four separate vars rather than four slots of one array: `&array[0]` and `&array[1]` in
+        // one call are two overlapping exclusive accesses to the same array, which Swift refuses.
+        var lhsRed: CGFloat = 0, lhsGreen: CGFloat = 0, lhsBlue: CGFloat = 0, lhsAlpha: CGFloat = 0
+        var rhsRed: CGFloat = 0, rhsGreen: CGFloat = 0, rhsBlue: CGFloat = 0, rhsAlpha: CGFloat = 0
+        UIColor(lhs).getRed(&lhsRed, green: &lhsGreen, blue: &lhsBlue, alpha: &lhsAlpha)
+        UIColor(rhs).getRed(&rhsRed, green: &rhsGreen, blue: &rhsBlue, alpha: &rhsAlpha)
+        let lhsRGBA = [lhsRed, lhsGreen, lhsBlue, lhsAlpha]
+        let rhsRGBA = [rhsRed, rhsGreen, rhsBlue, rhsAlpha]
         for (index, channel) in ["red", "green", "blue", "alpha"].enumerated() {
             XCTAssertEqual(
                 lhsRGBA[index],

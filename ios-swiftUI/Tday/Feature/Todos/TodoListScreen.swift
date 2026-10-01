@@ -6877,41 +6877,19 @@ private func todoModeAccentColor(_ mode: TodoListMode, listColorKey: String?) ->
     }
 }
 
+/// The list accent for a colour key, as every list-bearing screen draws it.
+///
+/// A thin name over `tdayListAccentColor(colorKey:)` rather than a table of its own. It used to
+/// carry its own copy of all fifteen values plus the two legacy aliases, and so did the Scheduled
+/// board's swatch picker, and so does the widget — three transcriptions of one palette, which is
+/// three chances for a list to be one colour in the app and another on the home screen. The shared
+/// table is the one the widget extension compiles, so this is now the same answer by construction
+/// instead of by a test refereeing three copies.
+///
+/// Kept as a function rather than replaced at its call sites because the name says WHAT is being
+/// asked for at thirty-odd of them, and `for:` reads better there than `colorKey:`.
 func todoListAccentColor(for key: String?) -> Color {
-    switch key {
-    case "PINK":
-        return todoHexColor(0xE05299)
-    case "GOLD":
-        return todoHexColor(0xE8A530)
-    case "DEEP_BLUE":
-        return todoHexColor(0x3C9ADD)
-    case "CORAL":
-        return todoHexColor(0xE6664C)
-    case "TEAL":
-        return todoHexColor(0x2EB8AC)
-    case "SLATE", "GRAY":
-        return todoHexColor(0x3E4774)
-    case "BLUE":
-        return todoHexColor(0x6EA8E1)
-    case "PURPLE":
-        return todoHexColor(0x7D67B6)
-    case "ROSE":
-        return todoHexColor(0xD1617D)
-    case "LIGHT_RED":
-        return todoHexColor(0xE06C6C)
-    case "BRICK":
-        return todoHexColor(0xC64C39)
-    case "YELLOW":
-        return todoHexColor(0xE8BA30)
-    case "LIME", "GREEN":
-        return todoHexColor(0x46B963)
-    case "ORANGE":
-        return todoHexColor(0xE28736)
-    case "RED":
-        return todoHexColor(0xDF3A3A)
-    default:
-        return todoHexColor(0xE05299)
-    }
+    tdayListAccentColor(colorKey: key)
 }
 
 private func todoBlendColor(_ lhs: Color, _ rhs: Color, amount: CGFloat) -> Color {

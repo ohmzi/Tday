@@ -432,6 +432,13 @@ extension View {
 
 enum TdayNativeSegmentedControlMetrics {
     static let height: CGFloat = 52
+
+    /// How far the selected capsule sits inside the track, below iOS 26.
+    ///
+    /// Matched by eye against iOS 26's own drawing of the same control rather than derived: the
+    /// system publishes no metric for it, and the only honest source is the thing being matched.
+    /// Not a motion token — it is a static inset, not a duration, curve or spring.
+    static let selectionInset: CGFloat = 2
 }
 
 struct TdayNativeSegmentedControl: UIViewRepresentable {
@@ -500,6 +507,7 @@ struct TdayNativeSegmentedControl: UIViewRepresentable {
         control.backgroundColor = UIColor(colors.surfaceVariant.opacity(0.76))
         control.selectedSegmentTintColor = UIColor(colors.surface)
         control.tintColor = UIColor(accentColor)
+        applyCapsuleSelectionIfNeeded(to: control)
         control.setTitleTextAttributes(
             [
                 .foregroundColor: UIColor(colors.onSurfaceVariant),
@@ -515,6 +523,80 @@ struct TdayNativeSegmentedControl: UIViewRepresentable {
             for: .selected
         )
         control.invalidateIntrinsicContentSize()
+    }
+
+    /// Draws the selected segment as a CAPSULE on the systems that do not draw one themselves.
+    ///
+    /// Nothing in this file styles the segment's corner — `UISegmentedControl` owns it, and it
+    /// changed its mind: iOS 26 draws the selected segment as a full capsule inset from the track,
+    /// while iOS 18 and earlier draw a modest-radius rounded rectangle sitting nearly flush. Same
+    /// code, same colours, same height; only the radius differs, and that single radius is why the
+    /// older systems read blockier than the design they are meant to share.
+    ///
+    /// So the radius stops being the system's to choose below iOS 26. A background image per state
+    /// is the public lever for that — `setBackgroundImage(_:for:barMetrics:)` has existed since
+    /// iOS 5 — rather than reaching into the control's private subviews to round whichever one
+    /// looks selected, which is undocumented and would fail silently the first time Apple renames a
+    /// layer. The images are generated from the same `colors` the modern path uses, so light and
+    /// dark need no second answer.
+    ///
+    /// iOS 26 and later return immediately and keep the system's own drawing: matching it is the
+    /// whole point, and re-implementing it there would mean maintaining a copy that drifts.
+    private func applyCapsuleSelectionIfNeeded(to control: ThickSegmentedControl) {
+        if #available(iOS 26.0, *) {
+            return
+        }
+
+        let track = Self.capsuleImage(
+            color: UIColor(colors.surfaceVariant.opacity(0.76)),
+            height: controlHeight,
+            inset: 0
+        )
+        // The selected capsule is inset so the track reads as a groove around it, which is what
+        // iOS 26 draws and what the flush rectangle below it never did.
+        let selected = Self.capsuleImage(
+            color: UIColor(colors.surface),
+            height: controlHeight,
+            inset: TdayNativeSegmentedControlMetrics.selectionInset
+        )
+
+        control.setBackgroundImage(track, for: .normal, barMetrics: .default)
+        control.setBackgroundImage(selected, for: .selected, barMetrics: .default)
+        control.setBackgroundImage(selected, for: [.selected, .highlighted], barMetrics: .default)
+        // The 1pt separators belong to the rectangular look; a capsule that floats in a groove has
+        // nothing to be separated from. An empty image rather than nil: nil restores the default.
+        for left in [UIControl.State.normal, .selected] {
+            for right in [UIControl.State.normal, .selected] {
+                control.setDividerImage(
+                    UIImage(),
+                    forLeftSegmentState: left,
+                    rightSegmentState: right,
+                    barMetrics: .default
+                )
+            }
+        }
+        // The track image carries the fill now; leaving the colour on as well double-draws it at
+        // the corners, where the image is transparent and the view's own layer is not.
+        control.backgroundColor = .clear
+    }
+
+    /// A horizontally stretchable capsule: two round caps and a 1pt middle that resizes.
+    ///
+    /// Drawn at `height` so the radius is exactly half the control's height — the definition of a
+    /// capsule, and the thing the older systems get wrong.
+    private static func capsuleImage(color: UIColor, height: CGFloat, inset: CGFloat) -> UIImage {
+        let radius = max(0, (height - inset * 2) / 2)
+        let cap = radius + inset
+        let size = CGSize(width: cap * 2 + 1, height: height)
+        let image = UIGraphicsImageRenderer(size: size).image { _ in
+            let rect = CGRect(origin: .zero, size: size).insetBy(dx: inset, dy: inset)
+            color.setFill()
+            UIBezierPath(roundedRect: rect, cornerRadius: radius).fill()
+        }
+        return image.resizableImage(
+            withCapInsets: UIEdgeInsets(top: 0, left: cap, bottom: 0, right: cap),
+            resizingMode: .stretch
+        )
     }
 
     final class Coordinator: NSObject {
