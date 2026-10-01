@@ -6279,7 +6279,7 @@ private fun buildOverdueSections(
         ?.let { todaysItems ->
             sections += TodoSection(
                 key = "day-$today",
-                title = "Today",
+                title = DAY_SECTION_TITLE_TODAY,
                 items = todaysItems,
                 quickAddDefaults = quickAddDefaultsForDate(
                     date = today,
@@ -6477,7 +6477,7 @@ private fun buildScheduledSections(
         earlierSection?.let { sections += it }
     }
 
-    sections += daySection(today, "Today")
+    sections += daySection(today, DAY_SECTION_TITLE_TODAY)
     if (!placesEarlierBeforeToday) {
         earlierSection?.let { sections += it }
     }
@@ -6723,6 +6723,16 @@ private fun emptyStateIconForMode(
 
 private val SCHEDULED_DAY_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEE MMM d", Locale.getDefault())
+
+/**
+ * The date-group header for the current day, named once because two call sites build it — the
+ * scheduled feed's own day section and the grouped builder below.
+ *
+ * Deliberately NOT the Today/Tonight screen title: this groups rows by CALENDAR DAY, so it stays
+ * "Today" after dark. A row due this evening is still due today, and calling that group "Tonight"
+ * would be a claim about which day the row is on.
+ */
+private const val DAY_SECTION_TITLE_TODAY = "Today"
 
 private fun quickAddDefaultsForDate(
     date: LocalDate,
