@@ -12,18 +12,6 @@ plugins {
     id("io.sentry.android.gradle")
 }
 
-// Several AndroidX artifacts' dependency metadata resolves kotlin-stdlib to
-// whatever the latest published release is (currently newer than this
-// project's pinned Kotlin plugin version above), which the older compiler
-// can't read ("compiled with an incompatible version of Kotlin"). Force it
-// back down to match so `./gradlew :app:compileDebugKotlin` builds at all —
-// pre-existing/unrelated to any one feature, found while working on notes.
-configurations.all {
-    resolutionStrategy {
-        force("org.jetbrains.kotlin:kotlin-stdlib:2.2.10")
-    }
-}
-
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
@@ -125,7 +113,7 @@ if (isReleaseTaskRequested && !hasReleaseSigning && !allowDebugSignedRelease) {
 
 android {
     namespace = "com.ohmz.tday.compose"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.ohmz.tday.compose"
@@ -214,7 +202,7 @@ ksp {
 dependencies {
     implementation(project(":shared"))
 
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     // On-device natural-language date parsing for the task-title field (offline,
     // no AI/network). Same engine the backend uses, so behaviour matches.
@@ -222,32 +210,37 @@ dependencies {
 
     // HTML sanitizer for the notes rich-text encoding — allow-lists the same
     // small tag set as tday-web's DOMParser-based sanitizer (see richNotes.ts).
-    implementation("org.jsoup:jsoup:1.23.1")
+    implementation("org.jsoup:jsoup:1.23.2")
 
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-ktx:1.19.1")
     // Per-app language override (AppCompatDelegate.setApplicationLocales); works
     // back to API 21 via the AppLocalesMetadataHolderService manifest hook.
-    implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.appcompat:appcompat:1.8.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    implementation("androidx.activity:activity-compose:1.13.0")
     // Installs the APK's baseline profile (src/main/baseline-prof.txt plus the libraries' own) on
     // first launch, for ART to compile at its next idle dexopt. Sideloaded APKs get no install-time
     // profile, so this is the only way it reaches them. Pinned because the 1.3.1 that arrives
     // transitively predates Android 14's ART and refuses to install anything there.
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
-    implementation("androidx.compose.ui:ui:1.7.6")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.7.6")
-    implementation("androidx.compose.material3:material3:1.3.1")
-    implementation("androidx.compose.material:material-icons-extended:1.7.6")
+    // The Compose BOM keeps every Compose artifact (including the ones only reached transitively, like
+    // foundation and animation) on one release; 2026.09.00 maps ui to 1.12.1 and material3 to 1.4.0.
+    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     // Backdrop blur for the bottom toast so it matches iOS's translucent
     // .ultraThinMaterial look (RenderEffect on API 31+, translucent fallback below).
-    implementation("dev.chrisbanes.haze:haze:1.2.2")
-    implementation("androidx.navigation:navigation-compose:2.8.5")
-    implementation("com.google.android.material:material:1.12.0")
+    implementation("dev.chrisbanes.haze:haze:2.0.1")
+    implementation("dev.chrisbanes.haze:haze-blur:2.0.1")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
+    implementation("com.google.android.material:material:1.14.0")
     implementation("androidx.credentials:credentials:1.6.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
 
@@ -297,11 +290,11 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("app.cash.turbine:turbine:1.2.0")
 
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.7.6")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.7.6")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.7.6")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
 val hasSentryAuth = !System.getenv("SENTRY_AUTH_TOKEN").isNullOrBlank()

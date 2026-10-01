@@ -59,10 +59,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.hazeBlur
 import kotlinx.coroutines.launch
 
 private const val TOAST_ENTER_FADE_DURATION_MS = 180
@@ -316,7 +317,7 @@ private fun TdayToastCard(
     val fadeDistancePx = with(LocalDensity.current) { TOAST_FADE_DISTANCE_DP.dp.toPx() }
     // Icons are removed app-wide. Every toast shares one neutral frosted surface
     // (matches iOS's `.ultraThinMaterial`) — no per-variant red tint, just text
-    // over a strong Haze blur (hazeChild below).
+    // over a strong Haze blur (hazeBlur below).
     //
     // iOS uses `.ultraThinMaterial`: a strong blur with a *light, translucent*
     // tint that lets the colourful content behind bleed through. The Haze default
@@ -324,7 +325,26 @@ private fun TdayToastCard(
     // background — that's why the toast used to read as a flat opaque card. We
     // instead pass an explicit low-alpha surface tint and a larger blur radius so
     // the frost is translucent and the content shows through, exactly like iOS.
-    val frostTint = HazeTint(colorScheme.surface.copy(alpha = if (isDark) 0.38f else 0.55f))
+    //
+    // Haze 2 splits the old `HazeStyle` into a blur Style (radius, background, colour effects)
+    // and a `HazeInput` that says what is blurred. The numbers are the ones the Haze 1 call
+    // passed; noise and edge treatment stay on the library defaults, which are unchanged
+    // (0.15 noise, rectangular edge).
+    val frostBackground = colorScheme.background
+    val frostSurface = colorScheme.surface
+    val frostStyle = remember(frostBackground, frostSurface, isDark) {
+        HazeBlurStyle {
+            backgroundColor(frostBackground)
+            colorEffects(
+                listOf(
+                    HazeColorEffect.tint(
+                        frostSurface.copy(alpha = if (isDark) 0.38f else 0.55f),
+                    ),
+                ),
+            )
+            blurRadius(30.dp)
+        }
+    }
     // The accent now only colours the optional action-label button.
     val accentColor = when (toast.kind) {
         TdayToastKind.ERROR -> colorScheme.error
@@ -364,19 +384,16 @@ private fun TdayToastCard(
             // Haze backdrop and the translucent tint round to the toast shape.
             .shadow(elevation = if (isDark) 8.dp else 6.dp, shape = toastShape)
             .clip(toastShape)
-            // Haze needs an explicit backgroundColor; without it the blur crashes
-            // ("backgroundColor not specified") when a toast draws over content
-            // that has no opaque backing (e.g. the offline toast). The light
-            // `frostTint` + larger blur emulate iOS's `.ultraThinMaterial`; we no
+            // The style keeps an explicit backgroundColor: Haze 1 crashed without one
+            // ("backgroundColor not specified") when a toast drew over content that
+            // has no opaque backing (e.g. the offline toast), and Haze 2 would merely
+            // let that content show through unbacked. The light
+            // frost tint + larger blur emulate iOS's `.ultraThinMaterial`; we no
             // longer paint an opaque surface fill on top (that flattened the blur
             // into a solid dark card).
-            .hazeChild(
-                state = hazeState,
-                style = HazeDefaults.style(
-                    backgroundColor = colorScheme.background,
-                    tint = frostTint,
-                    blurRadius = 30.dp,
-                ),
+            .hazeBlur(
+                input = HazeInput.Sources(hazeState),
+                style = frostStyle,
             )
             .border(
                 width = 1.dp,
