@@ -5,7 +5,7 @@ import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.ViewCompat
 
 /**
- * The app's haptic vocabulary — eight names for eight *events*, not eight waveforms.
+ * The app's haptic vocabulary — nine names for nine *events*, not nine waveforms.
  *
  * Before this file, 55 of the app's 64 haptic call sites fired the same
  * `HapticFeedbackConstantsCompat.CLOCK_TICK`, which meant deleting a task, ticking one off,
@@ -22,7 +22,7 @@ import androidx.core.view.ViewCompat
  * ### The names
  *
  * `buttonPress` · `selection` · `toggle` · `completion` · `destructive` · `dragPickUp` ·
- * `dragDrop` · `reveal`
+ * `dragDrop` · `reveal` · `screenChange`
  *
  * iOS mirrors these names exactly (`HapticManager`), so a reviewer comparing the two
  * clients compares events rather than translating `UIImpactFeedbackGenerator` styles into
@@ -148,5 +148,27 @@ object TdayHaptics {
      */
     fun reveal(view: View) {
         ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.CONTEXT_CLICK)
+    }
+
+    /**
+     * A list screen handed over: Today, Overdue, Scheduled, Priority, All, Completed, the calendar,
+     * a list or an Anytime list, opened or closed. One name for both directions, fired by the
+     * navigation itself rather than by any control, because a close by predictive-back or an
+     * edge swipe has no control to hang it on — which is also why [buttonPress] is the wrong name
+     * for this, and why the name had to be added rather than reused.
+     *
+     * `GESTURE_END` — "the user has finished a gesture". A tile tap and an edge swipe are both
+     * gestures, and the handover is the moment each of them ends. Opening and closing deliberately
+     * feel the SAME: the screen that arrived or left already says which way it went, so spending
+     * `GESTURE_START` on the other direction would buy information the hand does not need and take
+     * a second constant out of circulation.
+     *
+     * Below API 30 the platform substitutes `CONTEXT_CLICK`, which is [reveal]'s constant — the
+     * same kind of collapse the API 30/34 constants above already accept on old devices, and the
+     * two events never land near each other: a row's actions come out inside a screen, this fires
+     * as the screen itself changes.
+     */
+    fun screenChange(view: View) {
+        ViewCompat.performHapticFeedback(view, HapticFeedbackConstantsCompat.GESTURE_END)
     }
 }
