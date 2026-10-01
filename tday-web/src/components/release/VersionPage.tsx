@@ -1,7 +1,6 @@
 import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { CloudDownload, Loader2 } from "lucide-react";
-import { GithubIcon } from "@/components/ui/GithubIcon";
+import { CloudDownload, Github, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -315,7 +314,7 @@ const ReleaseLinkButton = ({ releaseUrl }: { releaseUrl: string }) => {
   return (
     <Button type="button" variant="outline" asChild className="w-full gap-2 sm:w-auto">
       <a href={releaseUrl} target="_blank" rel="noreferrer">
-        <GithubIcon className="h-4 w-4" />
+        <Github className="h-4 w-4" />
         {t("viewOnGithub")}
       </a>
     </Button>
