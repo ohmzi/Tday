@@ -185,34 +185,77 @@ struct RootFeedDock: View {
         .accessibilityLabel(activeTab.title)
     }
 
+    /// The dock's two tabs, drawn here rather than by `UISegmentedControl`.
+    ///
+    /// It WAS that control, and the look is why it is not any more. UIKit changed its mind about
+    /// the selected segment: from iOS 26 it draws a capsule inset from the track on every side,
+    /// and before that a modest-radius rectangle sitting flush against it. Nothing in this app
+    /// chose either — every colour, font and height was already applied identically on both — so
+    /// the dock simply looked like a different control depending on the OS, and the half of it
+    /// that is `collapsedButton` has always been a capsule. Three ways of making the older
+    /// systems draw the capsule were tried against a simulator and all three failed: a selected
+    /// background image alone is ignored, a visible one is drawn per segment so every unselected
+    /// tab wears its own tablet, and a transparent one gets a round left cap and a square right.
+    ///
+    /// Drawing it is the thing that actually matches, on every system and permanently. The app
+    /// already does exactly this for the completion history's tabs (`CompletedScopeTabs`), for
+    /// its own reason, and this follows that shape so the two read as one idiom — the difference
+    /// being capsules rather than rounded rectangles, which is the shape this dock wants.
+    ///
+    /// What moving off UIKit buys beyond the look: the thumb now travels on the app's own
+    /// vocabulary instead of UIKit's private timing, so it takes `Enter` like the Completed
+    /// strip and web's, and it is a clean cut under Reduce Motion rather than an animation the
+    /// gate cannot reach.
+    ///
+    /// No haptic here, deliberately. Selecting a tab calls `onSelect`, and the root already
+    /// fires `HapticManager.selection()` on that path — firing one here too would be two buzzes
+    /// for one tap, which is the defect this branch removed from Android's tiles.
     private var expandedControl: some View {
-        TdayNativeSegmentedControl(
-            labels: tabs.map(\.title),
-            selectedIndex: activeIndex,
-            accentColor: accentColor,
-            controlHeight: RootFeedDockMetrics.height,
-            fontSize: RootFeedDockMetrics.fontSize,
-            onSelect: { index in
-                guard tabs.indices.contains(index) else {
-                    return
+        GeometryReader { proxy in
+            let segmentWidth = proxy.size.width / CGFloat(tabs.count)
+            ZStack(alignment: .leading) {
+                Capsule().fill(colors.surfaceVariant.opacity(0.76))
+
+                Capsule()
+                    .fill(colors.surface)
+                    .frame(width: segmentWidth - RootFeedDockMetrics.thumbInset * 2)
+                    .padding(.vertical, RootFeedDockMetrics.thumbInset)
+                    .padding(.leading, RootFeedDockMetrics.thumbInset)
+                    .offset(x: CGFloat(activeIndex) * segmentWidth)
+                    .animation(
+                        tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter)),
+                        value: activeIndex
+                    )
+
+                HStack(spacing: 0) {
+                    ForEach(Array(tabs.enumerated()), id: \.element) { index, tab in
+                        let selected = index == activeIndex
+                        Button {
+                            guard !selected else { return }
+                            onSelect(tab)
+                        } label: {
+                            Text(tab.title)
+                                .font(TdayFont.font(size: RootFeedDockMetrics.fontSize, weight: .bold))
+                                .foregroundStyle(selected ? accentColor : colors.onSurfaceVariant)
+                                // The label's tint rides the same rung as the thumb under it, so
+                                // the two read as one movement rather than a slide and a flash.
+                                .animation(
+                                    tdayAnimation(TdayMotion.enter(duration: TdayMotion.Durations.enter)),
+                                    value: activeIndex
+                                )
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: RootFeedDockMetrics.height)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(selected ? [.isSelected] : [])
+                    }
                 }
-                onSelect(tabs[index])
             }
-        )
+        }
         .frame(width: RootFeedDockMetrics.width)
         .frame(height: RootFeedDockMetrics.height)
-        // The dock is a capsule, and until this line only HALF of it was. `collapsedButton`
-        // draws its own `Capsule` background, but the expanded control had no shape of its own
-        // and simply showed whatever corner `UISegmentedControl` felt like: a capsule from
-        // iOS 26, a modest rounded rectangle before it. So folding the dock open changed its
-        // silhouette on older systems, and the two halves of one control disagreed about what
-        // shape they were.
-        //
-        // Clipping in SwiftUI rather than reaching for the control's own radius: this is the
-        // same `Capsule` the collapsed half names, it is version-independent, and it cannot be
-        // undone by a future UIKit restyle. On iOS 26 it is a no-op over a shape that is
-        // already a capsule.
-        .clipShape(Capsule())
     }
 }
 
@@ -221,6 +264,10 @@ private enum RootFeedDockMetrics {
     static let collapsedWidth: CGFloat = 60
     static let height: CGFloat = 60
     static let fontSize: CGFloat = 14.5
+    /// From the track's edge to the thumb's, on every side. Matched by eye against iOS 26's own
+    /// drawing of the control this replaced, which is the thing being matched and so the only
+    /// honest source — the system publishes no metric for it.
+    static let thumbInset: CGFloat = 4
 }
 
 /// Where a root feed's dock folds down to its pill, and where it opens back up again.
