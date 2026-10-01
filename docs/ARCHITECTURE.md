@@ -456,9 +456,9 @@ User ──┬── Todo ──── TodoInstance
 
 ### ORM and Migrations
 
-- **ORM**: JetBrains Exposed 0.57.0 (DSL/Table API with `newSuspendedTransaction(Dispatchers.IO) {}` for coroutine-safe DB access)
-- **Connection pool**: HikariCP 6.2.1 (max 10 connections, auto-commit off)
-- **Migrations**: Flyway 10.22.0 with `baselineOnMigrate=true` and a baseline version of `2` for legacy databases. Migration files live in `tday-backend/src/main/resources/db/migration/`, with `V2__full_schema.sql` serving as the clean-install schema snapshot.
+- **ORM**: JetBrains Exposed 1.5.0 (`org.jetbrains.exposed.v1.*` packages; DSL/Table API with `newSuspendedTransaction(Dispatchers.IO) {}` for coroutine-safe DB access)
+- **Connection pool**: HikariCP 7.1.0 (max 10 connections, auto-commit off)
+- **Migrations**: Flyway 13.8.1 with `baselineOnMigrate=true` and a baseline version of `2` for legacy databases. Migration files live in `tday-backend/src/main/resources/db/migration/`, with `V2__full_schema.sql` serving as the clean-install schema snapshot.
 - **Driver**: PostgreSQL JDBC 42.7.4
 
 ### PostgreSQL Enums
