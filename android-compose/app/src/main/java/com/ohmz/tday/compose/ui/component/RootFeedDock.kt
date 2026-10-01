@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -158,8 +157,14 @@ object RootFeedDockCollapse {
  * [interactiveTimeoutMillis].
  */
 private const val RootFeedDockTapExpansionMs = 2_400L
-private val RootFeedDockShape = RoundedCornerShape(TdayDimens.RootFeedDockRadius)
-private val RootFeedDockSelectorShape = RoundedCornerShape(TdayDimens.RootFeedDockSelectorRadius)
+// Capsules, not fixed radii. The dock is 64dp tall and its selector a little less, so a 25dp
+// track corner and a 20dp selector corner are both short of half their own height — they read as
+// rounded rectangles, which is what iOS looked like before its own dock was redrawn and is the
+// difference the two clients were reported for. `CircleShape` is Compose's capsule: it rounds by
+// half the shorter side, so it stays a capsule if either dimension is ever retuned, which a
+// hard-coded dp cannot. iOS says the same thing with `Capsule()` in `Core/UI/RootFeedDock.swift`.
+private val RootFeedDockShape = CircleShape
+private val RootFeedDockSelectorShape = CircleShape
 
 @StringRes
 internal fun RootFeedTab.labelRes(): Int {
