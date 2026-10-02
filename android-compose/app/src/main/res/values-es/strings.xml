@@ -681,6 +681,21 @@
     <string name="settings_resting_floaters">Flotantes en reposo</string>
     <string name="settings_calendar_sync">Añadir tareas programadas a mi calendario</string>
     <string name="settings_privacy">Privacidad</string>
+    <string name="settings_crash_reports">Informes de fallos y problemas</string>
+    <string name="settings_crash_reports_toggle">Enviar informes de fallos y problemas cuando algo falle</string>
+    <string name="settings_crash_reports_help">Acerca de los informes de fallos y problemas</string>
+
+    <!-- Crash reports: the one-time consent card -->
+    <string name="telemetry_card_title">¿Ayudas a corregir fallos?</string>
+    <string name="telemetry_card_intro">T\'Day puede enviar un breve informe técnico solo cuando algo sale mal, como un cierre inesperado, un bloqueo o un error inesperado. Ayuda al desarrollador a reproducir el problema en un dispositivo similar.</string>
+    <string name="telemetry_card_sent_label">Qué se incluye</string>
+    <string name="telemetry_card_sent">Versión de la app, modelo del dispositivo, versión del sistema operativo, qué falló y dónde.</string>
+    <string name="telemetry_card_never_sent_label">Nunca se incluye</string>
+    <string name="telemetry_card_never_sent">Tu nombre o cuenta, tu dirección IP, tu ubicación, la dirección de tu servidor ni ningún contenido de tus tareas o listas.</string>
+    <string name="telemetry_card_footnote">Desactivado por defecto. Cámbialo cuando quieras en Ajustes → Privacidad.</string>
+    <string name="telemetry_card_share">Compartir informes</string>
+    <string name="telemetry_card_not_now">Ahora no</string>
+    <string name="telemetry_card_read_faq">Leer las FAQ completas</string>
     <string name="root_feed_search_scheduled">Buscar tareas programadas</string>
     <string name="root_feed_search_floater">Buscar tareas flotantes</string>
 

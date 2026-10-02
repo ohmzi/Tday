@@ -109,7 +109,11 @@ struct SettingsScreen: View {
     }
 
     private var showsPrivacyCard: Bool {
-        matchesSearch(["Privacy", "Require Face ID to open T'Day"])
+        var terms = ["Privacy", "Require Face ID to open T'Day"]
+        if viewModel.container.telemetryConsent.isAvailable {
+            terms.append("Crash & problem reports")
+        }
+        return matchesSearch(terms)
     }
 
     // The tail of the screen is four small cards rather than one large one, so
@@ -402,6 +406,12 @@ struct SettingsScreen: View {
                     SettingsSectionCard {
                         SettingsSectionTitle("Privacy")
                         SettingsAppLockSection()
+                        // Only in a build that can send a report at all: with no DSN there is
+                        // nothing to switch, and the row would be a promise nothing keeps.
+                        if viewModel.container.telemetryConsent.isAvailable {
+                            SettingsDivider()
+                            SettingsCrashReportsSection(model: viewModel.container.telemetryConsent)
+                        }
                     }
                 }
             }
@@ -410,6 +420,11 @@ struct SettingsScreen: View {
             // children, and the header, the four cards above and the two
             // trailing rows already spend seven of them.
             Group {
+                // TEST-CRASH: always shown, whatever the search says; one row of the Group.
+                settingsListRow {
+                    TestCrashSettingsPanel()
+                }
+
                 if showsAboutCard {
                     settingsListRow {
                         SettingsSectionCard {
@@ -752,6 +767,52 @@ private struct SettingsAppLockSection: View {
             #if canImport(WidgetKit)
             WidgetCenter.shared.reloadAllTimelines()
             #endif
+        }
+    }
+}
+
+// MARK: - Crash reports
+
+/// Opt-in "send a short technical report when something fails". DEFAULT OFF, and nothing is
+/// collected, queued or sent until it is on (`TelemetryConsentStore`). Answering the card after
+/// the setup wizard and flipping this row are the same answer, written by the same model.
+///
+/// Label, "?" and switch are built out rather than left as `Toggle { label }` — the same reason
+/// `SettingsNotificationsSection` gives. The "?" opens the crash-reports topic of the guide, and
+/// inside a Toggle's label it would sit in the switch's own tap target and flip it instead.
+private struct SettingsCrashReportsSection: View {
+    let model: TelemetryConsentModel
+
+    @Environment(\.tdayColors) private var colors
+
+    var body: some View {
+        HStack(spacing: 14) {
+            SettingsRowIcon(asset: "LucideActivity")
+
+            Text(L("Crash & problem reports"))
+                .font(.body.weight(.heavy))
+                .foregroundStyle(colors.onSurface)
+
+            Spacer(minLength: 4)
+
+            GuideHelpLink(topicId: GuideTopicId.crashReports, label: "About crash & problem reports")
+
+            Toggle(
+                "",
+                isOn: Binding(
+                    get: { model.isEnabled },
+                    set: { value in
+                        if value {
+                            model.share()
+                        } else {
+                            model.decline()
+                        }
+                    }
+                )
+            )
+            .labelsHidden()
+            .tint(colors.secondary)
+            .accessibilityLabel(Text(L("Send crash & problem reports when something fails")))
         }
     }
 }

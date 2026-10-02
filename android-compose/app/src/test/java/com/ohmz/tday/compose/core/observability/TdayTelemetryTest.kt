@@ -21,10 +21,22 @@ class TdayTelemetryTest {
     }
 
     @Test
-    fun `clamps trace sample rates`() {
-        assertEquals(0.25, TdayTelemetry.traceSampleRate("0.25", 1.0), 0.0)
-        assertEquals(1.0, TdayTelemetry.traceSampleRate("5", 0.2), 0.0)
-        assertEquals(0.2, TdayTelemetry.traceSampleRate("nope", 0.2), 0.0)
+    fun `turns a navigation pattern into a path that names the screen and not what is on it`() {
+        assertEquals(
+            "/todos/list/:listId/:listName",
+            TdayTelemetry.navigationTemplate("todos/list/{listId}/{listName}"),
+        )
+        assertEquals("/help-guide", TdayTelemetry.navigationTemplate("help-guide?topic={topic}"))
+        assertEquals("/home", TdayTelemetry.navigationTemplate("home"))
+        assertEquals("/", TdayTelemetry.navigationTemplate(""))
+    }
+
+    @Test
+    fun `a navigation segment that is neither a route name nor a placeholder is not trusted`() {
+        assertEquals(
+            "/todos/list/:value/:value",
+            TdayTelemetry.navigationTemplate("todos/list/9d2f 4c/Weekly shop"),
+        )
     }
 
     @Test

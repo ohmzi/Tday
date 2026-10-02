@@ -1,3 +1,5 @@
+import { TestCrashButton } from "@/components/TestCrashButton"; // TEST-CRASH
+import type { TestCrashId } from "@/lib/testCrash"; // TEST-CRASH
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarClock, Clock3, Flag, Layers, Moon, Search, Sun } from "lucide-react";
@@ -341,6 +343,19 @@ const AllTasksTimelineContainer = ({
             accentColor={timelineScopeAccentColors[scope]}
             icon={ScopeIcon}
             barSlots={barSlots}
+          />
+
+          {/* TEST-CRASH */}
+          <TestCrashButton
+            id={
+              {
+                today: "TC-BUILTIN-TODAY",
+                overdue: "TC-BUILTIN-OVERDUE",
+                priority: "TC-BUILTIN-PRIO",
+                scheduled: "TC-BUILTIN-SCHED",
+                all: "TC-BUILTIN-ALL",
+              }[scope] as TestCrashId
+            }
           />
 
           {/* Stood down while a query finds nothing: a week-summary card sitting

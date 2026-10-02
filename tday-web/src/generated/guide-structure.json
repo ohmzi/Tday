@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "currentVersion": "0.7.49",
+  "currentVersion": "0.8.0",
   "sections": [
     {
       "id": "GETTING_STARTED",
@@ -1052,6 +1052,72 @@
       "helpAnchors": [],
       "serverOnly": false,
       "sinceVersion": "0.5.0"
+    },
+    {
+      "id": "crash-reports",
+      "section": "MODES_AND_SYNC",
+      "icon": "activity",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "titleKey": "guide.topics.crash-reports.title",
+      "summaryKey": "guide.topics.crash-reports.summary",
+      "keywordsKey": "guide.topics.crash-reports.keywords",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.crash-reports.body"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.crash-reports.body2"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.crash-reports.body3"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.crash-reports.body4"
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "keys": [
+            "guide.topics.crash-reports.body5"
+          ]
+        },
+        {
+          "type": "STEPS",
+          "keys": [
+            "guide.topics.crash-reports.step0",
+            "guide.topics.crash-reports.step1",
+            "guide.topics.crash-reports.step2"
+          ]
+        },
+        {
+          "type": "TIP",
+          "keys": [
+            "guide.topics.crash-reports.tip"
+          ]
+        }
+      ],
+      "badge": null,
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-privacy"
+      ],
+      "serverOnly": false,
+      "sinceVersion": "0.8.0"
     },
     {
       "id": "ai-summary",

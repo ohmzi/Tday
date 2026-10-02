@@ -56,6 +56,17 @@ PROCESSING_SUCCESS_STATE = "VALID".freeze
 # xcconfig, where a `//` sequence starts a comment and would silently truncate the value.
 PROBE_KEY_SHAPE = %r{\A[A-Za-z0-9+/=_-]+\z}
 
+# A Sentry DSN is `https://<public key>@<host>/<project id>`: a hex key, a hostname, a numeric
+# project. Anything else is not a DSN the SDK can use, so it fails the lane here rather than
+# shipping as a build whose crash reporting silently never starts. It also guarantees the only
+# `//` in the value is the scheme's, which is what the xcconfig escape in `beta` relies on.
+SENTRY_DSN_SHAPE = %r{\Ahttps://[0-9a-f]+@[a-z0-9.-]+/\d+\z}i
+
+# The Sentry project the iOS dSYMs belong to — the same organization the web and Android
+# projects live in (tday-web/vite.config.ts, android-compose/app/build.gradle.kts).
+SENTRY_ORG = "tday-kb".freeze
+SENTRY_IOS_PROJECT = "tday-ios".freeze
+
 # Apple Development certificates are valid for one year. Warn this far ahead of expiry so the
 # secret gets rotated before the archive silently goes back to minting throwaway certificates.
 DEVELOPMENT_CERT_RENEWAL_WARNING_DAYS = 30
@@ -134,15 +145,61 @@ end
 
 # `Tday/Info.plist` publishes `TdayProbeEncryptionKey` as `$(TDAY_PROBE_ENCRYPTION_KEY)`, and an
 # undefined build setting expands to the empty string — which makes `ProbeDecryptor` return nil
-# and silently disables the whole server version-compatibility gate. The value is passed through
-# a temporary xcconfig rather than `xcargs` on purpose: gym echoes the assembled xcodebuild
+# and silently disables the whole server version-compatibility gate. It publishes `SENTRY_DSN`
+# the same way, so an undefined one leaves crash reporting off. Both values are passed through a
+# temporary xcconfig rather than `xcargs` on purpose: gym echoes the assembled xcodebuild
 # command into the build log, and xcargs would put the secret in it.
-def write_build_settings_xcconfig(probe_setting) # skipcq: SCT-A000
+#
+# `-xcconfig` outranks every other source of a build setting, the target-level `SENTRY_DSN = ""`
+# in the pbxproj included, so the value reaches Info.plist without touching the project.
+def write_build_settings_xcconfig(settings) # skipcq: SCT-A000
   path = File.join(scratch_dir, "tday-build-settings.xcconfig")
   File.open(path, File::WRONLY | File::CREAT | File::TRUNC, 0o600) do |file|
-    file.write("TDAY_PROBE_ENCRYPTION_KEY = #{probe_setting}\n") # skipcq: SCT-A000
+    settings.each { |name, value| file.write("#{name} = #{value}\n") } # skipcq: SCT-A000
   end
   path
+end
+
+# Sentry cannot symbolicate an iOS crash without this build's dSYMs: a report would be a list of
+# raw addresses. It runs BEFORE `upload_to_testflight`, deliberately — App Store Connect spends the
+# (version, buildNumber) pair the moment it accepts an upload, so a failure here has to cost a
+# re-run, not a build number.
+#
+# Skipped without SENTRY_AUTH_TOKEN (a local `fastlane beta`, a fork). With one, anything short of
+# a successful upload fails the lane: a release whose crash reports cannot be read is not the
+# release that was meant. sentry-cli reads the token from the environment itself, so it is never
+# on a command line or in the log.
+def upload_dsyms_to_sentry(dsym_zip_path)
+  if ENV["SENTRY_AUTH_TOKEN"].to_s.strip.empty? # skipcq: SCT-A000
+    UI.important(
+      "SENTRY_AUTH_TOKEN is not set: the dSYMs are not uploaded, so crash reports from this " \
+      "build will not symbolicate."
+    )
+    return
+  end
+
+  if dsym_zip_path.to_s.empty? || !File.exist?(dsym_zip_path)
+    UI.user_error!(
+      "SENTRY_AUTH_TOKEN is set but the archive produced no dSYM zip to upload. Nothing was " \
+      "sent to TestFlight, so the build number is still free."
+    )
+  end
+
+  begin
+    sh(
+      "sentry-cli", "debug-files", "upload",
+      "--org", SENTRY_ORG, "--project", SENTRY_IOS_PROJECT,
+      dsym_zip_path
+    )
+  rescue StandardError => e
+    UI.user_error!(
+      "sentry-cli could not upload the dSYMs to Sentry (#{e.class}; its own output is above). " \
+      "Nothing was sent to TestFlight, so the build number is still free — fix the cause (the " \
+      "SENTRY_AUTH_TOKEN scope, or sentry-cli missing from PATH) and re-run."
+    )
+  end
+
+  UI.success("Uploaded the dSYMs to Sentry (#{SENTRY_ORG}/#{SENTRY_IOS_PROJECT}).")
 end
 
 # ---------------------------------------------------------------------------
@@ -546,6 +603,10 @@ platform :ios do
       pem = decode_private_key(encoded_key)
       key_path = write_private_key(key_id, pem)
 
+      # Everything the build reads from the environment rather than from the project: written to
+      # one temporary xcconfig below, so no value ever reaches an xcodebuild command line.
+      build_settings = {}
+
       # Not fatal: a local `fastlane beta` should not need the production probe key. CI enforces
       # its presence in the `decide` job instead, so a real release cannot ship without it.
       probe_setting = ENV["TDAY_PROBE_ENCRYPTION_KEY"].to_s.strip # skipcq: SCT-A000
@@ -561,8 +622,31 @@ platform :ios do
           "comment in an xcconfig). Re-check the secret; its value is not printed here."
         )
       else
-        xcconfig_path = write_build_settings_xcconfig(probe_setting)
+        build_settings["TDAY_PROBE_ENCRYPTION_KEY"] = probe_setting
       end
+
+      # Optional and silent when absent: with no DSN the app ships with crash reporting off and no
+      # consent card. Garbage is the opposite case and fails loudly — a typo'd secret would
+      # otherwise produce exactly that silent absence in a build that was meant to have it.
+      #
+      # The `//` trap again, and here it cannot be rejected as it is for the probe key: every DSN
+      # contains one, in `https://`. In an xcconfig `//` starts a comment, so written as-is the
+      # setting would be cut off at `https:` and ship as a DSN that fails to parse. `$()` is an
+      # empty variable reference — it breaks the sequence and expands to nothing, so Info.plist
+      # still receives the original value. SENTRY_DSN_SHAPE has already guaranteed the scheme's is
+      # the only `//` in it.
+      sentry_dsn = ENV["SENTRY_DSN"].to_s.strip # skipcq: SCT-A000
+      unless sentry_dsn.empty?
+        unless sentry_dsn.match?(SENTRY_DSN_SHAPE)
+          UI.user_error!(
+            "SENTRY_DSN is not shaped like a Sentry DSN (https://<key>@<host>/<project id>). " \
+            "Re-check the SENTRY_DSN_IOS secret; its value is not printed here."
+          )
+        end
+        build_settings["SENTRY_DSN"] = sentry_dsn.sub("//", "/$()/")
+      end
+
+      xcconfig_path = write_build_settings_xcconfig(build_settings) unless build_settings.empty?
 
       # The persistent Apple Development certificate the archive is signed with — see "CI signing
       # keychain" above. REQUIRED on GitHub Actions: without it the archive would fall back to
@@ -763,6 +847,11 @@ platform :ios do
         )
         next
       end
+
+      # Before the TestFlight upload, never after it: see `upload_dsyms_to_sentry`.
+      upload_dsyms_to_sentry(
+        Fastlane::Actions.lane_context[Fastlane::Actions::SharedValues::DSYM_OUTPUT_PATH]
+      )
 
       # Deliberately the last thing the lane does. Everything that can fail — resolving SPM,
       # compiling five targets, minting profiles, exporting the .ipa — has already either

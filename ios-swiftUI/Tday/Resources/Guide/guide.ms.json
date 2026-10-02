@@ -1,5 +1,5 @@
 {
-  "currentVersion": "0.7.49",
+  "currentVersion": "0.8.0",
   "ui": {
     "title": "Panduan & Petua",
     "subtitle": "Segala yang T'Day mampu lakukan — yang jelas dan yang tersembunyi.",
@@ -1520,7 +1520,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Mod Tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. Ia cara utama untuk menggunakan T'Day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. Dalam pelayar ia disimpan dalam storan pelayar itu sendiri, jadi membersihkan kuki dan data tapak turut membuang ruang kerja itu — eksport dahulu jika mahu menyimpannya."
+            "Mod Tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. Ia cara utama untuk menggunakan T'Day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. Dalam pelayar ia disimpan dalam storan pelayar itu sendiri, jadi membersihkan kuki dan data tapak turut membuang ruang kerja itu — eksport dahulu jika mahu menyimpannya. Jika anda memilih untuk menyertai laporan ranap, hanya laporan teknikal ringkas dihantar apabila sesuatu gagal, tidak pernah tugasan atau senarai anda."
           ]
         },
         {
@@ -1532,7 +1532,7 @@
       ],
       "searchTitle": "mod tempatan",
       "searchKeywords": "mod tempatan, luar talian, peribadi, tanpa akaun, tanpa pelayan, pada peranti",
-      "searchBody": "guna t'day sepenuhnya luar talian, tanpa pelayan atau akaun. mod tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. ia cara utama untuk menggunakan t'day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. dalam pelayar ia disimpan dalam storan pelayar itu sendiri, jadi membersihkan kuki dan data tapak turut membuang ruang kerja itu — eksport dahulu jika mahu menyimpannya. ciri khusus pelayan dipaparkan di sini dengan lencana “mod pelayan” supaya anda tahu apa yang berubah jika anda log masuk."
+      "searchBody": "guna t'day sepenuhnya luar talian, tanpa pelayan atau akaun. mod tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. ia cara utama untuk menggunakan t'day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. dalam pelayar ia disimpan dalam storan pelayar itu sendiri, jadi membersihkan kuki dan data tapak turut membuang ruang kerja itu — eksport dahulu jika mahu menyimpannya. jika anda memilih untuk menyertai laporan ranap, hanya laporan teknikal ringkas dihantar apabila sesuatu gagal, tidak pernah tugasan atau senarai anda. ciri khusus pelayan dipaparkan di sini dengan lencana “mod pelayan” supaya anda tahu apa yang berubah jika anda log masuk."
     },
     {
       "id": "server-mode",
@@ -1659,6 +1659,75 @@
       "searchTitle": "pindah dari peranti ini ke pelayan",
       "searchKeywords": "pindah, tempatan ke pelayan, alih data, tukar mod, muat naik, log masuk, pindahkan",
       "searchBody": "bawa tugasan dalam peranti anda apabila beralih ke mod pelayan. bermula dalam mod tempatan dan kemudian menyediakan pelayan? tiada apa-apa dimuat naik dengan sendirinya. untuk memindahkan data anda: eksport dahulu daripada tetapan, log masuk ke pelayan anda, kemudian import fail itu di sana. tugasan, senarai dan sejarah berpindah dalam satu langkah yang disengajakan — anda pilih masanya, dan data dalam peranti kekal tidak tersentuh sehingga itu. selepas import, simpan fail yang dieksport sehingga anda sahkan semuanya tiba — ia juga berfungsi sebagai sandaran."
+    },
+    {
+      "id": "crash-reports",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "activity",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-privacy"
+      ],
+      "title": "Laporan ranap & masalah",
+      "summary": "Pilihan, dimatikan secara lalai. Dihantar hanya apabila sesuatu gagal.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Laporan ranap & masalah bersifat pilihan dan dimatikan secara lalai. Jika anda menghidupkannya, T'Day menghantar laporan teknikal ringkas hanya pada saat sesuatu gagal: apl ranap, beku, ralat yang tidak dijangka, atau kehabisan memori. Ia berfungsi seperti Crashlytics: wujud untuk membaiki pepijat, bukan untuk mengukur cara anda menggunakan apl. Tiada analitik penggunaan, tiada penjejakan sesi dan tiada pemantauan prestasi pada peranti anda semasa semuanya berjalan seperti biasa."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Laporan mengandungi versi apl, model peranti dan versi OS anda (atau pelayar dan versinya), ralat dan tempat dalam kod ia berlaku, beberapa langkah berlabel yang membawa kepadanya, nama skrin atau laluan API tanpa sebarang ID, kod status, dan pada mudah alih keadaan kasar peranti seperti memori kosong, tahap bateri dan sama ada anda berada dalam talian. Ia juga merangkumi ofset zon masa anda (contohnya UTC+2) dan bahasa, kerana tarikh adalah teras sebuah perancang tugasan."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Laporan tidak pernah mengandungi: nama, nama pengguna, e-mel atau sebarang butiran akaun anda; alamat IP atau lokasi anda; alamat pelayan anda; tajuk dan kandungan tugasan, senarai atau nota; kandungan pangkalan data anda; kata laluan, kuki atau token; tangkapan skrin atau rakaman. Mesej ralat dibersihkan daripada alamat, pengecam dan teks yang dipetik pada peranti anda sebelum dihantar, secara usaha terbaik. Laporan tidak membawa ID pengguna, jadi ia tidak boleh dikesan kembali kepada anda atau dipadam bagi setiap orang."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Laporan dihantar hanya selepas anda memilih untuk menyertai, dan hanya apabila kegagalan berlaku. Jika sesuatu gagal semasa tetapan ini dimatikan, tiada apa-apa disimpan atau dimasukkan ke baris gilir, dan menghidupkannya kemudian tidak menghantar kegagalan terdahulu. Apa yang dikira sebagai kegagalan bergantung pada platform: Android melaporkan ranap, beku dan ranap kehabisan memori; iOS melaporkan ranap, beku dan sistem menamatkan apl kerana menggunakan terlalu banyak memori; apl web hanya melaporkan ralat yang tidak dijangka. T'Day tidak mengesan kebocoran memori."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Laporan sampai kepada penyelenggara T'Day melalui Sentry, sebuah perkhidmatan pelaporan ranap. Laporan disimpan selama 30 hari dan digunakan hanya untuk membaiki pepijat, tidak pernah dijual atau dikongsi untuk pengiklanan. Ia dihantar terus ke Sentry, bukan melalui pelayan anda. Sentry dapat melihat alamat rangkaian bagi sebarang sambungan, seperti mana-mana perkhidmatan dalam talian, tetapi ia ditetapkan supaya tidak menyimpannya, dan apl web juga memberitahu Sentry laman web mana laporan itu datang. Jika anda menjalankan pelayan sendiri, pelayan itu boleh menghantar laporan ralatnya sendiri secara berasingan, serta tempoh masa bagi sampel kecil permintaan, ke Sentry pengendalinya apabila pengendali menghidupkannya. Itu tidak pernah merangkumi tugasan anda. Binaan tanpa titik akhir pelaporan, seperti yang anda bina sendiri, tidak memaparkan tetapan ini."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Buka Tetapan.",
+            "Buka Privasi dan matikan \"Laporan ranap & masalah\".",
+            "Laporan berhenti serta-merta, dan apa-apa yang menunggu untuk dihantar dipadam."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Memilih \"Bukan sekarang\" tidak mengenakan sebarang kos. Anda boleh menghidupkannya pada bila-bila masa dalam Tetapan → Privasi. Butiran teknikal: docs/TELEMETRY.md dalam repositori T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "laporan ranap & masalah",
+      "searchKeywords": "ranap, ralat, laporan, privasi, diagnostik, telemetri, beku, tergantung, memori, analitik, crash, error, report, sentry, privacy, diagnostics, telemetry, hang, anr, memory, analytics",
+      "searchBody": "pilihan, dimatikan secara lalai. dihantar hanya apabila sesuatu gagal. laporan ranap & masalah bersifat pilihan dan dimatikan secara lalai. jika anda menghidupkannya, t'day menghantar laporan teknikal ringkas hanya pada saat sesuatu gagal: apl ranap, beku, ralat yang tidak dijangka, atau kehabisan memori. ia berfungsi seperti crashlytics: wujud untuk membaiki pepijat, bukan untuk mengukur cara anda menggunakan apl. tiada analitik penggunaan, tiada penjejakan sesi dan tiada pemantauan prestasi pada peranti anda semasa semuanya berjalan seperti biasa. laporan mengandungi versi apl, model peranti dan versi os anda (atau pelayar dan versinya), ralat dan tempat dalam kod ia berlaku, beberapa langkah berlabel yang membawa kepadanya, nama skrin atau laluan api tanpa sebarang id, kod status, dan pada mudah alih keadaan kasar peranti seperti memori kosong, tahap bateri dan sama ada anda berada dalam talian. ia juga merangkumi ofset zon masa anda (contohnya utc+2) dan bahasa, kerana tarikh adalah teras sebuah perancang tugasan. laporan tidak pernah mengandungi: nama, nama pengguna, e-mel atau sebarang butiran akaun anda; alamat ip atau lokasi anda; alamat pelayan anda; tajuk dan kandungan tugasan, senarai atau nota; kandungan pangkalan data anda; kata laluan, kuki atau token; tangkapan skrin atau rakaman. mesej ralat dibersihkan daripada alamat, pengecam dan teks yang dipetik pada peranti anda sebelum dihantar, secara usaha terbaik. laporan tidak membawa id pengguna, jadi ia tidak boleh dikesan kembali kepada anda atau dipadam bagi setiap orang. laporan dihantar hanya selepas anda memilih untuk menyertai, dan hanya apabila kegagalan berlaku. jika sesuatu gagal semasa tetapan ini dimatikan, tiada apa-apa disimpan atau dimasukkan ke baris gilir, dan menghidupkannya kemudian tidak menghantar kegagalan terdahulu. apa yang dikira sebagai kegagalan bergantung pada platform: android melaporkan ranap, beku dan ranap kehabisan memori; ios melaporkan ranap, beku dan sistem menamatkan apl kerana menggunakan terlalu banyak memori; apl web hanya melaporkan ralat yang tidak dijangka. t'day tidak mengesan kebocoran memori. laporan sampai kepada penyelenggara t'day melalui sentry, sebuah perkhidmatan pelaporan ranap. laporan disimpan selama 30 hari dan digunakan hanya untuk membaiki pepijat, tidak pernah dijual atau dikongsi untuk pengiklanan. ia dihantar terus ke sentry, bukan melalui pelayan anda. sentry dapat melihat alamat rangkaian bagi sebarang sambungan, seperti mana-mana perkhidmatan dalam talian, tetapi ia ditetapkan supaya tidak menyimpannya, dan apl web juga memberitahu sentry laman web mana laporan itu datang. jika anda menjalankan pelayan sendiri, pelayan itu boleh menghantar laporan ralatnya sendiri secara berasingan, serta tempoh masa bagi sampel kecil permintaan, ke sentry pengendalinya apabila pengendali menghidupkannya. itu tidak pernah merangkumi tugasan anda. binaan tanpa titik akhir pelaporan, seperti yang anda bina sendiri, tidak memaparkan tetapan ini. buka tetapan. buka privasi dan matikan \"laporan ranap & masalah\". laporan berhenti serta-merta, dan apa-apa yang menunggu untuk dihantar dipadam. memilih \"bukan sekarang\" tidak mengenakan sebarang kos. anda boleh menghidupkannya pada bila-bila masa dalam tetapan → privasi. butiran teknikal: docs/telemetry.md dalam repositori t'day."
     },
     {
       "id": "ai-summary",

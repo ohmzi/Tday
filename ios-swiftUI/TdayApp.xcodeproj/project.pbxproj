@@ -203,6 +203,22 @@
 		F2E1D0C9B8A7F6E5D4C3B2A1 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* HapticManager.swift */; };
 		F5D16EE508D6244152B8E4B2 /* ServerURLState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24DBD8CA3EE648D4560B880 /* ServerURLState.swift */; };
 		FCDE195DEB990E58558699B1 /* ErrorRetryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE3D896A638869384B4CF1EF /* ErrorRetryView.swift */; };
+		BD0FF85ED3C4ADA02B3D4508 /* SlowOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C4A120076AEA4D23A2FECF /* SlowOperation.swift */; };
+		82BEFBFEBA82B7B233D1BD3C /* TelemetryConsentModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E82BADDB0F421FEDB4AE2C78 /* TelemetryConsentModel.swift */; };
+		76FD1B62A577FC70877D5CF3 /* TelemetryConsentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48476967315177D0F41D0AA5 /* TelemetryConsentStore.swift */; };
+		C4372887F210671ACDDF4306 /* TelemetryLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 661D21C26307ABAE56465993 /* TelemetryLifecycle.swift */; };
+		7B41BE78254884F02F6CA527 /* TelemetryScrubber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C30EE6553DBF2DE2EBB5E9 /* TelemetryScrubber.swift */; };
+		4C55D2CB44A40B86DF640958 /* TelemetryConsentCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4617184504DDB21C95729411 /* TelemetryConsentCard.swift */; };
+		976263AFDB011B0C942217E7 /* TestCrash.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7F49387AF02EAFC81DC885E /* TestCrash.swift */; };
+		F23717CEA40D9A19CC8CF40C /* TestCrashButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB6C30815F0DC7B09959F195 /* TestCrashButton.swift */; };
+		DD9B62D642F6FD4F1C067773 /* SentryConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA75002D78D6DC0FF70B1019 /* SentryConfigurationTests.swift */; };
+		2C8FBEB019195DBB9ADF4F47 /* SlowOperationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7711621D96EC718E5FA3252 /* SlowOperationTests.swift */; };
+		97525E76F35537FE5D45D7C1 /* TestCrashTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0029A8CE62D2FFDC6C2AD7 /* TestCrashTests.swift */; };
+		EEB7FC0322BDB9F52792220E /* TelemetryConsentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC0601D53154733344DEBE3 /* TelemetryConsentTests.swift */; };
+		3456D9EC9685351BD71D1BEB /* TelemetryEventScrubTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B30922DCF49B1B4EA624153 /* TelemetryEventScrubTests.swift */; };
+		2FEF0395C0DE979374663DD6 /* TelemetryLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 170037AFBF0247A60F8A42A1 /* TelemetryLifecycleTests.swift */; };
+		B2D912C7C3C918AC06A9F5E2 /* TelemetryScrubberTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B020C85FDD716AC5B6935B6 /* TelemetryScrubberTests.swift */; };
+		C46DDBCE3F3321935FAFBE05 /* Sentry-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 310C0E9E9ADE8EFB6F2491C1 /* Sentry-Dynamic */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -480,6 +496,21 @@
 		F2C4D6E8A1B3456790ABCDEF /* TdaySheetChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TdaySheetChrome.swift; sourceTree = "<group>"; };
 		FC47AEF5EB0B44524D8C20B1 /* SettingsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsScreen.swift; sourceTree = "<group>"; };
 		FC92D6152EADEDF915AE116B /* TodayTasksWidgetSnapshotStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTasksWidgetSnapshotStoreTests.swift; sourceTree = "<group>"; };
+		A5C4A120076AEA4D23A2FECF /* SlowOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlowOperation.swift; sourceTree = "<group>"; };
+		E82BADDB0F421FEDB4AE2C78 /* TelemetryConsentModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryConsentModel.swift; sourceTree = "<group>"; };
+		48476967315177D0F41D0AA5 /* TelemetryConsentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryConsentStore.swift; sourceTree = "<group>"; };
+		661D21C26307ABAE56465993 /* TelemetryLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryLifecycle.swift; sourceTree = "<group>"; };
+		66C30EE6553DBF2DE2EBB5E9 /* TelemetryScrubber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryScrubber.swift; sourceTree = "<group>"; };
+		4617184504DDB21C95729411 /* TelemetryConsentCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryConsentCard.swift; sourceTree = "<group>"; };
+		C7F49387AF02EAFC81DC885E /* TestCrash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestCrash.swift; sourceTree = "<group>"; };
+		BB6C30815F0DC7B09959F195 /* TestCrashButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestCrashButton.swift; sourceTree = "<group>"; };
+		BA75002D78D6DC0FF70B1019 /* SentryConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryConfigurationTests.swift; sourceTree = "<group>"; };
+		B7711621D96EC718E5FA3252 /* SlowOperationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlowOperationTests.swift; sourceTree = "<group>"; };
+		BE0029A8CE62D2FFDC6C2AD7 /* TestCrashTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestCrashTests.swift; sourceTree = "<group>"; };
+		0AC0601D53154733344DEBE3 /* TelemetryConsentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryConsentTests.swift; sourceTree = "<group>"; };
+		8B30922DCF49B1B4EA624153 /* TelemetryEventScrubTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryEventScrubTests.swift; sourceTree = "<group>"; };
+		170037AFBF0247A60F8A42A1 /* TelemetryLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryLifecycleTests.swift; sourceTree = "<group>"; };
+		7B020C85FDD716AC5B6935B6 /* TelemetryScrubberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryScrubberTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -516,6 +547,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6B3006D75D0C52A267A9BF28 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C46DDBCE3F3321935FAFBE05 /* Sentry-Dynamic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -594,6 +633,13 @@
 				7BF881C9B39C6DF685E58AA6 /* DefaultHomeScreenTests.swift */,
 				19F61DADBD9B8EFC300698C4 /* SystemCredentialLoginTests.swift */,
 				5E7E7A8C0B534B26A6E2F911 /* TelemetrySanitizerTests.swift */,
+				BA75002D78D6DC0FF70B1019 /* SentryConfigurationTests.swift */,
+				B7711621D96EC718E5FA3252 /* SlowOperationTests.swift */,
+				BE0029A8CE62D2FFDC6C2AD7 /* TestCrashTests.swift */,
+				0AC0601D53154733344DEBE3 /* TelemetryConsentTests.swift */,
+				8B30922DCF49B1B4EA624153 /* TelemetryEventScrubTests.swift */,
+				170037AFBF0247A60F8A42A1 /* TelemetryLifecycleTests.swift */,
+				7B020C85FDD716AC5B6935B6 /* TelemetryScrubberTests.swift */,
 				C0FE7715B8C9D0E1F2A30001 /* TdayConfettiKinematicsTests.swift */,
 				C0FE7715B8C9D0E1F2A30011 /* ShouldCelebrateEmptyStateTests.swift */,
 				F0A57E0300000000000000D1 /* TaskRowListMarkTests.swift */,
@@ -704,6 +750,7 @@
 				7BA4A69F753AF1C268BCD197 /* ScheduledTaskHome */,
 				DA05A67258F74BF398DCADA3 /* Onboarding */,
 				9F18066D3B63DF80ECB870BB /* Settings */,
+				74889EEE72EA877B097F862A /* Telemetry */,
 				0D57A85AA8A54CBA3AB77925 /* Todos */,
 			);
 			path = Feature;
@@ -1088,6 +1135,8 @@
 				72FDFB18FAE7DA7B2B569510 /* Notification */,
 				4E5771B69142214019F82B21 /* Security */,
 				5A4E00000000000000000033 /* Share */,
+				7CDC143AC586EFAD241E77F7 /* Telemetry */,
+				9A6EEEED5094E09BE42CAAD5 /* TestCrash */,
 				1B2C7D3B4B2547C0818F50C1 /* Text */,
 				DF657ECAF439ED3F03187CCE /* UI */,
 				5477B1D0058C97A680F19FA5 /* Widget */,
@@ -1143,6 +1192,35 @@
 			path = Completed;
 			sourceTree = "<group>";
 		};
+		9A6EEEED5094E09BE42CAAD5 /* TestCrash */ = {
+			isa = PBXGroup;
+			children = (
+				C7F49387AF02EAFC81DC885E /* TestCrash.swift */,
+				BB6C30815F0DC7B09959F195 /* TestCrashButton.swift */,
+			);
+			path = TestCrash;
+			sourceTree = "<group>";
+		};
+		7CDC143AC586EFAD241E77F7 /* Telemetry */ = {
+			isa = PBXGroup;
+			children = (
+				A5C4A120076AEA4D23A2FECF /* SlowOperation.swift */,
+				E82BADDB0F421FEDB4AE2C78 /* TelemetryConsentModel.swift */,
+				48476967315177D0F41D0AA5 /* TelemetryConsentStore.swift */,
+				661D21C26307ABAE56465993 /* TelemetryLifecycle.swift */,
+				66C30EE6553DBF2DE2EBB5E9 /* TelemetryScrubber.swift */,
+			);
+			path = Telemetry;
+			sourceTree = "<group>";
+		};
+		74889EEE72EA877B097F862A /* Telemetry */ = {
+			isa = PBXGroup;
+			children = (
+				4617184504DDB21C95729411 /* TelemetryConsentCard.swift */,
+			);
+			path = Telemetry;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -1169,6 +1247,7 @@
 			buildConfigurationList = 032110A302C6CF9B65A2760A /* Build configuration list for PBXNativeTarget "TdayTests" */;
 			buildPhases = (
 				64E975FE272A463522F716BE /* Sources */,
+				6B3006D75D0C52A267A9BF28 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -1177,6 +1256,7 @@
 			);
 			name = TdayTests;
 			packageProductDependencies = (
+				310C0E9E9ADE8EFB6F2491C1 /* Sentry-Dynamic */,
 			);
 			productName = TdayTests;
 			productReference = D26B48A87B57A0417CC3F578 /* TdayTests.xctest */;
@@ -1368,6 +1448,13 @@
 				E0D3B11DFB20419468405B6E /* DefaultHomeScreenTests.swift in Sources */,
 				C8B96DDF0DC7AD0B8DD54E4F /* SystemCredentialLoginTests.swift in Sources */,
 				5E7E7A8C0B534B26A6E2F910 /* TelemetrySanitizerTests.swift in Sources */,
+				DD9B62D642F6FD4F1C067773 /* SentryConfigurationTests.swift in Sources */,
+				2C8FBEB019195DBB9ADF4F47 /* SlowOperationTests.swift in Sources */,
+				97525E76F35537FE5D45D7C1 /* TestCrashTests.swift in Sources */,
+				EEB7FC0322BDB9F52792220E /* TelemetryConsentTests.swift in Sources */,
+				3456D9EC9685351BD71D1BEB /* TelemetryEventScrubTests.swift in Sources */,
+				2FEF0395C0DE979374663DD6 /* TelemetryLifecycleTests.swift in Sources */,
+				B2D912C7C3C918AC06A9F5E2 /* TelemetryScrubberTests.swift in Sources */,
 				C0FE7715B8C9D0E1F2A30002 /* TdayConfettiKinematicsTests.swift in Sources */,
 				C0FE7715B8C9D0E1F2A30012 /* ShouldCelebrateEmptyStateTests.swift in Sources */,
 				F0A57E0300000000000000D2 /* TaskRowListMarkTests.swift in Sources */,
@@ -1502,6 +1589,14 @@
 				3E0BE8F327DB1A2EE5B101C4 /* ReminderPreferenceStore.swift in Sources */,
 				8D227AE36B26809A15603F5E /* SecureStore.swift in Sources */,
 				5549AF8633C0733EDE2A2827 /* SentryConfiguration.swift in Sources */,
+				BD0FF85ED3C4ADA02B3D4508 /* SlowOperation.swift in Sources */,
+				82BEFBFEBA82B7B233D1BD3C /* TelemetryConsentModel.swift in Sources */,
+				76FD1B62A577FC70877D5CF3 /* TelemetryConsentStore.swift in Sources */,
+				C4372887F210671ACDDF4306 /* TelemetryLifecycle.swift in Sources */,
+				7B41BE78254884F02F6CA527 /* TelemetryScrubber.swift in Sources */,
+				4C55D2CB44A40B86DF640958 /* TelemetryConsentCard.swift in Sources */,
+				976263AFDB011B0C942217E7 /* TestCrash.swift in Sources */,
+				F23717CEA40D9A19CC8CF40C /* TestCrashButton.swift in Sources */,
 				557E0B136F4C0A00AF79E4F0 /* ServerConfigRepository.swift in Sources */,
 				F5D16EE508D6244152B8E4B2 /* ServerURLState.swift in Sources */,
 				0A6188D6B8C9FC92A9927F1C /* SettingsRepository.swift in Sources */,
@@ -1596,7 +1691,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayShareExtension/TdayShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 61;
+				CURRENT_PROJECT_VERSION = 62;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1605,7 +1700,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.49;
+				MARKETING_VERSION = 0.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayShareExtension;
 				PRODUCT_NAME = TdayShareExtension;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1624,7 +1719,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayShareExtension/TdayShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 61;
+				CURRENT_PROJECT_VERSION = 62;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayShareExtension/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1633,7 +1728,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.49;
+				MARKETING_VERSION = 0.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayShareExtension;
 				PRODUCT_NAME = TdayShareExtension;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -1711,7 +1806,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 61;
+				CURRENT_PROJECT_VERSION = 62;
 				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
@@ -1721,12 +1816,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.49;
+				MARKETING_VERSION = 0.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios;
 				PRODUCT_NAME = Tday;
 				SDKROOT = iphoneos;
 				SENTRY_DSN = "";
-				SENTRY_TRACES_SAMPLE_RATE = 0.2;
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_VERSION = 5.0;
@@ -1740,7 +1834,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 61;
+				CURRENT_PROJECT_VERSION = 62;
 				DEVELOPMENT_TEAM = JUFACN2FS3;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Tday/Info.plist;
@@ -1750,12 +1844,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.49;
+				MARKETING_VERSION = 0.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios;
 				PRODUCT_NAME = Tday;
 				SDKROOT = iphoneos;
 				SENTRY_DSN = "";
-				SENTRY_TRACES_SAMPLE_RATE = 1.0;
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_VERSION = 5.0;
@@ -1855,7 +1948,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 61;
+				CURRENT_PROJECT_VERSION = 62;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1864,7 +1957,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.49;
+				MARKETING_VERSION = 0.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayTasksWidget;
 				PRODUCT_NAME = TdayWidget;
 				SDKROOT = iphoneos;
@@ -1882,7 +1975,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = TdayWidget/TdayWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 61;
+				CURRENT_PROJECT_VERSION = 62;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -1891,7 +1984,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.49;
+				MARKETING_VERSION = 0.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.TdayTasksWidget;
 				PRODUCT_NAME = TdayWidget;
 				SDKROOT = iphoneos;
@@ -1908,7 +2001,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TdayWatchWidget/TdayWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 61;
+				CURRENT_PROJECT_VERSION = 62;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWatchWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1916,7 +2009,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.49;
+				MARKETING_VERSION = 0.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp.widget;
 				PRODUCT_NAME = TdayWatchWidget;
 				SDKROOT = watchos;
@@ -1937,7 +2030,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TdayWatchWidget/TdayWatchWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 61;
+				CURRENT_PROJECT_VERSION = 62;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWatchWidget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1945,7 +2038,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.49;
+				MARKETING_VERSION = 0.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp.widget;
 				PRODUCT_NAME = TdayWatchWidget;
 				SDKROOT = watchos;
@@ -1964,14 +2057,14 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TdayWatch/TdayWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 61;
+				CURRENT_PROJECT_VERSION = 62;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWatch/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.49;
+				MARKETING_VERSION = 0.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp;
 				PRODUCT_NAME = TdayWatch;
 				SDKROOT = watchos;
@@ -1992,14 +2085,14 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = TdayWatch/TdayWatch.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 61;
+				CURRENT_PROJECT_VERSION = 62;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TdayWatch/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.49;
+				MARKETING_VERSION = 0.8.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios.watchkitapp;
 				PRODUCT_NAME = TdayWatch;
 				SDKROOT = watchos;
@@ -2110,6 +2203,11 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		A8BC3C28FBC8E4D5C38307DB /* Sentry-Dynamic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 25F077B213506555FEDF5480 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = "Sentry-Dynamic";
+		};
+		310C0E9E9ADE8EFB6F2491C1 /* Sentry-Dynamic */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 25F077B213506555FEDF5480 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = "Sentry-Dynamic";

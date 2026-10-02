@@ -1,5 +1,5 @@
 {
-  "currentVersion": "0.7.49",
+  "currentVersion": "0.8.0",
   "ui": {
     "title": "Como fazer e dicas",
     "subtitle": "Tudo o que o T'Day sabe fazer — o óbvio e o escondido.",
@@ -1520,7 +1520,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "O Modo local mantém tudo no seu dispositivo — sem início de sessão, sem servidor, sem envios. É uma forma de primeira classe de usar o T'Day em privado, e os seus dados locais nunca são enviados para lado nenhum por conta própria. Num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa também o espaço de trabalho — exporte-o antes se quiser mantê-lo."
+            "O Modo local mantém tudo no seu dispositivo — sem início de sessão, sem servidor, sem envios. É uma forma de primeira classe de usar o T'Day em privado, e os seus dados locais nunca são enviados para lado nenhum por conta própria. Num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa também o espaço de trabalho — exporte-o antes se quiser mantê-lo. Se você ativar os relatórios de falhas, apenas um breve relatório técnico é enviado quando algo falha, nunca as suas tarefas ou listas."
           ]
         },
         {
@@ -1532,7 +1532,7 @@
       ],
       "searchTitle": "modo local",
       "searchKeywords": "modo local, offline, privado, sem conta, sem servidor, no dispositivo",
-      "searchBody": "use o t'day totalmente offline, sem servidor nem conta. o modo local mantem tudo no seu dispositivo — sem inicio de sessao, sem servidor, sem envios. e uma forma de primeira classe de usar o t'day em privado, e os seus dados locais nunca sao enviados para lado nenhum por conta propria. num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa tambem o espaco de trabalho — exporte-o antes se quiser mante-lo. as funcionalidades exclusivas do servidor aparecem aqui com um selo “modo servidor” para saber o que muda se iniciar sessao."
+      "searchBody": "use o t'day totalmente offline, sem servidor nem conta. o modo local mantem tudo no seu dispositivo — sem inicio de sessao, sem servidor, sem envios. e uma forma de primeira classe de usar o t'day em privado, e os seus dados locais nunca sao enviados para lado nenhum por conta propria. num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa tambem o espaco de trabalho — exporte-o antes se quiser mante-lo. se voce ativar os relatorios de falhas, apenas um breve relatorio tecnico e enviado quando algo falha, nunca as suas tarefas ou listas. as funcionalidades exclusivas do servidor aparecem aqui com um selo “modo servidor” para saber o que muda se iniciar sessao."
     },
     {
       "id": "server-mode",
@@ -1659,6 +1659,75 @@
       "searchTitle": "passar deste dispositivo para um servidor",
       "searchKeywords": "migracao, local para servidor, mover dados, mudar de modo, carregar, iniciar sessao, transferir",
       "searchBody": "leve as tarefas do dispositivo consigo ao mudar para o modo servidor. comecou no modo local e depois configurou um servidor? nada e carregado por conta propria. para mover os seus dados: exporte-os primeiro nas definicoes, inicie sessao no seu servidor e importe ai o ficheiro. tarefas, listas e historico transferem-se num passo deliberado — escolhe o momento, e os dados no dispositivo ficam intactos ate la. depois de importar, guarde o ficheiro exportado ate confirmar que tudo chegou — assim tambem serve de copia de seguranca."
+    },
+    {
+      "id": "crash-reports",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "activity",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-privacy"
+      ],
+      "title": "Relatórios de falhas e problemas",
+      "summary": "Opcional, desativado por padrão. Enviado só quando algo falha.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Os relatórios de falhas e problemas são opcionais e vêm desativados por padrão. Se você ativá-los, o T'Day envia um breve relatório técnico apenas no momento em que algo falha: um fechamento inesperado, um travamento, um erro inesperado ou falta de memória. Funciona como o Crashlytics: existe para corrigir bugs, não para medir como você usa o app. Não há análise de uso, rastreamento de sessões nem monitoramento de desempenho no seu dispositivo enquanto tudo funciona normalmente."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Um relatório contém a versão do app, o modelo do seu dispositivo e a versão do sistema operacional (ou o navegador e a versão), o erro e o ponto do código onde ele ocorreu, algumas etapas rotuladas que antecederam o erro, nomes de telas ou de rotas da API sem nenhum ID, códigos de status e, nos dispositivos móveis, condições aproximadas do dispositivo, como memória livre, nível de bateria e se você estava online. Também inclui a diferença do seu fuso horário (por exemplo, UTC+2) e o idioma, porque as datas são essenciais em um planejador de tarefas."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "O relatório nunca contém: seu nome, nome de usuário, e-mail ou qualquer dado da conta; seu endereço IP ou localização; o endereço do seu servidor; títulos e conteúdos de tarefas, listas ou notas; o conteúdo do seu banco de dados; senhas, cookies ou tokens; capturas de tela ou gravações. As mensagens de erro têm endereços, identificadores e texto entre aspas removidos no seu dispositivo antes do envio, da melhor forma possível. Os relatórios não carregam ID de usuário, por isso não podem ser rastreados até você nem excluídos por pessoa."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Os relatórios só são enviados depois que você ativa a opção, e apenas quando ocorre uma falha. Se algo falhar com a configuração desativada, nada é armazenado nem colocado em fila, e ativá-la depois não envia falhas anteriores. O que conta como falha depende da plataforma: o Android relata fechamentos inesperados, travamentos e falhas por falta de memória; o iOS relata fechamentos inesperados, travamentos e o sistema encerrar o app por uso excessivo de memória; o app web relata apenas erros inesperados. O T'Day não detecta vazamentos de memória."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Os relatórios vão para o mantenedor do T'Day por meio do Sentry, um serviço de relatórios de falhas. Ficam guardados por 30 dias e são usados apenas para corrigir bugs, nunca vendidos nem compartilhados para publicidade. São enviados diretamente ao Sentry, não pelo seu servidor. O Sentry vê o endereço de rede de qualquer conexão, como qualquer serviço online, mas está configurado para não armazená-lo, e o app web também informa ao Sentry de qual site veio o relatório. Se você tem o seu próprio servidor, ele pode enviar separadamente os próprios relatórios de erros, além de tempos de uma pequena amostra de requisições, para o Sentry do operador, quando o operador ativar isso. Isso nunca inclui as suas tarefas. Versões sem um endpoint de relatórios, como as que você mesmo compila, não mostram esta configuração."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abra as Configurações.",
+            "Abra Privacidade e desative \"Relatórios de falhas e problemas\".",
+            "Os relatórios param imediatamente, e tudo o que estava aguardando envio é excluído."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Escolher \"Agora não\" não custa nada. Você pode ativar isso quando quiser em Configurações → Privacidade. Detalhes técnicos: docs/TELEMETRY.md no repositório do T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "relatorios de falhas e problemas",
+      "searchKeywords": "falha, fechamento inesperado, travamento, erro, relatorio, privacidade, diagnostico, telemetria, memoria, analise de uso, crash, sentry, anr, error, report, privacy, diagnostics, telemetry, hang, memory, analytics",
+      "searchBody": "opcional, desativado por padrao. enviado so quando algo falha. os relatorios de falhas e problemas sao opcionais e vem desativados por padrao. se voce ativa-los, o t'day envia um breve relatorio tecnico apenas no momento em que algo falha: um fechamento inesperado, um travamento, um erro inesperado ou falta de memoria. funciona como o crashlytics: existe para corrigir bugs, nao para medir como voce usa o app. nao ha analise de uso, rastreamento de sessoes nem monitoramento de desempenho no seu dispositivo enquanto tudo funciona normalmente. um relatorio contem a versao do app, o modelo do seu dispositivo e a versao do sistema operacional (ou o navegador e a versao), o erro e o ponto do codigo onde ele ocorreu, algumas etapas rotuladas que antecederam o erro, nomes de telas ou de rotas da api sem nenhum id, codigos de status e, nos dispositivos moveis, condicoes aproximadas do dispositivo, como memoria livre, nivel de bateria e se voce estava online. tambem inclui a diferenca do seu fuso horario (por exemplo, utc+2) e o idioma, porque as datas sao essenciais em um planejador de tarefas. o relatorio nunca contem: seu nome, nome de usuario, e-mail ou qualquer dado da conta; seu endereco ip ou localizacao; o endereco do seu servidor; titulos e conteudos de tarefas, listas ou notas; o conteudo do seu banco de dados; senhas, cookies ou tokens; capturas de tela ou gravacoes. as mensagens de erro tem enderecos, identificadores e texto entre aspas removidos no seu dispositivo antes do envio, da melhor forma possivel. os relatorios nao carregam id de usuario, por isso nao podem ser rastreados ate voce nem excluidos por pessoa. os relatorios so sao enviados depois que voce ativa a opcao, e apenas quando ocorre uma falha. se algo falhar com a configuracao desativada, nada e armazenado nem colocado em fila, e ativa-la depois nao envia falhas anteriores. o que conta como falha depende da plataforma: o android relata fechamentos inesperados, travamentos e falhas por falta de memoria; o ios relata fechamentos inesperados, travamentos e o sistema encerrar o app por uso excessivo de memoria; o app web relata apenas erros inesperados. o t'day nao detecta vazamentos de memoria. os relatorios vao para o mantenedor do t'day por meio do sentry, um servico de relatorios de falhas. ficam guardados por 30 dias e sao usados apenas para corrigir bugs, nunca vendidos nem compartilhados para publicidade. sao enviados diretamente ao sentry, nao pelo seu servidor. o sentry ve o endereco de rede de qualquer conexao, como qualquer servico online, mas esta configurado para nao armazena-lo, e o app web tambem informa ao sentry de qual site veio o relatorio. se voce tem o seu proprio servidor, ele pode enviar separadamente os proprios relatorios de erros, alem de tempos de uma pequena amostra de requisicoes, para o sentry do operador, quando o operador ativar isso. isso nunca inclui as suas tarefas. versoes sem um endpoint de relatorios, como as que voce mesmo compila, nao mostram esta configuracao. abra as configuracoes. abra privacidade e desative \"relatorios de falhas e problemas\". os relatorios param imediatamente, e tudo o que estava aguardando envio e excluido. escolher \"agora nao\" nao custa nada. voce pode ativar isso quando quiser em configuracoes → privacidade. detalhes tecnicos: docs/telemetry.md no repositorio do t'day."
     },
     {
       "id": "ai-summary",

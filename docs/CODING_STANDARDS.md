@@ -603,6 +603,20 @@ T'Day is Sentry-first and privacy-first. New UI, API, sync, auth, reminder,
 widget, realtime, or storage work should include diagnostics only when they help
 debug failures or performance.
 
+- Client telemetry is opt-in and failures-only, so it must be consent-gated.
+  Never initialise or start a Sentry SDK anywhere but the platform's
+  consent-gated initializer (web `sentryInit.ts`, Android `TelemetryBootstrap`,
+  iOS `SentryConfiguration`; the backend's is `BackendSentry`). A new
+  `Sentry.init`, `SentryAndroid.init`, or `SentrySDK.start` elsewhere fails the
+  `sentry-privacy` guardrail.
+- Never record outside the allow-list in `docs/TELEMETRY.md`. A new breadcrumb
+  category, tag, context, or extra means updating the platform scrubber, its
+  tests, and that document. Do not add session pings, traces, or sampled
+  performance data on a client.
+- Report new failure paths through the helpers, not raw SDK calls: the platform
+  capture helper for exceptions, and the `slow_operation` helper (web
+  `slowOperation.ts`, Android `SlowOperation`, iOS `SlowOperation`) with the
+  shared operation ids and thresholds for slow paths.
 - Use the platform helper: backend `TdayObservability`, web
   `src/lib/observability/sentry.ts`, Android `TdayTelemetry`, and iOS
   `TdayTelemetry`.

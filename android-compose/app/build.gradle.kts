@@ -133,11 +133,6 @@ android {
             "SENTRY_DSN",
             "\"${localProps.getProperty("sentryDsn") ?: System.getenv("SENTRY_DSN") ?: ""}\"",
         )
-        buildConfigField(
-            "String",
-            "SENTRY_TRACES_SAMPLE_RATE",
-            "\"${localProps.getProperty("sentryTracesSampleRate") ?: System.getenv("SENTRY_TRACES_SAMPLE_RATE") ?: ""}\"",
-        )
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -281,7 +276,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     implementation("io.sentry:sentry-okhttp:8.59.0")
-    implementation("io.sentry:sentry-android-navigation:8.59.0")
 
     implementation("androidx.security:security-crypto:1.1.0")
 
@@ -307,6 +301,9 @@ dependencies {
     androidTestImplementation("androidx.room:room-testing:2.8.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    // Leak hunting for debug builds only: Sentry reports an out-of-memory kill, never a leak. It
+    // installs itself from a content provider, so there is no code to call.
+    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
@@ -320,8 +317,19 @@ sentry {
     org = "tday-kb"
     projectName = "tday-android"
     authToken = System.getenv("SENTRY_AUTH_TOKEN")
+    // Failures only (docs/TELEMETRY.md): the app sends no traces, so none of the plugin's
+    // bytecode instrumentation (OkHttp, Room, file I/O, Compose navigation, app start) has anything
+    // to feed. Switching `enabled` off skips all of it; logcat and appStart are off as well so that
+    // turning tracing back on for a local experiment cannot quietly bring either back, since logcat
+    // would turn every `Log.w`/`Log.e` message into a breadcrumb.
     tracingInstrumentation {
-        enabled = true
+        enabled = false
+        logcat {
+            enabled = false
+        }
+        appStart {
+            enabled = false
+        }
     }
     autoInstallation {
         enabled = true

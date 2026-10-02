@@ -19,6 +19,7 @@ extension EnvironmentValues {
 enum GuideTopicId {
     static let nlpDateSyntax = "nlp-date-syntax"
     static let recurrencePresets = "recurrence-presets"
+    static let crashReports = "crash-reports"
 }
 
 /// A quiet contextual "?" that deep-links from a feature surface into its
@@ -28,6 +29,9 @@ enum GuideTopicId {
 /// pushing the guide onto the navigation stack.
 struct GuideHelpLink: View {
     let topicId: String
+    /// What VoiceOver says. The guide's own name by default; a row whose "?" opens one specific
+    /// topic can say which.
+    var label: String = "How-To & Tips"
 
     @Environment(\.openGuideTopic) private var openGuideTopic
     @Environment(\.dismiss) private var dismiss
@@ -47,7 +51,7 @@ struct GuideHelpLink: View {
                     dismiss()
                     openGuideTopic(topicId)
                 }
-                .accessibilityLabel(Text(L("How-To & Tips")))
+                .accessibilityLabel(Text(L(label)))
                 .accessibilityAddTraits(.isButton)
         }
     }

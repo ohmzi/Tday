@@ -1,11 +1,15 @@
 package com.ohmz.tday.routes
 
+import arrow.core.raise.either
 import com.ohmz.tday.di.inject
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.withAuth
+import com.ohmz.tday.models.request.ServerTelemetryPatchRequest
 import com.ohmz.tday.security.AbuseGuard
 import com.ohmz.tday.services.AdminService
+import com.ohmz.tday.services.InstanceSettingsService
 import com.ohmz.tday.services.SecurityAlertService
+import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
@@ -17,6 +21,7 @@ fun Route.adminRoutes() {
     val adminService by inject<AdminService>()
     val abuseGuard by inject<AbuseGuard>()
     val securityAlertService by inject<SecurityAlertService>()
+    val instanceSettingsService by inject<InstanceSettingsService>()
 
     route("/admin") {
         route("/security") {
@@ -43,6 +48,25 @@ fun Route.adminRoutes() {
                                 ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("block id is required"))
                             abuseGuard.clearBlock(blockId, user).map { mapOf("message" to it) }
                         }
+                    }
+                }
+            }
+        }
+
+        // Whether this server may send its own error reports to Sentry. Web-only: it concerns
+        // the operator's server, not any one device, so the mobile apps have no counterpart.
+        route("/telemetry") {
+            get {
+                call.withAuth { user ->
+                    instanceSettingsService.serverTelemetry(user)
+                }
+            }
+
+            patch {
+                call.withAuth { user ->
+                    either {
+                        val body = call.receive<ServerTelemetryPatchRequest>()
+                        instanceSettingsService.setServerTelemetry(body.enabled, user).bind()
                     }
                 }
             }

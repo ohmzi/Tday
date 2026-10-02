@@ -26,6 +26,12 @@ function isNew(topic: GuideTopicDef): boolean {
   return topic.sinceVersion === GUIDE_CURRENT_VERSION;
 }
 
+// A topic that ships in the running release is listed under "What's New" and again in its own
+// section. Rows are keyed by where they sit as well as by topic, so expanding, or deep-linking to,
+// one copy never opens the other. A link lands on the section copy, the topic's home.
+type RowScope = "new" | "section";
+const rowKey = (scope: RowScope, topicId: string) => `${scope}:${topicId}`;
+
 export default function GuideScreen() {
   const { t } = useTranslation();
   const { topicId: topicIdParam } = useParams();
@@ -34,7 +40,9 @@ export default function GuideScreen() {
 
   const focusTopicId = topicIdParam ?? searchParams.get("topic");
   const [query, setQuery] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(focusTopicId ?? null);
+  const [expandedId, setExpandedId] = useState<string | null>(
+    focusTopicId ? rowKey("section", focusTopicId) : null,
+  );
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // NEW badges show until the guide has been opened in this release: read the
@@ -66,8 +74,9 @@ export default function GuideScreen() {
 
   useEffect(() => {
     if (!focusTopicId) return;
-    setExpandedId(focusTopicId);
-    scrollIntoView(rowRefs.current[focusTopicId], { block: "center" });
+    const key = rowKey("section", focusTopicId);
+    setExpandedId(key);
+    scrollIntoView(rowRefs.current[key], { block: "center" });
   }, [focusTopicId]);
 
   const whatsNew = useMemo(() => whatsNewTopics(), []);
@@ -77,16 +86,18 @@ export default function GuideScreen() {
   // split Settings uses.
   const barSlots = useNativePageBarSlots();
 
-  const renderRow = (topic: GuideTopicDef, index: number) => (
+  const renderRow = (scope: RowScope) => (topic: GuideTopicDef, index: number) => (
     <div key={topic.id}>
       {index > 0 ? <CardDivider /> : null}
       <TopicRow
         topic={topic}
         showNew={showNewBadges && isNew(topic)}
-        expanded={expandedId === topic.id}
-        onToggle={() => setExpandedId((cur) => (cur === topic.id ? null : topic.id))}
+        expanded={expandedId === rowKey(scope, topic.id)}
+        onToggle={() =>
+          setExpandedId((cur) => (cur === rowKey(scope, topic.id) ? null : rowKey(scope, topic.id)))
+        }
         onTryIt={(seg) => router.push(`/app/${seg}`)}
-        registerRef={(el) => (rowRefs.current[topic.id] = el)}
+        registerRef={(el) => (rowRefs.current[rowKey(scope, topic.id)] = el)}
       />
     </div>
   );
@@ -121,7 +132,7 @@ export default function GuideScreen() {
             {t("guide.results", { count: rankedIds.length })}
           </p>
           {rankedIds.length > 0 ? (
-            <GuideCard>{rankedIds.map((id, i) => renderRow(byId[id], i))}</GuideCard>
+            <GuideCard>{rankedIds.map((id, i) => renderRow("section")(byId[id], i))}</GuideCard>
           ) : (
             <GuideCard>
               <p className="py-6 text-center text-sm font-extrabold text-muted-foreground">
@@ -137,7 +148,7 @@ export default function GuideScreen() {
               title={t("guide.whatsNew")}
               titleIcon={<Sparkles className="size-4 shrink-0 text-accent" aria-hidden="true" />}
             >
-              {whatsNew.map(renderRow)}
+              {whatsNew.map(renderRow("new"))}
             </GuideCard>
           )}
           {GUIDE_SECTIONS.map((section) => {
@@ -145,7 +156,7 @@ export default function GuideScreen() {
             if (topics.length === 0) return null;
             return (
               <GuideCard key={section.id} title={t(section.titleKey)}>
-                {topics.map(renderRow)}
+                {topics.map(renderRow("section"))}
               </GuideCard>
             );
           })}

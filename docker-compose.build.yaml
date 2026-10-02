@@ -27,6 +27,16 @@ services:
       context: .
       dockerfile: Dockerfile.backend
       args:
-        # Build-time only: Vite bakes these into the SPA bundle. Both are public values.
+        # Build-time only: Vite bakes it into the SPA bundle, and the image derives the CSP's
+        # browser-Sentry origin from it. A DSN is a public value.
         VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
-        VITE_SENTRY_TRACES_SAMPLE_RATE: ${VITE_SENTRY_TRACES_SAMPLE_RATE:-}
+      # The source-map upload token is not a build arg (args land in `docker history`): it is a
+      # build secret, read from SENTRY_AUTH_TOKEN in the invoking shell or the project-root .env
+      # and mounted into the web build only. Optional — unset or empty, the build runs unchanged
+      # and uploads nothing.
+      secrets:
+        - sentry_auth_token
+
+secrets:
+  sentry_auth_token:
+    environment: SENTRY_AUTH_TOKEN

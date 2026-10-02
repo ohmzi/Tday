@@ -1,4 +1,5 @@
 import {
+  Activity,
   AlarmClock,
   Bell,
   BellRing,
@@ -36,6 +37,7 @@ import {
 // Maps the Lucide glyph names authored in the shared GuideCatalog to their
 // components. A shared commonTest can assert every catalog icon exists here.
 const ICONS: Record<string, LucideIcon> = {
+  activity: Activity,
   "alarm-clock": AlarmClock,
   bell: Bell,
   "bell-ring": BellRing,

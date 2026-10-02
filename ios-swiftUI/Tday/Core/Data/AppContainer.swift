@@ -11,6 +11,7 @@ final class AppContainer {
     let themeStore: ThemeStore
     let languageStore: LanguageStore
     let motionPreference: MotionPreferenceStore
+    let telemetryConsent: TelemetryConsentModel
     let reminderPreferenceStore: ReminderPreferenceStore
     let serverURLState: ServerURLState
     let cookieStore: CookieStore
@@ -53,6 +54,7 @@ final class AppContainer {
         themeStore = ThemeStore()
         languageStore = LanguageStore()
         motionPreference = MotionPreferenceStore()
+        telemetryConsent = TelemetryConsentModel()
         reminderPreferenceStore = ReminderPreferenceStore()
         serverURLState = ServerURLState(currentURL: secureStore.loadPersistedServerURL())
         cookieStore = CookieStore(

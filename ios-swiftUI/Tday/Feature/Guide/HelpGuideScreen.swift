@@ -63,6 +63,21 @@ struct HelpGuideScreen: View {
     }
 
     var body: some View {
+        ScrollViewReader { proxy in
+            guideScrollView
+                // `loaded` flips in `onAppear`, once the artifact is in and the card for
+                // `initialTopic` is on screen already expanded. One turn later, because the cards
+                // are only laid out by then and `scrollTo` needs the target to exist.
+                .onChange(of: loaded) { _, isLoaded in
+                    guard isLoaded, let initialTopic else { return }
+                    DispatchQueue.main.async {
+                        proxy.scrollTo(initialTopic, anchor: .top)
+                    }
+                }
+        }
+    }
+
+    private var guideScrollView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 TimelineExpandedTitleRow(
@@ -210,7 +225,7 @@ struct HelpGuideScreen: View {
         } else {
             VStack(alignment: .leading, spacing: 24) {
                 if !whatsNew.isEmpty {
-                    section(title: artifact.ui["whatsNew"] ?? "What's new", topics: whatsNew)
+                    section(title: artifact.ui["whatsNew"] ?? "What's new", topics: whatsNew, isHighlights: true)
                 }
                 ForEach(artifact.sections.sorted { $0.order < $1.order }, id: \.id) { sec in
                     let topics = artifact.topics.filter { $0.section == sec.id }
@@ -222,18 +237,31 @@ struct HelpGuideScreen: View {
         }
     }
 
-    private func section(title: String, topics: [GuideTopicDTO]) -> some View {
+    /// The key a topic card is scrolled to and expanded by. A new topic is listed under "What's
+    /// new" AND in its own section, and the card in its own section is the one a deep link opens
+    /// and `scrollTo` lands on, so the copy above it takes a key of its own rather than a
+    /// duplicate.
+    static func cardKey(topicID: String, isHighlight: Bool) -> String {
+        isHighlight ? "highlight-\(topicID)" : topicID
+    }
+
+    /// `isHighlights` marks the "What's new" section.
+    private func section(title: String, topics: [GuideTopicDTO], isHighlights: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title.uppercased())
                 .font(.tdayRounded(size: 12, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.55))
                 .padding(.leading, 4)
-            ForEach(topics, id: \.id) { topic in topicCard(topic) }
+            ForEach(topics, id: \.id) { topic in
+                topicCard(topic, isHighlight: isHighlights)
+                    .id(Self.cardKey(topicID: topic.id, isHighlight: isHighlights))
+            }
         }
     }
 
-    private func topicCard(_ topic: GuideTopicDTO) -> some View {
-        let expanded = expandedId == topic.id
+    private func topicCard(_ topic: GuideTopicDTO, isHighlight: Bool = false) -> some View {
+        let key = Self.cardKey(topicID: topic.id, isHighlight: isHighlight)
+        let expanded = expandedId == key
         return VStack(alignment: .leading, spacing: 0) {
             // Emphasis, because the card changes how big it is. `docs/motion.md` settles
             // Change against Emphasis on geometry rather than on importance, and one
@@ -258,7 +286,7 @@ struct HelpGuideScreen: View {
             // branch it animates cannot open the transaction that would play it.
             Button(action: {
                 withAnimation(tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis))) {
-                    expandedId = expanded ? nil : topic.id
+                    expandedId = expanded ? nil : key
                 }
             }) {
                 HStack(spacing: 12) {

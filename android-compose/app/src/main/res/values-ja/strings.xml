@@ -680,6 +680,21 @@
     <string name="settings_resting_floaters">休眠フローター</string>
     <string name="settings_calendar_sync">予定タスクをカレンダーに追加</string>
     <string name="settings_privacy">プライバシー</string>
+    <string name="settings_crash_reports">クラッシュと問題のレポート</string>
+    <string name="settings_crash_reports_toggle">不具合が起きたときにクラッシュと問題のレポートを送信する</string>
+    <string name="settings_crash_reports_help">クラッシュと問題のレポートについて</string>
+
+    <!-- Crash reports: the one-time consent card -->
+    <string name="telemetry_card_title">クラッシュの修正に協力しますか？</string>
+    <string name="telemetry_card_intro">T\'Day は、問題が起きたときだけ短い技術レポートを送信できます。対象は、クラッシュ、フリーズ、予期しないエラーなどです。開発者が似た端末で問題を再現するのに役立ちます。</string>
+    <string name="telemetry_card_sent_label">含まれる情報</string>
+    <string name="telemetry_card_sent">アプリのバージョン、端末のモデル、OSのバージョン、何がどこで失敗したか。</string>
+    <string name="telemetry_card_never_sent_label">含まれない情報</string>
+    <string name="telemetry_card_never_sent">名前やアカウント、IPアドレス、位置情報、サーバーのアドレス、タスクやリストの内容。</string>
+    <string name="telemetry_card_footnote">デフォルトではオフです。設定 → プライバシーからいつでも変更できます。</string>
+    <string name="telemetry_card_share">レポートを共有</string>
+    <string name="telemetry_card_not_now">今はしない</string>
+    <string name="telemetry_card_read_faq">よくある質問をすべて読む</string>
     <string name="root_feed_search_scheduled">予定タスクを検索</string>
     <string name="root_feed_search_floater">フローターを検索</string>
 

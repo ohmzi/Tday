@@ -10,6 +10,7 @@ object TdayObservability {
         "app",
         "app-settings",
         "auth",
+        "calendar",
         "callback",
         "credentials",
         "credentials-key",

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 export default function PrivacyPage() {
   const { t } = useTranslation("privacy");
 
-  const sections = Array.from({ length: 9 }, (_, i) => i + 1);
+  const sections = Array.from({ length: 10 }, (_, i) => i + 1);
 
   return (
     <main className="min-h-screen px-6 py-16">

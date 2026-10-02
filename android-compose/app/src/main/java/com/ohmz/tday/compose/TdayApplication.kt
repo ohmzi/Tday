@@ -14,17 +14,13 @@ import androidx.work.WorkManager
 import com.ohmz.tday.compose.core.notification.BootRescheduleReceiver
 import com.ohmz.tday.compose.core.notification.ReminderRescheduleWorker
 import com.ohmz.tday.compose.core.notification.TaskReminderReceiver
-import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.core.observability.TelemetryBootstrap
 import com.ohmz.tday.compose.feature.widget.TodayTasksWidgetPreviewPublisher
 import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
 import com.ohmz.tday.compose.feature.widget.WidgetSyncWorker
 import com.ohmz.tday.compose.feature.widget.didNightModeFlip
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.HiltAndroidApp
-import io.sentry.android.core.SentryAndroid
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -70,6 +66,12 @@ class TdayApplication : Application(), Configuration.Provider {
             .build()
 
     override fun onCreate() {
+        // First, and before Hilt builds the graph in super.onCreate(): this is the one place the
+        // crash reporter starts, and it runs in every process of the app (a widget refresh, a boot
+        // or alarm receiver, a worker) rather than only when MainActivity draws a frame. It is
+        // cheap for everyone who has not opted in: one preferences read and, for them, a purge of
+        // whatever an older build left on disk. Only a device that said yes pays for starting Sentry.
+        TelemetryBootstrap.shared(this).start()
         super.onCreate()
         lastUiMode = resources.configuration.uiMode
     }
@@ -112,25 +114,6 @@ class TdayApplication : Application(), Configuration.Provider {
         // setWidgetPreview binder calls it doesn't need.
         TodayTasksWidgetPreviewPublisher.publish(this)
         DayAheadScheduling.scheduleNext(this, dayAheadPreferenceStore.getOption())
-
-        CoroutineScope(Dispatchers.Default).launch {
-            SentryAndroid.init(this@TdayApplication) { options ->
-                options.dsn = BuildConfig.SENTRY_DSN
-                options.environment = if (BuildConfig.DEBUG) "development" else "production"
-                options.release = "tday-android@${BuildConfig.VERSION_NAME}"
-                options.dist = BuildConfig.VERSION_CODE.toString()
-                options.isSendDefaultPii = false
-                options.isEnableAutoSessionTracking = true
-                options.tracesSampleRate = TdayTelemetry.traceSampleRate(
-                    BuildConfig.SENTRY_TRACES_SAMPLE_RATE,
-                    if (BuildConfig.DEBUG) 1.0 else 0.2,
-                )
-                options.setBeforeSend { event, _ ->
-                    event.user?.ipAddress = null
-                    event
-                }
-            }
-        }
 
         createNotificationChannels()
         enqueuePeriodicRescheduleWorker()

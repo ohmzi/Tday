@@ -286,6 +286,11 @@ struct CreateTaskSheet: View {
                 }
             }
 
+            // TEST-CRASH: in the middle of the create form (not shown while editing a task).
+            if !isEditingExistingTask {
+                TestCrashButton(id: .newTask)
+            }
+
             TdaySheetSectionTitle(text: "Details")
             TdaySheetCard {
                 CreateTaskSheetSelectorTriggerRow(

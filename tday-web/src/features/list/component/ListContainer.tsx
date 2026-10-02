@@ -1,3 +1,4 @@
+import { TestCrashButton } from "@/components/TestCrashButton"; // TEST-CRASH
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import TodoListLoading from "@/components/todo/component/TodoListLoading";
@@ -241,6 +242,8 @@ const ListContainer = ({ id }: { id: string }) => {
                         placeholder so it can fade out over the rows, instead of
                         being unmounted in the frame it is supposed to fade in. */}
                     <TodoListLoading loading={listTodosLoading} />
+                    {/* TEST-CRASH */}
+                    <TestCrashButton id="TC-LIST-SCHED" />
 
                     {/* Empty state — no search results */}
                     {!listTodosLoading && isSearching && filteredTodos.length === 0 && (

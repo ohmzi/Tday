@@ -683,6 +683,21 @@
     <string name="settings_resting_floaters">Отдыхающие плавающие</string>
     <string name="settings_calendar_sync">Добавлять запланированные задачи в мой календарь</string>
     <string name="settings_privacy">Конфиденциальность</string>
+    <string name="settings_crash_reports">Отчёты о сбоях и проблемах</string>
+    <string name="settings_crash_reports_toggle">Отправлять отчёты о сбоях и проблемах при ошибках</string>
+    <string name="settings_crash_reports_help">Об отчётах о сбоях и проблемах</string>
+
+    <!-- Crash reports: the one-time consent card -->
+    <string name="telemetry_card_title">Помочь исправить сбои?</string>
+    <string name="telemetry_card_intro">T\'Day может отправлять короткий технический отчёт только тогда, когда что-то идёт не так, например при сбое, зависании или неожиданной ошибке. Это помогает разработчику воспроизвести проблему на похожем устройстве.</string>
+    <string name="telemetry_card_sent_label">Что входит в отчёт</string>
+    <string name="telemetry_card_sent">Версия приложения, модель устройства, версия ОС, что именно пошло не так и где.</string>
+    <string name="telemetry_card_never_sent_label">Никогда не входит</string>
+    <string name="telemetry_card_never_sent">Ваше имя или аккаунт, IP-адрес, местоположение, адрес сервера и любое содержимое задач или списков.</string>
+    <string name="telemetry_card_footnote">По умолчанию выключено. Это можно изменить в любой момент: Настройки → Конфиденциальность.</string>
+    <string name="telemetry_card_share">Делиться отчётами</string>
+    <string name="telemetry_card_not_now">Не сейчас</string>
+    <string name="telemetry_card_read_faq">Читать полный FAQ</string>
     <string name="root_feed_search_scheduled">Поиск запланированных задач</string>
     <string name="root_feed_search_floater">Поиск плавающих задач</string>
 

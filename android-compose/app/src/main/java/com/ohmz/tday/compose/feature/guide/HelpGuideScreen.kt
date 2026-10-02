@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -51,6 +52,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -73,6 +76,8 @@ import com.ohmz.tday.shared.guide.GuideSearch
 import com.ohmz.tday.shared.guide.GuideSectionId
 import com.ohmz.tday.shared.guide.GuideStringsGenerated
 import com.ohmz.tday.shared.guide.GuideTopic
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 // What the guide draws that the scale has no rung for, named here rather than snapped onto a
 // neighbouring step. The page margin is the reason the list is worth reading: this screen has always
@@ -119,6 +124,15 @@ private val TipBlockRadius = 10.dp
 
 /** Inline code pads wider than tall, so a monospace run clears its own box. */
 private val CodeBlockHorizontalPadding = 10.dp
+
+/**
+ * Which card is open is tracked by this key. A topic that is new in this release is on the page
+ * twice, in What's New and in its own section, and the copy in What's New gets a key of its own so
+ * opening one never opens the other. The section card keeps the plain topic id, which is also what
+ * a deep link and the search results carry.
+ */
+internal fun guideCardKey(topicId: String, inWhatsNew: Boolean): String =
+    if (inWhatsNew) "whats-new:$topicId" else topicId
 
 /**
  * The in-app How-To / feature guide. Reads the shared [GuideCatalog] natively via
@@ -189,6 +203,26 @@ fun HelpGuideScreen(
     val guideScrollState = rememberScrollState()
     val heroCollapse = rememberScrollHeroTitleCollapse(scrollState = guideScrollState)
 
+    // A "?" link lands here with its topic already expanded, which is not the same as on screen:
+    // the page is a long list and the topic may sit well below the fold. Once the card has been
+    // laid out, scroll it to just under the toolbar, once. Remembered across a rotation so the
+    // jump never fights a scroll the reader has made since.
+    val landingScope = rememberCoroutineScope()
+    var landedOnInitialTopic by rememberSaveable { mutableStateOf(false) }
+    // Only a section card is a landing target, so a topic that is also in What's New lands (and
+    // opens) in its section rather than in the copy above it.
+    fun Modifier.landingTarget(id: String): Modifier =
+        if (landedOnInitialTopic || id != initialTopic) {
+            this
+        } else {
+            onGloballyPositioned { coordinates ->
+                if (landedOnInitialTopic) return@onGloballyPositioned
+                landedOnInitialTopic = true
+                val top = (coordinates.positionInParent().y - pinnedToolbarHeightPx).roundToInt().coerceAtLeast(0)
+                landingScope.launch { guideScrollState.scrollTo(top) }
+            }
+        }
+
     Scaffold(
         containerColor = colorScheme.background,
     ) { padding ->
@@ -255,8 +289,9 @@ fun HelpGuideScreen(
                 if (whatsNew.isNotEmpty()) {
                     SectionLabel(res("guide.whatsNew"))
                     whatsNew.forEach { topic ->
-                        TopicCard(topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
-                            expandedId = if (expandedId == topic.id) null else topic.id
+                        val key = guideCardKey(topic.id, inWhatsNew = true)
+                        TopicCard(topic, expandedId == key, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
+                            expandedId = if (expandedId == key) null else key
                         }
                         Spacer(Modifier.height(TopicCardSpacing))
                     }
@@ -267,8 +302,12 @@ fun HelpGuideScreen(
                     if (sectionTopics.isNotEmpty()) {
                         SectionLabel(res(section.titleKey))
                         sectionTopics.forEach { topic ->
-                            TopicCard(topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
-                                expandedId = if (expandedId == topic.id) null else topic.id
+                            val key = guideCardKey(topic.id, inWhatsNew = false)
+                            TopicCard(
+                                topic, expandedId == key, ::res, isLocalMode, showNewBadges, onOpenDeepLink,
+                                modifier = Modifier.landingTarget(topic.id),
+                            ) {
+                                expandedId = if (expandedId == key) null else key
                             }
                             Spacer(Modifier.height(TopicCardSpacing))
                         }
@@ -402,6 +441,7 @@ private fun TopicCard(
     isLocalMode: Boolean,
     showNewBadge: Boolean,
     onOpenDeepLink: (String) -> Unit,
+    modifier: Modifier = Modifier,
     onToggle: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -409,7 +449,7 @@ private fun TopicCard(
         shape = RoundedCornerShape(TdayDimens.RadiusLg),
         color = colorScheme.surface,
         border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.06f)),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column {
             Row(
@@ -594,6 +634,7 @@ private fun BodyBlock(type: GuideBlockType, texts: List<String>) {
 // (guarded by the guide-icons coverage test); book is a defensive fallback.
 @DrawableRes
 private fun guideIconRes(name: String): Int = when (name) {
+    "activity" -> R.drawable.ic_lucide_activity
     "alarm-clock" -> R.drawable.ic_lucide_alarm_clock
     "bell" -> R.drawable.ic_lucide_bell
     "bell-ring" -> R.drawable.ic_lucide_bell_ring

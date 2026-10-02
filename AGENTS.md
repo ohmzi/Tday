@@ -129,6 +129,9 @@ T'Day is a task app, not a marketing site. Mobile screens should feel quiet, use
 
 T'Day is Sentry-first and privacy-first. New UI, API, sync, auth, reminder, widget, realtime, or storage behavior should include only diagnostic telemetry that helps debug failures or performance.
 
+- Client telemetry (web, Android, iOS) is opt-in and failures-only, so it must be consent-gated. Never initialise or start a Sentry SDK anywhere but the platform's consent-gated initializer (web `sentryInit.ts`, Android `TelemetryBootstrap`, iOS `SentryConfiguration`; backend `BackendSentry`), and never add session pings, traces, or sampled performance data to a client.
+- Never record outside the allow-list in `docs/TELEMETRY.md`. A new breadcrumb category, tag, context, or extra means updating the platform scrubber, its tests, and that document.
+- Report new failure paths through the platform helpers (`TdayTelemetry` capture, and the `slow_operation` helper with the shared operation ids and thresholds for slow paths), not raw SDK calls.
 - Use platform helpers: backend `TdayObservability`, web `src/lib/observability/sentry.ts`, Android `TdayTelemetry`, and iOS `TdayTelemetry`.
 - Keep breadcrumb and transaction names stable and structural: route templates, screen/operation names, status codes, durations, counts, and enum-like states.
 - Pass route-like fields such as `route`, `path`, `url`, `from`, and `to` through the platform helper so they are stored as templates, not raw URLs.
@@ -146,6 +149,7 @@ The in-app How-To guide (Settings → "How-To & Tips") is content-driven from th
 - The exporter also regenerates `SummaryStringBundlesGenerated.kt` from the web `summary` namespace; a new summary-engine phrase means adding the key to every locale file and to `SUMMARY_VALUE_KEYS` in `GuideContentExporter.kt`.
 - Topic icons must be real Lucide glyphs present on every platform (web `lucide-react`, Android `ic_lucide_<glyph>.xml`, iOS `Lucide<Glyph>.imageset`); the `guide-icons` coverage test enforces this for guide topics and the `settings-icons` one does the same for the Settings row glyphs. Add missing assets per `docs/ICONS.md`.
 - The i18n parity guardrail blocks partial translations, so a new topic needs all locales up front (machine-translate, then refine).
+- The `crash-reports` topic ("Crash & problem reports", `sinceVersion = "0.8.0"`) is the FAQ behind the opt-in crash-reporting card and the Settings → Privacy "?" link. Keep it in sync with `docs/TELEMETRY.md`: if what is collected, retained, or never sent changes, update the topic's strings in every `tday-web/messages/<locale>.json` and re-export.
 
 ## Architecture Expectations
 

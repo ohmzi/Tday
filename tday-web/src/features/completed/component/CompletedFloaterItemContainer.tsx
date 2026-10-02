@@ -1,3 +1,4 @@
+import { TEST_CRASH_ROW_PROPS, testCrashRowOpen } from "@/lib/testCrash"; // TEST-CRASH
 import { CompletedFloaterItemType } from "@/types";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import FloaterListDot from "@/features/floaterList/component/FloaterListDot";
@@ -44,6 +45,8 @@ export const CompletedFloaterItemContainer = ({
 
   return (
     <div
+      {...TEST_CRASH_ROW_PROPS} // TEST-CRASH
+      onClickCapture={testCrashRowOpen} // TEST-CRASH
       style={
         removing
           ? {
