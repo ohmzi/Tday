@@ -8,6 +8,9 @@ import com.ohmz.tday.domain.AuthenticatedUser
 import com.ohmz.tday.observability.TelemetryGate
 import com.ohmz.tday.security.SecurityEventLogger
 import com.ohmz.tday.security.testAppConfig
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -15,7 +18,9 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.util.concurrent.Executors
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -144,6 +149,57 @@ class InstanceSettingsServiceTest {
         service(gate = unreadable).loadTelemetryGate()
 
         assertFalse(unreadable.isOpen)
+    }
+
+    @Test
+    fun `overlapping toggles leave the gate agreeing with the stored row`() = runBlocking {
+        // The first toggle's caller is slow to resume after its commit. A toggle that is allowed
+        // to overlap it commits its own row and sets the gate in that gap, and the older toggle
+        // then overwrites the gate with its stale answer.
+        val slowCaller = Executors.newSingleThreadExecutor()
+        val fastCaller = Executors.newSingleThreadExecutor()
+        try {
+            val service = service()
+            val first = async(slowCaller.asCoroutineDispatcher()) {
+                service.setServerTelemetry(enabled = true, admin).orFail()
+            }
+            slowCaller.execute { Thread.sleep(400) }
+            delay(100)
+            val second = async(fastCaller.asCoroutineDispatcher()) {
+                service.setServerTelemetry(enabled = false, admin).orFail()
+            }
+            first.await()
+            second.await()
+
+            val stored = transaction(db) { InstanceSettings.selectAll().single()[InstanceSettings.settingValue] }
+            assertEquals("false", stored)
+            assertEquals(stored == "true", gate.isOpen, "the gate disagrees with the stored row")
+        } finally {
+            slowCaller.shutdownNow()
+            fastCaller.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `a write that fails leaves the gate where it was and surfaces the error`() = runBlocking {
+        val service = service()
+        service.setServerTelemetry(enabled = true, admin).orFail()
+        transaction(db) { exec("DROP TABLE instance_settings") }
+
+        assertFails { service.setServerTelemetry(enabled = false, admin) }
+
+        assertTrue(gate.isOpen, "a setting that was never stored must not close the gate")
+        assertEquals(listOf("telemetry_enabled"), events.reasonCodes)
+    }
+
+    @Test
+    fun `a failed first write leaves the gate closed`() = runBlocking {
+        transaction(db) { exec("DROP TABLE instance_settings") }
+
+        assertFails { service().setServerTelemetry(enabled = true, admin) }
+
+        assertFalse(gate.isOpen, "a setting that was never stored must not open the gate")
+        assertTrue(events.reasonCodes.isEmpty())
     }
 
     private fun <T> Either<AppError, T>.orFail(): T = fold({ error("expected success but got $it") }, { it })

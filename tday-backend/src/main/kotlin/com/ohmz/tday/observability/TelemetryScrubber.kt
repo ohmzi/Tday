@@ -40,6 +40,12 @@ object TelemetryScrubber {
     private val textRules: List<Pair<Regex, String>> = listOf(
         Regex("""jdbc:[A-Za-z0-9]+:[^\s"'<>)\]]+""") to "[jdbc]",
         Regex("""\b[A-Za-z][A-Za-z0-9+.-]*://[^\s"'<>)\]]+""") to "[url]",
+        // Parsers echo the offending input back: kotlinx.serialization appends the JSON it was
+        // decoding (all of it, or a window around the offset) after "JSON input:", java.time and
+        // the number parsers quote the text they could not read.
+        Regex("""(JSON input:\s*)[\s\S]*""") to "$1[redacted]",
+        Regex("""Text '.*' could not be parsed""") to "Text '[redacted]' could not be parsed",
+        Regex("""(For input string:\s*).*""") to "$1[redacted]",
         Regex("""Key \(.*\)=\(.*\)""") to "Key [redacted]",
         Regex("""Failing row contains \(.*\)""") to "Failing row contains [redacted]",
         Regex("""(invalid input (?:syntax|value) for [^:\n]*:\s*)"[^"\n]*"""") to "$1\"[redacted]\"",

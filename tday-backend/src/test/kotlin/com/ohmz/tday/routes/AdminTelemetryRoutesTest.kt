@@ -117,6 +117,18 @@ class AdminTelemetryRoutesTest {
     }
 
     @Test
+    fun `an admin who is not approved is refused like any other admin route and nothing changes`() = testApplication {
+        application {
+            configureTelemetryApp(dsn = DSN, authUser = approvedUser(role = "ADMIN").copy(approvalStatus = "PENDING"))
+        }
+
+        assertEquals(HttpStatusCode.Forbidden, client.get("/api/admin/telemetry").status)
+        assertEquals(HttpStatusCode.Forbidden, client.patchEnabled(true).status)
+        assertFalse(gate.isOpen)
+        transaction(db) { assertEquals(0, InstanceSettings.selectAll().count()) }
+    }
+
+    @Test
     fun `an unauthenticated caller gets nothing`() = testApplication {
         application { configureTelemetryApp(dsn = DSN, authUser = null) }
 

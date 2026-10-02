@@ -57,6 +57,33 @@ class TelemetryScrubberTest {
     }
 
     @Test
+    fun `redacts the input kotlinx serialization echoes in a decoding failure`() {
+        val short = TelemetryScrubber.scrubText(
+            "Unexpected JSON token at offset 9: Expected end of the object\nJSON input: {\"title\":\"Call Dr Patel about results\"}",
+        )
+        val windowed = TelemetryScrubber.scrubText(
+            "Unexpected JSON token at offset 241: Expected comma\nJSON input: .....e\":\"Call Dr Patel about results\",\"due\":.....",
+        )
+
+        assertFalse("Patel" in short, short)
+        assertFalse("Patel" in windowed, windowed)
+        assertTrue("Unexpected JSON token at offset 9" in short, short)
+        assertTrue("JSON input: [redacted]" in short, short)
+        assertTrue("JSON input: [redacted]" in windowed, windowed)
+    }
+
+    @Test
+    fun `redacts the text parsers echo back in their failures`() {
+        val date = TelemetryScrubber.scrubText("DateTimeParseException: Text 'Call Dr Patel's results' could not be parsed at index 0")
+        val number = TelemetryScrubber.scrubText("""NumberFormatException: For input string: "Call Dr Patel"""")
+
+        assertFalse("Patel" in date, date)
+        assertEquals("DateTimeParseException: Text '[redacted]' could not be parsed at index 0", date)
+        assertFalse("Patel" in number, number)
+        assertEquals("NumberFormatException: For input string: [redacted]", number)
+    }
+
+    @Test
     fun `redacts connection strings and urls`() {
         val scrubbed = TelemetryScrubber.scrubText(
             "Cannot connect to jdbc:postgresql://db.internal:5432/tday?user=admin&password=hunter2 " +
