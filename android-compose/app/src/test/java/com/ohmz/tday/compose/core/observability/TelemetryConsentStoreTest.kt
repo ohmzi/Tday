@@ -57,4 +57,14 @@ class TelemetryConsentStoreTest {
         store.deny()
         assertEquals(TelemetryConsentState.DENIED, store.state())
     }
+
+    @Test
+    fun `grant and deny report whether the answer reached the disk`() {
+        assertEquals(true, store.grant(nowMs = 1L))
+        assertEquals(true, store.deny())
+
+        preferences.failingCommits = 2
+        assertEquals(false, store.grant(nowMs = 2L))
+        assertEquals(false, store.deny())
+    }
 }

@@ -126,6 +126,15 @@ private val TipBlockRadius = 10.dp
 private val CodeBlockHorizontalPadding = 10.dp
 
 /**
+ * Which card is open is tracked by this key. A topic that is new in this release is on the page
+ * twice, in What's New and in its own section, and the copy in What's New gets a key of its own so
+ * opening one never opens the other. The section card keeps the plain topic id, which is also what
+ * a deep link and the search results carry.
+ */
+internal fun guideCardKey(topicId: String, inWhatsNew: Boolean): String =
+    if (inWhatsNew) "whats-new:$topicId" else topicId
+
+/**
  * The in-app How-To / feature guide. Reads the shared [GuideCatalog] natively via
  * the :shared dependency, resolves localized strings from the generated
  * [GuideStringsGenerated], and searches with the shared [GuideSearch] — so its
@@ -198,13 +207,12 @@ fun HelpGuideScreen(
     // the page is a long list and the topic may sit well below the fold. Once the card has been
     // laid out, scroll it to just under the toolbar, once. Remembered across a rotation so the
     // jump never fights a scroll the reader has made since.
-    val whatsNewIds = remember(whatsNew) { whatsNew.mapTo(HashSet()) { it.id } }
     val landingScope = rememberCoroutineScope()
     var landedOnInitialTopic by rememberSaveable { mutableStateOf(false) }
-    // The card is on the page twice when the topic is new in this release: in What's New, above
-    // the sections, and in its own section. The first of the two is the one to land on.
-    fun Modifier.landingTarget(id: String, inWhatsNew: Boolean): Modifier =
-        if (landedOnInitialTopic || id != initialTopic || inWhatsNew != (id in whatsNewIds)) {
+    // Only a section card is a landing target, so a topic that is also in What's New lands (and
+    // opens) in its section rather than in the copy above it.
+    fun Modifier.landingTarget(id: String): Modifier =
+        if (landedOnInitialTopic || id != initialTopic) {
             this
         } else {
             onGloballyPositioned { coordinates ->
@@ -281,11 +289,9 @@ fun HelpGuideScreen(
                 if (whatsNew.isNotEmpty()) {
                     SectionLabel(res("guide.whatsNew"))
                     whatsNew.forEach { topic ->
-                        TopicCard(
-                            topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink,
-                            modifier = Modifier.landingTarget(topic.id, inWhatsNew = true),
-                        ) {
-                            expandedId = if (expandedId == topic.id) null else topic.id
+                        val key = guideCardKey(topic.id, inWhatsNew = true)
+                        TopicCard(topic, expandedId == key, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
+                            expandedId = if (expandedId == key) null else key
                         }
                         Spacer(Modifier.height(TopicCardSpacing))
                     }
@@ -296,11 +302,12 @@ fun HelpGuideScreen(
                     if (sectionTopics.isNotEmpty()) {
                         SectionLabel(res(section.titleKey))
                         sectionTopics.forEach { topic ->
+                            val key = guideCardKey(topic.id, inWhatsNew = false)
                             TopicCard(
-                                topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink,
-                                modifier = Modifier.landingTarget(topic.id, inWhatsNew = false),
+                                topic, expandedId == key, ::res, isLocalMode, showNewBadges, onOpenDeepLink,
+                                modifier = Modifier.landingTarget(topic.id),
                             ) {
-                                expandedId = if (expandedId == topic.id) null else topic.id
+                                expandedId = if (expandedId == key) null else key
                             }
                             Spacer(Modifier.height(TopicCardSpacing))
                         }

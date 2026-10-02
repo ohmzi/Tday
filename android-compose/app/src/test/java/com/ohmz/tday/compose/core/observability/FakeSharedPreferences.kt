@@ -7,10 +7,14 @@ import android.content.SharedPreferences
  * only stubs the framework, so a real `getSharedPreferences` is not available here.
  *
  * Writes land immediately whether the test calls `apply()` or `commit()`, which is the
- * observable behaviour of the real thing from the same process.
+ * observable behaviour of the real thing from the same process. [failingCommits] makes the next
+ * that many `commit()` calls report a failed disk write, with the value still visible in memory,
+ * which is what the real implementation does when the file cannot be written.
  */
 internal class FakeSharedPreferences : SharedPreferences {
     private val values = mutableMapOf<String, Any?>()
+
+    var failingCommits = 0
 
     override fun getAll(): MutableMap<String, *> = values.toMutableMap()
 
@@ -61,7 +65,10 @@ internal class FakeSharedPreferences : SharedPreferences {
 
         override fun clear() = apply { values.clear() }
 
-        override fun commit(): Boolean = true
+        override fun commit(): Boolean = failingCommits.let { failing ->
+            if (failing > 0) failingCommits = failing - 1
+            failing == 0
+        }
 
         override fun apply() = Unit
     }

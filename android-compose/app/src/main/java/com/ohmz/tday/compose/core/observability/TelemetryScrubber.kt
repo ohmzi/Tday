@@ -2,6 +2,7 @@ package com.ohmz.tday.compose.core.observability
 
 import io.sentry.Breadcrumb
 import io.sentry.SentryEvent
+import io.sentry.protocol.SentryStackTrace
 
 /**
  * The one place that decides what a report may say. Pure functions over the SDK's own event types,
@@ -19,6 +20,17 @@ object TelemetryScrubber {
     /** Past this a message is a payload, not a diagnosis. */
     private const val MAX_TEXT_LENGTH = 300
 
+    /**
+     * How much of a message the rules read. Several of them are quadratic on a long unbroken run
+     * (the email one most of all), and they run on the thread that is crashing: a base64 blob in an
+     * exception message must not stall it. Far above [MAX_TEXT_LENGTH], so everything that can
+     * survive the cut has still been through every rule.
+     */
+    private const val MAX_SCANNED_LENGTH = 2000
+
+    /** A thread name a person could not have put an address in: short, plain words and separators. */
+    private val SAFE_THREAD_NAME = Regex("^[A-Za-z0-9 _.:-]{1,48}$")
+
     private val ALLOWED_CONTEXTS = setOf("app", "device", "os", "runtime", "trace", "art")
 
     /** `http` and `navigation` are reduced to structure below; the rest are structural already. */
@@ -35,12 +47,14 @@ object TelemetryScrubber {
     private val NAVIGATION_BREADCRUMB_KEYS = setOf("from", "to")
 
     // Domains a self-hoster is likely to serve T'Day from. A host with no dot ("nas") is caught by
-    // the contextual rules below instead, and the list stops short of file extensions (.so, .md)
-    // and Kotlin members (.id, .it, .is) that would otherwise read as hosts.
+    // the contextual rules below instead, and the list stops short of the suffixes that are also
+    // file extensions or Kotlin members (.so, .md, .sh, .py, .rs, .kt, .ts, .cc, .id, .is, .to) and
+    // would otherwise read stack frames and file names as hosts. "ts.net" needs no entry: "net" has it.
     private const val HOST_SUFFIXES =
-        "com|net|org|io|dev|app|me|xyz|info|biz|cloud|tech|online|site|link|lan|local|localdomain|home|" +
-            "internal|example|test|localhost|arpa|de|uk|fr|nl|eu|us|ca|au|jp|cn|br|ru|es|ch|se|fi|dk|pl|" +
-            "cz|nz|za|kr|tw|hk|sg|ie|mx|tr|ua|il|co"
+        "com|net|org|info|biz|io|dev|app|page|me|ai|xyz|cloud|tech|online|site|link|lan|local|" +
+            "localdomain|home|internal|intranet|corp|example|test|localhost|arpa|co|de|uk|fr|nl|eu|us|" +
+            "ca|au|jp|cn|br|ru|es|ch|se|fi|dk|pl|cz|nz|za|kr|tw|hk|sg|ie|mx|tr|ua|il|it|at|be|pt|gr|" +
+            "hu|ro|bg|sk|si|hr|lt|lv|ee"
 
     private const val HEX = "[0-9A-Fa-f]"
 
@@ -49,6 +63,12 @@ object TelemetryScrubber {
      * so the generic ones do not take half of them and leave the rest looking harmless.
      */
     private val TEXT_RULES: List<Pair<Regex, String>> = listOf(
+        // Text a library quotes back from what it was parsing: kotlinx.serialization's "JSON input:"
+        // (the whole payload, or a window around the failure), java.time's "Text '...' could not be
+        // parsed" and the number parsers' "For input string:". That is the user's own words.
+        Regex("(JSON input:\\s*)[\\s\\S]*") to "$1[redacted]",
+        Regex("(Text\\s+)'[\\s\\S]*?'(?=\\s+could not be parsed)") to "$1'[redacted]'",
+        Regex("(For input string:\\s*)[^\\n]*") to "$1[redacted]",
         Regex("jdbc:\\S+", RegexOption.IGNORE_CASE) to "[url]",
         Regex("\\b[a-z][a-z0-9+.-]*://[^\\s\"'<>)\\]]+", RegexOption.IGNORE_CASE) to "[url]",
         Regex("Key \\([^)]*\\)=\\([^)]*\\)") to "Key ([redacted])=([redacted])",
@@ -78,7 +98,7 @@ object TelemetryScrubber {
 
     /** Replaces everything in [text] that identifies a person, a server or a record. */
     fun scrubText(text: String): String {
-        val redacted = TEXT_RULES.fold(text) { current, (pattern, replacement) ->
+        val redacted = TEXT_RULES.fold(text.take(MAX_SCANNED_LENGTH)) { current, (pattern, replacement) ->
             pattern.replace(current, replacement)
         }
         return if (redacted.length > MAX_TEXT_LENGTH) redacted.take(MAX_TEXT_LENGTH) + "…" else redacted
@@ -108,7 +128,21 @@ object TelemetryScrubber {
         }
         contexts.app?.permissions = null
 
-        event.exceptions?.forEach { exception -> exception.value = exception.value?.let(::scrubText) }
+        event.exceptions?.forEach { exception ->
+            exception.value = exception.value?.let(::scrubText)
+            scrubStackTrace(exception.stacktrace)
+        }
+        // An ANR is built from the system's thread dump, so it brings every thread and every loaded
+        // library along. OkHttp names its threads after the server it is talking to, and the
+        // images' paths run through the install's random directory names.
+        event.threads?.forEach { thread ->
+            thread.name = thread.name?.let(::safeThreadName)
+            scrubStackTrace(thread.stacktrace)
+        }
+        event.debugMeta?.images?.forEach { image ->
+            image.codeFile = image.codeFile?.let(::fileName)
+            image.debugFile = image.debugFile?.let(::fileName)
+        }
         event.message?.let { message ->
             message.message = message.message?.let(::scrubText)
             message.formatted = message.formatted?.let(::scrubText)
@@ -120,6 +154,26 @@ object TelemetryScrubber {
 
         tags.forEach { (key, value) -> if (event.getTag(key) == null) event.setTag(key, value) }
         return event
+    }
+
+    /**
+     * A thread's name if it is plain words, else its first word if that is, else nothing. A name
+     * that a rule would change is not plain: "OkHttp tday.example.com" becomes "OkHttp".
+     */
+    private fun safeThreadName(name: String): String? =
+        sequenceOf(name, name.substringBefore(' '))
+            .firstOrNull { SAFE_THREAD_NAME.matches(it) && "://" !in it && scrubText(it) == it }
+
+    /** `/data/app/~~random==/com.ohmz.tday-random==/lib/arm64/libx.so` is `libx.so`. */
+    private fun fileName(path: String): String = path.substringAfterLast('/')
+
+    /** Native frames name the library by its install path; Java frames carry class and file names only. */
+    private fun scrubStackTrace(stackTrace: SentryStackTrace?) {
+        stackTrace?.frames?.forEach { frame ->
+            frame.filename = frame.filename?.let(::fileName)
+            frame.absPath = frame.absPath?.let(::fileName)
+            frame.`package` = frame.`package`?.let(::fileName)
+        }
     }
 
     /** The breadcrumb reduced to structure, or `null` if its category is not on the allow list. */

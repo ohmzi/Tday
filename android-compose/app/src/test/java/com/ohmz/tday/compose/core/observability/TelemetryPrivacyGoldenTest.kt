@@ -6,9 +6,14 @@ import io.sentry.JsonSerializer
 import io.sentry.SentryEvent
 import io.sentry.android.core.SentryAndroidOptions
 import io.sentry.protocol.App
+import io.sentry.protocol.DebugImage
+import io.sentry.protocol.DebugMeta
 import io.sentry.protocol.Device
 import io.sentry.protocol.Message
 import io.sentry.protocol.SentryException
+import io.sentry.protocol.SentryStackFrame
+import io.sentry.protocol.SentryStackTrace
+import io.sentry.protocol.SentryThread
 import io.sentry.protocol.User
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -153,6 +158,70 @@ class TelemetryPrivacyGoldenTest {
             "ip_address",
         )) {
             assertFalse("the report still contains $secret:\n$json", json.contains(secret))
+        }
+    }
+
+    /** What `AnrV2Integration` builds from the system's thread dump: every thread, every loaded image. */
+    private fun anrEvent(): SentryEvent = SentryEvent(Date(2_000L)).apply {
+        threads = listOf(
+            SentryThread().apply {
+                id = 1L
+                name = "main"
+                isCrashed = true
+                stacktrace = SentryStackTrace(
+                    listOf(
+                        SentryStackFrame().apply {
+                            module = "com.ohmz.tday.compose.MainActivity"
+                            function = "onResume"
+                            filename = "MainActivity.kt"
+                        },
+                        SentryStackFrame().apply {
+                            `package` = "/data/app/~~x==/com.ohmz.tday-y==/lib/arm64/libsentry.so"
+                            absPath = "/data/app/~~x==/com.ohmz.tday-y==/base.apk"
+                            filename = "/data/app/~~x==/com.ohmz.tday-y==/base.apk"
+                        },
+                    ),
+                )
+            },
+            SentryThread().apply {
+                id = 42L
+                name = "OkHttp https://tday.alice-home.net/..."
+            },
+            SentryThread().apply {
+                id = 43L
+                name = "OkHttp tday.alice-home.net"
+            },
+            SentryThread().apply {
+                id = 44L
+                name = "RenderThread"
+            },
+        )
+        debugMeta = DebugMeta().apply {
+            images = listOf(
+                DebugImage().apply {
+                    type = "elf"
+                    debugId = "0123456789abcdef"
+                    codeFile = "/data/app/~~x==/com.ohmz.tday-y==/lib/arm64/libsentry.so"
+                    debugFile = "/data/app/~~x==/com.ohmz.tday-y==/lib/arm64/libsentry.so"
+                },
+                DebugImage().apply {
+                    type = "elf"
+                    codeFile = "/system/lib64/libc.so"
+                },
+            )
+        }
+    }
+
+    @Test
+    fun `an ANR report carries neither the server host in a thread name nor the install path`() {
+        val sent = options.beforeSend!!.execute(anrEvent(), Hint())!!
+        val json = StringWriter().also { JsonSerializer(options).serialize(sent, it) }.toString()
+
+        for (secret in listOf("alice-home", "alice", "tday.alice", "https://", "~~x==", "com.ohmz.tday-y==", "/data/app")) {
+            assertFalse("the report still contains $secret:\n$json", json.contains(secret))
+        }
+        for (kept in listOf("\"main\"", "\"OkHttp\"", "RenderThread", "libsentry.so", "libc.so", "MainActivity.kt", "onResume")) {
+            assertTrue("the report lost $kept:\n$json", json.contains(kept))
         }
     }
 

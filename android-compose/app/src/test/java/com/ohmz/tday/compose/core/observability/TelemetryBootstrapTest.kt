@@ -13,9 +13,11 @@ class TelemetryBootstrapTest {
     @get:Rule
     val temp = TemporaryFolder()
 
-    private val store = TelemetryConsentStore(FakeSharedPreferences())
+    private val preferences = FakeSharedPreferences()
+    private val store = TelemetryConsentStore(preferences)
     private val gate = TelemetryGate()
     private var now = 1_000L
+    private val persistFailures = mutableListOf<String>()
 
     private lateinit var sentryDir: File
     private lateinit var installationFile: File
@@ -36,6 +38,7 @@ class TelemetryBootstrapTest {
         sentryCacheDir = sentryDir,
         installationFile = installationFile,
         clock = { now },
+        onPersistFailure = { persistFailures += it },
     )
 
     /** What an earlier run of the SDK leaves behind: envelopes, native crash state, the install id. */
@@ -176,6 +179,52 @@ class TelemetryBootstrapTest {
         assertEquals(TelemetryConsentState.DENIED, store.state())
         assertFalse(gate.isOpen)
         assertResidueGone()
+    }
+
+    @Test
+    fun `a no that fails to reach the disk is retried once and still reports success`() {
+        store.grant(nowMs = 500L)
+        val bootstrap = bootstrap()
+        bootstrap.start()
+        preferences.failingCommits = 1
+
+        val persisted = bootstrap.apply(granted = false)
+
+        assertTrue(persisted)
+        assertEquals(emptyList<String>(), persistFailures)
+        assertEquals(TelemetryConsentState.DENIED, store.state())
+        assertFalse(gate.isOpen)
+    }
+
+    @Test
+    fun `a no that cannot be written still turns everything off in this process and says so`() {
+        store.grant(nowMs = 500L)
+        leaveSdkResidue()
+        val bootstrap = bootstrap()
+        bootstrap.start()
+        preferences.failingCommits = 2
+
+        val persisted = bootstrap.apply(granted = false)
+
+        assertFalse(persisted)
+        assertEquals(listOf("consent.deny.not_persisted"), persistFailures)
+        assertEquals(TelemetryConsentState.DENIED, store.state())
+        assertEquals(listOf("start@500", "stop"), sdk.events)
+        assertFalse(gate.isOpen)
+        assertResidueGone()
+    }
+
+    @Test
+    fun `a yes that cannot be written does not start the sdk and leaves the answer off`() {
+        preferences.failingCommits = 1
+
+        val persisted = bootstrap().apply(granted = true)
+
+        assertFalse(persisted)
+        assertEquals(listOf("consent.grant.not_persisted"), persistFailures)
+        assertEquals(emptyList<String>(), sdk.events)
+        assertFalse(gate.isOpen)
+        assertEquals(TelemetryConsentState.DENIED, store.state())
     }
 
     @Test

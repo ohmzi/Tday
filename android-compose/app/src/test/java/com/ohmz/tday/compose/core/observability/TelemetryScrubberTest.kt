@@ -157,6 +157,84 @@ class TelemetryScrubberTest {
         assertTrue(scrubbed.endsWith("…"))
     }
 
+    @Test
+    fun `redacts the input a kotlinx serialization decoding error quotes`() {
+        val short = TelemetryScrubber.scrubText(
+            "Unexpected JSON token at offset 12: Expected '}'\nJSON input: {\"title\":\"Call Dr Patel about results\"}",
+        )
+        val windowed = TelemetryScrubber.scrubText(
+            "Unexpected JSON token at offset 400: Expected '}'\nJSON input: .....\"title\":\"Buy milk for Bob\"...",
+        )
+
+        for (scrubbed in listOf(short, windowed)) {
+            assertFalse(scrubbed, scrubbed.contains("Patel"))
+            assertFalse(scrubbed, scrubbed.contains("Bob"))
+            assertFalse(scrubbed, scrubbed.contains("milk"))
+            assertTrue(scrubbed, scrubbed.contains("Unexpected JSON token at offset"))
+            assertTrue(scrubbed, scrubbed.contains("JSON input: [redacted]"))
+        }
+    }
+
+    @Test
+    fun `redacts the text a date parse error and a number format error echo`() {
+        val date = TelemetryScrubber.scrubText("Text 'Buy Bob's milk tomorrow' could not be parsed at index 0")
+        val number = TelemetryScrubber.scrubText("java.lang.NumberFormatException: For input string: \"call mum\"")
+
+        assertFalse(date, date.contains("Bob"))
+        assertFalse(date, date.contains("milk"))
+        assertTrue(date, date.endsWith("could not be parsed at index 0"))
+        assertFalse(number, number.contains("mum"))
+        assertTrue(number, number.contains("NumberFormatException: For input string:"))
+    }
+
+    @Test(timeout = 5_000)
+    fun `a hostile message is capped before the rules run so a crash cannot stall the thread`() {
+        val blob = "a".repeat(100_000)
+
+        val scrubbed = TelemetryScrubber.scrubText(blob)
+
+        assertTrue(scrubbed.length <= 301)
+    }
+
+    @Test
+    fun `still redacts what sits inside the scanned window of an oversized message`() {
+        val scrubbed = TelemetryScrubber.scrubText("owner alex@example.com " + "b".repeat(50_000))
+
+        assertFalse(scrubbed.contains("alex"))
+        assertTrue(scrubbed.startsWith("owner [email]"))
+    }
+
+    @Test
+    fun `redacts a bare host under the less common suffixes a self hoster picks`() {
+        for (host in listOf(
+            "tday.alice.page", "tday.alice.it", "tday.alice.ai", "tday.my-home.me", "tday.alice.app",
+            "tday.alice.dev", "tday.alice.io", "tday.alice.co", "tday.alice.co.uk", "tday.alice.de",
+            "tday.alice.fr", "tday.alice.es", "tday.alice.nl", "tday.alice.se", "tday.alice.ch",
+            "tday.alice.at", "tday.alice.ca", "tday.alice.com.au", "tday.alice.nz", "tday.alice.jp",
+            "tday.alice.us", "tday.alice.eu", "tday.alice.xyz", "tday.alice.cloud", "tday.alice.tech",
+            "tday.alice.online", "tday.alice.site", "tday.alice.link", "tday.alice.lan",
+            "tday.alice.home", "tday.alice.internal", "tday.alice.local", "tday.alice.localdomain",
+            "tday.tail1234.ts.net",
+        )) {
+            val scrubbed = TelemetryScrubber.scrubText("CN=$host closed")
+
+            assertFalse("$host survived as: $scrubbed", scrubbed.contains("alice") || scrubbed.contains("tail1234"))
+        }
+    }
+
+    @Test
+    fun `keeps stack frame and file names that only look like hosts`() {
+        for (text in listOf(
+            "at com.ohmz.tday.compose.core.TdayApp.onCreate(TdayApp.kt:42)",
+            "at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)",
+            "dlopen failed: library libsentry-android-ndk.so not found",
+            "see build.gradle.kts and libs.versions.toml and run.sh and script.py",
+            "Foo.id Foo.is Foo.to Foo.md",
+        )) {
+            assertEquals(text, TelemetryScrubber.scrubText(text))
+        }
+    }
+
     // ── Events ──────────────────────────────────────────────────────────────────────────────
 
     private fun event(): SentryEvent = SentryEvent().apply {

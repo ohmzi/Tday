@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.core.observability
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,6 +10,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TelemetryConsentManagerTest {
@@ -78,13 +83,58 @@ class TelemetryConsentManagerTest {
     }
 
     @Test
-    fun `the last tap wins when answers arrive faster than they are applied`() {
-        val manager = manager()
+    fun `answers are applied in the order they were given even when applying one is slow`() {
+        // The SDK blocks on a latch for its first transition, so every later tap is queued behind
+        // it on a real thread pool. A consumer that launched one coroutine per tap would let those
+        // queued taps race for the bootstrap lock and apply in whatever order the threads woke.
+        val taps = List(12) { it % 2 == 0 }
+        val executor = Executors.newFixedThreadPool(taps.size + 2)
+        try {
+            repeat(TRIALS) {
+                val trialStore = TelemetryConsentStore(FakeSharedPreferences())
+                val trialGate = TelemetryGate()
+                val events = CopyOnWriteArrayList<String>()
+                val firstTransitionMayFinish = CountDownLatch(1)
+                val slowSdk = object : TelemetrySdk {
+                    override fun start(grantedAtMs: Long) = transition("start")
 
-        listOf(true, false, true).forEach(manager::setShareReports)
+                    override fun stop() = transition("stop")
 
-        assertEquals(TelemetryConsentState.GRANTED, manager.state.value)
-        assertEquals(TelemetryConsentState.GRANTED, store.state())
-        assertTrue(gate.isOpen)
+                    private fun transition(name: String) {
+                        if (events.isEmpty()) firstTransitionMayFinish.await()
+                        Thread.sleep(1)
+                        events += name
+                    }
+                }
+                val bootstrap = TelemetryBootstrap(
+                    store = trialStore,
+                    gate = trialGate,
+                    sdk = slowSdk,
+                    dsn = "https://publickey@o1.ingest.sentry.io/2",
+                    sentryCacheDir = File(temp.newFolder(), "sentry"),
+                    installationFile = File(temp.newFolder(), "INSTALLATION"),
+                    clock = { 1_000L },
+                )
+                val manager = TelemetryConsentManager(bootstrap, executor.asCoroutineDispatcher())
+
+                taps.forEach(manager::setShareReports)
+                firstTransitionMayFinish.countDown()
+
+                val expected = taps.map { if (it) "start" else "stop" }
+                val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3)
+                while (events.size < expected.size && System.nanoTime() < deadline) Thread.sleep(5)
+
+                assertEquals(expected, events.toList())
+                assertEquals(TelemetryConsentState.DENIED, manager.state.value)
+                assertEquals(TelemetryConsentState.DENIED, trialStore.state())
+                assertFalse(trialGate.isOpen)
+            }
+        } finally {
+            executor.shutdownNow()
+        }
+    }
+
+    private companion object {
+        const val TRIALS = 15
     }
 }

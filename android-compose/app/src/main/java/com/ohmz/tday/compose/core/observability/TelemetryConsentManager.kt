@@ -49,7 +49,9 @@ class TelemetryConsentManager @Inject constructor(
         scope.launch {
             for (granted in answers) {
                 // A failure applying one answer must not stop the next from being applied.
-                runCatching { bootstrap.apply(granted) }
+                val persisted = runCatching { bootstrap.apply(granted) }.getOrDefault(true)
+                // A yes that could not be stored was undone, so the switch must stop saying on.
+                if (!persisted) _state.value = bootstrap.state()
             }
         }
     }

@@ -39,19 +39,19 @@ class TelemetryConsentStore internal constructor(private val preferences: Shared
     /** When consent was given, or 0 if it has not been. */
     fun grantedAtMs(): Long = preferences.getLong(KEY_GRANTED_AT_MS, 0L)
 
-    fun grant(nowMs: Long) {
+    /** Whether the answer reached the disk; in memory it is changed either way. */
+    fun grant(nowMs: Long): Boolean =
         preferences.edit()
             .putString(KEY_STATE, VALUE_GRANTED)
             .putLong(KEY_GRANTED_AT_MS, nowMs)
             .commit()
-    }
 
-    fun deny() {
+    /** Whether the answer reached the disk; in memory it is changed either way. */
+    fun deny(): Boolean =
         preferences.edit()
             .putString(KEY_STATE, VALUE_DENIED)
             .remove(KEY_GRANTED_AT_MS)
             .commit()
-    }
 
     private companion object {
         const val PREF_NAME = "telemetry_consent_prefs"
