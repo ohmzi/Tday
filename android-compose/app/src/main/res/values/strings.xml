@@ -707,6 +707,21 @@
     <string name="app_lock_unlock">Unlock</string>
     <string name="app_lock_prompt_title">Unlock T\'Day</string>
     <string name="app_lock_prompt_subtitle">Confirm it\'s you to see your tasks</string>
+    <string name="settings_crash_reports">Crash &amp; problem reports</string>
+    <string name="settings_crash_reports_toggle">Send crash &amp; problem reports when something fails</string>
+    <string name="settings_crash_reports_help">About crash &amp; problem reports</string>
+
+    <!-- Crash reports: the one-time consent card -->
+    <string name="telemetry_card_title">Help fix crashes?</string>
+    <string name="telemetry_card_intro">T\'Day can send a short technical report only when something goes wrong: a crash, a freeze, running out of memory, or something very slow. It helps the developer reproduce the problem on a similar device.</string>
+    <string name="telemetry_card_sent_label">What\'s sent</string>
+    <string name="telemetry_card_sent">App version, device model, OS version, what failed and where.</string>
+    <string name="telemetry_card_never_sent_label">Never sent</string>
+    <string name="telemetry_card_never_sent">Your name or account, IP address, location, server address, or any task or list content.</string>
+    <string name="telemetry_card_footnote">Off by default. Change it any time in Settings → Privacy.</string>
+    <string name="telemetry_card_share">Share reports</string>
+    <string name="telemetry_card_not_now">Not now</string>
+    <string name="telemetry_card_read_faq">Read the full FAQ</string>
     <string name="root_feed_search_scheduled">Search Scheduled Task</string>
     <string name="root_feed_search_floater">Search Floater Task</string>
 

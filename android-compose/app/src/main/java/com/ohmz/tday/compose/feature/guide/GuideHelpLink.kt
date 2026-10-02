@@ -32,9 +32,17 @@ private val HelpLinkGlyphSize = 18.dp
  * A quiet contextual "?" that deep-links from a feature surface into its guide
  * topic — the Android counterpart of the web `GuideHelpLink`. Renders nothing
  * when no [LocalOpenGuideTopic] provider is in scope.
+ *
+ * [contentDescription] says what the link is about ("About crash & problem reports")
+ * where the generic label would leave a screen reader reading the same "How-To & Tips"
+ * for every "?" on the page.
  */
 @Composable
-fun GuideHelpLink(topicId: String, modifier: Modifier = Modifier) {
+fun GuideHelpLink(
+    topicId: String,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+) {
     val openGuideTopic = LocalOpenGuideTopic.current ?: return
     IconButton(
         onClick = { openGuideTopic(topicId) },
@@ -42,7 +50,7 @@ fun GuideHelpLink(topicId: String, modifier: Modifier = Modifier) {
     ) {
         Icon(
             imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_circle_help),
-            contentDescription = stringResource(R.string.settings_help_guide),
+            contentDescription = contentDescription ?: stringResource(R.string.settings_help_guide),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(HelpLinkGlyphSize),
         )

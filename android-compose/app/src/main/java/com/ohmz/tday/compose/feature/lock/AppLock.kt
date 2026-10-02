@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -76,6 +77,15 @@ internal const val APP_LOCK_GRACE_MS = 2_000L
  */
 internal fun canSatisfyAppLock(biometricManager: BiometricManager, sdkInt: Int = Build.VERSION.SDK_INT): Boolean =
     biometricManager.canAuthenticate(appLockAuthenticators(sdkInt)) == BiometricManager.BIOMETRIC_SUCCESS
+
+/**
+ * Whether the app lock is covering the app right now.
+ *
+ * The lock is an overlay inside the activity's window, but a `Dialog` is a window of its own and
+ * draws above it, so a dialog opened by anything beneath the lock stays on top of a locked app.
+ * Anything that raises one outside the sign-in gates reads this and waits for the unlock.
+ */
+val LocalAppLocked = compositionLocalOf { false }
 
 /** The gap between the lock glyph, the title and the unlock button. 16 sits between `SpacingXl`
  *  and `SpacingXxl`. */

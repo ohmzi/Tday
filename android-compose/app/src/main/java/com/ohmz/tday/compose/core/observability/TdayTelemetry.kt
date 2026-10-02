@@ -62,14 +62,8 @@ object TdayTelemetry {
         RegexOption.IGNORE_CASE,
     )
     private val tokenLikeLabelPattern = Regex("^[A-Za-z0-9_.:-]+$")
-
-    fun traceSampleRate(rawValue: String?, fallback: Double): Double {
-        val parsed = rawValue
-            ?.takeIf { it.isNotBlank() }
-            ?.toDoubleOrNull()
-            ?: fallback
-        return parsed.coerceIn(0.0, 1.0)
-    }
+    private val routeTemplateSegment = Regex("^\\{[A-Za-z][A-Za-z0-9_]*}$")
+    private val routeLiteralSegment = Regex("^[A-Za-z][A-Za-z0-9_-]*$")
 
     fun sanitizePath(raw: String): String {
         val noQuery = raw.substringBefore('?').substringBefore('#')
@@ -83,6 +77,42 @@ object TdayTelemetry {
         val segments = path.split('/').filter(String::isNotBlank)
         if (segments.isEmpty()) return "/"
         return segments.joinToString(prefix = "/", separator = "/") { sanitizeSegment(it) }
+    }
+
+    /**
+     * A navigation destination's declared pattern as a path: `todos/list/{listId}/{listName}`
+     * becomes `/todos/list/:listId/:listName`.
+     *
+     * Not [sanitizePath], which has to guess whether a segment is a value. A pattern is the
+     * opposite: the segments are the app's own route names and the braces mark where a value goes,
+     * so keeping them says where the user was without saying what they were looking at. Query
+     * templates (`?topic={topic}`) are dropped.
+     */
+    fun navigationTemplate(routePattern: String): String {
+        val segments = routePattern.substringBefore('?').split('/').filter(String::isNotBlank)
+        if (segments.isEmpty()) return "/"
+        return segments.joinToString(prefix = "/", separator = "/") { segment ->
+            when {
+                routeTemplateSegment.matches(segment) -> ":" + segment.removeSurrounding("{", "}")
+                routeLiteralSegment.matches(segment) -> segment
+                else -> ":value"
+            }
+        }
+    }
+
+    /**
+     * Records that the user moved to the destination declared as [routePattern]: the pattern and
+     * nothing else. Sentry's own navigation listener also attaches the arguments, which for a list
+     * screen are the list's id and its name.
+     */
+    fun recordNavigation(routePattern: String) {
+        val breadcrumb = Breadcrumb().apply {
+            category = "navigation"
+            message = "navigate"
+            level = SentryLevel.INFO
+            setData("to", navigationTemplate(routePattern))
+        }
+        Sentry.addBreadcrumb(breadcrumb)
     }
 
     fun safeLabel(value: Any?): String {

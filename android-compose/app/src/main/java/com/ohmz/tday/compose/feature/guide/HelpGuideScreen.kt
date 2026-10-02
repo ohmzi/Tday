@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -51,6 +52,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -73,6 +76,8 @@ import com.ohmz.tday.shared.guide.GuideSearch
 import com.ohmz.tday.shared.guide.GuideSectionId
 import com.ohmz.tday.shared.guide.GuideStringsGenerated
 import com.ohmz.tday.shared.guide.GuideTopic
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 // What the guide draws that the scale has no rung for, named here rather than snapped onto a
 // neighbouring step. The page margin is the reason the list is worth reading: this screen has always
@@ -189,6 +194,27 @@ fun HelpGuideScreen(
     val guideScrollState = rememberScrollState()
     val heroCollapse = rememberScrollHeroTitleCollapse(scrollState = guideScrollState)
 
+    // A "?" link lands here with its topic already expanded, which is not the same as on screen:
+    // the page is a long list and the topic may sit well below the fold. Once the card has been
+    // laid out, scroll it to just under the toolbar, once. Remembered across a rotation so the
+    // jump never fights a scroll the reader has made since.
+    val whatsNewIds = remember(whatsNew) { whatsNew.mapTo(HashSet()) { it.id } }
+    val landingScope = rememberCoroutineScope()
+    var landedOnInitialTopic by rememberSaveable { mutableStateOf(false) }
+    // The card is on the page twice when the topic is new in this release: in What's New, above
+    // the sections, and in its own section. The first of the two is the one to land on.
+    fun Modifier.landingTarget(id: String, inWhatsNew: Boolean): Modifier =
+        if (landedOnInitialTopic || id != initialTopic || inWhatsNew != (id in whatsNewIds)) {
+            this
+        } else {
+            onGloballyPositioned { coordinates ->
+                if (landedOnInitialTopic) return@onGloballyPositioned
+                landedOnInitialTopic = true
+                val top = (coordinates.positionInParent().y - pinnedToolbarHeightPx).roundToInt().coerceAtLeast(0)
+                landingScope.launch { guideScrollState.scrollTo(top) }
+            }
+        }
+
     Scaffold(
         containerColor = colorScheme.background,
     ) { padding ->
@@ -255,7 +281,10 @@ fun HelpGuideScreen(
                 if (whatsNew.isNotEmpty()) {
                     SectionLabel(res("guide.whatsNew"))
                     whatsNew.forEach { topic ->
-                        TopicCard(topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
+                        TopicCard(
+                            topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink,
+                            modifier = Modifier.landingTarget(topic.id, inWhatsNew = true),
+                        ) {
                             expandedId = if (expandedId == topic.id) null else topic.id
                         }
                         Spacer(Modifier.height(TopicCardSpacing))
@@ -267,7 +296,10 @@ fun HelpGuideScreen(
                     if (sectionTopics.isNotEmpty()) {
                         SectionLabel(res(section.titleKey))
                         sectionTopics.forEach { topic ->
-                            TopicCard(topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink) {
+                            TopicCard(
+                                topic, expandedId == topic.id, ::res, isLocalMode, showNewBadges, onOpenDeepLink,
+                                modifier = Modifier.landingTarget(topic.id, inWhatsNew = false),
+                            ) {
                                 expandedId = if (expandedId == topic.id) null else topic.id
                             }
                             Spacer(Modifier.height(TopicCardSpacing))
@@ -402,6 +434,7 @@ private fun TopicCard(
     isLocalMode: Boolean,
     showNewBadge: Boolean,
     onOpenDeepLink: (String) -> Unit,
+    modifier: Modifier = Modifier,
     onToggle: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -409,7 +442,7 @@ private fun TopicCard(
         shape = RoundedCornerShape(TdayDimens.RadiusLg),
         color = colorScheme.surface,
         border = BorderStroke(TdayDimens.BorderWidth, colorScheme.onSurface.copy(alpha = 0.06f)),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column {
             Row(
@@ -594,6 +627,7 @@ private fun BodyBlock(type: GuideBlockType, texts: List<String>) {
 // (guarded by the guide-icons coverage test); book is a defensive fallback.
 @DrawableRes
 private fun guideIconRes(name: String): Int = when (name) {
+    "activity" -> R.drawable.ic_lucide_activity
     "alarm-clock" -> R.drawable.ic_lucide_alarm_clock
     "bell" -> R.drawable.ic_lucide_bell
     "bell-ring" -> R.drawable.ic_lucide_bell_ring

@@ -79,6 +79,8 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -89,9 +91,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.LocaleListCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.BuildConfig
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.calendar.CalendarEntryPoint
@@ -114,6 +118,7 @@ import com.ohmz.tday.compose.core.notification.canPromptForNotificationPermissio
 import com.ohmz.tday.compose.core.notification.isNotificationOsAuthorized
 import com.ohmz.tday.compose.core.notification.notificationToggleAction
 import com.ohmz.tday.compose.core.notification.notificationToggleChecked
+import com.ohmz.tday.compose.core.observability.TelemetryConsentState
 import com.ohmz.tday.compose.core.push.needsDistributorChoice
 import com.ohmz.tday.compose.core.push.readUnifiedPushDistributorState
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
@@ -136,6 +141,7 @@ import com.ohmz.tday.compose.feature.auth.SecurityQuestionPicker
 import com.ohmz.tday.compose.feature.guide.GuideHelpLink
 import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
 import com.ohmz.tday.compose.feature.settings.data.DataTransferCard
+import com.ohmz.tday.compose.feature.telemetry.TelemetryConsentViewModel
 import com.ohmz.tday.compose.feature.widget.WidgetEntryPoint
 import com.ohmz.tday.compose.ui.component.RootFeedTab
 import com.ohmz.tday.compose.ui.component.TdayCenteredSelectorDialog
@@ -237,6 +243,7 @@ fun SettingsScreen(
     onLoadSecurityQuestionStatus: suspend () -> SecurityQuestionStatusResponse?,
     onFetchSecurityQuestions: suspend () -> List<SecurityQuestion>,
     onUpdateSecurityQuestions: suspend (String, List<SecurityAnswerInput>) -> ProfileEditResult,
+    telemetryConsent: TelemetryConsentViewModel = hiltViewModel(),
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
@@ -571,6 +578,15 @@ fun SettingsScreen(
         ) {
             AppLockRow()
             UnencryptedLegacyCacheWarning()
+        },
+        SettingsEntry(
+            key = "crash-reports",
+            // Hidden on a build with no DSN (a fork, a self-built APK): nothing could be sent.
+            visible = telemetryConsent.isAvailable &&
+                search.matches(privacyTitle, stringResource(R.string.settings_crash_reports)),
+            section = privacyTitle,
+        ) {
+            CrashReportsRow(telemetryConsent)
         },
     ).filter { it.visible }
 
@@ -2174,6 +2190,25 @@ private fun AppLockRow() {
 }
 
 /**
+ * Opt-in crash and problem reports, default off. The same answer the one-time consent card records,
+ * so saying yes or no in either place is saying it in both.
+ */
+@Composable
+private fun CrashReportsRow(viewModel: TelemetryConsentViewModel) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+
+    SettingsToggleRow(
+        icon = R.drawable.ic_lucide_activity,
+        title = stringResource(R.string.settings_crash_reports),
+        checked = state == TelemetryConsentState.GRANTED,
+        onCheckedChange = viewModel::setShareReports,
+        switchLabel = stringResource(R.string.settings_crash_reports_toggle),
+        helpTopicId = GuideTopicIds.CRASH_REPORTS,
+        helpLabel = stringResource(R.string.settings_crash_reports_help),
+    )
+}
+
+/**
  * Renders only when the pre-encryption cache file is still on disk — a migration that failed often
  * enough to be abandoned, or one still waiting for the pending-mutation queue to drain.
  *
@@ -2536,12 +2571,20 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     else -> null
 }
 
+/**
+ * A titled switch. [helpTopicId] adds a "?" to that guide topic between the title and the switch,
+ * for a row whose copy cannot say everything it needs to. [switchLabel] is what a screen reader
+ * says for the switch itself when the title alone would not explain what turning it on does.
+ */
 @Composable
 private fun SettingsToggleRow(
     @DrawableRes icon: Int,
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    switchLabel: String? = null,
+    helpTopicId: String? = null,
+    helpLabel: String? = null,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     Row(
@@ -2556,9 +2599,17 @@ private fun SettingsToggleRow(
             fontWeight = FontWeight.ExtraBold,
             color = colorScheme.onSurface,
         )
+        if (helpTopicId != null) {
+            GuideHelpLink(helpTopicId, contentDescription = helpLabel)
+        }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
+            modifier = if (switchLabel != null) {
+                Modifier.semantics { contentDescription = switchLabel }
+            } else {
+                Modifier
+            },
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = colorScheme.secondary,

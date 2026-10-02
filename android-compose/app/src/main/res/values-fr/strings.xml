@@ -681,6 +681,21 @@
     <string name="settings_resting_floaters">Flottants au repos</string>
     <string name="settings_calendar_sync">Ajouter les tâches planifiées à mon calendrier</string>
     <string name="settings_privacy">Confidentialité</string>
+    <string name="settings_crash_reports">Rapports de plantage et de problèmes</string>
+    <string name="settings_crash_reports_toggle">Envoyer des rapports de plantage et de problèmes en cas d\'échec</string>
+    <string name="settings_crash_reports_help">À propos des rapports de plantage et de problèmes</string>
+
+    <!-- Crash reports: the one-time consent card -->
+    <string name="telemetry_card_title">Aider à corriger les plantages ?</string>
+    <string name="telemetry_card_intro">T\'Day peut envoyer un court rapport technique uniquement quand quelque chose ne va pas : un plantage, un blocage, un manque de mémoire ou une lenteur importante. Cela aide le développeur à reproduire le problème sur un appareil similaire.</string>
+    <string name="telemetry_card_sent_label">Ce qui est envoyé</string>
+    <string name="telemetry_card_sent">Version de l\'app, modèle de l\'appareil, version du système, ce qui a échoué et à quel endroit.</string>
+    <string name="telemetry_card_never_sent_label">Jamais envoyé</string>
+    <string name="telemetry_card_never_sent">Votre nom ou compte, adresse IP, localisation, adresse du serveur, ou tout contenu de tâche ou de liste.</string>
+    <string name="telemetry_card_footnote">Désactivé par défaut. Modifiable à tout moment dans Réglages → Confidentialité.</string>
+    <string name="telemetry_card_share">Partager les rapports</string>
+    <string name="telemetry_card_not_now">Pas maintenant</string>
+    <string name="telemetry_card_read_faq">Lire la FAQ complète</string>
     <string name="root_feed_search_scheduled">Rechercher des tâches planifiées</string>
     <string name="root_feed_search_floater">Rechercher des tâches flottantes</string>
 

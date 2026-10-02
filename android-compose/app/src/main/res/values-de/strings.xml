@@ -681,6 +681,21 @@
     <string name="settings_resting_floaters">Ruhende Floater</string>
     <string name="settings_calendar_sync">Geplante Aufgaben zu meinem Kalender hinzufügen</string>
     <string name="settings_privacy">Privatsphäre</string>
+    <string name="settings_crash_reports">Absturz- und Problemberichte</string>
+    <string name="settings_crash_reports_toggle">Absturz- und Problemberichte senden, wenn etwas fehlschlägt</string>
+    <string name="settings_crash_reports_help">Info zu Absturz- und Problemberichten</string>
+
+    <!-- Crash reports: the one-time consent card -->
+    <string name="telemetry_card_title">Hilf mit, Abstürze zu beheben?</string>
+    <string name="telemetry_card_intro">T\'Day kann einen kurzen technischen Bericht senden, aber nur dann, wenn etwas schiefgeht: ein Absturz, ein Einfrieren, Speichermangel oder etwas sehr Langsames. Das hilft dem Entwickler, das Problem auf einem ähnlichen Gerät nachzustellen.</string>
+    <string name="telemetry_card_sent_label">Das wird gesendet</string>
+    <string name="telemetry_card_sent">App-Version, Gerätemodell, Betriebssystemversion, was fehlgeschlagen ist und wo.</string>
+    <string name="telemetry_card_never_sent_label">Wird nie gesendet</string>
+    <string name="telemetry_card_never_sent">Dein Name oder Konto, IP-Adresse, Standort, Serveradresse oder jegliche Inhalte von Aufgaben oder Listen.</string>
+    <string name="telemetry_card_footnote">Standardmäßig aus. Du kannst das jederzeit unter Einstellungen → Privatsphäre ändern.</string>
+    <string name="telemetry_card_share">Berichte teilen</string>
+    <string name="telemetry_card_not_now">Jetzt nicht</string>
+    <string name="telemetry_card_read_faq">Vollständige FAQ lesen</string>
     <string name="root_feed_search_scheduled">Geplante Aufgaben suchen</string>
     <string name="root_feed_search_floater">Floater-Aufgaben suchen</string>
 

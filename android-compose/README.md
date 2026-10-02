@@ -33,6 +33,7 @@ android-compose/app/src/main/java/com/ohmz/tday/compose/
 │   ├── network/       # Retrofit, cookies, realtime, connectivity
 │   ├── calendar/      # Opt-in device-calendar mirror (CalendarContract)
 │   ├── notification/  # Reminders, boot receiver, workers
+│   ├── observability/ # Opt-in crash reports: consent store, bootstrap, scrubber, gated transport
 │   ├── security/      # Probe/decryption helpers
 │   └── ui/            # Shared app UI helpers
 ├── feature/
@@ -44,6 +45,7 @@ android-compose/app/src/main/java/com/ohmz/tday/compose/
 │   ├── car/           # Internal car-mode Today/Floater surface
 │   ├── completed/     # Completed todo/floater history
 │   ├── settings/      # Settings and admin toggles
+│   ├── telemetry/     # One-time crash-reports consent card
 │   ├── release/       # Latest release and APK installer
 │   └── widget/        # Today/Floater/List widgets (plain RemoteViews) and the refresh coordinator
 └── ui/
@@ -246,6 +248,42 @@ the recognized phrase in place, and strips it from the saved task title.
   `VisualTransformation`, sets the Due, and removes the phrase from the title only on submit.
 - Parsing runs in the device timezone; the due is saved as a UTC instant. Release builds keep
   Natty/ANTLR via `proguard-rules.pro`.
+
+## Crash reports (opt-in)
+
+Off by default and per device. Nothing starts, is queued or is stored until the person says yes, on
+the one-time card shown after the sign-in wizard (Server and Local Mode alike) or in Settings →
+Privacy → "Crash & problem reports", which has a "?" to the `crash-reports` guide topic. The full
+privacy contract is in `docs/TELEMETRY.md`.
+
+- **No DSN, no surface.** The DSN comes from `SENTRY_DSN` (environment or `sentryDsn` in
+  `local.properties`). Empty (forks, self-built APKs) hides the card and the Settings row and the
+  SDK never starts. `SENTRY_AUTH_TOKEN` only gates the R8 mapping upload.
+- **One entry point.** `core/observability/TelemetryBootstrap` is the only code that starts or stops
+  Sentry. `TdayApplication.onCreate` calls `start()`, so a boot, widget or alarm process is covered:
+  consent granted starts the SDK; any other state deletes whatever an older build left under
+  `cacheDir/sentry`. Auto-init and Sentry's content providers are removed in the manifest.
+- **Consent store.** `TelemetryConsentStore` keeps `state` and `granted_at_ms` in plain
+  SharedPreferences (`telemetry_consent_prefs`), readable in `onCreate`. It is not part of
+  `SecureConfigStore` and is never cleared by sign-out or `clearAllLocalData`: the choice belongs to
+  the device. `beforeSend` drops any event older than `granted_at_ms`, so an ANR replayed from the
+  system's exit history can never arrive after opt-in.
+- **Switching.** The card and the Settings row both go through `TelemetryConsentManager` (Hilt
+  singleton). Off closes the in-memory gate, then the SDK, then deletes its files, without a flush;
+  on purges first and starts fresh.
+- **Failures only.** `TelemetryOptions` sets sample rate 0, no tracing, session tracking, client
+  reports or trace headers, and every `dataCollection` field explicitly. `TelemetryScrubber` removes
+  the user, install id, hosts, IPs, emails and ids from every event and keeps only allow-listed
+  breadcrumbs; `GatedTransportFactory` is the last check before the network.
+- **Slow operations.** `SlowOperation` is the helper for the `slow_operation` event. No call site
+  uses it yet.
+- **Debug builds** include LeakCanary (Sentry reports an out-of-memory kill, never a leak) and
+  `TelemetryDebugReceiver`:
+
+```bash
+adb shell am broadcast -n com.ohmz.tday.compose/.debug.TelemetryDebugReceiver \
+  -a com.ohmz.tday.compose.debug.TELEMETRY_TRIGGER --es kind crash   # or anr, slow_op
+```
 
 ## Mobile Parity
 

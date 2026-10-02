@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -22,6 +23,7 @@ import com.ohmz.tday.compose.core.data.applyScreenshotProtection
 import com.ohmz.tday.compose.core.notification.BootRescheduleReceiver
 import com.ohmz.tday.compose.core.notification.NotificationPreferenceStore
 import com.ohmz.tday.compose.feature.lock.AppLockOverlay
+import com.ohmz.tday.compose.feature.lock.LocalAppLocked
 import com.ohmz.tday.compose.feature.lock.appLockAuthenticators
 import com.ohmz.tday.compose.feature.lock.canSatisfyAppLock
 import com.ohmz.tday.compose.feature.lock.shouldLockOnForeground
@@ -85,16 +87,18 @@ class MainActivity : AppCompatActivity() {
         setIntent(launchIntent)
         dispatchDeepLinkIntent(launchIntent)
         setContent {
-            TdayApp(
-                onFirstFrameDrawn = {
-                    (application as? TdayApplication)?.runDeferredStartup()
-                    dismissUpdateReadyNotification()
-                    requestNotificationPermissionIfNeeded()
-                },
-            )
+            val locked by _locked.collectAsStateWithLifecycle()
+            CompositionLocalProvider(LocalAppLocked provides locked) {
+                TdayApp(
+                    onFirstFrameDrawn = {
+                        (application as? TdayApplication)?.runDeferredStartup()
+                        dismissUpdateReadyNotification()
+                        requestNotificationPermissionIfNeeded()
+                    },
+                )
+            }
             // Layered over TdayApp rather than replacing it so the nav stack and view-model state
             // survive locking; the overlay is opaque and eats touches.
-            val locked by _locked.collectAsStateWithLifecycle()
             if (locked) {
                 TdayTheme {
                     AppLockOverlay(onRequestUnlock = ::promptForUnlock)

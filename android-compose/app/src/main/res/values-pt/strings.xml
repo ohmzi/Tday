@@ -681,6 +681,21 @@
     <string name="settings_resting_floaters">Flutuantes em repouso</string>
     <string name="settings_calendar_sync">Adicionar tarefas agendadas ao meu calendário</string>
     <string name="settings_privacy">Privacidade</string>
+    <string name="settings_crash_reports">Relatórios de falhas e problemas</string>
+    <string name="settings_crash_reports_toggle">Enviar relatórios de falhas e problemas quando algo falhar</string>
+    <string name="settings_crash_reports_help">Sobre os relatórios de falhas e problemas</string>
+
+    <!-- Crash reports: the one-time consent card -->
+    <string name="telemetry_card_title">Ajudar a corrigir falhas?</string>
+    <string name="telemetry_card_intro">O T\'Day pode enviar um breve relatório técnico apenas quando algo dá errado: o app fecha inesperadamente, trava, fica sem memória ou fica muito lento. Isso ajuda o desenvolvedor a reproduzir o problema em um dispositivo parecido.</string>
+    <string name="telemetry_card_sent_label">O que é enviado</string>
+    <string name="telemetry_card_sent">Versão do app, modelo do dispositivo, versão do sistema operacional, o que falhou e onde.</string>
+    <string name="telemetry_card_never_sent_label">Nunca é enviado</string>
+    <string name="telemetry_card_never_sent">Seu nome ou conta, endereço IP, localização, endereço do servidor ou qualquer conteúdo de tarefas ou listas.</string>
+    <string name="telemetry_card_footnote">Desativado por padrão. Altere quando quiser em Configurações → Privacidade.</string>
+    <string name="telemetry_card_share">Enviar relatórios</string>
+    <string name="telemetry_card_not_now">Agora não</string>
+    <string name="telemetry_card_read_faq">Ler o FAQ completo</string>
     <string name="root_feed_search_scheduled">Pesquisar tarefas agendadas</string>
     <string name="root_feed_search_floater">Pesquisar tarefas flutuantes</string>
 
