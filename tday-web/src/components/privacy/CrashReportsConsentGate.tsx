@@ -98,7 +98,7 @@ export default function CrashReportsConsentGate() {
       >
         <DialogTitle className="sr-only">{t("card.title")}</DialogTitle>
         <div aria-hidden>
-          <HeroTile title={t("card.title")} Icon={Activity} tint={TINT.serverBlue} wrapTitle />
+          <HeroTile title={t("card.title")} Icon={Activity} tint={TINT.consentBlue} wrapTitle />
         </div>
 
         <DialogDescription className="text-[14px] font-bold leading-snug text-foreground/60">
@@ -114,6 +114,9 @@ export default function CrashReportsConsentGate() {
             <dt className="text-[13px] font-extrabold text-foreground">{t("card.neverSentLabel")}</dt>
             <dd className="text-[14px] font-bold leading-snug text-foreground/60">
               {t("card.neverSent")}
+            </dd>
+            <dd className="mt-1 text-[12px] font-bold leading-snug text-foreground/50">
+              {t("card.webNote")}
             </dd>
           </div>
         </dl>

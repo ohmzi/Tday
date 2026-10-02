@@ -15,6 +15,8 @@ export const TINT = {
   loginRose: "rgb(212, 138, 140)", // step chip · "Login"
   heroRose: "rgb(201, 120, 128)", // hero tile · sign in / create
   sun: "rgb(245, 196, 66)",
+  // Deeper than serverBlue: the consent card's 21px white title needs 4.5:1, serverBlue gives 2.5:1.
+  consentBlue: "rgb(26, 84, 146)", // hero tile · crash-report consent
 } as const;
 
 export function HeroTile({

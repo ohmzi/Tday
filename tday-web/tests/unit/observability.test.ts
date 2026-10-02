@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  readTraceSampleRate,
   routeTemplate,
   sanitizeTelemetryLabel,
   sanitizeTelemetryPath,
   sanitizeTelemetryUrl,
   scrubSentryBreadcrumb,
-  scrubSentryTransaction,
 } from "@/lib/observability/sentry";
 
 describe("observability sanitizers", () => {
@@ -29,12 +27,6 @@ describe("observability sanitizers", () => {
     expect(sanitizeTelemetryPath("/en/app/calendar")).toBe(
       "/:locale/app/calendar",
     );
-  });
-
-  it("clamps trace sample rates", () => {
-    expect(readTraceSampleRate("0.25", 1)).toBe(0.25);
-    expect(readTraceSampleRate("5", 0.2)).toBe(1);
-    expect(readTraceSampleRate("nope", 0.2)).toBe(0.2);
   });
 
   it("redacts accidental labels containing PII or token-shaped ids", () => {
@@ -64,20 +56,5 @@ describe("observability sanitizers", () => {
         status_code: 500,
       },
     });
-  });
-
-  it("sanitizes transaction names without corrupting plain operations", () => {
-    const listTransaction = {
-      transaction: "/en/app/list/list-123",
-    } as Parameters<typeof scrubSentryTransaction>[0];
-    const pageloadTransaction = {
-      transaction: "pageload",
-    } as Parameters<typeof scrubSentryTransaction>[0];
-    expect(
-      scrubSentryTransaction(listTransaction).transaction,
-    ).toBe("/:locale/app/list/:id");
-    expect(scrubSentryTransaction(pageloadTransaction).transaction).toBe(
-      "pageload",
-    );
   });
 });

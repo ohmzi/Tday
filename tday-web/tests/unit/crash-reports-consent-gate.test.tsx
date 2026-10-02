@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@/i18n";
+import { TINT } from "@/components/onboarding/OnboardingPrimitives";
 import CrashReportsConsentGate from "@/components/privacy/CrashReportsConsentGate";
 import {
   getTelemetryConsent,
@@ -72,6 +73,29 @@ describe("CrashReportsConsentGate", () => {
     expect(screen.getByRole("button", { name: "Share reports" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Not now" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Read the full FAQ" })).toBeTruthy();
+  });
+
+  it("tells the web reader which website a report is attributed to", () => {
+    renderGate();
+
+    expect(
+      screen.getByText(
+        "In the web app, only unexpected errors are reported, and your browser also tells Sentry which website a report came from.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("keeps the white title readable on the hero tile (WCAG 4.5:1)", () => {
+    const luminance = (rgb: string) => {
+      const [r, g, b] = (rgb.match(/\d+/g) ?? []).map((v) => {
+        const c = Number(v) / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+
+    expect(1.05 / (luminance(TINT.consentBlue) + 0.05)).toBeGreaterThanOrEqual(4.5);
+    expect(1.05 / (luminance(TINT.serverBlue) + 0.05)).toBeLessThan(4.5);
   });
 
   it("does not take focus onto the consenting button, so a stray Enter cannot grant", () => {

@@ -72,6 +72,9 @@ export default defineConfig({
       // key was meant to precache, restored along with it rather than quietly narrowed.
       injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,wav}"],
+        // The worker is built after the Sentry plugin's glob, so its map would never be uploaded
+        // nor deleted and would ship publicly. The worker is not Sentry-instrumented; no map.
+        sourcemap: false,
       },
       workbox: {
         // `sw.ts` registers its own NavigationRoute; these two are kept for a move back to
@@ -92,6 +95,13 @@ export default defineConfig({
         // whether or not an upload happened, and a local build should keep its maps.
         filesToDeleteAfterUpload: process.env.SENTRY_AUTH_TOKEN ? ["dist/**/*.map"] : undefined,
       },
+      // Without a handler the plugin only logs a failed upload, and the maps are deleted anyway,
+      // so the release would ship green with unreadable stacks. With a token, fail the build.
+      errorHandler: process.env.SENTRY_AUTH_TOKEN
+        ? (err) => {
+            throw err;
+          }
+        : undefined,
       // Keeps the build tool from reporting its own usage to Sentry.
       telemetry: false,
       // The app never turns the SDK's `debug` option on, so let the bundler drop
