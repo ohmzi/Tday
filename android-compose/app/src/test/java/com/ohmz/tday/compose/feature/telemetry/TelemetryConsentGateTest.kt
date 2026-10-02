@@ -44,3 +44,31 @@ class TelemetryConsentGateTest {
         assertEquals(false, shows(aHigherGateIsUp = true))
     }
 }
+
+/**
+ * The two answers carry equal weight. How a button looks is not something a JVM can check, so this
+ * pins how the file is written: both choices come from one helper, in a full-width column, and
+ * nothing else in the card is a filled button that could tip the balance.
+ */
+class TelemetryConsentChoiceWeightTest {
+    private val source: String = generateSequence(java.io.File(".").canonicalFile) { it.parentFile }
+        .flatMap { sequenceOf(java.io.File(it, "src/main"), java.io.File(it, "app/src/main")) }
+        .map { java.io.File(it, "java/com/ohmz/tday/compose/feature/telemetry/TelemetryConsentGate.kt") }
+        .firstOrNull { it.isFile }
+        ?.readText()
+        ?: error("could not locate TelemetryConsentGate.kt")
+
+    @Test
+    fun `share and not now are drawn by the same helper, share first`() {
+        val calls = Regex("""ConsentChoiceButton\(\s*text = stringResource\(R\.string\.(\w+)\)""")
+            .findAll(source).map { it.groupValues[1] }.toList()
+        assertEquals(listOf("telemetry_card_share", "telemetry_card_not_now"), calls)
+    }
+
+    @Test
+    fun `only the helper builds a filled button, so the two cannot differ in style`() {
+        assertEquals(1, Regex("""(?<![A-Za-z])Button\(""").findAll(source).count())
+        assertEquals(false, source.contains("FilledTonalButton"))
+        assertEquals(false, source.contains("weight(1f)"))
+    }
+}
