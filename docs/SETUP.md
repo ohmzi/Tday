@@ -276,6 +276,11 @@ To build the backend image from your checkout instead of pulling a release:
 docker compose -f docker-compose.yaml -f docker-compose.build.yaml up -d --build
 ```
 
+The image build needs BuildKit, which is the default builder from Docker 23 and in the Compose v2 plugin
+this guide already requires. With the legacy builder (`DOCKER_BUILDKIT=0`, or an engine older than 23) it
+stops at the web build step, because that step mounts an optional build secret for the Sentry source-map
+upload. You do not need to set any Sentry value to build.
+
 To build the mobile apps yourself:
 
 - **Android:** open `android-compose/` in Android Studio (SDK 35) and run on a device or emulator.

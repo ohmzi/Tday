@@ -110,6 +110,11 @@ Before considering Sentry fully operational, verify release artifacts:
 - Web source maps upload only when `SENTRY_AUTH_TOKEN` is configured, under the
   release `tday-web@<version>`. With a token, the build then deletes the public
   `.map` files from `dist`, so the unminified source is not served to visitors.
+  A failed upload (unreachable Sentry, wrong token scope, wrong org or project
+  slug) fails the Docker build, so the release stops before anything is
+  published, the same as the Android and iOS uploads. The service worker is
+  built without a source map (`injectManifest.sourcemap: false`), so no
+  `sw.js.map` is ever served.
 - Android R8 mapping/native metadata upload only when `SENTRY_AUTH_TOKEN` is
   configured. A release stack that is still obfuscated means the upload was
   skipped.

@@ -156,8 +156,14 @@ reference when they change.
   error". "What's included": app version, device model, OS version, what failed
   and where. "Never included": name or account, IP address, location, server
   address, or any task or list content. Footnote: "Off by default. Change it any
-  time in Settings → Privacy." Buttons: "Share reports", "Not now", "Read the
-  full FAQ".
+  time in Settings → Privacy." (French and Portuguese name the Settings screen
+  as each UI does: web "Paramètres" / "Définições", iOS "Réglages", Android
+  "Paramètres" / "Configurações".) Buttons: "Share reports" and "Not now" are
+  the same size and style on every client, stacked full width, with "Share
+  reports" first, and "Read the full FAQ" below them. The web card alone adds a
+  small note: only unexpected errors are reported there, and the browser also
+  tells Sentry which website a report came from (the `Origin` header cannot be
+  suppressed on a cross-origin request).
 - **Settings → Privacy.** The row is "Crash & problem reports" with the switch
   "Send crash & problem reports when something fails". The admin row is "Server
   error reports": "Sends this server's own errors, plus timings for a small
@@ -176,8 +182,10 @@ reference when they change.
   slowness.
 - **Public privacy page.** `/privacy` has the crash section as section 9
   ("Crash & Problem Reports") and Contact as section 10. Section 4 says data is
-  shared with Sentry only if the person opts in. The page is dated October 2,
-  2026 (`privacy.lastUpdated`). The Local Mode guide body mentions that an
+  shared with Sentry only if the person opts in. Section 1's technical-data
+  bullet says it describes what the server sees when you connect and is not
+  part of crash reports. The page is dated October 2, 2026
+  (`privacy.lastUpdated`). The Local Mode guide body mentions that an
   opted-in device sends only a short technical report on failure, never tasks or
   lists.
 - **How-To guide placement.** `crash-reports` is the only topic with
