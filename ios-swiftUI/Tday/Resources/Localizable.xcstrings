@@ -1790,6 +1790,65 @@
         }
       }
     },
+    "About crash & problem reports" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Info zu Absturz- und Problemberichten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acerca de los informes de fallos y problemas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À propos des rapports de plantage et de problèmes"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informazioni sulle segnalazioni di crash e problemi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クラッシュと問題のレポートについて"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perihal laporan ranap & masalah"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sobre os relatórios de falhas e problemas"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Об отчётах о сбоях и проблемах"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关于崩溃与问题报告"
+          }
+        }
+      }
+    },
     "Accounts and sync" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2965,6 +3024,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "应用版本"
+          }
+        }
+      }
+    },
+    "App version, device model, OS version, what failed and where." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App-Version, Gerätemodell, Betriebssystemversion, was fehlgeschlagen ist und wo."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versión de la app, modelo del dispositivo, versión del sistema operativo, qué falló y dónde."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version de l'app, modèle de l'appareil, version du système, ce qui a échoué et à quel endroit."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versione dell'app, modello del dispositivo, versione del sistema operativo, cosa non ha funzionato e dove."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリのバージョン、端末のモデル、OSのバージョン、何がどこで失敗したか。"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versi apl, model peranti, versi OS, apa yang gagal dan di mana."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versão do app, modelo do dispositivo, versão do sistema operacional, o que falhou e onde."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Версия приложения, модель устройства, версия ОС, что именно пошло не так и где."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用版本、设备型号、系统版本，以及出错的内容和位置。"
           }
         }
       }
@@ -5618,6 +5736,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法读取该文件。"
+          }
+        }
+      }
+    },
+    "Crash & problem reports" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Absturz- und Problemberichte"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informes de fallos y problemas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapports de plantage et de problèmes"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Segnalazioni di crash e problemi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クラッシュと問題のレポート"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laporan ranap & masalah"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Relatórios de falhas e problemas"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отчёты о сбоях и проблемах"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "崩溃与问题报告"
           }
         }
       }
@@ -8803,6 +8980,65 @@
         }
       }
     },
+    "Help fix crashes?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hilf mit, Abstürze zu beheben?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Ayudas a corregir fallos?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aider à corriger les plantages ?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aiutaci a risolvere i crash?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クラッシュの修正に協力しますか？"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bantu baiki ranap apl?"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajudar a corrigir falhas?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Помочь исправить сбои?"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "帮助修复崩溃问题？"
+          }
+        }
+      }
+    },
     "Helping your day stop freelancing" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -11750,6 +11986,65 @@
         }
       }
     },
+    "Never sent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird nie gesendet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nunca se envía"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jamais envoyé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non viene mai inviato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信されない情報"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak pernah dihantar"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nunca é enviado"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Никогда не отправляется"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "绝不发送的内容"
+          }
+        }
+      }
+    },
     "New list" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -13869,6 +14164,65 @@
         }
       }
     },
+    "Not now" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jetzt nicht"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ahora no"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas maintenant"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Non ora"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今はしない"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bukan sekarang"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agora não"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не сейчас"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂不"
+          }
+        }
+      }
+    },
     "Not yet" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -14278,6 +14632,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "关闭"
+          }
+        }
+      }
+    },
+    "Off by default. Change it any time in Settings → Privacy." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standardmäßig aus. Du kannst das jederzeit unter Einstellungen → Privatsphäre ändern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desactivado por defecto. Cámbialo cuando quieras en Ajustes → Privacidad."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivé par défaut. Modifiable à tout moment dans Réglages → Confidentialité."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disattivato per impostazione predefinita. Puoi cambiarlo in qualsiasi momento in Impostazioni → Privacy."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デフォルトではオフです。設定 → プライバシーからいつでも変更できます。"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dimatikan secara lalai. Tukar bila-bila masa dalam Tetapan → Privasi."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desativado por padrão. Altere quando quiser em Configurações → Privacidade."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "По умолчанию выключено. Это можно изменить в любой момент: Настройки → Конфиденциальность."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "默认关闭。你可以随时在“设置 → 隐私”中更改。"
           }
         }
       }
@@ -16585,6 +16998,65 @@
         }
       }
     },
+    "Read the full FAQ" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vollständige FAQ lesen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leer las FAQ completas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire la FAQ complète"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leggi le FAQ complete"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "よくある質問をすべて読む"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baca FAQ penuh"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ler o FAQ completo"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Читать полный FAQ"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "阅读完整常见问题解答"
+          }
+        }
+      }
+    },
     "Ready to sync" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -18826,6 +19298,65 @@
         }
       }
     },
+    "Send crash & problem reports when something fails" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Absturz- und Problemberichte senden, wenn etwas fehlschlägt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar informes de fallos y problemas cuando algo falle"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer des rapports de plantage et de problèmes en cas d'échec"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia segnalazioni di crash e problemi quando qualcosa non funziona"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不具合が起きたときにクラッシュと問題のレポートを送信する"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hantar laporan ranap & masalah apabila sesuatu gagal"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar relatórios de falhas e problemas quando algo falhar"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отправлять отчёты о сбоях и проблемах при ошибках"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "出现故障时发送崩溃与问题报告"
+          }
+        }
+      }
+    },
     "Server" : {
       "localizations" : {
         "de" : {
@@ -19351,6 +19882,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分享列表"
+          }
+        }
+      }
+    },
+    "Share reports" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berichte teilen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartir informes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partager les rapports"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condividi segnalazioni"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レポートを共有"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kongsi laporan"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar relatórios"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Делиться отчётами"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享报告"
           }
         }
       }
@@ -20830,6 +21420,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "T'Day 可以在此设备上安全地保存该服务器网址，以便您在设置时重复使用。"
+          }
+        }
+      }
+    },
+    "T'Day can send a short technical report only when something goes wrong: a crash, a freeze, running out of memory, or something very slow. It helps the developer reproduce the problem on a similar device." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "T'Day kann einen kurzen technischen Bericht senden, aber nur dann, wenn etwas schiefgeht: ein Absturz, ein Einfrieren, Speichermangel oder etwas sehr Langsames. Das hilft dem Entwickler, das Problem auf einem ähnlichen Gerät nachzustellen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "T'Day puede enviar un breve informe técnico solo cuando algo sale mal: un cierre inesperado, un bloqueo, quedarse sin memoria o algo muy lento. Ayuda al desarrollador a reproducir el problema en un dispositivo similar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "T'Day peut envoyer un court rapport technique uniquement quand quelque chose ne va pas : un plantage, un blocage, un manque de mémoire ou une lenteur importante. Cela aide le développeur à reproduire le problème sur un appareil similaire."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "T'Day può inviare una breve segnalazione tecnica solo quando qualcosa va storto: un crash, un blocco, la memoria esaurita o qualcosa di molto lento. Aiuta lo sviluppatore a riprodurre il problema su un dispositivo simile."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "T'Day は、問題が起きたときだけ短い技術レポートを送信できます。対象は、クラッシュ、フリーズ、メモリ不足、極端に遅い処理です。開発者が似た端末で問題を再現するのに役立ちます。"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "T'Day boleh menghantar laporan teknikal ringkas hanya apabila berlaku masalah: apl ranap, beku, kehabisan memori, atau sesuatu yang sangat perlahan. Ini membantu pembangun menghasilkan semula masalah itu pada peranti yang serupa."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O T'Day pode enviar um breve relatório técnico apenas quando algo dá errado: o app fecha inesperadamente, trava, fica sem memória ou fica muito lento. Isso ajuda o desenvolvedor a reproduzir o problema em um dispositivo parecido."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "T'Day может отправлять короткий технический отчёт только тогда, когда что-то идёт не так: при сбое, зависании, нехватке памяти или очень медленной работе. Это помогает разработчику воспроизвести проблему на похожем устройстве."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有在出现问题时，T'Day 才会发送一份简短的技术报告：崩溃、卡死、内存不足，或运行异常缓慢。这能帮助开发者在相似的设备上重现问题。"
           }
         }
       }
@@ -24721,6 +25370,65 @@
         }
       }
     },
+    "What's sent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das wird gesendet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Qué se envía"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce qui est envoyé"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cosa viene inviato"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信される情報"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apa yang dihantar"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O que é enviado"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Что отправляется"
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会发送的内容"
+          }
+        }
+      }
+    },
     "Where 'someday' gets a date" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -25130,6 +25838,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "每年"
+          }
+        }
+      }
+    },
+    "Your name or account, IP address, location, server address, or any task or list content." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Name oder Konto, IP-Adresse, Standort, Serveradresse oder jegliche Inhalte von Aufgaben oder Listen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu nombre o cuenta, tu dirección IP, tu ubicación, la dirección de tu servidor ni ningún contenido de tus tareas o listas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre nom ou compte, adresse IP, localisation, adresse du serveur, ou tout contenu de tâche ou de liste."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il tuo nome o account, l'indirizzo IP, la posizione, l'indirizzo del server o qualsiasi contenuto di attività o elenchi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "名前やアカウント、IPアドレス、位置情報、サーバーのアドレス、タスクやリストの内容。"
+          }
+        },
+        "ms" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nama atau akaun anda, alamat IP, lokasi, alamat pelayan, atau sebarang kandungan tugasan atau senarai."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seu nome ou conta, endereço IP, localização, endereço do servidor ou qualquer conteúdo de tarefas ou listas."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ваше имя или аккаунт, IP-адрес, местоположение, адрес сервера и любое содержимое задач или списков."
+          }
+        },
+        "zh" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的姓名或账户、IP 地址、位置、服务器地址，以及任何任务或列表内容。"
           }
         }
       }

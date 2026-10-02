@@ -1,0 +1,154 @@
+import Sentry
+import XCTest
+
+#if SWIFT_PACKAGE
+@testable import TdayCore
+#else
+@testable import Tday
+#endif
+
+/// The options the SDK is started with, and the two callbacks that are the gate.
+///
+/// Every line of `makeOptions` exists because the SDK's default for it describes a product that
+/// wants analytics, so a default that moves under a minor-version bump is the failure these tests
+/// are for: they pin the answer rather than trusting the SDK to keep giving it.
+final class SentryConfigurationTests: XCTestCase {
+    private let dsn = "https://0123456789abcdef0123456789abcdef@o0.ingest.example.invalid/1"
+
+    private func makeOptions(
+        consentedAt: Date? = nil,
+        gate: TelemetryGate = TelemetryGate()
+    ) -> Options {
+        SentryConfiguration.makeOptions(dsn: dsn, consentedAt: consentedAt, gate: gate)
+    }
+
+    // MARK: - Failures only
+
+    func testNothingIsCollectedOrSentExceptFailures() {
+        let options = makeOptions()
+
+        XCTAssertFalse(options.sendDefaultPii)
+        XCTAssertFalse(options.enableAutoSessionTracking)
+        XCTAssertFalse(options.sendClientReports)
+        XCTAssertEqual(options.sampleRate?.doubleValue, 1)
+        XCTAssertEqual(options.tracesSampleRate?.doubleValue, 0)
+        XCTAssertNil(options.tracesSampler)
+        XCTAssertFalse(options.isTracingEnabled)
+    }
+
+    func testNoAutomaticInstrumentationIsLeftOn() {
+        let options = makeOptions()
+
+        XCTAssertFalse(options.enableAutoPerformanceTracing)
+        XCTAssertFalse(options.enableUIViewControllerTracing)
+        XCTAssertFalse(options.enableUserInteractionTracing)
+        XCTAssertFalse(options.enablePreWarmedAppStartTracing)
+        XCTAssertFalse(options.enableStandaloneAppStartTracing)
+        XCTAssertFalse(options.enableTimeToFullDisplayTracing)
+        XCTAssertFalse(options.enableFileIOTracing)
+        XCTAssertFalse(options.enableDataSwizzling)
+        XCTAssertFalse(options.enableFileManagerSwizzling)
+        XCTAssertFalse(options.enableCoreDataTracing)
+    }
+
+    func testTheNetworkIsInvisibleToTheSdk() {
+        let options = makeOptions()
+
+        XCTAssertFalse(options.enableSwizzling)
+        XCTAssertFalse(options.enableNetworkTracking)
+        XCTAssertFalse(options.enableNetworkBreadcrumbs)
+        XCTAssertFalse(options.enableCaptureFailedRequests)
+        XCTAssertTrue(options.tracePropagationTargets.isEmpty)
+        XCTAssertFalse(options.enablePropagateTraceparent)
+    }
+
+    func testNoPictureOfTheScreenAndNoMemoryContents() {
+        let options = makeOptions()
+
+        XCTAssertEqual(options.sessionReplay.sessionSampleRate, 0)
+        XCTAssertEqual(options.sessionReplay.onErrorSampleRate, 0)
+        XCTAssertFalse(options.attachScreenshot)
+        XCTAssertFalse(options.attachViewHierarchy)
+        XCTAssertFalse(options.reportAccessibilityIdentifier)
+        XCTAssertFalse(options.enableMemoryIntrospection)
+        XCTAssertFalse(options.enableMetricKit)
+    }
+
+    func testTheFailureClassesTheReportsAreForStayOn() {
+        let options = makeOptions()
+
+        XCTAssertTrue(options.enableCrashHandler)
+        XCTAssertTrue(options.enableWatchdogTerminationTracking)
+        XCTAssertTrue(options.enableAppHangTracking)
+        XCTAssertEqual(options.appHangTimeoutInterval, 2)
+    }
+
+    func testClosingTheSdkDoesNotWaitToFlush() {
+        XCTAssertEqual(makeOptions().shutdownTimeInterval, 0)
+    }
+
+    func testTheReleaseAndTheDsnAreSet() {
+        let options = makeOptions()
+
+        XCTAssertEqual(options.dsn, dsn)
+        XCTAssertTrue(options.releaseName?.hasPrefix("tday-ios@") ?? false)
+        XCTAssertNotNil(options.dist)
+    }
+
+    // MARK: - The gate
+
+    func testNothingIsSentWhileTheGateIsClosed() {
+        let gate = TelemetryGate()
+        let options = makeOptions(gate: gate)
+
+        XCTAssertNil(options.beforeSend?(Event(level: .error)))
+        XCTAssertNil(options.beforeBreadcrumb?(Breadcrumb(level: .info, category: "tday")))
+    }
+
+    func testAnEventPassesTheGateOnceItIsOpenAndLeavesWithoutAUser() throws {
+        let gate = TelemetryGate()
+        gate.open()
+        let options = makeOptions(consentedAt: Date(timeIntervalSince1970: 1), gate: gate)
+        let event = Event(level: .error)
+        event.user = User(userId: "5F3C0D2E-91AB-4C7D-8E2F-0A1B2C3D4E5F")
+
+        let sent = try XCTUnwrap(options.beforeSend?(event))
+
+        XCTAssertNil(sent.user)
+        XCTAssertEqual(sent.tags?["client"], "ios")
+    }
+
+    func testAFailureFromBeforeConsentIsDroppedEvenThroughAnOpenGate() {
+        let gate = TelemetryGate()
+        gate.open()
+        let options = makeOptions(consentedAt: Date(timeIntervalSince1970: 2_000_000_000), gate: gate)
+        let event = Event(level: .error)
+        event.timestamp = Date(timeIntervalSince1970: 1_900_000_000)
+
+        XCTAssertNil(options.beforeSend?(event))
+    }
+
+    func testClosingTheGateStopsTheNextEventAtOnce() {
+        let gate = TelemetryGate()
+        gate.open()
+        let options = makeOptions(consentedAt: Date(timeIntervalSince1970: 1), gate: gate)
+        XCTAssertNotNil(options.beforeSend?(Event(level: .error)))
+
+        gate.close()
+
+        XCTAssertNil(options.beforeSend?(Event(level: .error)))
+    }
+
+    func testOnlyStructuralBreadcrumbsPassAnOpenGate() {
+        let gate = TelemetryGate()
+        gate.open()
+        let options = makeOptions(gate: gate)
+
+        XCTAssertNotNil(options.beforeBreadcrumb?(Breadcrumb(level: .info, category: "tday")))
+        XCTAssertNil(options.beforeBreadcrumb?(Breadcrumb(level: .info, category: "touch")))
+    }
+
+    func testTheGateIsClosedUntilSomethingOpensIt() {
+        XCTAssertFalse(TelemetryGate().isOpen)
+    }
+}

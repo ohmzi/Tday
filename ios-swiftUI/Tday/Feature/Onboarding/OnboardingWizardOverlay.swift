@@ -8,7 +8,9 @@ enum OnboardingStep: Equatable {
 }
 
 struct OnboardingWizardOverlay: View {
-    fileprivate enum Metrics {
+    // Internal, with `WizardPrimaryButton` and `WizardTextButtonStyle` below: the crash-reports
+    // consent card is the wizard's sibling and draws with the same card geometry and the same buttons.
+    enum Metrics {
         static let overlayPadding: CGFloat = 18
         static let cardMaxWidth: CGFloat = 430
         static let cardCornerRadius: CGFloat = 34
@@ -1304,7 +1306,7 @@ private extension UIView {
     }
 }
 
-private struct WizardPrimaryButton: View {
+struct WizardPrimaryButton: View {
     let title: String
     let enabled: Bool
     let action: () -> Void
@@ -1351,7 +1353,7 @@ private struct WizardPressButtonStyle: ButtonStyle {
     }
 }
 
-private struct WizardTextButtonStyle: ButtonStyle {
+struct WizardTextButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .tdayRippleEffect(isPressed: configuration.isPressed)

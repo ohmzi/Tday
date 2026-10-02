@@ -31,7 +31,10 @@ let package = Package(
         ),
         .testTarget(
             name: "TdayCoreTests",
-            dependencies: ["TdayCore"],
+            dependencies: [
+                "TdayCore",
+                .product(name: "Sentry-Dynamic", package: "sentry-cocoa"),
+            ],
             path: "Tests/TdayCoreTests"
         ),
     ]

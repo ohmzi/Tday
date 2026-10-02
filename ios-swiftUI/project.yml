@@ -69,7 +69,6 @@ targets:
         CURRENT_PROJECT_VERSION: 62
         MARKETING_VERSION: 0.8.0
         SENTRY_DSN: ""
-        SENTRY_TRACES_SAMPLE_RATE: "0.2"
         TARGETED_DEVICE_FAMILY: 1
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
@@ -194,6 +193,10 @@ targets:
       - path: Tests/TdayCoreTests
     dependencies:
       - target: Tday
+      # The telemetry tests build `Sentry.Options`, `Event` and `Breadcrumb` themselves, so the
+      # module has to be visible to the test target and not only to the app it is hosted in.
+      - package: sentry-cocoa
+        product: Sentry-Dynamic
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.tests
