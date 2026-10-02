@@ -57,7 +57,7 @@
         "content": [
           "Kontodaten: E-Mail-Adresse und Zeitzone",
           "Nutzerinhalte: Aufgaben, Notizen und verschlüsselte Dateien",
-          "Technische Daten: IP-Adresse, Browser- und Sitzungsinformationen",
+          "Technische Daten, die der Server beim Verbinden sieht (nicht Teil von Absturzberichten): IP-Adresse, Browser- und Sitzungsinformationen",
           "Cookies und lokaler Speicher für die Authentifizierung"
         ]
       },
@@ -666,7 +666,8 @@
       "footnote": "Standardmäßig aus. Du kannst das jederzeit unter Einstellungen → Privatsphäre ändern.",
       "share": "Berichte teilen",
       "notNow": "Jetzt nicht",
-      "readFaq": "Vollständige FAQ lesen"
+      "readFaq": "Vollständige FAQ lesen",
+      "webNote": "In der Web-App werden nur unerwartete Fehler gemeldet, und dein Browser teilt Sentry außerdem mit, von welcher Website ein Bericht stammt."
     }
   },
   "summary": {

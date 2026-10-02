@@ -57,7 +57,7 @@
         "content": [
           "Données de compte : adresse e-mail et fuseau horaire",
           "Contenu utilisateur : tâches, notes et fichiers cryptés",
-          "Données techniques : adresse IP, informations sur le navigateur et la session",
+          "Données techniques que le serveur voit lors de la connexion (elles ne font pas partie des rapports de plantage) : adresse IP, informations sur le navigateur et la session",
           "Cookies et stockage local pour l'authentification"
         ]
       },
@@ -663,10 +663,11 @@
       "sent": "Version de l'app, modèle de l'appareil, version du système, ce qui a échoué et à quel endroit.",
       "neverSentLabel": "Jamais inclus",
       "neverSent": "Votre nom ou compte, adresse IP, localisation, adresse du serveur, ou tout contenu de tâche ou de liste.",
-      "footnote": "Désactivé par défaut. Modifiable à tout moment dans Réglages → Confidentialité.",
+      "footnote": "Désactivé par défaut. Modifiable à tout moment dans Paramètres → Confidentialité.",
       "share": "Partager les rapports",
       "notNow": "Pas maintenant",
-      "readFaq": "Lire la FAQ complète"
+      "readFaq": "Lire la FAQ complète",
+      "webNote": "Dans l'app web, seules les erreurs inattendues sont signalées, et votre navigateur indique aussi à Sentry de quel site provient un rapport."
     }
   },
   "summary": {
@@ -1078,7 +1079,7 @@
         "keywords": "plantage, crash, erreur, rapport, rapports, sentry, confidentialité, diagnostic, diagnostics, télémétrie, blocage, gel, anr, mémoire, analyse, statistiques",
         "body": "Les rapports de plantage et de problèmes sont facultatifs et désactivés par défaut. Si vous les activez, T'Day envoie un court rapport technique uniquement au moment où quelque chose échoue : un plantage, un blocage, une erreur inattendue ou un manque de mémoire. Cela fonctionne comme Crashlytics : le but est de corriger des bugs, pas de mesurer la façon dont vous utilisez l'app. Il n'y a ni analyse d'usage, ni suivi de session, ni surveillance des performances sur votre appareil quand tout fonctionne normalement.",
         "body2": "Un rapport contient la version de l'app, le modèle de votre appareil et la version de son système d'exploitation (ou le navigateur et sa version), l'erreur et l'endroit du code où elle s'est produite, quelques étapes nommées qui y ont mené, des noms d'écrans ou de routes d'API sans aucun identifiant, des codes d'état et, sur mobile, l'état approximatif de l'appareil, comme la mémoire libre, le niveau de batterie et le fait que vous étiez en ligne ou non. Il inclut aussi votre décalage horaire (par exemple UTC+2) et votre langue, car les dates sont essentielles dans un planificateur de tâches.",
-        "body3": "Jamais envoyé : votre nom, votre nom d'utilisateur, votre e-mail ou tout autre détail de compte ; votre adresse IP ou votre localisation ; l'adresse de votre serveur ; les titres et contenus des tâches, des listes ou des notes ; le contenu de votre base de données ; les mots de passe, cookies ou jetons ; les captures d'écran ou enregistrements. Les adresses, les identifiants et le texte entre guillemets sont retirés des messages d'erreur sur votre appareil avant leur envoi, dans la mesure du possible. Les rapports ne portent aucun identifiant d'utilisateur : ils ne peuvent donc pas être rattachés à vous ni supprimés pour une personne donnée.",
+        "body3": "Le rapport ne contient jamais : votre nom, votre nom d'utilisateur, votre e-mail ou tout autre détail de compte ; votre adresse IP ou votre localisation ; l'adresse de votre serveur ; les titres et contenus des tâches, des listes ou des notes ; le contenu de votre base de données ; les mots de passe, cookies ou jetons ; les captures d'écran ou enregistrements. Les adresses, les identifiants et le texte entre guillemets sont retirés des messages d'erreur sur votre appareil avant leur envoi, dans la mesure du possible. Les rapports ne portent aucun identifiant d'utilisateur : ils ne peuvent donc pas être rattachés à vous ni supprimés pour une personne donnée.",
         "body4": "Les rapports ne sont envoyés qu'après votre accord, et uniquement lorsqu'un échec se produit. Si quelque chose échoue alors que le paramètre est désactivé, rien n'est enregistré ni mis en file d'attente, et l'activer plus tard n'envoie pas les échecs précédents. Ce qui compte comme un échec dépend de la plateforme : Android signale les plantages, les blocages et les plantages dus à un manque de mémoire ; iOS signale les plantages, les blocages et la fermeture de l'app par le système parce qu'elle utilise trop de mémoire ; l'app web signale uniquement les erreurs inattendues. T'Day ne détecte pas les fuites de mémoire.",
         "body5": "Les rapports parviennent au mainteneur de T'Day via Sentry, un service de rapports de plantage. Ils sont conservés 30 jours et utilisés uniquement pour corriger des bugs, jamais vendus ni partagés à des fins publicitaires. Ils sont envoyés directement à Sentry, sans passer par votre serveur. Sentry voit l'adresse réseau de toute connexion, comme tout service en ligne, mais il est configuré pour ne pas la stocker, et l'app web indique aussi à Sentry de quel site provient le rapport. Si vous exploitez votre propre serveur, celui-ci peut envoyer séparément ses propres rapports d'erreurs, ainsi que les durées d'un petit échantillon de requêtes, au Sentry de son opérateur lorsque ce dernier l'active. Cela n'inclut jamais vos tâches. Les versions sans point de réception des rapports, comme celles que vous compilez vous-même, n'affichent pas ce paramètre.",
         "step0": "Ouvrez les Réglages.",

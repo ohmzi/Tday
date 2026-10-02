@@ -692,7 +692,7 @@
     <string name="telemetry_card_sent">Version de l\'app, modèle de l\'appareil, version du système, ce qui a échoué et à quel endroit.</string>
     <string name="telemetry_card_never_sent_label">Jamais inclus</string>
     <string name="telemetry_card_never_sent">Votre nom ou compte, adresse IP, localisation, adresse du serveur, ou tout contenu de tâche ou de liste.</string>
-    <string name="telemetry_card_footnote">Désactivé par défaut. Modifiable à tout moment dans Réglages → Confidentialité.</string>
+    <string name="telemetry_card_footnote">Désactivé par défaut. Modifiable à tout moment dans Paramètres → Confidentialité.</string>
     <string name="telemetry_card_share">Partager les rapports</string>
     <string name="telemetry_card_not_now">Pas maintenant</string>
     <string name="telemetry_card_read_faq">Lire la FAQ complète</string>

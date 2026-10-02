@@ -57,7 +57,7 @@
         "content": [
           "Dados da conta: endereço de e-mail e fuso horário",
           "Conteúdo do utilizador: tarefas, notas e ficheiros encriptados",
-          "Dados técnicos: endereço IP, informações do navegador e da sessão",
+          "Dados técnicos que o servidor vê quando se liga (não fazem parte dos relatórios de falhas): endereço IP, informações do navegador e da sessão",
           "Cookies e armazenamento local para autenticação"
         ]
       },
@@ -663,10 +663,11 @@
       "sent": "Versão do app, modelo do dispositivo, versão do sistema operacional, o que falhou e onde.",
       "neverSentLabel": "Nunca incluído",
       "neverSent": "Seu nome ou conta, endereço IP, localização, endereço do servidor ou qualquer conteúdo de tarefas ou listas.",
-      "footnote": "Desativado por padrão. Altere quando quiser em Configurações → Privacidade.",
+      "footnote": "Desativado por padrão. Altere quando quiser em Definições → Privacidade.",
       "share": "Enviar relatórios",
       "notNow": "Agora não",
-      "readFaq": "Ler o FAQ completo"
+      "readFaq": "Ler o FAQ completo",
+      "webNote": "No app web, só são reportados erros inesperados, e o seu navegador também informa ao Sentry de qual site veio o relatório."
     }
   },
   "summary": {

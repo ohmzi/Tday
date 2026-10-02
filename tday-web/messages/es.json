@@ -57,7 +57,7 @@
         "content": [
           "Datos de la cuenta: correo electrónico y zona horaria",
           "Contenido del usuario: tareas, notas y archivos cifrados",
-          "Datos técnicos: dirección IP, información del navegador y de la sesión",
+          "Datos técnicos que ve el servidor durante la conexión (no forman parte de los informes de fallos): dirección IP, información del navegador y de la sesión",
           "Cookies y almacenamiento local para la autenticación"
         ]
       },
@@ -666,7 +666,8 @@
       "footnote": "Desactivado por defecto. Cámbialo cuando quieras en Ajustes → Privacidad.",
       "share": "Compartir informes",
       "notNow": "Ahora no",
-      "readFaq": "Leer las FAQ completas"
+      "readFaq": "Leer las FAQ completas",
+      "webNote": "En la app web solo se informan errores inesperados, y tu navegador también le indica a Sentry de qué sitio web procede un informe."
     }
   },
   "summary": {

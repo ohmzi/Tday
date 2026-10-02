@@ -57,7 +57,7 @@
         "content": [
           "Account data: email address and time zone",
           "User content: todos, notes, and encrypted files",
-          "Technical data: IP address, browser and session info",
+          "Technical data the server sees when you connect (this is not part of crash reports): IP address, browser and session info",
           "Cookies and local storage for authentication"
         ]
       },
@@ -666,7 +666,8 @@
       "footnote": "Off by default. Change it any time in Settings → Privacy.",
       "share": "Share reports",
       "notNow": "Not now",
-      "readFaq": "Read the full FAQ"
+      "readFaq": "Read the full FAQ",
+      "webNote": "In the web app, only unexpected errors are reported, and your browser also tells Sentry which website a report came from."
     }
   },
   "summary": {

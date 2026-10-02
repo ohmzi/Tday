@@ -57,7 +57,7 @@
         "content": [
           "Data akaun: alamat e-mel dan zon masa",
           "Kandungan pengguna: tugasan, nota, dan fail disulitkan",
-          "Data teknikal: alamat IP, maklumat pelayar dan sesi",
+          "Data teknikal yang dilihat pelayan semasa sambungan (bukan sebahagian daripada laporan ranap): alamat IP, maklumat pelayar dan sesi",
           "Kuki dan simpanan tempatan untuk pengesahan"
         ]
       },
@@ -666,7 +666,8 @@
       "footnote": "Dimatikan secara lalai. Tukar bila-bila masa dalam Tetapan → Privasi.",
       "share": "Kongsi laporan",
       "notNow": "Bukan sekarang",
-      "readFaq": "Baca FAQ penuh"
+      "readFaq": "Baca FAQ penuh",
+      "webNote": "Dalam apl web, hanya ralat tidak dijangka dilaporkan, dan pelayar anda juga memberitahu Sentry laman web mana laporan itu datang."
     }
   },
   "summary": {
