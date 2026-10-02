@@ -49,7 +49,7 @@
   },
   "privacy": {
     "title": "Dasar Privasi",
-    "lastUpdated": "Terakhir dikemas kini: 19 Januari 2026",
+    "lastUpdated": "Terakhir dikemas kini: 2 Oktober 2026",
     "intro": "T'Day (“kami”, atau “kita”) adalah aplikasi produktiviti peribadi. Dasar Privasi ini menjelaskan data apa yang kami kumpul dan bagaimana kami menggunakannya.",
     "sections": {
       "1": {
@@ -76,7 +76,7 @@
       },
       "4": {
         "title": "Perkongsian Data",
-        "content": "Kami hanya berkongsi data dengan penyedia perkhidmatan yang diperlukan untuk mengendalikan T'Day. Kami tidak menjual data peribadi anda."
+        "content": "Kami hanya berkongsi data dengan penyedia perkhidmatan yang diperlukan untuk mengendalikan T'Day, dan, hanya jika anda memilih untuk menyertai, dengan Sentry untuk laporan ranap dan masalah. Kami tidak menjual data peribadi anda."
       },
       "5": {
         "title": "Kuki",
@@ -95,16 +95,16 @@
         "content": "Kami mungkin mengemas kini dasar ini dari semasa ke semasa. Kemas kini akan muncul di halaman ini."
       },
       "9": {
-        "title": "Hubungan",
-        "content": "Soalan? E-mel support"
-      },
-      "10": {
         "title": "Laporan Ranap & Masalah",
         "content": [
           "Ia pilihan dan dimatikan secara lalai. Tiada apa-apa dihantar kecuali anda menghidupkannya, dan itu pun hanya pada saat sesuatu gagal",
           "Laporan mengandungi versi apl, model peranti dan OS, ralat itu dan tempat ia berlaku. Ia tidak pernah mengandungi nama, akaun, alamat IP, lokasi, alamat pelayan atau sebarang kandungan tugasan atau senarai anda",
-          "Laporan dihantar ke Sentry, disimpan selama 30 hari dan digunakan hanya untuk membaiki pepijat, tidak pernah untuk analitik atau pengiklanan"
+          "Laporan dihantar ke Sentry, disimpan selama 30 hari dan digunakan hanya untuk membaiki pepijat, tidak pernah untuk analitik atau pengiklanan. Sentry dapat melihat alamat rangkaian bagi sebarang sambungan tetapi ditetapkan supaya tidak menyimpannya"
         ]
+      },
+      "10": {
+        "title": "Hubungan",
+        "content": "Soalan? E-mel support"
       }
     }
   },
@@ -651,17 +651,17 @@
     "serverTelemetry": {
       "title": "Laporan ralat pelayan",
       "toggle": "Hantar laporan ralat pelayan ini ke Sentry pengendalinya",
-      "description": "Menghantar ralat pelayan ini sendiri ke projek Sentry yang ditetapkan dalam SENTRY_DSN. Tidak pernah menyertakan tugasan, senarai atau butiran akaun.",
+      "description": "Menghantar ralat pelayan ini sendiri, serta tempoh masa bagi sampel kecil permintaan, ke projek Sentry yang ditetapkan dalam SENTRY_DSN. Tidak pernah menyertakan tugasan, senarai atau butiran akaun.",
       "updateFailed": "Tidak dapat mengemas kini tetapan pelayan. Cuba lagi."
     }
   },
   "crashReports": {
     "card": {
       "title": "Bantu baiki ranap apl?",
-      "intro": "T'Day boleh menghantar laporan teknikal ringkas hanya apabila berlaku masalah: apl ranap, beku, kehabisan memori, atau sesuatu yang sangat perlahan. Ini membantu pembangun menghasilkan semula masalah itu pada peranti yang serupa.",
-      "sentLabel": "Apa yang dihantar",
+      "intro": "T'Day boleh menghantar laporan teknikal ringkas hanya apabila berlaku masalah, seperti apl ranap, beku atau ralat yang tidak dijangka. Ini membantu pembangun menghasilkan semula masalah itu pada peranti yang serupa.",
+      "sentLabel": "Apa yang disertakan",
       "sent": "Versi apl, model peranti, versi OS, apa yang gagal dan di mana.",
-      "neverSentLabel": "Tidak pernah dihantar",
+      "neverSentLabel": "Tidak pernah disertakan",
       "neverSent": "Nama atau akaun anda, alamat IP, lokasi, alamat pelayan, atau sebarang kandungan tugasan atau senarai.",
       "footnote": "Dimatikan secara lalai. Tukar bila-bila masa dalam Tetapan → Privasi.",
       "share": "Kongsi laporan",
@@ -1043,7 +1043,7 @@
         "title": "Mod Tempatan",
         "summary": "Guna T'Day sepenuhnya luar talian, tanpa pelayan atau akaun.",
         "keywords": "mod tempatan, luar talian, peribadi, tanpa akaun, tanpa pelayan, pada peranti",
-        "body": "Mod Tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. Ia cara utama untuk menggunakan T'Day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. Dalam pelayar ia disimpan dalam storan pelayar itu sendiri, jadi membersihkan kuki dan data tapak turut membuang ruang kerja itu — eksport dahulu jika mahu menyimpannya.",
+        "body": "Mod Tempatan menyimpan segalanya pada peranti anda — tiada log masuk, tiada pelayan, tiada muat naik. Ia cara utama untuk menggunakan T'Day secara peribadi, dan data tempatan anda tidak pernah dihantar ke mana-mana dengan sendirinya. Dalam pelayar ia disimpan dalam storan pelayar itu sendiri, jadi membersihkan kuki dan data tapak turut membuang ruang kerja itu — eksport dahulu jika mahu menyimpannya. Jika anda memilih untuk menyertai laporan ranap, hanya laporan teknikal ringkas dihantar apabila sesuatu gagal, tidak pernah tugasan atau senarai anda.",
         "tip": "Ciri khusus pelayan dipaparkan di sini dengan lencana “Mod pelayan” supaya anda tahu apa yang berubah jika anda log masuk."
       },
       "server-mode": {
@@ -1076,11 +1076,11 @@
         "title": "Laporan ranap & masalah",
         "summary": "Pilihan, dimatikan secara lalai. Dihantar hanya apabila sesuatu gagal.",
         "keywords": "ranap, ralat, laporan, privasi, diagnostik, telemetri, beku, tergantung, memori, analitik, crash, error, report, sentry, privacy, diagnostics, telemetry, hang, anr, memory, analytics",
-        "body": "Laporan ranap & masalah bersifat pilihan dan dimatikan secara lalai. Jika anda menghidupkannya, T'Day menghantar laporan teknikal ringkas hanya pada saat sesuatu gagal: apl ranap, beku, sistem menutup apl kerana menggunakan terlalu banyak memori, ralat yang tidak dijangka, atau operasi yang luar biasa perlahan. Ia berfungsi seperti Crashlytics: wujud untuk membaiki pepijat, bukan untuk mengukur cara anda menggunakan apl. Tiada analitik penggunaan, tiada penjejakan sesi dan tiada pemantauan prestasi semasa semuanya berjalan seperti biasa.",
-        "body2": "Laporan mengandungi versi apl, model peranti dan versi OS anda (atau pelayar dan versinya), ralat dan tempat dalam kod ia berlaku, beberapa langkah berlabel yang membawa kepadanya, nama skrin atau laluan API tanpa sebarang ID, kod status, tempoh masa, dan keadaan kasar peranti seperti memori kosong, tahap bateri dan sama ada anda berada dalam talian. Ia juga merangkumi ofset zon masa anda (contohnya UTC+2) dan bahasa, kerana tarikh adalah teras sebuah perancang tugasan.",
-        "body3": "Tidak pernah dihantar: nama, nama pengguna, e-mel atau sebarang butiran akaun anda; alamat IP atau lokasi anda; alamat pelayan anda; tajuk dan kandungan tugasan, senarai atau nota; kandungan pangkalan data anda; kata laluan, kuki atau token; tangkapan skrin atau rakaman. Mesej dibersihkan daripada alamat dan pengecam pada peranti anda sebelum dihantar. Laporan tidak membawa ID pengguna, jadi ia tidak boleh dikesan kembali kepada anda atau dipadam bagi setiap orang.",
-        "body4": "Laporan dihantar hanya selepas anda memilih untuk menyertai, dan hanya apabila kegagalan berlaku. Jika sesuatu gagal semasa tetapan ini dimatikan, tiada apa-apa disimpan atau dimasukkan ke baris gilir, dan menghidupkannya kemudian tidak menghantar kegagalan terdahulu. T'Day tidak mengesan kebocoran memori. Ia hanya perasan apabila sistem menamatkan apl kerana menggunakan terlalu banyak memori.",
-        "body5": "Laporan sampai kepada penyelenggara T'Day melalui Sentry, sebuah perkhidmatan pelaporan ranap. Laporan disimpan selama 30 hari dan digunakan hanya untuk membaiki pepijat, tidak pernah dijual atau dikongsi untuk pengiklanan. Ia dihantar terus ke Sentry, bukan melalui pelayan anda. Sentry dapat melihat alamat rangkaian bagi sebarang sambungan, seperti mana-mana perkhidmatan dalam talian, tetapi ia ditetapkan supaya tidak menyimpannya. Jika anda menjalankan pelayan sendiri, pelayan itu boleh menghantar laporan ralatnya sendiri secara berasingan ke Sentry pengendalinya apabila pengendali menghidupkannya. Itu tidak pernah merangkumi tugasan anda.",
+        "body": "Laporan ranap & masalah bersifat pilihan dan dimatikan secara lalai. Jika anda menghidupkannya, T'Day menghantar laporan teknikal ringkas hanya pada saat sesuatu gagal: apl ranap, beku, ralat yang tidak dijangka, atau kehabisan memori. Ia berfungsi seperti Crashlytics: wujud untuk membaiki pepijat, bukan untuk mengukur cara anda menggunakan apl. Tiada analitik penggunaan, tiada penjejakan sesi dan tiada pemantauan prestasi pada peranti anda semasa semuanya berjalan seperti biasa.",
+        "body2": "Laporan mengandungi versi apl, model peranti dan versi OS anda (atau pelayar dan versinya), ralat dan tempat dalam kod ia berlaku, beberapa langkah berlabel yang membawa kepadanya, nama skrin atau laluan API tanpa sebarang ID, kod status, dan pada mudah alih keadaan kasar peranti seperti memori kosong, tahap bateri dan sama ada anda berada dalam talian. Ia juga merangkumi ofset zon masa anda (contohnya UTC+2) dan bahasa, kerana tarikh adalah teras sebuah perancang tugasan.",
+        "body3": "Laporan tidak pernah mengandungi: nama, nama pengguna, e-mel atau sebarang butiran akaun anda; alamat IP atau lokasi anda; alamat pelayan anda; tajuk dan kandungan tugasan, senarai atau nota; kandungan pangkalan data anda; kata laluan, kuki atau token; tangkapan skrin atau rakaman. Mesej ralat dibersihkan daripada alamat, pengecam dan teks yang dipetik pada peranti anda sebelum dihantar, secara usaha terbaik. Laporan tidak membawa ID pengguna, jadi ia tidak boleh dikesan kembali kepada anda atau dipadam bagi setiap orang.",
+        "body4": "Laporan dihantar hanya selepas anda memilih untuk menyertai, dan hanya apabila kegagalan berlaku. Jika sesuatu gagal semasa tetapan ini dimatikan, tiada apa-apa disimpan atau dimasukkan ke baris gilir, dan menghidupkannya kemudian tidak menghantar kegagalan terdahulu. Apa yang dikira sebagai kegagalan bergantung pada platform: Android melaporkan ranap, beku dan ranap kehabisan memori; iOS melaporkan ranap, beku dan sistem menamatkan apl kerana menggunakan terlalu banyak memori; apl web hanya melaporkan ralat yang tidak dijangka. T'Day tidak mengesan kebocoran memori.",
+        "body5": "Laporan sampai kepada penyelenggara T'Day melalui Sentry, sebuah perkhidmatan pelaporan ranap. Laporan disimpan selama 30 hari dan digunakan hanya untuk membaiki pepijat, tidak pernah dijual atau dikongsi untuk pengiklanan. Ia dihantar terus ke Sentry, bukan melalui pelayan anda. Sentry dapat melihat alamat rangkaian bagi sebarang sambungan, seperti mana-mana perkhidmatan dalam talian, tetapi ia ditetapkan supaya tidak menyimpannya, dan apl web juga memberitahu Sentry laman web mana laporan itu datang. Jika anda menjalankan pelayan sendiri, pelayan itu boleh menghantar laporan ralatnya sendiri secara berasingan, serta tempoh masa bagi sampel kecil permintaan, ke Sentry pengendalinya apabila pengendali menghidupkannya. Itu tidak pernah merangkumi tugasan anda. Binaan tanpa titik akhir pelaporan, seperti yang anda bina sendiri, tidak memaparkan tetapan ini.",
         "step0": "Buka Tetapan.",
         "step1": "Buka Privasi dan matikan \"Laporan ranap & masalah\".",
         "step2": "Laporan berhenti serta-merta, dan apa-apa yang menunggu untuk dihantar dipadam.",

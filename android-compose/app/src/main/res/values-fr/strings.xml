@@ -687,10 +687,10 @@
 
     <!-- Crash reports: the one-time consent card -->
     <string name="telemetry_card_title">Aider à corriger les plantages ?</string>
-    <string name="telemetry_card_intro">T\'Day peut envoyer un court rapport technique uniquement quand quelque chose ne va pas : un plantage, un blocage, un manque de mémoire ou une lenteur importante. Cela aide le développeur à reproduire le problème sur un appareil similaire.</string>
-    <string name="telemetry_card_sent_label">Ce qui est envoyé</string>
+    <string name="telemetry_card_intro">T\'Day peut envoyer un court rapport technique uniquement quand quelque chose ne va pas, comme un plantage, un blocage ou une erreur inattendue. Cela aide le développeur à reproduire le problème sur un appareil similaire.</string>
+    <string name="telemetry_card_sent_label">Ce qui est inclus</string>
     <string name="telemetry_card_sent">Version de l\'app, modèle de l\'appareil, version du système, ce qui a échoué et à quel endroit.</string>
-    <string name="telemetry_card_never_sent_label">Jamais envoyé</string>
+    <string name="telemetry_card_never_sent_label">Jamais inclus</string>
     <string name="telemetry_card_never_sent">Votre nom ou compte, adresse IP, localisation, adresse du serveur, ou tout contenu de tâche ou de liste.</string>
     <string name="telemetry_card_footnote">Désactivé par défaut. Modifiable à tout moment dans Réglages → Confidentialité.</string>
     <string name="telemetry_card_share">Partager les rapports</string>

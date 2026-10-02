@@ -713,10 +713,10 @@
 
     <!-- Crash reports: the one-time consent card -->
     <string name="telemetry_card_title">Help fix crashes?</string>
-    <string name="telemetry_card_intro">T\'Day can send a short technical report only when something goes wrong: a crash, a freeze, running out of memory, or something very slow. It helps the developer reproduce the problem on a similar device.</string>
-    <string name="telemetry_card_sent_label">What\'s sent</string>
+    <string name="telemetry_card_intro">T\'Day can send a short technical report only when something goes wrong, such as a crash, a freeze or an unexpected error. It helps the developer reproduce the problem on a similar device.</string>
+    <string name="telemetry_card_sent_label">What\'s included</string>
     <string name="telemetry_card_sent">App version, device model, OS version, what failed and where.</string>
-    <string name="telemetry_card_never_sent_label">Never sent</string>
+    <string name="telemetry_card_never_sent_label">Never included</string>
     <string name="telemetry_card_never_sent">Your name or account, IP address, location, server address, or any task or list content.</string>
     <string name="telemetry_card_footnote">Off by default. Change it any time in Settings → Privacy.</string>
     <string name="telemetry_card_share">Share reports</string>

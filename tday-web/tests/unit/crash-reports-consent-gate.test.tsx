@@ -67,8 +67,8 @@ describe("CrashReportsConsentGate", () => {
 
     expect(screen.getByRole("dialog", { name: "Help fix crashes?" })).toBeTruthy();
     expect(screen.getByText(/T'Day can send a short technical report/)).toBeTruthy();
-    expect(screen.getByText("What's sent")).toBeTruthy();
-    expect(screen.getByText("Never sent")).toBeTruthy();
+    expect(screen.getByText("What's included")).toBeTruthy();
+    expect(screen.getByText("Never included")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Share reports" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Not now" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Read the full FAQ" })).toBeTruthy();

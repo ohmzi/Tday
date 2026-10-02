@@ -687,10 +687,10 @@
 
     <!-- Crash reports: the one-time consent card -->
     <string name="telemetry_card_title">Aiutaci a risolvere i crash?</string>
-    <string name="telemetry_card_intro">T\'Day può inviare una breve segnalazione tecnica solo quando qualcosa va storto: un crash, un blocco, la memoria esaurita o qualcosa di molto lento. Aiuta lo sviluppatore a riprodurre il problema su un dispositivo simile.</string>
-    <string name="telemetry_card_sent_label">Cosa viene inviato</string>
+    <string name="telemetry_card_intro">T\'Day può inviare una breve segnalazione tecnica solo quando qualcosa va storto, ad esempio un crash, un blocco o un errore imprevisto. Aiuta lo sviluppatore a riprodurre il problema su un dispositivo simile.</string>
+    <string name="telemetry_card_sent_label">Cosa è incluso</string>
     <string name="telemetry_card_sent">Versione dell\'app, modello del dispositivo, versione del sistema operativo, cosa non ha funzionato e dove.</string>
-    <string name="telemetry_card_never_sent_label">Non viene mai inviato</string>
+    <string name="telemetry_card_never_sent_label">Mai incluso</string>
     <string name="telemetry_card_never_sent">Il tuo nome o account, l\'indirizzo IP, la posizione, l\'indirizzo del server o qualsiasi contenuto di attività o elenchi.</string>
     <string name="telemetry_card_footnote">Disattivato per impostazione predefinita. Puoi cambiarlo in qualsiasi momento in Impostazioni → Privacy.</string>
     <string name="telemetry_card_share">Condividi segnalazioni</string>

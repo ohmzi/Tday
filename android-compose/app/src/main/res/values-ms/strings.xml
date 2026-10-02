@@ -686,10 +686,10 @@
 
     <!-- Crash reports: the one-time consent card -->
     <string name="telemetry_card_title">Bantu baiki ranap apl?</string>
-    <string name="telemetry_card_intro">T\'Day boleh menghantar laporan teknikal ringkas hanya apabila berlaku masalah: apl ranap, beku, kehabisan memori, atau sesuatu yang sangat perlahan. Ini membantu pembangun menghasilkan semula masalah itu pada peranti yang serupa.</string>
-    <string name="telemetry_card_sent_label">Apa yang dihantar</string>
+    <string name="telemetry_card_intro">T\'Day boleh menghantar laporan teknikal ringkas hanya apabila berlaku masalah, seperti apl ranap, beku atau ralat yang tidak dijangka. Ini membantu pembangun menghasilkan semula masalah itu pada peranti yang serupa.</string>
+    <string name="telemetry_card_sent_label">Apa yang disertakan</string>
     <string name="telemetry_card_sent">Versi apl, model peranti, versi OS, apa yang gagal dan di mana.</string>
-    <string name="telemetry_card_never_sent_label">Tidak pernah dihantar</string>
+    <string name="telemetry_card_never_sent_label">Tidak pernah disertakan</string>
     <string name="telemetry_card_never_sent">Nama atau akaun anda, alamat IP, lokasi, alamat pelayan, atau sebarang kandungan tugasan atau senarai.</string>
     <string name="telemetry_card_footnote">Dimatikan secara lalai. Tukar bila-bila masa dalam Tetapan → Privasi.</string>
     <string name="telemetry_card_share">Kongsi laporan</string>

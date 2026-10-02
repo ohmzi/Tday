@@ -354,10 +354,10 @@ const IOS_LOCALES = ["de", "es", "fr", "it", "ja", "ms", "pt", "ru", "zh"];
 // English is the key. Each is also a literal in the Swift view that shows it.
 const IOS_CARD_KEYS = [
   "Help fix crashes?",
-  "T'Day can send a short technical report only when something goes wrong: a crash, a freeze, running out of memory, or something very slow. It helps the developer reproduce the problem on a similar device.",
-  "What's sent",
+  "T'Day can send a short technical report only when something goes wrong, such as a crash, a freeze or an unexpected error. It helps the developer reproduce the problem on a similar device.",
+  "What's included",
   "App version, device model, OS version, what failed and where.",
-  "Never sent",
+  "Never included",
   "Your name or account, IP address, location, server address, or any task or list content.",
   "Off by default. Change it any time in Settings → Privacy.",
   "Share reports",
@@ -557,8 +557,8 @@ describe("crash-report strings: web", () => {
     "settings.serverTelemetry.toggle",
     "settings.serverTelemetry.description",
     "settings.serverTelemetry.updateFailed",
-    "privacy.sections.10.title",
-    "privacy.sections.10.content",
+    "privacy.sections.9.title",
+    "privacy.sections.9.content",
   ];
 
   it.each(WEB_LOCALES)("%s has each of them, translated", (locale) => {

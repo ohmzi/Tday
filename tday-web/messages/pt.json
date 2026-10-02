@@ -49,7 +49,7 @@
   },
   "privacy": {
     "title": "Política de Privacidade",
-    "lastUpdated": "Última atualização: 19 de janeiro de 2026",
+    "lastUpdated": "Última atualização: 2 de outubro de 2026",
     "intro": "O T'Day (“nós”, ou “nosso”) é uma aplicação de produtividade pessoal. Esta Política de Privacidade explica quais os dados que recolhemos e como os utilizamos.",
     "sections": {
       "1": {
@@ -76,7 +76,7 @@
       },
       "4": {
         "title": "Partilha de Dados",
-        "content": "Apenas partilhamos dados com fornecedores de serviços necessários para operar o T'Day. Não vendemos os seus dados pessoais."
+        "content": "Apenas partilhamos dados com fornecedores de serviços necessários para operar o T'Day e, somente se você ativar, com o Sentry para relatórios de falhas e problemas. Não vendemos os seus dados pessoais."
       },
       "5": {
         "title": "Cookies",
@@ -95,16 +95,16 @@
         "content": "Podemos atualizar esta política periodicamente. As atualizações aparecerão nesta página."
       },
       "9": {
-        "title": "Contacto",
-        "content": "Dúvidas? Envie e-mail para support"
-      },
-      "10": {
         "title": "Relatórios de Falhas e Problemas",
         "content": [
           "Opcional e desativado por padrão. Nada é enviado a menos que você ative, e mesmo assim apenas no momento em que algo falha",
           "Um relatório contém a versão do app, o modelo do dispositivo e o sistema operacional, o erro e onde ele ocorreu. Nunca contém seu nome, conta, endereço IP, localização, endereço do servidor nem qualquer conteúdo de tarefas ou listas",
-          "Os relatórios vão para o Sentry, ficam guardados por 30 dias e são usados apenas para corrigir bugs, nunca para análise de uso nem publicidade"
+          "Os relatórios vão para o Sentry, ficam guardados por 30 dias e são usados apenas para corrigir bugs, nunca para análise de uso nem publicidade. O Sentry vê o endereço de rede de qualquer conexão, mas está configurado para não armazená-lo"
         ]
+      },
+      "10": {
+        "title": "Contacto",
+        "content": "Dúvidas? Envie e-mail para support"
       }
     }
   },
@@ -651,17 +651,17 @@
     "serverTelemetry": {
       "title": "Relatórios de erros do servidor",
       "toggle": "Enviar os relatórios de erros deste servidor para o Sentry do operador",
-      "description": "Envia os erros do próprio servidor para o projeto do Sentry definido em SENTRY_DSN. Nunca inclui tarefas, listas nem dados de conta.",
+      "description": "Envia os erros do próprio servidor, além de tempos de uma pequena amostra de requisições, para o projeto do Sentry definido em SENTRY_DSN. Nunca inclui tarefas, listas nem dados de conta.",
       "updateFailed": "Não foi possível atualizar a configuração do servidor. Tente novamente."
     }
   },
   "crashReports": {
     "card": {
       "title": "Ajudar a corrigir falhas?",
-      "intro": "O T'Day pode enviar um breve relatório técnico apenas quando algo dá errado: o app fecha inesperadamente, trava, fica sem memória ou fica muito lento. Isso ajuda o desenvolvedor a reproduzir o problema em um dispositivo parecido.",
-      "sentLabel": "O que é enviado",
+      "intro": "O T'Day pode enviar um breve relatório técnico apenas quando algo dá errado, como o app fechar inesperadamente, travar ou ocorrer um erro inesperado. Isso ajuda o desenvolvedor a reproduzir o problema em um dispositivo parecido.",
+      "sentLabel": "O que está incluído",
       "sent": "Versão do app, modelo do dispositivo, versão do sistema operacional, o que falhou e onde.",
-      "neverSentLabel": "Nunca é enviado",
+      "neverSentLabel": "Nunca incluído",
       "neverSent": "Seu nome ou conta, endereço IP, localização, endereço do servidor ou qualquer conteúdo de tarefas ou listas.",
       "footnote": "Desativado por padrão. Altere quando quiser em Configurações → Privacidade.",
       "share": "Enviar relatórios",
@@ -1043,7 +1043,7 @@
         "title": "Modo local",
         "summary": "Use o T'Day totalmente offline, sem servidor nem conta.",
         "keywords": "modo local, offline, privado, sem conta, sem servidor, no dispositivo",
-        "body": "O Modo local mantém tudo no seu dispositivo — sem início de sessão, sem servidor, sem envios. É uma forma de primeira classe de usar o T'Day em privado, e os seus dados locais nunca são enviados para lado nenhum por conta própria. Num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa também o espaço de trabalho — exporte-o antes se quiser mantê-lo.",
+        "body": "O Modo local mantém tudo no seu dispositivo — sem início de sessão, sem servidor, sem envios. É uma forma de primeira classe de usar o T'Day em privado, e os seus dados locais nunca são enviados para lado nenhum por conta própria. Num navegador vive no armazenamento desse navegador, por isso limpar os cookies e os dados do site limpa também o espaço de trabalho — exporte-o antes se quiser mantê-lo. Se você ativar os relatórios de falhas, apenas um breve relatório técnico é enviado quando algo falha, nunca as suas tarefas ou listas.",
         "tip": "As funcionalidades exclusivas do servidor aparecem aqui com um selo “Modo servidor” para saber o que muda se iniciar sessão."
       },
       "server-mode": {
@@ -1076,11 +1076,11 @@
         "title": "Relatórios de falhas e problemas",
         "summary": "Opcional, desativado por padrão. Enviado só quando algo falha.",
         "keywords": "falha, fechamento inesperado, travamento, erro, relatório, privacidade, diagnóstico, telemetria, memória, análise de uso, crash, sentry, anr, error, report, privacy, diagnostics, telemetry, hang, memory, analytics",
-        "body": "Os relatórios de falhas e problemas são opcionais e vêm desativados por padrão. Se você ativá-los, o T'Day envia um breve relatório técnico apenas no momento em que algo falha: um fechamento inesperado, um travamento, o sistema encerrar o app por uso excessivo de memória, um erro inesperado ou uma operação incomumente lenta. Funciona como o Crashlytics: existe para corrigir bugs, não para medir como você usa o app. Não há análise de uso, rastreamento de sessões nem monitoramento de desempenho enquanto tudo funciona normalmente.",
-        "body2": "Um relatório contém a versão do app, o modelo do seu dispositivo e a versão do sistema operacional (ou o navegador e a versão), o erro e o ponto do código onde ele ocorreu, algumas etapas rotuladas que antecederam o erro, nomes de telas ou de rotas da API sem nenhum ID, códigos de status, tempos e condições aproximadas do dispositivo, como memória livre, nível de bateria e se você estava online. Também inclui a diferença do seu fuso horário (por exemplo, UTC+2) e o idioma, porque as datas são essenciais em um planejador de tarefas.",
-        "body3": "Nunca é enviado: seu nome, nome de usuário, e-mail ou qualquer dado da conta; seu endereço IP ou localização; o endereço do seu servidor; títulos e conteúdos de tarefas, listas ou notas; o conteúdo do seu banco de dados; senhas, cookies ou tokens; capturas de tela ou gravações. As mensagens têm endereços e identificadores removidos no seu dispositivo antes do envio. Os relatórios não carregam ID de usuário, por isso não podem ser rastreados até você nem excluídos por pessoa.",
-        "body4": "Os relatórios só são enviados depois que você ativa a opção, e apenas quando ocorre uma falha. Se algo falhar com a configuração desativada, nada é armazenado nem colocado em fila, e ativá-la depois não envia falhas anteriores. O T'Day não detecta vazamentos de memória. Ele apenas percebe quando o sistema encerra o app por uso excessivo de memória.",
-        "body5": "Os relatórios vão para o mantenedor do T'Day por meio do Sentry, um serviço de relatórios de falhas. Ficam guardados por 30 dias e são usados apenas para corrigir bugs, nunca vendidos nem compartilhados para publicidade. São enviados diretamente ao Sentry, não pelo seu servidor. O Sentry vê o endereço de rede de qualquer conexão, como qualquer serviço online, mas está configurado para não armazená-lo. Se você tem o seu próprio servidor, ele pode enviar separadamente os próprios relatórios de erros para o Sentry do operador, quando o operador ativar isso. Isso nunca inclui as suas tarefas.",
+        "body": "Os relatórios de falhas e problemas são opcionais e vêm desativados por padrão. Se você ativá-los, o T'Day envia um breve relatório técnico apenas no momento em que algo falha: um fechamento inesperado, um travamento, um erro inesperado ou falta de memória. Funciona como o Crashlytics: existe para corrigir bugs, não para medir como você usa o app. Não há análise de uso, rastreamento de sessões nem monitoramento de desempenho no seu dispositivo enquanto tudo funciona normalmente.",
+        "body2": "Um relatório contém a versão do app, o modelo do seu dispositivo e a versão do sistema operacional (ou o navegador e a versão), o erro e o ponto do código onde ele ocorreu, algumas etapas rotuladas que antecederam o erro, nomes de telas ou de rotas da API sem nenhum ID, códigos de status e, nos dispositivos móveis, condições aproximadas do dispositivo, como memória livre, nível de bateria e se você estava online. Também inclui a diferença do seu fuso horário (por exemplo, UTC+2) e o idioma, porque as datas são essenciais em um planejador de tarefas.",
+        "body3": "O relatório nunca contém: seu nome, nome de usuário, e-mail ou qualquer dado da conta; seu endereço IP ou localização; o endereço do seu servidor; títulos e conteúdos de tarefas, listas ou notas; o conteúdo do seu banco de dados; senhas, cookies ou tokens; capturas de tela ou gravações. As mensagens de erro têm endereços, identificadores e texto entre aspas removidos no seu dispositivo antes do envio, da melhor forma possível. Os relatórios não carregam ID de usuário, por isso não podem ser rastreados até você nem excluídos por pessoa.",
+        "body4": "Os relatórios só são enviados depois que você ativa a opção, e apenas quando ocorre uma falha. Se algo falhar com a configuração desativada, nada é armazenado nem colocado em fila, e ativá-la depois não envia falhas anteriores. O que conta como falha depende da plataforma: o Android relata fechamentos inesperados, travamentos e falhas por falta de memória; o iOS relata fechamentos inesperados, travamentos e o sistema encerrar o app por uso excessivo de memória; o app web relata apenas erros inesperados. O T'Day não detecta vazamentos de memória.",
+        "body5": "Os relatórios vão para o mantenedor do T'Day por meio do Sentry, um serviço de relatórios de falhas. Ficam guardados por 30 dias e são usados apenas para corrigir bugs, nunca vendidos nem compartilhados para publicidade. São enviados diretamente ao Sentry, não pelo seu servidor. O Sentry vê o endereço de rede de qualquer conexão, como qualquer serviço online, mas está configurado para não armazená-lo, e o app web também informa ao Sentry de qual site veio o relatório. Se você tem o seu próprio servidor, ele pode enviar separadamente os próprios relatórios de erros, além de tempos de uma pequena amostra de requisições, para o Sentry do operador, quando o operador ativar isso. Isso nunca inclui as suas tarefas. Versões sem um endpoint de relatórios, como as que você mesmo compila, não mostram esta configuração.",
         "step0": "Abra as Configurações.",
         "step1": "Abra Privacidade e desative \"Relatórios de falhas e problemas\".",
         "step2": "Os relatórios param imediatamente, e tudo o que estava aguardando envio é excluído.",

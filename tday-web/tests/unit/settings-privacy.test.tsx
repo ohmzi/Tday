@@ -184,7 +184,7 @@ describe("ServerTelemetryRow", () => {
     render(<ServerTelemetryRow telemetry={{ ...OFFERED, enabled: true }} />, { wrapper: wrapper() });
 
     expect(screen.getByText("Server error reports")).toBeTruthy();
-    expect(screen.getByText(/Sends this server's own errors to the Sentry project set in SENTRY_DSN/)).toBeTruthy();
+    expect(screen.getByText(/Sends this server's own errors, plus timings for a small sample of requests, to the Sentry project set in SENTRY_DSN/)).toBeTruthy();
     expect(
       screen.getByRole("switch", { name: "Send this server's error reports to its operator's Sentry" }).getAttribute("aria-checked"),
     ).toBe("true");

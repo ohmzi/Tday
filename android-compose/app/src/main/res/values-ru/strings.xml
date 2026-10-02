@@ -689,10 +689,10 @@
 
     <!-- Crash reports: the one-time consent card -->
     <string name="telemetry_card_title">Помочь исправить сбои?</string>
-    <string name="telemetry_card_intro">T\'Day может отправлять короткий технический отчёт только тогда, когда что-то идёт не так: при сбое, зависании, нехватке памяти или очень медленной работе. Это помогает разработчику воспроизвести проблему на похожем устройстве.</string>
-    <string name="telemetry_card_sent_label">Что отправляется</string>
+    <string name="telemetry_card_intro">T\'Day может отправлять короткий технический отчёт только тогда, когда что-то идёт не так, например при сбое, зависании или неожиданной ошибке. Это помогает разработчику воспроизвести проблему на похожем устройстве.</string>
+    <string name="telemetry_card_sent_label">Что входит в отчёт</string>
     <string name="telemetry_card_sent">Версия приложения, модель устройства, версия ОС, что именно пошло не так и где.</string>
-    <string name="telemetry_card_never_sent_label">Никогда не отправляется</string>
+    <string name="telemetry_card_never_sent_label">Никогда не входит</string>
     <string name="telemetry_card_never_sent">Ваше имя или аккаунт, IP-адрес, местоположение, адрес сервера и любое содержимое задач или списков.</string>
     <string name="telemetry_card_footnote">По умолчанию выключено. Это можно изменить в любой момент: Настройки → Конфиденциальность.</string>
     <string name="telemetry_card_share">Делиться отчётами</string>

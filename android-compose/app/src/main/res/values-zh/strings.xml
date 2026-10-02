@@ -686,10 +686,10 @@
 
     <!-- Crash reports: the one-time consent card -->
     <string name="telemetry_card_title">帮助修复崩溃问题？</string>
-    <string name="telemetry_card_intro">只有在出现问题时，T\'Day 才会发送一份简短的技术报告：崩溃、卡死、内存不足，或运行异常缓慢。这能帮助开发者在相似的设备上重现问题。</string>
-    <string name="telemetry_card_sent_label">会发送的内容</string>
+    <string name="telemetry_card_intro">只有在出现问题时，T\'Day 才会发送一份简短的技术报告，例如崩溃、卡死或意外错误。这能帮助开发者在相似的设备上重现问题。</string>
+    <string name="telemetry_card_sent_label">包含的内容</string>
     <string name="telemetry_card_sent">应用版本、设备型号、系统版本，以及出错的内容和位置。</string>
-    <string name="telemetry_card_never_sent_label">绝不发送的内容</string>
+    <string name="telemetry_card_never_sent_label">绝不包含的内容</string>
     <string name="telemetry_card_never_sent">你的姓名或账户、IP 地址、位置、服务器地址，以及任何任务或列表内容。</string>
     <string name="telemetry_card_footnote">默认关闭。你可以随时在“设置 → 隐私”中更改。</string>
     <string name="telemetry_card_share">分享报告</string>

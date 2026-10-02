@@ -1,15 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "· %@" : {
-
-    },
-    "@%@" : {
-
-    },
-    "%@" : {
-
-    },
+    "· %@" : {},
+    "@%@" : {},
+    "%@" : {},
     "%@ uses a certificate your device can't verify.\n\nFingerprint:\n%@\n\nOnly continue if this matches your server. If you're on public Wi-Fi and weren't expecting this, cancel." : {
       "localizations" : {
         "en" : {
@@ -11986,61 +11980,61 @@
         }
       }
     },
-    "Never sent" : {
+    "Never included" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wird nie gesendet"
+            "value" : "Nie enthalten"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nunca se envía"
+            "value" : "Nunca se incluye"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jamais envoyé"
+            "value" : "Jamais inclus"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Non viene mai inviato"
+            "value" : "Mai incluso"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "送信されない情報"
+            "value" : "含まれない情報"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidak pernah dihantar"
+            "value" : "Tidak pernah disertakan"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nunca é enviado"
+            "value" : "Nunca incluído"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Никогда не отправляется"
+            "value" : "Никогда не входит"
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "绝不发送的内容"
+            "value" : "绝不包含的内容"
           }
         }
       }
@@ -15756,9 +15750,7 @@
         }
       }
     },
-    "Password must be at least 8 characters, with an uppercase letter and a special character." : {
-
-    },
+    "Password must be at least 8 characters, with an uppercase letter and a special character." : {},
     "Password must include at least one special character" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -21360,12 +21352,8 @@
         }
       }
     },
-    "T'Day" : {
-
-    },
-    "T’Day" : {
-
-    },
+    "T'Day" : {},
+    "T’Day" : {},
     "T'Day can save this server URL securely on this device so you can reuse it during setup." : {
       "localizations" : {
         "de" : {
@@ -21424,61 +21412,61 @@
         }
       }
     },
-    "T'Day can send a short technical report only when something goes wrong: a crash, a freeze, running out of memory, or something very slow. It helps the developer reproduce the problem on a similar device." : {
+    "T'Day can send a short technical report only when something goes wrong, such as a crash, a freeze or an unexpected error. It helps the developer reproduce the problem on a similar device." : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day kann einen kurzen technischen Bericht senden, aber nur dann, wenn etwas schiefgeht: ein Absturz, ein Einfrieren, Speichermangel oder etwas sehr Langsames. Das hilft dem Entwickler, das Problem auf einem ähnlichen Gerät nachzustellen."
+            "value" : "T'Day kann einen kurzen technischen Bericht senden, aber nur dann, wenn etwas schiefgeht, etwa bei einem Absturz, einem Einfrieren oder einem unerwarteten Fehler. Das hilft dem Entwickler, das Problem auf einem ähnlichen Gerät nachzustellen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day puede enviar un breve informe técnico solo cuando algo sale mal: un cierre inesperado, un bloqueo, quedarse sin memoria o algo muy lento. Ayuda al desarrollador a reproducir el problema en un dispositivo similar."
+            "value" : "T'Day puede enviar un breve informe técnico solo cuando algo sale mal, como un cierre inesperado, un bloqueo o un error inesperado. Ayuda al desarrollador a reproducir el problema en un dispositivo similar."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day peut envoyer un court rapport technique uniquement quand quelque chose ne va pas : un plantage, un blocage, un manque de mémoire ou une lenteur importante. Cela aide le développeur à reproduire le problème sur un appareil similaire."
+            "value" : "T'Day peut envoyer un court rapport technique uniquement quand quelque chose ne va pas, comme un plantage, un blocage ou une erreur inattendue. Cela aide le développeur à reproduire le problème sur un appareil similaire."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day può inviare una breve segnalazione tecnica solo quando qualcosa va storto: un crash, un blocco, la memoria esaurita o qualcosa di molto lento. Aiuta lo sviluppatore a riprodurre il problema su un dispositivo simile."
+            "value" : "T'Day può inviare una breve segnalazione tecnica solo quando qualcosa va storto, ad esempio un crash, un blocco o un errore imprevisto. Aiuta lo sviluppatore a riprodurre il problema su un dispositivo simile."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day は、問題が起きたときだけ短い技術レポートを送信できます。対象は、クラッシュ、フリーズ、メモリ不足、極端に遅い処理です。開発者が似た端末で問題を再現するのに役立ちます。"
+            "value" : "T'Day は、問題が起きたときだけ短い技術レポートを送信できます。対象は、クラッシュ、フリーズ、予期しないエラーなどです。開発者が似た端末で問題を再現するのに役立ちます。"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day boleh menghantar laporan teknikal ringkas hanya apabila berlaku masalah: apl ranap, beku, kehabisan memori, atau sesuatu yang sangat perlahan. Ini membantu pembangun menghasilkan semula masalah itu pada peranti yang serupa."
+            "value" : "T'Day boleh menghantar laporan teknikal ringkas hanya apabila berlaku masalah, seperti apl ranap, beku atau ralat yang tidak dijangka. Ini membantu pembangun menghasilkan semula masalah itu pada peranti yang serupa."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O T'Day pode enviar um breve relatório técnico apenas quando algo dá errado: o app fecha inesperadamente, trava, fica sem memória ou fica muito lento. Isso ajuda o desenvolvedor a reproduzir o problema em um dispositivo parecido."
+            "value" : "O T'Day pode enviar um breve relatório técnico apenas quando algo dá errado, como o app fechar inesperadamente, travar ou ocorrer um erro inesperado. Isso ajuda o desenvolvedor a reproduzir o problema em um dispositivo parecido."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day может отправлять короткий технический отчёт только тогда, когда что-то идёт не так: при сбое, зависании, нехватке памяти или очень медленной работе. Это помогает разработчику воспроизвести проблему на похожем устройстве."
+            "value" : "T'Day может отправлять короткий технический отчёт только тогда, когда что-то идёт не так, например при сбое, зависании или неожиданной ошибке. Это помогает разработчику воспроизвести проблему на похожем устройстве."
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "只有在出现问题时，T'Day 才会发送一份简短的技术报告：崩溃、卡死、内存不足，或运行异常缓慢。这能帮助开发者在相似的设备上重现问题。"
+            "value" : "只有在出现问题时，T'Day 才会发送一份简短的技术报告，例如崩溃、卡死或意外错误。这能帮助开发者在相似的设备上重现问题。"
           }
         }
       }
@@ -25370,61 +25358,61 @@
         }
       }
     },
-    "What's sent" : {
+    "What's included" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das wird gesendet"
+            "value" : "Das ist enthalten"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Qué se envía"
+            "value" : "Qué se incluye"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ce qui est envoyé"
+            "value" : "Ce qui est inclus"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cosa viene inviato"
+            "value" : "Cosa è incluso"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "送信される情報"
+            "value" : "含まれる情報"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apa yang dihantar"
+            "value" : "Apa yang disertakan"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O que é enviado"
+            "value" : "O que está incluído"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Что отправляется"
+            "value" : "Что входит в отчёт"
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "会发送的内容"
+            "value" : "包含的内容"
           }
         }
       }

@@ -61,17 +61,17 @@ struct TelemetryConsentCard: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Text(L("T'Day can send a short technical report only when something goes wrong: a crash, a freeze, running out of memory, or something very slow. It helps the developer reproduce the problem on a similar device."))
+            Text(L("T'Day can send a short technical report only when something goes wrong, such as a crash, a freeze or an unexpected error. It helps the developer reproduce the problem on a similar device."))
                 .font(.tdayRounded(size: 15, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.72))
                 .fixedSize(horizontal: false, vertical: true)
 
             detail(
-                label: "What's sent",
+                label: "What's included",
                 text: "App version, device model, OS version, what failed and where."
             )
             detail(
-                label: "Never sent",
+                label: "Never included",
                 text: "Your name or account, IP address, location, server address, or any task or list content."
             )
 

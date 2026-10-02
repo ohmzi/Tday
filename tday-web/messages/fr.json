@@ -49,7 +49,7 @@
   },
   "privacy": {
     "title": "Politique de confidentialité",
-    "lastUpdated": "Dernière mise à jour : 19 janvier 2026",
+    "lastUpdated": "Dernière mise à jour : 2 octobre 2026",
     "intro": "T'Day (« nous », « notre » ou « nos ») est une application de productivité personnelle. Cette politique de confidentialité explique quelles données nous collectons et comment nous les utilisons.",
     "sections": {
       "1": {
@@ -76,7 +76,7 @@
       },
       "4": {
         "title": "Partage des données",
-        "content": "Nous ne partageons les données qu'avec les prestataires de services requis pour exploiter T'Day. Nous ne vendons pas vos données personnelles."
+        "content": "Nous ne partageons les données qu'avec les prestataires de services requis pour exploiter T'Day et, uniquement si vous y consentez, avec Sentry pour les rapports de plantage et de problèmes. Nous ne vendons pas vos données personnelles."
       },
       "5": {
         "title": "Cookies",
@@ -95,16 +95,16 @@
         "content": "Nous pouvons mettre à jour cette politique de temps à autre. Les mises à jour apparaîtront sur cette page."
       },
       "9": {
-        "title": "Contact",
-        "content": "Des questions ? Envoyez un e-mail à support"
-      },
-      "10": {
         "title": "Rapports de plantage et de problèmes",
         "content": [
           "Facultatif et désactivé par défaut. Rien n'est envoyé tant que vous ne l'activez pas, puis uniquement au moment où quelque chose échoue",
           "Un rapport contient la version de l'app, le modèle de l'appareil et son système d'exploitation, l'erreur et l'endroit où elle s'est produite. Il ne contient jamais votre nom, votre compte, votre adresse IP, votre localisation, l'adresse du serveur ni aucun contenu de tâche ou de liste",
-          "Les rapports sont envoyés à Sentry, conservés 30 jours et utilisés uniquement pour corriger des bugs, jamais à des fins d'analyse ou de publicité"
+          "Les rapports sont envoyés à Sentry, conservés 30 jours et utilisés uniquement pour corriger des bugs, jamais à des fins d'analyse ou de publicité. Sentry voit l'adresse réseau de toute connexion, mais il est configuré pour ne pas la stocker"
         ]
+      },
+      "10": {
+        "title": "Contact",
+        "content": "Des questions ? Envoyez un e-mail à support"
       }
     }
   },
@@ -651,17 +651,17 @@
     "serverTelemetry": {
       "title": "Rapports d'erreurs du serveur",
       "toggle": "Envoyer les rapports d'erreurs de ce serveur au Sentry de son opérateur",
-      "description": "Envoie les erreurs propres à ce serveur au projet Sentry défini dans SENTRY_DSN. N'inclut jamais de tâches, de listes ni de détails de compte.",
+      "description": "Envoie les erreurs propres à ce serveur, ainsi que les durées d'un petit échantillon de requêtes, au projet Sentry défini dans SENTRY_DSN. N'inclut jamais de tâches, de listes ni de détails de compte.",
       "updateFailed": "Impossible de mettre à jour le paramètre du serveur. Réessayez."
     }
   },
   "crashReports": {
     "card": {
       "title": "Aider à corriger les plantages ?",
-      "intro": "T'Day peut envoyer un court rapport technique uniquement quand quelque chose ne va pas : un plantage, un blocage, un manque de mémoire ou une lenteur importante. Cela aide le développeur à reproduire le problème sur un appareil similaire.",
-      "sentLabel": "Ce qui est envoyé",
+      "intro": "T'Day peut envoyer un court rapport technique uniquement quand quelque chose ne va pas, comme un plantage, un blocage ou une erreur inattendue. Cela aide le développeur à reproduire le problème sur un appareil similaire.",
+      "sentLabel": "Ce qui est inclus",
       "sent": "Version de l'app, modèle de l'appareil, version du système, ce qui a échoué et à quel endroit.",
-      "neverSentLabel": "Jamais envoyé",
+      "neverSentLabel": "Jamais inclus",
       "neverSent": "Votre nom ou compte, adresse IP, localisation, adresse du serveur, ou tout contenu de tâche ou de liste.",
       "footnote": "Désactivé par défaut. Modifiable à tout moment dans Réglages → Confidentialité.",
       "share": "Partager les rapports",
@@ -1043,7 +1043,7 @@
         "title": "Mode local",
         "summary": "Utilisez T'Day entièrement hors ligne, sans serveur ni compte.",
         "keywords": "mode local, hors ligne, privé, sans compte, sans serveur, sur l'appareil",
-        "body": "Le Mode local garde tout sur votre appareil — pas de connexion, pas de serveur, pas d'envoi. C'est une façon à part entière d'utiliser T'Day en toute confidentialité, et vos données locales ne sont jamais envoyées où que ce soit d'elles-mêmes. Dans un navigateur, il réside dans le stockage de ce navigateur : effacer vos cookies et données de site efface aussi l'espace de travail — exportez-le avant si vous voulez le conserver.",
+        "body": "Le Mode local garde tout sur votre appareil — pas de connexion, pas de serveur, pas d'envoi. C'est une façon à part entière d'utiliser T'Day en toute confidentialité, et vos données locales ne sont jamais envoyées où que ce soit d'elles-mêmes. Dans un navigateur, il réside dans le stockage de ce navigateur : effacer vos cookies et données de site efface aussi l'espace de travail — exportez-le avant si vous voulez le conserver. Si vous activez les rapports de plantage, seul un court rapport technique est envoyé en cas d'échec, jamais vos tâches ni vos listes.",
         "tip": "Les fonctionnalités réservées au serveur sont signalées ici par un badge « Mode serveur » pour que vous sachiez ce qui change si vous vous connectez."
       },
       "server-mode": {
@@ -1076,11 +1076,11 @@
         "title": "Rapports de plantage et de problèmes",
         "summary": "Facultatif, désactivé par défaut. Envoyé uniquement en cas d'échec.",
         "keywords": "plantage, crash, erreur, rapport, rapports, sentry, confidentialité, diagnostic, diagnostics, télémétrie, blocage, gel, anr, mémoire, analyse, statistiques",
-        "body": "Les rapports de plantage et de problèmes sont facultatifs et désactivés par défaut. Si vous les activez, T'Day envoie un court rapport technique uniquement au moment où quelque chose échoue : un plantage, un blocage, la fermeture de l'app par le système parce qu'elle utilise trop de mémoire, une erreur inattendue ou une opération anormalement lente. Cela fonctionne comme Crashlytics : le but est de corriger des bugs, pas de mesurer la façon dont vous utilisez l'app. Il n'y a ni analyse d'usage, ni suivi de session, ni surveillance des performances quand tout fonctionne normalement.",
-        "body2": "Un rapport contient la version de l'app, le modèle de votre appareil et la version de son système d'exploitation (ou le navigateur et sa version), l'erreur et l'endroit du code où elle s'est produite, quelques étapes nommées qui y ont mené, des noms d'écrans ou de routes d'API sans aucun identifiant, des codes d'état, des durées, ainsi que l'état approximatif de l'appareil, comme la mémoire libre, le niveau de batterie et le fait que vous étiez en ligne ou non. Il inclut aussi votre décalage horaire (par exemple UTC+2) et votre langue, car les dates sont essentielles dans un planificateur de tâches.",
-        "body3": "Jamais envoyé : votre nom, votre nom d'utilisateur, votre e-mail ou tout autre détail de compte ; votre adresse IP ou votre localisation ; l'adresse de votre serveur ; les titres et contenus des tâches, des listes ou des notes ; le contenu de votre base de données ; les mots de passe, cookies ou jetons ; les captures d'écran ou enregistrements. Les adresses et les identifiants sont retirés des messages d'erreur sur votre appareil avant leur envoi. Les rapports ne portent aucun identifiant d'utilisateur : ils ne peuvent donc pas être rattachés à vous ni supprimés pour une personne donnée.",
-        "body4": "Les rapports ne sont envoyés qu'après votre accord, et uniquement lorsqu'un échec se produit. Si quelque chose échoue alors que le paramètre est désactivé, rien n'est enregistré ni mis en file d'attente, et l'activer plus tard n'envoie pas les échecs précédents. T'Day ne détecte pas les fuites de mémoire. Il remarque seulement quand le système ferme l'app parce qu'elle utilise trop de mémoire.",
-        "body5": "Les rapports parviennent au mainteneur de T'Day via Sentry, un service de rapports de plantage. Ils sont conservés 30 jours et utilisés uniquement pour corriger des bugs, jamais vendus ni partagés à des fins publicitaires. Ils sont envoyés directement à Sentry, sans passer par votre serveur. Sentry voit l'adresse réseau de toute connexion, comme tout service en ligne, mais il est configuré pour ne pas la stocker. Si vous exploitez votre propre serveur, celui-ci peut envoyer séparément ses propres rapports d'erreurs au Sentry de son opérateur lorsque ce dernier l'active. Cela n'inclut jamais vos tâches.",
+        "body": "Les rapports de plantage et de problèmes sont facultatifs et désactivés par défaut. Si vous les activez, T'Day envoie un court rapport technique uniquement au moment où quelque chose échoue : un plantage, un blocage, une erreur inattendue ou un manque de mémoire. Cela fonctionne comme Crashlytics : le but est de corriger des bugs, pas de mesurer la façon dont vous utilisez l'app. Il n'y a ni analyse d'usage, ni suivi de session, ni surveillance des performances sur votre appareil quand tout fonctionne normalement.",
+        "body2": "Un rapport contient la version de l'app, le modèle de votre appareil et la version de son système d'exploitation (ou le navigateur et sa version), l'erreur et l'endroit du code où elle s'est produite, quelques étapes nommées qui y ont mené, des noms d'écrans ou de routes d'API sans aucun identifiant, des codes d'état et, sur mobile, l'état approximatif de l'appareil, comme la mémoire libre, le niveau de batterie et le fait que vous étiez en ligne ou non. Il inclut aussi votre décalage horaire (par exemple UTC+2) et votre langue, car les dates sont essentielles dans un planificateur de tâches.",
+        "body3": "Jamais envoyé : votre nom, votre nom d'utilisateur, votre e-mail ou tout autre détail de compte ; votre adresse IP ou votre localisation ; l'adresse de votre serveur ; les titres et contenus des tâches, des listes ou des notes ; le contenu de votre base de données ; les mots de passe, cookies ou jetons ; les captures d'écran ou enregistrements. Les adresses, les identifiants et le texte entre guillemets sont retirés des messages d'erreur sur votre appareil avant leur envoi, dans la mesure du possible. Les rapports ne portent aucun identifiant d'utilisateur : ils ne peuvent donc pas être rattachés à vous ni supprimés pour une personne donnée.",
+        "body4": "Les rapports ne sont envoyés qu'après votre accord, et uniquement lorsqu'un échec se produit. Si quelque chose échoue alors que le paramètre est désactivé, rien n'est enregistré ni mis en file d'attente, et l'activer plus tard n'envoie pas les échecs précédents. Ce qui compte comme un échec dépend de la plateforme : Android signale les plantages, les blocages et les plantages dus à un manque de mémoire ; iOS signale les plantages, les blocages et la fermeture de l'app par le système parce qu'elle utilise trop de mémoire ; l'app web signale uniquement les erreurs inattendues. T'Day ne détecte pas les fuites de mémoire.",
+        "body5": "Les rapports parviennent au mainteneur de T'Day via Sentry, un service de rapports de plantage. Ils sont conservés 30 jours et utilisés uniquement pour corriger des bugs, jamais vendus ni partagés à des fins publicitaires. Ils sont envoyés directement à Sentry, sans passer par votre serveur. Sentry voit l'adresse réseau de toute connexion, comme tout service en ligne, mais il est configuré pour ne pas la stocker, et l'app web indique aussi à Sentry de quel site provient le rapport. Si vous exploitez votre propre serveur, celui-ci peut envoyer séparément ses propres rapports d'erreurs, ainsi que les durées d'un petit échantillon de requêtes, au Sentry de son opérateur lorsque ce dernier l'active. Cela n'inclut jamais vos tâches. Les versions sans point de réception des rapports, comme celles que vous compilez vous-même, n'affichent pas ce paramètre.",
         "step0": "Ouvrez les Réglages.",
         "step1": "Ouvrez Confidentialité et désactivez « Rapports de plantage et de problèmes ».",
         "step2": "Les rapports s'arrêtent immédiatement, et tout ce qui attendait d'être envoyé est supprimé.",

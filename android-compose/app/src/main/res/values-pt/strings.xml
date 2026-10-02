@@ -687,10 +687,10 @@
 
     <!-- Crash reports: the one-time consent card -->
     <string name="telemetry_card_title">Ajudar a corrigir falhas?</string>
-    <string name="telemetry_card_intro">O T\'Day pode enviar um breve relatório técnico apenas quando algo dá errado: o app fecha inesperadamente, trava, fica sem memória ou fica muito lento. Isso ajuda o desenvolvedor a reproduzir o problema em um dispositivo parecido.</string>
-    <string name="telemetry_card_sent_label">O que é enviado</string>
+    <string name="telemetry_card_intro">O T\'Day pode enviar um breve relatório técnico apenas quando algo dá errado, como o app fechar inesperadamente, travar ou ocorrer um erro inesperado. Isso ajuda o desenvolvedor a reproduzir o problema em um dispositivo parecido.</string>
+    <string name="telemetry_card_sent_label">O que está incluído</string>
     <string name="telemetry_card_sent">Versão do app, modelo do dispositivo, versão do sistema operacional, o que falhou e onde.</string>
-    <string name="telemetry_card_never_sent_label">Nunca é enviado</string>
+    <string name="telemetry_card_never_sent_label">Nunca incluído</string>
     <string name="telemetry_card_never_sent">Seu nome ou conta, endereço IP, localização, endereço do servidor ou qualquer conteúdo de tarefas ou listas.</string>
     <string name="telemetry_card_footnote">Desativado por padrão. Altere quando quiser em Configurações → Privacidade.</string>
     <string name="telemetry_card_share">Enviar relatórios</string>
