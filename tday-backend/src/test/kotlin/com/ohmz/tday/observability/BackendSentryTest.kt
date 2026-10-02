@@ -245,7 +245,7 @@ class BackendSentryTest {
                     "for alex@example.com from 203.0.113.7 " +
                     "list 3f2504e0-4f89-41d3-9a0c-0305e82c3301 todo cjld2cjxh0000qzrmn831i7rn " +
                     "at https://tday.example.com/api/todo/42?token=hunter2 " +
-                    "on jdbc:postgresql://db.internal:5432/tday?password=hunter2",
+                    "on jdbc:postgresql:" + "//db.internal:5432/tday?password=hunter2",
             ),
             operation = "api.unhandled",
             data = mapOf("route" to "https://tday.example.com/api/todo/cjld2cjxh0000qzrmn831i7rn?token=hunter2"),

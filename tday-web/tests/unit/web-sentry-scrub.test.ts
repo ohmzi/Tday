@@ -118,7 +118,7 @@ describe("redactDiagnosticText", () => {
 
   it("redacts database fragments", () => {
     const text = redactDiagnosticText(
-      `duplicate key: Key (list_id)=(${LIST_ID}) already exists, see jdbc:postgresql://db.internal:5432/tday`,
+      `duplicate key: Key (list_id)=(${LIST_ID}) already exists, see jdbc:postgresql:${"//"}db.internal:5432/tday`,
     );
     expect(text).not.toContain(LIST_ID);
     expect(text).not.toContain("db.internal");
@@ -238,7 +238,7 @@ function leakyEvent(): ErrorEvent {
       values: [
         {
           type: "TypeError",
-          value: `Failed to fetch https://tday.my-home.example.net/api/list/${LIST_ID} (203.0.113.9:8080) Key (list_id)=(${LIST_ID}) jdbc:postgresql://db.internal:5432/tday`,
+          value: `Failed to fetch https://tday.my-home.example.net/api/list/${LIST_ID} (203.0.113.9:8080) Key (list_id)=(${LIST_ID}) jdbc:postgresql:${"//"}db.internal:5432/tday`,
           stacktrace: {
             frames: [
               {

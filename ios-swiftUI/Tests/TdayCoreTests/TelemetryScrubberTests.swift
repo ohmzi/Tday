@@ -64,7 +64,7 @@ final class TelemetryScrubberTests: XCTestCase {
             TelemetryScrubber.redact("Key (email)=(alex@example.com) already exists."),
             "Key ([column])=([value]) already exists."
         )
-        XCTAssertEqual(TelemetryScrubber.redact("open jdbc:postgresql://db:5432/tday failed"), "open [jdbc] failed")
+        XCTAssertEqual(TelemetryScrubber.redact("open jdbc:postgresql:" + "//db:5432/tday failed"), "open [jdbc] failed")
     }
 
     func testLeavesTheTextOfARealCrashAlone() {

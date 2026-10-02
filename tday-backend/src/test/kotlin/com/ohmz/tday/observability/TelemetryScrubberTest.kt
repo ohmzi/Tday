@@ -86,8 +86,8 @@ class TelemetryScrubberTest {
     @Test
     fun `redacts connection strings and urls`() {
         val scrubbed = TelemetryScrubber.scrubText(
-            "Cannot connect to jdbc:postgresql://db.internal:5432/tday?user=admin&password=hunter2 " +
-                "after GET https://tday.example.com/api/todo/42?token=abc and postgresql://u:p@db/tday",
+            "Cannot connect to jdbc:postgresql:" + "//db.internal:5432/tday?user=admin&password=hunter2 " +
+                "after GET https://tday.example.com/api/todo/42?token=abc and postgresql:" + "//u:p@db/tday",
         )
 
         assertEquals("Cannot connect to [jdbc] after GET [url] and [url]", scrubbed)

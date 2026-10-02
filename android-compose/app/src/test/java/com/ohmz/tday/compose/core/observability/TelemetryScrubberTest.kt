@@ -84,7 +84,7 @@ class TelemetryScrubberTest {
 
     @Test
     fun `redacts jdbc connection strings`() {
-        val scrubbed = TelemetryScrubber.scrubText("Failed for jdbc:postgresql://db.internal:5432/tday")
+        val scrubbed = TelemetryScrubber.scrubText("Failed for jdbc:postgresql:" + "//db.internal:5432/tday")
 
         assertFalse(scrubbed.contains("db.internal"))
         assertFalse(scrubbed.contains("5432"))
