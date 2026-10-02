@@ -321,7 +321,7 @@ leave it alone.
 
 The web also keeps two small, non-consent keys for crash reporting: `sessionStorage`
 `tday.telemetry.consentDeferred` (the consent card was set aside this session) and `localStorage`
-`tday.slowOperation.cooldowns` (when each slow operation was last reported). iOS keeps
+`tday.slowOperation.cooldowns` (when each slow operation was last reported; nothing writes it until a call site uses the helper). iOS keeps
 `telemetry.slowOperation.lastReported` in `UserDefaults`. None of them holds content. See
 [TELEMETRY.md](TELEMETRY.md#consent-and-delivery).
 

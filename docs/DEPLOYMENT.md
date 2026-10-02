@@ -1175,7 +1175,9 @@ Crash reporting is optional and consent-based. What is collected and the full co
   `/version.json` before concluding the toggle is missing.
 - **Client reports.** The published image carries the maintainer's browser DSN and the release
   builds carry the Android and iOS DSNs. Each client asks its user once, and sends nothing until they
-  say yes. An image or app built without a DSN never asks.
+  say yes. An image or app built without a DSN never asks. The web report is sent with no `Referer`,
+  but the browser still sends `Origin`, so the maintainer's Sentry sees the domain your web image is
+  served from.
 - **Release secrets.** `SENTRY_DSN_WEB`, `SENTRY_DSN_ANDROID`, `SENTRY_DSN_IOS`, and
   `SENTRY_AUTH_TOKEN` (see the secrets table in [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md)). A missing
   one only warns.

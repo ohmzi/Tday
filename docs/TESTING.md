@@ -69,7 +69,9 @@ tday-web/tests/
     ├── web-slow-operation.test.ts          # slow_operation thresholds and rate limits
     ├── crash-reports-consent-gate.test.tsx # Consent card behavior
     ├── settings-privacy.test.tsx           # Privacy rows (browser and admin)
-    └── settings-privacy-card.test.tsx      # When the Privacy card appears on the real SettingsPage
+    ├── settings-privacy-card.test.tsx      # When the Privacy card appears on the real SettingsPage
+    ├── privacy-page-sections.test.tsx      # /privacy: crash section is 9, Contact is 10, section 4 names Sentry opt-in
+    └── guide-screen-new-topic.test.tsx     # crash-reports listed under What's New and its section; a deep link expands and scrolls the section copy only
 ```
 
 Web tests are intentionally split into behavior-focused unit tests and repository-wide guardrails. Add a focused unit test beside the closest existing unit coverage when changing client behavior, API client behavior, cache mutation helpers, auth provider logic, release metadata, routing guards, timezone/date handling, or i18n behavior. Add or update guardrails when a documented standard should be enforceable across the repository.
@@ -233,10 +235,24 @@ tested where the code runs, on every platform:
 
 | Platform | Command | What the telemetry tests prove |
 |----------|---------|--------------------------------|
-| Web | `cd tday-web && npm run test` | `buildWebSentryOptions` asserts the option posture, and `initSentryIfConsented` starts the SDK only for a granted answer (not for unanswered or denied) and closes it on revoke. `startSentry`/`stopSentry` also run against the real SDK with only the transport faked: nothing is patched or sent before a yes or after a no, a revoke then a new yes works, and events from while off never arrive. A recording transport under the real SDK shows that what leaves is scrubbed and tagged, and the scrub tests push an event full of identifiers through `scrubWebEvent` |
-| Backend | `./gradlew :tday-backend:test` | `TelemetryGateTest`, `GatedTransportTest` (recording transport, plus a reflection check that every `ITransport` method is declared), `BackendSentryTest` (option asserts), `TelemetryScrubberTest`, `ClientTagsTest`, `LogbackSentryAppenderTest`, `SentryRequestPluginTest` (per-request scope), `InstanceSettingsServiceTest`, `AdminTelemetryRoutesTest` (403 for a non-admin, PATCH round trip, no-DSN case), `SecurityHeadersTest` (client ingest origin in the CSP) and `InstanceSettingsPostgresTest` (the real V32 migration on Postgres; needs Docker and is skipped without it) |
-| Android | `cd android-compose && ./gradlew :app:testDebugUnitTest` | `TelemetryBootstrapTest` (fake SDK: start only when granted, purge, revoke ordering), `TelemetryConsentStoreTest`, `TelemetryConsentManagerTest`, `GatedTransportTest` (recording transport, every `ITransport` method declared), `TelemetryOptionsTest` (configures a real `SentryAndroidOptions` and reads the fields back), `TelemetryScrubberTest`, `TelemetryPrivacyGoldenTest` (an event with UUIDs, hosts, IPs, and emails is scrubbed, serialised, and grepped), `TelemetryEventTagsTest`, `SlowOperationTest`, `TelemetryConsentGateTest`, and `TelemetryConsentViewModelTest` |
-| iOS | `xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'` | `TelemetryConsentTests` (isolated `UserDefaults` suite), `TelemetryLifecycleTests` (grant, revoke, and purge against an injectable caches directory), `SentryConfigurationTests` (`makeOptions` asserts), `TelemetryScrubberTests` and `TelemetryEventScrubTests`, `SlowOperationTests`, and `TelemetrySanitizerTests` |
+| Web | `cd tday-web && npm run test` | `buildWebSentryOptions` asserts the option posture, and `initSentryIfConsented` starts the SDK only for a granted answer (not for unanswered or denied) and closes it on revoke. `startSentry`/`stopSentry` also run against the real SDK with only the transport faked: nothing is patched or sent before a yes or after a no, a revoke then a new yes works, and events from while off never arrive. A recording transport under the real SDK shows that what leaves is scrubbed and tagged, and the scrub tests push an event full of identifiers through `scrubWebEvent`. `web-sentry-init.test.ts` pins the referrer policy: the options carry `transportOptions.fetchOptions.referrerPolicy: "no-referrer"` and the gated transport hands them to the inner transport untouched (the guardrail `web sends reports with referrerPolicy no-referrer` pins it in source). The scrub tests also cover the 2000-character scan cap (200,000 characters of `a` must finish quickly), the wider top-level-domain list, and the Chrome and Safari JSON-parse echoes |
+| Backend | `./gradlew :tday-backend:test` | `TelemetryGateTest`, `GatedTransportTest` (recording transport, plus a reflection check that every `ITransport` method is declared), `BackendSentryTest` (option asserts), `TelemetryScrubberTest` (including the `JSON input:`, `Text '...' could not be parsed`, and `For input string:` echoes), `ClientTagsTest`, `LogbackSentryAppenderTest`, `SentryRequestPluginTest` (per-request scope), `InstanceSettingsServiceTest` (including a deterministic overlap test: a second toggle runs while the first caller is still resuming, and the stored row and the gate must agree; and failed writes leave the gate where it was), `AdminTelemetryRoutesTest` (403 for a non-admin and for an admin who is not approved, PATCH round trip, no-DSN case), `SecurityHeadersTest` (client ingest origin in the CSP) and `InstanceSettingsPostgresTest` (the real V32 migration on Postgres; needs Docker and is skipped without it) |
+| Android | `cd android-compose && ./gradlew :app:testDebugUnitTest` | `TelemetryBootstrapTest` (fake SDK: start only when granted, purge, revoke ordering, a failed "no" retried once and obeyed in memory, a failed "yes" that does not start the SDK), `TelemetryConsentStoreTest` (commit results), `TelemetryConsentManagerTest` (answers applied in order on a real thread pool while one is slow), `GatedTransportTest` (recording transport, every `ITransport` method declared), `TelemetryOptionsTest` (configures a real `SentryAndroidOptions` and reads the fields back), `TelemetryScrubberTest` (quoted-input rules, the 2000-character cap with a 5-second timeout on a 100,000-character message, and the host-suffix lists), `TelemetryPrivacyGoldenTest` (an event with UUIDs, hosts, IPs, and emails is scrubbed, serialised, and grepped; and an ANR golden: the server host in a thread name and the install path must be gone while `main`, `OkHttp`, `RenderThread`, `libsentry.so`, and `MainActivity.kt` stay), `TelemetryEventTagsTest`, `SlowOperationTest`, `TelemetryConsentGateTest`, `TelemetryConsentViewModelTest`, and `GuideCardKeyTest` (the What's New copy of a guide topic has its own key, so a deep link opens the section card only; the Compose wiring itself is not unit-tested) |
+| iOS | `xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'` | `TelemetryConsentTests` (isolated `UserDefaults` suite), `TelemetryLifecycleTests` (grant, revoke, and purge against an injectable caches directory), `SentryConfigurationTests` (`makeOptions` asserts), `TelemetryScrubberTests` (including mixed-case hosts such as `NAS.Example.com` and Swift type paths that must survive) and `TelemetryEventScrubTests`, `SlowOperationTests`, `TelemetrySanitizerTests`, and `GuideContentContractTests` (including that a What's New copy has its own expansion key) |
+
+The iOS XCTests added late in review (`TelemetryScrubberTests`, `GuideContentContractTests`) were
+checked only with `swiftc -parse` and a regex harness on Linux. Run them on macOS before a release
+that changes crash reporting:
+
+```bash
+cd ios-swiftUI && swift test --filter TelemetryScrubberTests
+cd ios-swiftUI && swift test --filter GuideContentContractTests
+# or, through Xcode
+xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday \
+  -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6' \
+  -only-testing:TdayCoreTests/TelemetryScrubberTests \
+  -only-testing:TdayCoreTests/GuideContentContractTests
+```
 
 The consent-card visuals, Settings placement, and the real SDK start path with a
 DSN cannot be covered by these tests. Verify them by hand before a release that
@@ -253,7 +269,8 @@ changes crash reporting:
 - **When on.** The event JSON has no `user`, IP, host, or install UUID; stacks are
   deobfuscated, symbolicated, or un-minified; the context tags are present.
 - **Card flows.** Server and Local Mode on all three clients, an existing
-  install, "Read the full FAQ" deferring the card and landing on the topic, the
+  install, "Read the full FAQ" deferring the card and landing on the topic
+  (only the section copy of `crash-reports` expands, not the What's New one), the
   admin toggle on web (admin, non-admin, and no DSN), and a build with no DSN
   showing no card and no Settings row.
 
@@ -391,7 +408,7 @@ Current JVM tests cover API response helpers, offline sync state serialization, 
 | Pending mutation creation/replay behavior | Unit | High |
 | ViewModel state transitions | Unit | High |
 | Local Mode server-only affordances | Unit/manual | High |
-| Crash-reports consent, bootstrap (start/purge/revoke), options, and scrubber | Unit | High |
+| Crash-reports consent, bootstrap (start/purge/revoke, persistence failure), options, scrubber (ANR thread names and paths, quoted input), and the guide card key | Unit | High |
 | Notification scheduling logic | Unit | Medium |
 | Today/Floater widget filtering, counts, setup/empty states, layout rules, priority dots, day/night watermark rule, and refresh triggers | Unit | Medium |
 | Car surface mode mapping, empty states, accents, and voice-create fallback | Unit/manual | Medium |
@@ -460,7 +477,7 @@ Current XCTest coverage includes API model contracts, cache mapper date parsing,
 | Pending mutation creation/replay behavior | Unit | High |
 | ViewModel state transitions | Unit | Medium |
 | Local Mode server-only affordances | Unit/manual | High |
-| Crash-reports consent store, lifecycle (grant/revoke/purge), `makeOptions`, and scrubber | Unit | High |
+| Crash-reports consent store, lifecycle (grant/revoke/purge), `makeOptions`, scrubber, and the guide card key | Unit | High |
 | Reminder scheduling helpers | Unit | Medium |
 | Navigation/deep-link routing helpers | Unit | Medium |
 | Today/Floater widget snapshot schema, 50-row task cap, setup/empty states, App Group key consistency, and static best-fit overflow fallback | Unit | Medium |

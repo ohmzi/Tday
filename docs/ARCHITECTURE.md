@@ -484,7 +484,9 @@ The SDK starts once at process start (`Application.kt` to `BackendSentry.init`) 
 re-initialised. An in-memory `TelemetryGate`, loaded from the `instance_settings` table after
 migrations and updated by `PATCH /api/admin/telemetry`, is checked at every exit: the transport
 wrapper, `beforeSend`, `beforeSendTransaction`, `beforeBreadcrumb`, and `tracesSampler`. The admin
-route is `AdminRoutes.kt` to `InstanceSettingsService`. Web is the only client of that route.
+route is `AdminRoutes.kt` to `InstanceSettingsService`. Web is the only client of that route. With the
+toggle on, the backend also sends a sample of requests (default `0.1` in production, none for `/health`,
+`/api/mobile/probe`, `/ws`, `/calendar/*`) as `http.server` transactions; the clients send no traces.
 
 ### Delivery
 

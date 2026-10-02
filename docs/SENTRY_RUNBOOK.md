@@ -91,7 +91,9 @@ Do these before the first release that carries a DSN:
 Only the backend traces; the clients send no traces and have no sample-rate
 input. The backend input is `SENTRY_TRACES_SAMPLE_RATE`, and it defaults to `0.1`
 in production and `1.0` elsewhere. `/health`, `/api/mobile/probe`, `/ws`, and
-`/calendar/*` are never traced.
+`/calendar/*` are never traced. A backend that has the admin toggle off sends no
+transactions at all; with it on, the sampled requests arrive as `http.server`
+transactions next to the error events.
 
 | Environment | Sample Rate |
 |-------------|-------------|
@@ -270,7 +272,10 @@ that intentionally crashes.
    - A symbolicated, deobfuscated, or un-minified stack.
    - No `user`, IP address, install ID, self-hosted server address, email,
      raw URL, auth/session/cookie value, task title, list name, or local-only
-     content.
+     content. A web event is the one place a site appears: the browser sends
+     `Origin` with the report, so Sentry knows which site it came from (no
+     `Referer`, no URL in the body). On Android, check an ANR's thread names and
+     library paths for the server's name or the install directory.
 7. Resolve the test issue or mark it as ignored with a clear note.
 
 ## When More Context Is Needed

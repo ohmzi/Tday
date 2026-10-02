@@ -3,8 +3,9 @@
 T'Day uses Sentry for crash reporting on the backend, web, Android, and iOS.
 Since 0.8.0 the three clients are **opt-in and failures-only**: nothing is sent
 until a person turns "Crash & problem reports" on, and then only at the moment
-something fails (a crash, a freeze, the system closing the app for using too
-much memory, an unexpected error, or an unusually slow operation). The backend
+something fails. What counts as a failure differs by platform, and the
+[list per platform](#what-triggers-a-report-in-080) is deliberately short: the
+`slow_operation` event is built but nothing triggers it yet. The backend
 keeps its own operator-controlled switch, described in
 [Backend Server Reports](#backend-server-reports). The decision and its
 rationale are in
@@ -32,11 +33,26 @@ PII.
 | Web | Each browser: the one-time consent card, then Settings → Privacy | Off | Failure reports only |
 | Android | Each device: the one-time consent card, then Settings → Privacy | Off | Failure reports only |
 | iOS | Each device: the one-time consent card, then Settings → Privacy | Off | Failure reports only |
-| Backend | The operator sets `SENTRY_DSN`, then an admin turns on "Server error reports" (web Settings → Privacy) | Off | Error reports plus sampled request traces |
+| Backend | The operator sets `SENTRY_DSN`, then an admin turns on "Server error reports" (web Settings → Privacy) | Off | Error reports plus sampled `http.server` transactions (default `0.1` in production) |
 
 Clients send no session pings, no release-health data, and no sampled
 performance traces. A device that never opts in sends nothing at all, and a
 build with no DSN never asks.
+
+### What Triggers A Report In 0.8.0
+
+| Platform | Reports sent | Not reported |
+|----------|--------------|--------------|
+| Android | Uncaught crashes, including native crashes (NDK) and Java `OutOfMemoryError` crashes; ANRs (read from the system's exit history on the next launch); unexpected errors captured through `TdayTelemetry.capture` | A background process killed for low memory leaves no event (no `REASON_LOW_MEMORY` capture yet); no heap data attached to an OOM; ANRs and other exits from before the opt-in are never sent |
+| iOS | Crashes; app hangs over 2 s; watchdog terminations; errors captured through `TdayTelemetry.capture` | No MetricKit; no memory-warning event (the memory warning is only a breadcrumb on a later event) |
+| Web | Unexpected errors only: global error handlers, React root error handlers, the error boundary and route error page | No freeze or hang signal and no browser memory signal; network noise (`Failed to fetch`, `AbortError`) is ignored |
+| Backend | Errors while the admin toggle is on; sampled `http.server` transactions (see [Backend Server Reports](#backend-server-reports)) | Client aborts and cancellations |
+
+`slow_operation` has a helper, thresholds, and rate limits on all three
+clients, but no call site uses it, so no client sends it today. The shared
+copy and the guide promise a "freeze" only where the platform detector above
+exists; they do not promise slowness reports, and T'Day does not detect memory
+leaks.
 
 ## Industry Reference Baseline
 
@@ -102,7 +118,8 @@ in `Application.onCreate` on Android, and in `TdayApp.init` on iOS.
   Android `BuildConfig.SENTRY_DSN`, iOS `SENTRY_DSN` in `Info.plist`; forks,
   debug runs, self-built apps), there is no card, no Settings row, and the SDK
   is never initialised.
-- **Consent card.** A wizard-styled card ("Help fix crashes?") appears once,
+- **Consent card.** A wizard-styled card ("Help fix crashes?", with "What's
+  included" and "Never included" lists) appears once,
   after the connect/sign-in wizard, when a workspace (Server or Local Mode) is
   open. Existing installs see it once too. "Share reports" and "Not now" carry
   equal weight. It is skipped when the DSN is missing, the question is already
@@ -128,6 +145,49 @@ in `Application.onCreate` on Android, and in `TdayApp.init` on iOS.
   stay untouched). A failure during first run, including onboarding, is lost by
   design. No telemetry about consent changes is ever sent.
 
+### What The Copy Says
+
+The words people see are held to what the code does, and
+`docs/adr/009-opt-in-failure-only-crash-reporting.md` and this file are the
+reference when they change.
+
+- **Card.** "Help fix crashes?" says T'Day can send a short technical report
+  only when something goes wrong, "such as a crash, a freeze or an unexpected
+  error". "What's included": app version, device model, OS version, what failed
+  and where. "Never included": name or account, IP address, location, server
+  address, or any task or list content. Footnote: "Off by default. Change it any
+  time in Settings → Privacy." Buttons: "Share reports", "Not now", "Read the
+  full FAQ".
+- **Settings → Privacy.** The row is "Crash & problem reports" with the switch
+  "Send crash & problem reports when something fails". The admin row is "Server
+  error reports": "Sends this server's own errors, plus timings for a small
+  sample of requests, to the Sentry project set in SENTRY_DSN. Never includes
+  tasks, lists or account details."
+- **FAQ (`crash-reports` guide topic, `sinceVersion` 0.8.0).** The body lists
+  what counts as a failure per platform (Android: crashes, freezes, and
+  out-of-memory crashes; iOS: crashes, freezes, and the system ending the app
+  for using too much memory; web: unexpected errors only) and says T'Day does
+  not detect memory leaks. It says reports are scrubbed on the device on a
+  best-effort basis, that Sentry sees the network address of any connection but
+  is set not to store it, and that the web app also tells Sentry which website
+  the report came from (the `Origin` header). It discloses the time-zone offset
+  and language, and that a server can send its own errors plus timings for a
+  sample of requests to its operator's Sentry. It does not promise reports of
+  slowness.
+- **Public privacy page.** `/privacy` has the crash section as section 9
+  ("Crash & Problem Reports") and Contact as section 10. Section 4 says data is
+  shared with Sentry only if the person opts in. The page is dated October 2,
+  2026 (`privacy.lastUpdated`). The Local Mode guide body mentions that an
+  opted-in device sends only a short technical report on failure, never tasks or
+  lists.
+- **How-To guide placement.** `crash-reports` is the only topic with
+  `sinceVersion` 0.8.0, so it is listed under What's New and again in its own
+  section. On web, Android, and iOS the two copies expand independently
+  (What's New rows are keyed `new:` or `section:` plus the topic id on web, `whats-new:<id>` on
+  Android, `highlight-<id>` on iOS), and a deep link (`/app/guide/crash-reports`,
+  the "?" in Settings, or the card's FAQ button) expands and scrolls to the
+  section card only.
+
 ### Turning It Off
 
 Switching off, or saying "Not now" after a yes, runs the same sequence on every
@@ -144,6 +204,16 @@ client:
 | Web | Nothing on disk: the client is closed and unbound and the global, isolation, and current scopes are cleared, with no reload. A withdrawal in another tab arrives through the `storage` event |
 | Android | `cacheDir/sentry` and the `INSTALLATION` file the SDK writes to `filesDir` |
 | iOS | `<Caches>/io.sentry` and `<Caches>/SentryCrash` (purged before and after `SentrySDK.close()`, because the SDK keeps cached crash reports and sends them on a later launch) |
+
+On Android the store reports whether each write reached the disk (`commit()`,
+not `apply()`), and `TelemetryBootstrap.apply` returns that result. A "no" that
+cannot be written is retried once. If the retry fails too, this process still
+obeys it (the gate closes, the SDK stops, the files are purged), the failure is
+written to the local log only (`consent.deny.not_persisted`, never reported),
+and no second marker is kept, because it would go to the same disk that refused
+the write. The remaining risk is that the next cold start reads the old `granted`.
+A "yes" that cannot be written does not start the SDK: the stored answer is put
+back to denied (`consent.grant.not_persisted`) and the switch turns itself off.
 
 A launch with any state other than `granted` purges again before doing anything
 else (Android `TelemetryBootstrap.start`, iOS `SentryConfiguration.start`), so
@@ -194,7 +264,7 @@ Every report may contain non-identifying diagnostics:
 | Data | Example | Why It Helps |
 |------|---------|--------------|
 | Stack trace | `NullPointerException at TodoService.kt:42` | Finds the failing code path |
-| Failure kind | Crash, ANR or app hang with thread data, OOM or watchdog kill, unhandled error, `slow_operation` | Separates what went wrong from how often |
+| Failure kind | Crash, ANR or app hang with thread data, Java OOM crash or watchdog kill, unhandled error (`slow_operation` once call sites exist) | Separates what went wrong from how often |
 | Scrubbed message | `Failed to connect to [host]` | Explains the error without hosts, addresses, or identifiers |
 | Release / build | `tday-ios@0.8.0`, dist = build number | Connects regressions to releases |
 | Runtime context | OS and version (browser on web), device model, architecture, memory, battery level, online state; on iOS also coarse connection type (`wifi`, `cellular`, `none`) from sentry-cocoa 9.30 | Reproduces platform-specific failures, including offline/sync ones |
@@ -208,7 +278,7 @@ Backend reports (when enabled) add:
 
 | Data | Example | Why It Helps |
 |------|---------|--------------|
-| Request transactions | `PATCH /api/todo/:id`, sampled | Finds slow or failing server routes (not sent by clients) |
+| Request transactions | `http.server` transactions named by route template (`PATCH /api/todo/:id`), sampled; method, status, duration, and the client tags only | Finds slow or failing server routes (not sent by clients) |
 | Client build tags | `client.platform` = `android`, `client.version` = `0.8.0` | Ties a server error to the app build that triggered it |
 | Security event code | `auth_lockout`, `request_rate_limit_triggered` | Connects backend abuse signals to failures |
 
@@ -259,7 +329,8 @@ eleven ids so the vocabulary is one table everywhere, even though
 **Status:** the helpers, thresholds, and limits are implemented and unit-tested
 on all three clients (web `lib/observability/slowOperation.ts`, Android
 `SlowOperation.kt`, iOS `Core/Telemetry/SlowOperation.swift`). No call site
-reports an operation yet; wiring them is Phase 2 (see
+reports an operation yet, so no client sends a `slow_operation` event in 0.8.0
+(only the debug-build Android trigger does); wiring them is Phase 2 (see
 [Coverage Roadmap](#coverage-roadmap-not-yet-implemented)).
 
 ## What Is NOT Collected
@@ -270,8 +341,8 @@ reports an operation yet; wiring them is Phase 2 (see
 | Local Mode task/list/floater content | Local Mode breadcrumbs are structural only, such as `local_mode.enter`; Local Mode diagnostics never imply a server upload |
 | Name, username, email, user ID, install ID | The event `user` is removed on every client (web deletes it, Android and iOS null it), so the per-install UUID the SDKs attach as `user.id`, and Android's `device.id`, never leave the device. `sendDefaultPii = false` on backend/Android/iOS (Kotlin: `isSendDefaultPii`) and an explicit `dataCollection` block with `userInfo` off on web, Android, and the backend (Sentry web SDK 11 removed `sendDefaultPii`) |
 | IP address, location | The IP is never set and `ip_address` is cleared on every event. The Sentry project setting "Prevent Storing of IP Addresses" must also be on for all four projects (an operator step, see the runbook): Sentry necessarily sees the network address of any connection, and is set not to store it |
-| Your server's address, hostnames, URLs | URLs become route templates; hosts, IPs, URLs, and emails are redacted from message text; web stack-frame and debug-image paths are reduced to path-only; iOS image paths lose the app-container ID; Android `serverName` and iOS `serverName` are cleared; the backend uses the fixed name `tday-backend` |
-| Cookies, auth headers, CSRF values, session IDs | Request bodies are not attached; web `dataCollection` sets `cookies: false`, `httpBodies: []` and `urlQueryParams: false`, and the web request is rebuilt to the route template plus `User-Agent` only (which also removes `Referer`); Android and iOS drop the request entirely |
+| Your server's address, hostnames, URLs | URLs become route templates; hosts, IPs, URLs, and emails are redacted from message text; web stack-frame and debug-image paths are reduced to path-only; iOS image paths lose the app-container ID; Android ANR thread names are allow-listed (OkHttp names its threads after the server, so `OkHttp tday.example.com` becomes `OkHttp`), and its stack-frame and debug-image paths are cut to the file name (the install directory has random names); Android `serverName` and iOS `serverName` are cleared; the backend uses the fixed name `tday-backend`. One exception: a browser adds `Origin` to the cross-origin POST to Sentry and nothing can remove it, so Sentry sees which site a web report came from (see [Scrub Rules](#scrub-rules)) |
+| Cookies, auth headers, CSRF values, session IDs | Request bodies are not attached; web `dataCollection` sets `cookies: false`, `httpBodies: []` and `urlQueryParams: false`, and the web request in the event body is rebuilt to the route template plus `User-Agent` only (which drops the body's `Referer` header); the web transport also sends `referrerPolicy: "no-referrer"`, so the HTTP `Referer` header is not sent either; Android and iOS drop the request entirely |
 | Query strings and raw URLs | Route helpers remove queries and replace IDs with `:id` |
 | Device name, full locale, IANA time zone, device hash | Dropped (`device.name`, `device.locale`, `device.timezone`, the `culture` context, iOS `device_app_hash`, Android `device.id`) and replaced by the coarse `tz_offset` and `locale_lang` tags |
 | Navigation arguments | Android records the destination's route pattern only (`/todos/list/:listId/:listName`) through `TdayTelemetry.recordNavigation`, because Sentry's own navigation listener also attaches the arguments, which are the list's ID and name |
@@ -293,8 +364,12 @@ is dropped. A web event that cannot be scrubbed is not sent.
 |------|------|
 | `user`, install UUID, Android `device.id` | Removed |
 | IP | Never set; `ip_address` cleared |
-| Exception and message text | URLs, hosts, IPv4/IPv6 addresses, emails, `jdbc:` strings, Postgres `Key (x)=(y)` fragments, UUIDs and cuids, and long digit runs are replaced with placeholders such as `[url]`, `[host]`, `[ip]`, `[email]`, `[id]`, and `[number]`; the text is cut to 300 characters. The exception type is kept |
-| URL and request | Host and query dropped, route template kept. Web keeps only `User-Agent`; Android and iOS keep no request |
+| Exception and message text | URLs, hosts, IPv4/IPv6 addresses, emails, `jdbc:` strings, Postgres `Key (x)=(y)` fragments, UUIDs and cuids, and long digit runs are replaced with placeholders such as `[url]`, `[host]`, `[ip]`, `[email]`, `[id]`, and `[number]` (the web scrubber writes them in angle brackets, `<host>`); the text is cut to 300 characters. The exception type is kept. Quoted input is redacted too (see below) |
+| Scan cap | The rules read only the first 2000 characters of a message on web, Android, and iOS, and the first 4096 on the backend, because several are quadratic on a long unbroken run and run on the thread that is failing. The 300-character cut comes after the rules, so nothing that survives it went unscanned |
+| Quoted input | Parsers echo the user's own text back in exception messages. Android and the backend redact `JSON input:` through the end of the text (kotlinx.serialization), `Text '...' could not be parsed` (java.time), and `For input string:` through the end of the line. Web redacts the Chrome echo (`Unexpected token ..., "<snippet>"... is not valid JSON`, up to the last quote before the closing words) and the Safari echo (`JSON Parse error: Unrecognized token 'x'`); the Java and Kotlin messages do not occur in a browser. iOS has no such rule: its captured errors are reduced to domain and code, and no iOS path puts user text in an exception message |
+| Hosts | A bare host is redacted by suffix. Android lists common TLDs, many ccTLDs, and self-hosting suffixes (`lan`, `local`, `home`, `internal`, `localdomain`, `arpa`), and leaves out suffixes that are also file extensions or Kotlin members (`.so`, `.md`, `.kt`, `.ts`, `.id`, `.to`, and similar) so stack frames are not read as hosts; web uses a similar list (`page`, `it`, `ai`, `me`, `es`, `nl`, `se`, `ch`, `at`, `nz`, `tech`, `link`, `localdomain` and the rest) and keeps names such as `main.tsx` and `vendor.map`; `x.ts.net` is covered by `net`. The backend has no suffix list: it redacts `host:port` for any alphabetic suffix except source extensions. iOS keeps a lowercase-only rule (so `Tday.APIError` and `Array.swift` survive) and adds a case-insensitive rule that applies only to a name ending in a private or well-known suffix, so `NAS.Example.com`, `Alexs-iPhone.local`, and `Alex-Mac.Tail1234.ts.net` go while Swift type paths stay |
+| Android threads and images | ANR thread names pass `^[A-Za-z0-9 _.:-]{1,48}$`, contain no `://`, and are unchanged by the text rules; otherwise the first word is kept if it passes the same test, else the name is dropped. `debugMeta.images[].codeFile` and `debugFile`, and each stack frame's `filename`, `absPath`, and `package`, are reduced to the part after the last `/` |
+| URL and request | Host and query dropped, route template kept. Web keeps only `User-Agent` in the event body and sends the report with `referrerPolicy: "no-referrer"`; the browser still sends `Origin`, so Sentry can see which site a web report came from. Android and iOS keep no request |
 | Device context | IANA `timezone`, full `locale`, and `device.name` dropped; `tz_offset` and `locale_lang` added as tags |
 | Contexts | Android keeps only `app`, `device`, `os`, `runtime`, `trace`, and `art`; iOS removes `culture` and `user info` |
 | Breadcrumb categories | Allow-list below. `http` and `navigation` on Android are reduced to method, status code, route template, and `from`/`to` templates |
@@ -319,6 +394,7 @@ default today, because a default is a promise only until the next release.
 | Session tracking | No session integration (`defaultIntegrations: false` with a named allow-list) | `isEnableAutoSessionTracking = false` | `enableAutoSessionTracking = false` |
 | Client reports | `sendClientReports: false` | `isSendClientReports = false` | `sendClientReports = false` |
 | Trace propagation | `tracePropagationTargets: []` | `setTracePropagationTargets(emptyList())` | `tracePropagationTargets = []` |
+| Report transport | Gated fetch transport with `transportOptions.fetchOptions.referrerPolicy: "no-referrer"` (the SDK default `strict-origin` would put the page's origin in `Referer`); `Origin` is still sent by the browser | Gated OkHttp transport | Sentry's own transport |
 | Failed requests | None installed | `SentryOkHttpInterceptor(captureFailedRequests = false)` | `enableCaptureFailedRequests = false`, swizzling off |
 | User and PII | `dataCollection` with `userInfo: false`, cookies, query strings, and bodies off | `dataCollection.userInfo = false` first, then every other field; `isSendDefaultPii = false` | `sendDefaultPii = false` |
 | Replay, screenshots | Replay rates `0` | Replay `0.0`, screenshot and view hierarchy off | Replay `0`, screenshot and view hierarchy off |
@@ -343,7 +419,7 @@ ones.
 | Mobile server setup | Probe/version breadcrumbs | New connection/version flows report phase and result class only |
 | Reminders/widgets | Reminder reschedule breadcrumbs and nonfatal capture around scheduler/boot/worker/widget-create failure paths | New failure paths should capture exception type and operation only |
 | Security events | Backend `eventLog` plus Sentry breadcrumbs for event code | New security events must use documented reason codes |
-| Slow operations | `slow_operation` helpers with thresholds and rate limits on web, Android, iOS (no call sites yet) | New slow-path wrappers use the helper and the shared operation ids |
+| Slow operations | `slow_operation` helpers with thresholds and rate limits on web, Android, iOS (no call sites yet, so nothing is sent) | New slow-path wrappers use the helper and the shared operation ids |
 
 ## Post-Sentry Feature Coverage
 
@@ -480,6 +556,14 @@ toggle decides whether anything is sent.
   failed write never leaves the gate open. Each change logs the reason code
   `telemetry_enabled` or `telemetry_disabled` through `SecurityEventLogger`, and
   nothing else.
+- **Traces when the toggle is on.** Tracing is process-wide, so the backend is
+  not errors-only: with the toggle on, a sample of requests is sent as
+  `http.server` transactions alongside the error events, named by route
+  template and carrying method, status, duration, and the `client.platform` and
+  `client.version` tags. `beforeSendTransaction` drops the user and rebuilds the
+  request to method plus sanitized path. With the toggle off the rate is `0`.
+  The admin toggle's description says this ("plus timings for a small sample of
+  requests").
 - **Sampling.** `tracesSampler` returns `0` for `/health`, `/api/mobile/probe`,
   `/ws`, and `/calendar/*` (the paths the rate limiter treats as infrastructure,
   about 576 health transactions a day on their own), and
@@ -489,7 +573,9 @@ toggle decides whether anything is sent.
   plus path template, `serverName` is the fixed `tday-backend`, and
   `dataCollection` is set field by field with `userInfo` off. Messages are
   redacted (including Postgres `Key (x)=(y)` and `Failing row contains (...)`
-  fragments), cancellation and client-abort IO exceptions are dropped, and
+  fragments, and the `JSON input:`, `Text '...' could not be parsed`, and
+  `For input string:` echoes of parsers; the rules read at most 4096
+  characters), cancellation and client-abort IO exceptions are dropped, and
   logback sends breadcrumbs at ERROR only, because INFO and WARN lines carry
   user IDs, request paths, and push endpoints. The logback appender is given a
   sentinel DSN so it cannot start an ungated client of its own.
@@ -570,6 +656,18 @@ defaults to `1.0` so local issues are easier to reproduce.
 This table is the planned Phase 2 and is **not implemented**. Clients stay
 failures-only: nothing here adds traces, sessions, or analytics.
 
+Gaps in 0.8.0 that the table closes, stated plainly:
+
+- No call site reports a `slow_operation` event on any client (the helpers
+  exist, nothing calls them).
+- Android reports no low-memory kill (`REASON_LOW_MEMORY`) and attaches no heap
+  data to an out-of-memory crash; only a Java `OutOfMemoryError` that crashes
+  the app is reported.
+- iOS has no MetricKit signal and no memory-warning event.
+- Web has no freeze or hang signal and no memory signal.
+- Android Room/SQLCipher open failures, iOS `try!` on `ModelContainer`, web
+  IndexedDB failures, and `SyncManager` replay failures are not captured yet.
+
 | Layer | Planned additions | Skipped, and why |
 |-------|-------------------|------------------|
 | Network | Web: breadcrumb on fetch rejection, and React Query `onError` captures only non-`ApiError`. Mobile: capture contract/decode failures and add retry/transport breadcrumbs | 5xx/4xx/offline captures on clients (noise, or the server's own report) |
@@ -578,8 +676,8 @@ failures-only: nothing here adds traces, sessions, or analytics.
 | UI | Keep `ErrorBoundary` and `RouteErrorPage` | All UI transaction, interaction, and SwiftUI tracing (analytics-like) |
 | Background | Android WorkManager, boot, and widget failure captures at the existing sites; iOS BGTask expiry; backend scheduler failures (`ReminderPushScheduler`, `RetentionScheduler`, summary warm-up, MCP tool failures) and a `retention-sweep` Cron check-in | Per-minute check-ins; the widget and watch targets stay uncovered (no Sentry linked) |
 | Startup | `cold_start` and `first_data_ready` slow-operation call sites (Android `Process.getStartUptimeMillis()`) | |
-| Memory and OOM | Android: attach heap and native-heap data on `OutOfMemoryError`, an `onTrimMemory` breadcrumb, and a next-launch `REASON_LOW_MEMORY` capture (timestamp-gated). iOS: evaluate `enableMetricKit` (timestamp-gated). Backend: capture `OutOfMemoryError` in the `StatusPages` handler, flush, and rethrow | Browser memory signal |
-| ANR and hang | Android ANR replayed on the next launch, timestamp-gated. iOS hang tracking then MetricKit | Web (no signal outside spans) |
+| Memory and OOM | Android: attach heap and native-heap data on `OutOfMemoryError` (today only the crash itself is reported), an `onTrimMemory` breadcrumb, and a next-launch `REASON_LOW_MEMORY` capture (timestamp-gated; the SDK's memory-limiter exit reporting is off). iOS: evaluate `enableMetricKit` (timestamp-gated). Backend: capture `OutOfMemoryError` in the `StatusPages` handler, flush, and rethrow | Browser memory signal |
+| ANR and hang | Android: ANRs are already reported (from the system's exit history on the next launch, timestamp-gated); nothing further is planned. iOS: hang tracking (2 s) is on; MetricKit is planned. Web: no freeze signal | Web (no signal outside spans) |
 
 Already shipped from the roadmap's ideas: the web `onUncaughtError` and
 `onRecoverableError` handlers, the backend client-abort filter, the iOS

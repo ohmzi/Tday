@@ -109,7 +109,7 @@ full data contract is in [DATA_MODEL.md](DATA_MODEL.md).
 | Export and import       | Download everything as one JSON file. Importing always adds and never overwrites. | ✅  | ✅      | ✅  |
 | Move to a server        | Take your Local Mode data to a server in one deliberate step                   | —   | ✅      | ✅  |
 | In-app updates          | Download and install the latest release from inside the app                    | —   | ✅      | —   |
-| Crash and problem reports | Optional and off by default (Settings → Privacy): a short technical report goes to the maintainer only when something fails, with no account, IP, server address, or task content. See [TELEMETRY.md](TELEMETRY.md) | ✅  | ✅      | ✅  |
+| Crash and problem reports | Optional and off by default (Settings → Privacy): a short technical report goes to the maintainer only when something fails, with no account, IP, server address, or task content (the web app's report still carries the browser's `Origin`, so Sentry sees which site it came from). Android and iOS also report only what each platform's detectors catch: crashes, hangs or ANRs, and captured errors; web reports unexpected errors only. See [TELEMETRY.md](TELEMETRY.md) | ✅  | ✅      | ✅  |
 
 ### Integrations
 

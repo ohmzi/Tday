@@ -272,7 +272,8 @@ listed in [SECURITY_POSTURE.md](docs/security/SECURITY_POSTURE.md).
   and web image ask once, and nothing is sent until you say yes (Settings → Privacy changes it any
   time). When on, a short report goes straight to the maintainer's Sentry, and only at the moment
   something fails. It contains diagnostics, never task content, account details, your server's
-  address, or IP addresses ([TELEMETRY.md](docs/TELEMETRY.md)). Your own server can send its own
+  address, or IP addresses, except that a browser's report necessarily tells Sentry which site it
+  came from (the `Origin` header) ([TELEMETRY.md](docs/TELEMETRY.md)). Your own server can send its own
   error reports to your Sentry project, but only if you set a DSN and an admin switches it on.
 - **Update checks go to GitHub.** The web, Android and iOS apps ask GitHub's public API whether a
   new T'Day release exists, and the web app loads release notes from `raw.githubusercontent.com`.

@@ -220,14 +220,17 @@ server never reports anything. To get error reports from your server:
    turns it on, a server with a DSN still sends nothing.
 
 `SENTRY_TRACES_SAMPLE_RATE` (optional) sets how many requests are traced; it defaults to `0.1` in
-production. Server reports hold error types, stack traces, and route templates, never task or list
+production. Once the admin switch is on, the server sends errors and that sample of requests (as
+`http.server` transactions, with route template, method, status and duration). Server reports hold error types, stack traces, and route templates, never task or list
 content. See [TELEMETRY.md](TELEMETRY.md) for exactly what is and is not sent.
 
 **The apps and the web app.** The published web image and the release apps carry the maintainer's own
 client DSNs. Each person is asked once, after setup, whether to share crash reports, and nothing is
 sent unless they say yes; they can change their mind in **Settings → Privacy**. Those reports go
-straight from the device or browser to the maintainer's Sentry, not through your server, and never
-include your server's address. An app or image you build yourself has no DSN unless you give it one,
+straight from the device or browser to the maintainer's Sentry, not through your server, and the report
+text never includes your server's address. One exception: a browser sends an `Origin` header with the
+web app's report, so the maintainer's Sentry can see which site the web report came from; the web
+app's FAQ says so. An app or image you build yourself has no DSN unless you give it one,
 so it never asks.
 
 ---

@@ -267,17 +267,32 @@ privacy contract is in `docs/TELEMETRY.md`.
   SharedPreferences (`telemetry_consent_prefs`), readable in `onCreate`. It is not part of
   `SecureConfigStore` and is never cleared by sign-out or `clearAllLocalData`: the choice belongs to
   the device. `beforeSend` drops any event older than `granted_at_ms`, so an ANR replayed from the
-  system's exit history can never arrive after opt-in.
+  system's exit history can never arrive after opt-in. The store uses `commit()` and returns whether
+  the write reached the disk: `TelemetryBootstrap.apply` returns that result, retries a failed "no"
+  once, and if it still fails the process obeys the "no" anyway (gate closed, SDK stopped, files
+  purged) and logs `consent.deny.not_persisted` locally with `Log.w`, never to Sentry. No fallback
+  marker is kept (it would go to the same disk). A failed "yes" does not start the SDK and puts the
+  answer back to denied.
 - **Switching.** The card and the Settings row both go through `TelemetryConsentManager` (Hilt
   singleton). Off closes the in-memory gate, then the SDK, then deletes its files, without a flush;
   on purges first and starts fresh.
 - **Failures only.** `TelemetryOptions` sets sample rate 0, no tracing, session tracking, client
   reports or trace headers, and every `dataCollection` field explicitly. `TelemetryScrubber` removes
   the user, install id, hosts, IPs, emails and ids from every event and keeps only allow-listed
-  breadcrumbs; `GatedTransportFactory` is the last check before the network.
+  breadcrumbs; `GatedTransportFactory` is the last check before the network. Message text is scanned
+  only up to 2000 characters, redacts what parsers quote back (`JSON input:`, `Text '...' could not be
+  parsed`, `For input string:`), and cuts to 300. An ANR event also brings thread names and library
+  paths: thread names pass an allow-list (`OkHttp tday.example.com` becomes `OkHttp`), and stack-frame
+  and debug-image paths are reduced to the file name, so neither names the server or the install dir.
+- **What is reported.** Uncaught crashes (native crashes and Java out-of-memory crashes included),
+  ANRs (read from the system's exit history on the next launch), and errors passed to
+  `TdayTelemetry.capture`. A kernel low-memory kill of a background process leaves no event yet.
 - **Slow operations.** `SlowOperation` is the helper for the `slow_operation` event. No call site
-  uses it yet.
-- **Debug builds** include LeakCanary (Sentry reports an out-of-memory kill, never a leak) and
+  uses it yet, so a release build sends none; only the debug receiver's `slow_op` trigger does.
+- **Guide.** `crash-reports` shows under What's New and in its section. The What's New copy is keyed
+  `whats-new:<id>` (`guideCardKey` in `HelpGuideScreen.kt`), so a deep link, which uses the plain id,
+  expands and scrolls to the section card only.
+- **Debug builds** include LeakCanary (Sentry reports a Java out-of-memory crash, never a leak) and
   `TelemetryDebugReceiver`:
 
 ```bash

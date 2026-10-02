@@ -231,8 +231,8 @@ For user-facing iOS changes, compare the Android implementation in `android-comp
 ## Crash reports (opt-in)
 
 Crash and problem reports go to the maintainer's Sentry only if the person turns them on, and then
-only at the moment something fails (a crash, an app hang, a watchdog kill, an unexpected error, a
-slow operation). Off by default; `docs/TELEMETRY.md` has the full contract and `docs/adr/009-*` the
+only at the moment something fails (a crash, an app hang over 2 s, a watchdog termination, a captured
+error). The `slow_operation` helper exists, but nothing calls it yet. Off by default; `docs/TELEMETRY.md` has the full contract and `docs/adr/009-*` the
 decision.
 
 - The answer is per device and has three states: unanswered (behaves as off), granted, denied. It
@@ -247,15 +247,24 @@ decision.
   reports, swizzling, network tracking and screenshots are all pinned off; app-hang and watchdog
   tracking stay on. `beforeSend` drops events older than the consent time and passes the rest through
   `TelemetryScrubber` (no user, request, device name, locale or zone; URLs, hosts, addresses and
-  identifiers redacted; tags `client`, `app_version`, `mode`, `tz_offset`, `locale_lang`).
+  identifiers redacted; tags `client`, `app_version`, `mode`, `tz_offset`, `locale_lang`). Message text
+  is scanned only up to 2000 characters and then cut to 300. A host written with capitals
+  (`NAS.Example.com`, `Alexs-iPhone.local`, `Alex-Mac.Tail1234.ts.net`) is redacted when it ends in a
+  private or well-known suffix, while Swift type paths such as `Tday.SyncEngine.Replay` are kept.
+  `TdayTelemetry.capture` reports an error as its domain and code only.
 - `TelemetryConsentModel` (owned by `AppContainer`) is the one writer. The one-time
   `TelemetryConsentCard` (overlay in `AppRootView`, below the update-required, security-questions and
   app-lock gates) and the Settings -> Privacy row both write through it, so answering in Settings
   first counts as answering. "Read the full FAQ" holds the card back until the next launch and opens
-  the `crash-reports` guide topic.
+  the `crash-reports` guide topic. That topic is listed under What's New and in its section;
+  `HelpGuideScreen.cardKey(topicID:isHighlight:)` keys the What's New copy `highlight-<id>`, so a deep
+  link expands and scrolls to the section card only.
 - Turning it off runs `TelemetryLifecycle.revoke`: close the gate, delete the on-disk state, close the
   SDK, delete again. `SlowOperation.report` is the only way a slow operation becomes an event, with the
-  thresholds and rate limits shared across clients.
+  thresholds and rate limits shared across clients; no call site uses it yet.
+- Run the telemetry tests on macOS with `swift test --filter TelemetryScrubberTests` (and
+  `--filter GuideContentContractTests`) from `ios-swiftUI/`, or `xcodebuild test ... -only-testing:TdayCoreTests/TelemetryScrubberTests`
+  (see `docs/TESTING.md`).
 
 ## Environment Notes
 
