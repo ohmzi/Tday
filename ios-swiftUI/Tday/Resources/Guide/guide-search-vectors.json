@@ -42,6 +42,7 @@
       "morning-sweep",
       "share-into-tday",
       "apple-watch",
+      "crash-reports",
       "device-calendar-sync"
     ],
     "reminder": [
@@ -74,7 +75,8 @@
       "list-icons",
       "completed-history",
       "reminder-snooze",
-      "day-ahead"
+      "day-ahead",
+      "crash-reports"
     ],
     "search": [
       "search-tasks"

@@ -97,6 +97,14 @@
       "9": {
         "title": "Kontakt",
         "content": "Fragen? E-Mail an support"
+      },
+      "10": {
+        "title": "Absturz- und Problemberichte",
+        "content": [
+          "Optional und standardmäßig ausgeschaltet. Es wird nichts gesendet, solange Sie die Funktion nicht einschalten, und dann nur in dem Moment, in dem etwas fehlschlägt",
+          "Ein Bericht enthält die App-Version, das Gerätemodell und das Betriebssystem, den Fehler und die Stelle, an der er aufgetreten ist. Er enthält nie Ihren Namen, Ihr Konto, Ihre IP-Adresse, Ihren Standort, Ihre Serveradresse oder Inhalte von Aufgaben oder Listen",
+          "Berichte werden an Sentry gesendet, 30 Tage lang aufbewahrt und ausschließlich zur Behebung von Fehlern verwendet, nie für Analysen oder Werbung"
+        ]
       }
     }
   },
@@ -631,6 +639,34 @@
       "confirmAction": "Zurücksetzen",
       "confirmCancel": "Abbrechen",
       "resetFailed": "Cache konnte nicht zurückgesetzt werden. Schließe die App, öffne sie erneut und versuche es nochmal."
+    },
+    "privacy": {
+      "title": "Privatsphäre"
+    },
+    "crashReports": {
+      "title": "Absturz- und Problemberichte",
+      "toggle": "Absturz- und Problemberichte senden, wenn etwas fehlschlägt",
+      "helpLabel": "Info zu Absturz- und Problemberichten"
+    },
+    "serverTelemetry": {
+      "title": "Fehlerberichte des Servers",
+      "toggle": "Fehlerberichte dieses Servers an das Sentry des Betreibers senden",
+      "description": "Sendet die eigenen Fehler dieses Servers an das Sentry-Projekt, das in SENTRY_DSN festgelegt ist. Enthält nie Aufgaben, Listen oder Kontodetails.",
+      "updateFailed": "Die Servereinstellung konnte nicht aktualisiert werden. Bitte erneut versuchen."
+    }
+  },
+  "crashReports": {
+    "card": {
+      "title": "Hilf mit, Abstürze zu beheben?",
+      "intro": "T'Day kann einen kurzen technischen Bericht senden, aber nur dann, wenn etwas schiefgeht: ein Absturz, ein Einfrieren, Speichermangel oder etwas sehr Langsames. Das hilft dem Entwickler, das Problem auf einem ähnlichen Gerät nachzustellen.",
+      "sentLabel": "Das wird gesendet",
+      "sent": "App-Version, Gerätemodell, Betriebssystemversion, was fehlgeschlagen ist und wo.",
+      "neverSentLabel": "Wird nie gesendet",
+      "neverSent": "Dein Name oder Konto, IP-Adresse, Standort, Serveradresse oder jegliche Inhalte von Aufgaben oder Listen.",
+      "footnote": "Standardmäßig aus. Du kannst das jederzeit unter Einstellungen → Privatsphäre ändern.",
+      "share": "Berichte teilen",
+      "notNow": "Jetzt nicht",
+      "readFaq": "Vollständige FAQ lesen"
     }
   },
   "summary": {
@@ -1035,6 +1071,20 @@
         "keywords": "migration, lokal zu server, daten umziehen, modus wechseln, hochladen, anmelden, übertragen",
         "body": "Im lokalen Modus gestartet und später einen Server eingerichtet? Es wird nie etwas von selbst hochgeladen. So ziehst du deine Daten um: Exportiere sie zuerst in den Einstellungen, melde dich an deinem Server an und importiere dort die Datei. Aufgaben, Listen und Historie ziehen in einem bewussten Schritt um — du wählst den Moment, und deine Gerätedaten bleiben bis dahin unberührt.",
         "tip": "Behalte die exportierte Datei nach dem Import, bis du geprüft hast, dass alles angekommen ist — dann dient sie zugleich als Backup."
+      },
+      "crash-reports": {
+        "title": "Absturz- und Problemberichte",
+        "summary": "Optional, standardmäßig aus. Wird nur gesendet, wenn etwas fehlschlägt.",
+        "keywords": "absturz, abstürze, crash, fehler, fehlerbericht, bericht, problembericht, sentry, privatsphäre, datenschutz, diagnose, telemetrie, einfrieren, hänger, anr, speicher, arbeitsspeicher, analyse, nutzungsdaten",
+        "body": "Absturz- und Problemberichte sind optional und standardmäßig ausgeschaltet. Wenn du sie einschaltest, sendet T'Day nur in dem Moment einen kurzen technischen Bericht, in dem etwas fehlschlägt: ein Absturz, ein Einfrieren, das Beenden der App durch das System wegen zu hohen Speicherverbrauchs, ein unerwarteter Fehler oder ein ungewöhnlich langsamer Vorgang. Das funktioniert wie Crashlytics: Es dient dazu, Fehler zu beheben, nicht dazu, zu messen, wie du die App nutzt. Solange alles normal läuft, gibt es keine Nutzungsanalyse, kein Sitzungs-Tracking und keine Leistungsüberwachung.",
+        "body2": "Ein Bericht enthält die App-Version, dein Gerätemodell und die Version deines Betriebssystems (oder Browser und Version), den Fehler und die Stelle im Code, an der er aufgetreten ist, ein paar benannte Schritte davor, Namen von Bildschirmen oder API-Routen ohne jegliche IDs, Statuscodes, Zeitmessungen sowie grobe Gerätezustände wie freien Arbeitsspeicher, Akkustand und ob du online warst. Außerdem enthält er deinen Zeitzonenversatz (zum Beispiel UTC+2) und deine Sprache, weil Datumsangaben für einen Aufgabenplaner zentral sind.",
+        "body3": "Wird nie gesendet: dein Name, Benutzername, deine E-Mail-Adresse oder sonstige Kontodetails; deine IP-Adresse oder dein Standort; die Adresse deines Servers; Titel und Inhalte von Aufgaben, Listen oder Notizen; der Inhalt deiner Datenbank; Passwörter, Cookies oder Tokens; Screenshots oder Aufzeichnungen. Meldungen werden auf deinem Gerät von Adressen und Kennungen bereinigt, bevor sie gesendet werden. Berichte enthalten keine Nutzer-ID, sodass sie nicht auf dich zurückgeführt und auch nicht pro Person gelöscht werden können.",
+        "body4": "Berichte werden nur gesendet, nachdem du zugestimmt hast, und nur, wenn ein Fehler auftritt. Schlägt etwas fehl, während die Einstellung aus ist, wird nichts gespeichert oder in eine Warteschlange gestellt, und wenn du sie später einschaltest, werden frühere Fehler nicht nachgesendet. T'Day erkennt keine Speicherlecks. Es bemerkt nur, wenn das System die App beendet, weil sie zu viel Speicher verbraucht.",
+        "body5": "Berichte gehen über Sentry, einen Dienst für Absturzberichte, an den Maintainer von T'Day. Sie werden 30 Tage lang aufbewahrt und ausschließlich zur Fehlerbehebung verwendet, nie verkauft oder für Werbung weitergegeben. Sie werden direkt an Sentry gesendet, nicht über deinen Server. Sentry sieht die Netzwerkadresse jeder Verbindung, wie jeder Onlinedienst, ist aber so eingestellt, dass sie nicht gespeichert wird. Wenn du einen eigenen Server betreibst, kann dieser separat seine eigenen Fehlerberichte an das Sentry seines Betreibers senden, wenn der Betreiber das einschaltet. Das enthält nie deine Aufgaben.",
+        "step0": "Öffne die Einstellungen.",
+        "step1": "Öffne Privatsphäre und schalte „Absturz- und Problemberichte“ aus.",
+        "step2": "Es werden sofort keine Berichte mehr gesendet, und alles, was noch auf das Senden wartet, wird gelöscht.",
+        "tip": "„Jetzt nicht“ zu wählen kostet nichts. Du kannst das jederzeit unter Einstellungen → Privatsphäre einschalten. Technische Details: docs/TELEMETRY.md im Repository von T'Day."
       },
       "in-app-update": {
         "title": "In-App-Updates",

@@ -434,6 +434,24 @@ object GuideCatalog {
             setOf(ANDROID, IOS), sinceVersion = "0.5.0",
             body = listOf(para(GuideTopicIds.LOCAL_TO_SERVER_MIGRATION), tip(GuideTopicIds.LOCAL_TO_SERVER_MIGRATION)),
         ),
+        topic(
+            // The consent surface's FAQ: what the opt-in crash reports hold, when they
+            // are sent and what never leaves the device. Five paragraphs because blocks
+            // are plain text (no list block), so each topic of the privacy contract
+            // gets its own paragraph — see docs/TELEMETRY.md for the source of truth.
+            GuideTopicIds.CRASH_REPORTS, GuideSectionId.MODES_AND_SYNC, "activity",
+            setOf(WEB, ANDROID, IOS), sinceVersion = "0.8.0",
+            body = listOf(
+                para(GuideTopicIds.CRASH_REPORTS),
+                paraSlot(GuideTopicIds.CRASH_REPORTS, 2),
+                paraSlot(GuideTopicIds.CRASH_REPORTS, 3),
+                paraSlot(GuideTopicIds.CRASH_REPORTS, 4),
+                paraSlot(GuideTopicIds.CRASH_REPORTS, 5),
+                steps(GuideTopicIds.CRASH_REPORTS, 3),
+                tip(GuideTopicIds.CRASH_REPORTS),
+            ),
+            helpAnchors = listOf("settings-privacy"),
+        ),
 
         // ── Integrations ─────────────────────────────────────────────────
         // The two topics the Settings "Feature toggle" card switches on lead the
@@ -535,6 +553,12 @@ object GuideCatalog {
     )
 
     private fun para(id: String) = GuideBlock(GuideBlockType.PARAGRAPH, listOf("guide.topics.$id.body"))
+
+    /** A further paragraph for topics long enough to need several: `body2`, `body3`, … */
+    private fun paraSlot(id: String, slot: Int) = GuideBlock(
+        GuideBlockType.PARAGRAPH,
+        listOf(if (slot <= 1) "guide.topics.$id.body" else "guide.topics.$id.body$slot"),
+    )
     private fun tip(id: String) = GuideBlock(GuideBlockType.TIP, listOf("guide.topics.$id.tip"))
     private fun example(id: String) = GuideBlock(GuideBlockType.EXAMPLE, listOf("guide.topics.$id.example"))
     private fun kbd(id: String, slot: Int = 1) = GuideBlock(

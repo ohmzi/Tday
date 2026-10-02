@@ -97,6 +97,14 @@
       "9": {
         "title": "Contact",
         "content": "Questions? Email support"
+      },
+      "10": {
+        "title": "Crash & Problem Reports",
+        "content": [
+          "Optional and off by default. Nothing is sent unless you turn it on, and then only at the moment something fails",
+          "A report holds the app version, device model and OS, the error and where it happened. It never holds your name, account, IP address, location, server address or any task or list content",
+          "Reports go to Sentry, are kept for 30 days and are used only to fix bugs, never for analytics or advertising"
+        ]
       }
     }
   },
@@ -631,6 +639,34 @@
       "confirmAction": "Reset",
       "confirmCancel": "Cancel",
       "resetFailed": "Couldn't reset the cache. Close and reopen the app, then try again."
+    },
+    "privacy": {
+      "title": "Privacy"
+    },
+    "crashReports": {
+      "title": "Crash & problem reports",
+      "toggle": "Send crash & problem reports when something fails",
+      "helpLabel": "About crash & problem reports"
+    },
+    "serverTelemetry": {
+      "title": "Server error reports",
+      "toggle": "Send this server's error reports to its operator's Sentry",
+      "description": "Sends this server's own errors to the Sentry project set in SENTRY_DSN. Never includes tasks, lists or account details.",
+      "updateFailed": "Couldn't update the server setting. Try again."
+    }
+  },
+  "crashReports": {
+    "card": {
+      "title": "Help fix crashes?",
+      "intro": "T'Day can send a short technical report only when something goes wrong: a crash, a freeze, running out of memory, or something very slow. It helps the developer reproduce the problem on a similar device.",
+      "sentLabel": "What's sent",
+      "sent": "App version, device model, OS version, what failed and where.",
+      "neverSentLabel": "Never sent",
+      "neverSent": "Your name or account, IP address, location, server address, or any task or list content.",
+      "footnote": "Off by default. Change it any time in Settings → Privacy.",
+      "share": "Share reports",
+      "notNow": "Not now",
+      "readFaq": "Read the full FAQ"
     }
   },
   "summary": {
@@ -1035,6 +1071,20 @@
         "keywords": "migration, local to server, move data, switch mode, upload, sign in, transfer",
         "body": "Started in Local Mode and later set up a server? Nothing ever uploads on its own. To move your data up: export it from Settings first, sign in to your server, then import the file there. Your tasks, lists, and history transfer in one deliberate step — you choose the moment, and your on-device data stays untouched until you do.",
         "tip": "After importing, keep the exported file until you've confirmed everything arrived — then it doubles as a backup."
+      },
+      "crash-reports": {
+        "title": "Crash & problem reports",
+        "summary": "Optional, off by default. Sent only when something fails.",
+        "keywords": "crash, error, report, sentry, privacy, diagnostics, telemetry, hang, anr, memory, analytics",
+        "body": "Crash & problem reports are optional and off by default. If you turn them on, T'Day sends a short technical report only at the moment something fails: a crash, a freeze, the system closing the app for using too much memory, an unexpected error, or an unusually slow operation. It works like Crashlytics: it exists to fix bugs, not to measure how you use the app. There is no usage analytics, no session tracking and no performance monitoring while things work normally.",
+        "body2": "A report contains the app version, your device model and OS version (or browser and version), the error and the place in the code where it happened, a few labelled steps leading up to it, screen or API route names without any IDs, status codes, timings, and rough device conditions such as free memory, battery level and whether you were online. It also includes your time-zone offset (for example UTC+2) and language, because dates are central to a task planner.",
+        "body3": "Never sent: your name, username, email or any account detail; your IP address or location; the address of your server; task, list or note titles and contents; the contents of your database; passwords, cookies or tokens; screenshots or recordings. Messages are scrubbed of addresses and identifiers on your device before they are sent. Reports carry no user ID, so they cannot be traced back to you or deleted per person.",
+        "body4": "Reports are sent only after you opt in, and only when a failure occurs. If something fails while the setting is off, nothing is stored or queued, and turning it on later does not send earlier failures. T'Day does not detect memory leaks. It only notices when the system ends the app for using too much memory.",
+        "body5": "Reports go to T'Day's maintainer through Sentry, a crash-reporting service. They are kept for 30 days and used only to fix bugs, never sold or shared for advertising. They are sent directly to Sentry, not through your server. Sentry sees the network address of any connection, as any online service does, but it is set not to store it. If you run your own server, it can separately send its own error reports to its operator's Sentry when the operator turns that on. That never includes your tasks.",
+        "step0": "Open Settings.",
+        "step1": "Open Privacy and switch off \"Crash & problem reports\".",
+        "step2": "Reports stop immediately, and anything waiting to be sent is deleted.",
+        "tip": "Choosing \"Not now\" costs nothing. You can turn this on any time in Settings → Privacy. Technical details: docs/TELEMETRY.md in the T'Day repository."
       },
       "in-app-update": {
         "title": "In-app updates",
