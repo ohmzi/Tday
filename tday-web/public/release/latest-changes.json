@@ -1,11 +1,11 @@
 {
   "version": "0.8.0",
-  "publishedAt": "2026-10-01T19:14:15-04:00",
+  "publishedAt": "2026-10-02T18:14:47-04:00",
   "notes": [
-    "Fix the Kotlin DeepSource findings the cleanup introduced",
-    "Fix the four DeepSource findings the cleanup introduced",
-    "Fix blank Morning Sweep trash icon and translate the offline banner"
+    "Fix the FAQ lead-in in four locales, add the web card note and align how Settings is named",
+    "Fix the web consent card contrast, fail the build on a failed source-map upload and drop dead tracing helpers",
+    "Make Android crash reports opt-in and failures-only"
   ],
   "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.0",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.48..v0.7.49"
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.7.49..v0.8.0"
 }
