@@ -1,3 +1,4 @@
+import { TestCrashButton } from "@/components/TestCrashButton"; // TEST-CRASH
 import React, { useEffect, useState } from "react";
 import { Calendar as CalendarIcon, Flag, Leaf, List as ListIcon, Repeat } from "lucide-react";
 import { RRule } from "rrule";
@@ -241,6 +242,9 @@ const TodoForm = ({
           </SheetCard>
         </>
       )}
+
+      {/* TEST-CRASH */}
+      {!isEditing && <TestCrashButton id="TC-NEW-TASK" />}
 
       {/* Details */}
       <SheetSectionTitle>{appDict("details")}</SheetSectionTitle>

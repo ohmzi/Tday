@@ -613,6 +613,14 @@ struct CompletedScreen: View {
                     )
                 }
 
+                // TEST-CRASH: with no task on screen there is no first task to follow.
+                if !sections.contains(where: { !(!isSearching && collapsedSectionIDs.contains($0.id)) && !$0.items.isEmpty }) {
+                    Section {
+                        TestCrashButton(id: .builtinDone)
+                            .testCrashListRowStyle()
+                    }
+                }
+
                 Color.clear
                     .frame(height: 120)
                     .listRowInsets(EdgeInsets())
@@ -793,15 +801,24 @@ struct CompletedScreen: View {
         // call as `canCollapseTimelineSection` on the timeline screens.
         let isCollapsible = !isSearching
         let isCollapsed = isCollapsible && collapsedSectionIDs.contains(section.id)
+        // TEST-CRASH: how many rows each section really shows, to find the first one on screen.
+        let testCrashVisibleCounts = sections.map { isCollapsible && collapsedSectionIDs.contains($0.id) ? 0 : $0.items.count }
 
         Section {
             if !isCollapsed {
                 ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, item in
-                    completedTimelineRow(item)
+                    // TEST-CRASH: row 0 of what is displayed crashes when opened and when edited.
+                    let testCrashIsFirst = TestCrash.isFirstVisibleRow(sectionIndex: sectionIndex, itemIndex: itemIndex, visibleCounts: testCrashVisibleCounts)
+                    completedTimelineRow(item, testCrashFirst: testCrashIsFirst)
                         .listRowInsets(EdgeInsets(top: 0, leading: TodoTimelineMetrics.horizontalPadding, bottom: 0, trailing: TodoTimelineMetrics.horizontalPadding))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .transition(completedRowTransition())
+                    // TEST-CRASH: the screen's button, right after its first task.
+                    if testCrashIsFirst {
+                        TestCrashButton(id: .builtinDone)
+                            .testCrashListRowStyle()
+                    }
                     if shouldShowDateDivider(after: itemIndex, inSectionAt: sectionIndex, sections: sections) {
                         TimelineRowDivider()
                             .transition(completedRowTransition())
@@ -883,9 +900,10 @@ struct CompletedScreen: View {
         TdayFeedItemMotion.row(reduceMotion: !tdayAnimation.isEnabled)
     }
 
-    private func completedTimelineRow(_ item: CompletedItem) -> some View {
+    private func completedTimelineRow(_ item: CompletedItem, testCrashFirst: Bool = false /* TEST-CRASH */) -> some View {
         CompletedTimelineRow(
             item: item,
+            testCrashFirst: testCrashFirst, // TEST-CRASH
             // Both namespaces, so the row's own kind picks the collection: the two
             // stores are disjoint and their ids are prefixed differently, so a
             // completed Floater resolved against the scheduled lists would lose its
@@ -1117,6 +1135,7 @@ private struct CompletedMark: View {
 
 private struct CompletedTimelineRow: View {
     let item: CompletedItem
+    let testCrashFirst: Bool // TEST-CRASH
     /// The two list namespaces the trailing mark resolves against.
     ///
     /// BOTH are handed over rather than the call site choosing one, because the choice
@@ -1267,6 +1286,7 @@ private struct CompletedTimelineRow: View {
             rowID: item.id,
             openRowID: $openSwipeTaskID,
             enabled: !isRestoring,
+            testCrashFirst: testCrashFirst, // TEST-CRASH
             onEdit: onEdit,
             onCopy: onCopy,
             onDelete: {

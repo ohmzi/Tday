@@ -345,6 +345,9 @@ struct ScheduledTaskHomeScreen: View {
                                     )
                                 }
 
+                                // TEST-CRASH: between the day's tasks and the category board.
+                                TestCrashButton(id: .feedScheduled)
+
                                 ScheduledTaskHomeCategoryBoard(
                                     overdueCount: overdueCount,
                                     scheduledCount: viewModel.summary.scheduledCount,
@@ -618,6 +621,7 @@ struct ScheduledTaskHomeScreen: View {
     private func scheduledTaskHomeTodayTaskRow(_ todo: TodoItem) -> some View {
         ScheduledTaskHomeTodayTaskRow(
             todo: todo,
+            testCrashFirst: todo.id == viewModel.todayTodos.first?.id, // TEST-CRASH
             lists: viewModel.lists,
             onComplete: { await viewModel.complete(todo) },
             onDelete: { Task { await viewModel.delete(todo) } },
@@ -724,6 +728,7 @@ private enum ScheduledTaskHomeTodayTaskCompletionPhase {
 
 private struct ScheduledTaskHomeTodayTaskRow: View {
     let todo: TodoItem
+    let testCrashFirst: Bool // TEST-CRASH
     let lists: [ListSummary]
     let onComplete: () async -> Void
     let onDelete: () -> Void
@@ -762,6 +767,7 @@ private struct ScheduledTaskHomeTodayTaskRow: View {
                 rowID: todo.id,
                 openRowID: $openSwipeTaskID,
                 enabled: !isCompleting,
+                testCrashFirst: testCrashFirst, // TEST-CRASH
                 onEdit: onEdit,
                 onCopy: onCopy,
                 onDelete: onDelete
@@ -1612,6 +1618,8 @@ struct CreateListSheet: View {
                         .padding(.horizontal, 18)
                         .padding(.vertical, 18)
                     }
+
+                    TestCrashButton(id: .newList) // TEST-CRASH: in the middle of the form
 
                     TdaySheetSectionTitle(text: "Color")
                     TdaySheetCard {

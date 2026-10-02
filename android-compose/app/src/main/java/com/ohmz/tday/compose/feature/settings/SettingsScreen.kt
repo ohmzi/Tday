@@ -1,5 +1,6 @@
 package com.ohmz.tday.compose.feature.settings
 
+import com.ohmz.tday.compose.core.testcrash.TestCrashSettingsBlock // TEST-CRASH
 import android.Manifest
 import android.app.Activity
 import android.app.NotificationManager
@@ -812,6 +813,7 @@ fun SettingsScreen(
 
             SettingsFilteredCard(appearanceRows)
             SettingsFilteredCard(featureRows)
+            TestCrashSettingsBlock() // TEST-CRASH
             SettingsFilteredCard(privacyRows)
             SettingsFilteredCard(aboutRows)
 

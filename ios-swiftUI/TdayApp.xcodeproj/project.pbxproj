@@ -209,8 +209,11 @@
 		C4372887F210671ACDDF4306 /* TelemetryLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 661D21C26307ABAE56465993 /* TelemetryLifecycle.swift */; };
 		7B41BE78254884F02F6CA527 /* TelemetryScrubber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C30EE6553DBF2DE2EBB5E9 /* TelemetryScrubber.swift */; };
 		4C55D2CB44A40B86DF640958 /* TelemetryConsentCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4617184504DDB21C95729411 /* TelemetryConsentCard.swift */; };
+		976263AFDB011B0C942217E7 /* TestCrash.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7F49387AF02EAFC81DC885E /* TestCrash.swift */; };
+		F23717CEA40D9A19CC8CF40C /* TestCrashButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB6C30815F0DC7B09959F195 /* TestCrashButton.swift */; };
 		DD9B62D642F6FD4F1C067773 /* SentryConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA75002D78D6DC0FF70B1019 /* SentryConfigurationTests.swift */; };
 		2C8FBEB019195DBB9ADF4F47 /* SlowOperationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7711621D96EC718E5FA3252 /* SlowOperationTests.swift */; };
+		97525E76F35537FE5D45D7C1 /* TestCrashTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0029A8CE62D2FFDC6C2AD7 /* TestCrashTests.swift */; };
 		EEB7FC0322BDB9F52792220E /* TelemetryConsentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AC0601D53154733344DEBE3 /* TelemetryConsentTests.swift */; };
 		3456D9EC9685351BD71D1BEB /* TelemetryEventScrubTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B30922DCF49B1B4EA624153 /* TelemetryEventScrubTests.swift */; };
 		2FEF0395C0DE979374663DD6 /* TelemetryLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 170037AFBF0247A60F8A42A1 /* TelemetryLifecycleTests.swift */; };
@@ -499,8 +502,11 @@
 		661D21C26307ABAE56465993 /* TelemetryLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryLifecycle.swift; sourceTree = "<group>"; };
 		66C30EE6553DBF2DE2EBB5E9 /* TelemetryScrubber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryScrubber.swift; sourceTree = "<group>"; };
 		4617184504DDB21C95729411 /* TelemetryConsentCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryConsentCard.swift; sourceTree = "<group>"; };
+		C7F49387AF02EAFC81DC885E /* TestCrash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestCrash.swift; sourceTree = "<group>"; };
+		BB6C30815F0DC7B09959F195 /* TestCrashButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestCrashButton.swift; sourceTree = "<group>"; };
 		BA75002D78D6DC0FF70B1019 /* SentryConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SentryConfigurationTests.swift; sourceTree = "<group>"; };
 		B7711621D96EC718E5FA3252 /* SlowOperationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlowOperationTests.swift; sourceTree = "<group>"; };
+		BE0029A8CE62D2FFDC6C2AD7 /* TestCrashTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestCrashTests.swift; sourceTree = "<group>"; };
 		0AC0601D53154733344DEBE3 /* TelemetryConsentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryConsentTests.swift; sourceTree = "<group>"; };
 		8B30922DCF49B1B4EA624153 /* TelemetryEventScrubTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryEventScrubTests.swift; sourceTree = "<group>"; };
 		170037AFBF0247A60F8A42A1 /* TelemetryLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryLifecycleTests.swift; sourceTree = "<group>"; };
@@ -629,6 +635,7 @@
 				5E7E7A8C0B534B26A6E2F911 /* TelemetrySanitizerTests.swift */,
 				BA75002D78D6DC0FF70B1019 /* SentryConfigurationTests.swift */,
 				B7711621D96EC718E5FA3252 /* SlowOperationTests.swift */,
+				BE0029A8CE62D2FFDC6C2AD7 /* TestCrashTests.swift */,
 				0AC0601D53154733344DEBE3 /* TelemetryConsentTests.swift */,
 				8B30922DCF49B1B4EA624153 /* TelemetryEventScrubTests.swift */,
 				170037AFBF0247A60F8A42A1 /* TelemetryLifecycleTests.swift */,
@@ -1129,6 +1136,7 @@
 				4E5771B69142214019F82B21 /* Security */,
 				5A4E00000000000000000033 /* Share */,
 				7CDC143AC586EFAD241E77F7 /* Telemetry */,
+				9A6EEEED5094E09BE42CAAD5 /* TestCrash */,
 				1B2C7D3B4B2547C0818F50C1 /* Text */,
 				DF657ECAF439ED3F03187CCE /* UI */,
 				5477B1D0058C97A680F19FA5 /* Widget */,
@@ -1182,6 +1190,15 @@
 				7699A4200FA2F2970A1838D6 /* CompletedViewModel.swift */,
 			);
 			path = Completed;
+			sourceTree = "<group>";
+		};
+		9A6EEEED5094E09BE42CAAD5 /* TestCrash */ = {
+			isa = PBXGroup;
+			children = (
+				C7F49387AF02EAFC81DC885E /* TestCrash.swift */,
+				BB6C30815F0DC7B09959F195 /* TestCrashButton.swift */,
+			);
+			path = TestCrash;
 			sourceTree = "<group>";
 		};
 		7CDC143AC586EFAD241E77F7 /* Telemetry */ = {
@@ -1433,6 +1450,7 @@
 				5E7E7A8C0B534B26A6E2F910 /* TelemetrySanitizerTests.swift in Sources */,
 				DD9B62D642F6FD4F1C067773 /* SentryConfigurationTests.swift in Sources */,
 				2C8FBEB019195DBB9ADF4F47 /* SlowOperationTests.swift in Sources */,
+				97525E76F35537FE5D45D7C1 /* TestCrashTests.swift in Sources */,
 				EEB7FC0322BDB9F52792220E /* TelemetryConsentTests.swift in Sources */,
 				3456D9EC9685351BD71D1BEB /* TelemetryEventScrubTests.swift in Sources */,
 				2FEF0395C0DE979374663DD6 /* TelemetryLifecycleTests.swift in Sources */,
@@ -1577,6 +1595,8 @@
 				C4372887F210671ACDDF4306 /* TelemetryLifecycle.swift in Sources */,
 				7B41BE78254884F02F6CA527 /* TelemetryScrubber.swift in Sources */,
 				4C55D2CB44A40B86DF640958 /* TelemetryConsentCard.swift in Sources */,
+				976263AFDB011B0C942217E7 /* TestCrash.swift in Sources */,
+				F23717CEA40D9A19CC8CF40C /* TestCrashButton.swift in Sources */,
 				557E0B136F4C0A00AF79E4F0 /* ServerConfigRepository.swift in Sources */,
 				F5D16EE508D6244152B8E4B2 /* ServerURLState.swift in Sources */,
 				0A6188D6B8C9FC92A9927F1C /* SettingsRepository.swift in Sources */,

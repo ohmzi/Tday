@@ -1,3 +1,4 @@
+import { TestCrashSettingsControls } from "@/components/TestCrashButton"; // TEST-CRASH
 import React, { useState, useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -1598,6 +1599,9 @@ export default function SettingsPage() {
         )}
       </SheetCard>
       )}
+
+      {/* TEST-CRASH */}
+      <TestCrashSettingsControls />
 
       {/* Privacy — what this browser, and for an admin this server, may report when something
           fails. Both rows are opt-in and off until switched on; each hides itself when there is no
