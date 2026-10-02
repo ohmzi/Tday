@@ -69,6 +69,11 @@ enum TelemetryScrubber {
         (#"\b(?:\d{1,3}\.){3}\d{1,3}(?::\d{1,5})?\b"#, "[ip]"),
         (#"(?i)\b(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}\b"#, "[ip]"),
         (#"(?i)\b(?:[0-9a-f]{1,4}:){1,6}:(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,5})?(?![0-9a-z])"#, "[ip]"),
+        // Written with capitals (`NAS.Example.com`, `Alexs-iPhone.local`): only when it ends in a
+        // private or well-known suffix, because without that a Swift type path is a host too. Ahead
+        // of the lowercase rule, which would otherwise take the lowercase tail of `Mac.Tail.ts.net`
+        // and leave the front of the name.
+        (#"(?i)\b(?:[a-z0-9-]+\.)+(?:local|lan|home|internal|localdomain|ts\.net|co\.uk|com|net|org|io|dev|app|co|me|info|xyz|cloud)\b"#, "[host]"),
         // Lowercase only, so `Tday.APIError` and `Array.swift` survive and `nas.example.com`
         // does not.
         (#"\b(?:[a-z0-9-]+\.)+[a-z]{2,}\b"#, "[host]"),

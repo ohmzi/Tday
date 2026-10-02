@@ -39,6 +39,17 @@ final class TelemetryScrubberTests: XCTestCase {
         XCTAssertEqual(TelemetryScrubber.redact("could not resolve nas.home.lan"), "could not resolve [host]")
     }
 
+    func testRedactsHostnamesWrittenWithCapitals() {
+        XCTAssertEqual(
+            TelemetryScrubber.redact("Could not connect to NAS.Example.com on port 443"),
+            "Could not connect to [host] on port 443"
+        )
+        XCTAssertEqual(TelemetryScrubber.redact("ping Alexs-iPhone.local failed"), "ping [host] failed")
+        XCTAssertEqual(TelemetryScrubber.redact("no route to Home-NAS.lan"), "no route to [host]")
+        XCTAssertEqual(TelemetryScrubber.redact("tailnet Alex-Mac.Tail1234.ts.net down"), "tailnet [host] down")
+        XCTAssertEqual(TelemetryScrubber.redact("lookup Tday.Example.co.uk failed"), "lookup [host] failed")
+    }
+
     func testRedactsIdentifiersAndLongNumbers() {
         XCTAssertEqual(
             TelemetryScrubber.redact("list 9f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f is gone"),
@@ -63,6 +74,10 @@ final class TelemetryScrubberTests: XCTestCase {
             "Tday.APIError code 3",
             "HTTP 503 after 2 attempts",
             "build 0.8.0 (62)",
+            "Swift.DecodingError.keyNotFound in Foundation.JSONDecoder",
+            "Tday.SyncEngine.Replay failed in Sync.swift line 40",
+            "Reading Info.plist or Localizable.strings failed",
+            "Cannot find Tday.Todo.Recurrence in scope",
         ] {
             XCTAssertEqual(TelemetryScrubber.redact(text), text)
         }

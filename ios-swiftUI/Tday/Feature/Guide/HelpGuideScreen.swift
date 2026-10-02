@@ -237,9 +237,15 @@ struct HelpGuideScreen: View {
         }
     }
 
-    /// `isHighlights` marks the "What's new" section. A new topic is listed there AND in its own
-    /// section, and the card in its own section is the one `scrollTo` lands on, so the copy above
-    /// it takes an id of its own rather than a duplicate.
+    /// The key a topic card is scrolled to and expanded by. A new topic is listed under "What's
+    /// new" AND in its own section, and the card in its own section is the one a deep link opens
+    /// and `scrollTo` lands on, so the copy above it takes a key of its own rather than a
+    /// duplicate.
+    static func cardKey(topicID: String, isHighlight: Bool) -> String {
+        isHighlight ? "highlight-\(topicID)" : topicID
+    }
+
+    /// `isHighlights` marks the "What's new" section.
     private func section(title: String, topics: [GuideTopicDTO], isHighlights: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title.uppercased())
@@ -247,14 +253,15 @@ struct HelpGuideScreen: View {
                 .foregroundStyle(colors.onSurface.opacity(0.55))
                 .padding(.leading, 4)
             ForEach(topics, id: \.id) { topic in
-                topicCard(topic)
-                    .id(isHighlights ? "highlight-\(topic.id)" : topic.id)
+                topicCard(topic, isHighlight: isHighlights)
+                    .id(Self.cardKey(topicID: topic.id, isHighlight: isHighlights))
             }
         }
     }
 
-    private func topicCard(_ topic: GuideTopicDTO) -> some View {
-        let expanded = expandedId == topic.id
+    private func topicCard(_ topic: GuideTopicDTO, isHighlight: Bool = false) -> some View {
+        let key = Self.cardKey(topicID: topic.id, isHighlight: isHighlight)
+        let expanded = expandedId == key
         return VStack(alignment: .leading, spacing: 0) {
             // Emphasis, because the card changes how big it is. `docs/motion.md` settles
             // Change against Emphasis on geometry rather than on importance, and one
@@ -279,7 +286,7 @@ struct HelpGuideScreen: View {
             // branch it animates cannot open the transaction that would play it.
             Button(action: {
                 withAnimation(tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.emphasis))) {
-                    expandedId = expanded ? nil : topic.id
+                    expandedId = expanded ? nil : key
                 }
             }) {
                 HStack(spacing: 12) {
