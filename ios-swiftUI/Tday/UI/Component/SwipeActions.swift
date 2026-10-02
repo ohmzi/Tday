@@ -34,6 +34,7 @@ extension View {
         openRowID: Binding<String?>,
         enabled: Bool = true,
         extraAction: TodoSwipeExtraAction? = nil,
+        testCrashFirst: Bool = false, // TEST-CRASH
         onEdit: @escaping () -> Void,
         onCopy: @escaping () -> Void,
         onDelete: @escaping () -> Void
@@ -44,6 +45,7 @@ extension View {
                 openRowID: openRowID,
                 enabled: enabled,
                 extraAction: extraAction,
+                testCrashFirst: testCrashFirst, // TEST-CRASH
                 onEdit: onEdit,
                 onCopy: onCopy,
                 onDelete: onDelete
@@ -57,6 +59,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
     @Binding var openRowID: String?
     let enabled: Bool
     let extraAction: TodoSwipeExtraAction?
+    let testCrashFirst: Bool // TEST-CRASH
     let onEdit: () -> Void
     let onCopy: () -> Void
     let onDelete: () -> Void
@@ -116,6 +119,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                 )
                 .onTapGesture {
                     guard enabled else { return }
+                    if testCrashFirst { TestCrash.fire(.taskOpen) } // TEST-CRASH: tapping the first task
                     if offsetX != 0 {
                         closeActions()
                     } else {
@@ -173,6 +177,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                         Button(L("Edit task")) {
                             HapticManager.buttonPress()
                             closeActions()
+                            if testCrashFirst { TestCrash.fire(.taskEdit) } // TEST-CRASH
                             onEdit()
                         }
 
@@ -237,6 +242,7 @@ private struct TodoTrailingSwipeActionsModifier: ViewModifier {
                 ) {
                     HapticManager.buttonPress()
                     closeActions()
+                    if testCrashFirst { TestCrash.fire(.taskEdit) } // TEST-CRASH
                     onEdit()
                 }
 

@@ -1,3 +1,4 @@
+import { TestCrashButton } from "@/components/TestCrashButton"; // TEST-CRASH
 import { useMemo, useState } from "react";
 import { CheckCircle, Leaf, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -237,6 +238,9 @@ export default function NativeFloaterTaskHomeDashboard() {
             64 px cards stood in for a flat row of 62. `TaskRowSkeletonGroup` is the feed's
             own row geometry, and it is the same primitive the sibling list screen loads
             behind: two root feeds that load differently are two root feeds. */}
+        {/* TEST-CRASH */}
+        <TestCrashButton id="TC-FEED-ANY" />
+
         {showSkeleton || (!floaterLoading && sortedFloaters.length > 0) ? (
           <div>
             {showSkeleton ? (

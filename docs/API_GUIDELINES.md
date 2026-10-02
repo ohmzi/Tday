@@ -296,6 +296,30 @@ Floater lists group floaters.
 | GET | `/api/admin/users` | List all users |
 | PATCH | `/api/admin/users/{id}` | Update user (approve, change role) |
 | DELETE | `/api/admin/users/{id}` | Delete user and related data. `409` when a row still references the account (the constraint is named in the server log) |
+| GET | `/api/admin/telemetry` | Whether this server may send its own Sentry error reports. See [Admin telemetry](#admin-telemetry) |
+| PATCH | `/api/admin/telemetry` | Turn the server's own error reports on or off. See [Admin telemetry](#admin-telemetry) |
+
+#### Admin telemetry
+
+The admin's switch for the server's own Sentry reports. `SENTRY_DSN` is the master switch; this flag
+decides whether anything is sent once a DSN exists. It is stored in the `instance_settings` table (key
+`telemetry.sentry.enabled`, see [DATA_MODEL.md](DATA_MODEL.md#instance-settings)) and defaults to off.
+Only the web Settings → Privacy row uses it; the mobile apps have no counterpart because it concerns
+the operator's server, not any one device, and there is no shared DTO.
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/admin/telemetry` | none | `200` `{ "dsnConfigured": boolean, "enabled": boolean, "updatedAt": string \| null }` |
+| PATCH | `/api/admin/telemetry` | `{ "enabled": boolean }` | `200`, same shape as `GET`, reflecting the stored value |
+
+- Admin role only: any other caller gets `403`, the same as the other `/api/admin/*` routes. A malformed
+  body is a `400`.
+- `dsnConfigured` is `false` when `SENTRY_DSN` is unset, and the web hides the row. `PATCH` still stores
+  the flag in that case, so a stored `true` takes effect as soon as a DSN exists.
+- `updatedAt` is an ISO-8601 UTC timestamp, or `null` until an admin first changes the setting.
+- A change takes effect immediately without a restart (an in-memory gate is updated after the write
+  commits) and is recorded in the security event log as `telemetry_enabled` or `telemetry_disabled`,
+  with no other detail.
 
 ### Preferences
 

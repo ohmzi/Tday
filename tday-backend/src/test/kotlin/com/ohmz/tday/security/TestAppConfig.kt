@@ -110,6 +110,7 @@ fun testAppConfig(
     cspMode = null,
     cspConnectExtra = emptyList(),
     sentryDsn = null,
+    clientSentryDsn = null,
     sentryTracesSampleRate = 1.0,
     backendVersion = "0.0.0",
 )

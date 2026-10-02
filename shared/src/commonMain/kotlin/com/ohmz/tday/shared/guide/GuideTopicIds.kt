@@ -63,6 +63,7 @@ object GuideTopicIds {
     const val OFFLINE_SYNC = "offline-sync"
     const val EXPORT_YOUR_DATA = "export-your-data"
     const val LOCAL_TO_SERVER_MIGRATION = "local-to-server-migration"
+    const val CRASH_REPORTS = "crash-reports"
     const val IN_APP_UPDATE = "in-app-update"
     const val API_KEY_HOMARR = "api-key-homarr"
     const val DEVICE_CALENDAR_SYNC = "device-calendar-sync"

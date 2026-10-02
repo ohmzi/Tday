@@ -22,16 +22,41 @@ final class TelemetrySanitizerTests: XCTestCase {
         )
     }
 
-    func testClampsTraceSampleRates() {
-        XCTAssertEqual(TdayTelemetry.traceSampleRate(rawValue: "0.25", fallback: 1).doubleValue, 0.25)
-        XCTAssertEqual(TdayTelemetry.traceSampleRate(rawValue: "5", fallback: 0.2).doubleValue, 1.0)
-        XCTAssertEqual(TdayTelemetry.traceSampleRate(rawValue: "nope", fallback: 0.2).doubleValue, 0.2)
-    }
-
     func testRedactsSensitiveLabelsAndTokenShapedValues() {
         XCTAssertEqual(TdayTelemetry.safeLabel("alex@example.com"), "redacted")
         XCTAssertEqual(TdayTelemetry.safeLabel("https://example.com/api/todo/123"), "redacted")
         XCTAssertEqual(TdayTelemetry.safeLabel("cjld2cjxh0000qzrmn831i7rn"), "id")
+    }
+
+    func testAReportedErrorKeepsOnlyItsDomainAndCode() throws {
+        let failed = NSError(
+            domain: NSURLErrorDomain,
+            code: URLError.Code.badServerResponse.rawValue,
+            userInfo: [
+                "NSErrorFailingURLStringKey": "https://tday.example.com/api/todo/42",
+                NSLocalizedDescriptionKey: "Could not reach alex@example.com",
+            ]
+        )
+
+        let reported = try XCTUnwrap(TdayTelemetry.reportableError(failed))
+
+        XCTAssertEqual(reported.domain, NSURLErrorDomain)
+        XCTAssertEqual(reported.code, URLError.Code.badServerResponse.rawValue)
+        XCTAssertTrue(reported.userInfo.isEmpty)
+    }
+
+    func testASwiftErrorIsReportedByDomainAndCode() throws {
+        struct Failure: Error {}
+
+        let reported = try XCTUnwrap(TdayTelemetry.reportableError(Failure()))
+
+        XCTAssertTrue(reported.userInfo.isEmpty)
+        XCTAssertFalse(reported.domain.isEmpty)
+    }
+
+    func testATransportFailureIsNotReported() {
+        XCTAssertNil(TdayTelemetry.reportableError(URLError(.notConnectedToInternet)))
+        XCTAssertNil(TdayTelemetry.reportableError(URLError(.timedOut)))
     }
 
     func testSanitizesRouteLikeDataByKeyAndRedactsSensitiveFields() {

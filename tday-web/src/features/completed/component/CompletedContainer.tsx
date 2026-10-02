@@ -1,3 +1,4 @@
+import { TestCrashButton } from "@/components/TestCrashButton"; // TEST-CRASH
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -49,6 +50,9 @@ export default function CompletedContainer() {
   const activeIndex = Math.max(0, tabs.findIndex((tab) => tab.id === scope));
 
   const tabSwitcher = (
+    <>
+    {/* TEST-CRASH */}
+    <TestCrashButton id="TC-BUILTIN-DONE" />
     <div
       role="tablist"
       aria-label={completedDict("title")}
@@ -89,6 +93,7 @@ export default function CompletedContainer() {
         </button>
       ))}
     </div>
+    </>
   );
 
   return scope === "tasks" ? (

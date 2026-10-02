@@ -7,6 +7,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { RETURNING_BROWSER_STORAGE_KEY } from "@/lib/security/returningBrowser";
 import { HAPTICS_STORAGE_KEY } from "@/lib/feedbackPreferences";
+import {
+  TELEMETRY_CONSENT_AT_STORAGE_KEY,
+  TELEMETRY_CONSENT_STORAGE_KEY,
+} from "@/lib/privacy/telemetryConsent";
 
 function createWrapper() {
   const queryClient = new QueryClient();
@@ -218,6 +222,66 @@ describe("AuthProvider", () => {
     expect(window.localStorage.getItem("menu-state")).toBeNull();
     expect(window.sessionStorage.getItem("draft")).toBeNull();
     expect(result.current.authState).toBe("unauthenticated");
+  });
+
+  it("keeps the crash-report answer through a logout and through an expired session", async () => {
+    const signedIn = () =>
+      mockResponse(200, {
+        user: {
+          id: "user-1",
+          name: "Taylor",
+          email: "taylor@example.com",
+          role: "USER",
+          approvalStatus: "APPROVED",
+          timeZone: "UTC",
+        },
+      });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(signedIn())
+      .mockResolvedValueOnce(mockResponse(200, { message: "logged_out" }))
+      .mockResolvedValueOnce(signedIn())
+      .mockResolvedValueOnce(mockResponse(401, { message: "Not authenticated" }));
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.authState).toBe("authenticated");
+    });
+
+    // The answer belongs to this browser, not to the account. Losing it on a sign-out would put
+    // the consent card back in front of someone who already said no, and losing a "yes" would
+    // switch reports off without their having asked.
+    window.localStorage.setItem(TELEMETRY_CONSENT_STORAGE_KEY, "granted");
+    window.localStorage.setItem(TELEMETRY_CONSENT_AT_STORAGE_KEY, "1759320000000");
+
+    await act(async () => {
+      await result.current.logout();
+    });
+
+    expect(window.localStorage.getItem(TELEMETRY_CONSENT_STORAGE_KEY)).toBe("granted");
+    expect(window.localStorage.getItem(TELEMETRY_CONSENT_AT_STORAGE_KEY)).toBe("1759320000000");
+
+    await act(async () => {
+      await result.current.refreshSession();
+    });
+    await waitFor(() => {
+      expect(result.current.authState).toBe("authenticated");
+    });
+
+    await act(async () => {
+      await result.current.refreshSession();
+    });
+    await waitFor(() => {
+      expect(result.current.authState).toBe("unauthenticated");
+    });
+
+    expect(window.localStorage.getItem(TELEMETRY_CONSENT_STORAGE_KEY)).toBe("granted");
+    expect(window.localStorage.getItem(TELEMETRY_CONSENT_AT_STORAGE_KEY)).toBe("1759320000000");
   });
 
   it("does not clear auth state locally when the logout request fails", async () => {

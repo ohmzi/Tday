@@ -125,6 +125,28 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      # Which of the three client DSNs and the upload token exist decides whether this
+      # release can receive crash reports at all. None of them fails the release —
+      # reporting is opt-in and optional — but a missing one would otherwise ship
+      # silently inert: no consent card on that client, or stacks that cannot be
+      # read. So say so on the run. Only emptiness is tested; nothing is printed.
+      # The iOS DSN is checked in ios-testflight.yml, which owns that build.
+      - name: Check the crash-report inputs
+        env:
+          SENTRY_DSN_ANDROID: ${{ secrets.SENTRY_DSN_ANDROID }}
+          SENTRY_DSN_WEB: ${{ secrets.SENTRY_DSN_WEB }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          for name in SENTRY_DSN_ANDROID SENTRY_DSN_WEB; do
+            if [ -z "${!name}" ]; then
+              echo "::warning::${name} is not set, so this release ships with crash reporting unavailable on that client: no consent card, and nothing is ever sent."
+            fi
+          done
+
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "::warning::SENTRY_AUTH_TOKEN is not set, so this release uploads no Android R8 mapping and no web source maps: crash reports from it will not be deobfuscated or un-minified, and the web source maps ship publicly."
+          fi
+
       # Every merge into master ships a release, even when nobody touched
       # version.json. If the manifest version is already tagged we bump the
       # patch (which also increments ios.buildNumber and re-syncs every mirror);
@@ -371,11 +393,19 @@ jobs:
       # two expressions cannot pick a different generation than the keystore
       # did. They stay inline rather than going through GITHUB_ENV so the
       # passwords are only visible to this one step.
+      #
+      # The Sentry pair follows the same rule. SENTRY_DSN is baked into
+      # BuildConfig.SENTRY_DSN; it is a public identifier, and the in-app consent
+      # gate — not its secrecy — decides whether it is ever used. SENTRY_AUTH_TOKEN
+      # (upload scope only) lets the Sentry Gradle plugin upload the R8 mapping so
+      # release stacks deobfuscate; the build skips the upload when it is blank.
       - name: Build Android APK
         env:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD || secrets.TWA_STORE_PASSWORD }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD || secrets.TWA_KEY_PASSWORD }}
           TDAY_PROBE_ENCRYPTION_KEY: ${{ secrets.TDAY_PROBE_ENCRYPTION_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_ANDROID }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: ./gradlew :android-compose:app:assembleRelease --no-daemon
 
       - name: Prepare APK for release
@@ -461,8 +491,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
+      # Browser crash reporting is wired in here, at image build time, because Vite
+      # inlines VITE_* into the bundle and the DSN has to be in the frontend stage.
+      # Both steps must pass the same inputs: the DSN is a build arg and so part of
+      # the layer cache key, and the push step below replays this build from that
+      # cache — a push step without it would rebuild the SPA with no DSN and ship
+      # exactly that. The DSN is a public identifier; the in-app consent gate, not
+      # its secrecy, decides whether it is ever used.
+      #
+      # The source-map upload token is a build SECRET, not a build arg (args land in
+      # `docker history`), and it goes through `secret-envs` rather than `secrets`:
+      # the action rejects an empty `secrets` value ("... is not a valid secret"),
+      # which would fail the whole release whenever the repository secret is unset,
+      # whereas an empty env var yields an empty secret and the Dockerfile simply
+      # skips the upload. See the RUN --mount=type=secret in Dockerfile.backend.
       - name: Build Docker image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         with:
           context: .
           file: ./Dockerfile.backend
@@ -473,6 +519,10 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/ohmzi/Tday
             org.opencontainers.image.description=Tday - Personal task planner
+          build-args: |
+            VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN_WEB }}
+          secret-envs: |
+            sentry_auth_token=SENTRY_AUTH_TOKEN
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -522,8 +572,13 @@ jobs:
       # locks every client out with no way to update. The reverse gap (release
       # published, image missing) leaves the running server on the previous
       # version and is fixed by re-running this workflow.
+      #
+      # Same DSN build arg and token secret as the build step above, on purpose — see
+      # the note there for why dropping either here would change what gets shipped.
       - name: Push Docker image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         with:
           context: .
           file: ./Dockerfile.backend
@@ -534,6 +589,10 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/ohmzi/Tday
             org.opencontainers.image.description=Tday - Personal task planner
+          build-args: |
+            VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN_WEB }}
+          secret-envs: |
+            sentry_auth_token=SENTRY_AUTH_TOKEN
           cache-from: type=gha
 
       # develop is an ancestor of master right after a merge-commit merge, so

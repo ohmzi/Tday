@@ -5,8 +5,6 @@ type SentryBeforeBreadcrumb = NonNullable<SentryInitOptions["beforeBreadcrumb"]>
 type SentryBreadcrumb = Parameters<SentryBeforeBreadcrumb>[0];
 type SentryBeforeSend = NonNullable<SentryInitOptions["beforeSend"]>;
 type SentryErrorEvent = Parameters<SentryBeforeSend>[0];
-type SentryBeforeSendTransaction = NonNullable<SentryInitOptions["beforeSendTransaction"]>;
-type SentryTransactionEvent = Parameters<SentryBeforeSendTransaction>[0];
 
 const STATIC_SEGMENTS = new Set([
   "api",
@@ -108,16 +106,6 @@ export function routeTemplate(method: string, url: string): string {
   return `${method.toUpperCase()} ${sanitizeTelemetryUrl(url)}`;
 }
 
-export function readTraceSampleRate(
-  rawValue: string | undefined,
-  fallback: number,
-): number {
-  if (!rawValue) return fallback;
-  const parsed = Number(rawValue);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(1, Math.max(0, parsed));
-}
-
 export function addApiErrorBreadcrumb({
   method,
   url,
@@ -194,15 +182,6 @@ export function scrubSentryEvent(event: SentryErrorEvent): SentryErrorEvent {
       .filter((breadcrumb): breadcrumb is SentryBreadcrumb => breadcrumb != null);
   }
 
-  return event;
-}
-
-export function scrubSentryTransaction(
-  event: SentryTransactionEvent,
-): SentryTransactionEvent {
-  if (event.transaction) {
-    event.transaction = sanitizeTransactionName(event.transaction);
-  }
   return event;
 }
 
@@ -294,15 +273,4 @@ function sanitizeBreadcrumbMessage(message: string): string {
   }
 
   return sanitizeTelemetryLabel(message);
-}
-
-function sanitizeTransactionName(transaction: string): string {
-  const routeMatch = transaction.match(/^([A-Z]+)\s+(.+)$/);
-  if (routeMatch) {
-    return routeTemplate(routeMatch[1], routeMatch[2]);
-  }
-  if (transaction.includes("/") || transaction.includes("?")) {
-    return sanitizeTelemetryPath(transaction);
-  }
-  return sanitizeTelemetryLabel(transaction);
 }

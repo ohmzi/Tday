@@ -1,33 +1,125 @@
 import Foundation
+import os
 import Sentry
+import UIKit
 
+/// Starts Sentry, and only for someone who said yes.
+///
+/// Reports are opt-in and failures-only: the SDK is never started without a granted answer in
+/// `TelemetryConsentStore`, so before that nothing is initialised, buffered or sent, and an error
+/// during first run is lost on purpose. The options below are the other half. They are pinned one
+/// by one rather than left to the SDK's defaults, because those defaults are made for a product
+/// that wants analytics (session pings, sampled performance traces, breadcrumbs for every tap and
+/// every request) and a self-hosted planner wants none of it. `docs/TELEMETRY.md` has the contract.
 enum SentryConfiguration {
-    static func start() {
-        let dsn = TdayTelemetry.bundleString("SENTRY_DSN")
-        guard !dsn.isEmpty else { return }
+    /// The DSN this build was given. Empty in a fork, a debug run, or a build nobody injected one
+    /// into, and then there is no card, no Settings row, and no SDK.
+    static var dsn: String {
+        TdayTelemetry.bundleString("SENTRY_DSN")
+    }
 
-        SentrySDK.start { options in
-            options.dsn = dsn
-            let environment = ProcessInfo.processInfo.environment["SENTRY_ENVIRONMENT"] ?? "production"
-            options.environment = environment
+    static var isConfigured: Bool {
+        !dsn.isEmpty
+    }
 
-            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
-            let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
-            options.releaseName = "tday-ios@\(version)"
-            options.dist = build
-
-            options.sendDefaultPii = false
-            options.enableAutoSessionTracking = true
-            options.tracesSampleRate = TdayTelemetry.traceSampleRate(
-                rawValue: TdayTelemetry.bundleString("SENTRY_TRACES_SAMPLE_RATE"),
-                fallback: environment == "production" ? 0.2 : 1.0
-            )
-
-            options.beforeSend = { event in
-                event.user?.ipAddress = nil
-                return event
-            }
+    /// Called once from `TdayApp.init`, and again when the person turns reports on mid-session.
+    /// When the SDK is not going to run, what an earlier run left on disk is removed instead, so
+    /// "off" never leaves a report waiting for the next time it is "on".
+    static func start(consent: TelemetryConsentStore = TelemetryConsentStore()) {
+        guard isConfigured, consent.isGranted else {
+            TelemetryLifecycle.purge()
+            return
         }
+
+        // Open before the SDK starts: starting replays last launch's crash through `beforeSend`.
+        TelemetryGate.shared.open()
+        TdayTelemetry.observeMemoryWarnings()
+        // A granted answer always has a time; if it somehow does not, now is the safe reading.
+        SentrySDK.start(options: makeOptions(dsn: dsn, consentedAt: consent.consentedAt ?? Date()))
+    }
+
+    static func makeOptions(
+        dsn: String,
+        consentedAt: Date? = nil,
+        gate: TelemetryGate = .shared
+    ) -> Options {
+        let options = Options()
+        options.dsn = dsn
+        options.environment = ProcessInfo.processInfo.environment["SENTRY_ENVIRONMENT"] ?? "production"
+
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+        options.releaseName = "tday-ios@\(version)"
+        options.dist = build
+
+        // Failures only. Every error event is sent; nothing else is: no sessions, no traces, no
+        // client reports, and none of the automatic instrumentation that feeds them.
+        options.sendDefaultPii = false
+        options.sampleRate = 1
+        options.tracesSampleRate = 0
+        options.enableAutoSessionTracking = false
+        options.sendClientReports = false
+        options.enableAutoPerformanceTracing = false
+        options.enableUIViewControllerTracing = false
+        options.enableUserInteractionTracing = false
+        options.enablePreWarmedAppStartTracing = false
+        options.enableStandaloneAppStartTracing = false
+        options.enableTimeToFullDisplayTracing = false
+        options.enableFileIOTracing = false
+        options.enableDataSwizzling = false
+        options.enableFileManagerSwizzling = false
+        options.enableCoreDataTracing = false
+
+        // Nothing about the network. Swizzling off is what stops the SDK from reading every
+        // request, so the self-hosted server's address never reaches a breadcrumb, a span or a
+        // failed-request event, and no trace header is added to a request to it.
+        options.enableSwizzling = false
+        options.enableNetworkTracking = false
+        options.enableNetworkBreadcrumbs = false
+        options.enableCaptureFailedRequests = false
+        options.tracePropagationTargets = []
+        options.enablePropagateTraceparent = false
+
+        // No pictures of the screen, and none of what is in memory.
+        options.sessionReplay.sessionSampleRate = 0
+        options.sessionReplay.onErrorSampleRate = 0
+        options.attachScreenshot = false
+        options.attachViewHierarchy = false
+        options.reportAccessibilityIdentifier = false
+        options.enableMemoryIntrospection = false
+        options.enableMetricKit = false
+
+        // What a report is for. App hang tracking is deprecated from 9.29 and gone in v10, where
+        // MetricKit replaces it; until then it is how a freeze is reported.
+        options.enableCrashHandler = true
+        options.enableWatchdogTerminationTracking = true
+        options.enableAppHangTracking = true
+        options.appHangTimeoutInterval = 2
+
+        // `close()` flushes for this long, and tries to send whatever is cached. Turning reports
+        // off must not wait on that; `TelemetryLifecycle.revoke` has deleted the cache by then.
+        options.shutdownTimeInterval = 0
+
+        // The system's own breadcrumbs stay on and are filtered by what the allow-list keeps.
+        options.enableAutoBreadcrumbTracking = true
+        options.beforeBreadcrumb = { crumb in
+            guard gate.isOpen else {
+                return nil
+            }
+            return TelemetryScrubber.scrubBreadcrumb(crumb)
+        }
+
+        options.beforeSend = { event in
+            guard gate.isOpen else {
+                return nil
+            }
+            // The SDK stamps every event with the install UUID as `user.id`, and the scrubber
+            // drops the user whole. This is the belt to that braces: no address survives either way.
+            event.user?.ipAddress = nil
+            return TelemetryScrubber.scrub(event, context: .current(consentedAt: consentedAt))
+        }
+
+        return options
     }
 }
 
@@ -51,11 +143,6 @@ enum TdayTelemetry {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.hasPrefix("$(") { return "" }
         return trimmed
-    }
-
-    static func traceSampleRate(rawValue: String, fallback: Double) -> NSNumber {
-        let parsed = Double(rawValue).map { min(1.0, max(0.0, $0)) } ?? fallback
-        return NSNumber(value: parsed)
     }
 
     static func sanitizePath(_ raw: String) -> String {
@@ -103,7 +190,61 @@ enum TdayTelemetry {
     static func capture(_ error: Error, operation: String, data: [String: Any] = [:]) {
         guard SentrySDK.isEnabled else { return }
         addBreadcrumb(operation, category: "error", level: .error, data: data)
-        SentrySDK.capture(error: error)
+
+        // Nothing to report for the network being the network: the breadcrumb above is all of it a
+        // later report needs.
+        guard let reportable = reportableError(error) else { return }
+        SentrySDK.capture(error: reportable)
+    }
+
+    /// What of an error is reported: its domain and code, and nothing else it carries.
+    /// `SentrySDK.capture(error:)` attaches the whole of `NSError.userInfo` and the error's
+    /// description, and a failed URLSession call keeps the URL it was requesting in there
+    /// (`NSErrorFailingURLStringKey`). Nil for a transport failure, which is not a bug in T'Day.
+    static func reportableError(_ error: Error) -> NSError? {
+        let nsError = error as NSError
+        guard !TelemetryScrubber.isConnectivityNoise(domain: nsError.domain, code: nsError.code) else {
+            return nil
+        }
+        return NSError(domain: nsError.domain, code: nsError.code)
+    }
+
+    /// An operation that took longer than it should have, as an event of its own rather than a
+    /// span: traces are off, and a slow start is a failure of the same kind as a crash. Grouped by
+    /// operation, so one bad release is one issue and not one per device. Called only through
+    /// `SlowOperation.report`, which holds the thresholds and the rate limits.
+    static func captureSlowOperation(_ operation: SlowOperation, durationMs: Int) {
+        guard SentrySDK.isEnabled else { return }
+        let event = Event(level: .warning)
+        event.message = SentryMessage(formatted: "slow_operation")
+        event.fingerprint = ["slow_operation", operation.rawValue]
+        event.tags = [
+            "operation": operation.rawValue,
+            "duration_bucket": SlowOperation.durationBucket(ms: durationMs),
+        ]
+        event.extra = ["duration_ms": durationMs, "threshold_ms": operation.thresholdMs]
+        SentrySDK.capture(event: event)
+    }
+
+    /// A memory warning is the last thing the system says before it ends an app for using too
+    /// much, and the watchdog report that follows carries no figures; this is where the number
+    /// comes from. Registered once for the process and inert while reporting is off, so there is
+    /// nothing to take down again.
+    private static let memoryWarningObserver: NSObjectProtocol = NotificationCenter.default.addObserver(
+        forName: UIApplication.didReceiveMemoryWarningNotification,
+        object: nil,
+        queue: nil
+    ) { _ in
+        guard TelemetryGate.shared.isOpen else { return }
+        TdayTelemetry.addBreadcrumb(
+            "memory.warning",
+            level: .warning,
+            data: ["available_mb": os_proc_available_memory() / 1_048_576]
+        )
+    }
+
+    static func observeMemoryWarnings() {
+        _ = memoryWarningObserver
     }
 
     static func safeLabel(_ value: Any?) -> String {

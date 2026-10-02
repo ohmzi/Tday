@@ -95,6 +95,16 @@ final class GuideContentContractTests: XCTestCase {
         XCTAssertTrue(GuideSearch.rank("bluetooth", topics).isEmpty)
     }
 
+    /// A topic shipped in the current release is listed under "What's new" and in its own section.
+    /// A deep link opens the section card, whose key is the plain topic id, and not its copy above.
+    func testHighlightCopyOfATopicHasItsOwnExpansionKey() {
+        let sectionKey = HelpGuideScreen.cardKey(topicID: "crash-reports", isHighlight: false)
+        let highlightKey = HelpGuideScreen.cardKey(topicID: "crash-reports", isHighlight: true)
+
+        XCTAssertEqual(sectionKey, "crash-reports")
+        XCTAssertNotEqual(highlightKey, sectionKey)
+    }
+
     private func makeTopic(id: String, title: String, keywords: String, body: String) -> GuideTopicDTO {
         GuideTopicDTO(
             id: id, section: "X", sectionOrder: 0, icon: "book", platforms: ["IOS"],

@@ -68,6 +68,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.NavGraph
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -78,6 +79,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import com.ohmz.tday.compose.core.data.AppDataMode
 import com.ohmz.tday.compose.core.data.ConnectionFailureKind
 import com.ohmz.tday.compose.core.model.DashboardSummary
 import com.ohmz.tday.compose.core.model.ListSummary
@@ -86,6 +88,9 @@ import com.ohmz.tday.compose.core.navigation.AppRoute
 import com.ohmz.tday.compose.core.navigation.CompletedScope
 import com.ohmz.tday.compose.core.navigation.isHomeTileArrival
 import com.ohmz.tday.compose.core.navigation.navigateFromHomeTile
+import com.ohmz.tday.compose.core.observability.TdayTelemetry
+import com.ohmz.tday.compose.core.observability.TelemetryEventTags
+import com.ohmz.tday.compose.core.observability.TelemetryWorkspaceMode
 import com.ohmz.tday.compose.core.ui.LocalSnackbarManager
 import com.ohmz.tday.compose.core.ui.LocalTdayTileSourceScope
 import com.ohmz.tday.compose.core.ui.SnackbarEvent
@@ -133,6 +138,7 @@ import com.ohmz.tday.compose.feature.release.LatestReleaseUiState
 import com.ohmz.tday.compose.feature.release.LatestReleaseViewModel
 import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.sweep.MorningSweepScreen
+import com.ohmz.tday.compose.feature.telemetry.TelemetryConsentGate
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.component.RootCreateTaskButton
@@ -144,7 +150,6 @@ import com.ohmz.tday.compose.ui.theme.TdayTheme
 import com.ohmz.tday.compose.ui.theme.TdayTodayBlue
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
-import io.sentry.android.navigation.SentryNavigationListener
 
 private const val PENDING_SEARCH_HIGHLIGHT_TODO_ID = "pendingSearchHighlightTodoId"
 
@@ -287,7 +292,11 @@ fun TdayApp( // skipcq: KT-R1006
     val navController = rememberNavController()
 
     DisposableEffect(navController) {
-        val listener = SentryNavigationListener()
+        // The route pattern and nothing else. Sentry's own SentryNavigationListener also attaches
+        // the destination's arguments, which for a list screen are the list's id and its name.
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            destination.route?.let(TdayTelemetry::recordNavigation)
+        }
         navController.addOnDestinationChangedListener(listener)
         onDispose { navController.removeOnDestinationChangedListener(listener) }
     }
@@ -295,6 +304,10 @@ fun TdayApp( // skipcq: KT-R1006
     val appViewModel: AppViewModel = hiltViewModel()
     val releaseViewModel: LatestReleaseViewModel = hiltViewModel()
     val appUiState by appViewModel.uiState.collectAsStateWithLifecycle()
+    // Which workspace a crash report came from (local or server), once it is known.
+    LaunchedEffect(appUiState.dataMode) {
+        TelemetryEventTags.recordWorkspace(appUiState.dataMode.telemetryMode)
+    }
     val releaseUiState by releaseViewModel.uiState.collectAsStateWithLifecycle()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -1506,6 +1519,13 @@ private fun ScheduledTaskHomeRoute(
             )
         }
 
+        // Composed before AuthenticatedGates: dialogs stack in composition order, so the
+        // update-required and security-questions gates draw over this card, not under it.
+        TelemetryConsentGate(
+            workspaceOpen = appUiState.rootDestination == RootDestination.WORKSPACE,
+            aHigherGateIsUp = appUiState.showsUpdateRequiredGate || appUiState.showsSecurityQuestionsGate,
+        )
+
         AuthenticatedGates(
             appUiState = appUiState,
             appViewModel = appViewModel,
@@ -2147,6 +2167,24 @@ private fun OnboardingOverlay(
     }
 }
 
+/** The mandatory app/server update, which only blocks a signed-in server session. */
+private val AppUiState.showsUpdateRequiredGate: Boolean
+    get() = authenticated &&
+        !isLocalMode &&
+        (versionCheckResult is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired ||
+            versionCheckResult is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired)
+
+/** The security questions an admin can require before the account is usable. */
+private val AppUiState.showsSecurityQuestionsGate: Boolean
+    get() = authenticated && !isLocalMode && user?.requireSecurityQuestions == true
+
+private val AppDataMode.telemetryMode: TelemetryWorkspaceMode?
+    get() = when (this) {
+        AppDataMode.SERVER -> TelemetryWorkspaceMode.SERVER
+        AppDataMode.LOCAL -> TelemetryWorkspaceMode.LOCAL
+        AppDataMode.UNSET -> null
+    }
+
 /**
  * The gates that can block an already-signed-in server session: a mandatory app/server update, and
  * the security questions an admin can require before the account is usable.
@@ -2157,24 +2195,17 @@ private fun AuthenticatedGates(
     appViewModel: AppViewModel,
     authViewModel: AuthViewModel,
 ) {
-    val authenticatedVersionCheck = appUiState.versionCheckResult
-    if (appUiState.authenticated &&
-        !appUiState.isLocalMode &&
-        (authenticatedVersionCheck is com.ohmz.tday.compose.core.data.server.VersionCheckResult.AppUpdateRequired ||
-            authenticatedVersionCheck is com.ohmz.tday.compose.core.data.server.VersionCheckResult.ServerUpdateRequired)
-    ) {
+    val versionCheckResult = appUiState.versionCheckResult
+    if (appUiState.showsUpdateRequiredGate && versionCheckResult != null) {
         com.ohmz.tday.compose.feature.app.UpdateRequiredOverlay(
-            versionCheckResult = authenticatedVersionCheck,
+            versionCheckResult = versionCheckResult,
             requiredUpdateRelease = appUiState.requiredUpdateRelease,
             isCheckingRelease = appUiState.isCheckingUpdateRelease,
             onRetry = { appViewModel.recheckVersion() },
         )
     }
 
-    if (appUiState.authenticated &&
-        !appUiState.isLocalMode &&
-        appUiState.user?.requireSecurityQuestions == true
-    ) {
+    if (appUiState.showsSecurityQuestionsGate) {
         SetSecurityQuestionsGate(
             onFetchQuestions = authViewModel::fetchAllSecurityQuestions,
             onSubmit = { answers, onSuccess, onError ->

@@ -1,3 +1,4 @@
+import { TEST_CRASH_ROW_PROPS, testCrashRowOpen, useTestCrashRowEdit } from "@/lib/testCrash"; // TEST-CRASH
 import React, { useCallback, useEffect, useState } from "react";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -139,6 +140,7 @@ export const TodoItemCard = ({
     // of choosing several.
     disabled: readOnly || selecting,
   });
+  useTestCrashRowEdit(rowRef, displayForm); // TEST-CRASH
 
   const setCombinedRef = (node: HTMLDivElement | null) => {
     setItemElement(node);
@@ -222,6 +224,7 @@ export const TodoItemCard = ({
       <div
         id={getTodoFocusElementId(todoItem.id)}
         ref={setCombinedRef}
+        {...TEST_CRASH_ROW_PROPS} // TEST-CRASH
         style={
           removing
             ? {
@@ -352,6 +355,7 @@ export const TodoItemCard = ({
             setShowHandle(true);
           }}
           onMouseOut={() => setShowHandle(false)}
+          onClickCapture={testCrashRowOpen} // TEST-CRASH
           // The one place the row becomes pressable: while selecting, a tap
           // anywhere on it picks it up or puts it down.
           role={selecting ? "button" : undefined}

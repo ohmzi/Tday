@@ -1,5 +1,4 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
-import * as Sentry from "@sentry/react";
 import { resolveInitialLocale } from "@/i18n";
 import ShareTargetRedirectPage from "@/pages/ShareTargetRedirectPage";
 import LocaleAppRedirectPage from "@/pages/LocaleAppRedirectPage";
@@ -53,10 +52,7 @@ function SuspenseOutlet() {
   );
 }
 
-const sentryCreateBrowserRouter =
-  Sentry.wrapCreateBrowserRouterV7(createBrowserRouter);
-
-export const router = sentryCreateBrowserRouter([
+export const router = createBrowserRouter([
   {
     path: "/",
     element: <Navigate to={`/${resolveInitialLocale()}`} replace />,

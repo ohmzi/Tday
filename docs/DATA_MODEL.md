@@ -33,6 +33,7 @@ This document describes the durable and local data structures that define T'Day.
 | App config | _(no table — `appconfig` was dropped in V13)_ | `AppSettingsResponse` | Public app settings such as Summary availability, served from `AppSettingsRoutes`. |
 | File metadata | `Files` | Internal only | Retained table for cleanup/compatibility paths; there is no active upload/download API surface. |
 | Event/auth logs | `EventLogs`, `AuthThrottles`, `AuthSignals`, `VerificationTokens`, `CronLogs` | Internal models | Security, throttling, verification, diagnostics, and operational state. |
+| Instance setting | `InstanceSettings` (`instance_settings`) | `ServerTelemetryResponse` (backend/web only, not in `shared/`) | Instance-wide settings an admin changes at runtime. Holds `telemetry.sentry.enabled` today; see [Instance Settings](#instance-settings). Not user data and not tenant-scoped. |
 
 ## Mobile Probe Contract
 
@@ -283,6 +284,47 @@ Differences from the server contract, all deliberate:
   name/color. **Floaters only** — the identical bug in `CompletedTodos`/scheduled lists is
   left as-is, matching the backend's scope.
 
+## Instance Settings
+
+`instance_settings` (Flyway `V32__instance_settings.sql`, Exposed object `InstanceSettings`) is a
+key/value table for settings an admin changes at runtime, as opposed to the env vars that configure a
+deploy. Each new switch is a row, not a migration, and a missing row means "the default".
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `key` | `VARCHAR(64)` primary key | Setting name |
+| `value` | `VARCHAR(255)` not null | Stored as text |
+| `updated_at` | `TIMESTAMP` not null | UTC wall clock; served to the web as an ISO-8601 UTC string |
+
+| Key | Values | Default | Meaning |
+|-----|--------|---------|---------|
+| `telemetry.sentry.enabled` | `"true"` / `"false"` | missing row means off | Whether this server may send its own error reports to Sentry. Loaded into the in-memory `TelemetryGate` after migrations at startup and updated by `PATCH /api/admin/telemetry`. A deploy that sets `SENTRY_DSN` still sends nothing until an admin turns it on |
+
+It is a plain Exposed `Table` like `abuse_blocks`: it is **not** in the
+`createMissingTablesAndColumns` call, so Flyway creates it and the bootstrap never reconciles it.
+Nothing in it identifies a person, and it has no foreign keys. The admin API is documented in
+[API_GUIDELINES.md](API_GUIDELINES.md#admin-telemetry).
+
+## Crash-Report Consent (Per Device)
+
+Whether a client may send crash reports is a device-local answer, never a database row, so it is not
+synced, is not tied to an account or workspace mode, and is not part of any DTO, export bundle, or
+pending mutation. It must be readable before the app's services exist, which is when the SDK either
+starts or never does. Sign-out, an expired session, leaving a workspace, and clearing local data all
+leave it alone.
+
+| Platform | Store | Keys |
+|----------|-------|------|
+| Web | `localStorage` (both keys in `PRESERVED_STORAGE_KEYS`) | `tday.telemetry.consent` (`"granted"` / `"denied"`, absent means unanswered), `tday.telemetry.consentAt` (epoch ms, present only while granted) |
+| Android | Plain `SharedPreferences` file `telemetry_consent_prefs`, outside `SecureConfigStore` and not cleared by `OfflineCacheManager.clearAllLocalData` | `state` (`"granted"` / `"denied"`), `granted_at_ms` |
+| iOS | `UserDefaults.standard` | `telemetry.consent` (Bool, absent means unanswered), `telemetry.consentAt` (epoch seconds) |
+
+The web also keeps two small, non-consent keys for crash reporting: `sessionStorage`
+`tday.telemetry.consentDeferred` (the consent card was set aside this session) and `localStorage`
+`tday.slowOperation.cooldowns` (when each slow operation was last reported; nothing writes it until a call site uses the helper). iOS keeps
+`telemetry.slowOperation.lastReported` in `UserDefaults`. None of them holds content. See
+[TELEMETRY.md](TELEMETRY.md#consent-and-delivery).
+
 ## Tenant Isolation
 
 Every backend query that reads or writes private data must filter by the authenticated `userID`. Admin-only operations that touch other users must be behind centralized admin checks and should avoid returning private task content unless the endpoint explicitly requires it.
@@ -335,7 +377,7 @@ Rules for anything under `db/tables/`:
   pass.
 
 Tables absent from the `createMissingTablesAndColumns` list (`user_api_keys`,
-`calendar_feed_tokens`, `user_security_questions`, `task_steps`) keep
+`calendar_feed_tokens`, `user_security_questions`, `task_steps`, `instance_settings`) keep
 whatever their migration created. Their declarations now state `CASCADE` to match, so adding one
 of them to that list cannot silently downgrade it.
 

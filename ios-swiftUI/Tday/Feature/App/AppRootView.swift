@@ -526,7 +526,12 @@ struct AppRootView: View {
                                 }
                             }
 
-                            if appViewModel.authenticated && !appViewModel.isLocalMode && appViewModel.versionCheckResult != .compatible {
+                            // First in this stack, so the two gates after it draw over it; it is also
+                            // only ever true while neither of them is up. The app lock sits above all
+                            // of this, in its own overlay and its own window.
+                            telemetryConsentOverlay
+
+                            if showsUpdateRequiredGate {
                                 UpdateRequiredView(
                                     versionCheckResult: appViewModel.versionCheckResult,
                                     onRetry: {
@@ -535,10 +540,7 @@ struct AppRootView: View {
                                 )
                             }
 
-                            if appViewModel.authenticated,
-                               !appViewModel.isLocalMode,
-                               appViewModel.versionCheckResult == .compatible,
-                               appViewModel.user?.requireSecurityQuestions == true {
+                            if showsSecurityQuestionsGate {
                                 SecurityQuestionsGateView(
                                     authViewModel: authViewModel,
                                     onSaved: {
@@ -587,6 +589,14 @@ struct AppRootView: View {
                         .animation(
                             tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)),
                             value: showOnboardingOverlay
+                        )
+                        // The crash-reports card arrives and leaves the way the wizard does, and for the
+                        // same reason it needs a transaction of its own: its `.transition` is inert
+                        // without one, and what drives it is the person's answer, which nothing above
+                        // animates. Same rung and curve as the wizard's line, so the two read as one family.
+                        .animation(
+                            tdayAnimation(TdayMotion.standard(duration: TdayMotion.Durations.quick)),
+                            value: showsTelemetryConsent
                         )
                     }
                     // Above the stack, so both ends read the same namespace: the root feed's
@@ -804,6 +814,52 @@ struct AppRootView: View {
 
     private var appLockCoverMode: AppLockCoverMode {
         appLock.coverMode(isSceneActive: scenePhase == .active)
+    }
+
+    /// Whether the server and this app have to be brought to the same version before anything
+    /// else. Read by the gate itself and by the consent card, which waits for it.
+    private var showsUpdateRequiredGate: Bool {
+        appViewModel.authenticated && !appViewModel.isLocalMode && appViewModel.versionCheckResult != .compatible
+    }
+
+    /// Whether an account created before security questions existed has to set them before it
+    /// continues. Read by the gate itself and by the consent card, which waits for it.
+    private var showsSecurityQuestionsGate: Bool {
+        appViewModel.authenticated
+            && !appViewModel.isLocalMode
+            && appViewModel.versionCheckResult == .compatible
+            && appViewModel.user?.requireSecurityQuestions == true
+    }
+
+    /// The crash-reports card is due, and nothing that has to come first is on screen.
+    private var showsTelemetryConsent: Bool {
+        container.telemetryConsent.shouldPresentCard(
+            workspaceAvailable: appViewModel.isWorkspaceAvailable,
+            isCoveredByAnotherGate: showsUpdateRequiredGate
+                || showsSecurityQuestionsGate
+                || appLockCoverMode != .hidden
+        )
+    }
+
+    // Its own property for the reason `destinationView(for:)` is a function: `body` is already at
+    // the edge of what the type-checker will take.
+    @ViewBuilder
+    private var telemetryConsentOverlay: some View {
+        if showsTelemetryConsent {
+            TelemetryConsentCard(
+                onShare: { container.telemetryConsent.share() },
+                onDecline: { container.telemetryConsent.decline() },
+                // The card is part of the stack's root, so the guide pushed here covers it. It is
+                // held back first all the same: a card that is still due would be waiting when the
+                // person comes back, and the FAQ is the one thing that is not an answer to it.
+                onReadFAQ: {
+                    container.telemetryConsent.deferForSession()
+                    appViewModel.navigationPath.append(.helpGuide(topic: GuideTopicId.crashReports))
+                },
+                onDefer: { container.telemetryConsent.deferForSession() }
+            )
+            .transition(.opacity)
+        }
     }
 
     // Kept out of `body`: as part of the ~300-line body expression this switch

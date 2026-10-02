@@ -125,6 +125,8 @@ Every tappable Settings row leads with a glyph in a 22px slot (20px glyph, 14px 
 | Security questions | `shield-question` | `ShieldQuestion` | `ic_lucide_shield_question` | `LucideShieldQuestion` |
 | Role | — (empty slot) | — | (empty slot) | (empty slot) |
 | Reduce motion | `activity` | — | `ic_lucide_activity` | `LucideActivity` |
+| Crash & problem reports (Privacy) | `activity` | `Activity` | `ic_lucide_activity` | `LucideActivity` |
+| Server error reports (Privacy, admin) | `server` | `Server` | — | — |
 | Default reminder | `bell` | — | `ic_lucide_bell` | `LucideBell` |
 | Day Ahead digest | `bell-ring` | — | `ic_lucide_bell_ring` | `LucideBellRing` |
 | Quiet hours | `moon` | — | `ic_lucide_moon` | `LucideMoon` |
@@ -150,5 +152,7 @@ Every tappable Settings row leads with a glyph in a 22px slot (20px glyph, 14px 
 | Leave local workspace | `log-out` | `LogOut` | — | — |
 | Delete local data | `trash-2` | `Trash2` | — | — |
 | Sign out | `log-out` | `LogOut` | `ic_lucide_log_out` | `LucideLogOut` |
+
+The Privacy crash-reports row, the `crash-reports` guide topic, and the one-time consent card all use `activity`, the glyph Reduce motion already uses on mobile, so the feature needed no new assets (`shield-check` and `bug` have no native drawable or imageset). "Server error reports" is web-only: it configures the operator's server, so the mobile apps have no counterpart.
 
 Section headings, the theme segmented control, sync-status blocks, and filled buttons that already carry their own icon stay bare. The native glyphs above are listed in `tday-web/tests/fixtures/settings-icons.json`; the `settings-icons` coverage test fails if an Android drawable or iOS imageset is missing, so update the fixture when a row's glyph changes.

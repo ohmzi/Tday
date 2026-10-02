@@ -1,5 +1,8 @@
 package com.ohmz.tday.compose.feature.scheduledtaskhome
 
+import com.ohmz.tday.compose.core.testcrash.TestCrashButton // TEST-CRASH
+import com.ohmz.tday.compose.core.testcrash.TestCrashId // TEST-CRASH
+import com.ohmz.tday.compose.core.testcrash.testCrashItem // TEST-CRASH
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -763,6 +766,8 @@ fun ScheduledTaskHomeScreen(
                         }
                     }
 
+                    testCrashItem(TestCrashId.FEED_SCHED) // TEST-CRASH
+
                     if (uiState.summary.lists.isNotEmpty()) {
                         item(key = "scheduled-task-home-my-lists-header") {
                             MyListsHeader(
@@ -1424,6 +1429,7 @@ private fun CreateListBottomSheet(
                             }
                         }
 
+                            TestCrashButton(TestCrashId.NEW_LIST) // TEST-CRASH
                             TdaySheetSectionTitle(stringResource(R.string.scheduled_task_home_section_color))
                             TdaySheetCard {
                             Row(

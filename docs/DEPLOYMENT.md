@@ -51,9 +51,14 @@ docker compose -f docker-compose.yaml -f docker-compose.build.yaml \
 ```
 
 Without it the id falls back to a timestamp only — still unique per build, just less traceable.
-The release workflow passes **no** build args, so CI-published images carry a `dev-<timestamp>`
-build id and an empty `VITE_SENTRY_DSN`; both are cosmetic for cache invalidation (the id is still
-unique per build) but browser-side Sentry is off in the published image.
+The release workflow passes no `GIT_SHA`, so CI-published images carry a `dev-<timestamp>` build id
+(cosmetic for cache invalidation; the id is still unique per build). Its one build arg is
+`VITE_SENTRY_DSN`, taken from the `SENTRY_DSN_WEB` repository secret, so the published image carries
+the maintainer's browser Sentry DSN. That DSN is inert until a person opts in to crash reports in
+the app (see [Crash reporting](#crash-reporting-sentry)); a build with no DSN, such as a plain
+`docker build` or a self-built image without `VITE_SENTRY_DSN`, never shows the consent card. The
+source-map upload token is a build **secret** (`--secret id=sentry_auth_token`), not a build arg,
+so it never lands in `docker history`.
 
 ```bash
 # Local build (development). docker-compose.build.yaml adds the build: section and
@@ -294,14 +299,14 @@ Every file that contains or controls a version number, grouped by platform.
 |------|------|-------|
 | `tday-web/package.json` / `package-lock.json` (`"version"`) | App semver mirror | Auto-synced from `version.json`. |
 | `tday-web/vite.config.ts` (`__APP_VERSION__`) | Build-time define from `npm_package_version` | Injected into the SPA at build; fallback `"0.0.0"`. |
-| `tday-web/src/main.tsx` | Sentry release (`tday-web@<version>`) | Derived at build time. `VITE_SENTRY_TRACES_SAMPLE_RATE` controls trace sampling. |
+| `tday-web/src/lib/observability/sentryInit.ts` | Sentry release (`tday-web@<version>`) | Derived at build time; `vite.config.ts` uses the same name for the source-map upload. The web client sends no traces, so there is no sample-rate setting. |
 
 #### Android
 
 | File | What | Notes |
 |------|------|-------|
 | `android-compose/app/build.gradle.kts` | `versionName` / `versionCode` | Parsed from root `version.json` at build time. `versionCode` = `major*10_000_000 + minor*10_000 + patch` (`0.7.2` → `70002`), one decimal slot per component so the encoding never collides. `minor` ≤ 999, `patch` ≤ 9999, ceiling 2_100_000_000 — all enforced by `require` checks that fail the build. |
-| `android-compose/.../TdayApplication.kt` | Sentry release (`tday-android@<version>`) | Uses `BuildConfig.VERSION_NAME`. `SENTRY_TRACES_SAMPLE_RATE` or `local.properties:sentryTracesSampleRate` controls trace sampling. |
+| `android-compose/.../core/observability/TelemetryOptions.kt` | Sentry release (`tday-android@<version>`) | Uses `BuildConfig.VERSION_NAME`. The Android client sends no traces, so there is no sample-rate setting. |
 | `android-compose/.../NetworkModule.kt` | `X-Tday-App-Version` HTTP header | Uses `BuildConfig.VERSION_NAME`. |
 
 #### iOS
@@ -312,19 +317,21 @@ Every file that contains or controls a version number, grouped by platform.
 | `ios-swiftUI/Tday/Info.plist` (`TdayUpdateURL`) | App Store/TestFlight update URL | Auto-synced from `version.json` `ios.updateUrl`; leave empty only for builds without direct iOS update action. |
 | `ios-swiftUI/project.yml` / `TdayApp.xcodeproj/project.pbxproj` (`MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`) | Xcode project metadata | Auto-synced from `version.json`; keep both aligned when regenerating the project. |
 | `ios-swiftUI/Tday/Info.plist` (`CFBundleVersion`) | Build number | Mirrors `ios.buildNumber`; the bump command increments it. |
-| `ios-swiftUI/.../SentryConfiguration.swift` | Sentry release (`tday-ios@<version>`) | Uses `CFBundleShortVersionString`. `SENTRY_DSN` and `SENTRY_TRACES_SAMPLE_RATE` flow through `Info.plist` build settings. |
+| `ios-swiftUI/.../SentryConfiguration.swift` | Sentry release (`tday-ios@<version>`) | Uses `CFBundleShortVersionString`. `SENTRY_DSN` flows through `Info.plist` build settings; the iOS client sends no traces, so there is no sample-rate setting. |
 
 #### Backend
 
 | File | What | Notes |
 |------|------|-------|
 | `tday-backend/build.gradle.kts` (`version`) | Gradle artifact version | Parsed from root `version.json` and embedded as `tday-version.json`. |
-| `tday-backend/.../Application.kt` | Sentry release (`tday-backend@<version>`) | Reads `TDAY_BACKEND_VERSION`, then `TDAY_APP_VERSION`, then embedded manifest version. `SENTRY_TRACES_SAMPLE_RATE` controls trace sampling. |
+| `tday-backend/.../observability/BackendSentry.kt` | Sentry release (`tday-backend@<version>`) | Reads `TDAY_BACKEND_VERSION`, then `TDAY_APP_VERSION`, then embedded manifest version. `SENTRY_TRACES_SAMPLE_RATE` controls trace sampling (default `0.1` in production). |
 
 For Sentry project setup, release artifact verification, alerting, smoke drills,
 and failure triage, see [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md). Do not store
 Sentry account passwords in deployment files; use DSNs for SDK configuration and
-least-privilege auth tokens only for release/source artifact upload.
+least-privilege auth tokens only for release/source artifact upload. What is
+collected, and how a deployment's own switch works, is in
+[Crash reporting](#crash-reporting-sentry) below and [`TELEMETRY.md`](TELEMETRY.md).
 
 #### Server Compatibility (`TDAY_APP_VERSION`)
 
@@ -733,16 +740,27 @@ Two bases are deliberately **not** relied on:
 | `IOS_DEVELOPMENT_CERT_P12_PASSWORD` | secret | The password the `.p12` was exported with. Must be non-empty |
 | `IOS_TEAM_ID` | **variable** | Apple Team ID (`JUFACN2FS3`). Not a secret — it is printed on every provisioning profile |
 | `IOS_XCODE_VERSION` | **variable** | Optional Xcode pin, e.g. `16.4`. Unset, the job warns and uses the runner default |
+| `SENTRY_DSN_IOS` | secret (optional) | DSN of the `tday-ios` Sentry project. `Tday/Info.plist` publishes `SENTRY_DSN` as `$(SENTRY_DSN)`, and an undefined setting expands to `""`, which leaves crash reporting off and hides the consent card. It is a public identifier. Passed in every mode, and it must match `https://<hex key>@<host>/<digits>` or the lane fails, even in a verify run |
+| `SENTRY_AUTH_TOKEN` | secret (optional) | Upload-scope Sentry token. Given to release-mode runs only; the lane hands it to a pinned `sentry-cli` to upload the dSYMs to org `tday-kb`, project `tday-ios`, **before** the TestFlight upload. Without it the upload is skipped and iOS crash reports do not symbolicate |
 
-The **`decide` job on Linux** fails with an actionable message if any of those secrets is missing,
+The **`decide` job on Linux** fails with an actionable message if any of the Apple secrets above is missing,
 rather than 40 minutes later inside `xcodebuild` — and rather than booting a macOS runner (billed at
 10x the Linux rate) to run a six-variable emptiness test. No secret is ever echoed; only emptiness
 is tested. The check is gated on the build actually being wanted, so a web-only release still
 reports green on a repo where the Apple setup is unfinished.
 
+The two Sentry secrets never fail a release: a missing one makes the "Check the crash-report inputs"
+step emit a `::warning::` and that build ships without crash reporting or without symbolication.
+
 `TDAY_PROBE_ENCRYPTION_KEY` reaches the build through a temporary `xcconfig` written `0600` under
 `RUNNER_TEMP` and deleted in the lane's `ensure` block — **not** through `xcargs`, because gym
-echoes the assembled `xcodebuild` command into the build log.
+echoes the assembled `xcodebuild` command into the build log. `SENTRY_DSN` travels the same way,
+with its `//` rewritten as `/$()/` because a `//` starts a comment in an xcconfig.
+
+`sentry-cli` is installed on the macOS runner (release mode only) from a direct download pinned to
+one version and verified against its SHA-256 before it runs. To change the pin, take the new
+release's `sentry-cli-Darwin-universal` digest and update `SENTRY_CLI_VERSION` and
+`.github/pinned/cli-darwin-universal.sha256` together (see [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md)).
 
 #### One-time setup (Apple account holder only)
 
@@ -987,6 +1005,17 @@ The Ktor backend (`AppConfig.kt`) loads all settings from environment variables 
 | `OLLAMA_URL`                        | Optional Ollama service URL. Leave blank for backend logic-only summaries; use `http://ollama:11434` with the Compose `ai` profile |
 | `OLLAMA_MODEL`                      | AI model for summaries when Ollama is enabled (default: `qwen3.5:0.8b`)                                                        |
 
+#### Optional: crash reporting
+
+| Variable | Purpose |
+|----------|---------|
+| `SENTRY_DSN` | The server's own Sentry DSN. Blank (the default) means the server never reports and the admin toggle stays hidden. With a DSN set, nothing is sent until an admin switches on "Server error reports" in web Settings → Privacy (default off) |
+| `SENTRY_TRACES_SAMPLE_RATE` | Backend trace sampling from `0.0` to `1.0`. Defaults to `0.1` in production and `1.0` otherwise; health, probe, websocket, and calendar-feed requests are never traced |
+| `TDAY_CLIENT_SENTRY_DSN` | Baked into the published image from the web build's DSN; leave it alone. The server never sends to it, it only adds that ingest host to the CSP `connect-src` so the browser can report there |
+| `CSP_CONNECT_EXTRA` | Extra `connect-src` origins. When set, it replaces the origin otherwise derived from `SENTRY_DSN`; the client DSN's origin is always added on top |
+
+See [Crash reporting](#crash-reporting-sentry) for how the switch behaves after a deploy.
+
 The native iOS app saves and retrieves Tday credentials under the canonical `tday.ohmz.cloud` Apple Passwords scope, regardless of the server URL a user connects to.
 The native Android app can save and retrieve app-scoped password credentials immediately. Sharing
 credentials with the canonical `tday.ohmz.cloud` web scope requires
@@ -1129,6 +1158,32 @@ Flyway does not support automatic down-migrations. For rollbacks:
 - Set alerts for container restarts.
 - Monitor PostgreSQL connection pool (HikariCP) and disk usage.
 - Check the Ollama health endpoint only when the `ai` profile is enabled. Without Ollama, Summary falls back to backend logic.
+
+### Crash reporting (Sentry)
+
+Crash reporting is optional and consent-based. What is collected and the full consent model are in
+[`TELEMETRY.md`](TELEMETRY.md); setup, secrets, and drills are in [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md).
+
+- **Server reports.** `SENTRY_DSN` is the master switch. With it set, an admin turns "Server error
+  reports" on in web Settings → Privacy (Server Mode, `ADMIN` role). The setting lives in the
+  `instance_settings` table (migration `V32`) and **defaults to off**, so a server that updates to
+  0.8.0 with a DSN already set goes quiet until an admin switches the toggle on. With no DSN the row
+  is hidden.
+- **Switching it on.** The setting is loaded when the server starts and written through by
+  `PATCH /api/admin/telemetry`, so changing it needs no restart. The toggle and the web consent card
+  only exist on a live instance once the new image is running, so compare the `buildId` at
+  `/version.json` before concluding the toggle is missing.
+- **Client reports.** The published image carries the maintainer's browser DSN and the release
+  builds carry the Android and iOS DSNs. Each client asks its user once, and sends nothing until they
+  say yes. An image or app built without a DSN never asks. The web report is sent with no `Referer`,
+  but the browser still sends `Origin`, so the maintainer's Sentry sees the domain your web image is
+  served from.
+- **Release secrets.** `SENTRY_DSN_WEB`, `SENTRY_DSN_ANDROID`, `SENTRY_DSN_IOS`, and
+  `SENTRY_AUTH_TOKEN` (see the secrets table in [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md)). A missing
+  one only warns.
+- **Store labels (to-do).** Apple App Privacy and Google Play Data Safety must declare Crash Data and
+  Diagnostics even though collection is opt-in. There is no `PrivacyInfo.xcprivacy` yet; it becomes a
+  pre-submission task if iOS distribution moves beyond TestFlight.
 
 ### Backups
 

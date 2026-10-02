@@ -133,8 +133,11 @@ it. Same for the `AUTH_CAPTCHA_*` block.
 - **The key sits next to the data.** `DATA_ENCRYPTION_KEY` is in `.env.docker` on the same host as
   the Postgres volume. This protects a stolen dump, a detached volume or an offsite backup. It does
   **not** protect against anyone with shell access to the host.
-- **`CSP_CONNECT_EXTRA` replaces rather than appends** — setting it drops the auto-derived Sentry
-  ingest origin.
+- **`CSP_CONNECT_EXTRA` replaces rather than appends** — setting it drops the ingest origin derived
+  from `SENTRY_DSN`. The browser DSN's origin is always kept.
+- **`SENTRY_DSN` alone sends nothing.** Server error reports also need an admin to switch on
+  Settings → Privacy → Server error reports (off by default, stored in the database, no restart).
+  After an upgrade to 0.8.0 a server that already had a DSN goes quiet until that is done.
 
 ## 7. Verify after deploying
 

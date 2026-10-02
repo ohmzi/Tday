@@ -1,5 +1,6 @@
 package com.ohmz.tday.plugins
 
+import com.ohmz.tday.security.testAppConfig
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -101,5 +102,49 @@ class SecurityHeadersTest {
         assertEquals(CspMode.off, parseCspMode("off"))
         // An unrecognised value must fail safe (enforcing), not silently disable the policy.
         assertEquals(CspMode.enforce, parseCspMode("nonsense"))
+    }
+
+    private val backendDsn = "https://k1@o1.ingest.us.sentry.io/1"
+    private val clientDsn = "https://k2@o2.ingest.us.sentry.io/2"
+
+    @Test
+    fun `connect-src allows the backend and the client ingest origins`() {
+        val origins = cspConnectOrigins(testAppConfig().copy(sentryDsn = backendDsn, clientSentryDsn = clientDsn))
+
+        assertEquals(listOf("https://o1.ingest.us.sentry.io", "https://o2.ingest.us.sentry.io"), origins)
+    }
+
+    @Test
+    fun `the client origin is allowed even when the backend has no dsn`() {
+        // The published web image is built with the maintainer's client DSN, while a self-hoster
+        // normally runs the backend without one. The browser still has to reach the ingest host.
+        val origins = cspConnectOrigins(testAppConfig().copy(sentryDsn = null, clientSentryDsn = clientDsn))
+
+        assertEquals(listOf("https://o2.ingest.us.sentry.io"), origins)
+    }
+
+    @Test
+    fun `an explicit extra list replaces the backend origin but never the client one`() {
+        val origins = cspConnectOrigins(
+            testAppConfig().copy(
+                sentryDsn = backendDsn,
+                clientSentryDsn = clientDsn,
+                cspConnectExtra = listOf("https://errors.example.org"),
+            ),
+        )
+
+        assertEquals(listOf("https://errors.example.org", "https://o2.ingest.us.sentry.io"), origins)
+    }
+
+    @Test
+    fun `the same origin is listed once`() {
+        val origins = cspConnectOrigins(testAppConfig().copy(sentryDsn = backendDsn, clientSentryDsn = backendDsn))
+
+        assertEquals(listOf("https://o1.ingest.us.sentry.io"), origins)
+    }
+
+    @Test
+    fun `no dsn means no extra origin`() {
+        assertEquals(emptyList(), cspConnectOrigins(testAppConfig()))
     }
 }

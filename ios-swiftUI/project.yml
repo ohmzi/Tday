@@ -66,10 +66,9 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Tday/Tday.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 61
-        MARKETING_VERSION: 0.7.49
+        CURRENT_PROJECT_VERSION: 62
+        MARKETING_VERSION: 0.8.0
         SENTRY_DSN: ""
-        SENTRY_TRACES_SAMPLE_RATE: "0.2"
         TARGETED_DEVICE_FAMILY: 1
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
@@ -108,8 +107,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: TdayWidget/TdayWidget.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 61
-        MARKETING_VERSION: 0.7.49
+        CURRENT_PROJECT_VERSION: 62
+        MARKETING_VERSION: 0.8.0
         TARGETED_DEVICE_FAMILY: 1
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
@@ -130,8 +129,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: TdayShareExtension/TdayShareExtension.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 61
-        MARKETING_VERSION: 0.7.49
+        CURRENT_PROJECT_VERSION: 62
+        MARKETING_VERSION: 0.8.0
         TARGETED_DEVICE_FAMILY: 1
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
@@ -158,8 +157,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: TdayWatch/TdayWatch.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 61
-        MARKETING_VERSION: 0.7.49
+        CURRENT_PROJECT_VERSION: 62
+        MARKETING_VERSION: 0.8.0
         TARGETED_DEVICE_FAMILY: 4
         SKIP_INSTALL: YES
   # watchOS complication showing the remaining-task count on the watch face.
@@ -181,8 +180,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: TdayWatchWidget/TdayWatchWidget.entitlements
         GENERATE_INFOPLIST_FILE: NO
         SWIFT_VERSION: 5.0
-        CURRENT_PROJECT_VERSION: 61
-        MARKETING_VERSION: 0.7.49
+        CURRENT_PROJECT_VERSION: 62
+        MARKETING_VERSION: 0.8.0
         TARGETED_DEVICE_FAMILY: 4
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
@@ -194,6 +193,10 @@ targets:
       - path: Tests/TdayCoreTests
     dependencies:
       - target: Tday
+      # The telemetry tests build `Sentry.Options`, `Event` and `Breadcrumb` themselves, so the
+      # module has to be visible to the test target and not only to the app it is hosted in.
+      - package: sentry-cocoa
+        product: Sentry-Dynamic
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ohmz.tday.ios.tests

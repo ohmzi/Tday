@@ -31,7 +31,8 @@
       "day-done",
       "scheduled-lists",
       "morning-sweep",
-      "share-into-tday"
+      "share-into-tday",
+      "crash-reports"
     ],
     "reminder": [
       "push-notifications"
@@ -57,6 +58,7 @@
       "scheduled-lists",
       "list-icons",
       "completed-history",
+      "crash-reports",
       "api-key-homarr"
     ],
     "search": [

@@ -81,12 +81,19 @@ data class AppConfig(
     val cspMode: String?,
     val cspConnectExtra: List<String>,
     val sentryDsn: String?,
+    /**
+     * The DSN the web build reports to, baked into the image at build time and normally empty
+     * for self-builds. The backend never sends to it: it only lets the browser reach that ingest
+     * host through the Content-Security-Policy.
+     */
+    val clientSentryDsn: String?,
     val sentryTracesSampleRate: Double,
     val backendVersion: String,
 ) {
     companion object {
         fun load(): AppConfig {
             val versionDefaults = AppVersionDefaultsLoader.load()
+            val isProduction = resolveEnvironmentName().equals("production", ignoreCase = true)
             val sessionMaxAgeSec = envInt("AUTH_SESSION_MAX_AGE_SEC", 2_592_000)
                 .coerceIn(3600, 2_592_000)
             val sessionAbsoluteMaxAgeSec = envInt("AUTH_SESSION_ABSOLUTE_MAX_AGE_SEC", 7_776_000)
@@ -100,7 +107,7 @@ data class AppConfig(
                     ?: error("DATABASE_URL is required"),
                 authSecret = secret("AUTH_SECRET", "AUTH_SECRET_FILE")
                     ?: error("AUTH_SECRET is required"),
-                isProduction = resolveEnvironmentName().equals("production", ignoreCase = true),
+                isProduction = isProduction,
                 corsAllowedOrigins = envCsv("CORS_ALLOWED_ORIGINS"),
                 pbkdf2Iterations = envInt("AUTH_PBKDF2_ITERATIONS", 310_000)
                     .coerceIn(100_000, 2_000_000),
@@ -199,13 +206,17 @@ data class AppConfig(
                 cspMode = env("CSP_MODE"),
                 cspConnectExtra = envCsv("CSP_CONNECT_EXTRA"),
                 sentryDsn = env("SENTRY_DSN"),
-                sentryTracesSampleRate = envDouble("SENTRY_TRACES_SAMPLE_RATE", if (resolveEnvironmentName().equals("production", ignoreCase = true)) 0.2 else 1.0)
+                clientSentryDsn = env("TDAY_CLIENT_SENTRY_DSN"),
+                sentryTracesSampleRate = envDouble("SENTRY_TRACES_SAMPLE_RATE", defaultSentryTracesSampleRate(isProduction))
                     .coerceIn(0.0, 1.0),
                 backendVersion = env("TDAY_BACKEND_VERSION")
                     ?: env("TDAY_APP_VERSION")
                     ?: versionDefaults.version,
             )
         }
+
+        /** One request in ten in production; every request while developing, so a local run shows traces. */
+        fun defaultSentryTracesSampleRate(isProduction: Boolean): Double = if (isProduction) 0.1 else 1.0
 
         fun env(key: String, default: String = ""): String =
             System.getenv(key)?.trim()?.ifEmpty { null } ?: default

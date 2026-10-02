@@ -5,6 +5,8 @@ import com.ohmz.tday.config.DatabaseConfig
 import com.ohmz.tday.di.configModule
 import com.ohmz.tday.di.securityModule
 import com.ohmz.tday.di.serviceModule
+import com.ohmz.tday.observability.BackendSentry
+import com.ohmz.tday.observability.TelemetryGate
 import com.ohmz.tday.plugins.SentryRequestPlugin
 import com.ohmz.tday.plugins.configureCallLogging
 import com.ohmz.tday.plugins.configureCors
@@ -15,6 +17,7 @@ import com.ohmz.tday.plugins.configureSecurityHeaders
 import com.ohmz.tday.plugins.configureSerialization
 import com.ohmz.tday.plugins.configureStatusPages
 import com.ohmz.tday.security.FieldEncryption
+import com.ohmz.tday.services.InstanceSettingsService
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
@@ -22,7 +25,6 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
-import io.sentry.Sentry
 import kotlinx.coroutines.launch
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
@@ -34,32 +36,20 @@ private val logger = LoggerFactory.getLogger("com.ohmz.tday.Application")
 
 fun main() {
     val config = AppConfig.load()
+    val telemetryGate = TelemetryGate()
 
-    Sentry.init { options ->
-        options.dsn = config.sentryDsn.orEmpty()
-        options.environment = if (config.isProduction) "production" else "development"
-        options.release = "tday-backend@${config.backendVersion}"
-        options.isSendDefaultPii = false
-        options.serverName = "tday-backend"
-        options.tracesSampleRate = config.sentryTracesSampleRate
-        options.setBeforeSend { event, _ ->
-            event.user?.ipAddress = null
-            event.request?.url = event.request?.url?.let(com.ohmz.tday.observability.TdayObservability::sanitizePath)
-            event.request?.queryString = null
-            event
-        }
-    }
+    BackendSentry.init(config, telemetryGate)
 
     logger.info("Starting Tday backend on port ${config.port}")
     embeddedServer(Netty, port = config.port, host = "0.0.0.0") {
-        module(config)
+        module(config, telemetryGate)
     }.start(wait = true)
 }
 
-fun Application.module(config: AppConfig = AppConfig.load()) {
+fun Application.module(config: AppConfig = AppConfig.load(), telemetryGate: TelemetryGate = TelemetryGate()) {
     install(Koin) {
         slf4jLogger()
-        modules(configModule(config), securityModule, serviceModule)
+        modules(configModule(config, telemetryGate), securityModule, serviceModule)
     }
 
     val dbConfig by inject<DatabaseConfig>()
@@ -69,6 +59,9 @@ fun Application.module(config: AppConfig = AppConfig.load()) {
         logger.error("Database initialization failed during startup", e)
         throw e
     }
+
+    val instanceSettings by inject<InstanceSettingsService>()
+    instanceSettings.loadTelemetryGate()
 
     install(WebSockets) {
         pingPeriod = 15.seconds

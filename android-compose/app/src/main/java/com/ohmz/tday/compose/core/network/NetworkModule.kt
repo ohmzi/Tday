@@ -103,7 +103,10 @@ object NetworkModule {
                 // anything the system cannot vouch for, an exact pin the user confirmed once.
                 chain.proceed(updated)
             }
-            .addInterceptor(SentryOkHttpInterceptor())
+            // Breadcrumbs only, which TelemetryScrubber reduces to method, status and a route with
+            // no host. A failed request is not captured: a 5xx is the server's own report to make,
+            // and a 4xx, an offline phone or a timeout is noise that would not be a crash.
+            .addInterceptor(SentryOkHttpInterceptor(captureFailedRequests = false))
             .addInterceptor(logging)
             .build()
 

@@ -45,6 +45,9 @@ dependencies {
 
     implementation("io.sentry:sentry:8.59.0")
     implementation("io.sentry:sentry-logback:8.59.0")
+    // SentryContext gives each request its own scope. The Sentry Gradle plugin also installs it
+    // at build time, but a dependency the code compiles against should not hinge on that.
+    implementation("io.sentry:sentry-kotlin-extensions:8.59.0")
 
     implementation("io.insert-koin:koin-ktor:4.2.2")
     implementation("io.insert-koin:koin-logger-slf4j:4.2.2")

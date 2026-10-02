@@ -41,7 +41,7 @@ purposes:
 
 | File | Read by | Holds |
 |---|---|---|
-| `.env` (repo root) | Docker Compose, for `${VAR}` interpolation | `TDAY_HOST_BIND`, `TDAY_HOST_PORT`, `TZ`, `POSTGRES_USER/PASSWORD/DB`, `OLLAMA_MODEL`, `VITE_SENTRY_*` |
+| `.env` (repo root) | Docker Compose, for `${VAR}` interpolation | `TDAY_HOST_BIND`, `TDAY_HOST_PORT`, `TZ`, `POSTGRES_USER/PASSWORD/DB`, `OLLAMA_MODEL`, `VITE_SENTRY_DSN` |
 | `.env.docker` | injected into the backend container via `env_file` (`docker-compose.yaml:77-78`) | every backend setting: `AUTH_SECRET`, `DATABASE_URL`, `TDAY_ENV`, encryption keys, rate limits |
 
 Variables in `.env.docker` are **not** visible to Compose itself, and variables in `.env` are **not**
@@ -166,8 +166,9 @@ dependencies and documented in the source: `style-src` keeps `'unsafe-inline'` b
 /vaul inject runtime `<style>` elements, and blocking next-themes' inline anti-FOUC script costs a
 brief theme flash. There is no `report-uri`/`report-to` directive, so violations surface only in
 the browser console — nothing is collected server-side, in either mode. `CSP_CONNECT_EXTRA`
-**replaces** rather than appends — setting it drops the auto-derived Sentry ingest origin
-(`SecurityHeaders.kt:89-91`).
+**replaces** rather than appends — setting it drops the Sentry ingest origin derived from
+`SENTRY_DSN` (`SecurityHeaders.kt:87-98`). The browser DSN's origin (`TDAY_CLIENT_SENTRY_DSN`, baked
+into the published image) is always added on top, so web crash reports keep working either way.
 
 **`DATA_ENCRYPTION_KEY` + `REQUIRE_ENCRYPTION_AT_REST`** — field encryption at rest is **opt-in and
 off by default**, and running without it is a supported configuration, not a misconfiguration.
@@ -385,8 +386,11 @@ Notes that matter:
 - The backend and the SPA ship in the same image (`Dockerfile.backend:39-41`), so a deploy replaces
   both — and re-hashes every SPA chunk, which is why one deploy per release is the rule rather than
   a string of rebuilds. `VITE_SENTRY_DSN` is a **build arg**, not a runtime variable: it is inlined
-  by Vite during the build (`Dockerfile.backend:8-13`), so it can only be set by building the image
-  yourself. The CI-published image passes no build args at all, so its SPA carries an empty DSN.
+  by Vite during the build (`Dockerfile.backend:10-11`), so it can only be set by building the image
+  yourself. The CI-published image is built with the maintainer's browser DSN, which is inert until
+  a person opts in to crash reports; an image you build without the arg carries an empty DSN and
+  never asks. The server's own `SENTRY_DSN` is a runtime variable, and even with it set the server
+  sends nothing until an admin switches on Settings → Privacy → Server error reports.
 - If you use the AI profile, pull its images on upgrade too:
   `docker compose --profile ai pull ollama ollama-model-setup`.
 - After deploying, re-verify the externally observable posture:
@@ -444,8 +448,8 @@ console is the only place they appear). You do not need to rebuild the image to 
 `CSP_MODE=report-only` in `.env.docker` and `docker compose up -d tday-backend`. Violations are
 then reported but not blocked, and you can read exactly which directive is at fault. `CSP_MODE=off`
 removes the header entirely as a last resort. If the breakage is a blocked outbound call, add the
-origin to `CSP_CONNECT_EXTRA` — but remember it **replaces** the auto-derived Sentry origin, so
-include that too if you use Sentry.
+origin to `CSP_CONNECT_EXTRA` — but remember it **replaces** the Sentry origin derived from `SENTRY_DSN`
+(the browser DSN's origin is always kept), so include the backend's too if you use Sentry.
 
 **Rate limits collapse onto a single bucket behind a proxy.** If you front the backend with nginx,
 Traefik, Caddy or a NAS reverse proxy, it **must** set one of `cf-connecting-ip`,

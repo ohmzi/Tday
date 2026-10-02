@@ -8,6 +8,7 @@ import com.ohmz.tday.db.tables.Files
 import com.ohmz.tday.db.tables.FloaterListShares
 import com.ohmz.tday.db.tables.FloaterLists
 import com.ohmz.tday.db.tables.Floaters
+import com.ohmz.tday.db.tables.InstanceSettings
 import com.ohmz.tday.db.tables.ListShares
 import com.ohmz.tday.db.tables.Lists
 import com.ohmz.tday.db.tables.PushSubscriptions
@@ -50,7 +51,7 @@ object TestDatabase {
     private val tables: Array<Table> = arrayOf(
         Users, Accounts, Lists, FloaterLists, Todos, TodoInstances, CompletedTodos,
         CompletedFloaters, Floaters, Files, UserPreferences, UserSecurityQuestions,
-        ListShares, FloaterListShares, PushSubscriptions, UserApiKeys, CalendarFeedTokens,
+        ListShares, FloaterListShares, PushSubscriptions, UserApiKeys, CalendarFeedTokens, InstanceSettings,
     )
 
     /**

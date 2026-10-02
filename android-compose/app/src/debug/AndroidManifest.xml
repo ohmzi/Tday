@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!--
+            Debug builds only: `adb shell am broadcast` needs an exported receiver, which a release
+            build must never have. See TelemetryDebugReceiver for the three triggers.
+        -->
+        <receiver
+            android:name=".debug.TelemetryDebugReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.ohmz.tday.compose.debug.TELEMETRY_TRIGGER" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

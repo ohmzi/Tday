@@ -28,6 +28,10 @@ import {
   HAPTICS_STORAGE_KEY,
   SOUND_STORAGE_KEY,
 } from "@/lib/feedbackPreferences";
+import {
+  TELEMETRY_CONSENT_AT_STORAGE_KEY,
+  TELEMETRY_CONSENT_STORAGE_KEY,
+} from "@/lib/privacy/telemetryConsent";
 
 const AUTH_SESSION_RETRY_DELAY_MS = 15_000;
 
@@ -40,12 +44,18 @@ const AUTH_SESSION_RETRY_DELAY_MS = 15_000;
 // are the browser's accessibility settings. Somebody who turned the buzz off
 // because it hurts did not ask for it back when a token expired behind them, and
 // an expiry is not something they did.
+//
+// The crash-report answer is here because it is about this browser and not about the account:
+// wiping it on an expiry would put the consent card back in front of someone who already said no,
+// or quietly switch reports off for someone who said yes.
 const PRESERVED_STORAGE_KEYS = [
   RETURNING_BROWSER_STORAGE_KEY,
   APP_MODE_STORAGE_KEY,
   LOCAL_WORKSPACE_STORAGE_KEY,
   SOUND_STORAGE_KEY,
   HAPTICS_STORAGE_KEY,
+  TELEMETRY_CONSENT_STORAGE_KEY,
+  TELEMETRY_CONSENT_AT_STORAGE_KEY,
 ];
 
 export type AuthSessionState =

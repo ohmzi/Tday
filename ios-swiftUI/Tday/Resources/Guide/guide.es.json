@@ -1,5 +1,5 @@
 {
-  "currentVersion": "0.7.49",
+  "currentVersion": "0.8.0",
   "ui": {
     "title": "Cómo se usa y consejos",
     "subtitle": "Todo lo que T'Day puede hacer: lo evidente y lo oculto.",
@@ -1520,7 +1520,7 @@
         {
           "type": "PARAGRAPH",
           "texts": [
-            "El Modo local mantiene todo en tu dispositivo: sin inicio de sesión, sin servidor, sin subidas. Es una forma de primer nivel de usar T'Day de manera privada, y tus datos locales nunca se envían a ningún sitio por sí solos. En un navegador vive en el almacenamiento de ese navegador, así que borrar las cookies y los datos del sitio borra también el espacio de trabajo: expórtalo antes si quieres conservarlo."
+            "El Modo local mantiene todo en tu dispositivo: sin inicio de sesión, sin servidor, sin subidas. Es una forma de primer nivel de usar T'Day de manera privada, y tus datos locales nunca se envían a ningún sitio por sí solos. En un navegador vive en el almacenamiento de ese navegador, así que borrar las cookies y los datos del sitio borra también el espacio de trabajo: expórtalo antes si quieres conservarlo. Si activas los informes de fallos, solo se envía un breve informe técnico cuando algo falla, nunca tus tareas ni tus listas."
           ]
         },
         {
@@ -1532,7 +1532,7 @@
       ],
       "searchTitle": "modo local",
       "searchKeywords": "modo local, sin conexion, privado, sin cuenta, sin servidor, en el dispositivo",
-      "searchBody": "usa t'day totalmente sin conexion, sin servidor ni cuenta. el modo local mantiene todo en tu dispositivo: sin inicio de sesion, sin servidor, sin subidas. es una forma de primer nivel de usar t'day de manera privada, y tus datos locales nunca se envian a ningun sitio por si solos. en un navegador vive en el almacenamiento de ese navegador, asi que borrar las cookies y los datos del sitio borra tambien el espacio de trabajo: exportalo antes si quieres conservarlo. las funciones exclusivas del servidor se muestran aqui con una insignia de «modo servidor» para que sepas que cambia si inicias sesion."
+      "searchBody": "usa t'day totalmente sin conexion, sin servidor ni cuenta. el modo local mantiene todo en tu dispositivo: sin inicio de sesion, sin servidor, sin subidas. es una forma de primer nivel de usar t'day de manera privada, y tus datos locales nunca se envian a ningun sitio por si solos. en un navegador vive en el almacenamiento de ese navegador, asi que borrar las cookies y los datos del sitio borra tambien el espacio de trabajo: exportalo antes si quieres conservarlo. si activas los informes de fallos, solo se envia un breve informe tecnico cuando algo falla, nunca tus tareas ni tus listas. las funciones exclusivas del servidor se muestran aqui con una insignia de «modo servidor» para que sepas que cambia si inicias sesion."
     },
     {
       "id": "server-mode",
@@ -1659,6 +1659,75 @@
       "searchTitle": "pasa de este dispositivo a un servidor",
       "searchKeywords": "migracion, local a servidor, mover datos, cambiar de modo, subir, iniciar sesion, transferir",
       "searchBody": "lleva contigo tus tareas del dispositivo al cambiar al modo servidor. ¿empezaste en modo local y luego montaste un servidor? nunca se sube nada por su cuenta. para trasladar tus datos: exportalos primero desde ajustes, inicia sesion en tu servidor e importa alli el archivo. tus tareas, listas e historial se trasladan en un paso deliberado — tu eliges el momento, y tus datos del dispositivo quedan intactos hasta entonces. tras importar, conserva el archivo exportado hasta confirmar que llego todo — asi tambien sirve de respaldo."
+    },
+    {
+      "id": "crash-reports",
+      "section": "MODES_AND_SYNC",
+      "sectionOrder": 6,
+      "icon": "activity",
+      "platforms": [
+        "WEB",
+        "ANDROID",
+        "IOS"
+      ],
+      "badge": null,
+      "serverOnly": false,
+      "sinceVersion": "0.8.0",
+      "deepLink": null,
+      "helpAnchors": [
+        "settings-privacy"
+      ],
+      "title": "Informes de fallos y problemas",
+      "summary": "Opcional y desactivado por defecto. Solo se envían cuando algo falla.",
+      "body": [
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Los informes de fallos y problemas son opcionales y están desactivados por defecto. Si los activas, T'Day envía un breve informe técnico solo en el momento en que algo falla: un cierre inesperado, un bloqueo, un error inesperado o quedarse sin memoria. Funciona como Crashlytics: existe para corregir errores, no para medir cómo usas la app. No hay analítica de uso, ni seguimiento de sesiones, ni monitorización del rendimiento en tu dispositivo mientras todo funciona con normalidad."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Un informe contiene la versión de la app, el modelo de tu dispositivo y la versión del sistema operativo (o el navegador y su versión), el error y el lugar del código donde ocurrió, unos pocos pasos etiquetados que lo preceden, nombres de pantallas o rutas de la API sin ningún ID, códigos de estado y, en el móvil, condiciones aproximadas del dispositivo, como la memoria libre, el nivel de batería y si tenías conexión. También incluye tu desfase horario (por ejemplo, UTC+2) y tu idioma, porque las fechas son esenciales en un planificador de tareas."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "El informe nunca contiene: tu nombre, nombre de usuario, correo electrónico o cualquier dato de la cuenta; tu dirección IP o ubicación; la dirección de tu servidor; los títulos y contenidos de tareas, listas o notas; el contenido de tu base de datos; contraseñas, cookies o tokens; capturas de pantalla o grabaciones. Antes de enviarse, en tu dispositivo se eliminan de los mensajes de error las direcciones, los identificadores y el texto entrecomillado, en la medida de lo posible. Los informes no llevan ID de usuario, así que no se pueden vincular contigo ni eliminar persona por persona."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Los informes solo se envían después de que lo aceptes, y únicamente cuando ocurre un fallo. Si algo falla mientras el ajuste está desactivado, no se guarda ni se pone en cola nada, y activarlo más tarde no envía fallos anteriores. Lo que cuenta como fallo depende de la plataforma: Android informa de cierres inesperados, bloqueos y cierres por quedarse sin memoria; iOS informa de cierres inesperados, bloqueos y de que el sistema cierre la app por usar demasiada memoria; la app web informa únicamente de errores inesperados. T'Day no detecta fugas de memoria."
+          ]
+        },
+        {
+          "type": "PARAGRAPH",
+          "texts": [
+            "Los informes llegan a quien mantiene T'Day a través de Sentry, un servicio de informes de fallos. Se conservan 30 días y se usan solo para corregir errores; nunca se venden ni se comparten con fines publicitarios. Se envían directamente a Sentry, no a través de tu servidor. Sentry ve la dirección de red de cualquier conexión, como cualquier servicio en línea, pero está configurado para no almacenarla, y la app web también le indica a Sentry de qué sitio web procede el informe. Si usas tu propio servidor, este puede enviar por separado sus propios informes de errores, junto con los tiempos de una pequeña muestra de solicitudes, al Sentry de su operador cuando el operador lo active. Eso nunca incluye tus tareas. Las compilaciones sin un punto de envío de informes, como las que compilas tú mismo, no muestran este ajuste."
+          ]
+        },
+        {
+          "type": "STEPS",
+          "texts": [
+            "Abre Ajustes.",
+            "Abre Privacidad y desactiva «Informes de fallos y problemas».",
+            "Los informes se detienen de inmediato y se elimina todo lo que estuviera esperando para enviarse."
+          ]
+        },
+        {
+          "type": "TIP",
+          "texts": [
+            "Elegir «Ahora no» no cuesta nada. Puedes activarlo cuando quieras en Ajustes → Privacidad. Detalles técnicos: docs/TELEMETRY.md en el repositorio de T'Day."
+          ]
+        }
+      ],
+      "searchTitle": "informes de fallos y problemas",
+      "searchKeywords": "fallo, cierre inesperado, error, informe, privacidad, diagnostico, telemetria, bloqueo, memoria, analitica, crash, sentry, anr, hang, telemetry",
+      "searchBody": "opcional y desactivado por defecto. solo se envian cuando algo falla. los informes de fallos y problemas son opcionales y estan desactivados por defecto. si los activas, t'day envia un breve informe tecnico solo en el momento en que algo falla: un cierre inesperado, un bloqueo, un error inesperado o quedarse sin memoria. funciona como crashlytics: existe para corregir errores, no para medir como usas la app. no hay analitica de uso, ni seguimiento de sesiones, ni monitorizacion del rendimiento en tu dispositivo mientras todo funciona con normalidad. un informe contiene la version de la app, el modelo de tu dispositivo y la version del sistema operativo (o el navegador y su version), el error y el lugar del codigo donde ocurrio, unos pocos pasos etiquetados que lo preceden, nombres de pantallas o rutas de la api sin ningun id, codigos de estado y, en el movil, condiciones aproximadas del dispositivo, como la memoria libre, el nivel de bateria y si tenias conexion. tambien incluye tu desfase horario (por ejemplo, utc+2) y tu idioma, porque las fechas son esenciales en un planificador de tareas. el informe nunca contiene: tu nombre, nombre de usuario, correo electronico o cualquier dato de la cuenta; tu direccion ip o ubicacion; la direccion de tu servidor; los titulos y contenidos de tareas, listas o notas; el contenido de tu base de datos; contrasenas, cookies o tokens; capturas de pantalla o grabaciones. antes de enviarse, en tu dispositivo se eliminan de los mensajes de error las direcciones, los identificadores y el texto entrecomillado, en la medida de lo posible. los informes no llevan id de usuario, asi que no se pueden vincular contigo ni eliminar persona por persona. los informes solo se envian despues de que lo aceptes, y unicamente cuando ocurre un fallo. si algo falla mientras el ajuste esta desactivado, no se guarda ni se pone en cola nada, y activarlo mas tarde no envia fallos anteriores. lo que cuenta como fallo depende de la plataforma: android informa de cierres inesperados, bloqueos y cierres por quedarse sin memoria; ios informa de cierres inesperados, bloqueos y de que el sistema cierre la app por usar demasiada memoria; la app web informa unicamente de errores inesperados. t'day no detecta fugas de memoria. los informes llegan a quien mantiene t'day a traves de sentry, un servicio de informes de fallos. se conservan 30 dias y se usan solo para corregir errores; nunca se venden ni se comparten con fines publicitarios. se envian directamente a sentry, no a traves de tu servidor. sentry ve la direccion de red de cualquier conexion, como cualquier servicio en linea, pero esta configurado para no almacenarla, y la app web tambien le indica a sentry de que sitio web procede el informe. si usas tu propio servidor, este puede enviar por separado sus propios informes de errores, junto con los tiempos de una pequena muestra de solicitudes, al sentry de su operador cuando el operador lo active. eso nunca incluye tus tareas. las compilaciones sin un punto de envio de informes, como las que compilas tu mismo, no muestran este ajuste. abre ajustes. abre privacidad y desactiva «informes de fallos y problemas». los informes se detienen de inmediato y se elimina todo lo que estuviera esperando para enviarse. elegir «ahora no» no cuesta nada. puedes activarlo cuando quieras en ajustes → privacidad. detalles tecnicos: docs/telemetry.md en el repositorio de t'day."
     },
     {
       "id": "ai-summary",

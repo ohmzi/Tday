@@ -93,6 +93,7 @@ Tday/
 │           ├── di/            # Koin dependency injection
 │           ├── domain/        # Domain types and validation
 │           ├── models/        # Request/response DTOs
+│           ├── observability/ # Sentry init + gate, scrubber, telemetry helpers
 │           ├── plugins/       # Ktor plugins (routing, auth, headers)
 │           ├── routes/        # API route handlers
 │           ├── security/      # Auth, encryption, throttling
@@ -174,7 +175,7 @@ Exposed ORM → PostgreSQL (via HikariCP)
 
 ```
 tday-backend/src/main/kotlin/com/ohmz/tday/
-├── Application.kt          # main(), module(): wires all plugins and DI
+├── Application.kt          # main(), module(): wires all plugins and DI; starts the gated Sentry client
 ├── config/
 │   ├── AppConfig.kt        # Loads all env vars (and optional _FILE secret paths)
 │   └── DatabaseConfig.kt   # HikariCP pool, Flyway migrate, Exposed connect
@@ -183,6 +184,7 @@ tday-backend/src/main/kotlin/com/ohmz/tday/
 │   ├── tables/             # Exposed Table definitions (Users, Todos, etc.)
 │   └── util/               # Database utility helpers
 ├── di/AppModule.kt         # Koin modules: config, security, services
+├── observability/          # BackendSentry (the only Sentry.init), TelemetryGate, GatedTransport, scrubber, TdayObservability helper
 ├── domain/
 │   ├── AppError.kt         # Sealed error hierarchy → HTTP status codes
 │   ├── AuthContext.kt      # withAuth { } helper for authenticated routes
@@ -198,13 +200,13 @@ tday-backend/src/main/kotlin/com/ohmz/tday/
 │   ├── RateLimiting.kt     # App-layer request throttling
 │   ├── Security.kt         # JWE bearer + cookie auth, pipeline intercept
 │   ├── SecurityHeaders.kt  # CSP, HSTS, X-Frame-Options, etc.
-│   ├── SentryPlugin.kt     # Sentry JVM configuration
+│   ├── SentryPlugin.kt     # Per-request Sentry scope, request transactions, client-build tags
 │   ├── Serialization.kt    # kotlinx.serialization JSON config
 │   └── StatusPages.kt      # AppError → JSON ApiError mapping
 ├── routes/                 # HTTP route handlers by domain
 │   └── auth/               # Auth-specific routes
 ├── security/               # JWT, passwords, throttling, encryption
-└── services/               # Business logic (todo, list, user, admin, etc.)
+└── services/               # Business logic (todo, list, user, admin, instance settings, etc.)
 ```
 
 ### Installed Ktor Plugins
@@ -253,7 +255,7 @@ The primary error path uses the `AppError` sealed interface with `Either<AppErro
 
 ```
 tday-web/src/
-├── main.tsx              # React DOM entry point
+├── main.tsx              # React DOM entry point; starts Sentry only if this browser opted in (initSentryIfConsented)
 ├── App.tsx               # Provider tree: Theme → Query → Auth → Tooltip → ErrorBoundary → Router + Toaster
 ├── router.tsx            # Route definitions (public, protected, calendar layouts)
 ├── globals.css           # Tailwind @theme tokens, CSS variables
@@ -261,7 +263,7 @@ tday-web/src/
 ├── components/           # Shared UI (ui/* primitives, native app shell, auth, todo pieces)
 ├── features/             # Feature modules (calendar, completed, scheduledTaskHome, list, release, todayTodos, user)
 ├── hooks/                # Shared React hooks
-├── lib/                  # Utilities (api-client, navigation, cache, performance, security, dates, todo)
+├── lib/                  # Utilities (api-client, navigation, cache, performance, security, dates, todo, observability, privacy)
 ├── pages/                # Route-level screens and layouts
 ├── providers/            # React context providers (Auth, Theme, Query, Menu, etc.)
 └── types/                # TypeScript type definitions
@@ -378,6 +380,7 @@ com.ohmz.tday.compose/
 │   ├── navigation/    # AppRoute sealed class
 │   ├── network/       # Hilt NetworkModule, TdayApiService, EncryptedCookieStore
 │   ├── notification/  # Alarms, WorkManager, receivers
+│   ├── observability/ # Crash reporting: TelemetryBootstrap (the only SentryAndroid.init), consent store, options, scrubber, TdayTelemetry
 │   ├── security/      # Probe/decryption helpers
 │   └── ui/            # Shared non-feature app UI helpers
 ├── feature/
@@ -390,6 +393,7 @@ com.ohmz.tday.compose/
 │   ├── car/           # Internal Today/Floater car-mode surface
 │   ├── settings/      # SettingsScreen
 │   ├── release/       # In-app update and latest release
+│   ├── telemetry/     # Crash-reports consent card and its ViewModel
 │   ├── widget/        # Today/Floater/List widgets (RemoteViews) and refresh coordinator
 │   └── onboarding/    # OnboardingWizardOverlay
 └── ui/
@@ -419,6 +423,7 @@ ios-swiftUI/Tday/
 │   ├── Completed/    # Completion history
 │   ├── Settings/     # User settings
 │   ├── Auth/         # Login/register
+│   ├── Telemetry/    # Crash-reports consent card
 │   └── Onboarding/   # First-launch flow
 ├── Core/
 │   ├── Data/         # AppContainer, repositories, SwiftData cache, sync
@@ -428,6 +433,7 @@ ios-swiftUI/Tday/
 │   ├── Network/      # TdayAPIService, RealtimeClient (URLSession + cookies)
 │   ├── Notification/ # Deep links and reminders
 │   ├── Security/     # Probe/decryption helpers
+│   ├── Telemetry/    # Crash reporting: consent store and model, lifecycle (grant/revoke/purge), scrubber, slow-operation helper
 │   ├── UI/           # Shared app UI helpers
 │   └── Widget/       # TodayTasks snapshot store
 ├── UI/
@@ -436,7 +442,58 @@ ios-swiftUI/Tday/
 └── AppRootView.swift # NavigationStack, root feed state, overlays, deep links
 ```
 
-The WidgetKit extension lives beside the app target at `ios-swiftUI/TdayWidget/` and is wired as the `TdayWidget` app-extension target in both `project.yml` and the Xcode project. It shares snapshots with the app through the App Group suite `group.com.ohmz.tday`. The CarPlay surface lives in the app target under `ios-swiftUI/Tday/Feature/CarPlay/` and uses system templates plus App Intents; real distribution is gated on Apple granting the CarPlay entitlement. iOS tests live in `ios-swiftUI/Tests/`. Sentry Cocoa is the only notable third-party runtime dependency; core app behavior uses native frameworks.
+The WidgetKit extension lives beside the app target at `ios-swiftUI/TdayWidget/` and is wired as the `TdayWidget` app-extension target in both `project.yml` and the Xcode project. It shares snapshots with the app through the App Group suite `group.com.ohmz.tday`. The CarPlay surface lives in the app target under `ios-swiftUI/Tday/Feature/CarPlay/` and uses system templates plus App Intents; real distribution is gated on Apple granting the CarPlay entitlement. iOS tests live in `ios-swiftUI/Tests/`. Sentry Cocoa is the only notable third-party runtime dependency, and it starts only for a person who opted in to crash reports (see [Crash Reporting](#crash-reporting)); core app behavior uses native frameworks.
+
+## Crash Reporting
+
+Crash reporting is opt-in and failures-only on the three clients, and operator-gated on the backend.
+[`TELEMETRY.md`](TELEMETRY.md) is the contract (what is and is not collected); this section is the
+shape of the code. The decision is recorded in
+[ADR 009](adr/009-opt-in-failure-only-crash-reporting.md).
+
+### Client Data Flow
+
+```
+Consent card / Settings → Privacy switch
+    │  one writer per platform: consent store (per device; unanswered | granted | denied)
+    ▼
+Consent-gated initializer (the only SDK init call in the app)
+    ├── no DSN in the build  → never starts, no card, no row
+    ├── not granted          → never starts, purges what the SDK left on disk
+    └── granted              → starts with a failures-only option set
+    │
+    ▼
+Sentry SDK  → scrubber (beforeSend / beforeBreadcrumb: allow-list, redaction)
+            → in-memory gate + timestamp guard (drops anything older than the grant)
+            → transport → the maintainer's Sentry (direct, not through the user's server)
+```
+
+| Platform | Consent store | Initializer | Other pieces |
+|----------|---------------|-------------|--------------|
+| Web | `lib/privacy/telemetryConsent.ts` (`localStorage`, `useSyncExternalStore` hook) | `lib/observability/sentryInit.ts`, called from `main.tsx` before React renders | `webScrub.ts`, `slowOperation.ts`, `CrashReportsConsentGate` mounted in `AppLayout` |
+| Android | `core/observability/TelemetryConsentStore.kt` (plain `SharedPreferences`) | `TelemetryBootstrap`, started first in `TdayApplication.onCreate` so every process is covered | `TelemetryOptions`, `TelemetryScrubber`, `GatedTransportFactory`, `TelemetryConsentManager` (Hilt singleton), `TelemetryConsentGate` in `ScheduledTaskHomeRoute` |
+| iOS | `Core/Telemetry/TelemetryConsentStore.swift` (`UserDefaults`) | `SentryConfiguration.start()` from `TdayApp.init`, before `AppContainer` exists | `TelemetryConsentModel` (owned by `AppContainer`), `TelemetryLifecycle`, `TelemetryScrubber`, `TelemetryConsentCard` overlay in `AppRootView` |
+
+The consent store has to be readable before the dependency graph exists, because the decision to
+start the SDK is made in `main.tsx`, `Application.onCreate`, and `TdayApp.init`. That is why none of
+the stores is the Keychain, `EncryptedSharedPreferences`, or an app-level service.
+
+### Backend
+
+The SDK starts once at process start (`Application.kt` to `BackendSentry.init`) and is never closed or
+re-initialised. An in-memory `TelemetryGate`, loaded from the `instance_settings` table after
+migrations and updated by `PATCH /api/admin/telemetry`, is checked at every exit: the transport
+wrapper, `beforeSend`, `beforeSendTransaction`, `beforeBreadcrumb`, and `tracesSampler`. The admin
+route is `AdminRoutes.kt` to `InstanceSettingsService`. Web is the only client of that route. With the
+toggle on, the backend also sends a sample of requests (default `0.1` in production, none for `/health`,
+`/api/mobile/probe`, `/ws`, `/calendar/*`) as `http.server` transactions; the clients send no traces.
+
+### Delivery
+
+The DSNs are public build-time constants injected by CI (`release.yml`, `ios-testflight.yml`);
+`SENTRY_AUTH_TOKEN` uploads the symbolication artifacts. The web CSP allows the browser's ingest
+origin from `TDAY_CLIENT_SENTRY_DSN`. See [DEPLOYMENT.md](DEPLOYMENT.md#crash-reporting-sentry) and
+[SENTRY_RUNBOOK.md](SENTRY_RUNBOOK.md).
 
 ## Database Design
 

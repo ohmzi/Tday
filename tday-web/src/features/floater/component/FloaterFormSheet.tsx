@@ -1,3 +1,4 @@
+import { TestCrashButton } from "@/components/TestCrashButton"; // TEST-CRASH
 import { useEffect, useMemo, useState } from "react";
 import { Flag, List as ListIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -190,6 +191,9 @@ export default function FloaterFormSheet({
             placeholder={appDict("notes")}
           />
         </SheetTitleNotesCard>
+
+        {/* TEST-CRASH */}
+        {!isEditing && <TestCrashButton id="TC-NEW-TASK" />}
 
         <SheetSectionTitle>{appDict("details")}</SheetSectionTitle>
         <SheetCard>

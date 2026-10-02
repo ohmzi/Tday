@@ -4,6 +4,7 @@ import com.ohmz.tday.config.AppConfig
 import com.ohmz.tday.mcp.McpToolDispatcher
 import com.ohmz.tday.mcp.TdayMcpService
 import com.ohmz.tday.config.DatabaseConfig
+import com.ohmz.tday.observability.TelemetryGate
 import com.ohmz.tday.security.AbuseGuard
 import com.ohmz.tday.security.AbuseGuardImpl
 import com.ohmz.tday.security.AuthThrottle
@@ -37,6 +38,8 @@ import com.ohmz.tday.services.CompletedTodoService
 import com.ohmz.tday.services.CompletedTodoServiceImpl
 import com.ohmz.tday.services.ExportService
 import com.ohmz.tday.services.ExportServiceImpl
+import com.ohmz.tday.services.InstanceSettingsService
+import com.ohmz.tday.services.InstanceSettingsServiceImpl
 import com.ohmz.tday.services.IntegrationContextService
 import com.ohmz.tday.services.IntegrationContextServiceImpl
 import com.ohmz.tday.services.FloaterListService
@@ -77,8 +80,9 @@ import com.ohmz.tday.services.UserService
 import com.ohmz.tday.services.UserServiceImpl
 import org.koin.dsl.module
 
-fun configModule(config: AppConfig) = module {
+fun configModule(config: AppConfig, telemetryGate: TelemetryGate) = module {
     single { config }
+    single { telemetryGate }
     single { DatabaseConfig(get()) }
 }
 
@@ -119,6 +123,7 @@ val serviceModule = module {
     single<TodoNlpService> { TodoNlpServiceImpl() }
     single<RealtimeService> { RealtimeServiceImpl() }
     single<AdminService> { AdminServiceImpl(get(), get()) }
+    single<InstanceSettingsService> { InstanceSettingsServiceImpl(get(), get(), get()) }
     single<PushNotificationService> { PushNotificationServiceImpl(get()) }
     single<SecurityAlertService> { SecurityAlertServiceImpl(get(), get()) }
     single { ReminderPushScheduler(get(), get()) }
