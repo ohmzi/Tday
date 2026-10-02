@@ -64,7 +64,41 @@ const manifestFiles = [
   "ios-swiftUI/TdayApp.xcodeproj/project.pbxproj",
 ].filter(exists);
 
-for (const file of manifestFiles) {
+// Exact npm package names and whole scopes. The lockfile lists every transitive package, so a
+// substring match flags `es-set-tostringtag` for "gtag" and `workbox-google-analytics` for
+// "google-analytics". Kept in step with tests/guardrails/sentry-privacy.test.ts.
+const analyticsPackageNames = new Set([
+  "analytics", "analytics-node", "ga-gtag", "gtag", "gtag.js", "google-analytics",
+  "universal-analytics", "react-ga", "react-ga4", "react-gtm-module", "vue-gtag",
+  "mixpanel", "mixpanel-browser", "amplitude-js", "posthog-js", "posthog-node",
+  "logrocket", "dynatrace", "firebase", "bugsnag-js", "rollbar", "raygun4js", "trackjs",
+  "@types/gtag.js", "@types/google.analytics",
+]);
+const analyticsPackageScopes = [
+  "@analytics/", "@amplitude/", "@bugsnag/", "@datadog/", "@dynatrace/", "@dynatrace-sdk/",
+  "@firebase/", "@fullstory/", "@google-analytics/", "@highlight-run/", "@honeybadger-io/",
+  "@mixpanel/", "@posthog/", "@rollbar/", "@segment/",
+];
+
+function isAnalyticsPackage(name) {
+  return analyticsPackageNames.has(name) || analyticsPackageScopes.some((scope) => name.startsWith(scope));
+}
+
+const lockfile = JSON.parse(read("tday-web/package-lock.json"));
+const lockedAnalytics = Object.keys(lockfile.packages ?? {})
+  .filter((key) => key !== "")
+  .map((key) => key.slice(key.lastIndexOf("node_modules/") + "node_modules/".length))
+  .filter(isAnalyticsPackage);
+assert(
+  lockedAnalytics.length === 0,
+  `tday-web/package-lock.json must not add product analytics SDKs (${lockedAnalytics.join(", ")})`,
+);
+assert(
+  isAnalyticsPackage("@analytics/core") && !isAnalyticsPackage("es-set-tostringtag"),
+  "the analytics package matcher must match whole package names only",
+);
+
+for (const file of manifestFiles.filter((f) => !f.endsWith("package-lock.json"))) {
   notContains(
     file,
     /google-analytics|gtag|@analytics|mixpanel|amplitude|dynatrace|dtrum/i,
@@ -72,41 +106,27 @@ for (const file of manifestFiles) {
   );
 }
 
-contains(
-  "tday-web/src/main.tsx",
-  /beforeBreadcrumb:\s*scrubSentryBreadcrumb/,
-  "web Sentry must scrub automatic breadcrumbs",
+const webInit = "tday-web/src/lib/observability/sentryInit.ts";
+const webScrub = "tday-web/src/lib/observability/webScrub.ts";
+const consentStore = "tday-web/src/lib/privacy/telemetryConsent.ts";
+
+assert(
+  walk("tday-web/src").filter(
+    (f) => /\.(ts|tsx)$/.test(f) && /\bSentry\.init\(/.test(read(f)),
+  ).join() === path.join("tday-web/src/lib/observability/sentryInit.ts"),
+  "web Sentry.init( must appear exactly once under tday-web/src, in sentryInit.ts",
 );
-contains(
-  "tday-web/src/main.tsx",
-  /beforeSendTransaction:\s*scrubSentryTransaction/,
-  "web Sentry must scrub transaction names",
-);
-contains(
-  "tday-web/src/main.tsx",
-  /integration\.name\s*!==\s*"Console"/,
-  "web Sentry must disable automatic console breadcrumbs",
-);
-contains(
-  "tday-web/src/main.tsx",
-  /dom:\s*false/,
-  "web Sentry must disable automatic DOM breadcrumbs",
-);
-contains(
-  "tday-web/src/main.tsx",
-  /tracePropagationTargets:\s*\[\s*\/\^\\\/api/,
-  "web trace propagation must stay restricted to T'Day API routes",
-);
-contains(
-  "tday-web/src/main.tsx",
-  /replaysSessionSampleRate:\s*0/,
-  "web session replay must stay disabled",
-);
-contains(
-  "tday-web/src/main.tsx",
-  /replaysOnErrorSampleRate:\s*0/,
-  "web error replay must stay disabled",
-);
+contains(consentStore, /VITE_SENTRY_DSN/, "web must read its DSN from VITE_SENTRY_DSN, in the consent store");
+contains(webInit, /beforeBreadcrumb:/, "web Sentry must scrub automatic breadcrumbs");
+contains(webScrub, /scrubSentryBreadcrumb/, "web breadcrumb scrubbing must reuse the shared scrubber");
+contains(webInit, /defaultIntegrations:\s*false/, "web Sentry must install only its named integrations");
+contains(webInit, /dom:\s*false/, "web Sentry must disable automatic DOM breadcrumbs");
+notContains(webInit, /\bconsoleIntegration\b|\bbrowserTracingIntegration\b|\breplayIntegration\b/, "web Sentry must not install console, tracing or replay integrations");
+contains(webInit, /tracesSampleRate:\s*0\b/, "web Sentry must sample no traces");
+contains(webInit, /tracePropagationTargets:\s*\[\s*\]/, "web trace propagation must stay off");
+contains(webInit, /sendClientReports:\s*false/, "web Sentry must send no client reports");
+contains(webInit, /replaysSessionSampleRate:\s*0/, "web session replay must stay disabled");
+contains(webInit, /replaysOnErrorSampleRate:\s*0/, "web error replay must stay disabled");
 
 contains(
   "tday-web/src/lib/observability/sentry.ts",
@@ -136,12 +156,12 @@ contains(
 );
 
 contains(
-  "tday-backend/src/main/kotlin/com/ohmz/tday/Application.kt",
+  "tday-backend/src/main/kotlin/com/ohmz/tday/observability/BackendSentry.kt",
   /isSendDefaultPii\s*=\s*false/,
   "backend Sentry must keep sendDefaultPii disabled",
 );
 contains(
-  "android-compose/app/src/main/java/com/ohmz/tday/compose/TdayApplication.kt",
+  "android-compose/app/src/main/java/com/ohmz/tday/compose/core/observability/TelemetryOptions.kt",
   /isSendDefaultPii\s*=\s*false/,
   "Android Sentry must keep sendDefaultPii disabled",
 );
