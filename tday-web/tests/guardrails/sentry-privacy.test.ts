@@ -965,7 +965,7 @@ describe("sentry exception capture coverage", () => {
     expect(between(init, "function reportRootError", "console.error(error)")).toContain(
       "if (isTelemetryGranted()) captureReactError(error, errorInfo)",
     );
-    expect(readSource(webMain)).toContain("createRoot(document.getElementById(\"root\")!, reactRootErrorHandlers)");
+    expect(readSource(webMain)).toContain("createRoot(rootElement, reactRootErrorHandlers)");
   });
 
   it("web API client adds Sentry breadcrumbs on errors", () => {

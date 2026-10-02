@@ -195,7 +195,7 @@ export function scrubWebEvent(event: ErrorEvent, context: WebEventContext): Erro
   if (event.breadcrumbs) {
     event.breadcrumbs = event.breadcrumbs
       .map(scrubWebBreadcrumb)
-      .filter((breadcrumb): breadcrumb is Breadcrumb => breadcrumb != null);
+      .filter((breadcrumb): breadcrumb is Breadcrumb => breadcrumb !== null);
   }
 
   event.tags = {

@@ -31,6 +31,12 @@ object TelemetryScrubber {
     /** A thread name a person could not have put an address in: short, plain words and separators. */
     private val SAFE_THREAD_NAME = Regex("^[A-Za-z0-9 _.:-]{1,48}$")
 
+    private const val ROUTE_KEY = "route"
+
+    /** A rule that keeps the text before the match (group 1) and hides what follows it. */
+    private const val KEEP_PREFIX_REDACTED = "$1[redacted]"
+    private const val KEEP_PREFIX_HOST = "$1[host]"
+
     private val ALLOWED_CONTEXTS = setOf("app", "device", "os", "runtime", "trace", "art")
 
     /** `http` and `navigation` are reduced to structure below; the rest are structural already. */
@@ -43,7 +49,7 @@ object TelemetryScrubber {
         "network.event",
     )
 
-    private val HTTP_BREADCRUMB_KEYS = setOf("method", "status_code", "route")
+    private val HTTP_BREADCRUMB_KEYS = setOf("method", "status_code", ROUTE_KEY)
     private val NAVIGATION_BREADCRUMB_KEYS = setOf("from", "to")
 
     // Domains a self-hoster is likely to serve T'Day from. A host with no dot ("nas") is caught by
@@ -66,20 +72,20 @@ object TelemetryScrubber {
         // Text a library quotes back from what it was parsing: kotlinx.serialization's "JSON input:"
         // (the whole payload, or a window around the failure), java.time's "Text '...' could not be
         // parsed" and the number parsers' "For input string:". That is the user's own words.
-        Regex("(JSON input:\\s*)[\\s\\S]*") to "$1[redacted]",
+        Regex("(JSON input:\\s*)[\\s\\S]*") to KEEP_PREFIX_REDACTED,
         Regex("(Text\\s+)'[\\s\\S]*?'(?=\\s+could not be parsed)") to "$1'[redacted]'",
-        Regex("(For input string:\\s*)[^\\n]*") to "$1[redacted]",
+        Regex("(For input string:\\s*)[^\\n]*") to KEEP_PREFIX_REDACTED,
         Regex("jdbc:\\S+", RegexOption.IGNORE_CASE) to "[url]",
         Regex("\\b[a-z][a-z0-9+.-]*://[^\\s\"'<>)\\]]+", RegexOption.IGNORE_CASE) to "[url]",
         Regex("Key \\([^)]*\\)=\\([^)]*\\)") to "Key ([redacted])=([redacted])",
         Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+") to "[email]",
         Regex("sha(?:1|256)/[A-Za-z0-9+/=]{6,}", RegexOption.IGNORE_CASE) to "[pin]",
-        Regex("(DN:\\s*)[^\\n]*", RegexOption.IGNORE_CASE) to "$1[redacted]",
-        Regex("(subjectAltNames:\\s*)\\[[^\\]]*]", RegexOption.IGNORE_CASE) to "$1[host]",
+        Regex("(DN:\\s*)[^\\n]*", RegexOption.IGNORE_CASE) to KEEP_PREFIX_REDACTED,
+        Regex("(subjectAltNames:\\s*)\\[[^\\]]*]", RegexOption.IGNORE_CASE) to KEEP_PREFIX_HOST,
         Regex("(unable to resolve host\\s+)\"[^\"]*\"", RegexOption.IGNORE_CASE) to "$1\"[host]\"",
-        Regex("(UnknownHostException:\\s*)\\S+") to "$1[host]",
-        Regex("(failed to connect to\\s+)\\S+", RegexOption.IGNORE_CASE) to "$1[host]",
-        Regex("(hostname\\s+)\\S+(?=\\s+not verified)", RegexOption.IGNORE_CASE) to "$1[host]",
+        Regex("(UnknownHostException:\\s*)\\S+") to KEEP_PREFIX_HOST,
+        Regex("(failed to connect to\\s+)\\S+", RegexOption.IGNORE_CASE) to KEEP_PREFIX_HOST,
+        Regex("(hostname\\s+)\\S+(?=\\s+not verified)", RegexOption.IGNORE_CASE) to KEEP_PREFIX_HOST,
         Regex(
             "(?<![\\w:.])(?:(?:$HEX{1,4}:){7}$HEX{1,4}|" +
                 "(?:$HEX{1,4}:){0,6}$HEX{0,4}::(?:$HEX{1,4}:){0,6}$HEX{0,4})(?![\\w:])",
@@ -130,14 +136,14 @@ object TelemetryScrubber {
 
         event.exceptions?.forEach { exception ->
             exception.value = exception.value?.let(::scrubText)
-            scrubStackTrace(exception.stacktrace)
+            exception.stacktrace?.let(::scrubStackTrace)
         }
         // An ANR is built from the system's thread dump, so it brings every thread and every loaded
         // library along. OkHttp names its threads after the server it is talking to, and the
         // images' paths run through the install's random directory names.
         event.threads?.forEach { thread ->
             thread.name = thread.name?.let(::safeThreadName)
-            scrubStackTrace(thread.stacktrace)
+            thread.stacktrace?.let(::scrubStackTrace)
         }
         event.debugMeta?.images?.forEach { image ->
             image.codeFile = image.codeFile?.let(::fileName)
@@ -168,8 +174,8 @@ object TelemetryScrubber {
     private fun fileName(path: String): String = path.substringAfterLast('/')
 
     /** Native frames name the library by its install path; Java frames carry class and file names only. */
-    private fun scrubStackTrace(stackTrace: SentryStackTrace?) {
-        stackTrace?.frames?.forEach { frame ->
+    private fun scrubStackTrace(stackTrace: SentryStackTrace) {
+        stackTrace.frames?.forEach { frame ->
             frame.filename = frame.filename?.let(::fileName)
             frame.absPath = frame.absPath?.let(::fileName)
             frame.`package` = frame.`package`?.let(::fileName)
@@ -191,11 +197,11 @@ object TelemetryScrubber {
 
     /** Method, status and the path with ids and the host taken out; never the host, query or sizes. */
     private fun reduceHttp(breadcrumb: Breadcrumb) {
-        val route = (breadcrumb.data["route"] ?: breadcrumb.data["url"])
+        val route = (breadcrumb.data[ROUTE_KEY] ?: breadcrumb.data["url"])
             ?.toString()
             ?.let(TdayTelemetry::sanitizePath)
         keepOnly(breadcrumb, HTTP_BREADCRUMB_KEYS)
-        route?.let { breadcrumb.setData("route", it) }
+        route?.let { breadcrumb.setData(ROUTE_KEY, it) }
     }
 
     /** The two route templates; the SDK's `*_arguments` carry the real list ids and names. */

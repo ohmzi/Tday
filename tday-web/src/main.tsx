@@ -39,7 +39,10 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
     .catch((err) => console.warn("SW registration failed:", err));
 }
 
-createRoot(document.getElementById("root")!, reactRootErrorHandlers).render(
+const rootElement = document.getElementById("root");
+if (!rootElement) throw new Error("T'Day could not find its root element");
+
+createRoot(rootElement, reactRootErrorHandlers).render(
   <StrictMode>
     <App />
   </StrictMode>,

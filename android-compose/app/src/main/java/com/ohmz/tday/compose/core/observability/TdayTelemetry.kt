@@ -65,6 +65,10 @@ object TdayTelemetry {
     private val routeTemplateSegment = Regex("^\\{[A-Za-z][A-Za-z0-9_]*}$")
     private val routeLiteralSegment = Regex("^[A-Za-z][A-Za-z0-9_-]*$")
 
+    /** What a path or route segment becomes when it is a value and not one of the app's own names. */
+    private const val VALUE_SEGMENT = ":value"
+    private const val ID_SEGMENT = ":id"
+
     fun sanitizePath(raw: String): String {
         val noQuery = raw.substringBefore('?').substringBefore('#')
         val path = if ("://" in noQuery) {
@@ -95,7 +99,7 @@ object TdayTelemetry {
             when {
                 routeTemplateSegment.matches(segment) -> ":" + segment.removeSurrounding("{", "}")
                 routeLiteralSegment.matches(segment) -> segment
-                else -> ":value"
+                else -> VALUE_SEGMENT
             }
         }
     }
@@ -165,15 +169,15 @@ object TdayTelemetry {
             java.net.URLDecoder.decode(segment, Charsets.UTF_8.name())
         }.getOrDefault(segment).trim()
         return when {
-            decoded.isBlank() -> ":value"
+            decoded.isBlank() -> VALUE_SEGMENT
             decoded.matches(Regex("^:[A-Za-z][A-Za-z0-9_]*$")) -> decoded
             decoded in staticSegments -> decoded
             decoded.matches(Regex("[a-z]{2}(-[A-Z]{2})?")) -> ":locale"
             decoded.contains('@') || decoded.contains('=') -> ":redacted"
-            decoded.length > 24 -> ":id"
-            decoded.any(Char::isDigit) -> ":id"
-            decoded.any { it == '-' || it == '_' || it == ':' } -> ":id"
-            else -> ":value"
+            decoded.length > 24 -> ID_SEGMENT
+            decoded.any(Char::isDigit) -> ID_SEGMENT
+            decoded.any { it == '-' || it == '_' || it == ':' } -> ID_SEGMENT
+            else -> VALUE_SEGMENT
         }
     }
 

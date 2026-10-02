@@ -93,7 +93,8 @@ class TelemetryBootstrap internal constructor(
         // is recorded locally, never reported. No second marker is kept for the next launch: it
         // would be written to the same disk that just refused the write, so it would fail in
         // exactly the cases it exists for.
-        val persisted = store.deny() || store.deny()
+        var persisted = store.deny()
+        if (!persisted) persisted = store.deny()
         if (!persisted) onPersistFailure("consent.deny.not_persisted")
         gate.close()
         // The gate is already shut, so a failure to stop the SDK cannot leak a report; the purge

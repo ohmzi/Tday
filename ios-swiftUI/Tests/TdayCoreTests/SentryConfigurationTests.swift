@@ -13,7 +13,7 @@ import XCTest
 /// wants analytics, so a default that moves under a minor-version bump is the failure these tests
 /// are for: they pin the answer rather than trusting the SDK to keep giving it.
 final class SentryConfigurationTests: XCTestCase {
-    private let dsn = "https://0123456789abcdef0123456789abcdef@o0.ingest.example.invalid/1"
+    private let dsn = "https://publickey@o0.ingest.example.invalid/1"
 
     private func makeOptions(
         consentedAt: Date? = nil,
