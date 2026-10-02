@@ -133,6 +133,52 @@ describe("redactDiagnosticText", () => {
     expect(text).toContain("is not valid JSON");
   });
 
+  it("redacts a JSON snippet that itself contains quotes", () => {
+    const text = redactDiagnosticText(
+      `Unexpected token '<', "{"title":"Buy milk for Bob","d"... is not valid JSON`,
+    );
+    expect(text).not.toContain("Buy milk");
+    expect(text).not.toContain("Bob");
+    expect(text).toContain("is not valid JSON");
+  });
+
+  it("redacts the token Safari quotes in a JSON parse error", () => {
+    const text = redactDiagnosticText("JSON Parse error: Unrecognized token 'Buy'");
+    expect(text).not.toContain("Buy");
+    expect(text).toContain("JSON Parse error");
+  });
+
+  it("redacts hosts under the top-level domains self-hosters actually use", () => {
+    for (const tld of [
+      "page", "it", "ai", "me", "app", "dev", "io", "co", "uk", "de", "fr", "es", "nl", "se", "ch",
+      "at", "ca", "au", "nz", "jp", "us", "eu", "xyz", "cloud", "tech", "online", "site", "link",
+      "lan", "home", "internal", "local", "localdomain", "ts.net",
+    ]) {
+      expect(redactDiagnosticText(`could not reach tday.alice.${tld} today`), tld).toBe(
+        "could not reach <host> today",
+      );
+    }
+  });
+
+  it("keeps source file names that end in a file extension", () => {
+    expect(redactDiagnosticText("failed in main.tsx and vendor.map")).toBe(
+      "failed in main.tsx and vendor.map",
+    );
+  });
+
+  it("scans a bounded amount of text, so a hostile message cannot stall the page", () => {
+    const hostile = "a".repeat(200_000);
+    const started = performance.now();
+    const text = redactDiagnosticText(hostile);
+    expect(performance.now() - started).toBeLessThan(500);
+    expect(text.length).toBeLessThanOrEqual(300);
+  });
+
+  it("redacts before the final cut, never after", () => {
+    const text = redactDiagnosticText(`${"x ".repeat(100)}reach taylor@example.com now`);
+    expect(text).not.toContain("taylor");
+  });
+
   it("truncates long messages", () => {
     const long = "word ".repeat(200);
     expect(redactDiagnosticText(long).length).toBeLessThanOrEqual(300);

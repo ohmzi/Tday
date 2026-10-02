@@ -166,6 +166,12 @@ export function buildWebSentryOptions(
     denyUrls: DENIED_URLS,
     ignoreErrors: IGNORED_ERRORS,
     transport: makeGatedTransport(deps.makeTransport, deps.isGranted),
+    // `makeFetchTransport` sends `referrerPolicy: "strict-origin"`, which puts the page's origin, the
+    // self-hoster's own address, in `Referer`; its `fetchOptions` are spread last, so this wins and
+    // the gated transport above passes it on untouched. `Origin` is a different matter: a browser
+    // adds it to every cross-origin POST and nothing here can remove it, so Sentry still sees which
+    // site a web report came from.
+    transportOptions: { fetchOptions: { referrerPolicy: "no-referrer" } },
     beforeBreadcrumb: (breadcrumb) => (deps.isGranted() ? scrubWebBreadcrumb(breadcrumb) : null),
     beforeSend: (event) => {
       if (!deps.isGranted() || predatesConsent(event, deps.consentAt())) return null;

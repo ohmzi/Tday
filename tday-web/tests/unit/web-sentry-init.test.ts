@@ -63,6 +63,23 @@ describe("buildWebSentryOptions", () => {
     expect(options.release).toBe("tday-web@0.8.0");
   });
 
+  it("sends reports with no Referer, whatever page the visitor is on", () => {
+    const options = buildWebSentryOptions(ENV, fakeDeps());
+    expect(options.transportOptions?.fetchOptions?.referrerPolicy).toBe("no-referrer");
+  });
+
+  it("hands the transport factory those fetch options through the gate", () => {
+    const makeTransport = vi.fn(fakeDeps().makeTransport);
+    const options = buildWebSentryOptions(ENV, fakeDeps({ makeTransport }));
+    const transportOptions = { url: DSN, ...options.transportOptions } as Parameters<
+      NonNullable<typeof options.transport>
+    >[0];
+    options.transport!(transportOptions);
+    expect(makeTransport).toHaveBeenCalledWith(
+      expect.objectContaining({ fetchOptions: { referrerPolicy: "no-referrer" } }),
+    );
+  });
+
   it("installs exactly the allow-list of integrations, and none of the defaults", () => {
     const options = buildWebSentryOptions(ENV, fakeDeps());
     expect(options.defaultIntegrations).toBe(false);

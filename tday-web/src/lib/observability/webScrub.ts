@@ -24,6 +24,10 @@ export type WebEventContext = {
 };
 
 const MAX_MESSAGE_LENGTH = 300;
+// What the patterns below are ever run over. Several are quadratic on a long unbroken run, and this
+// runs on the thread that is reporting a failure, so a message holding a large blob is cut first.
+// Far more than the 300 characters that are kept, so the cut still lands after the redaction.
+const MAX_SCANNED_LENGTH = 2000;
 
 // Categories a browser breadcrumb may carry. `fetch`/`xhr` and `navigation` come from the SDK's
 // breadcrumbs integration (data scrubbed to route templates by `scrubSentryBreadcrumb`); `api` and
@@ -33,15 +37,20 @@ const BREADCRUMB_CATEGORIES = new Set(["api", "fetch", "xhr", "navigation", "tda
 
 // A real top-level domain, because that is what separates `tday.my-home.net` from `window.location`
 // or `t.map`: the second is an expression in an error message and the first is a host. Common
-// self-hosting suffixes (`.lan`, `.local`, `.internal`, `.home.arpa`) are in on purpose.
+// self-hosting suffixes (`.lan`, `.local`, `.internal`, `.localdomain`, `.home.arpa`; `.ts.net` is
+// a `.net`) are in on purpose.
 const TOP_LEVEL_DOMAINS =
-  "com|net|org|io|dev|app|co|xyz|info|cloud|site|online|us|uk|de|fr|jp|cn|ru|eu|ca|au|br|lan|local|internal|home|arpa";
+  "com|net|org|io|dev|app|co|xyz|info|cloud|site|online|us|uk|de|fr|jp|cn|ru|eu|ca|au|br|page|it|ai|me|es|nl|se|ch|at|nz|tech|link|lan|local|internal|home|localdomain|arpa";
 
 const JDBC_PATTERN = /\bjdbc:[^\s"'<>)\]]+/gi;
 const URL_PATTERN = /\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>)\]]+/gi;
 const EMAIL_PATTERN = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 const DATABASE_KEY_PATTERN = /Key \([^)]*\)=\([^)]*\)/g;
-const JSON_SNIPPET_PATTERN = /(,\s*)"[^"]*"(?:\.\.\.)?(\s+is not valid JSON)/g;
+// Chrome quotes the start of the body it failed to parse, and a body that is JSON has quotes of
+// its own, so the snippet runs up to the last quote before the closing words, not the next one.
+const JSON_SNIPPET_PATTERN = /(,\s*)"[^\n]*"(?:\.\.\.)?(\s+is not valid JSON)/g;
+// Safari names the offending token instead: `JSON Parse error: Unrecognized token 'Buy'`.
+const JSON_TOKEN_PATTERN = /(Unrecognized token )'[^'\n]*'/g;
 const IPV4_PATTERN = /\b(?:\d{1,3}\.){3}\d{1,3}\b/g;
 const IPV6_PATTERN =
   /(?<![\w:])(?:(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}|(?:[0-9a-f]{1,4}:){1,7}:(?:[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6})?|::[0-9a-f]{1,4}(?::[0-9a-f]{1,4}){0,6})(?![\w:])/gi;
@@ -69,7 +78,9 @@ const LONG_DIGITS_PATTERN = /\b\d{6,}\b/g;
  */
 export function redactDiagnosticText(text: string): string {
   const redacted = text
+    .slice(0, MAX_SCANNED_LENGTH)
     .replace(JSON_SNIPPET_PATTERN, '$1"<redacted>"$2')
+    .replace(JSON_TOKEN_PATTERN, "$1'<redacted>'")
     .replace(JDBC_PATTERN, "<jdbc>")
     .replace(URL_PATTERN, "<url>")
     .replace(EMAIL_PATTERN, "<email>")

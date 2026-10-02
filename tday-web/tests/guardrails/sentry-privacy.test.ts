@@ -465,6 +465,10 @@ describe("sentry privacy guardrails", () => {
       expect(scrub).toContain("function scrubRequest");
       expect(scrub).toContain('headers: { "User-Agent": userAgent }');
     });
+
+    it("web sends reports with referrerPolicy no-referrer", () => {
+      expect(readSource(webSentryInit)).toMatch(/referrerPolicy\s*:\s*"no-referrer"/);
+    });
   });
 
   describe("session replays are disabled on every client", () => {
