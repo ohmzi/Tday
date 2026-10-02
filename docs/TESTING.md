@@ -60,7 +60,16 @@ tday-web/tests/
     ├── publicRouteAuthGuard.test.tsx
     ├── release-info.test.ts
     ├── todo-form-create-close.test.tsx
-    └── todo-toast-navigation.test.ts
+    ├── todo-toast-navigation.test.ts
+    ├── telemetry-consent.test.tsx          # Crash-report consent store and hook
+    ├── web-sentry-init.test.ts             # Option posture; SDK started only when granted (init/close spied)
+    ├── web-sentry-lifecycle.test.ts        # startSentry/stopSentry against the real SDK, transport faked
+    ├── web-sentry-pipeline.test.ts         # Real SDK plus a recording transport: what leaves is scrubbed
+    ├── web-sentry-scrub.test.ts            # Event/breadcrumb scrub allow-list
+    ├── web-slow-operation.test.ts          # slow_operation thresholds and rate limits
+    ├── crash-reports-consent-gate.test.tsx # Consent card behavior
+    ├── settings-privacy.test.tsx           # Privacy rows (browser and admin)
+    └── settings-privacy-card.test.tsx      # When the Privacy card appears on the real SettingsPage
 ```
 
 Web tests are intentionally split into behavior-focused unit tests and repository-wide guardrails. Add a focused unit test beside the closest existing unit coverage when changing client behavior, API client behavior, cache mutation helpers, auth provider logic, release metadata, routing guards, timezone/date handling, or i18n behavior. Add or update guardrails when a documented standard should be enforceable across the repository.
@@ -194,15 +203,19 @@ unresolvable expression is passed over rather than guessed at.
 | What it checks | Rule enforced |
 |---------------|---------------|
 | Backend, web, Android, and iOS declare Sentry SDK dependencies | Telemetry wiring remains explicit |
-| Sentry initializes on every platform | Error reporting is available where configured |
+| Each platform's SDK init call appears in exactly one consent-gated file (`BackendSentry.kt`, `sentryInit.ts`, `TelemetryBootstrap.kt`, `SentryConfiguration.swift`) | Nothing initialises Sentry outside the gate, so "off means off" is a property of one file |
 | `sendDefaultPii` is disabled and IP addresses are stripped | Telemetry must not collect personal network identifiers |
+| Clients show session tracking off, sample rate `0`, empty trace propagation targets, failed-request capture off; web `defaultIntegrations: false`; Android `dataCollection.userInfo = false` | Clients are failures-only |
+| The web consent key is in `PRESERVED_STORAGE_KEYS`; the Android store is not referenced from `OfflineCacheManager` or `SecureConfigStore` | A sign-out or local-data clear is never a change of mind |
+| `release.yml` passes the DSN secrets and the token as a build secret (`--mount=type=secret` in the Dockerfile) | DSNs ship by CI and the upload token never lands in an image |
 | DSNs come from env/build configuration | No hardcoded Sentry DSNs in committed source |
-| Exception capture and HTTP tracing are wired where expected | Production errors include useful, privacy-safe context |
-| Trace sample rates are configurable | Production sampling can be reduced without code changes |
+| Exception capture is wired where expected | Production errors include useful, privacy-safe context |
+| Backend trace sample rate is configurable | Production sampling can be reduced without code changes |
 | Route sanitizers and helper modules exist | Breadcrumbs and transactions avoid raw IDs, URLs, and query strings |
 | Post-Sentry mobile feature breadcrumbs are structural | Local Mode, floaters, sync, credentials, updates, realtime, reminders, calendar, drag-reschedule, and security monitoring stay diagnosable without content |
 | Google Analytics, Dynatrace, Mixpanel, and Amplitude SDKs are absent | T'Day remains Sentry-first and not product-analytics-driven |
 | Source upload is conditional on `SENTRY_AUTH_TOKEN` | Local and self-hosted builds work without private tokens |
+| Android `telemetry_*` and `settings_crash_reports*` strings and iOS `Localizable.xcstrings` entries exist in all 10 locales | The consent card and Settings row never ship partly translated |
 | `docs/TELEMETRY.md` documents collection, no-op behavior, industry references, and coverage matrix | Privacy expectations stay discoverable |
 | `docs/SENTRY_RUNBOOK.md` documents setup, alerts, smoke drills, and failure triage | Developers can debug self-hosted failures without adding product analytics |
 
@@ -212,6 +225,37 @@ repo root:
 ```bash
 node scripts/observability-smoke.mjs
 ```
+
+#### Crash-reporting behavior tests
+
+The guardrail above reads source. The behavior that makes "off means off" true is
+tested where the code runs, on every platform:
+
+| Platform | Command | What the telemetry tests prove |
+|----------|---------|--------------------------------|
+| Web | `cd tday-web && npm run test` | `buildWebSentryOptions` asserts the option posture, and `initSentryIfConsented` starts the SDK only for a granted answer (not for unanswered or denied) and closes it on revoke. `startSentry`/`stopSentry` also run against the real SDK with only the transport faked: nothing is patched or sent before a yes or after a no, a revoke then a new yes works, and events from while off never arrive. A recording transport under the real SDK shows that what leaves is scrubbed and tagged, and the scrub tests push an event full of identifiers through `scrubWebEvent` |
+| Backend | `./gradlew :tday-backend:test` | `TelemetryGateTest`, `GatedTransportTest` (recording transport, plus a reflection check that every `ITransport` method is declared), `BackendSentryTest` (option asserts), `TelemetryScrubberTest`, `ClientTagsTest`, `LogbackSentryAppenderTest`, `SentryRequestPluginTest` (per-request scope), `InstanceSettingsServiceTest`, `AdminTelemetryRoutesTest` (403 for a non-admin, PATCH round trip, no-DSN case), `SecurityHeadersTest` (client ingest origin in the CSP) and `InstanceSettingsPostgresTest` (the real V32 migration on Postgres; needs Docker and is skipped without it) |
+| Android | `cd android-compose && ./gradlew :app:testDebugUnitTest` | `TelemetryBootstrapTest` (fake SDK: start only when granted, purge, revoke ordering), `TelemetryConsentStoreTest`, `TelemetryConsentManagerTest`, `GatedTransportTest` (recording transport, every `ITransport` method declared), `TelemetryOptionsTest` (configures a real `SentryAndroidOptions` and reads the fields back), `TelemetryScrubberTest`, `TelemetryPrivacyGoldenTest` (an event with UUIDs, hosts, IPs, and emails is scrubbed, serialised, and grepped), `TelemetryEventTagsTest`, `SlowOperationTest`, `TelemetryConsentGateTest`, and `TelemetryConsentViewModelTest` |
+| iOS | `xcodebuild test -project ios-swiftUI/TdayApp.xcodeproj -scheme Tday -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6'` | `TelemetryConsentTests` (isolated `UserDefaults` suite), `TelemetryLifecycleTests` (grant, revoke, and purge against an injectable caches directory), `SentryConfigurationTests` (`makeOptions` asserts), `TelemetryScrubberTests` and `TelemetryEventScrubTests`, `SlowOperationTests`, and `TelemetrySanitizerTests` |
+
+The consent-card visuals, Settings placement, and the real SDK start path with a
+DSN cannot be covered by these tests. Verify them by hand before a release that
+changes crash reporting:
+
+- **Zero egress when off.** Point each client at a local capture endpoint (or a
+  throwaway Sentry project behind a proxy). Cold start, a few minutes of use, and
+  a forced failure must produce zero requests to the ingest host in each of these
+  states: unanswered, denied, on then off, and off then on (including a failure
+  while off followed by a relaunch).
+- **ANR and hang replay.** Induce an ANR (Android debug builds have a trigger;
+  see [`SENTRY_RUNBOOK.md`](SENTRY_RUNBOOK.md)) or an iOS hang while off, grant
+  consent, and confirm it never arrives.
+- **When on.** The event JSON has no `user`, IP, host, or install UUID; stacks are
+  deobfuscated, symbolicated, or un-minified; the context tags are present.
+- **Card flows.** Server and Local Mode on all three clients, an existing
+  install, "Read the full FAQ" deferring the card and landing on the topic, the
+  admin toggle on web (admin, non-admin, and no DSN), and a build with no DSN
+  showing no card and no Settings row.
 
 ### Naming Conventions
 
@@ -283,8 +327,9 @@ Tests live in `tday-backend/src/test/kotlin/com/ohmz/tday/` and are grouped by p
 
 - `security/`: password hashing, JWT/JWE session handling, field encryption, credential envelope, and password proof.
 - `routes/`: todo, floater, list, mobile probe, security enforcement, Apple app association, and auth route flows.
-- `plugins/`: rate limiting.
-- `services/`: NLP parsing and service-level behavior.
+- `plugins/`: rate limiting, security headers (including the CSP's Sentry ingest origins), and the request-scoped Sentry plugin.
+- `services/`: NLP parsing, service-level behavior, and instance settings.
+- `observability/`: the Sentry gate, gated transport, scrubber, init options, client tags, and the logback appender.
 - `db/`: the in-memory database harness shared by the service tests that need one.
 
 ### What Should Be Tested (Backend)
@@ -300,6 +345,8 @@ Tests live in `tday-backend/src/test/kotlin/com/ohmz/tday/` and are grouped by p
 | Todo, floater, list, and completed route behavior | High |
 | Mobile probe and app association contract routes | Medium |
 | Route-level auth enforcement | Medium |
+| Sentry gate, scrubber, and options (nothing leaves while the admin toggle is off) | High |
+| Admin telemetry route (403 for non-admins, PATCH round trip) | High |
 | Service-layer business logic | Medium |
 
 ### Mocking Strategy (Backend)
@@ -344,6 +391,7 @@ Current JVM tests cover API response helpers, offline sync state serialization, 
 | Pending mutation creation/replay behavior | Unit | High |
 | ViewModel state transitions | Unit | High |
 | Local Mode server-only affordances | Unit/manual | High |
+| Crash-reports consent, bootstrap (start/purge/revoke), options, and scrubber | Unit | High |
 | Notification scheduling logic | Unit | Medium |
 | Today/Floater widget filtering, counts, setup/empty states, layout rules, priority dots, day/night watermark rule, and refresh triggers | Unit | Medium |
 | Car surface mode mapping, empty states, accents, and voice-create fallback | Unit/manual | Medium |
@@ -412,6 +460,7 @@ Current XCTest coverage includes API model contracts, cache mapper date parsing,
 | Pending mutation creation/replay behavior | Unit | High |
 | ViewModel state transitions | Unit | Medium |
 | Local Mode server-only affordances | Unit/manual | High |
+| Crash-reports consent store, lifecycle (grant/revoke/purge), `makeOptions`, and scrubber | Unit | High |
 | Reminder scheduling helpers | Unit | Medium |
 | Navigation/deep-link routing helpers | Unit | Medium |
 | Today/Floater widget snapshot schema, 50-row task cap, setup/empty states, App Group key consistency, and static best-fit overflow fallback | Unit | Medium |

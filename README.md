@@ -26,7 +26,7 @@ T'Day is a personal planner that stays out of your way. It shows what's due toda
 with no date a place of their own, and doesn't try to turn your to-do list into a game.
 
 - **Private.** Your tasks live on your device or on a server you run. T'Day has no cloud service
-  of its own, and it collects no analytics.
+  of its own, and it collects no analytics. Crash reports are optional and off until you say yes.
 - **Works offline.** Local Mode needs no server and no sign-up. In Server Mode, changes save on
   the device first and sync when you're back online.
 - **Native apps.** A Jetpack Compose app for Android, a SwiftUI app for iOS and Apple Watch, and
@@ -268,9 +268,12 @@ listed in [SECURITY_POSTURE.md](docs/security/SECURITY_POSTURE.md).
 - **Optional AES-256-GCM encryption** of sensitive database fields at rest, with key rotation.
 - **Mobile credentials** are stored in the iOS Keychain and in Android's encrypted storage. Local
   Mode data never leaves the device.
-- **No analytics or ad tracking.** Crash reporting (Sentry) is off unless you add your own DSN;
-  the published builds don't include one. When it's on, reports contain only diagnostics, never
-  task content, emails, or IP addresses ([TELEMETRY.md](docs/TELEMETRY.md)).
+- **No analytics or ad tracking.** Crash reports are opt-in and off by default. The released apps
+  and web image ask once, and nothing is sent until you say yes (Settings → Privacy changes it any
+  time). When on, a short report goes straight to the maintainer's Sentry, and only at the moment
+  something fails. It contains diagnostics, never task content, account details, your server's
+  address, or IP addresses ([TELEMETRY.md](docs/TELEMETRY.md)). Your own server can send its own
+  error reports to your Sentry project, but only if you set a DSN and an admin switches it on.
 - **Update checks go to GitHub.** The web, Android and iOS apps ask GitHub's public API whether a
   new T'Day release exists, and the web app loads release notes from `raw.githubusercontent.com`.
   These requests carry no account or task data, but GitHub sees your IP address. They also run in
@@ -300,7 +303,8 @@ data to a server later with export and import.
 <br/>
 
 Only to the server you choose. Date parsing runs on the device. AI summaries use a local Ollama
-model or a built-in fallback, never a cloud AI. Crash reports never include task content.
+model or a built-in fallback, never a cloud AI. Crash reports are opt-in and never include task
+content.
 
 </details>
 
@@ -310,9 +314,10 @@ model or a built-in fallback, never a cloud AI. Crash reports never include task
 
 GitHub, to check for new releases and, on Android, to download them (see
 [Security and privacy](#security-and-privacy)). Everything else is opt-in: crash reports go to
-Sentry only if you set a DSN, push notifications go through your browser's push service or your
-UnifiedPush distributor, and the optional Ollama container downloads its model from Ollama's
-registry.
+the maintainer's Sentry only if you say yes on the consent card or in Settings → Privacy (your
+server's own reports go to your Sentry only if you set a DSN and an admin turns them on), push
+notifications go through your browser's push service or your UnifiedPush distributor, and the
+optional Ollama container downloads its model from Ollama's registry.
 
 </details>
 
@@ -359,7 +364,7 @@ cd tday-web && npm install && npm run dev       # web app on http://localhost:51
 | [API_INTEGRATION.md](docs/API_INTEGRATION.md)      | API keys, endpoints, calendar feed, export/import, the Homarr widget       |
 | [MCP.md](docs/MCP.md)                              | Connecting an AI assistant: clients, key scopes, tool reference            |
 | [SECURITY.md](SECURITY.md)                         | Reporting vulnerabilities, auth, sessions, data protection                 |
-| [TELEMETRY.md](docs/TELEMETRY.md)                  | What crash reporting collects, and what it never does                      |
+| [TELEMETRY.md](docs/TELEMETRY.md)                  | Opt-in crash reports: what is collected, what never is, how consent works  |
 
 <details>
 <summary><b>For developers: architecture, data, testing, and more</b></summary>
@@ -377,7 +382,7 @@ cd tday-web && npm install && npm run dev       # web app on http://localhost:51
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md)                     | Docker image, CI/CD, releases, signing, configuration reference         |
 | [WIDGET_SYNC.md](docs/WIDGET_SYNC.md)                   | Widget refresh architecture and platform checklists                     |
 | [ICONS.md](docs/ICONS.md) · [motion.md](docs/motion.md) | The shared Lucide icon set and motion tokens                            |
-| [SENTRY_RUNBOOK.md](docs/SENTRY_RUNBOOK.md)             | Sentry setup, alerting, and failure triage                              |
+| [SENTRY_RUNBOOK.md](docs/SENTRY_RUNBOOK.md)             | Sentry setup, release secrets, alerting, and failure triage             |
 | [REPO_HOUSEKEEPING.md](docs/REPO_HOUSEKEEPING.md)       | Docs audit, generated files, repo hygiene                               |
 | [adr/](docs/adr)                                        | Architecture Decision Records                                           |
 | [AGENTS.md](AGENTS.md)                                  | The rules the AI coding agents follow ([how T'Day is built](#how-tday-is-built)) |

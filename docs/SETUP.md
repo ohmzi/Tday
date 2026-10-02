@@ -15,6 +15,7 @@ account. Pick it on first launch and skip this guide.
 - [Reaching it from other devices](#reaching-it-from-other-devices)
 - [Optional: AI summaries with Ollama](#optional-ai-summaries-with-ollama)
 - [Optional: web push notifications](#optional-web-push-notifications)
+- [Optional: crash reporting](#optional-crash-reporting)
 - [Updating](#updating)
 - [Backups](#backups)
 - [Building from source](#building-from-source)
@@ -74,6 +75,7 @@ Then edit `.env.docker`:
 | `TDAY_ENV`                  | Recommended | `production` once the app is served over HTTPS. This turns on secure cookies and HSTS.     |
 | `DATA_ENCRYPTION_KEY`       | Optional | A 32-byte key (`openssl rand -base64 32`) for field-level encryption at rest (AES-256-GCM).   |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Optional | Needed for [web push notifications](#optional-web-push-notifications).           |
+| `SENTRY_DSN`                | Optional | Your own Sentry project, for your server's error reports. Blank means the server never reports. See [crash reporting](#optional-crash-reporting). |
 
 Then create a root `.env` and change the database password from its default:
 
@@ -203,6 +205,30 @@ npx web-push generate-vapid-keys --json
 Put the two values in `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` in `.env.docker`, then recreate the
 backend with `docker compose up -d`. The Android and iOS apps schedule reminders on the device and
 don't need this.
+
+## Optional: crash reporting
+
+Crash reporting is optional, and off unless someone turns it on.
+
+**Your server's own error reports.** Leave `SENTRY_DSN` blank in `.env.docker` (the default) and your
+server never reports anything. To get error reports from your server:
+
+1. Create a project in your own [Sentry](https://sentry.io) account and put its DSN in `SENTRY_DSN`
+   in `.env.docker`, then recreate the backend with `docker compose up -d`.
+2. Sign in to the web app as an admin and switch on **Settings → Privacy → Server error reports**.
+   The switch is off by default, and it does not appear until `SENTRY_DSN` is set. Until an admin
+   turns it on, a server with a DSN still sends nothing.
+
+`SENTRY_TRACES_SAMPLE_RATE` (optional) sets how many requests are traced; it defaults to `0.1` in
+production. Server reports hold error types, stack traces, and route templates, never task or list
+content. See [TELEMETRY.md](TELEMETRY.md) for exactly what is and is not sent.
+
+**The apps and the web app.** The published web image and the release apps carry the maintainer's own
+client DSNs. Each person is asked once, after setup, whether to share crash reports, and nothing is
+sent unless they say yes; they can change their mind in **Settings → Privacy**. Those reports go
+straight from the device or browser to the maintainer's Sentry, not through your server, and never
+include your server's address. An app or image you build yourself has no DSN unless you give it one,
+so it never asks.
 
 ---
 
