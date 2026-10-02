@@ -339,6 +339,25 @@ jobs:
           fi
           echo "All Apple release secrets are present."
 
+      # Unlike the Apple secrets above, neither of these fails the release: crash reporting is
+      # opt-in and optional, and the app works without it. But a missing one ships silently
+      # inert — no consent card without the DSN, a list of raw addresses instead of stacks
+      # without the token — so it is surfaced on the run instead. Release mode only: a verify
+      # build is discarded. Only emptiness is tested; nothing is printed.
+      - name: Check the crash-report inputs
+        if: steps.decision.outputs.should_build == 'true' && steps.mode.outputs.mode == 'release'
+        env:
+          SENTRY_DSN_IOS: ${{ secrets.SENTRY_DSN_IOS }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          if [ -z "$SENTRY_DSN_IOS" ]; then
+            echo "::warning::SENTRY_DSN_IOS is not set, so this iOS build ships with crash reporting unavailable: no consent card, and nothing is ever sent."
+          fi
+
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "::warning::SENTRY_AUTH_TOKEN is not set, so this iOS build's dSYMs are not uploaded to Sentry and its crash reports will not symbolicate."
+          fi
+
       - name: Explain a skip
         if: steps.decision.outputs.should_build != 'true'
         env:
@@ -440,6 +459,34 @@ jobs:
         working-directory: ios-swiftUI
         run: bundle install --jobs 4 --retry 3
 
+      # What the `beta` lane uploads the dSYMs with (`upload_dsyms_to_sentry` in the Fastfile).
+      # Without them Sentry cannot symbolicate an iOS crash. Pinned to one release and checked
+      # against that release's SHA-256 instead of fetched through an installer script or a
+      # floating `latest`, because this binary runs with SENTRY_AUTH_TOKEN in its environment:
+      # what executes must be exactly the file named here. To move the pin, take the new
+      # version's `sentry-cli-Darwin-universal` digest from its GitHub release page and change
+      # SENTRY_CLI_VERSION and .github/pinned/cli-darwin-universal.sha256 together. The digest is
+      # a public checksum, kept in its own file rather than inline here because a bare 64-hex
+      # string next to the word "sentry" is what secret scanners report as an access token.
+      # Release mode only — a verify run never uploads and is not given
+      # the token.
+      - name: Install sentry-cli
+        if: needs.decide.outputs.mode == 'release'
+        env:
+          SENTRY_CLI_VERSION: "3.8.0"
+          CLI_DIGEST_FILE: .github/pinned/cli-darwin-universal.sha256
+        run: |
+          set -euo pipefail
+          BIN_DIR="${RUNNER_TEMP}/sentry-cli-bin"
+          mkdir -p "${BIN_DIR}"
+          curl --fail --silent --show-error --location --retry 3 \
+            --output "${BIN_DIR}/sentry-cli" \
+            "https://github.com/getsentry/sentry-cli/releases/download/${SENTRY_CLI_VERSION}/sentry-cli-Darwin-universal"
+          echo "$(tr -d '[:space:]' < "${CLI_DIGEST_FILE}")  ${BIN_DIR}/sentry-cli" | shasum -a 256 --check -
+          chmod +x "${BIN_DIR}/sentry-cli"
+          echo "${BIN_DIR}" >> "$GITHUB_PATH"
+          "${BIN_DIR}/sentry-cli" --version
+
       # One dependency (sentry-cocoa, pinned in Package.resolved), but resolving it is a full
       # git clone on every run. Both resolved files are in the key: the workspace copy is the
       # one Xcode actually reads, and the top-level one is what a `swift build` would use.
@@ -479,6 +526,16 @@ jobs:
           # silently disables the server version-compatibility gate. release.yml already passes
           # this same secret to the Android build; this is the iOS half of that parity.
           TDAY_PROBE_ENCRYPTION_KEY: ${{ secrets.TDAY_PROBE_ENCRYPTION_KEY }}
+          # Tday/Info.plist publishes SENTRY_DSN as $(SENTRY_DSN), and an undefined setting expands
+          # to "" — which leaves the SDK off and hides the consent card. The lane writes the DSN
+          # into the same temporary xcconfig as the probe key (shape-checked, `//` escaped). It is
+          # a public identifier; the in-app consent gate, not its secrecy, decides whether it is
+          # used. Passed in every mode so a malformed secret fails a verify run too, not only a
+          # release.
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_IOS }}
+          # Upload-scoped token the lane hands to sentry-cli for the dSYM upload. Given to release
+          # runs only: a verify run never uploads, so it never sees the token.
+          SENTRY_AUTH_TOKEN: ${{ needs.decide.outputs.mode == 'release' && secrets.SENTRY_AUTH_TOKEN || '' }}
           # The persistent Apple Development certificate the archive is signed with. The lane
           # writes it 0600 under RUNNER_TEMP, imports it into a throwaway keychain it creates
           # there, and deletes both in its `ensure` — see "CI signing keychain" in the Fastfile.
