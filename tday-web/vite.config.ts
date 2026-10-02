@@ -84,6 +84,16 @@ export default defineConfig({
       org: "tday-kb",
       project: "tday-web",
       authToken: process.env.SENTRY_AUTH_TOKEN,
+      // The same string `sentryInit.ts` gives the SDK, so uploaded source maps and events meet.
+      release: { name: `tday-web@${APP_VERSION}` },
+      sourcemaps: {
+        // Once the maps are in Sentry the public copies have no job: they would hand every visitor
+        // the unminified source. Only when a token exists, because the plugin deletes these files
+        // whether or not an upload happened, and a local build should keep its maps.
+        filesToDeleteAfterUpload: process.env.SENTRY_AUTH_TOKEN ? ["dist/**/*.map"] : undefined,
+      },
+      // Keeps the build tool from reporting its own usage to Sentry.
+      telemetry: false,
       // The app never turns the SDK's `debug` option on, so let the bundler drop
       // the SDK's own debug logging paths (about 7 KB of the entry chunk).
       bundleSizeOptimizations: { excludeDebugStatements: true },

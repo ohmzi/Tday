@@ -55,12 +55,14 @@ import NativePageHeader, { useNativePageBarSlots } from "@/components/app/Native
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import EmptyState from "@/components/app/EmptyState";
 import DataTransferCard from "./DataTransferCard";
+import { CrashReportsRow, ServerTelemetryRow } from "./PrivacyRows";
 import {
   CardDivider,
   RowIcon,
   RowIconSlot,
   SettingsOptionRow,
   SettingsPill,
+  SettingsSwitch,
 } from "./SettingsControls";
 import { nativeScreenAccentColors } from "@/components/app/nativeScreenTheme";
 import { api } from "@/lib/api-client";
@@ -94,6 +96,8 @@ import {
 } from "@/lib/floaterResting";
 import { Link, usePathname } from "@/lib/navigation";
 import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
+import { useServerTelemetry } from "@/features/serverTelemetry/query/get-server-telemetry";
+import { isCrashReportingConfigured } from "@/lib/privacy/telemetryConsent";
 import { LANGUAGE_STORAGE_KEY, resolveInitialLocale } from "@/i18n";
 import { DefaultHomeScreen } from "@/types/enums";
 import {
@@ -213,42 +217,6 @@ function SettingsFactRow({
       </span>
       <span className="shrink-0 text-sm font-black text-muted-foreground">{value}</span>
     </div>
-  );
-}
-
-/** Pill switch — mirrors the native toggle used across the app. */
-function SettingsSwitch({
-  checked,
-  onClick,
-  disabled,
-  ariaLabel,
-}: {
-  checked: boolean;
-  onClick: () => void;
-  disabled?: boolean;
-  ariaLabel: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={ariaLabel}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
-        checked ? "bg-accent" : "bg-muted-foreground/30",
-        disabled && "opacity-45",
-      )}
-    >
-      <span
-        className={cn(
-          "inline-block h-5 w-5 rounded-full bg-white shadow transition-transform",
-          checked ? "translate-x-[22px]" : "translate-x-[2px]",
-        )}
-      />
-    </button>
   );
 }
 
@@ -506,6 +474,10 @@ export default function SettingsPage() {
   const sqConfigured = sqStatus != null && !sqStatus.requireSecurityQuestions;
 
   const push = usePushNotifications();
+  // The Privacy card's two rows each have their own reason to be absent: this browser's needs a
+  // build with a DSN, the server's needs an admin on a server whose own DSN is set.
+  const crashReportsOffered = isCrashReportingConfigured();
+  const serverTelemetry = useServerTelemetry();
   const [restingFloatersOn, setRestingFloatersOn] = useState(() =>
     isRestingFloatersEnabled(),
   );
@@ -980,6 +952,13 @@ export default function SettingsPage() {
     ...(canVibrate ? [t("haptics.title"), t("haptics.toggle")] : []),
     ...(push.isSupported ? [t("notifications.title"), t("notifications.push")] : []),
   );
+  const showPrivacyCard =
+    (crashReportsOffered || serverTelemetry !== null) &&
+    cardMatches(
+      t("privacy.title"),
+      ...(crashReportsOffered ? [t("crashReports.title"), t("crashReports.toggle")] : []),
+      ...(serverTelemetry ? [t("serverTelemetry.title"), t("serverTelemetry.toggle")] : []),
+    );
   // Server Mode only. Export and import are an account's data moving in and out
   // of an account; a browser-only workspace has no account to move it between,
   // and the card's own "sign in to a server to import" line was the tell that it
@@ -1017,6 +996,7 @@ export default function SettingsPage() {
     !showAccountCard &&
     !showAppearanceCard &&
     !showPreferencesCard &&
+    !showPrivacyCard &&
     !showDataCard &&
     !showDashboardCard &&
     !showAboutCard &&
@@ -1617,6 +1597,17 @@ export default function SettingsPage() {
           </>
         )}
       </SheetCard>
+      )}
+
+      {/* Privacy — what this browser, and for an admin this server, may report when something
+          fails. Both rows are opt-in and off until switched on; each hides itself when there is no
+          DSN to send to, and the card with them. */}
+      {showPrivacyCard && (
+      <SettingsSection title={t("privacy.title")}>
+        {crashReportsOffered && <CrashReportsRow />}
+        {crashReportsOffered && serverTelemetry && <CardDivider />}
+        {serverTelemetry && <ServerTelemetryRow telemetry={serverTelemetry} />}
+      </SettingsSection>
       )}
 
       {/* Dashboard access — the keys that reach this account from outside the

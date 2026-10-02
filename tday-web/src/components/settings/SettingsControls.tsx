@@ -32,6 +32,42 @@ export function RowIconSlot() {
   return <span aria-hidden className="h-[22px] w-[22px] shrink-0" />;
 }
 
+/** Pill switch — mirrors the native toggle used across the app. */
+export function SettingsSwitch({
+  checked,
+  onClick,
+  disabled,
+  ariaLabel,
+}: {
+  checked: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+        checked ? "bg-accent" : "bg-muted-foreground/30",
+        disabled && "opacity-45",
+      )}
+    >
+      <span
+        className={cn(
+          "inline-block h-5 w-5 rounded-full bg-white shadow transition-transform",
+          checked ? "translate-x-[22px]" : "translate-x-[2px]",
+        )}
+      />
+    </button>
+  );
+}
+
 /** Thin divider between sub-sections within a card. */
 export function CardDivider() {
   return <div className="h-px bg-border/60" />;
