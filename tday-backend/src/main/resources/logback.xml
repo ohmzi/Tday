@@ -5,7 +5,18 @@
         </encoder>
     </appender>
     <appender name="SENTRY" class="io.sentry.logback.SentryAppender">
+        <!--
+            Left to its own devices the appender starts a Sentry client from SENTRY_DSN the moment
+            logging initialises, which is before main() builds the gated one and so bypasses the
+            admin's on/off switch. A DSN ending in _IS_UNDEFINED is the appender's own signal to
+            skip that; BackendSentry is the only place the SDK starts.
+        -->
+        <options>
+            <dsn>SENTRY_DSN_IS_UNDEFINED</dsn>
+        </options>
         <minimumEventLevel>ERROR</minimumEventLevel>
+        <!-- INFO and WARN lines carry user ids, request paths and push endpoints. -->
+        <minimumBreadcrumbLevel>ERROR</minimumBreadcrumbLevel>
     </appender>
     <root level="INFO">
         <appender-ref ref="STDOUT"/>

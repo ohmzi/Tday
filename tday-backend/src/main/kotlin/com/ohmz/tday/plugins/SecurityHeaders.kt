@@ -20,8 +20,6 @@ fun parseCspMode(raw: String?): CspMode = when (raw?.trim()?.lowercase()) {
  * Extracts the ingest origin from a Sentry DSN (`https://<key>@<host>/<projectId>`).
  *
  * The browser SDK posts envelopes straight to that host, so it has to be allowed in `connect-src`.
- * The backend's own DSN is used as the default because in practice both SDKs report to the same
- * Sentry org; `CSP_CONNECT_EXTRA` overrides it when they differ.
  */
 fun parseSentryIngestOrigin(dsn: String?): String? {
     val trimmed = dsn?.trim().orEmpty()
@@ -83,12 +81,25 @@ fun buildCspHeader(connectExtra: List<String>): String {
     ).joinToString("; ")
 }
 
+/**
+ * The origins `connect-src` allows beyond the app itself.
+ *
+ * The backend's own DSN origin is the default, because both usually report to the same Sentry org;
+ * `CSP_CONNECT_EXTRA` replaces it when they differ. The web build's DSN origin
+ * (`TDAY_CLIENT_SENTRY_DSN`, baked into the published image) is always added: it is the host the
+ * browser reports to, whatever a self-hoster configured for their own backend.
+ */
+fun cspConnectOrigins(config: AppConfig): List<String> {
+    val backendOrigins = config.cspConnectExtra.ifEmpty {
+        listOfNotNull(parseSentryIngestOrigin(config.sentryDsn))
+    }
+    return (backendOrigins + listOfNotNull(parseSentryIngestOrigin(config.clientSentryDsn))).distinct()
+}
+
 fun Application.configureSecurityHeaders() {
     val config by inject<AppConfig>()
 
-    val connectExtra = config.cspConnectExtra.ifEmpty {
-        listOfNotNull(parseSentryIngestOrigin(config.sentryDsn))
-    }
+    val connectExtra = cspConnectOrigins(config)
     val cspMode = parseCspMode(config.cspMode)
     val cspHeaderName = when (cspMode) {
         CspMode.enforce -> "Content-Security-Policy"
