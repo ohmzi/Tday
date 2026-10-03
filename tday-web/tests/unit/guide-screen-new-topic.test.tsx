@@ -16,6 +16,20 @@ import { scrollIntoView } from "@/lib/scroll";
 
 vi.mock("@/lib/scroll", () => ({ scrollIntoView: vi.fn() }));
 
+/**
+ * The topic this file is about is the one that ships in the running release — and a patch release
+ * need not have one. 0.8.1 shipped none, so `whatsNewTopics()` came back empty and every case here
+ * failed on `topic.titleKey`. That is a release cadence, not a broken screen: the scenario is real
+ * whenever a release does bring a topic, so pin it to one the catalog actually has rather than to
+ * whatever the current release happens to carry.
+ */
+vi.mock("@/features/guide/guideContent", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/guide/guideContent")>();
+  const shipped =
+    actual.GUIDE_TOPICS.find((candidate) => candidate.id === "crash-reports") ?? actual.GUIDE_TOPICS[0];
+  return { ...actual, whatsNewTopics: () => [shipped] };
+});
+
 afterEach(cleanup);
 beforeEach(() => vi.mocked(scrollIntoView).mockClear());
 
