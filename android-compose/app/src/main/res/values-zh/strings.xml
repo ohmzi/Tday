@@ -224,6 +224,7 @@
     <string name="onboarding_step_mode">模式</string>
     <string name="onboarding_step_server">服务器</string>
     <string name="onboarding_step_login">登录</string>
+    <string name="onboarding_step_privacy">隐私</string>
     <string name="onboarding_mode_title">选择你的设置方式</string>
     <string name="onboarding_mode_subtitle">选择 T\'Day 在哪里保存你的任务。</string>
     <string name="onboarding_mode_server_title">自托管服务器</string>

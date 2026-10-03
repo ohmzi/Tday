@@ -46,6 +46,41 @@ class TelemetryConsentGateTest {
 }
 
 /**
+ * The wizard's own version of the same question. The workspace is absent from these cases on
+ * purpose: whether the workspace opened without a gate in front of it is the caller's half of the
+ * decision (`privacyStepDue` in `TdayApp`), and what is pinned here is the half about the device.
+ */
+class TelemetryWizardPrivacyStepTest {
+    private fun offers(
+        available: Boolean = true,
+        state: TelemetryConsentState = TelemetryConsentState.UNANSWERED,
+        wizardWasOnScreen: Boolean = true,
+    ) = shouldPresentWizardPrivacyStep(available, state, wizardWasOnScreen)
+
+    @Test
+    fun `offers the step to a wizard that was on screen, on a device nobody has asked yet`() {
+        assertEquals(true, offers())
+    }
+
+    @Test
+    fun `never offers it on a build without a dsn`() {
+        assertEquals(false, offers(available = false))
+    }
+
+    @Test
+    fun `never offers it again once the question has been answered, either way`() {
+        assertEquals(false, offers(state = TelemetryConsentState.GRANTED))
+        assertEquals(false, offers(state = TelemetryConsentState.DENIED))
+    }
+
+    @Test
+    fun `never offers it to an install that never saw the wizard`() {
+        // Already signed in at launch, or restarted mid-step: the card asks, not the stepper.
+        assertEquals(false, offers(wizardWasOnScreen = false))
+    }
+}
+
+/**
  * The two answers carry equal weight. How a button looks is not something a JVM can check, so this
  * pins how the file is written: both choices come from one helper, in a full-width column, and
  * nothing else in the card is a filled button that could tip the balance.

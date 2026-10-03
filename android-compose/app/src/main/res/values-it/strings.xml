@@ -224,6 +224,7 @@
     <string name="onboarding_step_mode">Modalità</string>
     <string name="onboarding_step_server">Server</string>
     <string name="onboarding_step_login">Accesso</string>
+    <string name="onboarding_step_privacy">Privacy</string>
     <string name="onboarding_mode_title">Scegli la tua configurazione</string>
     <string name="onboarding_mode_subtitle">Scegli dove T\'Day conserva le tue attività.</string>
     <string name="onboarding_mode_server_title">Server self-hosted</string>

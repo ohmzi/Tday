@@ -1,6 +1,7 @@
 package com.ohmz.tday.compose.feature.onboarding
 
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -11,6 +12,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -103,6 +105,7 @@ import com.ohmz.tday.compose.core.ui.rememberTdayMotionEnabled
 import com.ohmz.tday.compose.feature.auth.AuthUiState
 import com.ohmz.tday.compose.feature.auth.ForgotPasswordPanel
 import com.ohmz.tday.compose.feature.auth.LoginCredentialCoordinator
+import com.ohmz.tday.compose.feature.telemetry.TelemetryDisclosure
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayTitleIconDayAccent
 import kotlinx.coroutines.delay
@@ -112,6 +115,17 @@ private enum class WizardStep {
     MODE,
     SERVER,
     LOGIN,
+
+    /**
+     * The crash-report consent, after the account exists.
+     *
+     * Not a step the wizard walks to on its own: it is due when a sign-in opens a workspace that has
+     * no required update and no security questions in front of it, under a wizard that was on screen
+     * for that sign-in, and the app holds the overlay up for it (see `privacyStepDue` in TdayApp).
+     * On a build with no DSN, on a device that has already answered, and on the Local Mode path —
+     * which never signs in — it does not exist at all, and the wizard is exactly what it was.
+     */
+    PRIVACY,
 }
 
 private enum class WizardViewState {
@@ -120,6 +134,7 @@ private enum class WizardViewState {
     CONNECTING,
     LOGIN,
     AUTHENTICATING,
+    PRIVACY,
 }
 
 /**
@@ -137,6 +152,7 @@ private val WizardViewState.stepOrder: Int?
         WizardViewState.MODE -> 0
         WizardViewState.SERVER -> 1
         WizardViewState.LOGIN -> 2
+        WizardViewState.PRIVACY -> 3
         WizardViewState.CONNECTING, WizardViewState.AUTHENTICATING -> null
     }
 
@@ -174,6 +190,10 @@ fun OnboardingWizardOverlay(
     onSaveServerUrlCredential: suspend (Context, String) -> Unit,
     onUseLocalMode: () -> Unit,
     onClearAuthStatus: () -> Unit,
+    privacyStepOffered: Boolean,
+    privacyStepDue: Boolean,
+    onShareCrashReports: () -> Unit,
+    onDeclineCrashReports: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val consumeAllTouchesSource = remember { MutableInteractionSource() }
@@ -477,7 +497,31 @@ fun OnboardingWizardOverlay(
         }
     }
 
+    // The wizard's own step order ends where the account now exists, but the crash-report question
+    // belongs to this flow rather than to the workspace behind it: the app keeps the overlay up for
+    // it (see TdayApp) and this walks onto it in the same breath.
+    //
+    // The loading flag a successful sign-in leaves behind is deliberately NOT cleared here. The step
+    // is checked ahead of both loading panels below instead, which is what keeps "Opening T'Day" off
+    // the question — and leaves the panel as the honest thing to draw if the step stops being due
+    // while it is still on screen (a session that expired under it, say).
+    LaunchedEffect(privacyStepDue) {
+        if (privacyStepDue) {
+            step = WizardStep.PRIVACY
+        }
+    }
+
+    // Back press has never moved the wizard between its steps — the panels carry their own "change
+    // setup" links — and it must not start here: walking back to LOGIN would offer to sign in again
+    // to someone who already is, over a workspace that has already opened. The two answers are the
+    // only ways off this step, so back is consumed while it is up.
+    BackHandler(enabled = step == WizardStep.PRIVACY) {}
+
     val viewState = when {
+        // Ahead of both loading panels, and it has to be: a successful sign-in leaves
+        // `isCompletingAuthentication` true, so a panel first in this chain would draw "Signing in"
+        // over the question for as long as the step is up.
+        step == WizardStep.PRIVACY -> WizardViewState.PRIVACY
         isConnecting -> WizardViewState.CONNECTING
         authUiState.isLoading || isCompletingAuthentication -> WizardViewState.AUTHENTICATING
         step == WizardStep.LOGIN -> WizardViewState.LOGIN
@@ -626,46 +670,87 @@ fun OnboardingWizardOverlay(
                         )
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING)) {
-                        WizardStepChip(
-                            modifier = Modifier.weight(1f),
-                            title = stringResource(R.string.onboarding_step_mode),
-                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_smartphone),
-                            color = Color(0xFF7FB78A),
-                            active = step == WizardStep.MODE,
-                            completed = step == WizardStep.SERVER || step == WizardStep.LOGIN,
-                        )
-                        WizardStepChip(
-                            modifier = Modifier.weight(1f),
-                            title = stringResource(R.string.onboarding_step_server),
-                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_globe),
-                            color = Color(0xFF6EA8E1),
-                            active = step == WizardStep.SERVER,
-                            completed = step == WizardStep.LOGIN,
-                        )
-                        WizardStepChip(
-                            modifier = Modifier.weight(1f),
-                            title = stringResource(R.string.onboarding_step_login),
-                            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
-                            color = Color(0xFFD48A8C),
-                            active = step == WizardStep.LOGIN,
-                        )
+                    // The chip row grows by one row for the last step, and the card with it. That is
+                    // a change of size on a control the person is watching, arriving with the step
+                    // the panel below is animating in, so it is animated on the same rung — and
+                    // snapped rather than sprung when motion is off, because a preference that asks
+                    // for no motion is not asking for a spring instead.
+                    Column(
+                        modifier = Modifier.animateContentSize(
+                            animationSpec = if (motionEnabled) {
+                                tween(
+                                    durationMillis = TdayMotionTokens.Durations.Enter,
+                                    easing = TdayMotionTokens.Easings.Enter,
+                                )
+                            } else {
+                                snap()
+                            },
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING),
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING)) {
+                            WizardStepChip(
+                                modifier = Modifier.weight(1f),
+                                title = stringResource(R.string.onboarding_step_mode),
+                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_smartphone),
+                                color = Color(0xFF7FB78A),
+                                active = step == WizardStep.MODE,
+                                completed = step == WizardStep.SERVER ||
+                                    step == WizardStep.LOGIN ||
+                                    step == WizardStep.PRIVACY,
+                            )
+                            WizardStepChip(
+                                modifier = Modifier.weight(1f),
+                                title = stringResource(R.string.onboarding_step_server),
+                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_globe),
+                                color = Color(0xFF6EA8E1),
+                                active = step == WizardStep.SERVER,
+                                completed = step == WizardStep.LOGIN || step == WizardStep.PRIVACY,
+                            )
+                            WizardStepChip(
+                                modifier = Modifier.weight(1f),
+                                title = stringResource(R.string.onboarding_step_login),
+                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_user),
+                                color = Color(0xFFD48A8C),
+                                active = step == WizardStep.LOGIN,
+                                completed = step == WizardStep.PRIVACY,
+                            )
+                        }
+
+                        // Its own row rather than a fourth chip beside those three: four at this
+                        // geometry would squeeze the widest labels ("Datenschutz", "Privacidad") into
+                        // a chip narrower than the word, and the last step is the one the person has
+                        // to answer before the workspace opens — it can afford the width.
+                        //
+                        // Offered, not only-while-active: the three chips above are the whole
+                        // sequence, and a step that exists but has not been reached yet is what the
+                        // dimmed third chip already means. A build with no DSN never gets here, so
+                        // there is no chip and no step at all.
+                        if (privacyStepOffered) {
+                            WizardStepChip(
+                                modifier = Modifier.fillMaxWidth(),
+                                title = stringResource(R.string.onboarding_step_privacy),
+                                imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_hand),
+                                color = Color(0xFF9E8CDB),
+                                active = step == WizardStep.PRIVACY,
+                            )
+                        }
                     }
 
-                    // The three chips above say WHERE the user is; until now nothing said
-                    // which WAY they had just gone. A crossfade — which is what an
-                    // AnimatedContent with no transitionSpec plays — is the one answer an
-                    // ordered sequence cannot give, and tapping Back off the server form
-                    // looked exactly like tapping Continue onto it.
+                    // The chips above say WHERE the user is — the last step adding a row of its own
+                    // while it is up — but until now nothing said which WAY they had just gone.
+                    // A crossfade, which is what an AnimatedContent with no transitionSpec plays,
+                    // is the one answer an ordered sequence cannot give, and tapping Back off the
+                    // server form looked exactly like tapping Continue onto it.
                     //
                     // The direction comes from `stepOrder` and never from the enum: two of
-                    // the five states are transient panels with no position, and the spec
+                    // the six states are transient panels with no position, and the spec
                     // below refuses to slide for them rather than inventing one.
                     //
                     // A step panel ARRIVES, so the incoming half is Enter; the panel being
                     // left is an absence and takes Quick, which is the first idiom rule
                     // capping an exit at the enter it undoes. `SizeTransform(clip = false)`
-                    // in every branch because the three panels are different heights and
+                    // in every branch because the panel heights differ and
                     // the default clips — the taller one would be chopped mid-slide.
                     AnimatedContent(
                         targetState = viewState,
@@ -1395,6 +1480,13 @@ fun OnboardingWizardOverlay(
                                 }
                             }
 
+                            WizardViewState.PRIVACY -> {
+                                WizardPrivacyPanel(
+                                    onShare = onShareCrashReports,
+                                    onNotNow = onDeclineCrashReports,
+                                )
+                            }
+
                             WizardViewState.AUTHENTICATING -> {
                                 val isRegistering = authMode == AuthPanelMode.CREATE_ACCOUNT ||
                                         authMode == AuthPanelMode.CREATE_ACCOUNT_SECURITY
@@ -1762,6 +1854,46 @@ private fun WizardModeChoiceButton(
                     maxLines = 2,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun WizardPrivacyPanel(
+    onShare: () -> Unit,
+    onNotNow: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(WIZARD_PANEL_SPACING),
+    ) {
+        // The card's own wording, not a second telling of it: one offer, two places it can be
+        // answered, and no way for the two to describe different things.
+        TelemetryDisclosure()
+
+        // The wizard's idiom for ending a step: the one filled button it wants tapped, over the
+        // text button that declines. The disclosure's paragraph about Settings answers "what if I
+        // change my mind", so the step needs no second control for it.
+        Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = TdayDimens.SpacingXs)
+                .height(WIZARD_PRIMARY_BUTTON_HEIGHT),
+            onClick = onShare,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colorScheme.primary,
+                contentColor = colorScheme.onPrimary,
+            ),
+        ) {
+            Text(stringResource(R.string.telemetry_card_share))
+        }
+
+        TextButton(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onNotNow,
+        ) {
+            Text(stringResource(R.string.telemetry_card_not_now))
         }
     }
 }

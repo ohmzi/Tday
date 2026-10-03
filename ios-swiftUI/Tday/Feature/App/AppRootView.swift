@@ -84,6 +84,12 @@ struct AppRootView: View {
     // reads it now, so a crossing invalidates that slot and nothing else.
     @State private var rootChrome = RootChromeState()
     @State private var rootControlsVisible = true
+    // Plain state, never stored: this says which launch the person is in, not what the install has
+    // done. An install that is already signed in at launch never sees a wizard, and one that is
+    // restarted in the middle of the wizard's last step comes back to a workspace — both have to
+    // fall back to the standalone crash-reports card rather than reopen the wizard, so this may not
+    // outlive the launch.
+    @State private var hasShownOnboardingWizard = false
     // Optional biometric gate, default OFF. When disabled every member below is inert.
     @State private var appLock = AppLockController()
     @Environment(\.scenePhase) private var scenePhase
@@ -147,7 +153,11 @@ struct AppRootView: View {
                         tdayAnimation(TdayMotion.exit(duration: TdayMotion.Durations.enter))
                     ))
             } else {
-                let showOnboardingOverlay = !appViewModel.isWorkspaceAvailable && appViewModel.versionCheckResult == .compatible
+                // The question the wizard's flow ends on counts as the wizard being up: the flow
+                // landing opens the workspace under it, and this is what keeps the workspace out of
+                // focus for the one thing that still has to be answered before it is handed over.
+                let showOnboardingOverlay = (!appViewModel.isWorkspaceAvailable && appViewModel.versionCheckResult == .compatible)
+                    || isOnboardingPrivacyStepDue
 
                 // The toast host wraps the stack rather than the stack carrying the toast's
                 // `.overlay` and `.animation(_:value:)` itself. Both of those read
@@ -446,10 +456,22 @@ struct AppRootView: View {
                             }
                         }
                         .overlay {
-                            if !appViewModel.isWorkspaceAvailable {
+                            // The workspace being open is not the only way the wizard stays up: it is
+                            // held for the crash-reports question its flow ends on, which arrives in
+                            // the same breath as the workspace. The gates inside keep their precedence
+                            // either way, and the ones outside draw over this slot.
+                            if !appViewModel.isWorkspaceAvailable || isOnboardingPrivacyStepDue {
                                 let isVersionBlocking = appViewModel.versionCheckResult != .compatible
+                                // The two holding screens below own this slot only while the wizard
+                                // is not holding it for its own last step. On that one path the
+                                // workspace is already open behind the wizard, so an out-of-date app
+                                // or an account waiting for approval belongs over the wizard — where
+                                // the gates below draw it — and drawing it here as well would stand
+                                // two copies of a screen that registers install launchers and answers
+                                // to a resume.
+                                let holdingScreensOwnTheSlot = !isOnboardingPrivacyStepDue
 
-                                if appViewModel.pendingApproval {
+                                if holdingScreensOwnTheSlot, appViewModel.pendingApproval {
                                     PendingApprovalView(
                                         username: appViewModel.pendingApprovalUsername,
                                         isChecking: appViewModel.isCheckingApproval,
@@ -461,7 +483,7 @@ struct AppRootView: View {
                                             appViewModel.cancelPendingApproval()
                                         }
                                     )
-                                } else if isVersionBlocking {
+                                } else if holdingScreensOwnTheSlot, isVersionBlocking {
                                     UpdateRequiredView(
                                         versionCheckResult: appViewModel.versionCheckResult,
                                         onRetry: {
@@ -520,9 +542,19 @@ struct AppRootView: View {
                                         onClearAuthStatus: {
                                             authViewModel.clearStatus()
                                             appViewModel.clearPendingApprovalNotice()
-                                        }
+                                        },
+                                        privacyStepOffered: isOnboardingPrivacyStepOffered,
+                                        privacyStepDue: isOnboardingPrivacyStepDue,
+                                        onShareReports: { container.telemetryConsent.share() },
+                                        onDeclineReports: { container.telemetryConsent.decline() }
                                     )
                                     .transition(.opacity)
+                                    // The wizard is what makes the question this session's to ask, so
+                                    // the moment it is on screen is the moment that is recorded. Set
+                                    // here rather than when the question is reached: a flow that opens
+                                    // the workspace has to find the answer already true, and this has
+                                    // long since run by then.
+                                    .onAppear { hasShownOnboardingWizard = true }
                                 }
                             }
 
@@ -831,13 +863,35 @@ struct AppRootView: View {
             && appViewModel.user?.requireSecurityQuestions == true
     }
 
-    /// The crash-reports card is due, and nothing that has to come first is on screen.
+    /// Whether this launch's wizard has a last step at all: a DSN to send to, no answer yet, and a
+    /// wizard that was actually on screen for the flow. This is the whole of the chip — a build with
+    /// no DSN, or a device that has already answered, has no fourth chip and no step, which is what
+    /// makes both a strict no-op there.
+    private var isOnboardingPrivacyStepOffered: Bool {
+        container.telemetryConsent.shouldPresentWizardStep(wizardWasOnScreen: hasShownOnboardingWizard)
+    }
+
+    /// Whether the step is the one to show now: the flow it belongs to has landed and the workspace
+    /// is open behind the wizard.
+    ///
+    /// The workspace opening IS the moment, and it is the same one whichever way it opened — a
+    /// sign-in, or "This device" — so nothing about the answer or the sign-in is read here. This is
+    /// also what holds the overlay up, and what the consent card is held back by: the step and the
+    /// card are the same question, and only ever one of them is up.
+    private var isOnboardingPrivacyStepDue: Bool {
+        isOnboardingPrivacyStepOffered && appViewModel.isWorkspaceAvailable
+    }
+
+    /// The crash-reports card is due, and nothing that has to come first is on screen. The wizard's
+    /// own last step is one of those: it is asking this same question, and the card is drawn over
+    /// the wizard in this stack rather than under it.
     private var showsTelemetryConsent: Bool {
         container.telemetryConsent.shouldPresentCard(
             workspaceAvailable: appViewModel.isWorkspaceAvailable,
             isCoveredByAnotherGate: showsUpdateRequiredGate
                 || showsSecurityQuestionsGate
                 || appLockCoverMode != .hidden
+                || isOnboardingPrivacyStepDue
         )
     }
 

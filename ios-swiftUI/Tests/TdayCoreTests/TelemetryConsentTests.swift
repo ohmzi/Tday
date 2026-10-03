@@ -176,6 +176,31 @@ final class TelemetryConsentModelTests: XCTestCase {
         XCTAssertTrue(isCardDue(makeModel()))
     }
 
+    // MARK: - When the wizard's last step is due
+
+    /// The step belongs to the flow the wizard carried — a sign-in, or "This device" — so it is due
+    /// in the frame that flow opens the workspace rather than waiting for one, and only for a wizard
+    /// that was actually on screen. An install that is already signed in at launch, or that restarted
+    /// mid-step, comes back to a workspace with no wizard, and the card is what asks it.
+    func testTheWizardStepIsDueForAWizardThatWasOnScreenAndForNothingElse() {
+        XCTAssertTrue(makeModel().shouldPresentWizardStep(wizardWasOnScreen: true))
+        XCTAssertFalse(makeModel().shouldPresentWizardStep(wizardWasOnScreen: false))
+    }
+
+    func testABuildWithoutADsnHasNoWizardStep() {
+        XCTAssertFalse(makeModel(isAvailable: false).shouldPresentWizardStep(wizardWasOnScreen: true))
+    }
+
+    func testAnAnswerEndsTheWizardStep() {
+        let granted = makeModel()
+        granted.share()
+        XCTAssertFalse(granted.shouldPresentWizardStep(wizardWasOnScreen: true))
+
+        let denied = makeModel()
+        denied.decline()
+        XCTAssertFalse(denied.shouldPresentWizardStep(wizardWasOnScreen: true))
+    }
+
     // MARK: - Answering
 
     func testSharingGrantsOnceAndTheCardGoesAway() {
