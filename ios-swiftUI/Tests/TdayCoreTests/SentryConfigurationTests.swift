@@ -151,4 +151,46 @@ final class SentryConfigurationTests: XCTestCase {
     func testTheGateIsClosedUntilSomethingOpensIt() {
         XCTAssertFalse(TelemetryGate().isOpen)
     }
+
+    // MARK: - TEST-CRASH titles
+
+    /// A trap's report has no exception value, so Sentry titles the issue after the crashing symbol
+    /// (`_assertionFailure`). The trigger's breadcrumb is what puts the screen back into the title and
+    /// marks the report as a test.
+    func testATestTriggerNamesItsScreenAndMarksItself() {
+        let event = Event()
+        let breadcrumb = Breadcrumb(level: .warning, category: "tday")
+        breadcrumb.message = "test_crash:TC-FEED-ANY: anytime feed"
+        event.breadcrumbs = [breadcrumb]
+        let exception = Exception(value: nil, type: "EXC_BREAKPOINT")
+        let mechanism = Mechanism(type: "mach")
+        mechanism.synthetic = NSNumber(value: true)
+        exception.mechanism = mechanism
+        event.exceptions = [exception]
+
+        event.applyTestCrashTitle()
+
+        XCTAssertEqual(event.exceptions?.first?.value, "TEST-CRASH TC-FEED-ANY: anytime feed")
+        XCTAssertEqual(event.message?.formatted, "TEST-CRASH TC-FEED-ANY: anytime feed")
+        // Sentry titles a synthetic exception after the crashing symbol instead of the value.
+        XCTAssertEqual(event.exceptions?.first?.mechanism?.synthetic, NSNumber(value: false))
+        XCTAssertEqual(event.tags?["test_crash"], "true")
+        XCTAssertEqual(event.tags?["test_crash_id"], "TC-FEED-ANY")
+    }
+
+    /// Every real event goes through the same hook, and none of them may be renamed or tagged.
+    func testAnEventWithoutATestBreadcrumbIsLeftAlone() {
+        let event = Event()
+        let breadcrumb = Breadcrumb(level: .warning, category: "tday")
+        breadcrumb.message = "sync replay failed"
+        event.breadcrumbs = [breadcrumb]
+        event.exceptions = [Exception(value: "Could not reach the server", type: "NSURLErrorDomain")]
+        event.tags = ["operation": "sync_replay"]
+
+        event.applyTestCrashTitle()
+
+        XCTAssertEqual(event.exceptions?.first?.value, "Could not reach the server")
+        XCTAssertNil(event.message)
+        XCTAssertEqual(event.tags, ["operation": "sync_replay"])
+    }
 }
