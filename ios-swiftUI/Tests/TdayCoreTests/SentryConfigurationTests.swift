@@ -176,6 +176,8 @@ final class SentryConfigurationTests: XCTestCase {
         XCTAssertEqual(event.exceptions?.first?.mechanism?.synthetic, NSNumber(value: false))
         XCTAssertEqual(event.tags?["test_crash"], "true")
         XCTAssertEqual(event.tags?["test_crash_id"], "TC-FEED-ANY")
+        // Every trap shares a crashing frame, so the fingerprint is what keeps one issue per trigger.
+        XCTAssertEqual(event.fingerprint, ["test-crash", "TC-FEED-ANY"])
     }
 
     /// The breadcrumb reaches `beforeSend` through the scrubber, which writes the spaces in a label

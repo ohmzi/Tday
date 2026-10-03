@@ -307,5 +307,9 @@ extension Event {
         merged["test_crash"] = "true"
         merged["test_crash_id"] = String(payload.prefix(while: { $0 != ":" }))
         tags = merged
+        // One issue per trigger. Every trap in this harness crashes in the same function, so without a
+        // fingerprint Sentry groups several of them into one issue and the merge's title stands for
+        // all of them — which is the opposite of what a per-screen cross-check is for.
+        fingerprint = ["test-crash", String(payload.prefix(while: { $0 != ":" }))]
     }
 }
