@@ -18,9 +18,20 @@ kotlin {
     }
 }
 
+// `rootProject` follows the directory Gradle was pointed at, and this repository is built from two
+// places: `android-compose/` on its own, and the repository root, which includes `:android-compose:app`
+// and is what Android Studio opens because the backend build lives there too. Reading only
+// `rootProject`'s file made a key such as `sentryDsn` silently vanish in one of them — a build with no
+// DSN has no crash-report surface at all. Both files are read, and the module's own is read last so it
+// wins where both define the same key.
 val localProps: Properties = Properties().apply {
-    val f = rootProject.file("local.properties")
-    if (f.exists()) f.reader().use { load(it) }
+    listOf(
+        rootProject.projectDir.parentFile?.let { File(it, "local.properties") },
+        rootProject.file("local.properties"),
+        File(rootProject.projectDir, "android-compose/local.properties"),
+    ).filterNotNull().distinct().forEach { f ->
+        if (f.exists()) f.reader().use { load(it) }
+    }
 }
 
 val projectVersion: String by lazy {
