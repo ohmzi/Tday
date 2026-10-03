@@ -12,6 +12,7 @@ import com.ohmz.tday.services.AdminService
 import com.ohmz.tday.services.InstanceSettingsService
 import com.ohmz.tday.services.SecurityAlertService
 import com.ohmz.tday.testcrash.BackendTestCrash
+import com.ohmz.tday.testcrash.TestCrashFailure
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
 import io.ktor.server.routing.Route
@@ -79,25 +80,27 @@ fun Route.adminRoutes() {
             // step it really takes — the handler, StatusPages, the SDK, the scrubber, the operator's
             // own gate — and lands in the backend's Sentry project. The message is the shape the
             // mobile and web triggers use, so one search finds every platform:
-            // `IllegalStateException: TEST-CRASH TC-BACKEND-CRASH: unhandled admin error`.
+            // `TestCrashFailure: TEST-CRASH TC-BACKEND-CRASH: unhandled admin error`.
             post("/test-crash") {
                 call.withAuth<Unit> { user ->
                     either {
                         user.requireAdminAccess().bind()
-                        throw IllegalStateException(BackendTestCrash.CRASH.message)
+                        throw TestCrashFailure(BackendTestCrash.CRASH)
                     }
                 }
             }
 
             // The same trigger down the other path this server reports by: the handler catches the
-            // failure and reports it itself, the way a caught failure anywhere else is reported.
+            // failure and reports it itself, the way a caught failure anywhere else is reported. Its
+            // fingerprint keeps it a separate issue from the trigger above, on the same route.
             post("/test-error") {
                 call.withAuth<Map<String, Boolean>>(status = HttpStatusCode.InternalServerError) { user ->
                     either {
                         user.requireAdminAccess().bind()
                         TdayObservability.captureException(
-                            IllegalStateException(BackendTestCrash.HANDLED.message),
+                            TestCrashFailure(BackendTestCrash.HANDLED),
                             operation = BackendTestCrash.OPERATION,
+                            fingerprint = BackendTestCrash.HANDLED.issueFingerprint,
                         )
                         mapOf("reported" to true)
                     }

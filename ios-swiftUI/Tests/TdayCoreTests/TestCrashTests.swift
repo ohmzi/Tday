@@ -85,6 +85,75 @@ final class TestCrashTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(TestCrash.freezeSeconds, 5)
     }
 
+    // MARK: - The freeze's slices
+
+    /// The freeze holds the main thread in slices, and its pass of the run loop is what hands over a
+    /// Stop tap that was queued behind the block. This drives that exact path — a tap scheduled on
+    /// the main queue, the loop running on this thread — with a budget too small to notice.
+    func testAQueuedStopTapEndsTheFreezeEarly() {
+        let state = TestCrash.FreezeState()
+        // What the panel's Stop control does, one tap's worth of delay after the block starts.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            TestCrash.cancelFreeze(state: state)
+        }
+
+        let started = Date()
+        let cancelled = TestCrash.runFreeze(
+            budget: 1,
+            sliceSeconds: 0.02,
+            holdOffSeconds: 0,
+            state: state,
+        )
+        let elapsed = Date().timeIntervalSince(started)
+
+        XCTAssertTrue(cancelled, "the queued Stop tap never reached the freeze")
+        XCTAssertTrue(state.wasCancelled)
+        XCTAssertFalse(state.isFrozen)
+        XCTAssertLessThan(elapsed, 0.5, "the block outlived the Stop tap")
+        XCTAssertEqual(state.lastBlockedMillis ?? 0, Int((elapsed * 1000).rounded()), accuracy: 50)
+        XCTAssertTrue(state.resultLine?.hasPrefix("Cancelled after ") == true, state.resultLine ?? "nil")
+    }
+
+    /// The other half of the same promise: with no tap, every slice and every pass of the run loop is
+    /// capped by what is left of the budget, so a full run cannot overrun it.
+    func testAFullFreezeStaysInsideItsBudget() {
+        let state = TestCrash.FreezeState()
+        let budget: TimeInterval = 0.4
+
+        let started = Date()
+        let cancelled = TestCrash.runFreeze(
+            budget: budget,
+            sliceSeconds: 0.1,
+            holdOffSeconds: 0,
+            state: state,
+        )
+        let elapsed = Date().timeIntervalSince(started)
+
+        XCTAssertFalse(cancelled)
+        XCTAssertFalse(state.wasCancelled)
+        XCTAssertFalse(state.isFrozen)
+        XCTAssertLessThanOrEqual(elapsed, budget + 0.1, "the block overran its budget")
+        XCTAssertGreaterThanOrEqual(elapsed, budget * 0.8)
+        XCTAssertEqual(state.lastBlockedMillis ?? 0, Int((budget * 1000).rounded()), accuracy: 100)
+        XCTAssertTrue(state.resultLine?.hasPrefix("Main thread was blocked for ") == true, state.resultLine ?? "nil")
+    }
+
+    /// The two decisions the numbers above encode: a slice bounds how long a tap sits behind the
+    /// block, and the hold-off covers the SDK's app-hang window (`SentryConfiguration` sets 2 s) so
+    /// that servicing the run loop — which is what lets the frames tracker see a frame — cannot happen
+    /// before the hang has been reported. It still leaves more than half the budget reachable by Stop.
+    func testTheFreezeIsSlicedAndHoldsOffTheRunLoopUntilTheSdkHasSeenTheHang() {
+        XCTAssertLessThanOrEqual(TestCrash.freezeSliceSeconds, 0.5)
+        XCTAssertGreaterThanOrEqual(TestCrash.freezeRunLoopHoldOffSeconds, TestCrash.freezeSliceSeconds * 5)
+        XCTAssertGreaterThan(TestCrash.freezeRunLoopHoldOffSeconds, 2)
+        XCTAssertLessThan(TestCrash.freezeRunLoopHoldOffSeconds, TestCrash.freezeSeconds)
+        XCTAssertLessThanOrEqual(TestCrash.freezeRunLoopPumpSeconds, TestCrash.freezeSliceSeconds)
+    }
+
+    func testCancellingWithoutAFreezeReportsNothingToCancel() {
+        XCTAssertFalse(TestCrash.cancelFreeze(state: TestCrash.FreezeState()))
+    }
+
     func testFirstVisibleRowSkipsEmptyAndCollapsedSections() {
         XCTAssertTrue(TestCrash.isFirstVisibleRow(sectionIndex: 0, itemIndex: 0, visibleCounts: [2, 3]))
         XCTAssertFalse(TestCrash.isFirstVisibleRow(sectionIndex: 0, itemIndex: 1, visibleCounts: [2, 3]))

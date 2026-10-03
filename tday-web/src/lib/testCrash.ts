@@ -3,6 +3,7 @@
 // reverting the one commit that added it. Nothing here weakens consent, the scrubber or a gate:
 // a report is only sent when the browser opted in and a DSN is built in.
 import { useEffect } from "react";
+import type { ErrorEvent } from "@sentry/react";
 import { ApiError, api } from "@/lib/api-client";
 import { addDiagnosticBreadcrumb, captureUiException } from "@/lib/observability/sentry";
 
@@ -128,8 +129,49 @@ export function buildTestCrashError(id: TestCrashId): Error {
 function freezeMainThread(): void {
   const end = Date.now() + FREEZE_MS;
   while (Date.now() < end) {
-    // Busy loop on purpose: this is the freeze being tested.
+    // Busy loop on purpose: this is the freeze being tested. A blocked main thread cannot paint, so
+    // nothing inside the app can offer a way out *during* the block — the notice below appears the
+    // moment the thread is free again, and the browser's own "page unresponsive" prompt covers a
+    // block that never ends.
   }
+}
+
+/** `TEST-CRASH <ID>:` wherever an event carries it — the message, or any exception in the chain. */
+const TEST_CRASH_IN_EVENT = /TEST-CRASH (TC-[A-Z-]+):/;
+
+/**
+ * TEST-CRASH: gives a trigger the title and the identity the other clients give theirs.
+ *
+ * Two things hide a trigger's name from Sentry. A `DOMException` arrives with no exception type, so
+ * its issue gets titled after whatever frame the SDK was in when it captured — every one of them read
+ * "captureException" — and the SDK marks that exception *synthetic*, which makes Sentry title the
+ * issue after the crashing frame instead of the exception at all. On top of both, Sentry groups by
+ * type and stack, so two screens raising the same error type shared one issue.
+ *
+ * This writes the type and value Sentry titles with, clears the synthetic flag the way the iOS
+ * harness does, and fingerprints each trigger so every button is one recognisable issue.
+ *
+ * Runs from `beforeSend`, after the scrubber, so it can only shape an already-scrubbed event.
+ */
+export function applyTestCrashTitle(event: ErrorEvent): ErrorEvent {
+  const haystack = [event.message, ...(event.exception?.values ?? []).map((value) => value.value)]
+    .filter(Boolean)
+    .join("\n");
+  const id = TEST_CRASH_IN_EVENT.exec(haystack)?.[1] as TestCrashId | undefined;
+  if (!id || !(id in TEST_CRASH_PLANS)) return event;
+  const message = testCrashMessage(id);
+  const values = event.exception?.values ?? [];
+  // Sentry titles a chained exception from its last entry; that entry keeps the real stack, and the
+  // wrapper entries above it only repeated the same text.
+  const titled = values.length ? values[values.length - 1] : undefined;
+  const mechanism = titled?.mechanism ? { ...titled.mechanism, synthetic: false } : titled?.mechanism;
+  event.exception = {
+    ...event.exception,
+    values: [{ ...titled, type: TEST_CRASH_PLANS[id].kind, value: message, mechanism }],
+  };
+  event.fingerprint = ["test-crash", id];
+  event.message = message;
+  return event;
 }
 
 /** Fires the crash for `id` on a path nothing in the app catches. */
