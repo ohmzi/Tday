@@ -124,14 +124,21 @@ object TdayObservability {
         Sentry.addBreadcrumb(breadcrumb)
     }
 
+    /**
+     * Reports a failure. `fingerprint` is for a failure that deserves an issue of its own rather than
+     * being grouped with everything else that fails on the same route — see [FingerprintedFailure],
+     * whose keys the callers pass straight through.
+     */
     fun captureException(
         throwable: Throwable,
         operation: String,
         data: Map<String, Any?> = emptyMap(),
+        fingerprint: List<String> = emptyList(),
     ) {
         Sentry.withScope { scope ->
             scope.setTag("tday.operation", safeLabel(operation))
             data.forEach { (key, value) -> scope.setExtra(key, safeDataValue(key, value).toString()) }
+            if (fingerprint.isNotEmpty()) scope.fingerprint = fingerprint
             Sentry.captureException(throwable)
         }
     }
