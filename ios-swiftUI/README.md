@@ -239,6 +239,10 @@ decision.
   lives in `UserDefaults.standard` (`telemetry.consent` as a Bool, `telemetry.consentAt` as epoch
   seconds), not the Keychain, so it resets with an install and is readable in `TdayApp.init`. Signing
   out, leaving a workspace and deleting local data leave it alone.
+- A local build gets its reporting endpoint from the gitignored `Local.xcconfig` (`SENTRY_DSN`, and
+  `TDAY_PROBE_ENCRYPTION_KEY` for the version gate), pulled in optionally by the committed
+  `Tday.xcconfig`. Without one, `Info.plist`'s `$(SENTRY_DSN)` is empty and every consent surface
+  stays hidden; the TestFlight lane passes its own `-xcconfig`, so releases never depend on it.
 - `SentryConfiguration.start()` (called from `TdayApp.init`) starts the SDK only when the answer is
   granted and `SENTRY_DSN` is non-empty. Otherwise it deletes `<Caches>/io.sentry` and
   `<Caches>/SentryCrash` and returns, so nothing is initialised, buffered or sent. A build without a
