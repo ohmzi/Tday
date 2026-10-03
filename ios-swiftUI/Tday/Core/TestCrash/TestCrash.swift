@@ -290,7 +290,10 @@ extension Event {
             return
         }
 
-        let title = "TEST-CRASH \(payload)"
+        // The scrubber rewrites the spaces in a breadcrumb label as underscores; the other clients'
+        // titles keep them, so they are put back: `TEST-CRASH TC-FEED-ANY: anytime feed`, exactly the
+        // string Android's exception and the web app's error carry.
+        let title = "TEST-CRASH \(payload.replacingOccurrences(of: "_", with: " "))"
         // `exception.value` is what Sentry titles a report with, and `message` is the fallback the
         // server uses when an exception has no value of its own.
         exceptions?.first?.value = title

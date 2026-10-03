@@ -178,6 +178,42 @@ final class SentryConfigurationTests: XCTestCase {
         XCTAssertEqual(event.tags?["test_crash_id"], "TC-FEED-ANY")
     }
 
+    /// The breadcrumb reaches `beforeSend` through the scrubber, which writes the spaces in a label
+    /// as underscores. The title has to come out with the spaces the other clients' titles have, so
+    /// the trigger's id-and-screen text reads the same on every platform.
+    func testTheScrubbersUnderscoresComeBackAsSpaces() {
+        let event = Event()
+        let breadcrumb = Breadcrumb(level: .warning, category: "tday")
+        breadcrumb.message = "test_crash:TC-FEED-ANY:_anytime_feed"
+        event.breadcrumbs = [breadcrumb]
+        event.exceptions = [Exception(value: nil, type: "EXC_BREAKPOINT")]
+
+        event.applyTestCrashTitle()
+
+        XCTAssertEqual(event.exceptions?.first?.value, "TEST-CRASH TC-FEED-ANY: anytime feed")
+        XCTAssertEqual(event.tags?["test_crash_id"], "TC-FEED-ANY")
+    }
+
+    /// The whole way out: the options' own `beforeSend`, with the gate open, on an event shaped like a
+    /// crash report.
+    func testTheGateOpenSendPathTitlesATestCrash() {
+        let gate = TelemetryGate()
+        gate.open()
+        let options = makeOptions(consentedAt: Date(timeIntervalSince1970: 1_000), gate: gate)
+
+        let event = Event(level: .fatal)
+        let breadcrumb = Breadcrumb(level: .warning, category: "tday")
+        breadcrumb.message = "test_crash:TC-SET-CRASH:_settings_fatal_crash"
+        event.breadcrumbs = [breadcrumb]
+        event.exceptions = [Exception(value: nil, type: "EXC_BREAKPOINT")]
+
+        let sent = options.beforeSend?(event)
+
+        XCTAssertEqual(sent?.exceptions?.first?.value, "TEST-CRASH TC-SET-CRASH: settings fatal crash")
+        XCTAssertEqual(sent?.tags?["test_crash"], "true")
+        XCTAssertEqual(sent?.tags?["test_crash_id"], "TC-SET-CRASH")
+    }
+
     /// Every real event goes through the same hook, and none of them may be renamed or tagged.
     func testAnEventWithoutATestBreadcrumbIsLeftAlone() {
         let event = Event()
