@@ -145,6 +145,99 @@ directly.
 | Ollama, optional `ai` profile | `ollama list` | 20s (5 retries) |
 | T'Day backend | Depends on PostgreSQL; uses Ollama opportunistically when configured | — |
 
+### Self-healing a hung backend
+
+`restart: always` covers one failure and only one: a container whose **process exits** is started
+again. A JVM that stops answering while its process stays alive is not restarted by Compose — the
+healthcheck above marks the container `unhealthy` and nothing acts on health. The stack therefore
+heals a crash but not a hang, and a hung backend stays hung until somebody notices.
+
+`scripts/backend-watchdog.sh` closes that gap. It reads the health the healthcheck already writes
+and restarts the container once the evidence is unambiguous:
+
+| Guard | Default | Why it exists |
+|-------|---------|---------------|
+| `--failures N` | 3 | Docker calls a container `unhealthy` only after its own `retries: 3` failed probes, so this is a second, deliberate delay on top of that — a restart is disruptive and a backend that is briefly unwell should be left alone |
+| `--cooldown MIN` | 15 | A restart is expensive, and a backend that is failing for its own reasons is not fixed by restarting it in a loop |
+
+With the healthcheck above (30s interval, `retries: 3`) and the default `--failures 3` on a
+one-minute cron, a backend that stops answering is restarted roughly four to five minutes later:
+about ninety seconds for Docker to call it unhealthy, then about three further minutes of
+consecutive unhealthy checks. That delay is the point; a brief wobble must not cost a restart.
+
+It is silent while the backend is healthy (cron mails on any output), logs one line per decision to
+stderr, and treats both `starting` — the healthcheck's `start_period` — and a container Docker is
+already restarting as "leave it alone". The failure count and the time of the last restart live in
+`$XDG_STATE_HOME/tday-watchdog` (`~/.local/state/tday-watchdog` by default), which is what lets
+"three consecutive" span three separate cron runs.
+
+Install it beside the compose file and run it every minute:
+
+```cron
+* * * * * /opt/tday/scripts/backend-watchdog.sh >>/var/log/tday-watchdog.log 2>&1
+```
+
+Each decision is one line on stderr, so the redirect is what keeps cron quiet and keeps the history.
+`--log-file PATH` writes the same lines to a file *as well as* stderr, for a host that wants both
+the mail and a log.
+
+Flags win over the matching `TDAY_WATCHDOG_*` environment variable:
+
+| Flag | Environment | Default |
+|------|-------------|---------|
+| `--container NAME` | `TDAY_WATCHDOG_CONTAINER` | `tday_backend` |
+| `--failures N` | `TDAY_WATCHDOG_FAILURES` | `3` |
+| `--cooldown MIN` | `TDAY_WATCHDOG_COOLDOWN` | `15` |
+| `--health-url URL` | `TDAY_WATCHDOG_HEALTH_URL` | unset — only needed when the container has no healthcheck to read |
+| `--log-file PATH` | `TDAY_WATCHDOG_LOG` | unset — decisions already go to stderr |
+| `--state-dir DIR` | `TDAY_WATCHDOG_STATE_DIR` | `$XDG_STATE_HOME/tday-watchdog` |
+| `--docker CMD` | `TDAY_WATCHDOG_DOCKER` | `docker` — cron's `PATH` is minimal, so pass an absolute path if the CLI is not on it |
+| `--dry-run` | — | report the decision and write nothing |
+| `--status` | — | print health, failure count, last restart and cooldown left, then exit |
+
+`scripts/backend-watchdog-test.sh` drives every branch through stubs — no Docker and no host
+needed — and is the reference for the exact decision rule.
+
+**macOS host.** cron works, but a launchd agent survives sleep and login changes and needs no
+`crontab` edit. Save this as `~/Library/LaunchAgents/com.tday.watchdog.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.tday.watchdog</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/tday/scripts/backend-watchdog.sh</string>
+  </array>
+  <key>StartInterval</key><integer>60</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>/tmp/tday-watchdog.log</string>
+  <key>StandardErrorPath</key><string>/tmp/tday-watchdog.log</string>
+</dict>
+</plist>
+```
+
+then load it with `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.tday.watchdog.plist`
+(`launchctl load -w …` on older macOS). launchd does not mail output, so the `Standard*Path` keys
+are how its decisions reach a file.
+
+**Alternative: the `autoheal` sidecar.** `willfarrell/autoheal` watches the health status of every
+container and restarts the unhealthy ones, which is less to own than the script above. The tradeoff
+is the Docker socket: it has to mount `/var/run/docker.sock`, and anything holding that socket can
+control every container on the host — root-equivalent access. This compose file is deliberately
+built to avoid that: `security_opt: no-new-privileges` and `cap_drop: ALL` are doing real work
+there, and a socket-mounted sidecar gives that reach back for itself. Prefer the host script unless
+the host already accepts a socket-mounted helper.
+
+**Seeing why it restarted:**
+
+- `docker compose logs --tail=200 tday-backend` — the JVM's own output up to the restart
+- `docker inspect --format '{{json .State.Health}}' tday_backend | jq` — the recent probes and what each one returned
+- the watchdog's log file — one line per decision, including the failure count at the moment it restarted
+- `docker events --filter container=tday_backend --since 1h` — `die`/`start` transitions, including ones Docker made on its own
+
 ## CI/CD Pipeline
 
 ### Workflows
