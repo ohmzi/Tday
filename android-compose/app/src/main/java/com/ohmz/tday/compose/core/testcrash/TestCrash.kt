@@ -220,9 +220,11 @@ object TestCrash {
             val current = minOf(sliceMillis, limit - blocked).coerceAtLeast(1L)
             try {
                 block(current)
-            } catch (t: Throwable) {
-                finish() // a failed block must not leave the freeze marked as running
-                throw t
+            } catch (interrupted: InterruptedException) {
+                // The one way the production block ends early: a block that was interrupted must not
+                // leave the freeze marked as running.
+                finish()
+                throw interrupted
             }
             blocked += current
             _freezeState.value = FreezeState(active = true, blockedMillis = blocked)

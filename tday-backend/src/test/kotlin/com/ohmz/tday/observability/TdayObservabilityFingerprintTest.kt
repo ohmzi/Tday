@@ -19,6 +19,11 @@ import kotlin.test.assertTrue
  *
  * The SDK is pointed at an in-memory transport, so this needs no network, no DSN and no database.
  */
+/** The repeated values the cases below share: one failure, and the two operation labels. */
+private const val FAILURE_MESSAGE = "boom"
+private const val TEST_CRASH_OPERATION = "test_crash"
+private const val UNHANDLED_OPERATION = "api.unhandled"
+
 class TdayObservabilityFingerprintTest {
     private val captured = mutableListOf<SentryEvent>()
 
@@ -58,8 +63,8 @@ class TdayObservabilityFingerprintTest {
     fun `the keys a failure declares reach the event`() {
         startSentry()
         TdayObservability.captureException(
-            IllegalStateException("boom"),
-            operation = "test_crash",
+            IllegalStateException(FAILURE_MESSAGE),
+            operation = TEST_CRASH_OPERATION,
             fingerprint = listOf("test-crash", "TC-BACKEND-CRASH"),
         )
         Sentry.flush(2_000)
@@ -71,7 +76,7 @@ class TdayObservabilityFingerprintTest {
     @Test
     fun `a failure without keys is left for Sentry to group`() {
         startSentry()
-        TdayObservability.captureException(IllegalStateException("boom"), operation = "api.unhandled")
+        TdayObservability.captureException(IllegalStateException(FAILURE_MESSAGE), operation = UNHANDLED_OPERATION)
         Sentry.flush(2_000)
 
         assertEquals(1, captured.size)
@@ -81,14 +86,14 @@ class TdayObservabilityFingerprintTest {
     @Test
     fun `the operation travels as a tag, as every other report does`() {
         startSentry()
-        TdayObservability.captureException(IllegalStateException("boom"), operation = "test_crash")
+        TdayObservability.captureException(IllegalStateException(FAILURE_MESSAGE), operation = TEST_CRASH_OPERATION)
         Sentry.flush(2_000)
 
         val event = captured.single()
-        assertEquals("test_crash", event.getTag("tday.operation"))
+        assertEquals(TEST_CRASH_OPERATION, event.getTag("tday.operation"))
         val exception = event.exceptions?.firstOrNull()
         assertEquals("IllegalStateException", exception?.type)
-        assertEquals("boom", exception?.value)
+        assertEquals(FAILURE_MESSAGE, exception?.value)
     }
 
     /** The helper must not put user text on the event on the way through. */
@@ -96,8 +101,8 @@ class TdayObservabilityFingerprintTest {
     fun `sensitive data keys are redacted before they are attached`() {
         startSentry()
         TdayObservability.captureException(
-            IllegalStateException("boom"),
-            operation = "api.unhandled",
+            IllegalStateException(FAILURE_MESSAGE),
+            operation = UNHANDLED_OPERATION,
             data = mapOf("token" to "secret-value", "route" to "/api/list"),
         )
         Sentry.flush(2_000)
