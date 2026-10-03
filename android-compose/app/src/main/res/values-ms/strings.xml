@@ -224,6 +224,7 @@
     <string name="onboarding_step_mode">Mod</string>
     <string name="onboarding_step_server">Pelayan</string>
     <string name="onboarding_step_login">Log masuk</string>
+    <string name="onboarding_step_privacy">Privasi</string>
     <string name="onboarding_mode_title">Pilih persediaan anda</string>
     <string name="onboarding_mode_subtitle">Pilih di mana T\'Day menyimpan tugasan anda.</string>
     <string name="onboarding_mode_server_title">Pelayan terhos sendiri</string>

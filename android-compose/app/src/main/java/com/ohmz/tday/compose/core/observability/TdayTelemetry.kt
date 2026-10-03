@@ -62,7 +62,10 @@ object TdayTelemetry {
         RegexOption.IGNORE_CASE,
     )
     private val tokenLikeLabelPattern = Regex("^[A-Za-z0-9_.:-]+$")
-    private val routeTemplateSegment = Regex("^\\{[A-Za-z][A-Za-z0-9_]*}$")
+    // Both braces are escaped: Android's ICU regex engine rejects a bare `}` after an escaped `{`
+    // (`PatternSyntaxException` at class-init time), while the JVM accepts it. Unit tests run on
+    // the JVM, so this only ever showed up on a device.
+    private val routeTemplateSegment = Regex("^\\{[A-Za-z][A-Za-z0-9_]*\\}$")
     private val routeLiteralSegment = Regex("^[A-Za-z][A-Za-z0-9_-]*$")
 
     /** What a path or route segment becomes when it is a value and not one of the app's own names. */

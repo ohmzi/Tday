@@ -1,8 +1,10 @@
 // TEST-CRASH: temporary test controls; see lib/testCrash.ts.
 import { useState } from "react";
 import {
+  BACKEND_TEST_CRASH_IDS,
   TEST_CRASH_LABELS,
   buildTestCrashError,
+  fireBackendTestCrash,
   fireTestCrash,
   type TestCrashId,
 } from "@/lib/testCrash";
@@ -10,6 +12,7 @@ import {
 const BUTTON_CLASS =
   "rounded-lg bg-destructive px-3 py-2 text-sm font-black text-destructive-foreground";
 const NOTE_CLASS = "text-xs font-extrabold text-muted-foreground";
+const ROW_CLASS = "flex flex-wrap gap-2";
 
 function RenderBomb(): null {
   throw buildTestCrashError("TC-SET-RENDER");
@@ -32,7 +35,7 @@ export function TestCrashSettingsControls() {
   return (
     <div className="flex flex-col items-start gap-2 px-1 py-2">
       <p className="text-sm font-black text-foreground">{TEST_CRASH_LABELS.settingsTitle}</p>
-      <div className="flex flex-wrap gap-2">
+      <div className={ROW_CLASS}>
         <button type="button" className={BUTTON_CLASS} onClick={() => fireTestCrash("TC-SET-CRASH")}>
           {TEST_CRASH_LABELS.button("TC-SET-CRASH")}
         </button>
@@ -63,6 +66,25 @@ export function TestCrashSettingsControls() {
       </div>
       <p className={NOTE_CLASS}>{TEST_CRASH_LABELS.note}</p>
       {armed ? <RenderBomb /> : null}
+
+      {/* The server's own path: pressing one makes the backend fail on purpose, so the report is a
+          backend event rather than a browser one. */}
+      <p className="pt-2 text-sm font-black text-foreground">
+        {TEST_CRASH_LABELS.backendTitle}
+      </p>
+      <div className={ROW_CLASS}>
+        {BACKEND_TEST_CRASH_IDS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            className={BUTTON_CLASS}
+            onClick={() => fireBackendTestCrash(id)}
+          >
+            {TEST_CRASH_LABELS.button(id)}
+          </button>
+        ))}
+      </div>
+      <p className={NOTE_CLASS}>{TEST_CRASH_LABELS.backendNote}</p>
     </div>
   );
 }

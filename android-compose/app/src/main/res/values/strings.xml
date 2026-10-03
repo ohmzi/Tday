@@ -234,6 +234,7 @@
     <string name="onboarding_step_mode">Mode</string>
     <string name="onboarding_step_server">Server</string>
     <string name="onboarding_step_login">Login</string>
+    <string name="onboarding_step_privacy">Privacy</string>
     <string name="onboarding_mode_title">Choose your setup</string>
     <string name="onboarding_mode_subtitle">Pick where T\'Day keeps your tasks.</string>
     <string name="onboarding_mode_server_title">Self-hosted server</string>

@@ -139,6 +139,8 @@ import com.ohmz.tday.compose.feature.release.LatestReleaseViewModel
 import com.ohmz.tday.compose.feature.settings.SettingsScreen
 import com.ohmz.tday.compose.feature.sweep.MorningSweepScreen
 import com.ohmz.tday.compose.feature.telemetry.TelemetryConsentGate
+import com.ohmz.tday.compose.feature.telemetry.TelemetryConsentViewModel
+import com.ohmz.tday.compose.feature.telemetry.shouldPresentWizardPrivacyStep
 import com.ohmz.tday.compose.feature.todos.TodoListScreen
 import com.ohmz.tday.compose.feature.todos.TodoListViewModel
 import com.ohmz.tday.compose.ui.component.RootCreateTaskButton
@@ -1383,7 +1385,45 @@ private fun ScheduledTaskHomeRoute(
     // Never true before the session has resolved: this route only exists
     // once the graph is built, and that waits for rootDestination to
     // leave SPLASH.
-    val showOnboardingWizard = appUiState.rootDestination == RootDestination.ONBOARDING
+    val onboardingWizardUp = appUiState.rootDestination == RootDestination.ONBOARDING
+
+    // The crash-report consent is the wizard's last step, so the wizard is held up for it instead
+    // of the workspace hiding it the moment the sign-in lands. Whether that step exists at all is a
+    // question about the device, not the workspace: a build with no DSN has nothing to ask, and an
+    // answered device must never be asked twice.
+    //
+    // Plain `remember`, not `rememberSaveable`: this says the wizard was on screen in THIS process.
+    // A process that restarts mid-step comes back signed in with `false` here and falls back to the
+    // after-sign-in card, which is the honest answer — it cannot know whether the step was reached.
+    var wizardWasOnScreen by remember { mutableStateOf(false) }
+    LaunchedEffect(onboardingWizardUp) {
+        if (onboardingWizardUp) wizardWasOnScreen = true
+    }
+    val telemetryConsent: TelemetryConsentViewModel = hiltViewModel()
+    val telemetryConsentState by telemetryConsent.state.collectAsStateWithLifecycle()
+    val privacyStepBelongsToThisFlow = shouldPresentWizardPrivacyStep(
+        available = telemetryConsent.isAvailable,
+        state = telemetryConsentState,
+        // The wizard is on screen now, or was: the second half is what is still true on the frame
+        // the sign-in opens the workspace under it.
+        wizardWasOnScreen = onboardingWizardUp || wizardWasOnScreen,
+    )
+
+    // ...and it is due only for a flow that actually opened a workspace and left no gate in front of
+    // it. A failed sign-in, an account waiting for approval, a required update and security
+    // questions still to be set all take the wizard's place — `OnboardingOverlay` draws the first
+    // two itself — and a wizard that is unmounted and put back would come back at its first step, so
+    // the step is dropped rather than merely covered, and the standalone card asks on the launch
+    // that gets past the gate.
+    //
+    // Local Mode is a workspace like any other here: "This device" ends the same flow, on the same
+    // last step, and the workspace opening is the moment either way.
+    val privacyStepDue = privacyStepBelongsToThisFlow &&
+        appUiState.rootDestination == RootDestination.WORKSPACE &&
+        !appUiState.pendingApproval &&
+        !appUiState.showsUpdateRequiredGate &&
+        !appUiState.showsSecurityQuestionsGate
+    val showOnboardingWizard = onboardingWizardUp || privacyStepDue
 
     // Remember the last attempted credentials so a pending-approval result
     // can be persisted into the holding screen (which re-attempts login).
@@ -1516,14 +1556,23 @@ private fun ScheduledTaskHomeRoute(
                     lastAuthUsername = username
                     lastAuthPassword = password
                 },
+                privacyStepOffered = privacyStepBelongsToThisFlow,
+                privacyStepDue = privacyStepDue,
+                onShareCrashReports = { telemetryConsent.setShareReports(true) },
+                onDeclineCrashReports = { telemetryConsent.setShareReports(false) },
             )
         }
 
         // Composed before AuthenticatedGates: dialogs stack in composition order, so the
         // update-required and security-questions gates draw over this card, not under it.
+        //
+        // `privacyStepDue` is one of those higher gates: the wizard is asking the same question on
+        // its own card at that moment, and a dialog over it would ask it twice at once.
         TelemetryConsentGate(
             workspaceOpen = appUiState.rootDestination == RootDestination.WORKSPACE,
-            aHigherGateIsUp = appUiState.showsUpdateRequiredGate || appUiState.showsSecurityQuestionsGate,
+            aHigherGateIsUp = appUiState.showsUpdateRequiredGate ||
+                appUiState.showsSecurityQuestionsGate ||
+                privacyStepDue,
         )
 
         AuthenticatedGates(
@@ -2061,6 +2110,10 @@ private fun OnboardingOverlay(
     authViewModel: AuthViewModel,
     authUiState: AuthUiState,
     onCredentialsAttempted: (String, String) -> Unit,
+    privacyStepOffered: Boolean,
+    privacyStepDue: Boolean,
+    onShareCrashReports: () -> Unit,
+    onDeclineCrashReports: () -> Unit,
 ) {
     val context = LocalContext.current
     if (appUiState.pendingApproval) {
@@ -2162,6 +2215,10 @@ private fun OnboardingOverlay(
                     authViewModel.clearStatus()
                     appViewModel.clearPendingApprovalNotice()
                 },
+                privacyStepOffered = privacyStepOffered,
+                privacyStepDue = privacyStepDue,
+                onShareCrashReports = onShareCrashReports,
+                onDeclineCrashReports = onDeclineCrashReports,
             )
         }
     }

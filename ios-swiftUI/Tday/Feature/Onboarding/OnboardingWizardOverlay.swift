@@ -5,6 +5,14 @@ enum OnboardingStep: Equatable {
     case mode
     case server
     case login
+    /// The wizard's last step: the per-install crash-reports question, the one the standalone
+    /// `TelemetryConsentCard` asks when an install reaches the workspace without a wizard.
+    ///
+    /// Only ever reached by a flow that has no answer yet — see
+    /// `TelemetryConsentModel.shouldPresentWizardStep`, which is what hands this overlay
+    /// `privacyStepOffered` and `privacyStepDue`. A build with no DSN never sets either, so the
+    /// fourth chip and the step simply do not exist there.
+    case privacy
 }
 
 struct OnboardingWizardOverlay: View {
@@ -48,6 +56,20 @@ struct OnboardingWizardOverlay: View {
     let onLoadSecurityQuestions: () async -> [SecurityQuestion]
     let onUseLocalMode: () async -> Void
     let onClearAuthStatus: () -> Void
+    /// Whether this flow has the last step at all: a DSN is configured, the person has not answered
+    /// the crash-reports question, and this wizard is the surface the session's flow came through.
+    /// The fourth chip exists on exactly this, so a build with no DSN has neither chip nor step.
+    let privacyStepOffered: Bool
+    /// Whether the step is the one to show now: the flow has landed and the workspace is open behind
+    /// the wizard. The host holds this overlay up on exactly this, and it is what walks the wizard
+    /// onto the step — see `enterPrivacyStepIfDue`.
+    let privacyStepDue: Bool
+    /// The two answers, recorded through the same consent model the card and the Settings row use.
+    /// Either one is also what the step's dismissal is made of: the answer takes `privacyStepOffered`
+    /// away, which takes `privacyStepDue` away with it, which is what the host is holding the overlay
+    /// on.
+    let onShareReports: () -> Void
+    let onDeclineReports: () -> Void
 
     @Environment(\.tdayColors) private var colors
     @State private var step: OnboardingStep = .server
@@ -105,6 +127,13 @@ struct OnboardingWizardOverlay: View {
             } else if step == .server {
                 requestSavedServerURLIfAvailable()
             }
+            // The one appearance that can already owe the step: this overlay is re-created after a
+            // holding screen owned the slot — an account that was waiting for approval, whose
+            // workspace opens the moment it is approved — and the flow has landed by then.
+            enterPrivacyStepIfDue()
+        }
+        .onChange(of: privacyStepDue) { _, _ in
+            enterPrivacyStepIfDue()
         }
         .onChange(of: step) { _, newStep in
             if newStep == .login {
@@ -257,33 +286,61 @@ struct OnboardingWizardOverlay: View {
                 Spacer(minLength: 0)
             }
 
-            HStack(spacing: Metrics.chipSpacing) {
-                WizardStepChip(
-                    title: "Mode",
-                    systemImage: "iphone",
-                    tint: Color(red: 0.5, green: 0.72, blue: 0.54),
-                    active: step == .mode,
-                    completed: step == .server || step == .login
-                )
+            VStack(spacing: Metrics.chipSpacing) {
+                HStack(spacing: Metrics.chipSpacing) {
+                    WizardStepChip(
+                        title: "Mode",
+                        systemImage: "iphone",
+                        tint: Color(red: 0.5, green: 0.72, blue: 0.54),
+                        active: step == .mode,
+                        completed: step == .server || step == .login || step == .privacy
+                    )
 
-                WizardStepChip(
-                    title: "Server",
-                    systemImage: "globe",
-                    tint: Color(red: 0.43, green: 0.66, blue: 0.88),
-                    active: step == .server,
-                    completed: step == .login
-                )
+                    WizardStepChip(
+                        title: "Server",
+                        systemImage: "globe",
+                        tint: Color(red: 0.43, green: 0.66, blue: 0.88),
+                        active: step == .server,
+                        completed: step == .login || step == .privacy
+                    )
 
-                WizardStepChip(
-                    title: "Login",
-                    systemImage: "person.fill",
-                    tint: Color(red: 0.83, green: 0.54, blue: 0.55),
-                    active: isLoginStep
-                )
+                    WizardStepChip(
+                        title: "Login",
+                        systemImage: "person.fill",
+                        tint: Color(red: 0.83, green: 0.54, blue: 0.55),
+                        active: isLoginStep,
+                        completed: step == .privacy
+                    )
+                }
+
+                // Its own row, rather than a fourth chip beside those three. Four of them at this
+                // geometry measure 348 pt and the card has 321 pt to give on a 393 pt screen (303 on
+                // a 375 pt one), so a fourth chip in the row would be squeezed until "Privacy" — and
+                // "Privacidad", and "Datenschutz" — was truncated. Full width is also the shape an
+                // active last step wants: it is the one step the person has to answer before the
+                // workspace opens, and the row above is what it is the last of.
+                //
+                // Offered rather than only-while-active, because it is a step of this flow like the
+                // other three: the wizard shows every step it is going to take, and the ones not
+                // reached yet are drawn dimmed. A build with no DSN never gets this far — there is
+                // no chip and no step at all.
+                if privacyStepOffered {
+                    WizardStepChip(
+                        title: "Privacy",
+                        lucideImage: "LucideHand",
+                        tint: Color(red: 0.62, green: 0.55, blue: 0.86),
+                        active: step == .privacy
+                    )
+                }
             }
 
             Group {
-                if isConnecting {
+                // Ahead of the two loading panels, and it has to be: `enterPrivacyStepIfDue` clears
+                // `isCompletingAuthentication` as it walks here, but the panel that flag drives is
+                // about a form this step has replaced, and the step is what the flow ended on.
+                if step == .privacy {
+                    privacyStepContent
+                } else if isConnecting {
                     WizardLoadingPanel(
                         systemImage: "globe.americas.fill",
                         title: "Connecting to server",
@@ -568,6 +625,44 @@ struct OnboardingWizardOverlay: View {
             }
             .padding(.top, 6)
         }
+    }
+
+    /// The last step: the crash-reports question, in the card's own words and the wizard's own
+    /// buttons — the primary one for the answer that turns reporting on, a text button for the one
+    /// that leaves it off, so the heavier control is the one that changes something.
+    ///
+    /// No "Read the full FAQ" link, unlike the card: that link is not an answer, and it works on the
+    /// card by holding the card back for the session. This step exists to be answered before the
+    /// workspace opens, so the answer is the only way off it.
+    private var privacyStepContent: some View {
+        VStack(alignment: .leading, spacing: Metrics.sectionSpacing) {
+            TelemetryConsentDisclosure()
+
+            WizardPrimaryButton(title: "Share reports", enabled: true, action: onShareReports)
+
+            Button("Not now", action: onDeclineReports)
+                .buttonStyle(WizardTextButtonStyle())
+                .font(.tdayRounded(size: 15, weight: .bold))
+                .foregroundStyle(colors.primary)
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
+    }
+
+    /// Walks onto the question the moment the flow it belongs to lands.
+    ///
+    /// The workspace opening behind the wizard is that moment, and it is the same one whichever way
+    /// it opened — a sign-in, or "This device" — which is why the walk is driven by `privacyStepDue`
+    /// rather than by the result of any one of them: the question belongs to the flow, not to one of
+    /// the ways through it, and this is the one place that says so.
+    ///
+    /// `isCompletingAuthentication` is released here for the reason it exists: it keeps the
+    /// "Opening T'Day" panel over the sign-in form, and the wizard has left that form.
+    private func enterPrivacyStepIfDue() {
+        guard privacyStepDue else {
+            return
+        }
+        step = .privacy
+        isCompletingAuthentication = false
     }
 
     private var securityQuestionsStepContent: some View {
@@ -922,7 +1017,10 @@ struct OnboardingWizardOverlay: View {
 
 private struct WizardStepChip: View {
     let title: String
-    let systemImage: String
+    var systemImage: String? = nil
+    /// A shared Lucide glyph from `Assets.xcassets`, used instead of an SF Symbol when the mark has
+    /// to be the same drawing as Android's. The three older chips still carry SF Symbols.
+    var lucideImage: String? = nil
     let tint: Color
     let active: Bool
     var completed: Bool = false
@@ -940,8 +1038,21 @@ private struct WizardStepChip: View {
         )
 
         HStack(spacing: 8) {
-            Image(systemName: completed ? "checkmark" : systemImage)
-                .font(.system(size: 13, weight: .bold))
+            if completed {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .bold))
+            } else if let lucideImage {
+                // The shared glyph rather than an SF Symbol, so this chip's mark is the same drawing
+                // as Android's `ic_lucide_hand` (docs/ICONS.md).
+                Image(lucideImage)
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 14, height: 14)
+            } else if let systemImage {
+                Image(systemName: systemImage)
+                    .font(.system(size: 13, weight: .bold))
+            }
 
             Text(L(title))
                 .font(.tdayRounded(size: 13, weight: .bold))

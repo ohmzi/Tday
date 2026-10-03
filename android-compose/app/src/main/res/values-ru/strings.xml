@@ -224,6 +224,7 @@
     <string name="onboarding_step_mode">Режим</string>
     <string name="onboarding_step_server">Сервер</string>
     <string name="onboarding_step_login">Вход</string>
+    <string name="onboarding_step_privacy">Конфиденциальность</string>
     <string name="onboarding_mode_title">Выберите настройку</string>
     <string name="onboarding_mode_subtitle">Выберите, где T\'Day хранит ваши задачи.</string>
     <string name="onboarding_mode_server_title">Собственный сервер</string>

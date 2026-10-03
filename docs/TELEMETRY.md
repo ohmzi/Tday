@@ -116,19 +116,29 @@ in `Application.onCreate` on Android, and in `TdayApp.init` on iOS.
 
 - **No DSN, no surface.** When a build carries no DSN (web `VITE_SENTRY_DSN`,
   Android `BuildConfig.SENTRY_DSN`, iOS `SENTRY_DSN` in `Info.plist`; forks,
-  debug runs, self-built apps), there is no card, no Settings row, and the SDK
-  is never initialised.
-- **Consent card.** A wizard-styled card ("Help fix crashes?", with "What's
-  included" and "Never included" lists) appears once,
-  after the connect/sign-in wizard, when a workspace (Server or Local Mode) is
-  open. Existing installs see it once too. "Share reports" and "Not now" carry
-  equal weight. It is skipped when the DSN is missing, the question is already
-  answered, it was set aside this session, or a higher gate is up (update
-  required, security questions, app lock, and on web a forced password change).
-  Escape or Back, and "Read the full FAQ", set the card aside without answering:
-  the question returns on the next launch (web: the next browser session,
-  because the deferral lives in `sessionStorage`). "Read the full FAQ" also opens
-  the `crash-reports` guide topic.
+  debug runs, self-built apps), there is no card, no wizard step, no Settings
+  row, and the SDK is never initialised.
+- **The wizard's last step (Android, iOS).** The connect/sign-in flow ends on
+  "Privacy", a fourth chip beside Mode, Server and Login, drawn with the
+  wizard's own card and buttons: the same "Help fix crashes?" disclosure, a
+  filled "Share reports" over a text "Not now". It comes due when the workspace
+  opens — Server or Local Mode, they are the same moment — so the wizard is held
+  on screen for it instead of the workspace hiding it. Back does not dismiss it;
+  the two answers are the only ways off. A build with no DSN, or a device that
+  has already answered, has no chip and no step at all.
+- **Consent card.** The same question, as a wizard-styled card, for the case the
+  step cannot cover: web (which has no wizard step), and on mobile an install
+  that reaches the workspace without the flow — already signed in at launch, a
+  restart mid-step, or a failed sign-in, pending approval, required update or
+  security questions that took the wizard's place. Only ever one of the two is
+  up. "Share reports" and "Not now" carry equal weight. It is skipped when the
+  DSN is missing, the question is already answered, it was set aside this
+  session, or a higher gate is up (update required, security questions, app
+  lock, and on web a forced password change). Escape or Back, and "Read the full
+  FAQ", set the card aside without answering: the question returns on the next
+  launch (web: the next browser session, because the deferral lives in
+  `sessionStorage`). "Read the full FAQ" also opens the `crash-reports` guide
+  topic.
 - **Settings → Privacy.** A "Crash & problem reports" switch with a "?" that
   opens the same guide topic. Answering here first counts as answering, so the
   card never asks.

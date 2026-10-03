@@ -42,7 +42,7 @@ ios-swiftUI/
 │   │   ├── CarPlay/
 │   │   ├── Completed/
 │   │   ├── Settings/
-│   │   ├── Telemetry/   # The one-time crash-reports consent card
+│   │   ├── Telemetry/   # The crash-reports consent card (the wizard's step lives in Onboarding/)
 │   │   └── Onboarding/
 │   ├── UI/
 │   │   ├── Component/
@@ -239,10 +239,14 @@ decision.
   lives in `UserDefaults.standard` (`telemetry.consent` as a Bool, `telemetry.consentAt` as epoch
   seconds), not the Keychain, so it resets with an install and is readable in `TdayApp.init`. Signing
   out, leaving a workspace and deleting local data leave it alone.
+- A local build gets its reporting endpoint from the gitignored `Local.xcconfig` (`SENTRY_DSN`, and
+  `TDAY_PROBE_ENCRYPTION_KEY` for the version gate), pulled in optionally by the committed
+  `Tday.xcconfig`. Without one, `Info.plist`'s `$(SENTRY_DSN)` is empty and every consent surface
+  stays hidden; the TestFlight lane passes its own `-xcconfig`, so releases never depend on it.
 - `SentryConfiguration.start()` (called from `TdayApp.init`) starts the SDK only when the answer is
   granted and `SENTRY_DSN` is non-empty. Otherwise it deletes `<Caches>/io.sentry` and
   `<Caches>/SentryCrash` and returns, so nothing is initialised, buffered or sent. A build without a
-  DSN (a fork, a debug run) shows neither the card nor the Settings row.
+  DSN (a fork, a debug run) shows neither the wizard's last step, nor the card, nor the Settings row.
 - Options come from the pure `SentryConfiguration.makeOptions(dsn:)`: sessions, traces, client
   reports, swizzling, network tracking and screenshots are all pinned off; app-hang and watchdog
   tracking stay on. `beforeSend` drops events older than the consent time and passes the rest through
@@ -252,10 +256,13 @@ decision.
   (`NAS.Example.com`, `Alexs-iPhone.local`, `Alex-Mac.Tail1234.ts.net`) is redacted when it ends in a
   private or well-known suffix, while Swift type paths such as `Tday.SyncEngine.Replay` are kept.
   `TdayTelemetry.capture` reports an error as its domain and code only.
-- `TelemetryConsentModel` (owned by `AppContainer`) is the one writer. The one-time
-  `TelemetryConsentCard` (overlay in `AppRootView`, below the update-required, security-questions and
-  app-lock gates) and the Settings -> Privacy row both write through it, so answering in Settings
-  first counts as answering. "Read the full FAQ" holds the card back until the next launch and opens
+- `TelemetryConsentModel` (owned by `AppContainer`) is the one writer. The question is the sign-in
+  wizard's own last step — a "Privacy" chip beside Mode, Server and Login, which `AppRootView` holds
+  the wizard on screen for once a workspace is available (Server or Local Mode) — and the
+  `TelemetryConsentCard` overlay in `AppRootView` asks the same thing when that step cannot: an
+  install already signed in at launch, a restart mid-step, or a gate that took the wizard's place.
+  The Settings -> Privacy row and all three surfaces write through the model, so answering in any one
+  of them counts as answering. "Read the full FAQ" holds the card back until the next launch and opens
   the `crash-reports` guide topic. That topic is listed under What's New and in its section;
   `HelpGuideScreen.cardKey(topicID:isHighlight:)` keys the What's New copy `highlight-<id>`, so a deep
   link expands and scrolls to the section card only.
