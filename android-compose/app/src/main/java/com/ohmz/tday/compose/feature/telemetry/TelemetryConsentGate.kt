@@ -41,6 +41,11 @@ import com.ohmz.tday.shared.guide.GuideTopicIds
  * It asks once, after the sign-in wizard, in a workspace of either kind. It never asks on a build
  * with no DSN (nothing could be sent), never again after an answer in either place, not for the
  * rest of the session once put off, and not while something more urgent has the screen.
+ *
+ * The wizard's last step asks the same question in the flow that earned it, and this card is then
+ * what a session that never saw the wizard falls back to: already signed in at launch, or a
+ * restart in the middle of that step. A caller holding that step up passes it in
+ * [shouldShowTelemetryCard]'s `aHigherGateIsUp`, so the two cannot be up at once.
  */
 internal fun shouldShowTelemetryCard(
     available: Boolean,
@@ -56,10 +61,27 @@ internal fun shouldShowTelemetryCard(
         !aHigherGateIsUp
 
 /**
+ * Whether the crash-report question is this sign-in flow's to ask, as the wizard's own last step:
+ * a build that can send, an answer nobody has given yet, and a wizard that was actually on screen
+ * for it.
+ *
+ * The workspace is deliberately not part of it, for the opposite reason it is part of
+ * [shouldShowTelemetryCard]: the step is what the sign-in flow ENDS on, so it comes due in the same
+ * breath as the workspace opening. The caller owns that breath (see `privacyStepDue` in `TdayApp`),
+ * because only the caller knows whether the workspace opened with a gate still in front of it — a
+ * required update or security questions put the question back on the card.
+ */
+internal fun shouldPresentWizardPrivacyStep(
+    available: Boolean,
+    state: TelemetryConsentState,
+    wizardWasOnScreen: Boolean,
+): Boolean = available && state == TelemetryConsentState.UNANSWERED && wizardWasOnScreen
+
+/**
  * The consent card, drawn as a dialog the way [com.ohmz.tday.compose.feature.auth.SetSecurityQuestionsGate]
  * is. [aHigherGateIsUp] covers the gates that live in the caller (update required, security
- * questions); the app lock is read from [LocalAppLocked], because a dialog would otherwise draw
- * over the lock screen.
+ * questions, the wizard's own consent step); the app lock is read from [LocalAppLocked], because a
+ * dialog would otherwise draw over the lock screen.
  *
  * Back press puts the card off until the next launch rather than answering it: the two buttons
  * are the only ways to say yes or no.
@@ -129,37 +151,7 @@ private fun TelemetryConsentCard(
                     .padding(TdayDimens.Spacing3xl),
                 verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
             ) {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_activity),
-                    contentDescription = null,
-                    tint = colorScheme.primary,
-                    modifier = Modifier.size(TdayDimens.IconXl),
-                )
-                Text(
-                    text = stringResource(R.string.telemetry_card_title),
-                    modifier = Modifier.semantics { heading() },
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Black,
-                    color = colorScheme.onSurface,
-                )
-                Text(
-                    text = stringResource(R.string.telemetry_card_intro),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = colorScheme.onSurface.copy(alpha = 0.7f),
-                )
-                DisclosureBlock(
-                    label = stringResource(R.string.telemetry_card_sent_label),
-                    body = stringResource(R.string.telemetry_card_sent),
-                )
-                DisclosureBlock(
-                    label = stringResource(R.string.telemetry_card_never_sent_label),
-                    body = stringResource(R.string.telemetry_card_never_sent),
-                )
-                Text(
-                    text = stringResource(R.string.telemetry_card_footnote),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colorScheme.onSurface.copy(alpha = 0.6f),
-                )
+                TelemetryDisclosure()
 
                 // Two identical full-width buttons, stacked: declining is as easy as agreeing, and
                 // a long translation of either label wraps inside its own button.
@@ -184,6 +176,57 @@ private fun TelemetryConsentCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * Everything the person is told before they answer — the glyph, the question, why it is asked, what
+ * a report carries, what it never carries, and where the answer can be changed later — with no
+ * answers and no container of its own.
+ *
+ * Extracted rather than copied because the sign-in wizard's last step makes the same offer: two
+ * places asking for the same thing must not be able to drift into asking for two different things.
+ * The answers stay with whichever surface is asking, because the wizard draws them on its own card
+ * in its own idiom.
+ */
+@Composable
+internal fun TelemetryDisclosure() {
+    val colorScheme = MaterialTheme.colorScheme
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
+    ) {
+        Icon(
+            imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_activity),
+            contentDescription = null,
+            tint = colorScheme.primary,
+            modifier = Modifier.size(TdayDimens.IconXl),
+        )
+        Text(
+            text = stringResource(R.string.telemetry_card_title),
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Black,
+            color = colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.telemetry_card_intro),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colorScheme.onSurface.copy(alpha = 0.7f),
+        )
+        DisclosureBlock(
+            label = stringResource(R.string.telemetry_card_sent_label),
+            body = stringResource(R.string.telemetry_card_sent),
+        )
+        DisclosureBlock(
+            label = stringResource(R.string.telemetry_card_never_sent_label),
+            body = stringResource(R.string.telemetry_card_never_sent),
+        )
+        Text(
+            text = stringResource(R.string.telemetry_card_footnote),
+            style = MaterialTheme.typography.bodySmall,
+            color = colorScheme.onSurface.copy(alpha = 0.6f),
+        )
     }
 }
 

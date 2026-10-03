@@ -3,10 +3,11 @@ import Observation
 
 /// What the person has answered about crash reports, and what answering does.
 ///
-/// The one place the consent card and the Settings row agree: both read `state` and both write
-/// through `share()` and `decline()`, so answering in Settings first counts as answering and the
-/// card never asks again. `@Observable` for the reason `MotionPreferenceStore` is: the card
-/// disappears the frame the switch moves, and the switch moves when the card is answered.
+/// The one place every surface that asks agrees: the wizard's last step, the standalone card and
+/// the Settings row all read `state` and all write through `share()` and `decline()`, so answering
+/// in any of them counts as answering and none of the others asks again. `@Observable` for the
+/// reason `MotionPreferenceStore` is: the card disappears the frame the switch moves, and the
+/// switch moves when the card is answered.
 ///
 /// `grant` and `revoke` are what turn the SDK on and off. They are injected only so a test can
 /// watch them without starting an SDK.
@@ -53,6 +54,20 @@ final class TelemetryConsentModel {
             && !isDeferredThisSession
             && workspaceAvailable
             && !isCoveredByAnotherGate
+    }
+
+    /// Whether the wizard's last step is due: there is a DSN to send to, the person has not
+    /// answered, and the wizard was actually the thing on screen for this session's flow.
+    ///
+    /// The workspace is deliberately not part of this, for the opposite reason it is part of
+    /// [shouldPresentCard]: the step is what the flow ends on, so it is due in the same breath as the
+    /// workspace opening rather than after it. An install that reaches the workspace without a wizard
+    /// — already signed in at launch, or restarted mid-step — never has a step and falls back to the
+    /// card.
+    func shouldPresentWizardStep(wizardWasOnScreen: Bool) -> Bool {
+        isAvailable
+            && state == .unanswered
+            && wizardWasOnScreen
     }
 
     /// "Share reports", or the switch turned on.

@@ -251,13 +251,16 @@ the recognized phrase in place, and strips it from the saved task title.
 
 ## Crash reports (opt-in)
 
-Off by default and per device. Nothing starts, is queued or is stored until the person says yes, on
-the one-time card shown after the sign-in wizard (Server and Local Mode alike) or in Settings →
-Privacy → "Crash & problem reports", which has a "?" to the `crash-reports` guide topic. The full
-privacy contract is in `docs/TELEMETRY.md`.
+Off by default and per device. Nothing starts, is queued or is stored until the person says yes. The
+question is the last step of the sign-in wizard — a "Privacy" chip beside Mode, Server and Login,
+which the wizard is held on screen for once a workspace opens (Server and Local Mode alike). The
+after-sign-in card asks the same thing when the step cannot: an install that is already signed in at
+launch, a restart mid-step, or a failed sign-in or gate that took the wizard's place. It can also be
+answered any time in Settings → Privacy → "Crash & problem reports", which has a "?" to the
+`crash-reports` guide topic. The full privacy contract is in `docs/TELEMETRY.md`.
 
 - **No DSN, no surface.** The DSN comes from `SENTRY_DSN` (environment or `sentryDsn` in
-  `local.properties`). Empty (forks, self-built APKs) hides the card and the Settings row and the
+  `local.properties`). Empty (forks, self-built APKs) hides the step, the card and the Settings row and the
   SDK never starts. `SENTRY_AUTH_TOKEN` only gates the R8 mapping upload.
 - **One entry point.** `core/observability/TelemetryBootstrap` is the only code that starts or stops
   Sentry. `TdayApplication.onCreate` calls `start()`, so a boot, widget or alarm process is covered:

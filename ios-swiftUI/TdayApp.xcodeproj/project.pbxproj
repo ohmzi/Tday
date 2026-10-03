@@ -297,6 +297,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7A11CF6000000000000000A1 /* Tday.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Tday.xcconfig; sourceTree = "<group>"; };
 		50DF00000000000000000000 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		50DF10000000000000000000 /* task_complete.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = task_complete.wav; sourceTree = "<group>"; };
 		CA1E7E010000000000000000 /* RecurrenceRuleParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceRuleParserTests.swift; sourceTree = "<group>"; };
@@ -783,6 +784,7 @@
 				DAD1CE000000000000000022 /* TdayWatch */,
 				DAD1CE00000000000000000C /* TdayWatchWidget */,
 				75319F4921808A73555E9EC0 /* Tests */,
+				7A11CF6000000000000000A1 /* Tday.xcconfig */,
 				3F0733C5DBF6EC9BC6DBCB4D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -1802,6 +1804,7 @@
 		};
 		AC5B9D6404DFE8D18A0D546C /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7A11CF6000000000000000A1 /* Tday.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
@@ -1820,7 +1823,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios;
 				PRODUCT_NAME = Tday;
 				SDKROOT = iphoneos;
-				SENTRY_DSN = "";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_VERSION = 5.0;
@@ -1830,6 +1832,7 @@
 		};
 		B1DD4CAD649FE743CF85D3FA /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7A11CF6000000000000000A1 /* Tday.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Tday/Tday.entitlements;
@@ -1848,7 +1851,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.ohmz.tday.ios;
 				PRODUCT_NAME = Tday;
 				SDKROOT = iphoneos;
-				SENTRY_DSN = "";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_VERSION = 5.0;

@@ -224,6 +224,7 @@
     <string name="onboarding_step_mode">Modo</string>
     <string name="onboarding_step_server">Servidor</string>
     <string name="onboarding_step_login">Iniciar sesión</string>
+    <string name="onboarding_step_privacy">Privacidad</string>
     <string name="onboarding_mode_title">Elige tu configuración</string>
     <string name="onboarding_mode_subtitle">Elige dónde T\'Day guarda tus tareas.</string>
     <string name="onboarding_mode_server_title">Servidor autoalojado</string>

@@ -1,4 +1,5 @@
 import Foundation
+import Sentry
 
 // TEST-CRASH: temporary cross-check triggers. The whole feature is this file, `TestCrashButton.swift`,
 // `Tests/TdayCoreTests/TestCrashTests.swift` and the lines tagged `TEST-CRASH` elsewhere;
@@ -163,10 +164,13 @@ enum TestCrash {
     /// Fires the trigger for `id`. A fatal kind never returns.
     static func fire(_ id: ID) {
         // The id rides on the trail so a report of a runtime trap (which carries the runtime's own
-        // message) still names the trigger. Category `tday` and a label are what the scrubber keeps.
+        // message) still names the trigger — and the screen it was fired from rides with it, because
+        // such a report has no exception value for Sentry to title the issue with.
+        // `Event.applyTestCrashTitle` reads both back before the report goes out. Category `tday` and
+        // a label are what the scrubber keeps.
         TdayTelemetry.addBreadcrumb(
-            "test_crash:\(id.rawValue)",
-            data: ["id": id.rawValue, "kind": id.kind.rawValue]
+            "test_crash:\(id.rawValue): \(id.summary)",
+            data: ["id": id.rawValue, "kind": id.kind.rawValue],
         )
         switch id.kind {
         case .fatalError:
@@ -232,5 +236,80 @@ enum TestCrash {
     /// A value the optimiser cannot fold, so the fault happens at run time and not as a compile error.
     private static func opaque(_ value: Int) -> Int {
         CommandLine.arguments.isEmpty ? 0 : value
+    }
+}
+
+// MARK: - Firing without a tap
+
+extension TestCrash {
+    /// Fires the trigger named by `-testCrash <ID>` (or `-testCrash=<ID>`) as the app starts.
+    ///
+    /// This is not only for convenience. A *tap* is what makes the next launch replay the button's
+    /// action — UIKit re-delivers the touch-up that was in flight when the process died, which re-runs
+    /// the trap on the way in and looks like an app stuck on its launch screen until the queued event
+    /// is finally consumed. An argument is read once, at start, and cannot loop:
+    ///
+    ///     xcrun devicectl device process launch --console --device <udid> \
+    ///         com.ohmz.tday.ios -testCrash TC-FEED-ANY
+    static func fireFromLaunchArgumentsIfRequested() {
+        let arguments = ProcessInfo.processInfo.arguments
+        let inline = arguments.first { $0.hasPrefix("-testCrash=") }?
+            .dropFirst("-testCrash=".count)
+        let following = arguments.firstIndex(of: "-testCrash").flatMap { index -> Substring? in
+            let next = arguments.index(after: index)
+            return next < arguments.endIndex ? Substring(arguments[next]) : nil
+        }
+        guard let raw = inline ?? following, let id = ID(rawValue: String(raw)) else {
+            return
+        }
+        fire(id)
+    }
+}
+
+// MARK: - Naming a test crash on the way out
+
+extension Event {
+    /// TEST-CRASH: gives a test trigger's report a title that names the screen it was fired from, and
+    /// marks it as a test.
+    ///
+    /// A Swift trap's report carries no exception value, so Sentry titles the issue after the crashing
+    /// symbol — `_assertionFailure`, which says nothing about the screen and nothing about it being a
+    /// test. The breadcrumb the trigger leaves behind is the one thing that survives the crash, so the
+    /// title is rebuilt from it: `EXC_BREAKPOINT: TEST-CRASH TC-FEED-ANY: anytime feed`.
+    ///
+    /// Called from `beforeSend`, so it runs while the report is being sent rather than while it is
+    /// being written. An event with no `test_crash:` breadcrumb — every real one — is left untouched.
+    func applyTestCrashTitle() {
+        let prefix = "test_crash:"
+        guard let payload = breadcrumbs?
+            .last(where: { $0.message?.hasPrefix(prefix) == true })?
+            .message?
+            .dropFirst(prefix.count),
+            !payload.isEmpty
+        else {
+            return
+        }
+
+        // The scrubber rewrites the spaces in a breadcrumb label as underscores; the other clients'
+        // titles keep them, so they are put back: `TEST-CRASH TC-FEED-ANY: anytime feed`, exactly the
+        // string Android's exception and the web app's error carry.
+        let title = "TEST-CRASH \(payload.replacingOccurrences(of: "_", with: " "))"
+        // `exception.value` is what Sentry titles a report with, and `message` is the fallback the
+        // server uses when an exception has no value of its own.
+        exceptions?.first?.value = title
+        message = SentryMessage(formatted: title)
+        // A crash-derived exception is marked `synthetic`, and Sentry titles a synthetic one after the
+        // crashing symbol instead — `closure in _assertionFailure`. Clearing the flag on a test event
+        // is what puts the screen in the title: `EXC_BREAKPOINT: TEST-CRASH TC-FEED-ANY: anytime feed`.
+        exceptions?.first?.mechanism?.synthetic = NSNumber(value: false)
+
+        var merged = tags ?? [:]
+        merged["test_crash"] = "true"
+        merged["test_crash_id"] = String(payload.prefix(while: { $0 != ":" }))
+        tags = merged
+        // One issue per trigger. Every trap in this harness crashes in the same function, so without a
+        // fingerprint Sentry groups several of them into one issue and the merge's title stands for
+        // all of them — which is the opposite of what a per-screen cross-check is for.
+        fingerprint = ["test-crash", String(payload.prefix(while: { $0 != ":" }))]
     }
 }

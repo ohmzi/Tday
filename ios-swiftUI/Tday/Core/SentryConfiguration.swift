@@ -116,7 +116,12 @@ enum SentryConfiguration {
             // The SDK stamps every event with the install UUID as `user.id`, and the scrubber
             // drops the user whole. This is the belt to that braces: no address survives either way.
             event.user?.ipAddress = nil
-            return TelemetryScrubber.scrub(event, context: .current(consentedAt: consentedAt))
+            let scrubbed = TelemetryScrubber.scrub(event, context: .current(consentedAt: consentedAt))
+            // TEST-CRASH: names a test trigger's report after the screen it was fired from, after the
+            // allow-list has had its say, so the tags this adds are the ones that go out. A no-op for
+            // every real event.
+            scrubbed?.applyTestCrashTitle()
+            return scrubbed
         }
 
         return options

@@ -224,6 +224,7 @@
     <string name="onboarding_step_mode">モード</string>
     <string name="onboarding_step_server">サーバー</string>
     <string name="onboarding_step_login">ログイン</string>
+    <string name="onboarding_step_privacy">プライバシー</string>
     <string name="onboarding_mode_title">セットアップを選択</string>
     <string name="onboarding_mode_subtitle">T\'Day がタスクを保存する場所を選びます。</string>
     <string name="onboarding_mode_server_title">セルフホストサーバー</string>

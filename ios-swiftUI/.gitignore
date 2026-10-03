@@ -14,3 +14,6 @@ fastlane/screenshots/
 fastlane/test_output/
 *.ipa
 *.dSYM.zip
+
+# Local xcconfig with this checkout's own build settings (Sentry DSN); see ios-swiftUI/Local.xcconfig.
+Local.xcconfig
