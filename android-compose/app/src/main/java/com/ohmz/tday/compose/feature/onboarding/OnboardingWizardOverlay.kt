@@ -731,7 +731,7 @@ fun OnboardingWizardOverlay(
                                 modifier = Modifier.fillMaxWidth(),
                                 title = stringResource(R.string.onboarding_step_privacy),
                                 imageVector = ImageVector.vectorResource(R.drawable.ic_lucide_hand),
-                                color = Color(0xFF9E8CDB),
+                                color = WIZARD_PRIVACY_TINT,
                                 active = step == WizardStep.PRIVACY,
                             )
                         }
@@ -1975,6 +1975,9 @@ private val WIZARD_MODE_TILE_HEIGHT = 116.dp
 /** The one card the whole wizard is drawn on, floating over whatever it covers. */
 private val WIZARD_CARD_ELEVATION = 12.dp
 private val WIZARD_BRAND_ICON_SIZE = 27.dp
+
+/** The last step's tint: the same violet the root feed accents with, a shade lighter for a chip. */
+private val WIZARD_PRIVACY_TINT = Color(0xFF9E8CDB)
 
 /**
  * The gap between the card's stacked parts — the step chips, the mode choices, a panel's rows.

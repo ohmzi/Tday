@@ -18,4 +18,9 @@ enum class BackendTestCrash(val id: String, val what: String) {
 
     /** Identical on every client: `TEST-CRASH <ID>: <description>`. */
     val message: String get() = "TEST-CRASH $id: $what"
+
+    companion object {
+        /** The operation every platform labels a trigger with, in breadcrumbs and in `capture`. */
+        const val OPERATION = "test_crash"
+    }
 }

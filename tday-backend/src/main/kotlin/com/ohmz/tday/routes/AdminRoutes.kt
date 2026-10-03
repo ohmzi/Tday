@@ -1,6 +1,5 @@
 package com.ohmz.tday.routes
 
-import arrow.core.Either
 import arrow.core.raise.either
 import com.ohmz.tday.di.inject
 import com.ohmz.tday.domain.AppError
@@ -83,9 +82,9 @@ fun Route.adminRoutes() {
             // `IllegalStateException: TEST-CRASH TC-BACKEND-CRASH: unhandled admin error`.
             post("/test-crash") {
                 call.withAuth<Unit> { user ->
-                    when (val access = user.requireAdminAccess()) {
-                        is Either.Left -> Either.Left(access.value)
-                        is Either.Right -> throw IllegalStateException(BackendTestCrash.CRASH.message)
+                    either {
+                        user.requireAdminAccess().bind()
+                        throw IllegalStateException(BackendTestCrash.CRASH.message)
                     }
                 }
             }
@@ -94,15 +93,13 @@ fun Route.adminRoutes() {
             // failure and reports it itself, the way a caught failure anywhere else is reported.
             post("/test-error") {
                 call.withAuth<Map<String, Boolean>>(status = HttpStatusCode.InternalServerError) { user ->
-                    when (val access = user.requireAdminAccess()) {
-                        is Either.Left -> Either.Left(access.value)
-                        is Either.Right -> {
-                            TdayObservability.captureException(
-                                IllegalStateException(BackendTestCrash.HANDLED.message),
-                                operation = "test_crash",
-                            )
-                            Either.Right(mapOf("reported" to true))
-                        }
+                    either {
+                        user.requireAdminAccess().bind()
+                        TdayObservability.captureException(
+                            IllegalStateException(BackendTestCrash.HANDLED.message),
+                            operation = BackendTestCrash.OPERATION,
+                        )
+                        mapOf("reported" to true)
                     }
                 }
             }

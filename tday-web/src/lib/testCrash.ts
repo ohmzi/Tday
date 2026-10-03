@@ -3,7 +3,7 @@
 // reverting the one commit that added it. Nothing here weakens consent, the scrubber or a gate:
 // a report is only sent when the browser opted in and a DSN is built in.
 import { useEffect } from "react";
-import { api } from "@/lib/api-client";
+import { ApiError, api } from "@/lib/api-client";
 import { addDiagnosticBreadcrumb, captureUiException } from "@/lib/observability/sentry";
 
 export type TestCrashVia = "timer" | "microtask" | "rejection" | "render" | "capture" | "freeze";
@@ -71,18 +71,27 @@ export type BackendTestCrashId = keyof typeof BACKEND_TEST_CRASHES;
 
 export const BACKEND_TEST_CRASH_IDS = Object.keys(BACKEND_TEST_CRASHES) as BackendTestCrashId[];
 
+/** The breadcrumb category every trigger leaves, on every client. */
+const TEST_CRASH_CATEGORY = "test_crash";
+
 /** Makes the server fail, so the server's own reporting path gets the cross-check the clients get. */
 export function fireBackendTestCrash(id: BackendTestCrashId): void {
-  addDiagnosticBreadcrumb("test_crash", { crash: id });
-  // The request is meant to fail: the report belongs to the server, its answer carries nothing, and
-  // a rejected promise here would only add a client-side error about a deliberate server one.
+  addDiagnosticBreadcrumb(TEST_CRASH_CATEGORY, { crash: id });
   void api
     .POST({
       url: BACKEND_TEST_CRASHES[id],
       headers: { "Content-Type": "application/json" },
-      body: "{}",
+      body: JSON.stringify({}),
     })
-    .catch(() => {});
+    .catch((error: unknown) => {
+      // The endpoint answers 500 on purpose: the report belongs to the server, so this is not a
+      // failure to hand anyone. Its status is still worth a trail, and saying so keeps the catch from
+      // being an empty one.
+      addDiagnosticBreadcrumb(TEST_CRASH_CATEGORY, {
+        crash: id,
+        status: error instanceof ApiError ? error.status : 0,
+      });
+    });
 }
 
 export const FREEZE_MS = 6000;
@@ -126,7 +135,7 @@ function freezeMainThread(): void {
 /** Fires the crash for `id` on a path nothing in the app catches. */
 export function fireTestCrash(id: TestCrashId): void {
   const plan = TEST_CRASH_PLANS[id];
-  addDiagnosticBreadcrumb("test_crash", { crash: id });
+  addDiagnosticBreadcrumb(TEST_CRASH_CATEGORY, { crash: id });
   if (plan.via === "freeze") {
     freezeMainThread();
     return;
@@ -134,7 +143,7 @@ export function fireTestCrash(id: TestCrashId): void {
   const error = buildTestCrashError(id);
   switch (plan.via) {
     case "capture":
-      captureUiException(error, "test_crash", { crash: id });
+      captureUiException(error, TEST_CRASH_CATEGORY, { crash: id });
       return;
     case "microtask":
       queueMicrotask(() => {

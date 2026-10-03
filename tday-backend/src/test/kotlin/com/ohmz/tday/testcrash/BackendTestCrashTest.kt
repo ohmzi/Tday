@@ -8,13 +8,16 @@ import kotlin.test.assertTrue
  * The one thing the cross-client search depends on: a server report names its trigger the way the
  * mobile and web reports do, so `TEST-CRASH` finds every platform and the id finds one screen.
  */
+/** `TEST-CRASH <id>: <what>`, the shape every platform writes. */
+private val MESSAGE_SHAPE = Regex("^TEST-CRASH TC-BACKEND-[A-Z]+: \\S.*$")
+
 class BackendTestCrashTest {
     @Test
     fun `every trigger names itself the way the other clients do`() {
         BackendTestCrash.entries.forEach { trigger ->
             assertEquals("TEST-CRASH ${trigger.id}: ${trigger.what}", trigger.message)
             assertTrue(
-                trigger.message.matches(Regex("^TEST-CRASH TC-BACKEND-[A-Z]+: \\S.*$")),
+                trigger.message.matches(MESSAGE_SHAPE),
                 "unexpected message shape: ${trigger.message}",
             )
         }
