@@ -3,6 +3,7 @@
 // reverting the one commit that added it. Nothing here weakens consent, the scrubber or a gate:
 // a report is only sent when the browser opted in and a DSN is built in.
 import { useEffect } from "react";
+import { api } from "@/lib/api-client";
 import { addDiagnosticBreadcrumb, captureUiException } from "@/lib/observability/sentry";
 
 export type TestCrashVia = "timer" | "microtask" | "rejection" | "render" | "capture" | "freeze";
@@ -44,11 +45,45 @@ export const TEST_CRASH_IDS = Object.keys(TEST_CRASH_PLANS) as TestCrashId[];
 
 // Labels live here, not in JSX, so the i18n guardrails stay quiet about a throwaway control.
 export const TEST_CRASH_LABELS = {
-  button: (id: TestCrashId) => `Test crash: ${id}`,
+  button: (id: string) => `Test crash: ${id}`,
   note: "Reports are sent only if crash reports are on in Settings > Privacy.",
   settingsTitle: "Test crashes",
   freezeBusy: "Freezing for about 6 seconds",
+  backendNote:
+    "Server-side: reported only when the server's own error reports are on below, and admins only.",
+  backendTitle: "Server-side test crashes",
 } as const;
+
+/**
+ * The triggers the *server* can be asked to fail with, and the endpoints that set them off. The ids
+ * are the ones the server names the report with, so the events read `TEST-CRASH TC-BACKEND-CRASH:
+ * unhandled admin error` — the same shape Android, iOS and the web put in a client-side report.
+ *
+ * Admin only: the routes refuse anyone else, and nothing is sent unless the operator has switched
+ * server error reports on.
+ */
+export const BACKEND_TEST_CRASHES = {
+  "TC-BACKEND-CRASH": "/api/admin/telemetry/test-crash",
+  "TC-BACKEND-ERROR": "/api/admin/telemetry/test-error",
+} as const;
+
+export type BackendTestCrashId = keyof typeof BACKEND_TEST_CRASHES;
+
+export const BACKEND_TEST_CRASH_IDS = Object.keys(BACKEND_TEST_CRASHES) as BackendTestCrashId[];
+
+/** Makes the server fail, so the server's own reporting path gets the cross-check the clients get. */
+export function fireBackendTestCrash(id: BackendTestCrashId): void {
+  addDiagnosticBreadcrumb("test_crash", { crash: id });
+  // The request is meant to fail: the report belongs to the server, its answer carries nothing, and
+  // a rejected promise here would only add a client-side error about a deliberate server one.
+  void api
+    .POST({
+      url: BACKEND_TEST_CRASHES[id],
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    })
+    .catch(() => {});
+}
 
 export const FREEZE_MS = 6000;
 

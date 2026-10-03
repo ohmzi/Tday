@@ -1,8 +1,10 @@
 // TEST-CRASH: temporary test controls; see lib/testCrash.ts.
 import { useState } from "react";
 import {
+  BACKEND_TEST_CRASH_IDS,
   TEST_CRASH_LABELS,
   buildTestCrashError,
+  fireBackendTestCrash,
   fireTestCrash,
   type TestCrashId,
 } from "@/lib/testCrash";
@@ -63,6 +65,25 @@ export function TestCrashSettingsControls() {
       </div>
       <p className={NOTE_CLASS}>{TEST_CRASH_LABELS.note}</p>
       {armed ? <RenderBomb /> : null}
+
+      {/* The server's own path: pressing one makes the backend fail on purpose, so the report is a
+          backend event rather than a browser one. */}
+      <p className="pt-2 text-sm font-black text-foreground">
+        {TEST_CRASH_LABELS.backendTitle}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {BACKEND_TEST_CRASH_IDS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            className={BUTTON_CLASS}
+            onClick={() => fireBackendTestCrash(id)}
+          >
+            {TEST_CRASH_LABELS.button(id)}
+          </button>
+        ))}
+      </div>
+      <p className={NOTE_CLASS}>{TEST_CRASH_LABELS.backendNote}</p>
     </div>
   );
 }
