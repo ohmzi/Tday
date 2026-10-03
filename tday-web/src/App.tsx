@@ -10,9 +10,16 @@ import { SonnerToaster } from "@/components/ui/sonner";
 import VersionGate from "@/components/app/VersionGate";
 import ConnectivityGate from "@/components/app/ConnectivityGate";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { useUnresponsiveNotice } from "@/hooks/useUnresponsiveNotice";
 
 function ThemeColorSync() {
   useThemeColor();
+  return null;
+}
+
+/** Offers a reload when the main thread was blocked long enough that the app looked dead. */
+function UnresponsiveNotice() {
+  useUnresponsiveNotice();
   return null;
 }
 
@@ -48,6 +55,7 @@ export default function App() {
       </QueryProvider>
       <VersionGate />
       <ConnectivityGate />
+      <UnresponsiveNotice />
       <SonnerToaster />
     </ThemeProvider>
   );

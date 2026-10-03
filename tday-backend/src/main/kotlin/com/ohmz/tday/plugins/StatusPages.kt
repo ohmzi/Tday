@@ -2,6 +2,7 @@ package com.ohmz.tday.plugins
 
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.models.response.ApiError
+import com.ohmz.tday.observability.FingerprintedFailure
 import com.ohmz.tday.observability.TdayObservability
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -53,6 +54,9 @@ fun Application.configureStatusPages() {
                 cause,
                 operation = "api.unhandled",
                 data = mapOf("route" to TdayObservability.sanitizePath(call.request.path())),
+                // A failure that named its own identity keeps its own issue, instead of being grouped
+                // with everything else that failed on this route.
+                fingerprint = (cause as? FingerprintedFailure)?.issueFingerprint.orEmpty(),
             )
             logger.error("api_error", cause)
             call.respondApiError(HttpStatusCode.InternalServerError, "An unexpected error occurred")
