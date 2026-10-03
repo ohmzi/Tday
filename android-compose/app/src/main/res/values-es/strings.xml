@@ -747,4 +747,8 @@
         <item quantity="one">No se pudo actualizar una tarea</item>
         <item quantity="other">No se pudieron actualizar %d tareas</item>
     </plurals>
+    <!-- TEST-CRASH: temporary freeze strings, removed with the TEST-CRASH commit -->
+    <string name="test_crash_freeze_stop">Detener</string>
+    <string name="test_crash_freeze_blocked">Subproceso principal bloqueado durante %1$s s</string>
+    <string name="test_crash_freeze_cancelled">Bloqueo cancelado tras %1$s s</string>
 </resources>

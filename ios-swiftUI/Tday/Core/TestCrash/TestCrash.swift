@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Sentry
 
 // TEST-CRASH: temporary cross-check triggers. The whole feature is this file, `TestCrashButton.swift`,
@@ -131,6 +132,72 @@ enum TestCrash {
     /// Longer than the SDK's hang threshold (2 s) and than the 5 s the cross-check asks for.
     static let freezeSeconds: TimeInterval = 6
 
+    /// The longest one slice of the freeze may hold the main thread. The budget is only ever looked
+    /// at between slices, so this is also how long a tap waits at worst.
+    static let freezeSliceSeconds: TimeInterval = 0.5
+
+    /// How much of the budget runs without servicing the run loop at all.
+    ///
+    /// The SDK reports an app hang only once the main thread has been off its run loop for the whole
+    /// `appHangTimeoutInterval` window (2 s, set in `SentryConfiguration`), because staying off it is
+    /// what stops the frames tracker's display link and lets the frame delay grow past the timeout.
+    /// Servicing the run loop — the only way a queued Stop tap is ever delivered — also lets that
+    /// display link fire, so the freeze listens only after the detector has had its window: it ticks
+    /// five times per window, so it has seen the hang by roughly 2.4 s and this leaves it a tick and
+    /// a half more. The rest of the budget is sliced, so Stop still ends it well before 6 s.
+    static let freezeRunLoopHoldOffSeconds: TimeInterval = 3
+
+    /// How long one pass of the run loop is given to hand over a tap that is already queued.
+    static let freezeRunLoopPumpSeconds: TimeInterval = 0.01
+
+    /// The frozen main thread's own state: what lets the Settings panel swap its trigger for a Stop
+    /// control and then say what the block cost. `@Observable` for the reason the rest of the app is
+    /// — the panel's body reads it, so the swap happens the frame the block starts and ends. It is
+    /// written from the main thread and only ever read from there.
+    @Observable
+    final class FreezeState {
+        /// True from the first slice to the last, and what the panel shows Stop for.
+        private(set) var isFrozen = false
+
+        /// Whether the last block was cut short by `cancelFreeze()`.
+        private(set) var wasCancelled = false
+
+        /// How long the last block held the main thread, in milliseconds. Nil until one has run.
+        private(set) var lastBlockedMillis: Int?
+
+        /// Set by `cancelFreeze()` and read between slices. No view reads it, so writing it does not
+        /// invalidate anything: the panel changes when the block actually ends.
+        fileprivate var cancellationRequested = false
+
+        /// The short line under the trigger once a block has ended: what it cost, and whether Stop
+        /// cut it short.
+        var resultLine: String? {
+            guard let millis = lastBlockedMillis else {
+                return nil
+            }
+            let seconds = String(format: "%.1f", Double(millis) / 1000)
+            return wasCancelled
+                ? "Cancelled after \(seconds) s of blocked main thread."
+                : "Main thread was blocked for \(seconds) s."
+        }
+
+        fileprivate func begin() {
+            isFrozen = true
+            wasCancelled = false
+            lastBlockedMillis = nil
+            cancellationRequested = false
+        }
+
+        fileprivate func finish(cancelled: Bool, blocked: TimeInterval) {
+            isFrozen = false
+            wasCancelled = cancelled
+            lastBlockedMillis = Int((blocked * 1000).rounded())
+        }
+    }
+
+    /// The one freeze the Settings panel observes and stops.
+    static let freezeState = FreezeState()
+
     /// The muted line under every button.
     static let consentNote = "Reports are sent only if crash reports are on in Settings > Privacy."
 
@@ -219,8 +286,74 @@ enum TestCrash {
         case .handledCapture:
             TdayTelemetry.capture(makeHandledError(for: id), operation: "test_crash:\(id.rawValue)")
         case .mainThreadFreeze:
-            Thread.sleep(forTimeInterval: freezeSeconds)
+            runFreeze()
         }
+    }
+
+    // MARK: - The freeze's slices
+
+    /// Holds the main thread for `budget`, in slices it can leave early.
+    ///
+    /// The block is real and on this thread, as the app-hang cross-check needs it to be; what is new
+    /// is that it comes back to the run loop between slices, so a Stop tap queued behind the block is
+    /// delivered and `cancelFreeze()` can set the flag the next slice checks. Returns whether it was
+    /// cancelled. `budget`, `sliceSeconds` and `holdOffSeconds` are injectable so the unit tests drive
+    /// this exact path with durations too small to notice; nothing in the app passes anything.
+    @discardableResult
+    static func runFreeze(
+        budget: TimeInterval = freezeSeconds,
+        sliceSeconds: TimeInterval = freezeSliceSeconds,
+        holdOffSeconds: TimeInterval = freezeRunLoopHoldOffSeconds,
+        state: FreezeState = TestCrash.freezeState
+    ) -> Bool {
+        // A second tap cannot stack a second block: the panel hides the trigger while this one holds
+        // the thread, and a tap that was already queued for it is swallowed here.
+        guard !state.isFrozen, budget > 0 else {
+            return false
+        }
+
+        let started = Date()
+        let deadline = started.addingTimeInterval(budget)
+        state.begin()
+
+        while !state.cancellationRequested {
+            let remaining = deadline.timeIntervalSinceNow
+            guard remaining > 0 else {
+                break
+            }
+            // Never longer than a slice, and never past the budget: both the sleep and the pass of
+            // the run loop below are capped by what is left of it, so a full run cannot overrun.
+            Thread.sleep(forTimeInterval: min(sliceSeconds, remaining))
+
+            let left = deadline.timeIntervalSinceNow
+            guard left > 0 else {
+                break
+            }
+            if Date().timeIntervalSince(started) >= holdOffSeconds {
+                // Running the run loop is what delivers the tap, and also what gives the frames
+                // tracker a frame — hence the hold-off above. It is bundled into one slice, so it
+                // costs a tap's delivery at most a slice plus this window.
+                RunLoop.current.run(until: Date().addingTimeInterval(min(freezeRunLoopPumpSeconds, left)))
+            }
+        }
+
+        // Only a tap that arrived while there was budget left to save is a cancellation: one that
+        // lands in the last slice has spent the budget anyway and is reported as a full block.
+        let cancelled = state.cancellationRequested && Date() < deadline
+        state.finish(cancelled: cancelled, blocked: Date().timeIntervalSince(started))
+        return cancelled
+    }
+
+    /// Ends a running freeze at the next slice boundary, and says whether there was one to end.
+    /// Called by the Settings panel's Stop control, from a tap the freeze's own run-loop pass hands
+    /// over while the block is still running.
+    @discardableResult
+    static func cancelFreeze(state: FreezeState = TestCrash.freezeState) -> Bool {
+        guard state.isFrozen else {
+            return false
+        }
+        state.cancellationRequested = true
+        return true
     }
 
     // MARK: - Private
