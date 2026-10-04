@@ -18,7 +18,7 @@ export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
     retry: 2,
     queryFn: async () => {
       const data = await api.GET({
-        url: `/api/todo?start=${calendarRange.start.getTime()}&end=${calendarRange.end.getTime()}`,
+        url: `/api/todo?start=${calendarRange.start.getTime()}&end=${calendarRange.end.getTime()}&expand=true`,
       });
       const { todos }: { todos: TodoApiItemType[] } = data;
       if (!todos) {
@@ -41,14 +41,19 @@ export const useCalendarTodo = (calendarRange: { start: Date; end: Date }) => {
           due: parseApiDateTime(todo.due!),
           instanceDate: todoInstanceDate,
           listID: todo.listID ?? null,
-          instances:
-            todo.instances?.map((instance) => ({
-              ...instance,
-              instanceDate: parseApiDateTime(instance.instanceDate),
-              overriddenDue: instance.overriddenDue
-                ? parseApiDateTime(instance.overriddenDue)
-                : null,
-            })) || null,
+          // `?.` guards null/undefined but not a value of the wrong shape, and a
+          // row written before instances existed can come back as something that
+          // is not an array. Mapping that threw "<x>.map is not a function" the
+          // moment the calendar rendered it, taking the whole screen with it.
+          instances: Array.isArray(todo.instances)
+            ? todo.instances.map((instance) => ({
+                ...instance,
+                instanceDate: parseApiDateTime(instance.instanceDate),
+                overriddenDue: instance.overriddenDue
+                  ? parseApiDateTime(instance.overriddenDue)
+                  : null,
+              }))
+            : null,
         };
       });
 

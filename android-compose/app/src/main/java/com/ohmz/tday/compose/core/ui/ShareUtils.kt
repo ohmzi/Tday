@@ -15,15 +15,18 @@ private val SHARE_DATE_FORMATTER: DateTimeFormatter =
     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
         .withZone(ZoneId.systemDefault())
 
-// Title + flattened notes + due + priority as plain text — the single source
-// of truth for "what a task looks like as text", shared by the share sheet
-// and the swipe-to-copy clipboard action so both read the same on every
-// platform (see iOS's ShareSheet.taskShareText, web's buildTaskShareText).
+// Title + flattened notes + due as plain text — the single source of truth for
+// "what a task looks like as text", shared by the share sheet and the
+// swipe-to-copy clipboard action so both read the same on every platform (see
+// iOS's ShareSheet.taskShareText, web's buildTaskShareText).
+//
+// The priority flag is deliberately not part of this: copying a task copies the
+// task, and the urgency tier is a list-view marking rather than part of what the
+// task says.
 private fun taskCopyText(
     context: Context,
     title: String,
     description: String?,
-    priority: String,
     due: Instant?,
 ): String {
     val parts = buildList {
@@ -32,21 +35,15 @@ private fun taskCopyText(
         due?.let {
             add(context.getString(R.string.share_due_label, SHARE_DATE_FORMATTER.format(it)))
         }
-        // "Low" is the default priority and "Lowest" sits even further below it — neither is
-        // worth flagging in shared text. Mirrors web's listShareText.ts (which fixed this same
-        // gap first) and iOS's ShareSheet.taskShareText.
-        priority.takeIf { it != "Low" && it != "Lowest" }?.let {
-            add(context.getString(R.string.share_priority_label, it))
-        }
     }
     return parts.joinToString("\n")
 }
 
 fun taskCopyText(context: Context, todo: TodoItem): String =
-    taskCopyText(context, todo.title, todo.description, todo.priority, todo.due)
+    taskCopyText(context, todo.title, todo.description, todo.due)
 
 fun taskCopyText(context: Context, item: CompletedItem): String =
-    taskCopyText(context, item.title, item.description, item.priority, item.due)
+    taskCopyText(context, item.title, item.description, item.due)
 
 fun buildListShareText(context: Context, listName: String, items: List<TodoItem>): String {
     val parts = buildList {

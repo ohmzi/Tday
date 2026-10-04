@@ -113,10 +113,10 @@ class McpTestWorld(
             return todo.right()
         }
 
-        override suspend fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String) =
+        override suspend fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String, expand: Boolean) =
             todos.values.toList().right()
 
-        override suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int) =
+        override suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int, expand: Boolean) =
             todos.values.toList().right()
 
         override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit> {

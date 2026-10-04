@@ -131,7 +131,7 @@
         <item>Membantu hari anda berhenti bekerja bebas</item>
         <item>Peringatan anda datang dengan persediaan</item>
         <item>Menukar saya patut kepada dijadualkan</item>
-        <item>Senarai TODO anda, tetapi ia muncul</item>
+        <item>Senarai tugasan anda, tetapi ia muncul</item>
         <item>Mengatasi \'esok saya buat\'</item>
         <item>Senarai tugasan dengan ingatan</item>
         <item>Pelaksana anda, terhos sendiri</item>
@@ -515,6 +515,7 @@
     <string name="widget_list_picker_subtitle">Widget ini hanya akan memaparkan senarai ini, dan butang + menambah tugasan terus ke dalamnya.</string>
     <string name="widget_list_picker_empty_title">Belum ada senarai</string>
     <string name="widget_list_picker_empty">Cipta senarai dalam T\'Day, kemudian ketik widget ini sekali lagi.</string>
+    <string name="widget_list_picker_section_views">Paparan</string>
     <string name="widget_list_picker_section_todo">Senarai berjadual</string>
     <string name="widget_list_picker_section_floater">Senarai apungan</string>
     <string name="widget_list_picker_selected">Dipilih</string>

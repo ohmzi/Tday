@@ -152,6 +152,16 @@ private struct TdayWidgetConfigurableListEntry: Codable {
 enum TdayWidgetListKind: String, Codable {
     case todo
     case floater
+    /// The app's own two scheduled views, offered only by the List widget's picker (see
+    /// `TdayListWidgetTargetEntity`). They are not lists in the catalog, so nothing in the app
+    /// writes entries for them and the widget must never look one up.
+    case scheduled
+    case overdue
+
+    /// True for the two kinds that stand for one of the app's built-in scheduled views rather than
+    /// a list the user made: there is nothing to look up in the catalog and nothing that can go
+    /// missing, so the deleted-list check must skip them.
+    var isPseudo: Bool { self == .scheduled || self == .overdue }
 
     // fileprivate, not internal: TaskWidgetMode (below) is `private`, i.e. file-scoped, and a
     // property can be no more visible than the types in its own signature. Every call site
@@ -159,7 +169,8 @@ enum TdayWidgetListKind: String, Codable {
     // file, so fileprivate costs nothing here.
     fileprivate var mode: TaskWidgetMode {
         switch self {
-        case .todo: return .today
+        // Both pseudo views hold scheduled tasks, so both render in the todo shape.
+        case .todo, .scheduled, .overdue: return .today
         case .floater: return .floater
         }
     }
@@ -222,7 +233,7 @@ struct TdayWidgetListEntityQuery: EntityQuery {
         return allLists()
     }
 
-    private static func allLists() -> [TdayWidgetListEntity] {
+    fileprivate static func allLists() -> [TdayWidgetListEntity] {
         guard let data = WidgetSnapshotFileStore.read(WidgetSnapshotFileStore.listsFileName),
               let entries = try? JSONDecoder().decode([TdayWidgetConfigurableListEntry].self, from: data) else {
             return []
@@ -238,6 +249,77 @@ struct TdayWidgetListEntityQuery: EntityQuery {
             )
         }
     }
+}
+
+/// What the LIST widget's picker offers: the same lists as `TdayWidgetListEntityQuery`, plus the
+/// app's two scheduled views, so a widget can be pointed at "Scheduled" or "Overdue" without a list
+/// existing for it.
+///
+/// A separate entity TYPE rather than two more entries in the shared query, because
+/// `AppEntity.defaultQuery` is per-type: adding them there would also offer Scheduled and Overdue
+/// to the Today and Floater widgets, which already ARE those views and have no list dimension to
+/// scope by. Every field is converted back to `TdayWidgetListEntity` before anything is loaded, so
+/// the whole render path stays on one type.
+struct TdayListWidgetTargetEntity: AppEntity {
+    let listId: String
+    let name: String
+    let kind: TdayWidgetListKind
+    var iconKey: String? = nil
+    var colorKey: String? = nil
+
+    var id: String { "\(kind.rawValue):\(listId)" }
+
+    static var typeDisplayRepresentation = TypeDisplayRepresentation(name: "List")
+    static var defaultQuery = TdayListWidgetTargetQuery()
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(name)")
+    }
+
+    var asListEntity: TdayWidgetListEntity {
+        TdayWidgetListEntity(listId: listId, name: name, kind: kind, iconKey: iconKey, colorKey: colorKey)
+    }
+}
+
+struct TdayListWidgetTargetQuery: EntityQuery {
+    func entities(for identifiers: [String]) async throws -> [TdayListWidgetTargetEntity] {
+        let wanted = Set(identifiers)
+        return Self.allTargets().filter { wanted.contains($0.id) }
+    }
+
+    func suggestedEntities() async throws -> [TdayListWidgetTargetEntity] {
+        Self.allTargets()
+    }
+
+    /// The user's lists come from the shared query's own reader of the catalog rather than a second
+    /// one here, so the two pickers can never disagree about which lists exist.
+    static func allTargets() -> [TdayListWidgetTargetEntity] {
+        let lists = TdayWidgetListEntityQuery.allLists().map { entity in
+            TdayListWidgetTargetEntity(
+                listId: entity.listId,
+                name: entity.name,
+                kind: entity.kind,
+                iconKey: entity.iconKey,
+                colorKey: entity.colorKey
+            )
+        }
+        return lists + pseudoTargets
+    }
+
+    /// The two pseudo views, with the ids the app writes their slices under (see
+    /// `TodayTasksWidgetSnapshotStore`'s `openByList`) and names from the string catalog.
+    static let pseudoTargets: [TdayListWidgetTargetEntity] = [
+        TdayListWidgetTargetEntity(
+            listId: "scheduled",
+            name: String(localized: "Scheduled"),
+            kind: .scheduled
+        ),
+        TdayListWidgetTargetEntity(
+            listId: "overdue",
+            name: String(localized: "Overdue"),
+            kind: .overdue
+        ),
+    ]
 }
 
 /// One list's accent as the widget draws it: the glyph for the watermark, and the colour that
@@ -293,8 +375,10 @@ struct SelectListWidgetListIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Choose List"
     static var description = IntentDescription("Choose which T'Day list this widget shows.")
 
+    // The target entity, not `TdayWidgetListEntity`, so this picker also offers the app's
+    // Scheduled and Overdue views — see `TdayListWidgetTargetEntity`.
     @Parameter(title: "List")
-    var list: TdayWidgetListEntity?
+    var list: TdayListWidgetTargetEntity?
 
     init() {}
 }
@@ -1351,7 +1435,7 @@ private struct PerListWidgetContent {
 private enum PerListWidgetContentLoader {
     static func load(list: TdayWidgetListEntity, date: Date) -> PerListWidgetContent {
         switch list.kind {
-        case .todo:
+        case .todo, .scheduled, .overdue:
             return loadTodoList(list: list, date: date)
         case .floater:
             return loadFloaterList(list: list, date: date)
@@ -1414,7 +1498,8 @@ private enum PerListWidgetContentLoader {
     /// days, so its whole list is the same one the Today/Floater widgets show for it.
     static func loadWholeList(list: TdayWidgetListEntity, date: Date) -> PerListWidgetContent {
         switch list.kind {
-        case .todo:
+        case .todo, .scheduled, .overdue:
+            // A pseudo view's rows are the whole of its slice too, so it shares this loader.
             return loadWholeTodoList(list: list, date: date)
         case .floater:
             return loadFloaterList(list: list, date: date)
@@ -2551,6 +2636,14 @@ private struct ListWidgetChrome {
     let openURL: URL
 
     init(list: TdayWidgetListEntity) {
+        if list.kind.isPseudo {
+            // Neither pseudo view is a list, so there is no list to add into or to open: "+"
+            // creates a scheduled task with no list, and a tap opens the view itself.
+            addURL = URL(string: "tday://todos/create?target=today") ?? list.kind.mode.createURL
+            let open = list.kind == .overdue ? "tday://todos/overdue" : "tday://todos/scheduled"
+            openURL = URL(string: open) ?? list.kind.mode.openURL
+            return
+        }
         var add = URLComponents()
         add.scheme = "tday"
         add.host = "todos"
@@ -2600,8 +2693,15 @@ private struct ListTasksProvider: AppIntentTimelineProvider {
     func timeline(for configuration: SelectListWidgetListIntent, in context: Context) async -> Timeline<ListTasksEntry> {
         let now = Date()
         var entries = [loadEntry(configuration: configuration, date: now)]
-        // A todo list's rows turn overdue, and today's time labels become days, at midnight.
-        if configuration.list?.kind == .todo {
+        // A due-date-shaped list's rows turn overdue, and today's time labels become days, at
+        // midnight.
+        //
+        // This re-derives each row against the new day; it does NOT move a task between the
+        // Scheduled and Overdue slices. Those are written by the app (see
+        // `TodayTasksWidgetSnapshotStore`), and membership in them is fixed until the app writes
+        // the next snapshot — so a task that crosses its due time overnight joins the Overdue
+        // widget on the next app write, not here.
+        if configuration.list?.kind != .floater {
             let midnight = TodayWidgetDayWindow.nextDayStart(after: now, calendar: .current)
             entries.append(loadEntry(configuration: configuration, date: midnight))
         }
@@ -2610,12 +2710,16 @@ private struct ListTasksProvider: AppIntentTimelineProvider {
     }
 
     private func loadEntry(configuration: SelectListWidgetListIntent, date: Date = Date()) -> ListTasksEntry {
-        guard let list = configuration.list else {
+        guard let target = configuration.list else {
             return .chooseList(date: date, listMissing: false)
         }
+        let list = target.asListEntity
         // A list deleted since it was picked asks for another rather than sitting empty. An
-        // unreadable catalog proves nothing, so the list is only called gone when it can be read.
-        if let catalog = TdayWidgetListEntityQuery.catalog(), !catalog.contains(where: { $0.id == list.id }) {
+        // unreadable catalog proves nothing, so the list is only called gone when it can be read —
+        // and a pseudo view is never in the catalog at all, so it is never called gone.
+        if !list.kind.isPseudo,
+           let catalog = TdayWidgetListEntityQuery.catalog(),
+           !catalog.contains(where: { $0.id == list.id }) {
             return .chooseList(date: date, listMissing: true)
         }
         // A list's NAME is user content, so the locked widget keeps the generic title — the same

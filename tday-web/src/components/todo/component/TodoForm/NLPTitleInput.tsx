@@ -19,6 +19,12 @@ type NLPTitleInputProps = {
   // straight from the title. Omitted by surfaces that don't expose those fields.
   setPriority?: (priority: TodoPriority) => void;
   setRruleOptions?: (options: Partial<Options> | null) => void;
+  /**
+   * The recurrence already chosen in the form, if any. Read only to decide
+   * whether the title may still hand one over — see the guard in
+   * `applyNLPHighlighting`.
+   */
+  rruleOptions?: Partial<Options> | null;
   className?: string;
   onSubmit?: () => void;
 };
@@ -30,6 +36,7 @@ export default function NLPTitleInput({
   setDateRange,
   setPriority,
   setRruleOptions,
+  rruleOptions,
   className,
   onSubmit,
 }: NLPTitleInputProps) {
@@ -97,10 +104,12 @@ export default function NLPTitleInput({
       dateCleaned = `${before}${after}`;
     }
 
-    // Recurrence + priority capture. Only sets the fields when a phrase is present
-    // (so it never clobbers a hand-picked recurrence/priority on later keystrokes).
+    // Recurrence + priority capture. Only sets the fields when a phrase is present,
+    // and only when nothing is chosen yet: a repeat the user hand-picked from the
+    // preset list must not be overwritten by a phrase that happens to still sit in
+    // the title ("gym every day" → tap Monthly → keep typing → back to Daily).
     const rp = parseRecurrencePriority(dateCleaned);
-    if (rp.rrule && setRruleOptions) {
+    if (rp.rrule && setRruleOptions && !rruleOptions) {
       setRruleOptions(RRule.parseString(rp.rrule));
     }
     if (rp.priority && setPriority) {

@@ -703,8 +703,9 @@
     "floaterPileFew": "Aquí esperan unas pocas cosas sin fecha.",
     "floaterPileSome": "Aquí se han juntado bastantes cosas sin fecha.",
     "floaterPileMany": "Aquí se ha acumulado una larga lista de cosas sin fecha.",
-    "floaterPinnedOne": "Fijaste {{title}} y nada más.",
-    "floaterPinnedMany": "Fijaste {{title}}, y no es lo único.",
+    "floaterStartWith": "Comienza con {{title}}.",
+    "floaterPinnedOne": "Solo {{title}} está fijada.",
+    "floaterPinnedMany": "{{title}} está fijada, y no es la única.",
     "floaterPriorityOne": "Solo {{title}} tiene prioridad alta.",
     "floaterPriorityMany": "{{title}} tiene prioridad alta, y no es lo único.",
     "floaterMediumOne": "Solo {{title}} tiene prioridad media.",
@@ -712,6 +713,7 @@
     "floaterRestingOne": "Una de ellas lleva meses sin tocarse.",
     "floaterRestingMany": "Algunas llevan meses sin tocarse.",
     "floaterRestingAll": "Aquí nada se ha tocado en meses.",
+    "floaterRestingAllOne": "No se ha tocado en meses.",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -987,9 +989,9 @@
       },
       "list-widgets": {
         "title": "Widget de lista",
-        "summary": "Un tercer widget, para la lista que elijas.",
+        "summary": "Un tercer widget, para una vista integrada o la lista que elijas.",
         "keywords": "widget, pantalla de inicio, lista, configurar, selector, cualquier momento, programado, añadir",
-        "body": "Junto a Hoy y Cualquier momento hay un widget de lista. Colócalo y te pregunta qué lista mostrar — cualquier lista programada o de cualquier momento. A partir de ahí muestra solo esa lista, y su + añade una tarea directamente en ella, con la prioridad predeterminada de la lista. Coloca otro para otra lista; cada uno conserva la suya.",
+        "body": "Junto a Hoy y Cualquier momento hay un widget de lista. Colócalo y te pregunta qué mostrar — las vistas integradas Programadas y Vencidas, o cualquiera de tus listas programadas o de cualquier momento. A partir de ahí muestra solo esa elección, y su + añade una tarea: dentro de la lista cuando elegiste una. Coloca otro para otra vista o lista; cada uno conserva la suya.",
         "tip": "Para cambiar un widget de lista a otra lista, mantenlo pulsado y elige Editar (Editar widget en iPhone)."
       },
       "widget-quick-add": {

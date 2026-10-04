@@ -64,6 +64,7 @@ import com.ohmz.tday.compose.core.ui.TdayMotionTokens
 import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.feature.app.AppViewModel
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
+import com.ohmz.tday.compose.feature.widget.snapshot.pseudoSelectionId
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotWriter
 import com.ohmz.tday.compose.ui.theme.TdayDimens
 import com.ohmz.tday.compose.ui.theme.TdayTheme
@@ -178,6 +179,12 @@ internal data class WidgetListOption(
 
 internal data class WidgetListPickerUiState(
     val loading: Boolean = true,
+    /**
+     * The app's own two scheduled views, offered ahead of the user's lists so a widget can be
+     * pointed at "Scheduled" or "Overdue" without a list existing for it. Their labels are
+     * resolved at render time (see `pseudoTitleRes`), so `name` is empty here.
+     */
+    val pseudoOptions: List<WidgetListOption> = emptyList(),
     val todoLists: List<WidgetListOption> = emptyList(),
     val floaterLists: List<WidgetListOption> = emptyList(),
 )
@@ -197,8 +204,32 @@ internal class WidgetListPickerViewModel @Inject constructor(
             val state = offlineCacheManager.loadOfflineState()
             val openTodos = state.todos.filterNot { it.completed }.groupingBy { it.listId }.eachCount()
             val openFloaters = state.floaters.filterNot { it.completed }.groupingBy { it.listId }.eachCount()
+            val openDated = state.todos.filterNot { it.completed }.filter { it.dueEpochMs != null }
+            val nowEpochMs = System.currentTimeMillis()
             _uiState.value = WidgetListPickerUiState(
                 loading = false,
+                pseudoOptions = listOf(
+                    WidgetListOption(
+                        id = WidgetListType.SCHEDULED.pseudoSelectionId,
+                        type = WidgetListType.SCHEDULED,
+                        name = "",
+                        colorKey = "BLUE",
+                        iconKey = null,
+                        openCount = openDated.size,
+                    ),
+                    WidgetListOption(
+                        id = WidgetListType.OVERDUE.pseudoSelectionId,
+                        type = WidgetListType.OVERDUE,
+                        name = "",
+                        colorKey = "RED",
+                        iconKey = null,
+                        openCount = openDated.count { task ->
+                            // `openDated` already dropped the undated rows; the fallback keeps
+                            // this free of a force-unwrap the guardrail forbids.
+                            (task.dueEpochMs ?: Long.MAX_VALUE) < nowEpochMs
+                        },
+                    ),
+                ),
                 todoLists = state.lists.map { list ->
                     WidgetListOption(
                         id = list.id,
@@ -268,7 +299,7 @@ internal fun WidgetListPickerScreen(
             when {
                 uiState.loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
 
-                uiState.todoLists.isEmpty() && uiState.floaterLists.isEmpty() -> PickerEmptyState(
+                uiState.pseudoOptions.isEmpty() && uiState.todoLists.isEmpty() && uiState.floaterLists.isEmpty() -> PickerEmptyState(
                     onOpenApp = onOpenApp,
                     modifier = Modifier.align(Alignment.Center),
                 )
@@ -284,6 +315,21 @@ internal fun WidgetListPickerScreen(
                     verticalArrangement = Arrangement.spacedBy(TdayDimens.ListItemSpacing),
                 ) {
                     item { PickerHeader() }
+                    if (uiState.pseudoOptions.isNotEmpty()) {
+                        item { PickerSectionLabel(stringResource(R.string.widget_list_picker_section_views)) }
+                        items(uiState.pseudoOptions, key = { "pseudo-${it.type}" }) { option ->
+                            PickerListRow(
+                                option,
+                                selected = option.id == currentListId,
+                                // The label and glyph are the app view's own, resolved now rather
+                                // than stored, so a language or theme change reaches them.
+                                label = pseudoTitleRes(option.type)?.let { stringResource(it) }
+                                    ?: option.name,
+                                iconRes = pseudoIconRes(option.type),
+                                onClick = { onPick(option) },
+                            )
+                        }
+                    }
                     if (uiState.todoLists.isNotEmpty()) {
                         item { PickerSectionLabel(stringResource(R.string.widget_list_picker_section_todo)) }
                         items(uiState.todoLists, key = { "todo-${it.id}" }) { option ->
@@ -354,7 +400,15 @@ private fun PickerSectionLabel(text: String) {
 }
 
 @Composable
-private fun PickerListRow(option: WidgetListOption, selected: Boolean, onClick: () -> Unit) {
+private fun PickerListRow(
+    option: WidgetListOption,
+    selected: Boolean,
+    onClick: () -> Unit,
+    /** The row's text. Defaults to the list's own name; a pseudo option passes a string resource. */
+    label: String = option.name,
+    /** A fixed glyph for a pseudo option, which has no list icon key to resolve one from. */
+    iconRes: Int? = null,
+) {
     val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val accent = tdayListAccentColor(
@@ -380,16 +434,25 @@ private fun PickerListRow(option: WidgetListOption, selected: Boolean, onClick: 
             modifier = Modifier.size(PickerRowIconDiscSize).clip(CircleShape).background(accent),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = tdayListIconForList(option.iconKey, option.name),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(TdayDimens.IconSm),
-            )
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(TdayDimens.IconSm),
+                )
+            } else {
+                Icon(
+                    imageVector = tdayListIconForList(option.iconKey, option.name),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(TdayDimens.IconSm),
+                )
+            }
         }
         Spacer(modifier = Modifier.width(TdayDimens.SpacingLg))
         Text(
-            text = option.name,
+            text = label,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,

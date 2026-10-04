@@ -26,13 +26,41 @@ internal enum class WidgetPriorityRing { HIGH, MEDIUM, LOW, LOWEST }
 
 /**
  * Which shape a per-list widget instance renders in — chosen once, at configuration time, by
- * which kind of list the user picked (a todo-list vs. a floater-list). Deliberately only two
- * values: the content-shape decision for this feature is that a widget always matches whichever
- * list TYPE was picked (due-date-shaped for a todo-list, undated-shaped for a floater-list), the
- * same two shapes the fixed Today/Floater widgets already use — never a third shape.
+ * which kind of list the user picked.
+ *
+ * Two SHAPES, four TYPES. [TODO] and [FLOATER] are the user's own lists, and the content shape
+ * follows the list TYPE (due-date-shaped for a todo-list, undated-shaped for a floater-list), the
+ * same two shapes the fixed Today/Floater widgets already use. [SCHEDULED] and [OVERDUE] are the
+ * app's own two scheduled views offered as widget choices of their own — the "Scheduled" feed and
+ * the Overdue screen — and both are due-date-shaped, so they share [TODO]'s shape. That is still
+ * never a third shape; what grew is the number of choices, not the vocabulary.
+ *
+ * Neither pseudo type has a `CachedListRecord` behind it, which is what [isPseudoList] is for:
+ * every reader that would look a list up checks it first.
  */
 @Serializable
-internal enum class WidgetListType { TODO, FLOATER }
+internal enum class WidgetListType { TODO, FLOATER, SCHEDULED, OVERDUE }
+
+/**
+ * True for the two types that stand for one of the app's built-in scheduled views rather than a
+ * list the user made. There is nothing to look up, nothing to rename and nothing to lose, so the
+ * title comes from a string resource and the rows come from the whole scheduled set.
+ */
+internal val WidgetListType.isPseudoList: Boolean
+    get() = this == WidgetListType.SCHEDULED || this == WidgetListType.OVERDUE
+
+/**
+ * What a pseudo selection stores where a real one stores a list id — [WidgetListSelection.listId] is
+ * not nullable, and keeping it non-null is what lets one stored shape serve both. Chosen so it can
+ * never collide with a real list id (those are cuids), and so a selection written by a build that
+ * did not know about pseudo types simply reads back as an ordinary list that no longer exists.
+ */
+internal val WidgetListType.pseudoSelectionId: String
+    get() = when (this) {
+        WidgetListType.SCHEDULED -> "tday-pseudo-scheduled"
+        WidgetListType.OVERDUE -> "tday-pseudo-overdue"
+        else -> error("$name is not a pseudo list")
+    }
 
 /**
  * The exact render payload a widget needs — nothing more. Written by the app process (which has

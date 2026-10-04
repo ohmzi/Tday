@@ -131,9 +131,9 @@
         <item>Hilft deinem Tag, das Freelancen zu lassen</item>
         <item>Deine Erinnerungen sind bestens vorbereitet</item>
         <item>Verwandelt „Ich sollte“ in „eingeplant“</item>
-        <item>Deine TODO-Liste, aber sie taucht auf</item>
+        <item>Deine Aufgabenliste, aber sie taucht auf</item>
         <item>Überlistet „Ich mach das morgen“</item>
-        <item>Eine To-do-Liste mit Gedächtnis</item>
+        <item>Eine Aufgabenliste mit Gedächtnis</item>
         <item>Dein Vollstrecker, selbstgehostet</item>
         <item>Der schlimmste Albtraum der Prokrastination</item>
         <item>Wo „irgendwann“ ein Datum bekommt</item>
@@ -516,6 +516,7 @@
     <string name="widget_list_picker_subtitle">Dieses Widget zeigt nur diese Liste, und sein + fügt Aufgaben direkt hinzu.</string>
     <string name="widget_list_picker_empty_title">Noch keine Listen</string>
     <string name="widget_list_picker_empty">Erstelle eine Liste in T\'Day und tippe dann erneut auf dieses Widget.</string>
+    <string name="widget_list_picker_section_views">Ansichten</string>
     <string name="widget_list_picker_section_todo">Geplante Listen</string>
     <string name="widget_list_picker_section_floater">Floater-Listen</string>
     <string name="widget_list_picker_selected">Ausgewählt</string>

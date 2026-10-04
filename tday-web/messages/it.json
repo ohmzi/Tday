@@ -703,8 +703,9 @@
     "floaterPileFew": "Qui aspettano poche cose senza data.",
     "floaterPileSome": "Qui si sono radunate parecchie cose senza data.",
     "floaterPileMany": "Qui si è accumulato un lungo elenco di cose senza data.",
-    "floaterPinnedOne": "Hai fissato {{title}} e nient'altro.",
-    "floaterPinnedMany": "Hai fissato {{title}}, e non è l'unica.",
+    "floaterStartWith": "Inizia con {{title}}.",
+    "floaterPinnedOne": "Solo {{title}} è fissata.",
+    "floaterPinnedMany": "{{title}} è fissata, e non è l'unica.",
     "floaterPriorityOne": "Solo {{title}} ha priorità alta.",
     "floaterPriorityMany": "{{title}} ha priorità alta, e non è l'unica.",
     "floaterMediumOne": "Solo {{title}} ha priorità media.",
@@ -712,6 +713,7 @@
     "floaterRestingOne": "Una di queste è intatta da mesi.",
     "floaterRestingMany": "Alcune sono intatte da mesi.",
     "floaterRestingAll": "Qui non si tocca niente da mesi.",
+    "floaterRestingAllOne": "Non si tocca da mesi.",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -987,9 +989,9 @@
       },
       "list-widgets": {
         "title": "Widget lista",
-        "summary": "Un terzo widget, per la lista che preferisci.",
+        "summary": "Un terzo widget, per una vista integrata o la lista che preferisci.",
         "keywords": "widget, schermata home, lista, configura, selettore, libera, pianificata, aggiungi",
-        "body": "Accanto a Oggi e Libere c'è un widget lista. Posizionalo e ti chiede quale lista mostrare — qualsiasi lista pianificata o di attività libere. Da quel momento mostra solo quella lista, e il suo + aggiunge un'attività direttamente lì, con la priorità predefinita della lista. Posizionane un altro per un'altra lista; ognuno mantiene la propria.",
+        "body": "Accanto a Oggi e Libere c'è un widget lista. Posizionalo e ti chiede cosa mostrare — le viste integrate Programmate e In ritardo, o qualsiasi lista pianificata o di attività libere. Da quel momento mostra solo quella scelta, e il suo + aggiunge un'attività: nella lista quando ne hai scelta una. Posizionane un altro per un'altra vista o lista; ognuno mantiene la propria.",
         "tip": "Per passare un widget lista a un'altra lista, tienilo premuto e scegli Modifica (Modifica widget su iPhone)."
       },
       "widget-quick-add": {

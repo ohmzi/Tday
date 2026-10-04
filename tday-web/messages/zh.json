@@ -703,6 +703,7 @@
     "floaterPileFew": "这里等着几件没有日期的事。",
     "floaterPileSome": "这里攒下了不少没有日期的事。",
     "floaterPileMany": "这里已经攒成一长串没有日期的事。",
+    "floaterStartWith": "先从{{title}}开始。",
     "floaterPinnedOne": "你只置顶了 {{title}}。",
     "floaterPinnedMany": "你置顶了 {{title}}，而且不止这一件。",
     "floaterPriorityOne": "只有 {{title}} 是高优先级。",
@@ -712,6 +713,7 @@
     "floaterRestingOne": "其中一件已经好几个月没动过。",
     "floaterRestingMany": "其中有几件已经好几个月没动过。",
     "floaterRestingAll": "这里已经好几个月没动过了。",
+    "floaterRestingAllOne": "它已经好几个月没动过了。",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -987,9 +989,9 @@
       },
       "list-widgets": {
         "title": "列表小组件",
-        "summary": "第三种小组件，显示你选择的一个列表。",
+        "summary": "第三种小组件，显示你选择的一个内置视图或列表。",
         "keywords": "小组件, 主屏幕, 列表, 设置, 选择器, 浮动任务, 计划任务, 添加",
-        "body": "除了「今天」和「浮动任务」，还有一个列表小组件。放置后它会询问要显示哪个列表——任意计划列表或浮动任务列表。之后它只显示该列表，点它的 + 会直接在其中添加任务，并使用该列表的默认优先级。再放一个即可显示另一个列表；每个小组件都保留自己的列表。",
+        "body": "除了「今天」和「浮动任务」，还有一个列表小组件。放置后它会询问要显示什么——内置的「已安排」和「逾期」视图，或任意计划列表或浮动任务列表。之后它只显示该选择，点它的 + 会添加任务：若你选了列表，则直接加入该列表。再放一个即可显示另一个视图或列表；每个小组件都保留自己的设置。",
         "tip": "要把列表小组件切换到另一个列表，长按它并选择「编辑」（iPhone 上为「编辑小组件」）。"
       },
       "widget-quick-add": {

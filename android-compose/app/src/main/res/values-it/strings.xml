@@ -516,6 +516,7 @@
     <string name="widget_list_picker_subtitle">Questo widget mostrerà solo questa lista e il suo + vi aggiungerà direttamente le attività.</string>
     <string name="widget_list_picker_empty_title">Ancora nessuna lista</string>
     <string name="widget_list_picker_empty">Crea una lista in T\'Day, poi tocca di nuovo questo widget.</string>
+    <string name="widget_list_picker_section_views">Viste</string>
     <string name="widget_list_picker_section_todo">Liste pianificate</string>
     <string name="widget_list_picker_section_floater">Liste senza data</string>
     <string name="widget_list_picker_selected">Selezionata</string>

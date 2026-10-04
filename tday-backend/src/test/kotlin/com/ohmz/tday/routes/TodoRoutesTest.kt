@@ -866,12 +866,14 @@ class TodoRoutesTest {
             start: Long,
             end: Long,
             timeZone: String,
+            expand: Boolean,
         ) = emptyList<TodoResponse>().right()
 
         override suspend fun getTimeline(
             userId: String,
             timeZone: String,
             recurringFutureDays: Int,
+            expand: Boolean,
         ) = timeline.right()
 
         override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<com.ohmz.tday.domain.AppError, Unit> {

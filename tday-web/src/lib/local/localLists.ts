@@ -54,6 +54,27 @@ function optionalColor(value: unknown): string | null | undefined {
   return color;
 }
 
+/** The four priority tiers a list may default to. Mirrors the shared `Priority` enum. */
+const LIST_PRIORITIES = new Set(["Lowest", "Low", "Medium", "High"]);
+
+/**
+ * A list's default priority, or `undefined` when the request did not mention it.
+ *
+ * `null` is a real value — "no default", the reset the picker's "None" row writes —
+ * and is distinct from `undefined`, which means "leave whatever is there". Same
+ * tri-state `optionalColor` above uses, so a PATCH that omits the field cannot
+ * silently clear it.
+ */
+function optionalPriority(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const priority = String(value);
+  if (!LIST_PRIORITIES.has(priority)) {
+    throw localBadRequest("defaultPriority is invalid", "defaultPriority");
+  }
+  return priority;
+}
+
 function newestFirst<T extends { createdAt: string }>(rows: T[]): T[] {
   return [...rows].sort((a, b) => (epochMs(b.createdAt) ?? 0) - (epochMs(a.createdAt) ?? 0));
 }
@@ -80,6 +101,7 @@ function toListDto(row: LocalListRow, todoCount: number) {
     color: row.color,
     todoCount,
     iconKey: row.iconKey,
+    defaultPriority: row.defaultPriority ?? null,
     userID: LOCAL_USER_ID,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -110,6 +132,7 @@ export function createList(body: Record<string, unknown>) {
     name,
     color: optionalColor(body.color) ?? null,
     iconKey: normalize(body.iconKey),
+    defaultPriority: optionalPriority(body.defaultPriority) ?? null,
     createdAt: now,
     updatedAt: now,
   };
@@ -121,6 +144,7 @@ export function updateList(body: Record<string, unknown>) {
   const id = normalize(body.id);
   if (!id) throw localBadRequest("list id is required", "id");
   const color = optionalColor(body.color);
+  const defaultPriority = optionalPriority(body.defaultPriority);
 
   updateWorkspace((workspace) => {
     const row = workspace.lists.find((list) => list.id === id);
@@ -130,6 +154,7 @@ export function updateList(body: Record<string, unknown>) {
     if (color !== undefined) row.color = color;
     const iconKey = normalize(body.iconKey);
     if (iconKey) row.iconKey = iconKey;
+    if (defaultPriority !== undefined) row.defaultPriority = defaultPriority;
     row.updatedAt = nowApiDateTime();
   });
 
@@ -205,6 +230,7 @@ function toFloaterListDto(row: LocalFloaterListRow, todoCount: number) {
     color: row.color,
     todoCount,
     iconKey: row.iconKey,
+    defaultPriority: row.defaultPriority ?? null,
     userID: LOCAL_USER_ID,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -237,6 +263,7 @@ export function createFloaterList(body: Record<string, unknown>) {
     name,
     color: optionalColor(body.color) ?? null,
     iconKey: normalize(body.iconKey),
+    defaultPriority: optionalPriority(body.defaultPriority) ?? null,
     reusable: body.reusable === true,
     createdAt: now,
     updatedAt: now,
@@ -249,6 +276,7 @@ export function updateFloaterList(body: Record<string, unknown>) {
   const id = normalize(body.id);
   if (!id) throw localBadRequest("floater list id is required", "id");
   const color = optionalColor(body.color);
+  const defaultPriority = optionalPriority(body.defaultPriority);
 
   updateWorkspace((workspace) => {
     const row = workspace.floaterLists.find((list) => list.id === id);
@@ -258,6 +286,7 @@ export function updateFloaterList(body: Record<string, unknown>) {
     if (color !== undefined) row.color = color;
     const iconKey = normalize(body.iconKey);
     if (iconKey) row.iconKey = iconKey;
+    if (defaultPriority !== undefined) row.defaultPriority = defaultPriority;
     if (typeof body.reusable === "boolean") row.reusable = body.reusable;
     row.updatedAt = nowApiDateTime();
   });

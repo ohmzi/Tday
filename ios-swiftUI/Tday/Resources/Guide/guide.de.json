@@ -1252,12 +1252,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Listen-Widget",
-      "summary": "Ein drittes Widget, für eine Liste deiner Wahl.",
+      "summary": "Ein drittes Widget, für eine eingebaute Ansicht oder eine Liste deiner Wahl.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Neben Heute und Jederzeit gibt es ein Listen-Widget. Platziere es, und es fragt, welche Liste es zeigen soll — jede geplante Liste oder Jederzeit-Liste. Danach zeigt es nur diese Liste, und sein + legt eine Aufgabe direkt darin an, mit der Standardpriorität der Liste. Platziere ein weiteres für eine andere Liste; jedes behält seine eigene."
+            "Neben Heute und Jederzeit gibt es ein Listen-Widget. Platziere es, und es fragt, was es zeigen soll — die eingebauten Ansichten Geplant und Überfällig oder jede geplante Liste oder Jederzeit-Liste. Danach zeigt es nur diese Auswahl, und sein + legt eine Aufgabe an: in der Liste, wenn du eine gewählt hast. Platziere ein weiteres für eine andere Ansicht oder Liste; jedes behält seine eigene."
           ]
         },
         {
@@ -1269,7 +1269,7 @@
       ],
       "searchTitle": "listen-widget",
       "searchKeywords": "widget, startbildschirm, liste, einrichtung, auswahl, jederzeit, geplant, hinzufugen",
-      "searchBody": "ein drittes widget, fur eine liste deiner wahl. neben heute und jederzeit gibt es ein listen-widget. platziere es, und es fragt, welche liste es zeigen soll — jede geplante liste oder jederzeit-liste. danach zeigt es nur diese liste, und sein + legt eine aufgabe direkt darin an, mit der standardprioritat der liste. platziere ein weiteres fur eine andere liste; jedes behalt seine eigene. um ein listen-widget auf eine andere liste umzustellen, halte es gedruckt und wahle bearbeiten (auf dem iphone: widget bearbeiten)."
+      "searchBody": "ein drittes widget, fur eine eingebaute ansicht oder eine liste deiner wahl. neben heute und jederzeit gibt es ein listen-widget. platziere es, und es fragt, was es zeigen soll — die eingebauten ansichten geplant und uberfallig oder jede geplante liste oder jederzeit-liste. danach zeigt es nur diese auswahl, und sein + legt eine aufgabe an: in der liste, wenn du eine gewahlt hast. platziere ein weiteres fur eine andere ansicht oder liste; jedes behalt seine eigene. um ein listen-widget auf eine andere liste umzustellen, halte es gedruckt und wahle bearbeiten (auf dem iphone: widget bearbeiten)."
     },
     {
       "id": "widget-quick-add",

@@ -703,6 +703,7 @@
     "floaterPileFew": "Beberapa perkara tanpa tarikh sedang menunggu di sini.",
     "floaterPileSome": "Agak banyak perkara tanpa tarikh sudah terkumpul di sini.",
     "floaterPileMany": "Senarai panjang perkara tanpa tarikh sudah terkumpul di sini.",
+    "floaterStartWith": "Mulakan dengan {{title}}.",
     "floaterPinnedOne": "Anda menyemat {{title}} sahaja.",
     "floaterPinnedMany": "Anda menyemat {{title}}, dan bukan itu sahaja.",
     "floaterPriorityOne": "Hanya {{title}} berkeutamaan tinggi.",
@@ -712,6 +713,7 @@
     "floaterRestingOne": "Satu daripadanya tidak disentuh berbulan-bulan.",
     "floaterRestingMany": "Sebahagiannya tidak disentuh berbulan-bulan.",
     "floaterRestingAll": "Tiada apa-apa di sini disentuh berbulan-bulan.",
+    "floaterRestingAllOne": "Ia tidak disentuh berbulan-bulan.",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -987,9 +989,9 @@
       },
       "list-widgets": {
         "title": "Widget senarai",
-        "summary": "Widget ketiga, untuk satu senarai pilihan anda.",
+        "summary": "Widget ketiga, untuk satu paparan terbina dalam atau senarai pilihan anda.",
         "keywords": "widget, skrin utama, senarai, persediaan, pemilih, terapung, berjadual, tambah",
-        "body": "Selain Hari Ini dan Terapung, ada widget senarai. Letakkannya dan ia akan bertanya senarai mana yang hendak dipaparkan — mana-mana senarai berjadual atau senarai terapung. Selepas itu ia hanya memaparkan senarai itu, dan butang + menambah tugasan terus ke dalamnya, dengan keutamaan lalai senarai itu. Letakkan satu lagi untuk senarai lain; setiap satu mengekalkan senarainya sendiri.",
+        "body": "Selain Hari Ini dan Terapung, ada widget senarai. Letakkannya dan ia akan bertanya apa yang hendak dipaparkan — paparan terbina dalam Dijadualkan dan Tertunggak, atau mana-mana senarai berjadual atau senarai terapung. Selepas itu ia hanya memaparkan pilihan itu, dan butang + menambah tugasan: ke dalam senarai jika anda memilih satu. Letakkan satu lagi untuk paparan atau senarai lain; setiap satu mengekalkan pilihannya sendiri.",
         "tip": "Untuk menukar widget senarai kepada senarai lain, tekan lama widget itu dan pilih Edit (Edit Widget pada iPhone)."
       },
       "widget-quick-add": {

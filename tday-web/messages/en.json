@@ -6,7 +6,7 @@
     "sections": {
       "1": {
         "title": "Use of the Service",
-        "content": "T'Day is a free productivity app for managing todos, notes, and files. You agree to use the Service lawfully and not abuse or disrupt it."
+        "content": "T'Day is a free productivity app for managing tasks, notes, and files. You agree to use the Service lawfully and not abuse or disrupt it."
       },
       "2": {
         "title": "Accounts",
@@ -56,7 +56,7 @@
         "title": "Information We Collect",
         "content": [
           "Account data: email address and time zone",
-          "User content: todos, notes, and encrypted files",
+          "User content: tasks, notes, and encrypted files",
           "Technical data the server sees when you connect (this is not part of crash reports): IP address, browser and session info",
           "Cookies and local storage for authentication"
         ]
@@ -321,7 +321,7 @@
   },
   "today": {
     "saveInstance": "Save instance",
-    "nextRepeatText": "This todo is next scheduled for",
+    "nextRepeatText": "This task is next scheduled for",
     "addATask": "Add a task",
     "titlePlaceholder": "Title",
     "menu": {
@@ -387,13 +387,13 @@
     "confirm": "Confirm",
     "cancel": "Cancel",
     "delete": {
-      "title": "Delete todo?",
+      "title": "Delete task?",
       "subtitle": "This action cannot be undone. This will permanently delete",
       "button": "Delete"
     },
     "deleteAll": {
-      "title": "Delete all todo recurrences?",
-      "subtitle": "This is a recurring todo, delete all other recurrences?",
+      "title": "Delete all task recurrences?",
+      "subtitle": "This is a recurring task, delete all other recurrences?",
       "deleteInstance": "Delete this occurrence only",
       "deleteAll": "Delete all recurrences"
     },
@@ -402,8 +402,8 @@
       "subtitle": "Changes you have made will be discarded"
     },
     "editAll": {
-      "title": "Edit all todo recurrences?",
-      "subtitle": "This is a recurring todo, make the same edit for all other recurrences?",
+      "title": "Edit all task recurrences?",
+      "subtitle": "This is a recurring task, make the same edit for all other recurrences?",
       "editInstance": "Edit this occurrence only",
       "editAll": "Edit all recurrences"
     }
@@ -411,7 +411,7 @@
   "shortcuts": {
     "title": "Shortcuts",
     "todo": {
-      "title": "Todo shortcuts",
+      "title": "Task shortcuts",
       "submitAndOpen": "Submit form and open another",
       "openForm": "Open form",
       "exitForm": "Exit form",
@@ -703,8 +703,9 @@
     "floaterPileFew": "A handful of undated things are waiting here.",
     "floaterPileSome": "Quite a few undated things have gathered here.",
     "floaterPileMany": "A long backlog of undated things has built up here.",
-    "floaterPinnedOne": "You pinned {{title}} and nothing else.",
-    "floaterPinnedMany": "You pinned {{title}}, and it isn't the only one.",
+    "floaterStartWith": "Start with {{title}}.",
+    "floaterPinnedOne": "Only {{title}} is pinned.",
+    "floaterPinnedMany": "{{title}} is pinned, and it isn't the only one.",
     "floaterPriorityOne": "Only {{title}} is at high priority.",
     "floaterPriorityMany": "{{title}} is at high priority, and it isn't the only one.",
     "floaterMediumOne": "Only {{title}} is at medium priority.",
@@ -712,6 +713,7 @@
     "floaterRestingOne": "One of them hasn't been touched in months.",
     "floaterRestingMany": "Some of them haven't been touched in months.",
     "floaterRestingAll": "Nothing here has been touched in months.",
+    "floaterRestingAllOne": "It hasn't been touched in months.",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -987,9 +989,9 @@
       },
       "list-widgets": {
         "title": "List widget",
-        "summary": "A third widget, for one list of your choice.",
+        "summary": "A third widget, for one built-in view or list of your choice.",
         "keywords": "widget, home screen, list, setup, picker, floater, scheduled, add",
-        "body": "Beside Today and Floater there's a List widget. Place it and it asks which list to show — any scheduled or floater list. From then on it shows only that list, and its + adds a task straight into it, with the list's default priority. Place another for another list; each keeps its own.",
+        "body": "Beside Today and Floater there's a List widget. Place it and it asks what to show — the built-in Scheduled and Overdue views, or any of your scheduled or floater lists. From then on it shows only that choice, and its + adds a task: into the list when you picked one. Place another for another view or list; each keeps its own.",
         "tip": "To switch a List widget to a different list, long-press it and choose Edit (Edit Widget on iPhone)."
       },
       "widget-quick-add": {

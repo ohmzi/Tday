@@ -34,6 +34,16 @@ internal enum class FloaterNote {
     /** Weaker than [PRIORITY_ONE]/[PRIORITY_MANY]: named only when nothing High is present. */
     MEDIUM_ONE,
     MEDIUM_MANY,
+
+    /**
+     * Nothing else is worth saying, so point at the row the list itself puts first.
+     *
+     * The only note that is chosen for what is ABSENT: a pile with no pin, no High and no
+     * dormancy used to be described and never directed — "A handful of undated things are
+     * waiting here." and no sense of where to start. Falls to [NONE] for a single-row pile,
+     * where naming the only task is an echo rather than a summary.
+     */
+    START_WITH,
 }
 
 /**
@@ -88,29 +98,30 @@ internal object FloaterSummaryPlanner {
         val high = tasks.count { priorityRankOf(it.priority) == HIGH_PRIORITY_RANK }
         val medium = tasks.count { priorityRankOf(it.priority) == MEDIUM_PRIORITY_RANK }
 
-        val note = when {
-            // A wholly dormant pile outranks a pin: when nothing has been touched in months,
-            // "you pinned one of these" is not the story — the dormancy is. Below that, the pin
-            // wins, because it is the one mark the person made deliberately.
-            resting == tasks.size -> FloaterNote.RESTING_ALL
-            pinned == 1 -> FloaterNote.PINNED_ONE
-            pinned > 1 -> FloaterNote.PINNED_MANY
-            resting == 1 -> FloaterNote.RESTING_ONE
-            resting > 1 -> FloaterNote.RESTING_MANY
-            high == 1 -> FloaterNote.PRIORITY_ONE
-            high > 1 -> FloaterNote.PRIORITY_MANY
-            // Below High: Medium is still worth naming over saying nothing about priority at
-            // all, but it never outranks High — a pile with both gets the High note only.
-            medium == 1 -> FloaterNote.MEDIUM_ONE
-            medium > 1 -> FloaterNote.MEDIUM_MANY
-            else -> FloaterNote.NONE
+        val note = noteFor(
+            total = tasks.size,
+            pinned = pinned,
+            resting = resting,
+            high = high,
+            medium = medium,
+        )
+
+        // Nothing stood out, so point at the row the list itself puts first — the same nudge
+        // the dated path opens with ("Start with X."). Only for a pile bigger than one row:
+        // naming the sole task back to the reader is an echo, not a summary. The claim is
+        // only "this is the first row", which the sort above makes true by construction —
+        // unlike a "waited longest" ranking, a rename cannot falsify it.
+        val chosen = if (note == FloaterNote.NONE && tasks.size > 1) {
+            FloaterNote.START_WITH
+        } else {
+            note
         }
 
         // Naming the only row on screen is not a summary, it is an echo. A single-task pile
         // keeps the notes that COUNT something (dormancy) and drops the ones that point at a
         // task, because with one task there is nothing to point away from.
         val single = tasks.size == 1
-        val noteTitle = when (note) {
+        val noteTitle = when (chosen) {
             FloaterNote.PINNED_ONE, FloaterNote.PINNED_MANY ->
                 ranked.first { it.pinned }.title
 
@@ -119,6 +130,8 @@ internal object FloaterSummaryPlanner {
 
             FloaterNote.MEDIUM_ONE, FloaterNote.MEDIUM_MANY ->
                 ranked.first { priorityRankOf(it.priority) == MEDIUM_PRIORITY_RANK }.title
+
+            FloaterNote.START_WITH -> ranked.first().title
 
             // The resting notes deliberately name nobody: `updatedAtEpochMs` is a last-write
             // clock, so "this one has waited longest" would be a claim about creation time that
@@ -129,7 +142,7 @@ internal object FloaterSummaryPlanner {
         val naming = noteTitle != null
         return FloaterSummaryPlan(
             band = bandFor(tasks.size),
-            note = if (single && naming) FloaterNote.NONE else note,
+            note = if (single && naming) FloaterNote.NONE else chosen,
             noteTitle = if (single && naming) null else noteTitle,
         )
     }
@@ -139,5 +152,33 @@ internal object FloaterSummaryPlanner {
         count <= FEW_MAX -> FloaterPileBand.FEW
         count <= SOME_MAX -> FloaterPileBand.SOME
         else -> FloaterPileBand.MANY
+    }
+
+    /**
+     * The single note the pile earns, by precedence. Split out of [plan] so that function reads as
+     * "count, choose, name" and this ladder can be read on its own.
+     */
+    private fun noteFor(
+        total: Int,
+        pinned: Int,
+        resting: Int,
+        high: Int,
+        medium: Int,
+    ): FloaterNote = when {
+        // A wholly dormant pile outranks a pin: when nothing has been touched in months,
+        // "you pinned one of these" is not the story — the dormancy is. Below that, the pin
+        // wins, because it is the one mark the person made deliberately.
+        resting == total -> FloaterNote.RESTING_ALL
+        pinned == 1 -> FloaterNote.PINNED_ONE
+        pinned > 1 -> FloaterNote.PINNED_MANY
+        resting == 1 -> FloaterNote.RESTING_ONE
+        resting > 1 -> FloaterNote.RESTING_MANY
+        high == 1 -> FloaterNote.PRIORITY_ONE
+        high > 1 -> FloaterNote.PRIORITY_MANY
+        // Below High: Medium is still worth naming over saying nothing about priority at
+        // all, but it never outranks High — a pile with both gets the High note only.
+        medium == 1 -> FloaterNote.MEDIUM_ONE
+        medium > 1 -> FloaterNote.MEDIUM_MANY
+        else -> FloaterNote.NONE
     }
 }

@@ -296,9 +296,9 @@ object GuideContentExporter {
         // Undated ("Anytime") vocabulary — deliberately shares nothing with the due/day keys
         // above, so a floater summary cannot reach a sentence that says "due".
         "floaterClear", "floaterPileOne", "floaterPileFew", "floaterPileSome", "floaterPileMany",
-        "floaterPinnedOne", "floaterPinnedMany", "floaterPriorityOne", "floaterPriorityMany",
-        "floaterMediumOne", "floaterMediumMany",
-        "floaterRestingOne", "floaterRestingMany", "floaterRestingAll",
+        "floaterStartWith", "floaterPinnedOne", "floaterPinnedMany", "floaterPriorityOne",
+        "floaterPriorityMany", "floaterMediumOne", "floaterMediumMany",
+        "floaterRestingOne", "floaterRestingMany", "floaterRestingAll", "floaterRestingAllOne",
     )
 
     private data class SummaryBundleData(
@@ -331,14 +331,27 @@ object GuideContentExporter {
         sb.appendLine("// Regenerate with: ./gradlew :shared:exportGuideContent")
         sb.appendLine()
         sb.appendLine("internal object SummaryStringBundles {")
+        // The vocabulary is emitted ONCE and every bundle zips its own values against it. Written
+        // per locale (which is what this used to do) the same sixty key literals appeared ten times
+        // in one file, which is exactly the "repeated string literal" finding static analysis
+        // raises — and raising it once per new key is a tax on adding a string.
+        sb.appendLine("    /** The vocabulary, in order. Declared once; every bundle zips its values against it. */")
+        sb.appendLine("    private val keys: List<String> = listOf(")
+        for (key in SUMMARY_VALUE_KEYS) {
+            sb.appendLine("        ${kquote(key)},")
+        }
+        sb.appendLine("    )")
+        sb.appendLine()
         for (locale in LOCALES) {
             val bundle = readSummaryBundle(rootDir, locale)
             sb.appendLine("    val $locale = SummaryStrings(")
-            sb.appendLine("        values = mapOf(")
-            for ((key, value) in bundle.values) {
-                sb.appendLine("            ${kquote(key)} to ${kquote(value)},")
+            sb.appendLine("        values = keys.zip(")
+            sb.appendLine("            listOf(")
+            for (value in bundle.values.values) {
+                sb.appendLine("                ${kquote(value)},")
             }
-            sb.appendLine("        ),")
+            sb.appendLine("            ),")
+            sb.appendLine("        ).toMap(),")
             sb.appendLine("        monthsShort = listOf(${bundle.months.joinToString(", ") { kquote(it) }}),")
             sb.appendLine("        weekdaysShort = listOf(${bundle.weekdays.joinToString(", ") { kquote(it) }}),")
             sb.appendLine("    )")

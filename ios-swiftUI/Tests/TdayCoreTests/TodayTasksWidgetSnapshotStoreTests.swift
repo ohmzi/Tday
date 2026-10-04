@@ -574,6 +574,28 @@ final class TodayTasksWidgetSnapshotStoreTests: XCTestCase {
         XCTAssertFalse(snapshot.perList["list-1"]?.tasks.contains { $0.id == "next-month" } ?? true)
     }
 
+    func testPseudoSlicesSplitOpenDatedTasksIntoScheduledAndOverdue() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = Date(timeIntervalSince1970: 1_764_072_600)
+        let state = OfflineSyncState(
+            todos: [
+                todo(id: "past", title: "Past", dueEpochMs: now.addingTimeInterval(-3_600).epochMs, listId: "list-1"),
+                todo(id: "ahead", title: "Ahead", dueEpochMs: now.addingTimeInterval(3_600).epochMs, listId: "list-1"),
+                todo(id: "done", title: "Done", dueEpochMs: now.addingTimeInterval(3_600).epochMs, completed: true, listId: "list-1")
+            ],
+            lists: [list(id: "list-1", name: "Work")]
+        )
+
+        let snapshot = TodayTasksWidgetSnapshotStore.makeSnapshot(from: state, now: now, calendar: calendar)
+
+        // The split the app's own Scheduled and Overdue screens draw: "Scheduled" is what is
+        // still ahead, so the two views never show the same task and each count matches the
+        // screen it opens. "Every dated task" made Scheduled a superset of Overdue.
+        XCTAssertEqual(snapshot.openByList["scheduled"]?.tasks.map(\.id), ["ahead"])
+        XCTAssertEqual(snapshot.openByList["overdue"]?.tasks.map(\.id), ["past"])
+    }
+
     func testOpenByListCapsRowsButKeepsTheTrueCount() {
         let nowEpochMs: Int64 = 1_764_072_600_000
         let todos = (0..<25).map { index in

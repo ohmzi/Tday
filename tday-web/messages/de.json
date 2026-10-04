@@ -703,8 +703,9 @@
     "floaterPileFew": "Hier warten ein paar Dinge ohne Datum.",
     "floaterPileSome": "Hier haben sich einige Dinge ohne Datum angesammelt.",
     "floaterPileMany": "Hier hat sich eine lange Liste von Dingen ohne Datum angesammelt.",
-    "floaterPinnedOne": "Du hast {{title}} angeheftet, sonst nichts.",
-    "floaterPinnedMany": "Du hast {{title}} angeheftet, und nicht nur das.",
+    "floaterStartWith": "Beginnen Sie mit {{title}}.",
+    "floaterPinnedOne": "Nur {{title}} ist angeheftet.",
+    "floaterPinnedMany": "{{title}} ist angeheftet, und nicht nur das.",
     "floaterPriorityOne": "Nur {{title}} hat hohe Priorität.",
     "floaterPriorityMany": "{{title}} hat hohe Priorität, und nicht nur das.",
     "floaterMediumOne": "Nur {{title}} hat mittlere Priorität.",
@@ -712,6 +713,7 @@
     "floaterRestingOne": "Eines davon ist seit Monaten unberührt.",
     "floaterRestingMany": "Einiges davon ist seit Monaten unberührt.",
     "floaterRestingAll": "Hier ist seit Monaten nichts angerührt worden.",
+    "floaterRestingAllOne": "Es ist seit Monaten nicht angerührt worden.",
     "title": "Summary",
     "loading": "Generating summary…",
     "error": "Couldn't generate a summary. Please try again.",
@@ -987,9 +989,9 @@
       },
       "list-widgets": {
         "title": "Listen-Widget",
-        "summary": "Ein drittes Widget, für eine Liste deiner Wahl.",
+        "summary": "Ein drittes Widget, für eine eingebaute Ansicht oder eine Liste deiner Wahl.",
         "keywords": "widget, startbildschirm, liste, einrichtung, auswahl, jederzeit, geplant, hinzufügen",
-        "body": "Neben Heute und Jederzeit gibt es ein Listen-Widget. Platziere es, und es fragt, welche Liste es zeigen soll — jede geplante Liste oder Jederzeit-Liste. Danach zeigt es nur diese Liste, und sein + legt eine Aufgabe direkt darin an, mit der Standardpriorität der Liste. Platziere ein weiteres für eine andere Liste; jedes behält seine eigene.",
+        "body": "Neben Heute und Jederzeit gibt es ein Listen-Widget. Platziere es, und es fragt, was es zeigen soll — die eingebauten Ansichten Geplant und Überfällig oder jede geplante Liste oder Jederzeit-Liste. Danach zeigt es nur diese Auswahl, und sein + legt eine Aufgabe an: in der Liste, wenn du eine gewählt hast. Platziere ein weiteres für eine andere Ansicht oder Liste; jedes behält seine eigene.",
         "tip": "Um ein Listen-Widget auf eine andere Liste umzustellen, halte es gedrückt und wähle Bearbeiten (auf dem iPhone: Widget bearbeiten)."
       },
       "widget-quick-add": {

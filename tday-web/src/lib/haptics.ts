@@ -71,6 +71,28 @@ export function hapticDismiss(): void {
 }
 
 /**
+ * The screen itself changed — a list screen was opened or closed, in either
+ * direction.
+ *
+ * The event both natives already spell and both fire from exactly one place:
+ * Android's `TdayHaptics.screenChange` (GESTURE_END — "a tile tap and an edge
+ * swipe are both gestures, and the handover is the moment each ends") and iOS's
+ * `HapticManager.screenChange` (`.soft` at 0.8 — "the most frequent event in the
+ * app after a plain tap"). Opening and closing deliberately feel the SAME on
+ * both: the screen that arrived or left already says which way it went.
+ *
+ * A single short pulse, not a pattern, for the same reason `hapticReveal` is:
+ * a screen handover is one event and not a compound outcome. 12 ms sits at the
+ * bottom of the 8–15 acknowledgement band — below `hapticButtonTap`'s 15,
+ * because this fires on every list the user walks through and a buzz as loud as
+ * a deliberate button press would wear out fast, which is the same reasoning
+ * iOS's comment gives for choosing its softest texture here.
+ */
+export function hapticScreenChange(): void {
+  vibrate(12);
+}
+
+/**
  * A hidden surface came out — a task row slid aside far enough to uncover the
  * actions behind it.
  *

@@ -39,8 +39,8 @@ import java.time.ZoneOffset
 
 interface TodoService {
     suspend fun create(userId: String, title: String, description: String?, priority: String, due: LocalDateTime, rrule: String?, listID: String?): Either<AppError, TodoResponse>
-    suspend fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String): Either<AppError, List<TodoResponse>>
-    suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int): Either<AppError, List<TodoResponse>>
+    suspend fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String, expand: Boolean = false): Either<AppError, List<TodoResponse>>
+    suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int, expand: Boolean = false): Either<AppError, List<TodoResponse>>
     suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit>
     suspend fun delete(userId: String, id: String): Either<AppError, Int>
     suspend fun completeTodo(userId: String, todoId: String, instanceDate: LocalDateTime?): Either<AppError, Unit>
@@ -108,6 +108,7 @@ class TodoServiceImpl(
     private val fieldEncryption: FieldEncryption,
     private val shareService: ListShareService,
     private val publisher: RealtimePublisher,
+    private val recurrenceExpander: RecurrenceExpander,
 ) : TodoService {
 
     override suspend fun create(
@@ -147,8 +148,7 @@ class TodoServiceImpl(
         ).right()
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    override suspend fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String): Either<AppError, List<TodoResponse>> {
+    override suspend fun getByDateRange(userId: String, start: Long, end: Long, timeZone: String, expand: Boolean): Either<AppError, List<TodoResponse>> {
         val dateRangeStart = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(start), ZoneOffset.UTC)
         val dateRangeEnd = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(end), ZoneOffset.UTC)
         val visibleListIds = shareService.sharedListIdsFor(userId, ListType.SCHEDULED)
@@ -160,10 +160,12 @@ class TodoServiceImpl(
                     (Todos.due lessEq dateRangeEnd)
             }.orderBy(Todos.createdAt, SortOrder.DESC).map { it.toTodoResponse() }
 
-            // One row per recurring template. The client expands occurrences from
-            // rrule/exdates/instances itself, and toTodoResponse() reads no
+            // One row per recurring template. `toTodoResponse()` reads no
             // TodoInstances columns, so joining instances here only fanned the
             // same todo out once per instance row (duplicate timeline entries).
+            // Callers that can expand (`expand = true`) get real occurrences from
+            // [expandRecurring] instead; the default stays one template per series
+            // because that is the shape the native clients already key off.
             val recurring = Todos.selectAll().where {
                 visibleTodos(userId, visibleListIds) and Todos.rrule.isNotNull() and
                     (Todos.completed eq false)
@@ -171,11 +173,11 @@ class TodoServiceImpl(
 
             oneOff + recurring
         }
-        return todos.right()
+        if (!expand) return todos.right()
+        return expandRecurring(userId, todos, timeZone, dateRangeStart, dateRangeEnd).right()
     }
 
-    @Suppress("UNUSED_PARAMETER")
-    override suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int): Either<AppError, List<TodoResponse>> {
+    override suspend fun getTimeline(userId: String, timeZone: String, recurringFutureDays: Int, expand: Boolean): Either<AppError, List<TodoResponse>> {
         val visibleListIds = shareService.sharedListIdsFor(userId, ListType.SCHEDULED)
         val todos = newSuspendedTransaction(Dispatchers.IO) {
             val oneOff = Todos.selectAll().where {
@@ -190,7 +192,55 @@ class TodoServiceImpl(
 
             oneOff + recurring
         }
-        return todos.right()
+        if (!expand) return todos.right()
+        // The window a recurring series is materialised over. From *now*, not from
+        // the series anchor: an old daily task still has today's occurrence due,
+        // and walking years of history to reach it would be the whole cost of the
+        // request for nothing the caller can show.
+        val from = LocalDateTime.now(ZoneOffset.UTC)
+        val to = from.plusDays(recurringFutureDays.coerceIn(1, 3650).toLong())
+        return expandRecurring(userId, todos, timeZone, from, to).right()
+    }
+
+    /**
+     * Replaces recurring templates with their concrete occurrences in
+     * [from]..[to], leaving one-off todos untouched.
+     *
+     * `TodoDto` carries `rrule` but never `exdates`/`instances`, so a client
+     * cannot expand a series correctly on its own — a cancelled or completed
+     * occurrence is invisible to it. [RecurrenceExpander] already has that state
+     * (via [getRecurrenceStates]) and is the same algorithm the MCP tools use, so
+     * callers that ask to expand get occurrences that honour overrides, moved
+     * dates and cancellations. Completed occurrences are dropped, matching the
+     * pending-only listings this feeds.
+     */
+    private suspend fun expandRecurring(
+        userId: String,
+        todos: List<TodoResponse>,
+        timeZone: String,
+        from: LocalDateTime,
+        to: LocalDateTime,
+    ): List<TodoResponse> {
+        val (recurring, oneOff) = todos.partition { !it.rrule.isNullOrBlank() }
+        if (recurring.isEmpty() || from.isAfter(to)) return todos
+
+        val states = when (val result = getRecurrenceStates(userId, recurring.map { it.id })) {
+            is Either.Left -> return todos
+            is Either.Right -> result.value
+        }
+        val zone = runCatching { java.time.ZoneId.of(timeZone) }.getOrDefault(ZoneOffset.UTC)
+
+        val expanded = recurring.flatMap { template ->
+            recurrenceExpander.expand(
+                todo = template,
+                state = states[template.id] ?: RecurrenceState(),
+                zone = zone,
+                from = from,
+                to = to,
+            )
+        }.filter { !it.completed }
+
+        return oneOff + expanded
     }
 
     override suspend fun update(userId: String, id: String, fields: Map<String, Any?>): Either<AppError, Unit> {

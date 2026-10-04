@@ -264,7 +264,9 @@ describe("anytime summary copy", () => {
     expect(floaterPileBand(12)).toBe("many");
 
     const note = (tasks: FloaterSummaryTask[]) => planFloaterSummary(tasks, NOW).note;
-    expect(note(plain(3))).toBe("none");
+    // Nothing stands out, so the pile points at its own first row rather than only
+    // describing itself — the one note chosen for what is absent.
+    expect(note(plain(3))).toBe("startWith");
     expect(note(plain(3).map((t, i) => ({ ...t, pinned: i === 0 })))).toBe("pinnedOne");
     expect(note(plain(3).map((t, i) => ({ ...t, pinned: i < 2 })))).toBe("pinnedMany");
     expect(

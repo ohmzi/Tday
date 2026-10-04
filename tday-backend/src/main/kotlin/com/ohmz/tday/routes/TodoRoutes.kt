@@ -113,17 +113,21 @@ private fun Route.todoGetRoute(todoService: TodoService) {
         call.withAuth { user ->
             val timeZone = user.timeZone ?: "UTC"
             val timeline = call.request.queryParameters["timeline"] == "true"
+            // Opt-in expansion. The native clients key off one row per recurring
+            // template, so the default stays that shape; a caller that asks here
+            // gets one row per occurrence, overrides and cancellations applied.
+            val expand = call.request.queryParameters["expand"] == "true"
 
             if (timeline) {
                 val days = call.request.queryParameters["recurringFutureDays"]?.toIntOrNull() ?: 365
-                todoService.getTimeline(user.id, timeZone, days.coerceIn(1, 3650))
+                todoService.getTimeline(user.id, timeZone, days.coerceIn(1, 3650), expand)
                     .map { mapOf(TODOS to it) }
             } else {
                 val start = call.request.queryParameters["start"]?.toLongOrNull()
                     ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("date range start not specified"))
                 val end = call.request.queryParameters["end"]?.toLongOrNull()
                     ?: return@withAuth arrow.core.Either.Left(AppError.BadRequest("date range end not specified"))
-                todoService.getByDateRange(user.id, start, end, timeZone)
+                todoService.getByDateRange(user.id, start, end, timeZone, expand)
                     .map { mapOf(TODOS to it) }
             }
         }
@@ -161,7 +165,7 @@ private fun Route.todoPatchRoute(todoService: TodoService) {
                 }
                 body.listID?.let { fields["listID"] = it.takeIf { value -> value.isNotBlank() } }
                 todoService.update(user.id, body.id, fields).bind()
-                mapOf(MSG to "Todo updated")
+                mapOf(MSG to "Task updated")
             }
         }
     }

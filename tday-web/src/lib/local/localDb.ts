@@ -84,6 +84,13 @@ export type LocalListRow = {
   name: string;
   color: string | null;
   iconKey: string | null;
+  /**
+   * The priority a task created in this list starts at — the local twin of the
+   * backend's `Lists.defaultPriority` / `FloaterLists.defaultPriority`. Optional
+   * because a workspace persisted before this field existed simply has none; a
+   * missing value reads as `null` ("no default"), exactly as the DTO reports it.
+   */
+  defaultPriority?: string | null;
   createdAt: string;
   updatedAt: string;
 };
