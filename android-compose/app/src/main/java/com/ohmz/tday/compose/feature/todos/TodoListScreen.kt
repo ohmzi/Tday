@@ -5284,10 +5284,29 @@ private fun ListSettingsBottomSheet(
                         }
                     }
 
-                    ListSettingsSharingSection(
-                        onShare = onShare,
-                        onMembers = onMembers,
-                    )
+                    if (onShare != null || onMembers != null) {
+                        TdaySheetSectionTitle(
+                            text = stringResource(R.string.share_section_title),
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(ListSettingsActionTileSpacing)) {
+                            if (onMembers != null) {
+                                ListSettingsActionTile(
+                                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
+                                    label = stringResource(R.string.members_title),
+                                    onClick = onMembers,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            if (onShare != null) {
+                                ListSettingsActionTile(
+                                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_share_2),
+                                    label = stringResource(R.string.action_share),
+                                    onClick = onShare,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(TdayDimens.SpacingXxs))
                     if (showDelete) {
                         ListSettingsDeleteButton(onClick = onDelete)
@@ -5414,37 +5433,6 @@ private fun ListSettingsIconSection(
                         tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-        }
-    }
-}
-
-/** The optional Sharing card — Members and Share tiles, only when either is offered. */
-@Composable
-private fun ListSettingsSharingSection(
-    onShare: (() -> Unit)?,
-    onMembers: (() -> Unit)?,
-) {
-    if (onShare != null || onMembers != null) {
-        TdaySheetSectionTitle(
-            text = stringResource(R.string.share_section_title),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(ListSettingsActionTileSpacing)) {
-            if (onMembers != null) {
-                ListSettingsActionTile(
-                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
-                    label = stringResource(R.string.members_title),
-                    onClick = onMembers,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            if (onShare != null) {
-                ListSettingsActionTile(
-                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_share_2),
-                    label = stringResource(R.string.action_share),
-                    onClick = onShare,
-                    modifier = Modifier.weight(1f),
-                )
             }
         }
     }
