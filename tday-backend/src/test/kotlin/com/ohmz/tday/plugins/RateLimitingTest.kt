@@ -272,12 +272,14 @@ class RateLimitingTest {
             start: Long,
             end: Long,
             timeZone: String,
+            expand: Boolean,
         ): Either<AppError, List<TodoResponse>> = emptyList<TodoResponse>().right()
 
         override suspend fun getTimeline(
             userId: String,
             timeZone: String,
             recurringFutureDays: Int,
+            expand: Boolean,
         ): Either<AppError, List<TodoResponse>> {
             timelineCalls += 1
             return listOf(

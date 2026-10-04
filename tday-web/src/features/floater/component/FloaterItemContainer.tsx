@@ -106,12 +106,12 @@ export default function FloaterItemContainer({
     disabled: readOnly,
   });
 
-  /** Copies the floater's title/notes/priority to the clipboard as plain text. */
+  /** Copies the floater's title/notes to the clipboard as plain text. */
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(
         buildTaskShareText({
-          todo: { title, description, priority },
+          todo: { title, description },
           lang: i18n.language,
           t: appDict,
         }),

@@ -634,6 +634,24 @@ enum TodayTasksWidgetSnapshotStore {
             )
         }
 
+        // The List widget's two pseudo views, under the ids their picker entities carry
+        // (`TdayListWidgetTargetQuery.pseudoTargets`): Scheduled is every open dated task, Overdue
+        // the ones already past due. Written only when they hold something, so the widget's "no
+        // slice" state keeps meaning "nothing here" rather than "not written yet".
+        let openDated = state.todos.filter { !$0.completed && $0.dueEpochMs != nil }
+        let nowEpochMsForPseudo = Int64(now.timeIntervalSince1970 * 1_000)
+        let pseudoSlices: [(id: String, todos: [CachedTodoRecord])] = [
+            ("scheduled", openDated),
+            ("overdue", openDated.filter { ($0.dueEpochMs ?? nowEpochMsForPseudo) < nowEpochMsForPseudo }),
+        ]
+        for slice in pseudoSlices where !slice.todos.isEmpty {
+            let sorted = TaskSortEngine.sortedTodos(slice.todos, key: taskSortKey)
+            openByList[slice.id] = TodayTasksWidgetPerListSnapshot(
+                totalCount: sorted.count,
+                tasks: sorted.prefix(perListTaskLimit).map(makeTaskSnapshot)
+            )
+        }
+
         let upcomingDays = days.dropFirst().map { day in
             let dayTasks = feedTasksDue(on: day)
             let dayOverdue = overdueTasks(before: day)

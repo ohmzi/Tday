@@ -13,19 +13,18 @@ export interface ShareableTodo {
 }
 
 // Minimal shape for a single task's plain-text export (swipe-to-copy, and
-// eventually a single-task share sheet). Unlike ShareableTodo above this
-// carries priority instead of completed — a standalone task's text reads as
-// title/notes/due/priority, not a list-row bullet.
+// eventually a single-task share sheet). Title, notes and due — the task as it
+// reads, without the priority flag: copying a task copies the task, and the
+// urgency tier is a list-view marking rather than part of what the task says.
 export interface ShareableSingleTodo {
   title: string;
   description?: string | null;
   due?: Date | null;
-  priority?: string | null;
 }
 
-// Canonical plain-text export of a single task — title + flattened notes +
-// due + priority. Mirrors iOS's ShareSheet.taskShareText and Android's
-// ShareUtils.taskCopyText so a task copied from any platform reads the same.
+// Canonical plain-text export of a single task — title + flattened notes + due.
+// Mirrors iOS's ShareSheet.taskShareText and Android's ShareUtils.taskCopyText
+// so a task copied from any platform reads the same.
 export function buildTaskShareText({
   todo,
   lang,
@@ -43,12 +42,6 @@ export function buildTaskShareText({
   }
   if (todo.due) {
     lines.push(t("shareDueLabel", { date: format(todo.due, "PPp", { locale }) }));
-  }
-  // "Low" is the default priority and "Lowest" sits even further below it —
-  // neither is worth calling out in the shared text, matching the flag
-  // renderer's precedent that the bottom tier stays unmarked.
-  if (todo.priority && todo.priority !== "Low" && todo.priority !== "Lowest") {
-    lines.push(t("sharePriorityLabel", { priority: todo.priority }));
   }
   return lines.join("\n");
 }

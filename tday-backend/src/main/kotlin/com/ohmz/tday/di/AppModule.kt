@@ -108,7 +108,7 @@ val serviceModule = module {
     single<CacheService> { CacheServiceImpl() }
     single<ListShareService> { ListShareServiceImpl(get(), get(), get()) }
     single { RealtimePublisher(get(), get(), get(), get()) }
-    single<TodoService> { TodoServiceImpl(get(), get(), get()) }
+    single<TodoService> { TodoServiceImpl(get(), get(), get(), get()) }
     single<FloaterService> { FloaterServiceImpl(get(), get(), get()) }
     single<ListService> { ListServiceImpl(get(), get(), get()) }
     single<FloaterListService> { FloaterListServiceImpl(get(), get(), get()) }

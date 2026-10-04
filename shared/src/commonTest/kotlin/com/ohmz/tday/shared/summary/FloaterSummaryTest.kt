@@ -396,7 +396,9 @@ class FloaterSummaryTest {
     fun noteFollowsItsDocumentedPrecedence() {
         fun note(tasks: List<SummaryTaskInput>) = FloaterSummaryPlanner.plan(tasks, nowMs).note
 
-        assertEquals(FloaterNote.NONE, note(plain(3)))
+        // Nothing stands out, so the pile points at its own first row rather than only
+        // describing itself — the one note chosen for what is absent.
+        assertEquals(FloaterNote.START_WITH, note(plain(3)))
         assertEquals(FloaterNote.PINNED_ONE, note(plain(3).mapIndexed { i, t -> t.copy(pinned = i == 0) }))
         assertEquals(FloaterNote.PINNED_MANY, note(plain(3).mapIndexed { i, t -> t.copy(pinned = i < 2) }))
         assertEquals(

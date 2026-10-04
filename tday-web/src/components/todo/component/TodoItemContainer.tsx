@@ -161,12 +161,12 @@ export const TodoItemCard = ({
     stageTaskCompletion(todoItem.id, () => completeMutateFn(todoItem));
   };
 
-  /** Copies the task's title/notes/due/priority to the clipboard as plain text. */
+  /** Copies the task's title/notes/due to the clipboard as plain text. */
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(
         buildTaskShareText({
-          todo: { title, description, due: todoItem.due, priority },
+          todo: { title, description, due: todoItem.due },
           lang: i18n.language,
           t: appDict,
         }),

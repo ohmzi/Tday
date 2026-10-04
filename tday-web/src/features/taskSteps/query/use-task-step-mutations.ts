@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
+import { canonicalTodoId } from "@/lib/todo/todo-id";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
@@ -8,6 +9,12 @@ const JSON_HEADERS = { "Content-Type": "application/json" };
  * ["taskSteps", todoId] cache on settle so the editor re-fetches the fresh
  * list. Every variables object carries `todoId` so we know which cache to
  * invalidate.
+ *
+ * `todoId` is canonicalized at every boundary that sends it — the create body,
+ * the reorder body, the cache key. The editor is handed a row id that may carry
+ * an occurrence suffix (`${id}:${instance}`); the steps endpoints own a todo, so
+ * an un-canonicalized id is answered with "todo not found". See `use-task-steps`
+ * for the read side of the same rule.
  */
 
 export function useCreateTaskStep() {
@@ -18,11 +25,13 @@ export function useCreateTaskStep() {
       await api.POST({
         url: "/api/todo/steps",
         headers: JSON_HEADERS,
-        body: JSON.stringify({ todoId, title }),
+        body: JSON.stringify({ todoId: canonicalTodoId(todoId), title }),
       });
     },
     onSettled: (_data, _error, { todoId }) => {
-      queryClient.invalidateQueries({ queryKey: ["taskSteps", todoId] });
+      queryClient.invalidateQueries({
+        queryKey: ["taskSteps", canonicalTodoId(todoId)],
+      });
     },
   });
 }
@@ -43,7 +52,9 @@ export function useToggleTaskStep() {
       });
     },
     onSettled: (_data, _error, { todoId }) => {
-      queryClient.invalidateQueries({ queryKey: ["taskSteps", todoId] });
+      queryClient.invalidateQueries({
+        queryKey: ["taskSteps", canonicalTodoId(todoId)],
+      });
     },
   });
 }
@@ -60,7 +71,9 @@ export function useDeleteTaskStep() {
       });
     },
     onSettled: (_data, _error, { todoId }) => {
-      queryClient.invalidateQueries({ queryKey: ["taskSteps", todoId] });
+      queryClient.invalidateQueries({
+        queryKey: ["taskSteps", canonicalTodoId(todoId)],
+      });
     },
   });
 }
@@ -73,11 +86,13 @@ export function useReorderTaskSteps() {
       await api.POST({
         url: "/api/todo/steps/reorder",
         headers: JSON_HEADERS,
-        body: JSON.stringify({ todoId, orderedIds }),
+        body: JSON.stringify({ todoId: canonicalTodoId(todoId), orderedIds }),
       });
     },
     onSettled: (_data, _error, { todoId }) => {
-      queryClient.invalidateQueries({ queryKey: ["taskSteps", todoId] });
+      queryClient.invalidateQueries({
+        queryKey: ["taskSteps", canonicalTodoId(todoId)],
+      });
     },
   });
 }

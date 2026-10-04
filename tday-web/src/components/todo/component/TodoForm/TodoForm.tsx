@@ -174,6 +174,7 @@ const TodoForm = ({
             setDateRange={setDateRange}
             setPriority={setPriority}
             setRruleOptions={setRruleOptions}
+            rruleOptions={rruleOptions}
             onSubmit={() => handleForm()}
           />
         }
@@ -316,19 +317,11 @@ const TodoForm = ({
         )}
       </SheetCard>
 
-      {/* Steps — a flat checklist, only for an already-saved task. */}
-      {isEditing && todo?.id ? (
-        <TaskStepsSection todoId={todo.id} />
-      ) : (
-        <>
-          <SheetSectionTitle>{appDict("steps")}</SheetSectionTitle>
-          <SheetCard>
-            <p className="px-[18px] py-3 text-sm font-bold text-muted-foreground">
-              {appDict("stepsCreateHint")}
-            </p>
-          </SheetCard>
-        </>
-      )}
+      {/* Steps — a flat checklist, only for an already-saved task. A new task
+          has nothing to attach a checklist to yet, so the form no longer raises
+          a Steps section that only says so; the checklist appears once the task
+          exists and is opened for editing. */}
+      {isEditing && todo?.id ? <TaskStepsSection todoId={todo.id} /> : null}
 
       {/* Floater list picker (shown when schedule is off) */}
       <CenteredSelectorOverlay

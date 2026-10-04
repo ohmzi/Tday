@@ -131,9 +131,9 @@
         <item>あなたの一日のフリーランスをやめさせる</item>
         <item>あなたのリマインダーは準備万端</item>
         <item>「やるべき」を「予定済み」に変える</item>
-        <item>あなたのTODOリスト、でもちゃんと現れる</item>
+        <item>あなたのタスクリスト、でもちゃんと現れる</item>
         <item>「明日やる」を出し抜く</item>
-        <item>記憶力のあるTODOリスト</item>
+        <item>記憶力のあるタスクリスト</item>
         <item>あなたの執行人、セルフホスト</item>
         <item>先延ばしの最悪の悪夢</item>
         <item>「いつか」に日付がつく場所</item>
@@ -515,6 +515,7 @@
     <string name="widget_list_picker_subtitle">このウィジェットにはこのリストだけが表示され、＋でこのリストに直接タスクを追加できます。</string>
     <string name="widget_list_picker_empty_title">まだリストがありません</string>
     <string name="widget_list_picker_empty">T\'Day でリストを作成してから、もう一度このウィジェットをタップしてください。</string>
+    <string name="widget_list_picker_section_views">ビュー</string>
     <string name="widget_list_picker_section_todo">予定リスト</string>
     <string name="widget_list_picker_section_floater">フローターリスト</string>
     <string name="widget_list_picker_selected">選択中</string>

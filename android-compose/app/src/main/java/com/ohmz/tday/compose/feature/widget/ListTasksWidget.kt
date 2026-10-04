@@ -10,6 +10,7 @@ import com.ohmz.tday.compose.MainActivity
 import com.ohmz.tday.compose.R
 import com.ohmz.tday.compose.core.data.AppSecurityPreferenceStore
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetListType
+import com.ohmz.tday.compose.feature.widget.snapshot.isPseudoList
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshot
 import com.ohmz.tday.compose.feature.widget.snapshot.WidgetSnapshotStore
 import com.ohmz.tday.compose.ui.theme.tdayListIconResForList
@@ -95,6 +96,8 @@ internal object ListTasksWidget {
     fun openIntent(context: Context, appWidgetId: Int): Intent {
         val selection = WidgetListSelectionStore(context.applicationContext).selectionFor(appWidgetId)
             ?: return pickListIntent(context, appWidgetId)
+        // A pseudo instance opens the app view it stands for, not a list route.
+        if (selection.listType.isPseudoList) return pseudoOpenIntent(selection.listType)
         return openListIntent(selection.listId, selection.listName, selection.listType)
     }
 }
@@ -146,9 +149,21 @@ internal fun listWidgetVisualsFor(
     val isDaytime = taskWidgetIsDaytime(LocalTime.now().hour)
     val base = when (listType) {
         WidgetListType.FLOATER -> FloaterWidgetVisuals
-        WidgetListType.TODO -> todayWidgetVisuals(isDaytime)
+        WidgetListType.TODO, WidgetListType.SCHEDULED, WidgetListType.OVERDUE -> todayWidgetVisuals(isDaytime)
     }
-    if (listIconKey.isNullOrBlank() && listName.isNullOrBlank()) return base
+    if (listIconKey.isNullOrBlank() && listName.isNullOrBlank()) {
+        // A pseudo list has no glyph key to resolve from — it wears the fixed mark for its view
+        // instead, the same one its picker row shows.
+        val pseudoGlyph = if (listType.isPseudoList) pseudoIconRes(listType) else null
+        if (pseudoGlyph == null) return base
+        val pseudoWatermark = TaskWidgetWatermark(
+            drawable = pseudoGlyph,
+            tint = todayWidgetAccentColor(isDaytime),
+            tintArgb = null,
+            alpha = TaskWidgetWatermark.WATERMARK_ALPHA,
+        )
+        return base.copy(emptyWatermark = pseudoWatermark, setupWatermark = pseudoWatermark)
+    }
     // The list's glyph in the LIST's own colour, falling back to its type's accent only when the
     // list has no colour. The type used to own the accent outright, which is why a red floater
     // list wore the floater green: the glyph came from the list and the tint did not.
@@ -157,7 +172,7 @@ internal fun listWidgetVisualsFor(
         drawable = tdayListIconResForList(listIconKey, listName),
         tint = when (listType) {
             WidgetListType.FLOATER -> R.color.tday_widget_floater_accent
-            WidgetListType.TODO -> todayWidgetAccentColor(isDaytime)
+            WidgetListType.TODO, WidgetListType.SCHEDULED, WidgetListType.OVERDUE -> todayWidgetAccentColor(isDaytime)
         },
         tintArgb = listAccent?.light,
         // A shared Lucide glyph is white at full opacity, so the watermark weight the other
@@ -180,10 +195,32 @@ private fun listWidgetTitleFor(
     isAppLocked: Boolean,
 ): String {
     if (isAppLocked || selection == null) return appContext.getString(R.string.widget_list_tasks_title)
+    // A pseudo instance has no list name to show, and its title is a fixed app-supplied one like
+    // Today's and Floater's — so it is read from resources now rather than stored at pick time,
+    // and a language change reaches it without re-picking the widget.
+    pseudoTitleRes(selection.listType)?.let { return appContext.getString(it) }
     // The cache's current name first, so a rename shows without picking the list again.
     return snapshot?.listName?.takeIf { it.isNotBlank() }
         ?: selection.listName.takeIf { it.isNotBlank() }
         ?: appContext.getString(R.string.widget_list_tasks_title)
+}
+
+/**
+ * The app-supplied title a pseudo list's widget wears, or null for a real list (whose title is the
+ * user's own name). Reuses the in-app screen titles so the widget and the screen it opens read the
+ * same word.
+ */
+internal fun pseudoTitleRes(listType: WidgetListType): Int? = when (listType) {
+    WidgetListType.SCHEDULED -> R.string.todos_title_scheduled
+    WidgetListType.OVERDUE -> R.string.todos_title_overdue
+    else -> null
+}
+
+/** The fixed Lucide glyph a pseudo list's picker row and widget watermark wear. */
+internal fun pseudoIconRes(listType: WidgetListType): Int? = when (listType) {
+    WidgetListType.SCHEDULED -> R.drawable.ic_lucide_calendar_clock
+    WidgetListType.OVERDUE -> R.drawable.ic_lucide_alarm_clock
+    else -> null
 }
 
 /**
@@ -236,7 +273,7 @@ private fun configuredModel(
     // A list holds every open task in it, whatever day each is due, so it counts "open" and
     // empties to "nothing left in this list" for either type — not Today's "due" and "due today".
     val addRes = when (selection.listType) {
-        WidgetListType.TODO -> R.string.widget_today_tasks_add
+        WidgetListType.TODO, WidgetListType.SCHEDULED, WidgetListType.OVERDUE -> R.string.widget_today_tasks_add
         WidgetListType.FLOATER -> R.string.widget_floater_tasks_add
     }
     val state = listContentState(isAppLocked, snapshot)
@@ -257,8 +294,19 @@ private fun configuredModel(
         addLabel = appContext.getString(addRes),
         items = if (isAppLocked || snapshot == null) emptyList() else listRows(snapshot, selection.listType),
         visuals = visuals,
-        openIntent = openListIntent(selection.listId, selection.listName, selection.listType),
-        addIntent = createListTaskIntent(appWidgetId, selection.listId, selection.listType),
+        // A pseudo list is not a list, so it opens the app screen it stands for and its "+"
+        // creates a scheduled task with no list — the same task the app's own Scheduled view
+        // would have you make.
+        openIntent = if (selection.listType.isPseudoList) {
+            pseudoOpenIntent(selection.listType)
+        } else {
+            openListIntent(selection.listId, selection.listName, selection.listType)
+        },
+        addIntent = if (selection.listType.isPseudoList) {
+            createListTaskIntent(appWidgetId, listId = null, selection.listType)
+        } else {
+            createListTaskIntent(appWidgetId, selection.listId, selection.listType)
+        },
     )
 }
 
@@ -272,7 +320,8 @@ private fun listContentState(
 }
 
 private fun listRows(snapshot: WidgetSnapshot, listType: WidgetListType): List<TaskWidgetListItem> {
-    val dueText = if (listType == WidgetListType.TODO) listDueText() else null
+    // Every type but Floater is due-date-shaped, pseudo lists included.
+    val dueText = if (listType == WidgetListType.FLOATER) null else listDueText()
     val checkingIds = WidgetCheckOff.ids()
     return snapshot.rows.map { row ->
         TaskWidgetListItem.Task(
@@ -332,7 +381,7 @@ internal fun pickListIntent(context: Context, appWidgetId: Int): Intent =
  */
 private fun createListTaskIntent(
     appWidgetId: Int,
-    listId: String,
+    listId: String?,
     listType: WidgetListType,
 ): Intent = Intent(
     Intent.ACTION_VIEW,
@@ -354,6 +403,21 @@ private fun openListIntent(listId: String, listName: String, listType: WidgetLis
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         addCategory(Intent.CATEGORY_LAUNCHER)
     }
+
+/**
+ * Opens the app screen a pseudo list stands for — `tday://todos/scheduled` or
+ * `tday://todos/overdue`, both already registered on their routes. Same shape as
+ * [openListIntent], minus the list coordinates there are none of.
+ */
+private fun pseudoOpenIntent(listType: WidgetListType): Intent =
+    Intent(Intent.ACTION_VIEW, Uri.parse(pseudoDeepLink(listType))).apply {
+        component = ComponentName(BuildConfig.APPLICATION_ID, MainActivity::class.java.name)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        addCategory(Intent.CATEGORY_LAUNCHER)
+    }
+
+private fun pseudoDeepLink(listType: WidgetListType): String =
+    if (listType == WidgetListType.OVERDUE) "tday://todos/overdue" else "tday://todos/scheduled"
 
 private fun listDeepLink(listId: String, listName: String, listType: WidgetListType): String {
     val prefix = if (listType == WidgetListType.TODO) "tday://todos/list" else "tday://floater/list"
