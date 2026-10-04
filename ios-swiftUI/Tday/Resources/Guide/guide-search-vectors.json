@@ -86,8 +86,7 @@
       "bulk-actions",
       "nlp-date-syntax",
       "copy-task-text",
-      "promote-and-float",
-      "list-widgets"
+      "promote-and-float"
     ],
     "pin": [
       "pin-task",

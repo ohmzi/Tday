@@ -2694,7 +2694,13 @@ private struct ListTasksProvider: AppIntentTimelineProvider {
         let now = Date()
         var entries = [loadEntry(configuration: configuration, date: now)]
         // A due-date-shaped list's rows turn overdue, and today's time labels become days, at
-        // midnight — the pseudo views included, where a task also moves from Scheduled to Overdue.
+        // midnight.
+        //
+        // This re-derives each row against the new day; it does NOT move a task between the
+        // Scheduled and Overdue slices. Those are written by the app (see
+        // `TodayTasksWidgetSnapshotStore`), and membership in them is fixed until the app writes
+        // the next snapshot — so a task that crosses its due time overnight joins the Overdue
+        // widget on the next app write, not here.
         if configuration.list?.kind != .floater {
             let midnight = TodayWidgetDayWindow.nextDayStart(after: now, calendar: .current)
             entries.append(loadEntry(configuration: configuration, date: midnight))

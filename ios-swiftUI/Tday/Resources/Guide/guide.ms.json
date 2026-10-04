@@ -1252,12 +1252,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Widget senarai",
-      "summary": "Widget ketiga, untuk satu senarai pilihan anda.",
+      "summary": "Widget ketiga, untuk satu paparan terbina dalam atau senarai pilihan anda.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Selain Hari Ini dan Terapung, ada widget senarai. Letakkannya dan ia akan bertanya senarai mana yang hendak dipaparkan — mana-mana senarai berjadual atau senarai terapung. Selepas itu ia hanya memaparkan senarai itu, dan butang + menambah tugasan terus ke dalamnya, dengan keutamaan lalai senarai itu. Letakkan satu lagi untuk senarai lain; setiap satu mengekalkan senarainya sendiri."
+            "Selain Hari Ini dan Terapung, ada widget senarai. Letakkannya dan ia akan bertanya apa yang hendak dipaparkan — paparan terbina dalam Dijadualkan dan Tertunggak, atau mana-mana senarai berjadual atau senarai terapung. Selepas itu ia hanya memaparkan pilihan itu, dan butang + menambah tugasan: ke dalam senarai jika anda memilih satu. Letakkan satu lagi untuk paparan atau senarai lain; setiap satu mengekalkan pilihannya sendiri."
           ]
         },
         {
@@ -1269,7 +1269,7 @@
       ],
       "searchTitle": "widget senarai",
       "searchKeywords": "widget, skrin utama, senarai, persediaan, pemilih, terapung, berjadual, tambah",
-      "searchBody": "widget ketiga, untuk satu senarai pilihan anda. selain hari ini dan terapung, ada widget senarai. letakkannya dan ia akan bertanya senarai mana yang hendak dipaparkan — mana-mana senarai berjadual atau senarai terapung. selepas itu ia hanya memaparkan senarai itu, dan butang + menambah tugasan terus ke dalamnya, dengan keutamaan lalai senarai itu. letakkan satu lagi untuk senarai lain; setiap satu mengekalkan senarainya sendiri. untuk menukar widget senarai kepada senarai lain, tekan lama widget itu dan pilih edit (edit widget pada iphone)."
+      "searchBody": "widget ketiga, untuk satu paparan terbina dalam atau senarai pilihan anda. selain hari ini dan terapung, ada widget senarai. letakkannya dan ia akan bertanya apa yang hendak dipaparkan — paparan terbina dalam dijadualkan dan tertunggak, atau mana-mana senarai berjadual atau senarai terapung. selepas itu ia hanya memaparkan pilihan itu, dan butang + menambah tugasan: ke dalam senarai jika anda memilih satu. letakkan satu lagi untuk paparan atau senarai lain; setiap satu mengekalkan pilihannya sendiri. untuk menukar widget senarai kepada senarai lain, tekan lama widget itu dan pilih edit (edit widget pada iphone)."
     },
     {
       "id": "widget-quick-add",

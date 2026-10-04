@@ -185,7 +185,7 @@ Shared route constants live in `shared/src/commonMain/kotlin/com/ohmz/tday/share
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/todo` | List todos (query: `start`/`end`, `timeline`, `recurringFutureDays`) |
+| GET | `/api/todo` | List todos (query: `start`/`end`, `timeline`, `recurringFutureDays`, `expand`) |
 | POST | `/api/todo` | Create a new todo |
 | PATCH | `/api/todo` | Update a todo |
 | DELETE | `/api/todo` | Delete a todo |
@@ -198,6 +198,15 @@ Shared route constants live in `shared/src/commonMain/kotlin/com/ohmz/tday/share
 | GET | `/api/todo/overdue` | List overdue todos |
 | POST | `/api/todo/nlp` | Natural language date/title parsing |
 | POST | `/api/todo/summary` | Task summary with optional AI and logic fallback |
+
+`GET /api/todo` returns **one row per recurring template** by default — the shape the native
+clients key off. Adding `expand=true` replaces each recurring template with its concrete
+occurrences in the requested window (the `start`/`end` range, or the timeline's
+`recurringFutureDays` from now, capped at 500 occurrences per series). Expansion honours the
+series' `exdates`, moved dates and cancellations and drops completed occurrences, which is why
+it has to happen server-side: `TodoDto` carries `rrule` but not `exdates`/`instances`, so a
+client cannot expand a series correctly on its own. The web opts in; the native clients do not
+yet.
 
 `PATCH /api/todo/complete` and `/api/todo/uncomplete` take `{ id, instanceDate? }`, and
 `instanceDate` is what decides the scope:

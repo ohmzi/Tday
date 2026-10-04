@@ -1252,12 +1252,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Widget lista",
-      "summary": "Un terzo widget, per la lista che preferisci.",
+      "summary": "Un terzo widget, per una vista integrata o la lista che preferisci.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Accanto a Oggi e Libere c'è un widget lista. Posizionalo e ti chiede quale lista mostrare — qualsiasi lista pianificata o di attività libere. Da quel momento mostra solo quella lista, e il suo + aggiunge un'attività direttamente lì, con la priorità predefinita della lista. Posizionane un altro per un'altra lista; ognuno mantiene la propria."
+            "Accanto a Oggi e Libere c'è un widget lista. Posizionalo e ti chiede cosa mostrare — le viste integrate Programmate e In ritardo, o qualsiasi lista pianificata o di attività libere. Da quel momento mostra solo quella scelta, e il suo + aggiunge un'attività: nella lista quando ne hai scelta una. Posizionane un altro per un'altra vista o lista; ognuno mantiene la propria."
           ]
         },
         {
@@ -1269,7 +1269,7 @@
       ],
       "searchTitle": "widget lista",
       "searchKeywords": "widget, schermata home, lista, configura, selettore, libera, pianificata, aggiungi",
-      "searchBody": "un terzo widget, per la lista che preferisci. accanto a oggi e libere c'e un widget lista. posizionalo e ti chiede quale lista mostrare — qualsiasi lista pianificata o di attivita libere. da quel momento mostra solo quella lista, e il suo + aggiunge un'attivita direttamente li, con la priorita predefinita della lista. posizionane un altro per un'altra lista; ognuno mantiene la propria. per passare un widget lista a un'altra lista, tienilo premuto e scegli modifica (modifica widget su iphone)."
+      "searchBody": "un terzo widget, per una vista integrata o la lista che preferisci. accanto a oggi e libere c'e un widget lista. posizionalo e ti chiede cosa mostrare — le viste integrate programmate e in ritardo, o qualsiasi lista pianificata o di attivita libere. da quel momento mostra solo quella scelta, e il suo + aggiunge un'attivita: nella lista quando ne hai scelta una. posizionane un altro per un'altra vista o lista; ognuno mantiene la propria. per passare un widget lista a un'altra lista, tienilo premuto e scegli modifica (modifica widget su iphone)."
     },
     {
       "id": "widget-quick-add",

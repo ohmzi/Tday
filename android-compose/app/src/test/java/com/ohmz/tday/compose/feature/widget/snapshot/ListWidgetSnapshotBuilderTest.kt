@@ -211,7 +211,7 @@ class ListWidgetSnapshotBuilderTest {
     }
 
     @Test
-    fun `scheduled pseudo list holds every open dated task, whatever list it is in`() {
+    fun `scheduled pseudo list holds the open dated tasks still ahead, whatever list they are in`() {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(
                 todos = listOf(
@@ -219,6 +219,10 @@ class ListWidgetSnapshotBuilderTest {
                     todo(id = "s-unsorted", title = "Scheduled unsorted", listId = null, dueEpochMs = now + 2L),
                     todo(id = "s-clear", title = "Scheduled clear", listId = "list-7", dueEpochMs = null),
                     todo(id = "s-done", title = "Scheduled done", listId = "list-7", dueEpochMs = now + 3L, completed = true),
+                    // Past due, so it belongs to the Overdue view, not this one. The app's own
+                    // Scheduled screen excludes it (`isScheduledTodo` is `due >= now`), and a
+                    // widget counting it would disagree with the screen it opens.
+                    todo(id = "s-late", title = "Scheduled late", listId = "list-7", dueEpochMs = now - 1L),
                 ),
             ),
             listId = WidgetListType.SCHEDULED.pseudoSelectionId,

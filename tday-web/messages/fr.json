@@ -989,9 +989,9 @@
       },
       "list-widgets": {
         "title": "Widget de liste",
-        "summary": "Un troisième widget, pour la liste de votre choix.",
+        "summary": "Un troisième widget, pour une vue intégrée ou la liste de votre choix.",
         "keywords": "widget, écran d'accueil, liste, configurer, sélecteur, flottant, prévu, ajouter",
-        "body": "À côté d'Aujourd'hui et Flottantes, il y a un widget de liste. Placez-le et il vous demande quelle liste afficher — n'importe quelle liste planifiée ou de tâches flottantes. Ensuite, il n'affiche que cette liste, et son + y ajoute directement une tâche, avec la priorité par défaut de la liste. Placez-en un autre pour une autre liste ; chacun garde la sienne.",
+        "body": "À côté d'Aujourd'hui et Flottantes, il y a un widget de liste. Placez-le et il vous demande quoi afficher — les vues intégrées Planifiées et En retard, ou n'importe quelle liste planifiée ou de tâches flottantes. Ensuite, il n'affiche que ce choix, et son + ajoute une tâche : dans la liste lorsque vous en avez choisi une. Placez-en un autre pour une autre vue ou liste ; chacun garde la sienne.",
         "tip": "Pour passer un widget de liste à une autre liste, appuyez longuement dessus et choisissez Modifier (Modifier le widget sur iPhone)."
       },
       "widget-quick-add": {

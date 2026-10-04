@@ -1252,12 +1252,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Widget de lista",
-      "summary": "Um terceiro widget, para a lista que escolher.",
+      "summary": "Um terceiro widget, para uma vista integrada ou a lista que escolher.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Ao lado de Hoje e Flutuantes há um widget de lista. Coloque-o e ele pergunta qual lista mostrar — qualquer lista agendada ou de tarefas flutuantes. A partir daí mostra só essa lista, e o seu + adiciona uma tarefa diretamente nela, com a prioridade padrão da lista. Coloque outro para outra lista; cada um mantém a sua."
+            "Ao lado de Hoje e Flutuantes há um widget de lista. Coloque-o e ele pergunta o que mostrar — as vistas integradas Agendadas e Atrasadas, ou qualquer lista agendada ou de tarefas flutuantes. A partir daí mostra só essa escolha, e o seu + adiciona uma tarefa: dentro da lista quando escolheu uma. Coloque outro para outra vista ou lista; cada um mantém a sua."
           ]
         },
         {
@@ -1269,7 +1269,7 @@
       ],
       "searchTitle": "widget de lista",
       "searchKeywords": "widget, tela inicial, lista, configurar, seletor, flutuante, agendada, adicionar",
-      "searchBody": "um terceiro widget, para a lista que escolher. ao lado de hoje e flutuantes ha um widget de lista. coloque-o e ele pergunta qual lista mostrar — qualquer lista agendada ou de tarefas flutuantes. a partir dai mostra so essa lista, e o seu + adiciona uma tarefa diretamente nela, com a prioridade padrao da lista. coloque outro para outra lista; cada um mantem a sua. para trocar um widget de lista para outra lista, toque e segure nele e escolha editar (editar widget no iphone)."
+      "searchBody": "um terceiro widget, para uma vista integrada ou a lista que escolher. ao lado de hoje e flutuantes ha um widget de lista. coloque-o e ele pergunta o que mostrar — as vistas integradas agendadas e atrasadas, ou qualquer lista agendada ou de tarefas flutuantes. a partir dai mostra so essa escolha, e o seu + adiciona uma tarefa: dentro da lista quando escolheu uma. coloque outro para outra vista ou lista; cada um mantem a sua. para trocar um widget de lista para outra lista, toque e segure nele e escolha editar (editar widget no iphone)."
     },
     {
       "id": "widget-quick-add",

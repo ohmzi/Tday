@@ -518,6 +518,7 @@
     <string name="widget_list_picker_subtitle">Виджет будет показывать только этот список, а кнопка + будет добавлять задачи прямо в него.</string>
     <string name="widget_list_picker_empty_title">Списков пока нет</string>
     <string name="widget_list_picker_empty">Создайте список в T\'Day, затем снова нажмите на этот виджет.</string>
+    <string name="widget_list_picker_section_views">Представления</string>
     <string name="widget_list_picker_section_todo">Запланированные списки</string>
     <string name="widget_list_picker_section_floater">Списки без срока</string>
     <string name="widget_list_picker_selected">Выбран</string>
