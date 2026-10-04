@@ -103,6 +103,9 @@ internal object WidgetInstanceCatalog {
     fun feedForListType(listType: WidgetListType): WidgetFeed = when (listType) {
         WidgetListType.TODO -> WidgetFeed.SCHEDULED
         WidgetListType.FLOATER -> WidgetFeed.FLOATER
+        // Both pseudo views hold scheduled tasks, so a "+" on either creates one — with no list,
+        // since neither is a list.
+        WidgetListType.SCHEDULED, WidgetListType.OVERDUE -> WidgetFeed.SCHEDULED
     }
 
     /**

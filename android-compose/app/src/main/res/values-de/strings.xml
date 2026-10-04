@@ -516,6 +516,7 @@
     <string name="widget_list_picker_subtitle">Dieses Widget zeigt nur diese Liste, und sein + fügt Aufgaben direkt hinzu.</string>
     <string name="widget_list_picker_empty_title">Noch keine Listen</string>
     <string name="widget_list_picker_empty">Erstelle eine Liste in T\'Day und tippe dann erneut auf dieses Widget.</string>
+    <string name="widget_list_picker_section_views">Ansichten</string>
     <string name="widget_list_picker_section_todo">Geplante Listen</string>
     <string name="widget_list_picker_section_floater">Floater-Listen</string>
     <string name="widget_list_picker_selected">Ausgewählt</string>

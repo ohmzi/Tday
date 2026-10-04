@@ -584,6 +584,7 @@
     <string name="widget_list_picker_subtitle">This widget will show only this list, and its + adds tasks straight to it.</string>
     <string name="widget_list_picker_empty_title">No lists yet</string>
     <string name="widget_list_picker_empty">Create a list in T\'Day, then tap this widget again.</string>
+    <string name="widget_list_picker_section_views">Views</string>
     <string name="widget_list_picker_section_todo">Scheduled lists</string>
     <string name="widget_list_picker_section_floater">Floater lists</string>
     <string name="widget_list_picker_selected">Currently selected</string>

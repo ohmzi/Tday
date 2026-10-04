@@ -120,6 +120,15 @@ class WidgetInstanceKindTest {
             WidgetFeed.FLOATER,
             WidgetInstanceCatalog.feedFor(WidgetInstanceKind.LIST, WidgetListType.FLOATER),
         )
+        // Both pseudo views hold scheduled tasks, so a "+" on either creates a scheduled one.
+        assertEquals(
+            WidgetFeed.SCHEDULED,
+            WidgetInstanceCatalog.feedFor(WidgetInstanceKind.LIST, WidgetListType.SCHEDULED),
+        )
+        assertEquals(
+            WidgetFeed.SCHEDULED,
+            WidgetInstanceCatalog.feedFor(WidgetInstanceKind.LIST, WidgetListType.OVERDUE),
+        )
     }
 
     @Test

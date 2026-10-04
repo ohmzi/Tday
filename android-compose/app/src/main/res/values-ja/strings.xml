@@ -515,6 +515,7 @@
     <string name="widget_list_picker_subtitle">このウィジェットにはこのリストだけが表示され、＋でこのリストに直接タスクを追加できます。</string>
     <string name="widget_list_picker_empty_title">まだリストがありません</string>
     <string name="widget_list_picker_empty">T\'Day でリストを作成してから、もう一度このウィジェットをタップしてください。</string>
+    <string name="widget_list_picker_section_views">ビュー</string>
     <string name="widget_list_picker_section_todo">予定リスト</string>
     <string name="widget_list_picker_section_floater">フローターリスト</string>
     <string name="widget_list_picker_selected">選択中</string>

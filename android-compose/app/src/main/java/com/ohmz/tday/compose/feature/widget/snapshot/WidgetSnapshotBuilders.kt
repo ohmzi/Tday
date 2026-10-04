@@ -143,6 +143,32 @@ internal fun buildListWidgetSnapshot(
         )
     }
 
+    // The two pseudo "lists" are the app's own scheduled views, not list records: there is nothing
+    // to look up and nothing that can go missing, so they are answered before the catalog read and
+    // never reach the "list deleted" path below. A Scheduled instance holds every open dated task;
+    // an Overdue instance holds the ones already past due. Both render in the todo-list shape.
+    if (listType.isPseudoList) {
+        val tasks = TaskSortEngine.sortedTodos(
+            state.todos.filter { task ->
+                val dueEpochMs = task.dueEpochMs ?: return@filter false
+                if (task.completed) return@filter false
+                when (listType) {
+                    WidgetListType.OVERDUE -> dueEpochMs < nowEpochMs
+                    else -> true
+                }
+            },
+        ) { it.toTodoSortKey() }
+        return WidgetSnapshot(
+            generatedAtEpochMs = nowEpochMs,
+            status = if (tasks.isEmpty()) WidgetSnapshotStatus.EMPTY else WidgetSnapshotStatus.TASKS,
+            taskCount = tasks.size,
+            rows = tasks.take(taskLimit).map { it.toSnapshotRow(nowEpochMs) },
+            // No name, icon key or colour: a pseudo instance titles itself from a string resource
+            // at render time (see ListTasksWidget), the same reason the Today and Floater titles
+            // are not baked.
+        )
+    }
+
     // Found by id in the list catalog of its own type; a list that is gone is reported as such
     // rather than rendered as an empty list, so the widget can ask for another one. Name and icon
     // key are read as one pair from one record — the header takes the name and the watermark the
@@ -152,6 +178,7 @@ internal fun buildListWidgetSnapshot(
             ?.let { ListWidgetIdentity(it.name, it.iconKey, it.color) }
         WidgetListType.FLOATER -> state.floaterLists.firstOrNull { it.id == listId }
             ?.let { ListWidgetIdentity(it.name, it.iconKey, it.color) }
+        WidgetListType.SCHEDULED, WidgetListType.OVERDUE -> null
     }
     val listName = list?.name
     val listIconKey = list?.iconKey
@@ -169,15 +196,7 @@ internal fun buildListWidgetSnapshot(
         WidgetListType.TODO -> {
             val tasks = TaskSortEngine.sortedTodos(
                 state.todos.filter { !it.completed && it.listId == listId },
-            ) { task ->
-                TaskSortKey(
-                    id = task.id,
-                    pinned = task.pinned,
-                    dueEpochMs = task.dueEpochMs,
-                    priorityRank = TaskSortEngine.priorityRank(task.priority),
-                    updatedAtEpochMs = task.updatedAtEpochMs.takeIf { it > 0L },
-                )
-            }
+            ) { it.toTodoSortKey() }
             WidgetSnapshot(
                 generatedAtEpochMs = nowEpochMs,
                 status = if (tasks.isEmpty()) WidgetSnapshotStatus.EMPTY else WidgetSnapshotStatus.TASKS,
@@ -210,8 +229,25 @@ internal fun buildListWidgetSnapshot(
                 listColorKey = listColorKey,
             )
         }
+
+        // Answered by the early return above; listed so the exhaustiveness check keeps this
+        // `when` honest if a fifth type ever appears.
+        WidgetListType.SCHEDULED, WidgetListType.OVERDUE ->
+            error("pseudo lists are built before the catalog lookup")
     }
 }
+
+/**
+ * The Today/list sort key for a cached todo — the one place the four fields are assembled, so a
+ * pseudo list's ordering cannot drift from a real todo-list's.
+ */
+private fun CachedTodoRecord.toTodoSortKey(): TaskSortKey = TaskSortKey(
+    id = id,
+    pinned = pinned,
+    dueEpochMs = dueEpochMs,
+    priorityRank = TaskSortEngine.priorityRank(priority),
+    updatedAtEpochMs = updatedAtEpochMs.takeIf { it > 0L },
+)
 
 /** Moved verbatim from the old `FloaterTasksWidgetModel.kt` (deleted). */
 internal fun buildFloaterWidgetSnapshot(

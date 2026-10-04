@@ -6,6 +6,7 @@ import com.ohmz.tday.compose.core.data.CachedListRecord
 import com.ohmz.tday.compose.core.data.CachedTodoRecord
 import com.ohmz.tday.compose.core.data.OfflineSyncState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -207,6 +208,69 @@ class ListWidgetSnapshotBuilderTest {
         )
 
         assertTrue(snapshot.listMissing)
+    }
+
+    @Test
+    fun `scheduled pseudo list holds every open dated task, whatever list it is in`() {
+        val snapshot = buildListWidgetSnapshot(
+            state = OfflineSyncState(
+                todos = listOf(
+                    todo(id = "in-list", title = "In list", listId = "list-1", dueEpochMs = now + 1L),
+                    todo(id = "no-list", title = "No list", listId = null, dueEpochMs = now + 2L),
+                    todo(id = "undated", title = "Undated", listId = "list-1", dueEpochMs = null),
+                    todo(id = "done", title = "Done", listId = "list-1", dueEpochMs = now + 3L, completed = true),
+                ),
+            ),
+            listId = WidgetListType.SCHEDULED.pseudoSelectionId,
+            listType = WidgetListType.SCHEDULED,
+            workspaceConfigured = true,
+            nowEpochMs = now,
+        )
+
+        assertEquals(WidgetSnapshotStatus.TASKS, snapshot.status)
+        assertEquals(2, snapshot.taskCount)
+        assertEquals(setOf("in-list", "no-list"), snapshot.rows.map { it.id }.toSet())
+        // Not a list, so there is nothing to look up and nothing that can go missing.
+        assertFalse(snapshot.listMissing)
+    }
+
+    @Test
+    fun `overdue pseudo list holds only the dated tasks already past due`() {
+        val snapshot = buildListWidgetSnapshot(
+            state = OfflineSyncState(
+                todos = listOf(
+                    todo(id = "past", title = "Past", listId = "list-1", dueEpochMs = now - 1L),
+                    todo(id = "future", title = "Future", listId = "list-1", dueEpochMs = now + 1L),
+                    todo(id = "undated", title = "Undated", listId = "list-1", dueEpochMs = null),
+                ),
+            ),
+            listId = WidgetListType.OVERDUE.pseudoSelectionId,
+            listType = WidgetListType.OVERDUE,
+            workspaceConfigured = true,
+            nowEpochMs = now,
+        )
+
+        assertEquals(1, snapshot.taskCount)
+        assertEquals(listOf("past"), snapshot.rows.map { it.id })
+        // Every row here is by definition past its due time, so the widget tints them all.
+        assertTrue(snapshot.rows.single().overdue)
+    }
+
+    @Test
+    fun `a pseudo list ignores the stored list id and never reads as missing`() {
+        val snapshot = buildListWidgetSnapshot(
+            state = OfflineSyncState(
+                todos = listOf(todo(id = "orphan", title = "Orphan", listId = "gone", dueEpochMs = now + 1L)),
+                lists = LISTS,
+            ),
+            listId = "gone",
+            listType = WidgetListType.SCHEDULED,
+            workspaceConfigured = true,
+            nowEpochMs = now,
+        )
+
+        assertFalse(snapshot.listMissing)
+        assertEquals(listOf("orphan"), snapshot.rows.map { it.id })
     }
 
     private fun todo(
