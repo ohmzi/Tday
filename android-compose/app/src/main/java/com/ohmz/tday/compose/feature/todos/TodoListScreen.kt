@@ -104,6 +104,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -114,6 +115,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -130,6 +132,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -5186,17 +5189,13 @@ private fun ListSettingsBottomSheet(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .onPreviewKeyEvent { event ->
-                                        if (
-                                            event.type == KeyEventType.KeyUp &&
-                                            (event.key == Key.Enter || event.key == Key.NumPadEnter)
-                                        ) {
-                                            keyboardController?.hide()
-                                            focusManager.clearFocus(force = true)
-                                            if (canSave) onSave()
-                                            true
-                                        } else {
-                                            false
-                                        }
+                                        handleListSettingsNameKeyEvent(
+                                            event = event,
+                                            canSave = canSave,
+                                            keyboardController = keyboardController,
+                                            focusManager = focusManager,
+                                            onSave = onSave,
+                                        )
                                     },
                                 decorationBox = { innerTextField ->
                                     Box(
@@ -5235,107 +5234,16 @@ private fun ListSettingsBottomSheet(
                         }
                     }
 
-                    TdaySheetSectionTitle(
-                        text = stringResource(R.string.scheduled_task_home_section_color),
+                    ListSettingsColorSection(
+                        selectedColorKey = listColor,
+                        onColorChange = onListColorChange,
                     )
-                    TdaySheetCard {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
-                            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
-                        ) {
-                            TdayListColorOptions.forEach { option ->
-                                val colorKey = option.key
-                                val selected = listColor == colorKey
-                                val swatchColor = option.color
-                                val interactionSource = remember { MutableInteractionSource() }
-                                Box(
-                                    modifier = Modifier
-                                        .sizeIn(minWidth = MinTouchTargetSize, minHeight = MinTouchTargetSize)
-                                        .wrapContentSize(Alignment.Center)
-                                        .size(ListColorSwatchSize)
-                                        .clip(CircleShape)
-                                        .background(swatchColor, CircleShape)
-                                        .clickable(
-                                            interactionSource = interactionSource,
-                                            indication = ripple(
-                                                bounded = true,
-                                                radius = ListColorSwatchRippleRadius,
-                                            ),
-                                        ) { onListColorChange(colorKey) }
-                                        .then(
-                                            if (selected) {
-                                                Modifier.border(
-                                                    width = ListColorSwatchSelectedOutline,
-                                                    color = colorScheme.onBackground.copy(alpha = 0.32f),
-                                                    shape = CircleShape,
-                                                )
-                                            } else {
-                                                Modifier
-                                            }
-                                        ),
-                                )
-                            }
-                        }
-                    }
 
-                    TdaySheetSectionTitle(
-                        text = stringResource(R.string.scheduled_task_home_section_icon),
+                    ListSettingsIconSection(
+                        selectedIconKey = listIconKey,
+                        selectedAccent = selectedAccent,
+                        onIconChange = onListIconChange,
                     )
-                    TdaySheetCard {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
-                            horizontalArrangement = Arrangement.spacedBy(ListIconOptionSpacing),
-                        ) {
-                            TdayListIconOptions.forEach { option ->
-                                val selected = listIconKey == option.key
-                                val interactionSource = remember { MutableInteractionSource() }
-                                Box(
-                                    modifier = Modifier
-                                        .size(ListIconSwatchSize)
-                                        .clip(CircleShape)
-                                        .background(
-                                            color = if (selected) {
-                                                selectedAccent.copy(alpha = 0.2f)
-                                            } else {
-                                                TdaySheetDefaults.controlSurfaceColor()
-                                            },
-                                            shape = CircleShape,
-                                        )
-                                        .clickable(
-                                            interactionSource = interactionSource,
-                                            indication = ripple(
-                                                bounded = true,
-                                                radius = ListIconSwatchRippleRadius,
-                                            ),
-                                        ) { onListIconChange(option.key) }
-                                        .then(
-                                            if (selected) {
-                                                Modifier.border(
-                                                    width = ListIconSwatchSelectedOutline,
-                                                    color = selectedAccent.copy(alpha = 0.55f),
-                                                    shape = CircleShape,
-                                                )
-                                            } else {
-                                                Modifier
-                                            }
-                                        ),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(option.iconRes),
-                                        contentDescription = stringResource(R.string.scheduled_task_home_section_icon),
-                                        tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
-                    }
 
                     TdaySheetSectionTitle(
                         text = stringResource(R.string.create_task_priority),
@@ -5376,29 +5284,10 @@ private fun ListSettingsBottomSheet(
                         }
                     }
 
-                    if (onShare != null || onMembers != null) {
-                        TdaySheetSectionTitle(
-                            text = stringResource(R.string.share_section_title),
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(ListSettingsActionTileSpacing)) {
-                            if (onMembers != null) {
-                                ListSettingsActionTile(
-                                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
-                                    label = stringResource(R.string.members_title),
-                                    onClick = onMembers,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            if (onShare != null) {
-                                ListSettingsActionTile(
-                                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_share_2),
-                                    label = stringResource(R.string.action_share),
-                                    onClick = onShare,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                        }
-                    }
+                    ListSettingsSharingSection(
+                        onShare = onShare,
+                        onMembers = onMembers,
+                    )
                     Spacer(Modifier.height(TdayDimens.SpacingXxs))
                     if (showDelete) {
                         ListSettingsDeleteButton(onClick = onDelete)
@@ -5407,6 +5296,178 @@ private fun ListSettingsBottomSheet(
             }
         }
     }
+}
+
+/** The sheet's colour picker card; the selected swatch carries the outline. */
+@Composable
+private fun ListSettingsColorSection(
+    selectedColorKey: String,
+    onColorChange: (String) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    TdaySheetSectionTitle(
+        text = stringResource(R.string.scheduled_task_home_section_color),
+    )
+    TdaySheetCard {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+            horizontalArrangement = Arrangement.spacedBy(TdayDimens.SpacingLg),
+        ) {
+            TdayListColorOptions.forEach { option ->
+                val colorKey = option.key
+                val selected = selectedColorKey == colorKey
+                val swatchColor = option.color
+                val interactionSource = remember { MutableInteractionSource() }
+                Box(
+                    modifier = Modifier
+                        .sizeIn(minWidth = MinTouchTargetSize, minHeight = MinTouchTargetSize)
+                        .wrapContentSize(Alignment.Center)
+                        .size(ListColorSwatchSize)
+                        .clip(CircleShape)
+                        .background(swatchColor, CircleShape)
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = ripple(
+                                bounded = true,
+                                radius = ListColorSwatchRippleRadius,
+                            ),
+                        ) { onColorChange(colorKey) }
+                        .then(
+                            if (selected) {
+                                Modifier.border(
+                                    width = ListColorSwatchSelectedOutline,
+                                    color = colorScheme.onBackground.copy(alpha = 0.32f),
+                                    shape = CircleShape,
+                                )
+                            } else {
+                                Modifier
+                            }
+                        ),
+                )
+            }
+        }
+    }
+}
+
+/** The sheet's icon picker card; the selected glyph takes the list accent. */
+@Composable
+private fun ListSettingsIconSection(
+    selectedIconKey: String,
+    selectedAccent: Color,
+    onIconChange: (String) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    TdaySheetSectionTitle(
+        text = stringResource(R.string.scheduled_task_home_section_icon),
+    )
+    TdaySheetCard {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = TdayDimens.SpacingXl, vertical = TdayDimens.SpacingXl),
+            horizontalArrangement = Arrangement.spacedBy(ListIconOptionSpacing),
+        ) {
+            TdayListIconOptions.forEach { option ->
+                val selected = selectedIconKey == option.key
+                val interactionSource = remember { MutableInteractionSource() }
+                Box(
+                    modifier = Modifier
+                        .size(ListIconSwatchSize)
+                        .clip(CircleShape)
+                        .background(
+                            color = if (selected) {
+                                selectedAccent.copy(alpha = 0.2f)
+                            } else {
+                                TdaySheetDefaults.controlSurfaceColor()
+                            },
+                            shape = CircleShape,
+                        )
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = ripple(
+                                bounded = true,
+                                radius = ListIconSwatchRippleRadius,
+                            ),
+                        ) { onIconChange(option.key) }
+                        .then(
+                            if (selected) {
+                                Modifier.border(
+                                    width = ListIconSwatchSelectedOutline,
+                                    color = selectedAccent.copy(alpha = 0.55f),
+                                    shape = CircleShape,
+                                )
+                            } else {
+                                Modifier
+                            }
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(option.iconRes),
+                        contentDescription = stringResource(R.string.scheduled_task_home_section_icon),
+                        tint = if (selected) selectedAccent else colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The optional Sharing card — Members and Share tiles, only when either is offered. */
+@Composable
+private fun ListSettingsSharingSection(
+    onShare: (() -> Unit)?,
+    onMembers: (() -> Unit)?,
+) {
+    if (onShare != null || onMembers != null) {
+        TdaySheetSectionTitle(
+            text = stringResource(R.string.share_section_title),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(ListSettingsActionTileSpacing)) {
+            if (onMembers != null) {
+                ListSettingsActionTile(
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_users_round),
+                    label = stringResource(R.string.members_title),
+                    onClick = onMembers,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            if (onShare != null) {
+                ListSettingsActionTile(
+                    icon = ImageVector.vectorResource(R.drawable.ic_lucide_share_2),
+                    label = stringResource(R.string.action_share),
+                    onClick = onShare,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+/** Enter in the name field hides the keyboard and saves when the name is valid. */
+private fun handleListSettingsNameKeyEvent(
+    event: KeyEvent,
+    canSave: Boolean,
+    keyboardController: SoftwareKeyboardController?,
+    focusManager: FocusManager,
+    onSave: () -> Unit,
+): Boolean {
+    if (
+        event.type == KeyEventType.KeyUp &&
+        (event.key == Key.Enter || event.key == Key.NumPadEnter)
+    ) {
+        keyboardController?.hide()
+        focusManager.clearFocus(force = true)
+        if (canSave) onSave()
+        return true
+    }
+    return false
 }
 
 /**
