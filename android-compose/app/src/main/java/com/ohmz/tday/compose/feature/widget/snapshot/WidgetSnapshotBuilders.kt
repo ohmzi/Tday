@@ -231,8 +231,12 @@ private fun CachedTodoRecord.toTodoSortKey(): TaskSortKey = TaskSortKey(
 )
 
 /**
- * A pseudo list's snapshot: [WidgetListType.SCHEDULED] holds every open dated task, and
- * [WidgetListType.OVERDUE] the ones already past due. Both render in the todo-list shape.
+ * A pseudo list's snapshot: [WidgetListType.SCHEDULED] holds the open dated tasks still ahead,
+ * and [WidgetListType.OVERDUE] the ones already past due. Both render in the todo-list shape.
+ *
+ * The split is the one the app's own Scheduled and Overdue screens draw, so the count on the
+ * widget and the count on the screen it opens are the same number. "Every dated task" would have
+ * made Scheduled a superset of Overdue and the two picker entries overlap.
  *
  * No name, icon key or colour are baked — a pseudo instance titles itself from a string resource
  * at render time (see `ListTasksWidget`), the same reason the Today and Floater titles are not.
@@ -247,7 +251,8 @@ private fun buildPseudoListSnapshot(
         state.todos.filter { task ->
             if (task.completed) return@filter false
             val dueEpochMs = task.dueEpochMs ?: return@filter false
-            listType != WidgetListType.OVERDUE || dueEpochMs < nowEpochMs
+            if (listType == WidgetListType.OVERDUE) dueEpochMs < nowEpochMs
+            else dueEpochMs >= nowEpochMs
         },
     ) { it.toTodoSortKey() }
     return WidgetSnapshot(

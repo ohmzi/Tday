@@ -1252,12 +1252,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "Widget de liste",
-      "summary": "Un troisième widget, pour la liste de votre choix.",
+      "summary": "Un troisième widget, pour une vue intégrée ou la liste de votre choix.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "À côté d'Aujourd'hui et Flottantes, il y a un widget de liste. Placez-le et il vous demande quelle liste afficher — n'importe quelle liste planifiée ou de tâches flottantes. Ensuite, il n'affiche que cette liste, et son + y ajoute directement une tâche, avec la priorité par défaut de la liste. Placez-en un autre pour une autre liste ; chacun garde la sienne."
+            "À côté d'Aujourd'hui et Flottantes, il y a un widget de liste. Placez-le et il vous demande quoi afficher — les vues intégrées Planifiées et En retard, ou n'importe quelle liste planifiée ou de tâches flottantes. Ensuite, il n'affiche que ce choix, et son + ajoute une tâche : dans la liste lorsque vous en avez choisi une. Placez-en un autre pour une autre vue ou liste ; chacun garde la sienne."
           ]
         },
         {
@@ -1269,7 +1269,7 @@
       ],
       "searchTitle": "widget de liste",
       "searchKeywords": "widget, ecran d'accueil, liste, configurer, selecteur, flottant, prevu, ajouter",
-      "searchBody": "un troisieme widget, pour la liste de votre choix. a cote d'aujourd'hui et flottantes, il y a un widget de liste. placez-le et il vous demande quelle liste afficher — n'importe quelle liste planifiee ou de taches flottantes. ensuite, il n'affiche que cette liste, et son + y ajoute directement une tache, avec la priorite par defaut de la liste. placez-en un autre pour une autre liste ; chacun garde la sienne. pour passer un widget de liste a une autre liste, appuyez longuement dessus et choisissez modifier (modifier le widget sur iphone)."
+      "searchBody": "un troisieme widget, pour une vue integree ou la liste de votre choix. a cote d'aujourd'hui et flottantes, il y a un widget de liste. placez-le et il vous demande quoi afficher — les vues integrees planifiees et en retard, ou n'importe quelle liste planifiee ou de taches flottantes. ensuite, il n'affiche que ce choix, et son + ajoute une tache : dans la liste lorsque vous en avez choisi une. placez-en un autre pour une autre vue ou liste ; chacun garde la sienne. pour passer un widget de liste a une autre liste, appuyez longuement dessus et choisissez modifier (modifier le widget sur iphone)."
     },
     {
       "id": "widget-quick-add",

@@ -1252,12 +1252,12 @@
       "deepLink": null,
       "helpAnchors": [],
       "title": "List widget",
-      "summary": "A third widget, for one list of your choice.",
+      "summary": "A third widget, for one built-in view or list of your choice.",
       "body": [
         {
           "type": "PARAGRAPH",
           "texts": [
-            "Beside Today and Floater there's a List widget. Place it and it asks which list to show — any scheduled or floater list. From then on it shows only that list, and its + adds a task straight into it, with the list's default priority. Place another for another list; each keeps its own."
+            "Beside Today and Floater there's a List widget. Place it and it asks what to show — the built-in Scheduled and Overdue views, or any of your scheduled or floater lists. From then on it shows only that choice, and its + adds a task: into the list when you picked one. Place another for another view or list; each keeps its own."
           ]
         },
         {
@@ -1269,7 +1269,7 @@
       ],
       "searchTitle": "list widget",
       "searchKeywords": "widget, home screen, list, setup, picker, floater, scheduled, add",
-      "searchBody": "a third widget, for one list of your choice. beside today and floater there's a list widget. place it and it asks which list to show — any scheduled or floater list. from then on it shows only that list, and its + adds a task straight into it, with the list's default priority. place another for another list; each keeps its own. to switch a list widget to a different list, long-press it and choose edit (edit widget on iphone)."
+      "searchBody": "a third widget, for one built-in view or list of your choice. beside today and floater there's a list widget. place it and it asks what to show — the built-in scheduled and overdue views, or any of your scheduled or floater lists. from then on it shows only that choice, and its + adds a task: into the list when you picked one. place another for another view or list; each keeps its own. to switch a list widget to a different list, long-press it and choose edit (edit widget on iphone)."
     },
     {
       "id": "widget-quick-add",

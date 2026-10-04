@@ -516,6 +516,7 @@
     <string name="widget_list_picker_subtitle">Este widget mostrará solo esta lista, y su + añadirá tareas directamente a ella.</string>
     <string name="widget_list_picker_empty_title">Aún no hay listas</string>
     <string name="widget_list_picker_empty">Crea una lista en T\'Day y vuelve a tocar este widget.</string>
+    <string name="widget_list_picker_section_views">Vistas</string>
     <string name="widget_list_picker_section_todo">Listas programadas</string>
     <string name="widget_list_picker_section_floater">Listas flotantes</string>
     <string name="widget_list_picker_selected">Seleccionada</string>

@@ -515,6 +515,7 @@
     <string name="widget_list_picker_subtitle">此小组件只显示这个清单，点 + 会直接向其中添加任务。</string>
     <string name="widget_list_picker_empty_title">还没有清单</string>
     <string name="widget_list_picker_empty">先在 T\'Day 中创建清单，然后再轻点此小组件。</string>
+    <string name="widget_list_picker_section_views">视图</string>
     <string name="widget_list_picker_section_todo">计划清单</string>
     <string name="widget_list_picker_section_floater">浮动清单</string>
     <string name="widget_list_picker_selected">已选择</string>

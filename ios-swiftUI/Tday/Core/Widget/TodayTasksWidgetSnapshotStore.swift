@@ -635,13 +635,18 @@ enum TodayTasksWidgetSnapshotStore {
         }
 
         // The List widget's two pseudo views, under the ids their picker entities carry
-        // (`TdayListWidgetTargetQuery.pseudoTargets`): Scheduled is every open dated task, Overdue
-        // the ones already past due. Written only when they hold something, so the widget's "no
-        // slice" state keeps meaning "nothing here" rather than "not written yet".
+        // (`TdayListWidgetTargetQuery.pseudoTargets`): Scheduled is the open dated tasks still
+        // ahead, Overdue the ones already past due. The split is the one the app's own Scheduled
+        // and Overdue screens draw (`TodoRepository.isScheduledTodo` is `due >= now`), so the count
+        // on the widget is the count on the screen it opens; "every dated task" would have made
+        // Scheduled a superset of Overdue and the two picker entries overlap.
+        //
+        // Written only when a slice holds something, so the widget's "no slice" state keeps meaning
+        // "nothing here" rather than "not written yet".
         let openDated = state.todos.filter { !$0.completed && $0.dueEpochMs != nil }
         let nowEpochMsForPseudo = Int64(now.timeIntervalSince1970 * 1_000)
         let pseudoSlices: [(id: String, todos: [CachedTodoRecord])] = [
-            ("scheduled", openDated),
+            ("scheduled", openDated.filter { ($0.dueEpochMs ?? nowEpochMsForPseudo) >= nowEpochMsForPseudo }),
             ("overdue", openDated.filter { ($0.dueEpochMs ?? nowEpochMsForPseudo) < nowEpochMsForPseudo }),
         ]
         for slice in pseudoSlices where !slice.todos.isEmpty {

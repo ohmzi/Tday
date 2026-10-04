@@ -989,9 +989,9 @@
       },
       "list-widgets": {
         "title": "Widget lista",
-        "summary": "Un terzo widget, per la lista che preferisci.",
+        "summary": "Un terzo widget, per una vista integrata o la lista che preferisci.",
         "keywords": "widget, schermata home, lista, configura, selettore, libera, pianificata, aggiungi",
-        "body": "Accanto a Oggi e Libere c'è un widget lista. Posizionalo e ti chiede quale lista mostrare — qualsiasi lista pianificata o di attività libere. Da quel momento mostra solo quella lista, e il suo + aggiunge un'attività direttamente lì, con la priorità predefinita della lista. Posizionane un altro per un'altra lista; ognuno mantiene la propria.",
+        "body": "Accanto a Oggi e Libere c'è un widget lista. Posizionalo e ti chiede cosa mostrare — le viste integrate Programmate e In ritardo, o qualsiasi lista pianificata o di attività libere. Da quel momento mostra solo quella scelta, e il suo + aggiunge un'attività: nella lista quando ne hai scelta una. Posizionane un altro per un'altra vista o lista; ognuno mantiene la propria.",
         "tip": "Per passare un widget lista a un'altra lista, tienilo premuto e scegli Modifica (Modifica widget su iPhone)."
       },
       "widget-quick-add": {

@@ -23,19 +23,9 @@ import { TaskRowSkeletonGroup } from "@/components/ui/TaskRowSkeleton";
 import { useSkeletonCrossfade } from "@/hooks/useSkeletonCrossfade";
 import FloaterListFormSheet from "@/features/floaterList/component/FloaterListFormSheet";
 import { flattenNotesToPlainText } from "@/lib/richNotes";
+import { tileSurface } from "@/lib/tileSurface";
 
 import RootFeedHeroHeader from "@/components/app/RootFeedHeroHeader";
-
-/**
- * A tile's background, leaning with the theme: the accent mixed over the theme's
- * muted card surface, lighter in light mode and darker in dark mode, with the
- * accent still dominant (66%). Mirrors the scheduled home's `tileSurface`, and is
- * what lets the text on a tile be `text-foreground` rather than a hardcoded white
- * that a light tile cannot be read against.
- */
-function tileSurface(color: string | undefined): string {
-  return `color-mix(in srgb, hsl(var(--card-muted)) 34%, ${color ?? "#68717A"} 66%)`;
-}
 
 function renderTileOverlay() {
   return (

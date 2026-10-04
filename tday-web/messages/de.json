@@ -989,9 +989,9 @@
       },
       "list-widgets": {
         "title": "Listen-Widget",
-        "summary": "Ein drittes Widget, für eine Liste deiner Wahl.",
+        "summary": "Ein drittes Widget, für eine eingebaute Ansicht oder eine Liste deiner Wahl.",
         "keywords": "widget, startbildschirm, liste, einrichtung, auswahl, jederzeit, geplant, hinzufügen",
-        "body": "Neben Heute und Jederzeit gibt es ein Listen-Widget. Platziere es, und es fragt, welche Liste es zeigen soll — jede geplante Liste oder Jederzeit-Liste. Danach zeigt es nur diese Liste, und sein + legt eine Aufgabe direkt darin an, mit der Standardpriorität der Liste. Platziere ein weiteres für eine andere Liste; jedes behält seine eigene.",
+        "body": "Neben Heute und Jederzeit gibt es ein Listen-Widget. Platziere es, und es fragt, was es zeigen soll — die eingebauten Ansichten Geplant und Überfällig oder jede geplante Liste oder Jederzeit-Liste. Danach zeigt es nur diese Auswahl, und sein + legt eine Aufgabe an: in der Liste, wenn du eine gewählt hast. Platziere ein weiteres für eine andere Ansicht oder Liste; jedes behält seine eigene.",
         "tip": "Um ein Listen-Widget auf eine andere Liste umzustellen, halte es gedrückt und wähle Bearbeiten (auf dem iPhone: Widget bearbeiten)."
       },
       "widget-quick-add": {
