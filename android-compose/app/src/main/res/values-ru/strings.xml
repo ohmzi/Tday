@@ -765,8 +765,4 @@
         <item quantity="many">Не удалось обновить %d задач</item>
         <item quantity="other">Не удалось обновить %d задачи</item>
     </plurals>
-    <!-- TEST-CRASH: temporary freeze strings, removed with the TEST-CRASH commit -->
-    <string name="test_crash_freeze_stop">Остановить</string>
-    <string name="test_crash_freeze_blocked">Основной поток заблокирован на %1$s с</string>
-    <string name="test_crash_freeze_cancelled">Зависание отменено через %1$s с</string>
 </resources>

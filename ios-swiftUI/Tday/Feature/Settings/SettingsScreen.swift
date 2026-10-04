@@ -420,11 +420,6 @@ struct SettingsScreen: View {
             // children, and the header, the four cards above and the two
             // trailing rows already spend seven of them.
             Group {
-                // TEST-CRASH: always shown, whatever the search says; one row of the Group.
-                settingsListRow {
-                    TestCrashSettingsPanel()
-                }
-
                 if showsAboutCard {
                     settingsListRow {
                         SettingsSectionCard {

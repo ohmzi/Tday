@@ -9,7 +9,6 @@ import {
   subscribeToTelemetryConsent,
 } from "@/lib/privacy/telemetryConsent";
 import { SENTRY_PII_HEADER_SNIPPETS } from "./sentry";
-import { applyTestCrashTitle } from "@/lib/testCrash"; // TEST-CRASH
 import {
   formatUtcOffset,
   localeLangTag,
@@ -177,9 +176,7 @@ export function buildWebSentryOptions(
     beforeSend: (event) => {
       if (!deps.isGranted() || predatesConsent(event, deps.consentAt())) return null;
       try {
-        // TEST-CRASH: the harness names and fingerprints its own events. This import and this call
-        // go with the rest of the harness.
-        return applyTestCrashTitle(scrubWebEvent(event, deps.eventContext()));
+        return scrubWebEvent(event, deps.eventContext());
       } catch {
         // An event that could not be scrubbed is not sent. The SDK would otherwise report the
         // failure as an event of its own, and those skip `beforeSend`.

@@ -3449,13 +3449,6 @@ struct TodoListScreen: View {
                                 draggedSectionID: draggedSectionID
                             )
                         }
-                        // TEST-CRASH: with no task on screen there is no first task to follow.
-                        if !sections.contains(where: { !isTimelineSectionCollapsed($0) && !$0.items.isEmpty }) {
-                            Section {
-                                TestCrashButton(id: testCrashScreenID)
-                                    .testCrashListRowStyle()
-                            }
-                        }
                     }
 
                     if showInlineFloaterTaskHomeEmpty {
@@ -3631,7 +3624,7 @@ struct TodoListScreen: View {
         }
     }
 
-    private func minimalTimelineRow(_ todo: TodoItem, in section: TodoTimelineSection, flashHighlight: Bool = false, testCrashFirst: Bool = false /* TEST-CRASH */) -> some View {
+    private func minimalTimelineRow(_ todo: TodoItem, in section: TodoTimelineSection, flashHighlight: Bool = false) -> some View {
         let listMeta = todo.listId.flatMap { listId in
             viewModel.lists.first(where: { $0.id == listId })
         }
@@ -3747,7 +3740,6 @@ struct TodoListScreen: View {
             openRowID: $openSwipeTaskID,
             enabled: !isCompleting && !isViewerList && !isSelecting,
             extraAction: promoteOrFloatSwipeAction(for: todo),
-            testCrashFirst: testCrashFirst, // TEST-CRASH
             onEdit: {
                 editingTodo = todo
             },
@@ -3850,8 +3842,6 @@ struct TodoListScreen: View {
         let isCollapsed = isTimelineSectionCollapsed(section)
         let isDropEligibleSection = draggedTodo.map { canDrop($0, into: section, draggedSectionID: draggedSectionID) } ?? false
         let isActiveDropSection = activeDropSectionId == section.id && isDropEligibleSection
-        // TEST-CRASH: how many rows each section really shows, to find the first one on screen.
-        let testCrashVisibleCounts = sections.map { isTimelineSectionCollapsed($0) ? 0 : $0.items.count }
 
         Section {
             if viewModel.mode.supportsTaskReschedule,
@@ -3882,9 +3872,7 @@ struct TodoListScreen: View {
             }
             if !isCollapsed {
                 ForEach(Array(section.items.enumerated()), id: \.element.id) { itemIndex, todo in
-                    // TEST-CRASH: row 0 of what is displayed crashes when opened and when edited.
-                    let testCrashIsFirst = TestCrash.isFirstVisibleRow(sectionIndex: sectionIndex, itemIndex: itemIndex, visibleCounts: testCrashVisibleCounts)
-                    minimalTimelineRow(todo, in: section, flashHighlight: shouldFlashTodo(todo), testCrashFirst: testCrashIsFirst)
+                    minimalTimelineRow(todo, in: section, flashHighlight: shouldFlashTodo(todo))
                         .id(timelineTodoScrollID(todo.id))
                         .todoInAppDropTargetFrame(
                             targetID: "minimal-row-\(section.id)-\(todo.id)",
@@ -3895,11 +3883,6 @@ struct TodoListScreen: View {
                         .listRowBackground(colors.background)
                         .listRowSeparator(.hidden)
                         .transition(timelineRowTransition())
-                    // TEST-CRASH: the screen's button, right after its first task.
-                    if testCrashIsFirst {
-                        TestCrashButton(id: testCrashScreenID)
-                            .testCrashListRowStyle()
-                    }
                     if shouldShowDateDivider(after: itemIndex, inSectionAt: sectionIndex, sections: sections) {
                         TimelineRowDivider()
                             .transition(timelineRowTransition())
@@ -7060,20 +7043,4 @@ private func todoHexColor(_ hex: UInt) -> Color {
         blue: Double(hex & 0xFF) / 255,
         opacity: 1
     )
-}
-
-// TEST-CRASH: which trigger this screen carries. One `TodoListScreen` serves every built-in list,
-// the Anytime feed and both kinds of user list, told apart by mode and list id.
-extension TodoListScreen {
-    fileprivate var testCrashScreenID: TestCrash.ID {
-        switch viewModel.mode {
-        case .today: return .builtinToday
-        case .overdue: return .builtinOverdue
-        case .scheduled: return .builtinScheduled
-        case .all: return .builtinAll
-        case .priority: return .builtinPriority
-        case .list: return .listScheduled
-        case .floater: return viewModel.listId == nil ? .feedAnytime : .listAnytime
-        }
-    }
 }

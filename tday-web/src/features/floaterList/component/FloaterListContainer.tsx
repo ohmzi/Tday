@@ -1,4 +1,3 @@
-import { TestCrashButton } from "@/components/TestCrashButton"; // TEST-CRASH
 import { useMemo, useState } from "react";
 import { Pencil, RotateCcw, Search, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -247,9 +246,6 @@ export default function FloaterListContainer({ id }: { id: string }) {
           }
         />
       ) : null}
-
-      {/* TEST-CRASH */}
-      <TestCrashButton id="TC-LIST-ANY" />
 
       {!floaterListLoading && sortedFloaters.length > 0 ? (
         // The other half of the crossfade: the rows arrive over the placeholder fading out

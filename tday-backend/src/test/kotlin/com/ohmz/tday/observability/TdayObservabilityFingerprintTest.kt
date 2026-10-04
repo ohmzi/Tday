@@ -14,14 +14,15 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * What the cross-check needs from the helper: the keys a failure declares reach the event Sentry
- * groups by. Without them two failures on one route share an issue and the second is invisible.
+ * What a failure that names its own issue needs from the helper: the keys it declares reach the
+ * event Sentry groups by. Without them two failures on one route share an issue and the second is
+ * invisible.
  *
  * The SDK is pointed at an in-memory transport, so this needs no network, no DSN and no database.
  */
 /** The repeated values the cases below share: one failure, and the two operation labels. */
 private const val FAILURE_MESSAGE = "boom"
-private const val TEST_CRASH_OPERATION = "test_crash"
+private const val FINGERPRINTED_OPERATION = "api.fingerprinted"
 private const val UNHANDLED_OPERATION = "api.unhandled"
 
 class TdayObservabilityFingerprintTest {
@@ -64,13 +65,13 @@ class TdayObservabilityFingerprintTest {
         startSentry()
         TdayObservability.captureException(
             IllegalStateException(FAILURE_MESSAGE),
-            operation = TEST_CRASH_OPERATION,
-            fingerprint = listOf("test-crash", "TC-BACKEND-CRASH"),
+            operation = FINGERPRINTED_OPERATION,
+            fingerprint = listOf("failure-kind", "api.fingerprinted"),
         )
         Sentry.flush(2_000)
 
         assertEquals(1, captured.size, "expected exactly one captured event")
-        assertEquals(listOf("test-crash", "TC-BACKEND-CRASH"), captured.single().fingerprints)
+        assertEquals(listOf("failure-kind", "api.fingerprinted"), captured.single().fingerprints)
     }
 
     @Test
@@ -86,11 +87,11 @@ class TdayObservabilityFingerprintTest {
     @Test
     fun `the operation travels as a tag, as every other report does`() {
         startSentry()
-        TdayObservability.captureException(IllegalStateException(FAILURE_MESSAGE), operation = TEST_CRASH_OPERATION)
+        TdayObservability.captureException(IllegalStateException(FAILURE_MESSAGE), operation = FINGERPRINTED_OPERATION)
         Sentry.flush(2_000)
 
         val event = captured.single()
-        assertEquals(TEST_CRASH_OPERATION, event.getTag("tday.operation"))
+        assertEquals(FINGERPRINTED_OPERATION, event.getTag("tday.operation"))
         val exception = event.exceptions?.firstOrNull()
         assertEquals("IllegalStateException", exception?.type)
         assertEquals(FAILURE_MESSAGE, exception?.value)

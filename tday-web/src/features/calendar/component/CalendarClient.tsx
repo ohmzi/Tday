@@ -1,5 +1,3 @@
-import { TEST_CRASH_ROW_PROPS, testCrashRowOpen, useTestCrashRowEdit } from "@/lib/testCrash"; // TEST-CRASH
-import { TestCrashButton } from "@/components/TestCrashButton"; // TEST-CRASH
 import "../style/calendar-styles.css";
 import {
   addDays,
@@ -693,7 +691,6 @@ export function CalendarTaskRow({
     actionsWidth: ACTIONS_WIDTH,
     onOpen: announceSwipeOpen,
   });
-  useTestCrashRowEdit(rowRef, displayForm); // TEST-CRASH
 
   /** Copies the task's title/notes/due/priority to the clipboard as plain text. */
   const handleCopy = async () => {
@@ -783,7 +780,6 @@ export function CalendarTaskRow({
           dialogs stay calendar-specific. */}
       <div
         ref={setCombinedRef}
-        {...TEST_CRASH_ROW_PROPS} // TEST-CRASH
         {...attributes}
         {...listeners}
         style={
@@ -877,7 +873,6 @@ export function CalendarTaskRow({
 
         {/* Foreground row — slides left on swipe to reveal the actions. */}
         <div
-          onClickCapture={testCrashRowOpen} // TEST-CRASH
           onDoubleClick={() => setDisplayForm(true)}
           onMouseOver={() => setShowHandle(true)}
           onMouseOut={() => setShowHandle(false)}
@@ -1446,9 +1441,6 @@ export default function CalendarClient() {
           onNavigate={navigatePeriod}
           onSelectDate={selectDate}
         />
-
-        {/* TEST-CRASH */}
-        <TestCrashButton id="TC-CALENDAR" />
 
         <section className="pb-4">
           <div className="mb-3">

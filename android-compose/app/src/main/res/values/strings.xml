@@ -773,10 +773,4 @@
         <item quantity="one">A task couldn\'t be updated</item>
         <item quantity="other">%d tasks couldn\'t be updated</item>
     </plurals>
-    <!-- TEST-CRASH: temporary crash-reporting cross-check strings, removed with the TEST-CRASH commit -->
-    <string name="test_crash_button" translatable="false">Test crash: %1$s</string>
-    <string name="test_crash_note" translatable="false">Reports are sent only if crash reports are on in Settings &gt; Privacy.</string>
-    <string name="test_crash_freeze_stop">Stop</string>
-    <string name="test_crash_freeze_blocked">Main thread blocked for %1$s s</string>
-    <string name="test_crash_freeze_cancelled">Freeze cancelled after %1$s s</string>
 </resources>

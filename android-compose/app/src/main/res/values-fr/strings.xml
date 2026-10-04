@@ -747,8 +747,4 @@
         <item quantity="one">Une tâche n\'a pas pu être mise à jour</item>
         <item quantity="other">%d tâches n\'ont pas pu être mises à jour</item>
     </plurals>
-    <!-- TEST-CRASH: temporary freeze strings, removed with the TEST-CRASH commit -->
-    <string name="test_crash_freeze_stop">Arrêter</string>
-    <string name="test_crash_freeze_blocked">Thread principal bloqué pendant %1$s s</string>
-    <string name="test_crash_freeze_cancelled">Blocage annulé après %1$s s</string>
 </resources>

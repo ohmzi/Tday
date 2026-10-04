@@ -56,12 +56,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.CompositionLocalProvider // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.LocalTestCrashFirstRow // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.TestCrash // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.TestCrashButton // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.TestCrashId // TEST-CRASH
-import com.ohmz.tday.compose.core.testcrash.TestCrashSlot // TEST-CRASH
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -4180,7 +4174,6 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
     onDragEnd: (position: Offset?) -> Unit,
     onDragCancel: () -> Unit,
 ) {
-    val testCrashSlot = TestCrashSlot(TestCrash.idForMode(uiState.mode, uiState.listId)) // TEST-CRASH
     timelineSections.forEachIndexed { sectionIndex, section ->
         val sectionHasTasks = section.items.isNotEmpty()
         val sectionModeCanCollapse = when (uiState.mode) {
@@ -4326,12 +4319,10 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                     sections = timelineSections,
                     collapsedSectionKeys = collapsedSectionKeys,
                 )
-                val testCrashFirst = testCrashSlot.claimFirst() // TEST-CRASH
                 item(
                     key = timelineTodoKey(section.key, todo.id),
                     contentType = "timeline-todo",
                 ) {
-                    CompositionLocalProvider(LocalTestCrashFirstRow provides testCrashFirst) { // TEST-CRASH
                     val rowModifier =
                         feedItemMotion(timelineAnimationsEnabled)
                     TimelineTaskRow(
@@ -4405,9 +4396,7 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
                         onDragTodoEnd = { position -> onDragEnd(position) },
                         onDragTodoCancel = onDragCancel,
                     )
-                    } // TEST-CRASH
                 }
-                if (testCrashFirst) testCrashSlot.placeButton(this) // TEST-CRASH
             }
         }
 
@@ -4424,7 +4413,6 @@ private fun LazyListScope.sectionedTimelineContent( // skipcq: KT-R1006
             earlierSceneContent.invoke(this)
         }
     }
-    testCrashSlot.placeIfNoTasks(this) // TEST-CRASH
 }
 
 /**
@@ -5376,8 +5364,6 @@ private fun ListSettingsBottomSheet(
                             }
                         }
                     }
-
-                    if (!showDelete) TestCrashButton(TestCrashId.NEW_LIST) // TEST-CRASH
 
                     if (reusable != null) {
                         // Web draws this card between the icon picker and the
@@ -7129,7 +7115,6 @@ private fun SwipeTaskRow( // skipcq: KT-R1006
     swipeSlot: TaskSwipeSlot,
     completionStaging: TaskCompletionStaging,
 ) {
-    val testCrashFirstRow = LocalTestCrashFirstRow.current // TEST-CRASH
     val colorScheme = MaterialTheme.colorScheme
     val view = LocalView.current
     val taskCompletionSound = rememberTaskCompletionSound()
@@ -7473,7 +7458,6 @@ private fun SwipeTaskRow( // skipcq: KT-R1006
                         onClick = {
                             TdayHaptics.buttonPress(view)
                             closeSwipeSlot()
-                            TestCrash.onTaskEdit(testCrashFirstRow) // TEST-CRASH
                             onInfo()
                         },
                     )
@@ -7613,7 +7597,6 @@ private fun SwipeTaskRow( // skipcq: KT-R1006
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                         ) {
-                            TestCrash.onTaskOpen(testCrashFirstRow) // TEST-CRASH
                             if (selectionActive) {
                                 onToggleSelected()
                                 return@clickable

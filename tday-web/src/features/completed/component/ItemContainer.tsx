@@ -1,4 +1,3 @@
-import { TEST_CRASH_ROW_PROPS, testCrashRowOpen } from "@/lib/testCrash"; // TEST-CRASH
 import { CompletedTodoItemType } from "@/types";
 import TodoCheckbox from "@/components/ui/TodoCheckbox";
 import ListDot from "@/components/ListDot";
@@ -49,8 +48,6 @@ export const CompletedTodoItemContainer = ({
 
   return (
     <div
-      {...TEST_CRASH_ROW_PROPS} // TEST-CRASH
-      onClickCapture={testCrashRowOpen} // TEST-CRASH
       style={
         removing
           ? {

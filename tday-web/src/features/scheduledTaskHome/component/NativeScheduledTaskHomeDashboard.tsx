@@ -1,4 +1,3 @@
-import { TestCrashButton } from "@/components/TestCrashButton"; // TEST-CRASH
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { useTranslation } from "react-i18next";
@@ -272,9 +271,6 @@ export default function NativeScheduledTaskHomeDashboard() {
             )}
           </div>
         )}
-
-        {/* TEST-CRASH */}
-        <TestCrashButton id="TC-FEED-SCHED" />
 
         <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-3">
           {[...scheduledTaskHomeCategoryRoutes]

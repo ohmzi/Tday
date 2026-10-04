@@ -738,8 +738,4 @@
     <plurals name="bulk_update_failed">
         <item quantity="other">%d件のタスクを更新できませんでした</item>
     </plurals>
-    <!-- TEST-CRASH: temporary freeze strings, removed with the TEST-CRASH commit -->
-    <string name="test_crash_freeze_stop">停止</string>
-    <string name="test_crash_freeze_blocked">メインスレッドを %1$s 秒ブロックしました</string>
-    <string name="test_crash_freeze_cancelled">%1$s 秒後にフリーズを中止しました</string>
 </resources>

@@ -1,4 +1,3 @@
-import { TEST_CRASH_ROW_PROPS, testCrashRowOpen, useTestCrashRowEdit } from "@/lib/testCrash"; // TEST-CRASH
 import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import { TASK_COMPLETION_REMOVING_TRANSITION } from "@/lib/taskCompletionTiming";
@@ -106,7 +105,6 @@ export default function FloaterItemContainer({
     onOpen: announceSwipeOpen,
     disabled: readOnly,
   });
-  useTestCrashRowEdit(rowRef, displayForm); // TEST-CRASH
 
   /** Copies the floater's title/notes/priority to the clipboard as plain text. */
   const handleCopy = async () => {
@@ -153,7 +151,6 @@ export default function FloaterItemContainer({
   return (
     <>
       <div
-        {...TEST_CRASH_ROW_PROPS} // TEST-CRASH
         // The node an outside tap is measured against: it wraps both the pill
         // strip and the translating foreground, which is what "outside the open
         // row" has to mean. The other two rows assign the same node inside a
@@ -249,7 +246,6 @@ export default function FloaterItemContainer({
         </div>
 
         <div
-          onClickCapture={testCrashRowOpen} // TEST-CRASH
           // Deliberately not interactive — see TodoItemContainer. Edit is the
           // Edit button, complete is the checkbox.
           onMouseOver={() => setShowHandle(true)}

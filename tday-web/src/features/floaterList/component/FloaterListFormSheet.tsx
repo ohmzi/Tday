@@ -1,4 +1,3 @@
-import { TestCrashButton } from "@/components/TestCrashButton"; // TEST-CRASH
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Share2, Trash2, Users } from "lucide-react";
@@ -362,9 +361,6 @@ export default function FloaterListFormSheet({
             />
           </div>
         </SheetCard>
-
-        {/* TEST-CRASH */}
-        {!isEditing && <TestCrashButton id="TC-NEW-LIST" />}
 
         <SheetSectionTitle>{appDict("color")}</SheetSectionTitle>
         <SheetCard className="p-3.5">
