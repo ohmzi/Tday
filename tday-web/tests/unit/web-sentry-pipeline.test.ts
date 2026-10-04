@@ -6,8 +6,8 @@ import { buildWebSentryOptions } from "@/lib/observability/sentryInit";
 import {
   getTelemetryConsentAt,
   isTelemetryGranted,
-  setTelemetryConsent,
-} from "@/lib/privacy/telemetryConsent";
+} from "@/lib/privacy/instanceTelemetry";
+import { setInstanceAnswerForTests } from "./support/instanceTelemetry";
 
 /**
  * The real SDK, a recording transport underneath it, and the real consent store on top: the whole
@@ -83,7 +83,7 @@ async function capture(value: string, scriptOrigin?: string) {
 beforeEach(() => {
   wire = [];
   window.localStorage.clear();
-  window.dispatchEvent(new StorageEvent("storage", { key: null }));
+  setInstanceAnswerForTests(false);
 });
 
 afterEach(async () => {
@@ -94,8 +94,8 @@ afterEach(async () => {
 });
 
 describe("the browser's event pipeline", () => {
-  it("sends a scrubbed, tagged report once consent is granted", async () => {
-    setTelemetryConsent(true);
+  it("sends a scrubbed, tagged report once the server says yes", async () => {
+    setInstanceAnswerForTests(true);
     startRealSdk();
     // `HttpContext` puts the page you came from into the request headers.
     Object.defineProperty(document, "referrer", {
@@ -127,30 +127,30 @@ describe("the browser's event pipeline", () => {
     }
   });
 
-  it("sends nothing while the answer is unanswered or no", async () => {
+  it("sends nothing while the server has not said yes", async () => {
     startRealSdk();
 
-    await capture("before any answer");
-    setTelemetryConsent(false);
-    await capture("after a no");
+    await capture("before the server answered");
+    setInstanceAnswerForTests(false);
+    await capture("after the server answered no");
 
     expect(wire).toHaveLength(0);
   });
 
-  it("stops sending at once when consent is withdrawn, even before the SDK is shut down", async () => {
-    setTelemetryConsent(true);
+  it("stops sending at once when reports are turned off, even before the SDK is shut down", async () => {
+    setInstanceAnswerForTests(true);
     startRealSdk();
-    await capture("while granted");
+    await capture("while reports are on");
     expect(wire).toHaveLength(1);
 
-    setTelemetryConsent(false);
-    await capture("after the withdrawal");
+    setInstanceAnswerForTests(false);
+    await capture("after reports are switched off");
 
     expect(wire).toHaveLength(1);
   });
 
   it("ignores errors thrown by scripts this page did not serve", async () => {
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
     startRealSdk();
 
     await capture("from somewhere else", "https://cdn.other.example.invalid");
@@ -161,7 +161,7 @@ describe("the browser's event pipeline", () => {
   });
 
   it("installs the allow-listed integrations and nothing the SDK might default to", () => {
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
     startRealSdk();
 
     expect(Sentry.getClient()?.getIntegrationNames().sort()).toEqual(
@@ -179,7 +179,7 @@ describe("the browser's event pipeline", () => {
   });
 
   it("sends no client report about the events it dropped", async () => {
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
     startRealSdk();
     await capture("Failed to fetch");
     expect(wire).toHaveLength(0);
@@ -193,8 +193,8 @@ describe("the browser's event pipeline", () => {
     expect(wire).toHaveLength(0);
   });
 
-  it("does not deliver an event stamped before consent was granted", async () => {
-    setTelemetryConsent(true);
+  it("does not deliver an event stamped before the admin's answer", async () => {
+    setInstanceAnswerForTests(true);
     startRealSdk();
     const grantedAt = getTelemetryConsentAt() ?? 0;
 

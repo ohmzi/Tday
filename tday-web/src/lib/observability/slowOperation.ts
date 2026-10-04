@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/react";
-import { isTelemetryGranted } from "@/lib/privacy/telemetryConsent";
+import { isTelemetryGranted } from "@/lib/privacy/instanceTelemetry";
 
 /**
  * A slow operation as a failure report. Crash reporting here is failures-only — no traces, no

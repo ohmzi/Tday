@@ -239,6 +239,10 @@ decision.
   lives in `UserDefaults.standard` (`telemetry.consent` as a Bool, `telemetry.consentAt` as epoch
   seconds), not the Keychain, so it resets with an install and is readable in `TdayApp.init`. Signing
   out, leaving a workspace and deleting local data leave it alone.
+- The wizard asks on **every** sign-in: a device that answered before is asked again, and the answer
+  on record stays in force until the new question replaces it. Mobile keeps its per-device answer;
+  the web and the server are governed by the admin's instance setting instead
+  ([ADR 010](../docs/adr/010-instance-governed-web-crash-reports.md), which amends 009 for those two).
 - A local build gets its reporting endpoint from the gitignored `Local.xcconfig` (`SENTRY_DSN`, and
   `TDAY_PROBE_ENCRYPTION_KEY` for the version gate), pulled in optionally by the committed
   `Tday.xcconfig`. Without one, `Info.plist`'s `$(SENTRY_DSN)` is empty and every consent surface

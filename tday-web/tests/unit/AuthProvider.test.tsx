@@ -7,10 +7,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "@/providers/AuthProvider";
 import { RETURNING_BROWSER_STORAGE_KEY } from "@/lib/security/returningBrowser";
 import { HAPTICS_STORAGE_KEY } from "@/lib/feedbackPreferences";
-import {
-  TELEMETRY_CONSENT_AT_STORAGE_KEY,
-  TELEMETRY_CONSENT_STORAGE_KEY,
-} from "@/lib/privacy/telemetryConsent";
+
+// Keys an older build used for the per-browser crash-report answer. Nothing reads them now; the
+// test below is that a sign-out does not keep them either.
+const LEGACY_CONSENT_KEY = "tday.telemetry.consent";
+const LEGACY_CONSENT_AT_KEY = "tday.telemetry.consentAt";
 
 function createWrapper() {
   const queryClient = new QueryClient();
@@ -224,7 +225,7 @@ describe("AuthProvider", () => {
     expect(result.current.authState).toBe("unauthenticated");
   });
 
-  it("keeps the crash-report answer through a logout and through an expired session", async () => {
+  it("carries no per-browser crash-report answer through a logout or an expired session", async () => {
     const signedIn = () =>
       mockResponse(200, {
         user: {
@@ -253,18 +254,18 @@ describe("AuthProvider", () => {
       expect(result.current.authState).toBe("authenticated");
     });
 
-    // The answer belongs to this browser, not to the account. Losing it on a sign-out would put
-    // the consent card back in front of someone who already said no, and losing a "yes" would
-    // switch reports off without their having asked.
-    window.localStorage.setItem(TELEMETRY_CONSENT_STORAGE_KEY, "granted");
-    window.localStorage.setItem(TELEMETRY_CONSENT_AT_STORAGE_KEY, "1759320000000");
+    // The web answer is now one instance-wide setting an admin gives on the server, held in memory
+    // for the page load. A leftover per-browser key from an older build is not session state and is
+    // not preserved: nothing reads it, and a sign-out takes it with everything else.
+    window.localStorage.setItem(LEGACY_CONSENT_KEY, "granted");
+    window.localStorage.setItem(LEGACY_CONSENT_AT_KEY, "1759320000000");
 
     await act(async () => {
       await result.current.logout();
     });
 
-    expect(window.localStorage.getItem(TELEMETRY_CONSENT_STORAGE_KEY)).toBe("granted");
-    expect(window.localStorage.getItem(TELEMETRY_CONSENT_AT_STORAGE_KEY)).toBe("1759320000000");
+    expect(window.localStorage.getItem(LEGACY_CONSENT_KEY)).toBeNull();
+    expect(window.localStorage.getItem(LEGACY_CONSENT_AT_KEY)).toBeNull();
 
     await act(async () => {
       await result.current.refreshSession();
@@ -280,8 +281,8 @@ describe("AuthProvider", () => {
       expect(result.current.authState).toBe("unauthenticated");
     });
 
-    expect(window.localStorage.getItem(TELEMETRY_CONSENT_STORAGE_KEY)).toBe("granted");
-    expect(window.localStorage.getItem(TELEMETRY_CONSENT_AT_STORAGE_KEY)).toBe("1759320000000");
+    expect(window.localStorage.getItem(LEGACY_CONSENT_KEY)).toBeNull();
+    expect(window.localStorage.getItem(LEGACY_CONSENT_AT_KEY)).toBeNull();
   });
 
   it("does not clear auth state locally when the logout request fails", async () => {

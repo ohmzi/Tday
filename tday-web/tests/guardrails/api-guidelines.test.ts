@@ -63,6 +63,10 @@ describe("Ktor API route conventions", () => {
       return ![
         "AppleAppSiteAssociationRoutes",
         "MobileProbeRoutes",
+        // Public-by-design: one instance-wide answer the admin gives for everyone, read by a
+        // browser before it has a session so it can decide whether to start its SDK. It carries no
+        // personal data and no DSN state — see the route file's own doc comment.
+        "InstanceTelemetryRoutes",
         "TimezoneRoutes",
         "AppSettingsRoutes",
         // Public-by-design: an opaque per-user token in the URL path is the

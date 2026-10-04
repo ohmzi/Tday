@@ -30,10 +30,10 @@ PII.
 
 | Platform | Who decides | Default | What is sent |
 |----------|-------------|---------|--------------|
-| Web | Each browser: the one-time consent card, then Settings → Privacy | Off | Failure reports only |
-| Android | Each device: the one-time consent card, then Settings → Privacy | Off | Failure reports only |
-| iOS | Each device: the one-time consent card, then Settings → Privacy | Off | Failure reports only |
-| Backend | The operator sets `SENTRY_DSN`, then an admin turns on "Server error reports" (web Settings → Privacy) | Off | Error reports plus sampled `http.server` transactions (default `0.1` in production) |
+| Web | The admin: one instance-wide answer, asked while setting the server up and changed in Settings → Privacy. It covers every user, every browser and every session, and no individual user is asked | Off | Failure reports only |
+| Backend | The same instance-wide answer as the web app: the operator sets `SENTRY_DSN`, and the admin's "Server error reports" switch covers the server too | Off | Error reports plus sampled `http.server` transactions (default `0.1` in production) |
+| Android | Each device: asked in the wizard on every sign-in, then in Settings → Privacy | Off | Failure reports only |
+| iOS | Each device: asked in the wizard on every sign-in, then in Settings → Privacy | Off | Failure reports only |
 
 Clients send no session pings, no release-health data, and no sampled
 performance traces. A device that never opts in sends nothing at all, and a
@@ -96,21 +96,37 @@ This section applies to web, Android, and iOS. The backend is covered in
 
 ### Consent State
 
-Consent is tri-state: `unanswered`, `granted`, or `denied`. `unanswered` behaves
-exactly like `denied`; the only difference is that the one-time card still has
-to ask. The answer is per device (per browser on web). It is not synced, and it
-is not tied to an account or workspace mode: sign-out, an expired session,
-leaving a workspace, and clearing local data all leave it alone.
+There are two kinds of answer, and they are deliberately different.
+
+**The web and the backend share one instance-wide answer.** It lives on the
+server (the `instance_settings` row behind Settings → Privacy), an admin sets
+it, and it applies to every user, every browser, every session and the server's
+own reports. No individual web user is asked, and a user cannot change it; the
+browser reads `{enabled, updatedAt}` from the public
+[instance telemetry endpoint](#configuration) before it starts the SDK, and uses
+`updatedAt` as the moment consent began, so anything that happened before the
+admin turned it on is dropped rather than sent.
+
+**Mobile answers per device.** It is not synced, and it is not tied to an
+account or workspace mode: sign-out, an expired session, leaving a workspace and
+clearing local data all leave it alone. What changes is *when it is asked*: a
+sign-in makes the question due again, because it is asked in the connect flow
+(see below) rather than once per install.
+
+Consent itself is tri-state: `unanswered`, `granted`, or `denied`. `unanswered`
+behaves exactly like `denied`; the only difference is that the question still has
+to be asked.
 
 | Platform | Where the answer lives | Keys |
 |----------|------------------------|------|
-| Web | `localStorage`; both keys are in `PRESERVED_STORAGE_KEYS` (`AuthProvider.tsx`) | `tday.telemetry.consent` (`granted` or `denied`, absent means unanswered), `tday.telemetry.consentAt` (epoch ms, present only while granted) |
+| Web | The server, read through the public instance telemetry endpoint before the SDK starts | `enabled` (Bool) and `updatedAt` (the moment consent began) on the `instance_settings` telemetry row |
 | Android | Plain `SharedPreferences` file `telemetry_consent_prefs`, not the encrypted `SecureConfigStore`, and not cleared by `OfflineCacheManager.clearAllLocalData` | `state` (`granted` or `denied`), `granted_at_ms` (a `granted` entry without a timestamp reads as unanswered) |
 | iOS | `UserDefaults.standard`, not the Keychain, so a reinstall resets it | `telemetry.consent` (Bool, absent means unanswered), `telemetry.consentAt` (epoch seconds) |
 
 The answer has to be readable before the app's own services exist, because that
-is when the SDK either starts or never does: in `main.tsx` before React renders,
-in `Application.onCreate` on Android, and in `TdayApp.init` on iOS.
+is when the SDK either starts or never does: in `main.tsx` before React renders
+(behind the instance fetch), in `Application.onCreate` on Android, and in
+`TdayApp.init` on iOS.
 
 ### Where The Question Is Asked
 
@@ -120,36 +136,44 @@ in `Application.onCreate` on Android, and in `TdayApp.init` on iOS.
   row, and the SDK is never initialised.
 - **The wizard's last step (Android, iOS).** The connect/sign-in flow ends on
   "Privacy", a fourth chip beside Mode, Server and Login, drawn with the
-  wizard's own card and buttons: the same "Help fix crashes?" disclosure, a
+  wizard's own card and buttons: the same "Share crash reports?" question, a
   filled "Share reports" over a text "Not now". It comes due when the workspace
   opens — Server or Local Mode, they are the same moment — so the wizard is held
   on screen for it instead of the workspace hiding it. Back does not dismiss it;
-  the two answers are the only ways off. A build with no DSN, or a device that
-  has already answered, has no chip and no step at all.
-- **Consent card.** The same question, as a wizard-styled card, for the case the
-  step cannot cover: web (which has no wizard step), and on mobile an install
-  that reaches the workspace without the flow — already signed in at launch, a
-  restart mid-step, or a failed sign-in, pending approval, required update or
-  security questions that took the wizard's place. Only ever one of the two is
-  up. "Share reports" and "Not now" carry equal weight. It is skipped when the
-  DSN is missing, the question is already answered, it was set aside this
+  the two answers are the only ways off. **Every sign-in makes it due again**: the
+  question is asked in the flow rather than once per install, so a device that
+  answered on an earlier sign-in is asked again. The answer on record stays in
+  force until this one replaces it — being due is not consent, and neither is
+  logging in a withdrawal — and answering either way, here or in Settings, ends
+  the question for that flow. A build with no DSN has no chip and no step at all.
+- **The server setup wizard (web, admin).** The same question for the instance:
+  when an admin sets the server up for the first time, the wizard asks whether
+  this server may send error reports, and the answer *is* the instance-wide
+  setting — the one that covers the web app for every user and the server's own
+  reports. It is asked after the admin's account exists, because setting it needs
+  admin rights. Only an admin ever sees it; everyone else inherits the answer.
+- **Consent card (mobile).** The same question, as a wizard-styled card, for the
+  case the step cannot cover: an install that reaches the workspace without the
+  flow — already signed in at launch, a restart mid-step, or a failed sign-in,
+  pending approval, required update or security questions that took the wizard's
+  place. Only ever one of the two is up. "Share reports" and "Not now" carry
+  equal weight. It is skipped when the DSN is missing, it was set aside this
   session, or a higher gate is up (update required, security questions, app
-  lock, and on web a forced password change). Escape or Back, and "Read the full
-  FAQ", set the card aside without answering: the question returns on the next
-  launch (web: the next browser session, because the deferral lives in
-  `sessionStorage`). "Read the full FAQ" also opens the `crash-reports` guide
-  topic.
-- **Settings → Privacy.** A "Crash & problem reports" switch with a "?" that
-  opens the same guide topic. Answering here first counts as answering, so the
-  card never asks.
-- **Where the card is mounted.** Web: `CrashReportsConsentGate` in
-  `AppLayout.tsx`, inside the signed-in shell, so Server Mode after login and
-  Local Mode after passphrase setup are both covered. Android:
-  `TelemetryConsentGate` in `ScheduledTaskHomeRoute`, composed before
-  `AuthenticatedGates` so the update-required and security-questions gates draw
-  over it, and never over the app lock. iOS: `TelemetryConsentCard` overlay in
-  `AppRootView`, placed before the update-required and security-questions gates
-  so they draw over it; the app lock is a separate overlay above everything.
+  lock). Escape or Back, and "Read the full FAQ", set the card aside without
+  answering: the question returns on the next launch. "Read the full FAQ" also
+  opens the `crash-reports` guide topic.
+- **Settings → Privacy.** On mobile, a "Crash & problem reports" switch for that
+  device with a "?" that opens the same guide topic; answering here first counts
+  as answering, so the card never asks. On web, the admin's instance-wide "Server
+  error reports" switch — the same setting the setup wizard asks for, and the one
+  that governs this browser and the server. A non-admin sees the state, not a
+  control.
+- **Where the card is mounted.** Android: `TelemetryConsentGate` in
+  `ScheduledTaskHomeRoute`, composed before `AuthenticatedGates` so the
+  update-required and security-questions gates draw over it, and never over the
+  app lock. iOS: `TelemetryConsentCard` overlay in `AppRootView`, placed before
+  the update-required and security-questions gates so they draw over it; the app
+  lock is a separate overlay above everything. Web has no per-user card.
 - **Nothing before a yes.** The SDK is never initialised, nothing is buffered,
   and no handler is installed or patched (on web, `window.onerror` and `fetch`
   stay untouched). A failure during first run, including onboarding, is lost by
@@ -161,25 +185,30 @@ The words people see are held to what the code does, and
 `docs/adr/009-opt-in-failure-only-crash-reporting.md` and this file are the
 reference when they change.
 
-- **Card.** "Help fix crashes?" says T'Day can send a short technical report
-  only when something goes wrong, "such as a crash, a freeze or an unexpected
-  error". "What's included": app version, device model, OS version, what failed
-  and where. "Never included": name or account, IP address, location, server
-  address, or any task or list content. Footnote: "Off by default. Change it any
-  time in Settings → Privacy." (French and Portuguese name the Settings screen
+- **Card (mobile) and wizard step (web).** "Send error reports?" says that if
+  something breaks, T'Day can send a short technical report to help fix it, and
+  that the answer can be changed in Settings. One "Never sent" line follows:
+  names, accounts, or any task or list content. Footnote: "Off by default. You
+  can change this in Settings." (French and Portuguese name the Settings screen
   as each UI does: web "Paramètres" / "Définições", iOS "Réglages", Android
-  "Paramètres" / "Configurações".) Buttons: "Share reports" and "Not now" are
-  the same size and style on every client, stacked full width, with "Share
-  reports" first, and "Read the full FAQ" below them. The web card alone adds a
-  small note: only unexpected errors are reported there, and the browser also
-  tells Sentry which website a report came from (the `Origin` header cannot be
-  suppressed on a cross-origin request).
-- **Settings → Privacy.** The row is "Crash & problem reports" with the switch
-  "Send crash & problem reports when something fails". The admin row is "Server
-  error reports": "Sends this server's own errors, plus timings for a small
-  sample of requests, to the Sentry project set in SENTRY_DSN. Never includes
-  tasks, lists or account details."
-- **FAQ (`crash-reports` guide topic, `sinceVersion` 0.8.0).** The body lists
+  "Paramètres" / "Configurações".) Buttons: "Send reports" and "Don't send" are
+  the same size and style on every client, stacked full width, with "Send
+  reports" first and "Read the full FAQ" below them. The web step's body adds the
+  one thing mobile's does not — one answer covers the whole server and everyone
+  using it — and the web has no per-user card, so the unexpected-errors-only note
+  and the `Origin` header disclosure live in the FAQ instead.
+- **Settings → Privacy.** Mobile keeps "Crash & problem reports" with the switch
+  "Send crash & problem reports when something fails". On web the single row is
+  the admin's "Server error reports", with the switch "Send error reports for this
+  server and the web app" and the description "Sends this server's own errors,
+  plus timings for a small sample of requests, to the Sentry project set in
+  SENTRY_DSN. The web app obeys the same switch. Never includes tasks, lists or
+  account details." A non-admin sees the state ("On" / "Off", "An admin decides
+  this for the whole server.") and no control.
+- **FAQ (`crash-reports` guide topic, `sinceVersion` 0.8.0).** It opens by saying
+  the answer is off by default and that who decides depends on the platform: one
+  admin answer for the whole server on web, asked per device in the sign-in flow
+  on mobile. The body lists
   what counts as a failure per platform (Android: crashes, freezes, and
   out-of-memory crashes; iOS: crashes, freezes, and the system ending the app
   for using too much memory; web: unexpected errors only) and says T'Day does
@@ -192,10 +221,13 @@ reference when they change.
   slowness.
 - **Public privacy page.** `/privacy` has the crash section as section 9
   ("Crash & Problem Reports") and Contact as section 10. Section 4 says data is
-  shared with Sentry only if the person opts in. Section 1's technical-data
+  shared with Sentry only with consent. Section 9's first bullet says the answer
+  is off by default, that on the web an admin decides for the whole server while
+  on mobile each device decides, and that reports are sent only at the moment
+  something fails. Section 1's technical-data
   bullet says it describes what the server sees when you connect and is not
-  part of crash reports. The page is dated October 2, 2026
-  (`privacy.lastUpdated`). The Local Mode guide body mentions that an
+  part of crash reports. The page carries its own date in
+  `privacy.lastUpdated`. The Local Mode guide body mentions that an
   opted-in device sends only a short technical report on failure, never tasks or
   lists.
 - **How-To guide placement.** `crash-reports` is the only topic with
@@ -219,7 +251,7 @@ client:
 
 | Platform | Purged |
 |----------|--------|
-| Web | Nothing on disk: the client is closed and unbound and the global, isolation, and current scopes are cleared, with no reload. A withdrawal in another tab arrives through the `storage` event |
+| Web | Nothing on disk: the client is closed and unbound and the global, isolation, and current scopes are cleared, with no reload. A change made in another browser reaches an open page when that page is next visible |
 | Android | `cacheDir/sentry` and the `INSTALLATION` file the SDK writes to `filesDir` |
 | iOS | `<Caches>/io.sentry` and `<Caches>/SentryCrash` (purged before and after `SentrySDK.close()`, because the SDK keeps cached crash reports and sends them on a later launch) |
 
@@ -462,7 +494,7 @@ category is on the allow-list above.
 | Task/list drag-reschedule | `calendar.drag_reschedule`, `calendar.task.reschedule`, `task.reschedule` | Recurring/scope/source only; no task ID, title, or target date |
 | Car task surfaces | `car_surface.open`, `car_surface.switch_mode`, `car_task.voice_create`, `car_task.complete` | Platform, mode, result, and counts only; no task title, voice transcript, task ID, or local cache record |
 | Security event monitoring | `security.event` | Reason code and route template only; no IP, raw URL, email, or session value |
-| Crash reports consent | None: no telemetry about consent changes is ever sent | The answer lives on the device (`telemetry.consent`) and never leaves it |
+| Crash reports consent | None: no telemetry about consent changes is ever sent | Mobile: the answer lives on the device (`telemetry.consent`) and never leaves it. Web and backend: the answer is the instance setting, which never leaves the server |
 | Server error reports toggle | Reason codes `telemetry_enabled` and `telemetry_disabled` in the security event log | Reason code only; no user or instance detail |
 
 ## Privacy Safeguards In Code
@@ -488,9 +520,14 @@ so a new init anywhere else fails CI.
     `startSentry`, `stopSentry`, `initSentryIfConsented`),
     `src/lib/observability/webScrub.ts`, `src/lib/observability/sentry.ts`
     (helpers and route sanitizers), `src/lib/observability/slowOperation.ts`.
-  - `src/lib/privacy/telemetryConsent.ts`, `src/hooks/useTelemetryConsent.ts`,
-    `src/components/privacy/CrashReportsConsentGate.tsx`,
-    `src/components/settings/PrivacyRows.tsx`.
+  - `src/lib/privacy/instanceTelemetry.ts` (the instance answer and the gate the
+    SDK reads), `src/lib/privacy/onboardingTelemetryHold.ts` with
+    `src/hooks/useOnboardingTelemetryHold.ts` (keeping the wizard on screen while
+    the admin answers), `src/components/onboarding/OnboardingTelemetryStep.tsx`
+    (the wizard step), `src/features/serverTelemetry/query/get-instance-telemetry.ts`
+    (the read-only row for a non-admin), `src/components/settings/PrivacyRows.tsx`.
+    There is no per-user web consent store: a stale `tday.telemetry.consent` key
+    from an older build is cleared, never read.
 - Android:
   - `TdayApplication.kt` calls `TelemetryBootstrap.shared(this).start()` first in
     `onCreate`, so a widget refresh, boot receiver, worker, or alarm that wakes

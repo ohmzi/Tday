@@ -49,7 +49,7 @@
   },
   "privacy": {
     "title": "Política de Privacidade",
-    "lastUpdated": "Última atualização: 2 de outubro de 2026",
+    "lastUpdated": "Última atualização: 4 de outubro de 2026",
     "intro": "O T'Day (“nós”, ou “nosso”) é uma aplicação de produtividade pessoal. Esta Política de Privacidade explica quais os dados que recolhemos e como os utilizamos.",
     "sections": {
       "1": {
@@ -76,7 +76,7 @@
       },
       "4": {
         "title": "Partilha de Dados",
-        "content": "Apenas partilhamos dados com fornecedores de serviços necessários para operar o T'Day e, somente se você ativar, com o Sentry para relatórios de falhas e problemas. Não vendemos os seus dados pessoais."
+        "content": "Apenas partilhamos dados com fornecedores de serviços necessários para operar o T'Day e, somente com consentimento, com o Sentry para relatórios de falhas e problemas. Não vendemos os seus dados pessoais."
       },
       "5": {
         "title": "Cookies",
@@ -97,7 +97,7 @@
       "9": {
         "title": "Relatórios de Falhas e Problemas",
         "content": [
-          "Opcional e desativado por padrão. Nada é enviado a menos que você ative, e mesmo assim apenas no momento em que algo falha",
+          "Desativado por padrão. Na aplicação web, um administrador decide por todo o servidor; no telemóvel, é você que decide em cada dispositivo. Os relatórios só são enviados no momento em que algo falha",
           "Um relatório contém a versão do app, o modelo do dispositivo e o sistema operacional, o erro e onde ele ocorreu. Nunca contém seu nome, conta, endereço IP, localização, endereço do servidor nem qualquer conteúdo de tarefas ou listas",
           "Os relatórios vão para o Sentry, ficam guardados por 30 dias e são usados apenas para corrigir bugs, nunca para análise de uso nem publicidade. O Sentry vê o endereço de rede de qualquer conexão, mas está configurado para não armazená-lo"
         ]
@@ -646,31 +646,26 @@
     "privacy": {
       "title": "Privacidade"
     },
-    "crashReports": {
-      "title": "Relatórios de falhas e problemas",
-      "toggle": "Enviar relatórios de falhas e problemas quando algo falhar",
-      "helpLabel": "Sobre os relatórios de falhas e problemas"
-    },
     "serverTelemetry": {
-      "title": "Relatórios de erros do servidor",
-      "toggle": "Enviar os relatórios de erros deste servidor para o Sentry do operador",
-      "description": "Envia os erros do próprio servidor, além de tempos de uma pequena amostra de requisições, para o projeto do Sentry definido em SENTRY_DSN. Nunca inclui tarefas, listas nem dados de conta.",
-      "updateFailed": "Não foi possível atualizar a configuração do servidor. Tente novamente."
+      "title": "Relatórios de erro do servidor",
+      "toggle": "Enviar relatórios de erro deste servidor e da web",
+      "description": "Envia os erros deste servidor, mais os tempos de uma pequena amostra de pedidos, para o projeto Sentry definido em SENTRY_DSN. A aplicação web obedece ao mesmo interruptor. Nunca inclui tarefas, listas ou dados da conta.",
+      "helpLabel": "Sobre os relatórios de erro",
+      "stateOn": "Ativado",
+      "stateOff": "Desativado",
+      "stateDetail": "Um administrador decide isto para todo o servidor.",
+      "updateFailed": "Não foi possível atualizar a definição do servidor. Tente novamente."
     }
   },
   "crashReports": {
     "card": {
-      "title": "Ajudar a corrigir falhas?",
-      "intro": "O T'Day pode enviar um breve relatório técnico apenas quando algo dá errado, como o app fechar inesperadamente, travar ou ocorrer um erro inesperado. Isso ajuda o desenvolvedor a reproduzir o problema em um dispositivo parecido.",
-      "sentLabel": "O que está incluído",
-      "sent": "Versão do app, modelo do dispositivo, versão do sistema operacional, o que falhou e onde.",
-      "neverSentLabel": "Nunca incluído",
-      "neverSent": "Seu nome ou conta, endereço IP, localização, endereço do servidor ou qualquer conteúdo de tarefas ou listas.",
-      "footnote": "Desativado por padrão. Altere quando quiser em Definições → Privacidade.",
+      "title": "Enviar relatórios de erro?",
+      "intro": "Se algo falhar, o T'Day pode enviar um breve relatório técnico para ajudar a corrigir. Uma resposta cobre todo este servidor e quem o utiliza.",
+      "neverSent": "Nunca enviado: nomes, contas ou conteúdo de tarefas e listas.",
       "share": "Enviar relatórios",
-      "notNow": "Agora não",
-      "readFaq": "Ler o FAQ completo",
-      "webNote": "No app web, só são reportados erros inesperados, e o seu navegador também informa ao Sentry de qual site veio o relatório."
+      "notNow": "Não enviar",
+      "saveFailed": "Não foi possível guardar. Tente novamente.",
+      "readFaq": "Ler as perguntas frequentes"
     }
   },
   "summary": {
@@ -1078,17 +1073,17 @@
       },
       "crash-reports": {
         "title": "Relatórios de falhas e problemas",
-        "summary": "Opcional, desativado por padrão. Enviado só quando algo falha.",
+        "summary": "Desativado por padrão. Quem decide depende da plataforma.",
         "keywords": "falha, fechamento inesperado, travamento, erro, relatório, privacidade, diagnóstico, telemetria, memória, análise de uso, crash, sentry, anr, error, report, privacy, diagnostics, telemetry, hang, memory, analytics",
-        "body": "Os relatórios de falhas e problemas são opcionais e vêm desativados por padrão. Se você ativá-los, o T'Day envia um breve relatório técnico apenas no momento em que algo falha: um fechamento inesperado, um travamento, um erro inesperado ou falta de memória. Funciona como o Crashlytics: existe para corrigir bugs, não para medir como você usa o app. Não há análise de uso, rastreamento de sessões nem monitoramento de desempenho no seu dispositivo enquanto tudo funciona normalmente.",
+        "body": "Os relatórios de falhas e problemas são opcionais e vêm desativados por padrão. Quem decide muda conforme a plataforma: na aplicação web, uma única resposta de um administrador cobre todo o servidor — o site, os erros do próprio servidor e todas as pessoas que o usam — e nenhum utilizador individual é questionado. No Android e no iOS, cada pessoa é questionada no fluxo de início de sessão, por isso a resposta é por dispositivo e a pergunta volta a cada início de sessão. Funciona como o Crashlytics: existe para corrigir bugs, não para medir como usa a aplicação. Enquanto tudo funciona normalmente, não há análise de uso, rastreamento de sessões nem monitorização de desempenho no seu dispositivo.",
         "body2": "Um relatório contém a versão do app, o modelo do seu dispositivo e a versão do sistema operacional (ou o navegador e a versão), o erro e o ponto do código onde ele ocorreu, algumas etapas rotuladas que antecederam o erro, nomes de telas ou de rotas da API sem nenhum ID, códigos de status e, nos dispositivos móveis, condições aproximadas do dispositivo, como memória livre, nível de bateria e se você estava online. Também inclui a diferença do seu fuso horário (por exemplo, UTC+2) e o idioma, porque as datas são essenciais em um planejador de tarefas.",
         "body3": "O relatório nunca contém: seu nome, nome de usuário, e-mail ou qualquer dado da conta; seu endereço IP ou localização; o endereço do seu servidor; títulos e conteúdos de tarefas, listas ou notas; o conteúdo do seu banco de dados; senhas, cookies ou tokens; capturas de tela ou gravações. As mensagens de erro têm endereços, identificadores e texto entre aspas removidos no seu dispositivo antes do envio, da melhor forma possível. Os relatórios não carregam ID de usuário, por isso não podem ser rastreados até você nem excluídos por pessoa.",
-        "body4": "Os relatórios só são enviados depois que você ativa a opção, e apenas quando ocorre uma falha. Se algo falhar com a configuração desativada, nada é armazenado nem colocado em fila, e ativá-la depois não envia falhas anteriores. O que conta como falha depende da plataforma: o Android relata fechamentos inesperados, travamentos e falhas por falta de memória; o iOS relata fechamentos inesperados, travamentos e o sistema encerrar o app por uso excessivo de memória; o app web relata apenas erros inesperados. O T'Day não detecta vazamentos de memória.",
-        "body5": "Os relatórios vão para o mantenedor do T'Day por meio do Sentry, um serviço de relatórios de falhas. Ficam guardados por 30 dias e são usados apenas para corrigir bugs, nunca vendidos nem compartilhados para publicidade. São enviados diretamente ao Sentry, não pelo seu servidor. O Sentry vê o endereço de rede de qualquer conexão, como qualquer serviço online, mas está configurado para não armazená-lo, e o app web também informa ao Sentry de qual site veio o relatório. Se você tem o seu próprio servidor, ele pode enviar separadamente os próprios relatórios de erros, além de tempos de uma pequena amostra de requisições, para o Sentry do operador, quando o operador ativar isso. Isso nunca inclui as suas tarefas. Versões sem um endpoint de relatórios, como as que você mesmo compila, não mostram esta configuração.",
+        "body4": "Os relatórios só são enviados quando algo falha, e apenas se estiverem ativados para essa plataforma: na aplicação web, depois de um administrador os ativar para o servidor; no telemóvel, depois de dizer sim no dispositivo. Se algo falhar com os relatórios desativados, nada é guardado nem colocado em fila, e ativá-los mais tarde não envia falhas anteriores. O que conta como falha depende da plataforma: o Android relata fechamentos inesperados, travamentos e falhas por falta de memória; o iOS relata fechamentos inesperados, travamentos e o sistema encerrar a aplicação por uso excessivo de memória; a aplicação web relata apenas erros inesperados. O T'Day não deteta fugas de memória.",
+        "body5": "Os relatórios vão para o mantenedor do T'Day através do Sentry, um serviço de relatórios de falhas. Ficam guardados 30 dias e são usados apenas para corrigir bugs, nunca vendidos nem partilhados para publicidade. São enviados diretamente ao Sentry, não pelo seu servidor. O Sentry vê o endereço de rede de qualquer ligação, como qualquer serviço online, mas está configurado para não o armazenar, e a aplicação web também informa ao Sentry de que site veio o relatório. Se tem o seu próprio servidor, a mesma resposta do administrador cobre também os relatórios de erro do próprio servidor, além de tempos de uma pequena amostra de pedidos; isso nunca inclui as suas tarefas. Versões sem um ponto de envio de relatórios, como as que compila você mesmo, não mostram esta definição.",
         "step0": "Abra as Configurações.",
-        "step1": "Abra Privacidade e desative \"Relatórios de falhas e problemas\".",
+        "step1": "Na aplicação web, um administrador desativa «Relatórios de erro do servidor» em Privacidade; no telemóvel, é você que desativa «Relatórios de falhas e problemas».",
         "step2": "Os relatórios param imediatamente, e tudo o que estava aguardando envio é excluído.",
-        "tip": "Escolher \"Agora não\" não custa nada. Você pode ativar isso quando quiser em Configurações → Privacidade. Detalhes técnicos: docs/TELEMETRY.md no repositório do T'Day."
+        "tip": "Dizer não não custa nada. A resposta pode ser alterada a qualquer momento em Definições → Privacidade — por um administrador na web, por você no telemóvel. Detalhes técnicos: docs/TELEMETRY.md no repositório do T'Day."
       },
       "in-app-update": {
         "title": "Atualizações na aplicação",

@@ -14,3 +14,16 @@ data class ServerTelemetryResponse(
     val enabled: Boolean,
     val updatedAt: String?,
 )
+
+/**
+ * The same answer, for a browser that has to decide whether to start its SDK before it has a
+ * session. Public, so it carries no DSN state and nothing about the server's configuration: the
+ * admin's answer, and the moment it was given, so a browser can drop anything older than it.
+ *
+ * [updatedAt] is ISO-8601 UTC, null until an admin first chooses.
+ */
+@Serializable
+data class InstanceTelemetryResponse(
+    val enabled: Boolean,
+    val updatedAt: String?,
+)

@@ -76,4 +76,23 @@ class TelemetryConsentViewModelTest {
         assertTrue(viewModel().isAvailable)
         assertFalse(viewModel(dsn = "").isAvailable)
     }
+
+    @Test
+    fun `a new connect flow owes an answer again until one is given in it`() {
+        val viewModel = viewModel()
+
+        viewModel.beginConnectFlow()
+        assertFalse(viewModel.answeredInConnectFlow.value)
+
+        viewModel.setShareReports(true)
+
+        assertTrue(viewModel.answeredInConnectFlow.value)
+        assertEquals(TelemetryConsentState.GRANTED, viewModel.state.value)
+
+        viewModel.beginConnectFlow()
+
+        assertFalse(viewModel.answeredInConnectFlow.value)
+        // The device answer survives the flow it was given in: Settings still reads it.
+        assertEquals(TelemetryConsentState.GRANTED, viewModel.state.value)
+    }
 }

@@ -7,6 +7,7 @@ import com.ohmz.tday.db.tables.InstanceSettings
 import com.ohmz.tday.domain.AppError
 import com.ohmz.tday.domain.AuthenticatedUser
 import com.ohmz.tday.domain.requireAdminAccess
+import com.ohmz.tday.models.response.InstanceTelemetryResponse
 import com.ohmz.tday.models.response.ServerTelemetryResponse
 import com.ohmz.tday.observability.TelemetryGate
 import com.ohmz.tday.security.SecurityEventLogger
@@ -33,6 +34,13 @@ interface InstanceSettingsService {
      * before any request is served. A flag that cannot be read leaves the gate closed.
      */
     fun loadTelemetryGate()
+
+    /**
+     * The instance answer a browser reads before it has a session: whether the admin allows reports,
+     * and since when. It is the same setting [serverTelemetry] returns, minus the DSN state, so an
+     * anonymous caller cannot learn anything about how this server is configured.
+     */
+    suspend fun instanceTelemetry(): InstanceTelemetryResponse
 }
 
 class InstanceSettingsServiceImpl(
@@ -83,6 +91,16 @@ class InstanceSettingsServiceImpl(
         }
     }
 
+    override suspend fun instanceTelemetry(): InstanceTelemetryResponse =
+        try {
+            val stored = newSuspendedTransaction(Dispatchers.IO) { readTelemetry() }
+            InstanceTelemetryResponse(enabled = stored.enabled, updatedAt = stored.updatedAt)
+        } catch (e: Exception) {
+            // Fail closed: a browser that cannot read the answer does not start its SDK.
+            logger.warn("Browser error reports stay off: the setting could not be read ({})", e.javaClass.simpleName)
+            InstanceTelemetryResponse(enabled = false, updatedAt = null)
+        }
+
     private fun readTelemetry(): ServerTelemetryResponse {
         val row = InstanceSettings.selectAll().where { InstanceSettings.settingKey eq TELEMETRY_ENABLED_KEY }.firstOrNull()
         return ServerTelemetryResponse(
@@ -91,7 +109,6 @@ class InstanceSettingsServiceImpl(
             updatedAt = row?.get(InstanceSettings.updatedAt)?.toInstant(ZoneOffset.UTC)?.toString(),
         )
     }
-
     private companion object {
         val logger = LoggerFactory.getLogger(InstanceSettingsServiceImpl::class.java)
     }

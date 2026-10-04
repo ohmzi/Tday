@@ -686,16 +686,14 @@
     <string name="settings_crash_reports_toggle">Enviar relatórios de falhas e problemas quando algo falhar</string>
     <string name="settings_crash_reports_help">Sobre os relatórios de falhas e problemas</string>
 
-    <!-- Crash reports: the one-time consent card -->
-    <string name="telemetry_card_title">Ajudar a corrigir falhas?</string>
-    <string name="telemetry_card_intro">O T\'Day pode enviar um breve relatório técnico apenas quando algo dá errado, como o app fechar inesperadamente, travar ou ocorrer um erro inesperado. Isso ajuda o desenvolvedor a reproduzir o problema em um dispositivo parecido.</string>
-    <string name="telemetry_card_sent_label">O que está incluído</string>
-    <string name="telemetry_card_sent">Versão do app, modelo do dispositivo, versão do sistema operacional, o que falhou e onde.</string>
-    <string name="telemetry_card_never_sent_label">Nunca incluído</string>
-    <string name="telemetry_card_never_sent">Seu nome ou conta, endereço IP, localização, endereço do servidor ou qualquer conteúdo de tarefas ou listas.</string>
-    <string name="telemetry_card_footnote">Desativado por padrão. Altere quando quiser em Configurações → Privacidade.</string>
+    <!-- Crash reports: the sign-in wizard's consent step and its card -->
+    <string name="telemetry_card_title">Enviar relatórios de erro?</string>
+    <string name="telemetry_card_intro">Se algo falhar, o T\'Day pode enviar um breve relatório técnico para ajudar a corrigir. Você pode alterar isso quando quiser em Configurações.</string>
+    <string name="telemetry_card_never_sent_label">Nunca enviado</string>
+    <string name="telemetry_card_never_sent">nomes, contas ou conteúdo de tarefas e listas.</string>
+    <string name="telemetry_card_footnote">Desativado por padrão. Você pode alterar isso em Configurações.</string>
     <string name="telemetry_card_share">Enviar relatórios</string>
-    <string name="telemetry_card_not_now">Agora não</string>
+    <string name="telemetry_card_not_now">Não enviar</string>
     <string name="telemetry_card_read_faq">Ler o FAQ completo</string>
     <string name="root_feed_search_scheduled">Pesquisar tarefas agendadas</string>
     <string name="root_feed_search_floater">Pesquisar tarefas flutuantes</string>

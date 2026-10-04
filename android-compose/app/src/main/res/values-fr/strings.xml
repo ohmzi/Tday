@@ -686,16 +686,14 @@
     <string name="settings_crash_reports_toggle">Envoyer des rapports de plantage et de problèmes en cas d\'échec</string>
     <string name="settings_crash_reports_help">À propos des rapports de plantage et de problèmes</string>
 
-    <!-- Crash reports: the one-time consent card -->
-    <string name="telemetry_card_title">Aider à corriger les plantages ?</string>
-    <string name="telemetry_card_intro">T\'Day peut envoyer un court rapport technique uniquement quand quelque chose ne va pas, comme un plantage, un blocage ou une erreur inattendue. Cela aide le développeur à reproduire le problème sur un appareil similaire.</string>
-    <string name="telemetry_card_sent_label">Ce qui est inclus</string>
-    <string name="telemetry_card_sent">Version de l\'app, modèle de l\'appareil, version du système, ce qui a échoué et à quel endroit.</string>
-    <string name="telemetry_card_never_sent_label">Jamais inclus</string>
-    <string name="telemetry_card_never_sent">Votre nom ou compte, adresse IP, localisation, adresse du serveur, ou tout contenu de tâche ou de liste.</string>
-    <string name="telemetry_card_footnote">Désactivé par défaut. Modifiable à tout moment dans Paramètres → Confidentialité.</string>
-    <string name="telemetry_card_share">Partager les rapports</string>
-    <string name="telemetry_card_not_now">Pas maintenant</string>
+    <!-- Crash reports: the sign-in wizard's consent step and its card -->
+    <string name="telemetry_card_title">Envoyer des rapports d\'erreur ?</string>
+    <string name="telemetry_card_intro">Si quelque chose casse, T\'Day peut envoyer un court rapport technique pour aider à le corriger. Vous pouvez modifier ce choix à tout moment dans les Paramètres.</string>
+    <string name="telemetry_card_never_sent_label">Jamais envoyé</string>
+    <string name="telemetry_card_never_sent">noms, comptes ou contenu des tâches et des listes.</string>
+    <string name="telemetry_card_footnote">Désactivé par défaut. Modifiable dans les Paramètres.</string>
+    <string name="telemetry_card_share">Envoyer les rapports</string>
+    <string name="telemetry_card_not_now">Ne pas envoyer</string>
     <string name="telemetry_card_read_faq">Lire la FAQ complète</string>
     <string name="root_feed_search_scheduled">Rechercher des tâches planifiées</string>
     <string name="root_feed_search_floater">Rechercher des tâches flottantes</string>

@@ -10,7 +10,7 @@ import SwiftUI
 /// in `AppRootView`'s overlay stack below every gate that has to come first and only ever shows
 /// while none of them is up and the wizard is not holding the step itself. Two buttons of equal
 /// weight, so that neither answer is the path of least resistance, and as plain as a question about
-/// a setting can be: what is sent, what never is.
+/// a setting can be: what is never sent.
 struct TelemetryConsentCard: View {
     let onShare: () -> Void
     let onDecline: () -> Void
@@ -50,8 +50,8 @@ struct TelemetryConsentCard: View {
             TelemetryConsentDisclosure()
 
             VStack(spacing: 10) {
-                WizardPrimaryButton(title: "Share reports", enabled: true, action: onShare)
-                WizardPrimaryButton(title: "Not now", enabled: true, action: onDecline)
+                WizardPrimaryButton(title: "Send reports", enabled: true, action: onShare)
+                WizardPrimaryButton(title: "Don't send", enabled: true, action: onDecline)
             }
 
             Button(action: onReadFAQ) {
@@ -86,7 +86,7 @@ struct TelemetryConsentCard: View {
 /// Its own view because two places ask the same question now: the wizard's last step, which draws
 /// it inside the wizard's card, and the standalone card above, which draws it with its own. They
 /// have to read word for word the same, and one view is the only way that stays true — the copy and
-/// the two lists live here, once.
+/// the list live here, once.
 struct TelemetryConsentDisclosure: View {
     @Environment(\.tdayColors) private var colors
 
@@ -105,27 +105,23 @@ struct TelemetryConsentDisclosure: View {
                     .background(colors.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .accessibilityHidden(true)
 
-                Text(L("Help fix crashes?"))
+                Text(L("Send error reports?"))
                     .font(.tdayRounded(size: 22, weight: .heavy))
                     .foregroundStyle(colors.onSurface)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Text(L("T'Day can send a short technical report only when something goes wrong, such as a crash, a freeze or an unexpected error. It helps the developer reproduce the problem on a similar device."))
+            Text(L("If something breaks, T'Day can send a short technical report to help fix it. You can change this any time in Settings."))
                 .font(.tdayRounded(size: 15, weight: .bold))
                 .foregroundStyle(colors.onSurface.opacity(0.72))
                 .fixedSize(horizontal: false, vertical: true)
 
             detail(
-                label: "What's included",
-                text: "App version, device model, OS version, what failed and where."
-            )
-            detail(
-                label: "Never included",
-                text: "Your name or account, IP address, location, server address, or any task or list content."
+                label: "Never sent",
+                text: "names, accounts, or any task or list content."
             )
 
-            Text(L("Off by default. Change it any time in Settings → Privacy."))
+            Text(L("Off by default. You can change this in Settings."))
                 .font(.tdayRounded(size: 13, weight: .bold))
                 .foregroundStyle(colors.onSurfaceVariant)
                 .fixedSize(horizontal: false, vertical: true)

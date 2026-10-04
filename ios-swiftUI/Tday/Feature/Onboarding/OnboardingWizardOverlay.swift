@@ -5,13 +5,14 @@ enum OnboardingStep: Equatable {
     case mode
     case server
     case login
-    /// The wizard's last step: the per-install crash-reports question, the one the standalone
+    /// The wizard's last step: the per-device crash-reports question, the one the standalone
     /// `TelemetryConsentCard` asks when an install reaches the workspace without a wizard.
     ///
-    /// Only ever reached by a flow that has no answer yet — see
+    /// Only ever reached by a connect flow that has not been answered yet — see
     /// `TelemetryConsentModel.shouldPresentWizardStep`, which is what hands this overlay
-    /// `privacyStepOffered` and `privacyStepDue`. A build with no DSN never sets either, so the
-    /// fourth chip and the step simply do not exist there.
+    /// `privacyStepOffered` and `privacyStepDue`. Every sign-in owes it again, so a device that
+    /// answered on a previous one is asked once more here. A build with no DSN never sets either,
+    /// so the fourth chip and the step simply do not exist there.
     case privacy
 }
 
@@ -56,18 +57,18 @@ struct OnboardingWizardOverlay: View {
     let onLoadSecurityQuestions: () async -> [SecurityQuestion]
     let onUseLocalMode: () async -> Void
     let onClearAuthStatus: () -> Void
-    /// Whether this flow has the last step at all: a DSN is configured, the person has not answered
-    /// the crash-reports question, and this wizard is the surface the session's flow came through.
-    /// The fourth chip exists on exactly this, so a build with no DSN has neither chip nor step.
+    /// Whether this flow has the last step at all: a DSN is configured, the connect flow has not been
+    /// answered yet, and this wizard is the surface the flow came through. The fourth chip exists on
+    /// exactly this, so a build with no DSN has neither chip nor step.
     let privacyStepOffered: Bool
     /// Whether the step is the one to show now: the flow has landed and the workspace is open behind
     /// the wizard. The host holds this overlay up on exactly this, and it is what walks the wizard
     /// onto the step — see `enterPrivacyStepIfDue`.
     let privacyStepDue: Bool
     /// The two answers, recorded through the same consent model the card and the Settings row use.
-    /// Either one is also what the step's dismissal is made of: the answer takes `privacyStepOffered`
-    /// away, which takes `privacyStepDue` away with it, which is what the host is holding the overlay
-    /// on.
+    /// Either one is also what the step's dismissal is made of: the answer is this flow's, so it takes
+    /// `privacyStepOffered` away, which takes `privacyStepDue` away with it, which is what the host is
+    /// holding the overlay on.
     let onShareReports: () -> Void
     let onDeclineReports: () -> Void
 
@@ -638,9 +639,9 @@ struct OnboardingWizardOverlay: View {
         VStack(alignment: .leading, spacing: Metrics.sectionSpacing) {
             TelemetryConsentDisclosure()
 
-            WizardPrimaryButton(title: "Share reports", enabled: true, action: onShareReports)
+            WizardPrimaryButton(title: "Send reports", enabled: true, action: onShareReports)
 
-            Button("Not now", action: onDeclineReports)
+            Button("Don't send", action: onDeclineReports)
                 .buttonStyle(WizardTextButtonStyle())
                 .font(.tdayRounded(size: 15, weight: .bold))
                 .foregroundStyle(colors.primary)

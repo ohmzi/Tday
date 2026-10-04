@@ -6,6 +6,7 @@ import {
   Lock,
   MonitorSmartphone,
   MoonStar,
+  ShieldCheck,
   Smartphone,
   Sparkles,
   Sun,
@@ -40,6 +41,9 @@ import {
   WizardPrimaryButton,
   WizardTextButton,
 } from "./OnboardingPrimitives";
+import OnboardingTelemetryStep from "./OnboardingTelemetryStep";
+import { setOnboardingTelemetryHold } from "@/lib/privacy/onboardingTelemetryHold";
+import { isCrashReportingConfigured } from "@/lib/privacy/instanceTelemetry";
 
 type AuthMode = "signin" | "create" | "forgot";
 
@@ -48,8 +52,11 @@ type AuthMode = "signin" | "create" | "forgot";
  * Server → Login); on the web the Server step is already answered — the app is
  * served by the very backend it would ask for — so choosing "Self-hosted" goes
  * straight to Login, and the Server chip renders as completed.
+ *
+ * "Privacy" is the admin's instance-wide error-report answer: it can only be asked once an admin is
+ * signed in, so it is the step after Login and nobody else ever sees it.
  */
-type WizardStep = "mode" | "login";
+type WizardStep = "mode" | "login" | "privacy";
 
 const USERNAME_REGEX = /^[a-z0-9](?:[a-z0-9._-]{1,28}[a-z0-9])$/;
 
@@ -154,6 +161,21 @@ export default function OnboardingWizard({
     setConfirmPassword("");
   };
 
+  // The one way off the admin's error-report step: lower the hold the auth guards are waiting on,
+  // then go where the answer (or the FAQ link) points. Stable identity, because the step closes
+  // over it in an effect.
+  const finishTelemetryStep = React.useCallback(
+    (destination: string) => {
+      setOnboardingTelemetryHold(false);
+      router.replace(destination);
+    },
+    [router],
+  );
+
+  // Nobody is asking once this wizard is gone (a back button mid-sign-in, say), so the latch must
+  // not outlive it and hold a later visit to the login route on a screen with no question.
+  React.useEffect(() => () => setOnboardingTelemetryHold(false), []);
+
   // Load the question catalogue when the user switches to account creation, then
   // default to the first two distinct questions.
   React.useEffect(() => {
@@ -238,6 +260,11 @@ export default function OnboardingWizard({
       setErrorMessage("Username and password are required");
       return;
     }
+    // Raised before the request leaves: once the session exists the auth guards would otherwise
+    // hand the browser to the app and take the admin's error-report step with them. Lowered on
+    // every path that does not reach that step.
+    const telemetryStepPossible = isCrashReportingConfigured();
+    if (telemetryStepPossible) setOnboardingTelemetryHold(true);
     setIsSubmitting(true);
     try {
       const credentialPayload = await createClientCredentialEnvelope(username, password);
@@ -247,6 +274,7 @@ export default function OnboardingWizard({
       );
 
       if (!result.ok) {
+        if (telemetryStepPossible) setOnboardingTelemetryHold(false);
         if (result.code === "pending_approval") {
           setPendingApproval(normalizedUsername);
           setPendingPassword(password);
@@ -259,8 +287,14 @@ export default function OnboardingWizard({
 
       // Approved sign-in: drop any lingering holding-screen marker.
       clearPendingApproval();
+      if (telemetryStepPossible) {
+        // The step decides whether this admin still has a question to answer.
+        setStep("privacy");
+        return;
+      }
       router.replace("/app");
     } catch (error) {
+      if (telemetryStepPossible) setOnboardingTelemetryHold(false);
       console.error(error);
       setErrorMessage(
         error instanceof Error && error.message
@@ -419,7 +453,7 @@ export default function OnboardingWizard({
                 Icon={Smartphone}
                 tint={TINT.modeGreen}
                 active={step === "mode"}
-                completed={step === "login"}
+                completed={step !== "mode"}
                 // The one step you can actually walk back to on web. Server has
                 // no step of its own here, so its chip stays inert.
                 onClick={step === "login" ? backToModeStep : undefined}
@@ -428,13 +462,21 @@ export default function OnboardingWizard({
                 title="Server"
                 Icon={Globe}
                 tint={TINT.serverBlue}
-                completed={step === "login"}
+                completed={step !== "mode"}
               />
               <StepChip
                 title="Login"
                 Icon={User}
                 tint={TINT.loginRose}
                 active={step === "login"}
+                completed={step === "privacy"}
+              />
+              {/* Only ever active for an admin, and only while the instance answer is missing. */}
+              <StepChip
+                title="Privacy"
+                Icon={ShieldCheck}
+                tint={TINT.consentBlue}
+                active={step === "privacy"}
               />
             </div>
 
@@ -477,6 +519,8 @@ export default function OnboardingWizard({
                   <p className="text-[14px] font-bold text-destructive">{errorMessage}</p>
                 )}
               </div>
+            ) : step === "privacy" ? (
+              <OnboardingTelemetryStep onFinish={finishTelemetryStep} />
             ) : mode === "forgot" ? (
               <ForgotPasswordPanel
                 initialUsername={username}

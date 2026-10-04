@@ -9,7 +9,7 @@ All API routes live under `/api/`. The web SPA consumes them via same-origin req
 ## Authentication
 
 - All routes require a valid JWE session unless listed as public.
-- Public routes: `/api/auth/*` (CSRF, register, login-challenge, credentials-key, callback), `/api/mobile/probe`, `/.well-known/apple-app-site-association`, `/apple-app-site-association`, `/.well-known/assetlinks.json`, `/health`.
+- Public routes: `/api/auth/*` (CSRF, register, login-challenge, credentials-key, callback), `/api/mobile/probe`, `/api/instance/telemetry`, `/.well-known/apple-app-site-association`, `/apple-app-site-association`, `/.well-known/assetlinks.json`, `/health`.
 - Authentication is enforced by a **Ktor pipeline intercept** in `Security.kt`:
   1. Reads a JWE token from `Authorization: Bearer` header or session cookies.
   2. Decodes and validates claims (expiry, `tokenVersion`, role, approval status).
@@ -380,6 +380,18 @@ pastes into an AI client is just `<origin>/mcp`. Two consequences are load-beari
   policy using the same window and budget as `api_global`.
 
 See [`MCP.md`](MCP.md).
+
+### Instance
+
+| Method | Path | Purpose | Auth |
+|--------|------|---------|------|
+| GET | `/api/instance/telemetry` | Whether this instance's admin allows error reports, and since when | Public |
+
+`GET /api/instance/telemetry` returns `{ "enabled": boolean, "updatedAt": string | null }`, answering
+`enabled: false` when the setting cannot be read. The web client reads it before starting its Sentry
+SDK and drops any event older than `updatedAt`; see
+[ADR 010](adr/010-instance-governed-web-crash-reports.md). It never carries DSN state or personal
+data — the admin's own view, which includes `dsnConfigured`, is `GET /api/admin/telemetry`.
 
 ### Mobile
 

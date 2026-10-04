@@ -7,7 +7,6 @@ import CreateFloaterProvider from "@/providers/CreateFloaterProvider";
 import ReleaseUpdateAnnouncer from "@/components/release/ReleaseUpdateAnnouncer";
 import NativeAppShell from "@/components/app/NativeAppShell";
 import KeyboardLayer from "@/features/palette/KeyboardLayer";
-import CrashReportsConsentGate from "@/components/privacy/CrashReportsConsentGate";
 import RealtimeInvalidator from "@/lib/realtime";
 
 export default function AppLayout() {
@@ -21,7 +20,6 @@ export default function AppLayout() {
           <CreateFloaterProvider>
             {isLocalMode ? null : <RealtimeInvalidator />}
             <KeyboardLayer />
-            <CrashReportsConsentGate />
             <NativeAppShell>
               <div className="relative z-0 flex min-w-0 flex-1 flex-col overflow-hidden">
                 <ReleaseUpdateAnnouncer />

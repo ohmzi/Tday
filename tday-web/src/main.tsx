@@ -14,8 +14,9 @@ import {
   reloadOnceForStaleChunk,
 } from "./lib/chunkError";
 
-// Starts crash reporting only if this browser already said yes, and follows the answer from here
-// on. Nothing is initialised, patched or queued before that; see `sentryInit.ts`.
+// Asks the server whether this instance allows error reports and starts crash reporting only once
+// the answer arrives, then follows the admin's answer from there on. Nothing is initialised,
+// patched or queued before it; see `sentryInit.ts`.
 initSentryIfConsented();
 
 // Recover from stale dynamic-import chunks after a deploy: when a hashed chunk

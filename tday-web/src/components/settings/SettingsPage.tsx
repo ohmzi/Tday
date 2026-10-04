@@ -55,7 +55,7 @@ import NativePageHeader, { useNativePageBarSlots } from "@/components/app/Native
 import MobileSearchHeader from "@/components/ui/MobileSearchHeader";
 import EmptyState from "@/components/app/EmptyState";
 import DataTransferCard from "./DataTransferCard";
-import { CrashReportsRow, ServerTelemetryRow } from "./PrivacyRows";
+import { ServerTelemetryRow, ServerTelemetryStateRow } from "./PrivacyRows";
 import {
   CardDivider,
   RowIcon,
@@ -97,7 +97,8 @@ import {
 import { Link, usePathname } from "@/lib/navigation";
 import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
 import { useServerTelemetry } from "@/features/serverTelemetry/query/get-server-telemetry";
-import { isCrashReportingConfigured } from "@/lib/privacy/telemetryConsent";
+import { useInstanceTelemetry } from "@/features/serverTelemetry/query/get-instance-telemetry";
+import { isCrashReportingConfigured } from "@/lib/privacy/instanceTelemetry";
 import { LANGUAGE_STORAGE_KEY, resolveInitialLocale } from "@/i18n";
 import { DefaultHomeScreen } from "@/types/enums";
 import {
@@ -474,10 +475,15 @@ export default function SettingsPage() {
   const sqConfigured = sqStatus != null && !sqStatus.requireSecurityQuestions;
 
   const push = usePushNotifications();
-  // The Privacy card's two rows each have their own reason to be absent: this browser's needs a
-  // build with a DSN, the server's needs an admin on a server whose own DSN is set.
-  const crashReportsOffered = isCrashReportingConfigured();
+  // One instance-wide answer about error reports. The admin who owns it gets the switch; anyone
+  // else reads the same answer as information, and only in a build that could send at all (a build
+  // with no DSN never starts the SDK, so there is nothing to tell them).
+  const buildCarriesDsn = isCrashReportingConfigured();
   const serverTelemetry = useServerTelemetry();
+  const errorReportsStateEnabled =
+    buildCarriesDsn && serverTelemetry === null && user?.role !== "ADMIN";
+  const instanceTelemetry = useInstanceTelemetry(errorReportsStateEnabled);
+  const errorReportsState = errorReportsStateEnabled ? instanceTelemetry : null;
   const [restingFloatersOn, setRestingFloatersOn] = useState(() =>
     isRestingFloatersEnabled(),
   );
@@ -953,11 +959,14 @@ export default function SettingsPage() {
     ...(push.isSupported ? [t("notifications.title"), t("notifications.push")] : []),
   );
   const showPrivacyCard =
-    (crashReportsOffered || serverTelemetry !== null) &&
+    (serverTelemetry !== null || errorReportsState !== null) &&
     cardMatches(
       t("privacy.title"),
-      ...(crashReportsOffered ? [t("crashReports.title"), t("crashReports.toggle")] : []),
-      ...(serverTelemetry ? [t("serverTelemetry.title"), t("serverTelemetry.toggle")] : []),
+      t("serverTelemetry.title"),
+      ...(serverTelemetry ? [t("serverTelemetry.toggle")] : []),
+      ...(errorReportsState
+        ? [t("serverTelemetry.stateOn"), t("serverTelemetry.stateOff")]
+        : []),
     );
   // Server Mode only. Export and import are an account's data moving in and out
   // of an account; a browser-only workspace has no account to move it between,
@@ -1599,14 +1608,13 @@ export default function SettingsPage() {
       </SheetCard>
       )}
 
-      {/* Privacy — what this browser, and for an admin this server, may report when something
-          fails. Both rows are opt-in and off until switched on; each hides itself when there is no
-          DSN to send to, and the card with them. */}
+      {/* Privacy — who may send error reports when something fails. One instance-wide answer an
+          admin gives: the admin flips it, everyone else reads it. A non-admin never sees a switch,
+          and a build with no DSN never sees the card. */}
       {showPrivacyCard && (
       <SettingsSection title={t("privacy.title")}>
-        {crashReportsOffered && <CrashReportsRow />}
-        {crashReportsOffered && serverTelemetry && <CardDivider />}
         {serverTelemetry && <ServerTelemetryRow telemetry={serverTelemetry} />}
+        {errorReportsState && <ServerTelemetryStateRow telemetry={errorReportsState} />}
       </SettingsSection>
       )}
 

@@ -3022,65 +3022,6 @@
         }
       }
     },
-    "App version, device model, OS version, what failed and where." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App-Version, Gerätemodell, Betriebssystemversion, was fehlgeschlagen ist und wo."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Versión de la app, modelo del dispositivo, versión del sistema operativo, qué falló y dónde."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Version de l'app, modèle de l'appareil, version du système, ce qui a échoué et à quel endroit."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Versione dell'app, modello del dispositivo, versione del sistema operativo, cosa non ha funzionato e dove."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリのバージョン、端末のモデル、OSのバージョン、何がどこで失敗したか。"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Versi apl, model peranti, versi OS, apa yang gagal dan di mana."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Versão do app, modelo do dispositivo, versão do sistema operacional, o que falhou e onde."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Версия приложения, модель устройства, версия ОС, что именно пошло не так и где."
-          }
-        },
-        "zh" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "应用版本、设备型号、系统版本，以及出错的内容和位置。"
-          }
-        }
-      }
-    },
     "Appearance" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -8974,61 +8915,61 @@
         }
       }
     },
-    "Help fix crashes?" : {
+    "Send error reports?" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hilf mit, Abstürze zu beheben?"
+            "value" : "Fehlerberichte senden?"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "¿Ayudas a corregir fallos?"
+            "value" : "¿Enviar informes de errores?"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aider à corriger les plantages ?"
+            "value" : "Envoyer des rapports d'erreur ?"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aiutaci a risolvere i crash?"
+            "value" : "Inviare segnalazioni di errore?"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クラッシュの修正に協力しますか？"
+            "value" : "エラー報告を送信しますか？"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bantu baiki ranap apl?"
+            "value" : "Hantar laporan ralat?"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ajudar a corrigir falhas?"
+            "value" : "Enviar relatórios de erro?"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Помочь исправить сбои?"
+            "value" : "Отправлять отчёты об ошибках?"
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "帮助修复崩溃问题？"
+            "value" : "发送错误报告？"
           }
         }
       }
@@ -11980,61 +11921,61 @@
         }
       }
     },
-    "Never included" : {
+    "Never sent" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nie enthalten"
+            "value" : "Nie gesendet"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nunca se incluye"
+            "value" : "Nunca se envía"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jamais inclus"
+            "value" : "Jamais envoyé"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mai incluso"
+            "value" : "Mai inviato"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "含まれない情報"
+            "value" : "送信されないもの"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidak pernah disertakan"
+            "value" : "Tidak pernah dihantar"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nunca incluído"
+            "value" : "Nunca enviado"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Никогда не входит"
+            "value" : "Никогда не отправляются"
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "绝不包含的内容"
+            "value" : "绝不发送"
           }
         }
       }
@@ -14158,61 +14099,61 @@
         }
       }
     },
-    "Not now" : {
+    "Don't send" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jetzt nicht"
+            "value" : "Nicht senden"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ahora no"
+            "value" : "No enviar"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pas maintenant"
+            "value" : "Ne pas envoyer"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Non ora"
+            "value" : "Non inviare"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "今はしない"
+            "value" : "送信しない"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bukan sekarang"
+            "value" : "Jangan hantar"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Agora não"
+            "value" : "Não enviar"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Не сейчас"
+            "value" : "Не отправлять"
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暂不"
+            "value" : "不发送"
           }
         }
       }
@@ -14630,61 +14571,61 @@
         }
       }
     },
-    "Off by default. Change it any time in Settings → Privacy." : {
+    "Off by default. You can change this in Settings." : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Standardmäßig aus. Du kannst das jederzeit unter Einstellungen → Privatsphäre ändern."
+            "value" : "Standardmäßig aus. Du kannst das in den Einstellungen ändern."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Desactivado por defecto. Cámbialo cuando quieras en Ajustes → Privacidad."
+            "value" : "Desactivado por defecto. Puedes cambiarlo en Ajustes."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Désactivé par défaut. Modifiable à tout moment dans Réglages → Confidentialité."
+            "value" : "Désactivé par défaut. Modifiable dans les Paramètres."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disattivato per impostazione predefinita. Puoi cambiarlo in qualsiasi momento in Impostazioni → Privacy."
+            "value" : "Disattivato per impostazione predefinita. Puoi cambiarlo in Impostazioni."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "デフォルトではオフです。設定 → プライバシーからいつでも変更できます。"
+            "value" : "デフォルトではオフです。設定から変更できます。"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dimatikan secara lalai. Tukar bila-bila masa dalam Tetapan → Privasi."
+            "value" : "Dimatikan secara lalai. Anda boleh menukarnya dalam Tetapan."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Desativado por padrão. Altere quando quiser em Configurações → Privacidade."
+            "value" : "Desativado por padrão. Você pode alterar isso em Configurações."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "По умолчанию выключено. Это можно изменить в любой момент: Настройки → Конфиденциальность."
+            "value" : "По умолчанию выключено. Это можно изменить в настройках."
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "默认关闭。你可以随时在“设置 → 隐私”中更改。"
+            "value" : "默认关闭。你可以在“设置”中更改。"
           }
         }
       }
@@ -19878,43 +19819,43 @@
         }
       }
     },
-    "Share reports" : {
+    "Send reports" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Berichte teilen"
+            "value" : "Berichte senden"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Compartir informes"
+            "value" : "Enviar informes"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Partager les rapports"
+            "value" : "Envoyer les rapports"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Condividi segnalazioni"
+            "value" : "Invia segnalazioni"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "レポートを共有"
+            "value" : "報告を送信"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kongsi laporan"
+            "value" : "Hantar laporan"
           }
         },
         "pt" : {
@@ -19926,13 +19867,13 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Делиться отчётами"
+            "value" : "Отправлять отчёты"
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "分享报告"
+            "value" : "发送报告"
           }
         }
       }
@@ -21412,61 +21353,61 @@
         }
       }
     },
-    "T'Day can send a short technical report only when something goes wrong, such as a crash, a freeze or an unexpected error. It helps the developer reproduce the problem on a similar device." : {
+    "If something breaks, T'Day can send a short technical report to help fix it. You can change this any time in Settings." : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day kann einen kurzen technischen Bericht senden, aber nur dann, wenn etwas schiefgeht, etwa bei einem Absturz, einem Einfrieren oder einem unerwarteten Fehler. Das hilft dem Entwickler, das Problem auf einem ähnlichen Gerät nachzustellen."
+            "value" : "Wenn etwas schiefgeht, kann T'Day einen kurzen technischen Bericht senden, um es zu beheben. Du kannst das jederzeit in den Einstellungen ändern."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day puede enviar un breve informe técnico solo cuando algo sale mal, como un cierre inesperado, un bloqueo o un error inesperado. Ayuda al desarrollador a reproducir el problema en un dispositivo similar."
+            "value" : "Si algo falla, T'Day puede enviar un breve informe técnico para ayudar a arreglarlo. Puedes cambiarlo cuando quieras en Ajustes."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day peut envoyer un court rapport technique uniquement quand quelque chose ne va pas, comme un plantage, un blocage ou une erreur inattendue. Cela aide le développeur à reproduire le problème sur un appareil similaire."
+            "value" : "Si quelque chose casse, T'Day peut envoyer un court rapport technique pour aider à le corriger. Vous pouvez modifier ce choix à tout moment dans les Paramètres."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day può inviare una breve segnalazione tecnica solo quando qualcosa va storto, ad esempio un crash, un blocco o un errore imprevisto. Aiuta lo sviluppatore a riprodurre il problema su un dispositivo simile."
+            "value" : "Se qualcosa si rompe, T'Day può inviare un breve rapporto tecnico per aiutare a risolverlo. Puoi cambiarlo in qualsiasi momento in Impostazioni."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day は、問題が起きたときだけ短い技術レポートを送信できます。対象は、クラッシュ、フリーズ、予期しないエラーなどです。開発者が似た端末で問題を再現するのに役立ちます。"
+            "value" : "問題が起きたとき、T'Day は修正のための短い技術報告を送信できます。設定からいつでも変更できます。"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day boleh menghantar laporan teknikal ringkas hanya apabila berlaku masalah, seperti apl ranap, beku atau ralat yang tidak dijangka. Ini membantu pembangun menghasilkan semula masalah itu pada peranti yang serupa."
+            "value" : "Jika sesuatu rosak, T'Day boleh menghantar laporan teknikal ringkas untuk membantu membaikinya. Anda boleh menukarnya bila-bila masa dalam Tetapan."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O T'Day pode enviar um breve relatório técnico apenas quando algo dá errado, como o app fechar inesperadamente, travar ou ocorrer um erro inesperado. Isso ajuda o desenvolvedor a reproduzir o problema em um dispositivo parecido."
+            "value" : "Se algo falhar, o T'Day pode enviar um breve relatório técnico para ajudar a corrigir. Você pode alterar isso quando quiser em Configurações."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "T'Day может отправлять короткий технический отчёт только тогда, когда что-то идёт не так, например при сбое, зависании или неожиданной ошибке. Это помогает разработчику воспроизвести проблему на похожем устройстве."
+            "value" : "Если что-то сломается, T'Day может отправить короткий технический отчёт, чтобы помочь это исправить. Это можно изменить в любой момент в настройках."
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "只有在出现问题时，T'Day 才会发送一份简短的技术报告，例如崩溃、卡死或意外错误。这能帮助开发者在相似的设备上重现问题。"
+            "value" : "出问题时，T'Day 可以发送一份简短的技术报告来帮助修复。你可以随时在“设置”中更改。"
           }
         }
       }
@@ -25358,65 +25299,6 @@
         }
       }
     },
-    "What's included" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das ist enthalten"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Qué se incluye"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ce qui est inclus"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cosa è incluso"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "含まれる情報"
-          }
-        },
-        "ms" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apa yang disertakan"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O que está incluído"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Что входит в отчёт"
-          }
-        },
-        "zh" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "包含的内容"
-          }
-        }
-      }
-    },
     "Where 'someday' gets a date" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -25830,61 +25712,61 @@
         }
       }
     },
-    "Your name or account, IP address, location, server address, or any task or list content." : {
+    "names, accounts, or any task or list content." : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dein Name oder Konto, IP-Adresse, Standort, Serveradresse oder jegliche Inhalte von Aufgaben oder Listen."
+            "value" : "Namen, Konten oder Inhalte von Aufgaben und Listen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu nombre o cuenta, tu dirección IP, tu ubicación, la dirección de tu servidor ni ningún contenido de tus tareas o listas."
+            "value" : "nombres, cuentas ni contenido de tareas o listas."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Votre nom ou compte, adresse IP, localisation, adresse du serveur, ou tout contenu de tâche ou de liste."
+            "value" : "noms, comptes ou contenu des tâches et des listes."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il tuo nome o account, l'indirizzo IP, la posizione, l'indirizzo del server o qualsiasi contenuto di attività o elenchi."
+            "value" : "nomi, account o contenuti di attività ed elenchi."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "名前やアカウント、IPアドレス、位置情報、サーバーのアドレス、タスクやリストの内容。"
+            "value" : "名前、アカウント、タスクやリストの内容。"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nama atau akaun anda, alamat IP, lokasi, alamat pelayan, atau sebarang kandungan tugasan atau senarai."
+            "value" : "nama, akaun, atau kandungan tugasan dan senarai."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seu nome ou conta, endereço IP, localização, endereço do servidor ou qualquer conteúdo de tarefas ou listas."
+            "value" : "nomes, contas ou conteúdo de tarefas e listas."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ваше имя или аккаунт, IP-адрес, местоположение, адрес сервера и любое содержимое задач или списков."
+            "value" : "имена, аккаунты, содержимое задач и списков."
           }
         },
         "zh" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你的姓名或账户、IP 地址、位置、服务器地址，以及任何任务或列表内容。"
+            "value" : "姓名、账户，或任何任务和清单内容。"
           }
         }
       }

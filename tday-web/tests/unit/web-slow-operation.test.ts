@@ -11,14 +11,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const captureEvent = vi.fn();
 vi.mock("@sentry/react", () => ({ captureEvent: (event: unknown) => captureEvent(event) }));
 
-const CONSENT_KEY = "tday.telemetry.consent";
 const COOLDOWN_KEY = "tday.slowOperation.cooldowns";
 
-async function loadHelper(consent: "granted" | "denied" | null = "granted") {
+/** A fresh helper, with the instance answer a test wants it to see. `null` leaves it unanswered. */
+async function loadHelper(enabled: boolean | null = true) {
   vi.resetModules();
-  if (consent) window.localStorage.setItem(CONSENT_KEY, consent);
-  else window.localStorage.removeItem(CONSENT_KEY);
-  return import("@/lib/observability/slowOperation");
+  const helper = await import("@/lib/observability/slowOperation");
+  if (enabled !== null) {
+    const instance = await import("@/lib/privacy/instanceTelemetry");
+    instance.applyInstanceTelemetry(instance.answerFrom(enabled, "2026-09-01T00:00:00.000Z"));
+  }
+  return helper;
 }
 
 beforeEach(() => {
@@ -102,10 +105,10 @@ describe("reportSlowOperation", () => {
     });
   });
 
-  it.each([["unanswered", null], ["denied", "denied"]] as const)(
-    "reports nothing while consent is %s, and does not start a cooldown",
-    async (_label, consent) => {
-      const { reportSlowOperation } = await loadHelper(consent);
+  it.each([["has not answered yet", null], ["answered no", false]] as const)(
+    "reports nothing while the server %s, and does not start a cooldown",
+    async (_label, enabled) => {
+      const { reportSlowOperation } = await loadHelper(enabled);
 
       reportSlowOperation("app_bootstrap", 20_000);
 

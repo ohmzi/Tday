@@ -1389,21 +1389,28 @@ private fun ScheduledTaskHomeRoute(
 
     // The crash-report consent is the wizard's last step, so the wizard is held up for it instead
     // of the workspace hiding it the moment the sign-in lands. Whether that step exists at all is a
-    // question about the device, not the workspace: a build with no DSN has nothing to ask, and an
-    // answered device must never be asked twice.
+    // question about the device, not the workspace: a build with no DSN has nothing to ask.
     //
     // Plain `remember`, not `rememberSaveable`: this says the wizard was on screen in THIS process.
     // A process that restarts mid-step comes back signed in with `false` here and falls back to the
     // after-sign-in card, which is the honest answer — it cannot know whether the step was reached.
     var wizardWasOnScreen by remember { mutableStateOf(false) }
-    LaunchedEffect(onboardingWizardUp) {
-        if (onboardingWizardUp) wizardWasOnScreen = true
-    }
     val telemetryConsent: TelemetryConsentViewModel = hiltViewModel()
-    val telemetryConsentState by telemetryConsent.state.collectAsStateWithLifecycle()
+    LaunchedEffect(onboardingWizardUp) {
+        if (onboardingWizardUp) {
+            wizardWasOnScreen = true
+            // A wizard coming on screen is a new connect flow, and the answer the last one was given
+            // is not an answer for this one: a sign-in that opens a workspace owes the question
+            // again. The device answer itself is left alone — Settings still reads and writes it, and
+            // the SDK still obeys it — so this only makes the question due again, never makes it
+            // granted.
+            telemetryConsent.beginConnectFlow()
+        }
+    }
+    val answeredInConnectFlow by telemetryConsent.answeredInConnectFlow.collectAsStateWithLifecycle()
     val privacyStepBelongsToThisFlow = shouldPresentWizardPrivacyStep(
         available = telemetryConsent.isAvailable,
-        state = telemetryConsentState,
+        answeredInConnectFlow = answeredInConnectFlow,
         // The wizard is on screen now, or was: the second half is what is still true on the frame
         // the sign-in opens the workspace under it.
         wizardWasOnScreen = onboardingWizardUp || wizardWasOnScreen,

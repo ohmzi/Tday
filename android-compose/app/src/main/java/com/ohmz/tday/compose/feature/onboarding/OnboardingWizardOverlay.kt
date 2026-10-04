@@ -119,11 +119,13 @@ private enum class WizardStep {
     /**
      * The crash-report consent, after the account exists.
      *
-     * Not a step the wizard walks to on its own: it is due when a sign-in opens a workspace that has
-     * no required update and no security questions in front of it, under a wizard that was on screen
-     * for that sign-in, and the app holds the overlay up for it (see `privacyStepDue` in TdayApp).
-     * On a build with no DSN, on a device that has already answered, and on the Local Mode path —
-     * which never signs in — it does not exist at all, and the wizard is exactly what it was.
+     * Not a step the wizard walks to on its own: it is due when a connect flow opens a workspace that
+     * has no required update and no security questions in front of it, under a wizard that was on
+     * screen for it, and the app holds the overlay up for it (see `privacyStepDue` in TdayApp). Every
+     * sign-in owes it again — a device that answered on a previous one is asked once more, and only
+     * an answer given in this flow takes the step away. On a build with no DSN, for a flow that has
+     * already been answered, and for an install that never saw the wizard, it does not exist at all,
+     * and the wizard is exactly what it was.
      */
     PRIVACY,
 }

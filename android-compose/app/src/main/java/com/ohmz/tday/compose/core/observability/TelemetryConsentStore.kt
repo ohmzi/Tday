@@ -5,8 +5,9 @@ import android.content.SharedPreferences
 
 /**
  * Whether this device has agreed to send crash and problem reports. [UNANSWERED] behaves exactly
- * like [DENIED]: nothing starts and nothing is stored. The difference is only that the one-time
- * consent card still has to ask.
+ * like [DENIED]: nothing starts and nothing is stored. The difference is only that the question
+ * still has to be asked — by the connect flow's last step, or by the standalone card for a device
+ * that reaches a workspace without one.
  */
 enum class TelemetryConsentState { UNANSWERED, GRANTED, DENIED }
 
@@ -17,8 +18,14 @@ enum class TelemetryConsentState { UNANSWERED, GRANTED, DENIED }
  * in `Application.onCreate` so a boot, widget or alarm process knows whether to start the SDK
  * without an EncryptedSharedPreferences Keystore round trip. For the same reason it is not in
  * `SecureConfigStore`, and never cleared by sign-out or `OfflineCacheManager.clearAllLocalData`:
- * consent belongs to the device, not to an account, so whoever signs in next inherits the choice
- * the person holding the phone made.
+ * consent belongs to the device, not to an account, so it survives a sign-out and is what governs
+ * sending until it changes.
+ *
+ * What a sign-in does change is when the question is asked, not what the answer means: the connect
+ * flow asks again on every sign-in, so the stored answer is not treated as an answer for the flow in
+ * progress. That per-flow half lives in memory, in `TelemetryConsentManager`; this store stays the
+ * one place the answer itself lives — what Settings reads and writes, and what `TelemetryBootstrap`
+ * obeys.
  *
  * [grantedAtMs] is half of the answer. Android replays an ANR from `ApplicationExitInfo` on the
  * next launch for up to 91 days, so a fresh start after opt-in would otherwise upload a hang that

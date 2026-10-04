@@ -99,7 +99,7 @@ const webApiClient = path.join(ROOT, "src", "lib", "api-client.ts");
 const webObservability = path.join(ROOT, "src", "lib", "observability", "sentry.ts");
 const webSentryInit = path.join(ROOT, "src", "lib", "observability", "sentryInit.ts");
 const webScrub = path.join(ROOT, "src", "lib", "observability", "webScrub.ts");
-const webConsent = path.join(ROOT, "src", "lib", "privacy", "telemetryConsent.ts");
+const webConsent = path.join(ROOT, "src", "lib", "privacy", "instanceTelemetry.ts");
 const webAuthProvider = path.join(ROOT, "src", "providers", "AuthProvider.tsx");
 const webErrorBoundary = path.join(ROOT, "src", "components", "ErrorBoundary.tsx");
 const webViteConfig = path.join(ROOT, "vite.config.ts");
@@ -301,6 +301,37 @@ describe("sentry starts from exactly one consent-gated file per platform", () =>
       expect(between(content, "beforeBreadcrumb:", "beforeSend:")).toContain("deps.isGranted()");
       expect(between(content, "beforeSend:", "scrubWebEvent")).toContain("!deps.isGranted()");
       expect(content).toContain("predatesConsent(event, deps.consentAt())");
+    });
+
+    it("asks the server for the instance answer before it starts anything", () => {
+      const init = withoutComments(readSource(webSentryInit));
+      const boot = between(init, "export function initSentryIfConsented", "return unsubscribe");
+      expect(boot).toContain("refreshInstanceTelemetry()");
+      // A change the admin makes in another browser reaches this page when it returns to view.
+      expect(boot).toContain("watchInstanceTelemetry()");
+
+      const consent = withoutComments(readSource(webConsent));
+      expect(consent).toContain('INSTANCE_TELEMETRY_URL = "/api/instance/telemetry"');
+      // The foreground re-read is a no-op in Local Mode: there is no server being talked to. And it
+      // only re-reads — an answer is the only thing that can open the gate.
+      const watcher = between(consent, "export function watchInstanceTelemetry", "addEventListener");
+      expect(watcher).toContain("isLocalMode()");
+      expect(watcher).toContain("refreshInstanceTelemetry()");
+      expect(watcher).not.toContain("applyInstanceTelemetry(");
+    });
+
+    it("has no per-user consent surface left", () => {
+      // One admin answer for the instance: no card, no browser switch, no browser store.
+      for (const removed of [
+        path.join(webSrc, "components", "privacy", "CrashReportsConsentGate.tsx"),
+        path.join(webSrc, "hooks", "useTelemetryConsent.ts"),
+        path.join(webSrc, "lib", "privacy", "telemetryConsent.ts"),
+      ]) {
+        expect(existsSync(removed), `${repoPath(removed)} should be gone`).toBe(false);
+      }
+      expect(
+        callSites([webSrc], [".ts", ".tsx"], /CrashReportsConsentGate|useTelemetryConsent/),
+      ).toEqual([]);
     });
   });
 
@@ -821,17 +852,21 @@ describe("sentry reports are failures only", () => {
 });
 
 describe("the crash-report answer survives sign-out and clearing local data", () => {
-  // The answer is about the device, not the account: wiping it would put the consent card back in
-  // front of someone who said no, or quietly switch reports off for someone who said yes.
-  it("web lists both consent keys in PRESERVED_STORAGE_KEYS", () => {
+  // On mobile the answer is about the device, not the account: wiping it would put the consent card
+  // back in front of someone who said no, or quietly switch reports off for someone who said yes.
+  it("web keeps no per-browser crash-report answer to preserve, and cannot read the old keys", () => {
     const auth = readSource(webAuthProvider);
     const preserved = between(auth, "const PRESERVED_STORAGE_KEYS = [", "];");
-    expect(preserved).toContain("TELEMETRY_CONSENT_STORAGE_KEY");
-    expect(preserved).toContain("TELEMETRY_CONSENT_AT_STORAGE_KEY");
+    expect(preserved).not.toContain("TELEMETRY_CONSENT");
+    expect(preserved).not.toContain("telemetry");
 
+    // The answer is the server's now, so the browser has no storage path for it at all: a value an
+    // older build wrote under either key is never read. (Doc comments may still name them, which
+    // `callSites` strips.)
     const consent = readSource(webConsent);
-    expect(consent).toContain('TELEMETRY_CONSENT_STORAGE_KEY = "tday.telemetry.consent"');
-    expect(consent).toContain('TELEMETRY_CONSENT_AT_STORAGE_KEY = "tday.telemetry.consentAt"');
+    expect(consent).toContain('INSTANCE_TELEMETRY_URL = "/api/instance/telemetry"');
+    expect(consent).not.toMatch(/localStorage/);
+    expect(callSites([webSrc], [".ts", ".tsx"], /tday\.telemetry\.consent(?:At)?/)).toEqual([]);
   });
 
   it("web clears client data only through calls that pass the preserved list", () => {

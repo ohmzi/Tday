@@ -286,8 +286,6 @@ const ANDROID_FAMILY = /^(?:telemetry_|settings_crash_reports)/;
 const ANDROID_REQUIRED_KEYS = [
   "telemetry_card_title",
   "telemetry_card_intro",
-  "telemetry_card_sent_label",
-  "telemetry_card_sent",
   "telemetry_card_never_sent_label",
   "telemetry_card_never_sent",
   "telemetry_card_footnote",
@@ -353,15 +351,13 @@ describe("crash-report strings: Android", () => {
 const IOS_LOCALES = ["de", "es", "fr", "it", "ja", "ms", "pt", "ru", "zh"];
 // English is the key. Each is also a literal in the Swift view that shows it.
 const IOS_CARD_KEYS = [
-  "Help fix crashes?",
-  "T'Day can send a short technical report only when something goes wrong, such as a crash, a freeze or an unexpected error. It helps the developer reproduce the problem on a similar device.",
-  "What's included",
-  "App version, device model, OS version, what failed and where.",
-  "Never included",
-  "Your name or account, IP address, location, server address, or any task or list content.",
-  "Off by default. Change it any time in Settings → Privacy.",
-  "Share reports",
-  "Not now",
+  "Send error reports?",
+  "If something breaks, T'Day can send a short technical report to help fix it. You can change this any time in Settings.",
+  "Never sent",
+  "names, accounts, or any task or list content.",
+  "Off by default. You can change this in Settings.",
+  "Send reports",
+  "Don't send",
   "Read the full FAQ",
 ];
 const IOS_SETTINGS_KEYS = [
@@ -535,27 +531,25 @@ describe("crash-reports guide topic", () => {
 });
 
 describe("crash-report strings: web", () => {
-  // The Settings row, the consent card, the admin row and the privacy page. The guide topic is
+  // The admin's onboarding step, the Settings row and the ask-an-admin row. The guide topic is
   // above. i18n-parity.test.ts already requires every locale to have English's key set; this
   // requires English to have these keys at all, and every locale to have said something in them.
   const REQUIRED = [
     "crashReports.card.title",
     "crashReports.card.intro",
-    "crashReports.card.sentLabel",
-    "crashReports.card.sent",
-    "crashReports.card.neverSentLabel",
     "crashReports.card.neverSent",
-    "crashReports.card.footnote",
     "crashReports.card.share",
     "crashReports.card.notNow",
+    "crashReports.card.saveFailed",
     "crashReports.card.readFaq",
     "settings.privacy.title",
-    "settings.crashReports.title",
-    "settings.crashReports.toggle",
-    "settings.crashReports.helpLabel",
     "settings.serverTelemetry.title",
     "settings.serverTelemetry.toggle",
     "settings.serverTelemetry.description",
+    "settings.serverTelemetry.helpLabel",
+    "settings.serverTelemetry.stateOn",
+    "settings.serverTelemetry.stateOff",
+    "settings.serverTelemetry.stateDetail",
     "settings.serverTelemetry.updateFailed",
     "privacy.sections.9.title",
     "privacy.sections.9.content",

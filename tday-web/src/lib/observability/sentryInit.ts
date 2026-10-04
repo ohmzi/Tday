@@ -6,8 +6,10 @@ import {
   getTelemetryConsentAt,
   isCrashReportingConfigured,
   isTelemetryGranted,
+  refreshInstanceTelemetry,
   subscribeToTelemetryConsent,
-} from "@/lib/privacy/telemetryConsent";
+  watchInstanceTelemetry,
+} from "@/lib/privacy/instanceTelemetry";
 import { SENTRY_PII_HEADER_SNIPPETS } from "./sentry";
 import {
   formatUtcOffset,
@@ -20,7 +22,8 @@ import {
 /**
  * The one place the browser's Sentry SDK is configured and started, and the only place it is
  * allowed to be: nothing initialises it at module load any more. It runs when — and only while —
- * this browser has said yes (`telemetryConsent`), and only in a build that carries a DSN.
+ * the server's instance-wide answer says yes (`instanceTelemetry`), and only in a build that
+ * carries a DSN. No individual user is asked, and no browser-local value can open it.
  *
  * "Off" has to mean off, so it is enforced in layers rather than in one:
  *
@@ -28,11 +31,11 @@ import {
  *   error during first run is lost, by design, because buffering it would be collecting it.
  * - A no closes the client, empties the scopes and unbinds it, so the helpers in `sentry.ts` go
  *   back to being no-ops.
- * - `beforeSend`, `beforeBreadcrumb` and the transport each ask the consent store again, because
+ * - `beforeSend`, `beforeBreadcrumb` and the transport each ask the in-memory answer again, because
  *   the SDK sends some things around `beforeSend` (its own internal-error events) and a closed
  *   client can still be holding an envelope.
- * - `predatesConsent` drops an event stamped before the grant, so nothing from the time the
- *   switch was off can ride in on a later yes.
+ * - `predatesConsent` drops an event stamped before the admin's answer, so nothing from the time
+ *   reports were off can ride in on a later yes.
  */
 
 type BrowserOptions = NonNullable<Parameters<typeof Sentry.init>[0]>;
@@ -223,13 +226,20 @@ function syncSentryWithConsent(): void {
 }
 
 /**
- * Called once from `main.tsx`, before React renders. Starts the SDK if this browser already said
- * yes, then follows every later change: a grant starts it, a withdrawal — here or in another tab —
- * stops it, with no reload either way. Returns the function that unsubscribes.
+ * Called once from `main.tsx`, before React renders. Asks the server whether this instance allows
+ * error reports and starts the SDK only once the answer arrives — nothing is initialised, patched
+ * or queued before it — then follows every later change: the admin switching reports on starts it,
+ * switching them off stops it, with no reload either way. A page that was already open picks the
+ * change up when it comes back to the foreground. Returns the function that unsubscribes.
  */
 export function initSentryIfConsented(): () => void {
+  const unsubscribe = subscribeToTelemetryConsent(syncSentryWithConsent);
+  // Start from the answer already held — off on a fresh page load — and then read the server's.
   syncSentryWithConsent();
-  return subscribeToTelemetryConsent(syncSentryWithConsent);
+  void refreshInstanceTelemetry();
+  // An admin's change in another browser reaches this page when it returns to view.
+  watchInstanceTelemetry();
+  return unsubscribe;
 }
 
 const captureReactError = Sentry.reactErrorHandler();
