@@ -17,7 +17,6 @@ struct TdayApp: App {
         )
         TdayFont.applyGlobalAppearances()
         SentryConfiguration.start()
-        TestCrash.fireFromLaunchArgumentsIfRequested() // TEST-CRASH
         NotificationDeepLinkDelegate.shared.install()
         WatchSessionManager.shared.activate()
         // Register the ~30-min background widget-refresh handler before launch completes.

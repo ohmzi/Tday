@@ -3,7 +3,10 @@ import { api } from "@/lib/api-client";
 import { useIsLocalMode } from "@/hooks/useAppMode";
 import { useAuth } from "@/providers/AuthProvider";
 
-/** Response of `GET`/`PATCH /api/admin/telemetry`: this server's own Sentry reporting. */
+/**
+ * Response of `GET`/`PATCH /api/admin/telemetry`: the instance-wide error-report answer an admin
+ * gives, which covers this server and every browser using the web app.
+ */
 export type ServerTelemetryResponse = {
   /** Whether the server has a `SENTRY_DSN` at all. Without one there is nothing to switch. */
   dsnConfigured: boolean;
@@ -15,10 +18,11 @@ export type ServerTelemetryResponse = {
 export const SERVER_TELEMETRY_QUERY_KEY = ["serverTelemetry"] as const;
 
 /**
- * The server's error-report switch, for the one person who may flip it — or null when it is not on
- * offer: the viewer is not an admin, the workspace is Local Mode (no server to report for, and the
- * route would be answered from browser storage), the request has not come back, or the server has
- * no DSN. The Settings row exists exactly when this is non-null.
+ * The admin's error-report switch — the one control for it — or null when the viewer may not
+ * configure it: not an admin, Local Mode (no server to report for, and the route would be answered
+ * from browser storage), the request has not come back, or the server has no DSN of its own. The
+ * switch row exists when this is non-null; everyone else reads the state instead
+ * (`useInstanceTelemetry`).
  */
 export function useServerTelemetry(): ServerTelemetryResponse | null {
   const { user } = useAuth();

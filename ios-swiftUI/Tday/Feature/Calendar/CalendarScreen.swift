@@ -690,9 +690,6 @@ struct CalendarScreen: View {
                 .padding(.bottom, 12)
             }
 
-            // TEST-CRASH: between the calendar and its task list.
-            TestCrashButton(id: .calendar)
-
             Text("Tasks due \(selectedDateHeaderText)")
                 .font(.tdayRounded(size: 22, weight: .heavy))
                 .foregroundStyle(colors.onSurface)
@@ -716,7 +713,6 @@ struct CalendarScreen: View {
         Group {
             if !pendingItems.isEmpty {
                 VStack(spacing: CalendarTaskListMetrics.rowSpacing) {
-                    let testCrashFirstID = pendingItems.first?.id // TEST-CRASH
                     ForEach(pendingItems) { todo in
                         CalendarPendingTaskRow(
                             todo: todo,
@@ -747,7 +743,6 @@ struct CalendarScreen: View {
                         .todoTrailingSwipeActions(
                             rowID: todo.id,
                             openRowID: $openSwipeTaskID,
-                            testCrashFirst: todo.id == testCrashFirstID, // TEST-CRASH
                             onEdit: {
                                 editingTodo = todo
                             },

@@ -191,7 +191,7 @@ final class TelemetryConsentModelTests: XCTestCase {
         XCTAssertFalse(makeModel(isAvailable: false).shouldPresentWizardStep(wizardWasOnScreen: true))
     }
 
-    func testAnAnswerEndsTheWizardStep() {
+    func testAnAnswerEndsTheWizardStepForTheFlowItWasGivenIn() {
         let granted = makeModel()
         granted.share()
         XCTAssertFalse(granted.shouldPresentWizardStep(wizardWasOnScreen: true))
@@ -199,6 +199,64 @@ final class TelemetryConsentModelTests: XCTestCase {
         let denied = makeModel()
         denied.decline()
         XCTAssertFalse(denied.shouldPresentWizardStep(wizardWasOnScreen: true))
+    }
+
+    /// The flow half of the question: the device answer outlives sign-out, so a second sign-in asks
+    /// again even though the store still says what the first one said.
+    func testASecondSignInAsksAgainEvenThoughTheDeviceAlreadyAnswered() {
+        store.grant()
+        let model = makeModel()
+        model.beginConnectFlow()
+        model.share()
+        XCTAssertFalse(model.shouldPresentWizardStep(wizardWasOnScreen: true))
+
+        // Sign out and in again: this flow owes an answer of its own.
+        model.beginConnectFlow()
+
+        XCTAssertTrue(model.shouldPresentWizardStep(wizardWasOnScreen: true))
+        // The device answer is untouched: Settings still reads it, and the SDK still obeys it.
+        XCTAssertEqual(model.state, .granted)
+        XCTAssertTrue(model.isEnabled)
+    }
+
+    func testANewSignInIsDueToAskWithoutAnsweringItOrSendingAnything() {
+        let model = makeModel() // Unanswered: nothing has ever been granted.
+        model.beginConnectFlow()
+
+        // Due, so the wizard asks...
+        XCTAssertTrue(model.shouldPresentWizardStep(wizardWasOnScreen: true))
+        // ...and an unanswered device is still off: being due is not consent, so nothing can leave.
+        XCTAssertEqual(model.state, .unanswered)
+        XCTAssertFalse(model.isEnabled)
+        XCTAssertEqual(grants, 0)
+        XCTAssertEqual(revokes, 0)
+        XCTAssertNil(store.consentedAt)
+    }
+
+    func testAnsweringAgainOnANewSignInEndsTheStepWithoutRewritingTheStore() {
+        store.grant(at: Date(timeIntervalSince1970: 1_800_000_000))
+        let model = makeModel()
+        model.beginConnectFlow()
+
+        model.share()
+
+        XCTAssertFalse(model.shouldPresentWizardStep(wizardWasOnScreen: true))
+        // Nothing was written and no second SDK was started: the store already said yes.
+        XCTAssertEqual(grants, 0)
+        XCTAssertEqual(model.state, .granted)
+        XCTAssertEqual(store.consentedAt, Date(timeIntervalSince1970: 1_800_000_000))
+    }
+
+    func testTheSettingsSwitchCountsAsAnsweringForTheCurrentSignIn() {
+        store.grant()
+        let model = makeModel()
+        model.beginConnectFlow()
+
+        // The switch is turned off in Settings while this flow is still owed an answer.
+        model.decline()
+
+        XCTAssertFalse(model.shouldPresentWizardStep(wizardWasOnScreen: true))
+        XCTAssertEqual(model.state, .denied)
     }
 
     // MARK: - Answering

@@ -6,11 +6,20 @@ import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@t
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "@/i18n";
-import { CrashReportsRow, ServerTelemetryRow } from "@/components/settings/PrivacyRows";
-import { useServerTelemetry } from "@/features/serverTelemetry/query/get-server-telemetry";
-import type { ServerTelemetryResponse } from "@/features/serverTelemetry/query/get-server-telemetry";
+import { ServerTelemetryRow, ServerTelemetryStateRow } from "@/components/settings/PrivacyRows";
+import {
+  useServerTelemetry,
+  type ServerTelemetryResponse,
+} from "@/features/serverTelemetry/query/get-server-telemetry";
+import { useInstanceTelemetry } from "@/features/serverTelemetry/query/get-instance-telemetry";
 import { ApiError } from "@/lib/api-client";
-import { getTelemetryConsent, setTelemetryConsent } from "@/lib/privacy/telemetryConsent";
+import { answerFrom, applyInstanceTelemetry } from "@/lib/privacy/instanceTelemetry";
+
+/**
+ * The Privacy card has one setting on the web: the instance-wide error-report answer an admin
+ * gives. The admin gets the switch; everyone else gets the same answer as information, because a
+ * control the server would refuse is worse than no control.
+ */
 
 const api = vi.hoisted(() => ({ GET: vi.fn(), PATCH: vi.fn() }));
 vi.mock("@/lib/api-client", async (importOriginal) => ({
@@ -34,6 +43,9 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 const OFFERED: ServerTelemetryResponse = { dsnConfigured: true, enabled: false, updatedAt: null };
+/** The role the one control in this card is queried by. */
+const SWITCH_ROLE = "switch";
+const INSTANCE_OFF = { enabled: false, updatedAt: "2026-09-01T00:00:00.000Z" };
 
 function wrapper() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -57,55 +69,10 @@ beforeEach(() => {
   authUser = { role: "ADMIN" };
   localMode = false;
   window.localStorage.clear();
-  window.dispatchEvent(new StorageEvent("storage", { key: null }));
+  applyInstanceTelemetry(answerFrom(false, null));
 });
 
 afterEach(cleanup);
-
-describe("CrashReportsRow", () => {
-  it("shows the switch off for a browser that has not answered", () => {
-    render(<CrashReportsRow />, { wrapper: wrapper() });
-
-    const toggle = screen.getByRole("switch", { name: "Send crash & problem reports when something fails" });
-    expect(toggle.getAttribute("aria-checked")).toBe("false");
-    expect(screen.getByText("Crash & problem reports")).toBeTruthy();
-  });
-
-  it("links the row to its guide topic with a name that says what it is about", () => {
-    render(<CrashReportsRow />, { wrapper: wrapper() });
-
-    const help = screen.getByRole("link", { name: "About crash & problem reports" });
-    expect(help.getAttribute("href")).toBe("/en/app/guide/crash-reports");
-  });
-
-  it("turns reports on, and counts as answering the question", () => {
-    render(<CrashReportsRow />, { wrapper: wrapper() });
-
-    fireEvent.click(screen.getByRole("switch"));
-
-    expect(getTelemetryConsent()).toBe("granted");
-    expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
-  });
-
-  it("turns reports off again", () => {
-    setTelemetryConsent(true);
-    render(<CrashReportsRow />, { wrapper: wrapper() });
-    expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
-
-    fireEvent.click(screen.getByRole("switch"));
-
-    expect(getTelemetryConsent()).toBe("denied");
-    expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("false");
-  });
-
-  it("follows an answer given somewhere else, such as the consent card", () => {
-    render(<CrashReportsRow />, { wrapper: wrapper() });
-
-    act(() => setTelemetryConsent(true));
-
-    expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
-  });
-});
 
 describe("useServerTelemetry", () => {
   it("offers the setting to an admin of a server whose DSN is set", async () => {
@@ -179,23 +146,65 @@ describe("useServerTelemetry", () => {
   });
 });
 
+describe("useInstanceTelemetry", () => {
+  it("reads the public answer when the caller asks for it", async () => {
+    api.GET.mockResolvedValue(INSTANCE_OFF);
+
+    const { result } = renderHook(() => useInstanceTelemetry(true), { wrapper: wrapper() });
+
+    await waitFor(() => expect(result.current).toEqual(INSTANCE_OFF));
+    expect(api.GET).toHaveBeenCalledWith({ url: "/api/instance/telemetry" });
+  });
+
+  it("does not ask at all when the caller has no reason to show it", async () => {
+    const { result } = renderHook(() => useInstanceTelemetry(false), { wrapper: wrapper() });
+
+    await act(async () => {});
+    expect(result.current).toBeNull();
+    expect(api.GET).not.toHaveBeenCalled();
+  });
+
+  it("does not ask, or answer, in Local Mode", async () => {
+    localMode = true;
+
+    const { result } = renderHook(() => useInstanceTelemetry(true), { wrapper: wrapper() });
+
+    await act(async () => {});
+    expect(result.current).toBeNull();
+    expect(api.GET).not.toHaveBeenCalled();
+  });
+});
+
 describe("ServerTelemetryRow", () => {
-  it("explains what the switch does and shows the server's current state", () => {
+  it("explains that the same switch covers the web app, and shows the current state", () => {
     render(<ServerTelemetryRow telemetry={{ ...OFFERED, enabled: true }} />, { wrapper: wrapper() });
 
     expect(screen.getByText("Server error reports")).toBeTruthy();
-    expect(screen.getByText(/Sends this server's own errors, plus timings for a small sample of requests, to the Sentry project set in SENTRY_DSN/)).toBeTruthy();
     expect(
-      screen.getByRole("switch", { name: "Send this server's error reports to its operator's Sentry" }).getAttribute("aria-checked"),
+      screen.getByText(
+        /The web app obeys the same switch\. Never includes tasks, lists or account details\./,
+      ),
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByRole(SWITCH_ROLE, { name: "Send error reports for this server and the web app" })
+        .getAttribute("aria-checked"),
     ).toBe("true");
   });
 
+  it("links the row to its guide topic with a name that says what it is about", () => {
+    render(<ServerTelemetryRow telemetry={OFFERED} />, { wrapper: wrapper() });
+
+    const help = screen.getByRole("link", { name: "About error reports" });
+    expect(help.getAttribute("href")).toBe("/en/app/guide/crash-reports");
+  });
+
   it("sends the new state through the shared API client and refreshes the query", async () => {
-    api.PATCH.mockResolvedValue({ ...OFFERED, enabled: true });
+    api.PATCH.mockResolvedValue({ ...OFFERED, enabled: true, updatedAt: "2026-10-01T12:00:00.000Z" });
     api.GET.mockResolvedValue({ ...OFFERED, enabled: true });
     render(<ServerTelemetryRow telemetry={OFFERED} />, { wrapper: wrapper() });
 
-    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole(SWITCH_ROLE));
 
     await waitFor(() => expect(api.PATCH).toHaveBeenCalledTimes(1));
     expect(api.PATCH).toHaveBeenCalledWith({
@@ -211,10 +220,10 @@ describe("ServerTelemetryRow", () => {
     api.PATCH.mockReturnValue(new Promise<ServerTelemetryResponse>((r) => (resolve = r)));
     render(<ServerTelemetryRow telemetry={OFFERED} />, { wrapper: wrapper() });
 
-    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole(SWITCH_ROLE));
 
-    await waitFor(() => expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true"));
-    expect((screen.getByRole("switch") as HTMLButtonElement).disabled).toBe(true);
+    await waitFor(() => expect(screen.getByRole(SWITCH_ROLE).getAttribute("aria-checked")).toBe("true"));
+    expect((screen.getByRole(SWITCH_ROLE) as HTMLButtonElement).disabled).toBe(true);
     await act(async () => resolve({ ...OFFERED, enabled: true }));
   });
 
@@ -222,7 +231,7 @@ describe("ServerTelemetryRow", () => {
     api.PATCH.mockRejectedValue(new ApiError("Forbidden", 403));
     render(<ServerTelemetryRow telemetry={OFFERED} />, { wrapper: wrapper() });
 
-    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole(SWITCH_ROLE));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith({
@@ -230,6 +239,35 @@ describe("ServerTelemetryRow", () => {
         variant: "destructive",
       }),
     );
-    await waitFor(() => expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("false"));
+    await waitFor(() => expect(screen.getByRole(SWITCH_ROLE).getAttribute("aria-checked")).toBe("false"));
+  });
+});
+
+describe("ServerTelemetryStateRow", () => {
+  it("shows the answer as information, with no control to press", () => {
+    render(<ServerTelemetryStateRow telemetry={INSTANCE_OFF} />, { wrapper: wrapper() });
+
+    expect(screen.getByText("Server error reports")).toBeTruthy();
+    expect(screen.getByText("An admin decides this for the whole server.")).toBeTruthy();
+    expect(screen.getByText("Off")).toBeTruthy();
+    expect(screen.queryByRole(SWITCH_ROLE)).toBeNull();
+  });
+
+  it("shows a yes as plainly as a no", () => {
+    render(
+      <ServerTelemetryStateRow telemetry={{ ...INSTANCE_OFF, enabled: true }} />,
+      { wrapper: wrapper() },
+    );
+
+    expect(screen.getByText("On")).toBeTruthy();
+    expect(screen.queryByRole(SWITCH_ROLE)).toBeNull();
+  });
+
+  it("still links to the guide topic", () => {
+    render(<ServerTelemetryStateRow telemetry={INSTANCE_OFF} />, { wrapper: wrapper() });
+
+    expect(screen.getByRole("link", { name: "About error reports" }).getAttribute("href")).toBe(
+      "/en/app/guide/crash-reports",
+    );
   });
 });

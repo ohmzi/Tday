@@ -83,6 +83,55 @@ class TelemetryConsentManagerTest {
     }
 
     @Test
+    fun `a new connect flow asks again even though the device answered on the last one`() {
+        val manager = manager()
+        manager.beginConnectFlow()
+        manager.setShareReports(true)
+        assertTrue(manager.answeredInConnectFlow.value)
+
+        // Sign out and sign in again: the answer the last flow was given is not an answer for this
+        // one, so the wizard's last step comes due again.
+        manager.beginConnectFlow()
+
+        assertFalse(manager.answeredInConnectFlow.value)
+        // The device answer itself is untouched: Settings still reads it, and the SDK still obeys it.
+        assertEquals(TelemetryConsentState.GRANTED, manager.state.value)
+        assertEquals(TelemetryConsentState.GRANTED, store.state())
+        assertTrue(gate.isOpen)
+    }
+
+    @Test
+    fun `a new connect flow makes the question due without answering it or letting anything out`() {
+        val manager = manager()
+
+        manager.beginConnectFlow()
+
+        // Due: the wizard has to ask...
+        assertFalse(manager.answeredInConnectFlow.value)
+        // ...and unanswered is still not a yes: nothing was granted, nothing started, and the gate
+        // that stands in front of every report is still shut.
+        assertEquals(TelemetryConsentState.UNANSWERED, manager.state.value)
+        assertEquals(TelemetryConsentState.UNANSWERED, store.state())
+        assertEquals(0L, store.grantedAtMs())
+        assertEquals(emptyList<String>(), sdkEvents)
+        assertFalse(gate.isOpen)
+    }
+
+    @Test
+    fun `saying yes again on a new flow answers that flow without a second sdk start`() {
+        store.grant(nowMs = 5L)
+        val manager = manager()
+        manager.beginConnectFlow()
+
+        manager.setShareReports(true)
+
+        assertTrue(manager.answeredInConnectFlow.value)
+        assertEquals(TelemetryConsentState.GRANTED, manager.state.value)
+        // The store already said yes, so there was nothing to write and no second SDK to start.
+        assertEquals(emptyList<String>(), sdkEvents)
+    }
+
+    @Test
     fun `answers are applied in the order they were given even when applying one is slow`() {
         // The SDK blocks on a latch for its first transition, so every later tap is queued behind
         // it on a real thread pool. A consumer that launched one coroutine per tap would let those

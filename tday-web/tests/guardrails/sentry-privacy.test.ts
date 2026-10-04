@@ -5,13 +5,35 @@ import { describe, it, expect } from "vitest";
 const ROOT = path.resolve(__dirname, "..", "..");
 const MONO = path.resolve(ROOT, "..");
 
+// Directory and extension names this file joins or filters by repeatedly, named so the file holds
+// one occurrence of each instead of one per call site.
+const SRC_DIR = "src";
+const LIB_DIR = "lib";
+const TS_EXT = ".ts";
+const TSX_EXT = ".tsx";
+const BACKEND_DIR = "tday-backend";
+const MAIN_DIR = "main";
+const COM_DIR = "com";
+const OHMZ_DIR = "ohmz";
+const TDAY_DIR = "tday";
+const ANDROID_DIR = "android-compose";
+const OBSERVABILITY_DIR = "observability";
+const KT_EXT = ".kt";
+const IOS_DIR = "ios-swiftUI";
+const BUILD_GRADLE = "build.gradle.kts";
+const JAVA_DIR = "java";
+const COMPOSE_DIR = "compose";
+const ANDROID_CORE_DIR = "core";
+const IOS_CORE_DIR = "Core";
+const SWIFT_EXT = ".swift";
+
 const BACKEND_SRC = path.join(
-  MONO, "tday-backend", "src", "main", "kotlin", "com", "ohmz", "tday",
+  MONO, BACKEND_DIR, SRC_DIR, MAIN_DIR, "kotlin", COM_DIR, OHMZ_DIR, TDAY_DIR,
 );
 const ANDROID_SRC = path.join(
-  MONO, "android-compose", "app", "src", "main",
+  MONO, ANDROID_DIR, "app", SRC_DIR, MAIN_DIR,
 );
-const IOS_SRC = path.join(MONO, "ios-swiftUI", "Tday");
+const IOS_SRC = path.join(MONO, IOS_DIR, "Tday");
 
 function readSource(filePath: string): string {
   return readFileSync(filePath, "utf-8");
@@ -72,44 +94,44 @@ function between(content: string, from: string, to: string): string {
 
 // ─── Backend Sentry paths ───────────────────────────────────────────
 const backendApp = path.join(BACKEND_SRC, "Application.kt");
-const backendSentry = path.join(BACKEND_SRC, "observability", "BackendSentry.kt");
-const backendGate = path.join(BACKEND_SRC, "observability", "TelemetryGate.kt");
-const backendGatedTransport = path.join(BACKEND_SRC, "observability", "GatedTransport.kt");
-const backendScrubber = path.join(BACKEND_SRC, "observability", "TelemetryScrubber.kt");
+const backendSentry = path.join(BACKEND_SRC, OBSERVABILITY_DIR, "BackendSentry.kt");
+const backendGate = path.join(BACKEND_SRC, OBSERVABILITY_DIR, "TelemetryGate.kt");
+const backendGatedTransport = path.join(BACKEND_SRC, OBSERVABILITY_DIR, "GatedTransport.kt");
+const backendScrubber = path.join(BACKEND_SRC, OBSERVABILITY_DIR, "TelemetryScrubber.kt");
 const backendStatusPages = path.join(BACKEND_SRC, "plugins", "StatusPages.kt");
 const backendSentryPlugin = path.join(BACKEND_SRC, "plugins", "SentryPlugin.kt");
-const backendObservability = path.join(BACKEND_SRC, "observability", "TdayObservability.kt");
+const backendObservability = path.join(BACKEND_SRC, OBSERVABILITY_DIR, "TdayObservability.kt");
 const backendRouting = path.join(BACKEND_SRC, "plugins", "Routing.kt");
 const backendAdminRoutes = path.join(BACKEND_SRC, "routes", "AdminRoutes.kt");
 const backendInstanceSettings = path.join(BACKEND_SRC, "services", "InstanceSettingsService.kt");
 const backendAppConfig = path.join(BACKEND_SRC, "config", "AppConfig.kt");
 const backendMigration = path.join(
-  MONO, "tday-backend", "src", "main", "resources", "db", "migration", "V32__instance_settings.sql",
+  MONO, BACKEND_DIR, SRC_DIR, MAIN_DIR, "resources", "db", "migration", "V32__instance_settings.sql",
 );
-const backendGradle = path.join(MONO, "tday-backend", "build.gradle.kts");
+const backendGradle = path.join(MONO, BACKEND_DIR, BUILD_GRADLE);
 const backendLogback = path.join(
-  MONO, "tday-backend", "src", "main", "resources", "logback.xml",
+  MONO, BACKEND_DIR, SRC_DIR, MAIN_DIR, "resources", "logback.xml",
 );
 
 // ─── Web Sentry paths ──────────────────────────────────────────────
-const webSrc = path.join(ROOT, "src");
-const webMain = path.join(ROOT, "src", "main.tsx");
-const webRouter = path.join(ROOT, "src", "router.tsx");
-const webApiClient = path.join(ROOT, "src", "lib", "api-client.ts");
-const webObservability = path.join(ROOT, "src", "lib", "observability", "sentry.ts");
-const webSentryInit = path.join(ROOT, "src", "lib", "observability", "sentryInit.ts");
-const webScrub = path.join(ROOT, "src", "lib", "observability", "webScrub.ts");
-const webConsent = path.join(ROOT, "src", "lib", "privacy", "telemetryConsent.ts");
-const webAuthProvider = path.join(ROOT, "src", "providers", "AuthProvider.tsx");
-const webErrorBoundary = path.join(ROOT, "src", "components", "ErrorBoundary.tsx");
+const webSrc = path.join(ROOT, SRC_DIR);
+const webMain = path.join(ROOT, SRC_DIR, "main.tsx");
+const webRouter = path.join(ROOT, SRC_DIR, "router.tsx");
+const webApiClient = path.join(ROOT, SRC_DIR, LIB_DIR, "api-client.ts");
+const webObservability = path.join(ROOT, SRC_DIR, LIB_DIR, OBSERVABILITY_DIR, "sentry.ts");
+const webSentryInit = path.join(ROOT, SRC_DIR, LIB_DIR, OBSERVABILITY_DIR, "sentryInit.ts");
+const webScrub = path.join(ROOT, SRC_DIR, LIB_DIR, OBSERVABILITY_DIR, "webScrub.ts");
+const webConsent = path.join(ROOT, SRC_DIR, LIB_DIR, "privacy", "instanceTelemetry.ts");
+const webAuthProvider = path.join(ROOT, SRC_DIR, "providers", "AuthProvider.tsx");
+const webErrorBoundary = path.join(ROOT, SRC_DIR, "components", "ErrorBoundary.tsx");
 const webViteConfig = path.join(ROOT, "vite.config.ts");
 const webPackageJson = path.join(ROOT, "package.json");
 const webPackageLock = path.join(ROOT, "package-lock.json");
 
 // ─── Android Sentry paths ──────────────────────────────────────────
-const ANDROID_DEBUG_SRC = path.join(MONO, "android-compose", "app", "src", "debug");
-const ANDROID_COMPOSE = path.join(ANDROID_SRC, "java", "com", "ohmz", "tday", "compose");
-const androidObservability = path.join(ANDROID_COMPOSE, "core", "observability");
+const ANDROID_DEBUG_SRC = path.join(MONO, ANDROID_DIR, "app", SRC_DIR, "debug");
+const ANDROID_COMPOSE = path.join(ANDROID_SRC, JAVA_DIR, COM_DIR, OHMZ_DIR, TDAY_DIR, COMPOSE_DIR);
+const androidObservability = path.join(ANDROID_COMPOSE, ANDROID_CORE_DIR, OBSERVABILITY_DIR);
 const androidApplication = path.join(ANDROID_COMPOSE, "TdayApplication.kt");
 const androidBootstrap = path.join(androidObservability, "TelemetryBootstrap.kt");
 const androidOptions = path.join(androidObservability, "TelemetryOptions.kt");
@@ -117,46 +139,46 @@ const androidScrubber = path.join(androidObservability, "TelemetryScrubber.kt");
 const androidConsentStore = path.join(androidObservability, "TelemetryConsentStore.kt");
 const androidGatedTransport = path.join(androidObservability, "GatedTransport.kt");
 const androidManifest = path.join(ANDROID_SRC, "AndroidManifest.xml");
-const androidGradle = path.join(MONO, "android-compose", "app", "build.gradle.kts");
-const androidNetworkModule = path.join(ANDROID_COMPOSE, "core", "network", "NetworkModule.kt");
+const androidGradle = path.join(MONO, ANDROID_DIR, "app", BUILD_GRADLE);
+const androidNetworkModule = path.join(ANDROID_COMPOSE, ANDROID_CORE_DIR, "network", "NetworkModule.kt");
 const androidTelemetry = path.join(androidObservability, "TdayTelemetry.kt");
 const androidOfflineCacheManager = path.join(
-  ANDROID_COMPOSE, "core", "data", "cache", "OfflineCacheManager.kt",
+  ANDROID_COMPOSE, ANDROID_CORE_DIR, "data", "cache", "OfflineCacheManager.kt",
 );
-const androidSecureConfigStore = path.join(ANDROID_COMPOSE, "core", "data", "SecureConfigStore.kt");
+const androidSecureConfigStore = path.join(ANDROID_COMPOSE, ANDROID_CORE_DIR, "data", "SecureConfigStore.kt");
 const androidTodoListViewModel = path.join(
-  ANDROID_SRC, "java", "com", "ohmz", "tday", "compose", "feature", "todos", "TodoListViewModel.kt",
+  ANDROID_SRC, JAVA_DIR, COM_DIR, OHMZ_DIR, TDAY_DIR, COMPOSE_DIR, "feature", "todos", "TodoListViewModel.kt",
 );
 const androidCalendarViewModel = path.join(
-  ANDROID_SRC, "java", "com", "ohmz", "tday", "compose", "feature", "calendar", "CalendarViewModel.kt",
+  ANDROID_SRC, JAVA_DIR, COM_DIR, OHMZ_DIR, TDAY_DIR, COMPOSE_DIR, "feature", "calendar", "CalendarViewModel.kt",
 );
 const androidCalendarScreen = path.join(
-  ANDROID_SRC, "java", "com", "ohmz", "tday", "compose", "feature", "calendar", "CalendarScreen.kt",
+  ANDROID_SRC, JAVA_DIR, COM_DIR, OHMZ_DIR, TDAY_DIR, COMPOSE_DIR, "feature", "calendar", "CalendarScreen.kt",
 );
 const androidCredentialService = path.join(
-  ANDROID_SRC, "java", "com", "ohmz", "tday", "compose", "core", "data", "auth", "SystemCredentialService.kt",
+  ANDROID_SRC, JAVA_DIR, COM_DIR, OHMZ_DIR, TDAY_DIR, COMPOSE_DIR, ANDROID_CORE_DIR, "data", "auth", "SystemCredentialService.kt",
 );
 
 // ─── iOS Sentry paths ──────────────────────────────────────────────
 // Every app, extension and widget target. A second target that linked Sentry would need its own
 // start call, and that call has to be found here.
 const IOS_TARGET_DIRS = ["Tday", "TdayShareExtension", "TdayWatch", "TdayWatchWidget", "TdayWidget"].map(
-  (dir) => path.join(MONO, "ios-swiftUI", dir),
+  (dir) => path.join(MONO, IOS_DIR, dir),
 );
-const iosSentryConfig = path.join(IOS_SRC, "Core", "SentryConfiguration.swift");
+const iosSentryConfig = path.join(IOS_SRC, IOS_CORE_DIR, "SentryConfiguration.swift");
 const iosApp = path.join(IOS_SRC, "TdayApp.swift");
 const iosInfoPlist = path.join(IOS_SRC, "Info.plist");
-const iosProject = path.join(MONO, "ios-swiftUI", "project.yml");
-const iosPbxproj = path.join(MONO, "ios-swiftUI", "TdayApp.xcodeproj", "project.pbxproj");
-const iosPackage = path.join(MONO, "ios-swiftUI", "Package.swift");
-const iosPackageResolved = path.join(MONO, "ios-swiftUI", "Package.resolved");
-const iosScrubber = path.join(IOS_SRC, "Core", "Telemetry", "TelemetryScrubber.swift");
-const iosConsentStore = path.join(IOS_SRC, "Core", "Telemetry", "TelemetryConsentStore.swift");
-const iosAuthRepository = path.join(IOS_SRC, "Core", "Data", "Auth", "AuthRepository.swift");
+const iosProject = path.join(MONO, IOS_DIR, "project.yml");
+const iosPbxproj = path.join(MONO, IOS_DIR, "TdayApp.xcodeproj", "project.pbxproj");
+const iosPackage = path.join(MONO, IOS_DIR, "Package.swift");
+const iosPackageResolved = path.join(MONO, IOS_DIR, "Package.resolved");
+const iosScrubber = path.join(IOS_SRC, IOS_CORE_DIR, "Telemetry", "TelemetryScrubber.swift");
+const iosConsentStore = path.join(IOS_SRC, IOS_CORE_DIR, "Telemetry", "TelemetryConsentStore.swift");
+const iosAuthRepository = path.join(IOS_SRC, IOS_CORE_DIR, "Data", "Auth", "AuthRepository.swift");
 const iosTodoListViewModel = path.join(IOS_SRC, "Feature", "Todos", "TodoListViewModel.swift");
 const iosCalendarViewModel = path.join(IOS_SRC, "Feature", "Calendar", "CalendarViewModel.swift");
 const iosCalendarScreen = path.join(IOS_SRC, "Feature", "Calendar", "CalendarScreen.swift");
-const iosCredentialService = path.join(IOS_SRC, "Core", "Data", "Auth", "SystemCredentialService.swift");
+const iosCredentialService = path.join(IOS_SRC, IOS_CORE_DIR, "Data", "Auth", "SystemCredentialService.swift");
 
 // ─── Documentation ─────────────────────────────────────────────────
 const telemetryDoc = path.join(MONO, "docs", "TELEMETRY.md");
@@ -266,7 +288,7 @@ describe("sentry integration guardrails", () => {
 describe("sentry starts from exactly one consent-gated file per platform", () => {
   describe("web", () => {
     it("calls Sentry.init once under src, in sentryInit.ts", () => {
-      expect(callSites([webSrc], [".ts", ".tsx"], /\bSentry\.init\(/)).toEqual([
+      expect(callSites([webSrc], [TS_EXT, TSX_EXT], /\bSentry\.init\(/)).toEqual([
         "tday-web/src/lib/observability/sentryInit.ts",
       ]);
     });
@@ -274,10 +296,10 @@ describe("sentry starts from exactly one consent-gated file per platform", () =>
     it("has no other way to initialise the SDK", () => {
       // `import { init } from "@sentry/react"` starts it without ever saying `Sentry.init(`.
       expect(
-        callSites([webSrc], [".ts", ".tsx"], /import\s*\{[^}]*\binit(?:AndBind)?\b[^}]*\}\s*from\s*["']@sentry\//),
+        callSites([webSrc], [TS_EXT, TSX_EXT], /import\s*\{[^}]*\binit(?:AndBind)?\b[^}]*\}\s*from\s*["']@sentry\//),
       ).toEqual([]);
       expect(
-        callSites([webSrc], [".ts", ".tsx"], /\bSentry\.initAndBind\(|\bnew\s+BrowserClient\(/),
+        callSites([webSrc], [TS_EXT, TSX_EXT], /\bSentry\.initAndBind\(|\bnew\s+BrowserClient\(/),
       ).toEqual([]);
     });
 
@@ -302,12 +324,43 @@ describe("sentry starts from exactly one consent-gated file per platform", () =>
       expect(between(content, "beforeSend:", "scrubWebEvent")).toContain("!deps.isGranted()");
       expect(content).toContain("predatesConsent(event, deps.consentAt())");
     });
+
+    it("asks the server for the instance answer before it starts anything", () => {
+      const init = withoutComments(readSource(webSentryInit));
+      const boot = between(init, "export function initSentryIfConsented", "return unsubscribe");
+      expect(boot).toContain("refreshInstanceTelemetry()");
+      // A change the admin makes in another browser reaches this page when it returns to view.
+      expect(boot).toContain("watchInstanceTelemetry()");
+
+      const consent = withoutComments(readSource(webConsent));
+      expect(consent).toContain('INSTANCE_TELEMETRY_URL = "/api/instance/telemetry"');
+      // The foreground re-read is a no-op in Local Mode: there is no server being talked to. And it
+      // only re-reads — an answer is the only thing that can open the gate.
+      const watcher = between(consent, "export function watchInstanceTelemetry", "addEventListener");
+      expect(watcher).toContain("isLocalMode()");
+      expect(watcher).toContain("refreshInstanceTelemetry()");
+      expect(watcher).not.toContain("applyInstanceTelemetry(");
+    });
+
+    it("has no per-user consent surface left", () => {
+      // One admin answer for the instance: no card, no browser switch, no browser store.
+      for (const removed of [
+        path.join(webSrc, "components", "privacy", "CrashReportsConsentGate.tsx"),
+        path.join(webSrc, "hooks", "useTelemetryConsent.ts"),
+        path.join(webSrc, LIB_DIR, "privacy", "telemetryConsent.ts"),
+      ]) {
+        expect(existsSync(removed), `${repoPath(removed)} should be gone`).toBe(false);
+      }
+      expect(
+        callSites([webSrc], [TS_EXT, TSX_EXT], /CrashReportsConsentGate|useTelemetryConsent/),
+      ).toEqual([]);
+    });
   });
 
   describe("android", () => {
     it("calls SentryAndroid.init once, in TelemetryBootstrap.kt", () => {
       expect(
-        callSites([ANDROID_SRC, ANDROID_DEBUG_SRC], [".kt", ".java"], /\b(?:SentryAndroid|Sentry)\.init\(/),
+        callSites([ANDROID_SRC, ANDROID_DEBUG_SRC], [KT_EXT, ".java"], /\b(?:SentryAndroid|Sentry)\.init\(/),
       ).toEqual([
         "android-compose/app/src/main/java/com/ohmz/tday/compose/core/observability/TelemetryBootstrap.kt",
       ]);
@@ -344,7 +397,7 @@ describe("sentry starts from exactly one consent-gated file per platform", () =>
 
   describe("iOS", () => {
     it("calls SentrySDK.start once, in SentryConfiguration.swift", () => {
-      expect(callSites(IOS_TARGET_DIRS, [".swift"], /\bSentrySDK\.start\(/)).toEqual([
+      expect(callSites(IOS_TARGET_DIRS, [SWIFT_EXT], /\bSentrySDK\.start\(/)).toEqual([
         "ios-swiftUI/Tday/Core/SentryConfiguration.swift",
       ]);
     });
@@ -366,7 +419,7 @@ describe("sentry starts from exactly one consent-gated file per platform", () =>
 
   describe("backend", () => {
     it("calls Sentry.init once, in BackendSentry.kt", () => {
-      expect(callSites([path.join(MONO, "tday-backend", "src", "main")], [".kt"], /\bSentry\.init\s*[({]/)).toEqual([
+      expect(callSites([path.join(MONO, BACKEND_DIR, SRC_DIR, MAIN_DIR)], [KT_EXT], /\bSentry\.init\s*[({]/)).toEqual([
         "tday-backend/src/main/kotlin/com/ohmz/tday/observability/BackendSentry.kt",
       ]);
     });
@@ -524,7 +577,7 @@ describe("sentry privacy guardrails", () => {
       expect(
         callSites(
           [webSrc],
-          [".ts", ".tsx"],
+          [TS_EXT, TSX_EXT],
           /\b(?:browserTracingIntegration|startBrowserTracing\w*|wrapCreateBrowserRouter\w*|reactRouterV\d\w*Instrumentation|browserProfilingIntegration)\b/,
         ),
       ).toEqual([]);
@@ -591,10 +644,10 @@ describe("sentry privacy guardrails", () => {
 
     it("no source file in any of the four trees contains one", () => {
       const offenders = [
-        ...listSources(webSrc, [".ts", ".tsx"]),
-        ...listSources(path.join(MONO, "tday-backend", "src", "main"), [".kt", ".xml"]),
-        ...listSources(ANDROID_SRC, [".kt", ".xml"]),
-        ...IOS_TARGET_DIRS.flatMap((dir) => listSources(dir, [".swift", ".plist"])),
+        ...listSources(webSrc, [TS_EXT, TSX_EXT]),
+        ...listSources(path.join(MONO, BACKEND_DIR, SRC_DIR, MAIN_DIR), [KT_EXT, ".xml"]),
+        ...listSources(ANDROID_SRC, [KT_EXT, ".xml"]),
+        ...IOS_TARGET_DIRS.flatMap((dir) => listSources(dir, [SWIFT_EXT, ".plist"])),
       ].filter((file) => SENTRY_DSN_PATTERN.test(readSource(file)));
       expect(offenders.map(repoPath)).toEqual([]);
     });
@@ -628,7 +681,7 @@ describe("sentry reports are failures only", () => {
       expect(
         callSites(
           [webSrc],
-          [".ts", ".tsx"],
+          [TS_EXT, TSX_EXT],
           /\b(?:browserSessionIntegration|replayIntegration|replayCanvasIntegration|feedbackIntegration|httpClientIntegration|captureConsoleIntegration|consoleLoggingIntegration|browserTracingIntegration)\b/,
         ),
       ).toEqual([]);
@@ -719,7 +772,7 @@ describe("sentry reports are failures only", () => {
       // SentryNavigationListener attaches the destination's arguments, which here are list ids
       // and list names.
       expect(
-        callSites([ANDROID_SRC, ANDROID_DEBUG_SRC], [".kt"], /\bSentryNavigationListener\b/),
+        callSites([ANDROID_SRC, ANDROID_DEBUG_SRC], [KT_EXT], /\bSentryNavigationListener\b/),
       ).toEqual([]);
       expect(readSource(androidGradle)).not.toContain("sentry-android-navigation");
       expect(readSource(androidTelemetry)).toContain("fun navigationTemplate(");
@@ -806,11 +859,11 @@ describe("sentry reports are failures only", () => {
     });
 
     it("no client has a trace sample rate setting left", () => {
-      expect(callSites([webSrc], [".ts", ".tsx"], /SENTRY_TRACES_SAMPLE_RATE/)).toEqual([]);
+      expect(callSites([webSrc], [TS_EXT, TSX_EXT], /SENTRY_TRACES_SAMPLE_RATE/)).toEqual([]);
       expect(
-        callSites([ANDROID_SRC, ANDROID_DEBUG_SRC], [".kt"], /SENTRY_TRACES_SAMPLE_RATE/),
+        callSites([ANDROID_SRC, ANDROID_DEBUG_SRC], [KT_EXT], /SENTRY_TRACES_SAMPLE_RATE/),
       ).toEqual([]);
-      expect(callSites(IOS_TARGET_DIRS, [".swift"], /SENTRY_TRACES_SAMPLE_RATE/)).toEqual([]);
+      expect(callSites(IOS_TARGET_DIRS, [SWIFT_EXT], /SENTRY_TRACES_SAMPLE_RATE/)).toEqual([]);
       for (const file of [androidGradle, iosInfoPlist, iosProject, iosPbxproj, webViteConfig]) {
         expect(readSource(file), `${repoPath(file)} must not carry a client trace rate`).not.toMatch(
           /SENTRY_TRACES_SAMPLE_RATE|sentryTracesSampleRate/,
@@ -821,17 +874,21 @@ describe("sentry reports are failures only", () => {
 });
 
 describe("the crash-report answer survives sign-out and clearing local data", () => {
-  // The answer is about the device, not the account: wiping it would put the consent card back in
-  // front of someone who said no, or quietly switch reports off for someone who said yes.
-  it("web lists both consent keys in PRESERVED_STORAGE_KEYS", () => {
+  // On mobile the answer is about the device, not the account: wiping it would put the consent card
+  // back in front of someone who said no, or quietly switch reports off for someone who said yes.
+  it("web keeps no per-browser crash-report answer to preserve, and cannot read the old keys", () => {
     const auth = readSource(webAuthProvider);
     const preserved = between(auth, "const PRESERVED_STORAGE_KEYS = [", "];");
-    expect(preserved).toContain("TELEMETRY_CONSENT_STORAGE_KEY");
-    expect(preserved).toContain("TELEMETRY_CONSENT_AT_STORAGE_KEY");
+    expect(preserved).not.toContain("TELEMETRY_CONSENT");
+    expect(preserved).not.toContain("telemetry");
 
+    // The answer is the server's now, so the browser has no storage path for it at all: a value an
+    // older build wrote under either key is never read. (Doc comments may still name them, which
+    // `callSites` strips.)
     const consent = readSource(webConsent);
-    expect(consent).toContain('TELEMETRY_CONSENT_STORAGE_KEY = "tday.telemetry.consent"');
-    expect(consent).toContain('TELEMETRY_CONSENT_AT_STORAGE_KEY = "tday.telemetry.consentAt"');
+    expect(consent).toContain('INSTANCE_TELEMETRY_URL = "/api/instance/telemetry"');
+    expect(consent).not.toMatch(/localStorage/);
+    expect(callSites([webSrc], [TS_EXT, TSX_EXT], /tday\.telemetry\.consent(?:At)?/)).toEqual([]);
   });
 
   it("web clears client data only through calls that pass the preserved list", () => {
@@ -841,7 +898,7 @@ describe("the crash-report answer survives sign-out and clearing local data", ()
     expect(auth.match(/preserveLocalStorageKeys:\s*PRESERVED_STORAGE_KEYS/g)).toHaveLength(calls.length);
     // No other caller, because a caller that forgets the list wipes the answer.
     expect(
-      callSites([webSrc], [".ts", ".tsx"], /(?<!function\s)\bclearClientUserData\(/).filter(
+      callSites([webSrc], [TS_EXT, TSX_EXT], /(?<!function\s)\bclearClientUserData\(/).filter(
         (site) => site !== repoPath(webAuthProvider),
       ),
     ).toEqual([]);
@@ -859,7 +916,7 @@ describe("the crash-report answer survives sign-out and clearing local data", ()
       );
     }
     expect(
-      callSites([ANDROID_SRC], [".kt"], /telemetry_consent_prefs/),
+      callSites([ANDROID_SRC], [KT_EXT], /telemetry_consent_prefs/),
     ).toEqual([repoPath(androidConsentStore)]);
   });
 
@@ -867,7 +924,7 @@ describe("the crash-report answer survives sign-out and clearing local data", ()
     const store = withoutComments(readSource(iosConsentStore));
     expect(store).toContain('consentKey = "telemetry.consent"');
     expect(store).toContain('consentedAtKey = "telemetry.consentAt"');
-    expect(callSites(IOS_TARGET_DIRS, [".swift"], /"telemetry\.consent(?:At)?"/)).toEqual([
+    expect(callSites(IOS_TARGET_DIRS, [SWIFT_EXT], /"telemetry\.consent(?:At)?"/)).toEqual([
       repoPath(iosConsentStore),
       repoPath(iosConsentStore),
     ]);
@@ -876,7 +933,7 @@ describe("the crash-report answer survives sign-out and clearing local data", ()
   it("iOS clear paths neither name the consent keys nor wipe UserDefaults wholesale", () => {
     const auth = withoutComments(readSource(iosAuthRepository));
     expect(auth).not.toMatch(/telemetry|TelemetryConsent/i);
-    expect(callSites(IOS_TARGET_DIRS, [".swift"], /removePersistentDomain|dictionaryRepresentation\(\)/)).toEqual(
+    expect(callSites(IOS_TARGET_DIRS, [SWIFT_EXT], /removePersistentDomain|dictionaryRepresentation\(\)/)).toEqual(
       [],
     );
   });
@@ -1023,7 +1080,7 @@ describe("no product analytics vendor SDKs", () => {
     const files = [
       backendGradle,
       androidGradle,
-      path.join(MONO, "ios-swiftUI", "Package.swift"),
+      path.join(MONO, IOS_DIR, "Package.swift"),
     ];
     for (const file of files.filter(existsSync)) {
       const content = readSource(file);
@@ -1036,15 +1093,15 @@ describe("no product analytics vendor SDKs", () => {
     // the copy compares itself to, not something to link.
     const files = [
       backendGradle,
-      path.join(MONO, "shared", "build.gradle.kts"),
-      path.join(MONO, "build.gradle.kts"),
+      path.join(MONO, "shared", BUILD_GRADLE),
+      path.join(MONO, BUILD_GRADLE),
       path.join(MONO, "settings.gradle.kts"),
-      path.join(MONO, "android-compose", "build.gradle.kts"),
-      path.join(MONO, "android-compose", "settings.gradle.kts"),
+      path.join(MONO, ANDROID_DIR, BUILD_GRADLE),
+      path.join(MONO, ANDROID_DIR, "settings.gradle.kts"),
       androidGradle,
       iosPackage,
       iosPackageResolved,
-      path.join(MONO, "ios-swiftUI", "TdayApp.xcodeproj", "project.xcworkspace", "xcshareddata", "swiftpm", "Package.resolved"),
+      path.join(MONO, IOS_DIR, "TdayApp.xcodeproj", "project.xcworkspace", "xcshareddata", "swiftpm", "Package.resolved"),
       iosProject,
       iosPbxproj,
     ];

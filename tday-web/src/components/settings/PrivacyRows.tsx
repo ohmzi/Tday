@@ -1,47 +1,21 @@
-import { Activity, Server } from "lucide-react";
+import { Check, Server, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { GuideHelpLink } from "@/features/guide/GuideHelpLink";
+import type { InstanceTelemetryResponse } from "@/features/serverTelemetry/query/get-instance-telemetry";
 import type { ServerTelemetryResponse } from "@/features/serverTelemetry/query/get-server-telemetry";
 import { useUpdateServerTelemetry } from "@/features/serverTelemetry/query/update-server-telemetry";
 import { useToast } from "@/hooks/use-toast";
-import { useTelemetryConsent } from "@/hooks/useTelemetryConsent";
-import { setTelemetryConsent } from "@/lib/privacy/telemetryConsent";
-import { RowIcon, SettingsSwitch } from "./SettingsControls";
+import { RowIcon, SettingsPill, SettingsSwitch } from "./SettingsControls";
 
 /**
- * This browser's crash and problem reports. Flipping it is the same act as answering the consent
- * card, so answering here first means the card never asks. Turning it off stops the SDK on the
- * spot, with no reload (see `sentryInit.ts`).
+ * The instance-wide error-report answer, as a control for the one person who may change it.
  *
- * The "?" sits on the row, not in a card heading as the other help links do: this card holds two
- * unrelated switches, and only this one has a guide topic.
- */
-export function CrashReportsRow() {
-  const { t } = useTranslation("settings");
-  const consent = useTelemetryConsent();
-  const granted = consent === "granted";
-
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex min-w-0 items-center gap-3.5">
-        <RowIcon icon={Activity} />
-        <p className="min-w-0 text-[1.05rem] font-black text-foreground">{t("crashReports.title")}</p>
-        <GuideHelpLink topic="crash-reports" label={t("crashReports.helpLabel")} />
-      </div>
-      <SettingsSwitch
-        checked={granted}
-        ariaLabel={t("crashReports.toggle")}
-        onClick={() => setTelemetryConsent(!granted)}
-      />
-    </div>
-  );
-}
-
-/**
- * The server's own error reports, for the admin of an instance that has a `SENTRY_DSN`. Web-only on
- * purpose: it configures the backend, which is not something a phone does. It is a different
- * switch from the one above — that one is about what this browser sends; this one is about what
- * the server sends — and its copy says so.
+ * It covers the whole server: this website for everyone using it, and the server's own error
+ * reports. Turning it off stops this browser's SDK on the spot, with no reload (see
+ * `sentryInit.ts`), because the browser reads the same answer.
+ *
+ * The "?" sits on the row, not in a card heading as the other help links do: only this row has a
+ * guide topic.
  */
 export function ServerTelemetryRow({ telemetry }: { telemetry: ServerTelemetryResponse }) {
   const { t } = useTranslation("settings");
@@ -56,7 +30,12 @@ export function ServerTelemetryRow({ telemetry }: { telemetry: ServerTelemetryRe
       <div className="flex min-w-0 items-center gap-3.5">
         <RowIcon icon={Server} />
         <div className="min-w-0">
-          <p className="text-[1.05rem] font-black text-foreground">{t("serverTelemetry.title")}</p>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="text-[1.05rem] font-black text-foreground">
+              {t("serverTelemetry.title")}
+            </p>
+            <GuideHelpLink topic="crash-reports" label={t("serverTelemetry.helpLabel")} />
+          </div>
           <p className="mt-0.5 text-sm font-extrabold text-muted-foreground">
             {t("serverTelemetry.description")}
           </p>
@@ -72,6 +51,38 @@ export function ServerTelemetryRow({ telemetry }: { telemetry: ServerTelemetryRe
               toast({ description: t("serverTelemetry.updateFailed"), variant: "destructive" }),
           })
         }
+      />
+    </div>
+  );
+}
+
+/**
+ * The same answer for someone who may not change it: the current state as information, never a
+ * switch. A control here would be a switch that does nothing — the server refuses anyone but an
+ * admin — so the row reports and stops.
+ */
+export function ServerTelemetryStateRow({ telemetry }: { telemetry: InstanceTelemetryResponse }) {
+  const { t } = useTranslation("settings");
+
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="flex min-w-0 items-center gap-3.5">
+        <RowIcon icon={Server} />
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="text-[1.05rem] font-black text-foreground">
+              {t("serverTelemetry.title")}
+            </p>
+            <GuideHelpLink topic="crash-reports" label={t("serverTelemetry.helpLabel")} />
+          </div>
+          <p className="mt-0.5 text-sm font-extrabold text-muted-foreground">
+            {t("serverTelemetry.stateDetail")}
+          </p>
+        </div>
+      </div>
+      <SettingsPill
+        icon={telemetry.enabled ? Check : X}
+        label={t(telemetry.enabled ? "serverTelemetry.stateOn" : "serverTelemetry.stateOff")}
       />
     </div>
   );

@@ -11,7 +11,7 @@ import {
   stopSentry,
   type WebSentryDeps,
 } from "@/lib/observability/sentryInit";
-import { setTelemetryConsent } from "@/lib/privacy/telemetryConsent";
+import { setInstanceAnswerForTests, stubInstanceTelemetryFetch } from "./support/instanceTelemetry";
 
 // Everything the lifecycle tests assert about "was the SDK started" is read off these two spies.
 // The real functions stay behind them for the scope helpers, so the teardown checks run against
@@ -49,10 +49,6 @@ function fakeDeps(overrides: Partial<WebSentryDeps> = {}): WebSentryDeps {
     makeTransport: () => ({ send: vi.fn(() => Promise.resolve({})), flush: vi.fn(() => Promise.resolve(true)) }) as Transport,
     ...overrides,
   };
-}
-
-function syncFromStorage() {
-  window.dispatchEvent(new StorageEvent("storage", { key: null }));
 }
 
 describe("buildWebSentryOptions", () => {
@@ -259,7 +255,7 @@ describe("initSentryIfConsented", () => {
   beforeEach(() => {
     vi.stubEnv("VITE_SENTRY_DSN", DSN);
     window.localStorage.clear();
-    syncFromStorage();
+    setInstanceAnswerForTests(false);
     vi.mocked(Sentry.init).mockClear();
     vi.mocked(Sentry.close).mockClear();
   });
@@ -269,34 +265,67 @@ describe("initSentryIfConsented", () => {
     unsubscribe = undefined;
     stopSentry();
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
-  it("starts nothing while the question is unanswered", () => {
-    unsubscribe = initSentryIfConsented();
+  it("asks the server and starts nothing at all until the answer arrives", async () => {
+    let answer: (value: unknown) => void = () => {};
+    const pending = new Promise((resolve) => {
+      answer = resolve;
+    });
+    const fetchMock = vi.fn(() => pending);
+    vi.stubGlobal("fetch", fetchMock);
 
+    unsubscribe = initSentryIfConsented();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/instance/telemetry",
+      expect.objectContaining({ credentials: "same-origin", cache: "no-store" }),
+    );
     expect(Sentry.init).not.toHaveBeenCalled();
-  });
 
-  it("starts nothing for a browser that said no", () => {
-    setTelemetryConsent(false);
-
-    unsubscribe = initSentryIfConsented();
-
-    expect(Sentry.init).not.toHaveBeenCalled();
-  });
-
-  it("starts once for a browser that said yes, with this build's DSN", () => {
-    setTelemetryConsent(true);
-
-    unsubscribe = initSentryIfConsented();
-
-    expect(Sentry.init).toHaveBeenCalledTimes(1);
+    answer({ ok: true, json: () => Promise.resolve({ enabled: true, updatedAt: null }) });
+    await vi.waitFor(() => expect(Sentry.init).toHaveBeenCalledTimes(1));
     expect(vi.mocked(Sentry.init).mock.calls[0][0]).toMatchObject({ dsn: DSN });
+  });
+
+  it("starts nothing when the server answers that reports are off", async () => {
+    stubInstanceTelemetryFetch({ enabled: false, updatedAt: "2026-09-01T00:00:00.000Z" });
+
+    unsubscribe = initSentryIfConsented();
+    await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+
+    expect(Sentry.init).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a failed request", () => Promise.reject(new Error("offline"))],
+    ["an error status", () => Promise.resolve({ ok: false, json: () => Promise.resolve({}) })],
+    ["a body that is not an answer", () => Promise.resolve({ ok: true, json: () => Promise.resolve({}) })],
+  ])("keeps reports off when the read ends in %s", async (_label, response) => {
+    const fetchMock = vi.fn(response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    unsubscribe = initSentryIfConsented();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await Promise.resolve();
+
+    expect(Sentry.init).not.toHaveBeenCalled();
+  });
+
+  it("ignores a stale per-browser answer from an older build", async () => {
+    window.localStorage.setItem("tday.telemetry.consent", "granted");
+    window.localStorage.setItem("tday.telemetry.consentAt", "1759320000000");
+    stubInstanceTelemetryFetch({ enabled: false, updatedAt: null });
+
+    unsubscribe = initSentryIfConsented();
+    await vi.waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+
+    expect(Sentry.init).not.toHaveBeenCalled();
   });
 
   it("starts nothing when the build carries no DSN, even after a yes", () => {
     vi.stubEnv("VITE_SENTRY_DSN", "");
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
 
     unsubscribe = initSentryIfConsented();
     startSentry();
@@ -304,40 +333,40 @@ describe("initSentryIfConsented", () => {
     expect(Sentry.init).not.toHaveBeenCalled();
   });
 
-  it("starts when the answer turns to yes after launch", () => {
+  it("starts when the admin turns reports on after launch", () => {
     unsubscribe = initSentryIfConsented();
     expect(Sentry.init).not.toHaveBeenCalled();
 
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
 
     expect(Sentry.init).toHaveBeenCalledTimes(1);
   });
 
   it("does not initialise a second time while it is already running", () => {
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
     unsubscribe = initSentryIfConsented();
 
     startSentry();
     startSentry();
-    syncFromStorage();
+    setInstanceAnswerForTests(true);
 
     expect(Sentry.init).toHaveBeenCalledTimes(1);
   });
 
-  it("refuses to start without consent even when asked directly", () => {
+  it("refuses to start without the server's yes even when asked directly", () => {
     startSentry();
 
     expect(Sentry.init).not.toHaveBeenCalled();
   });
 
-  it("closes the SDK and empties the scopes the moment the answer turns to no", () => {
-    setTelemetryConsent(true);
+  it("closes the SDK and empties the scopes the moment the admin turns reports off", () => {
+    setInstanceAnswerForTests(true);
     unsubscribe = initSentryIfConsented();
     Sentry.getIsolationScope().addBreadcrumb({ category: "tday", message: "sync.replay" });
     Sentry.getCurrentScope().addBreadcrumb({ category: "tday", message: "sync.replay" });
     Sentry.getGlobalScope().setUser({ id: "u1" });
 
-    setTelemetryConsent(false);
+    setInstanceAnswerForTests(false);
 
     expect(Sentry.close).toHaveBeenCalledTimes(1);
     expect(Sentry.getIsolationScope().getLastBreadcrumb()).toBeUndefined();
@@ -346,10 +375,10 @@ describe("initSentryIfConsented", () => {
   });
 
   it("does not flush on the way out, so nothing queued is delivered after a no", () => {
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
     unsubscribe = initSentryIfConsented();
 
-    setTelemetryConsent(false);
+    setInstanceAnswerForTests(false);
 
     // A flush would be asked to wait for queued events. Closing with a short fuse leaves the
     // transport gate, already closed, to drop whatever is left.
@@ -357,33 +386,22 @@ describe("initSentryIfConsented", () => {
     expect(timeout).toBeLessThanOrEqual(250);
   });
 
-  it("starts a fresh client when the answer turns back to yes", () => {
-    setTelemetryConsent(true);
+  it("starts a fresh client when reports are turned back on", () => {
+    setInstanceAnswerForTests(true);
     unsubscribe = initSentryIfConsented();
-    setTelemetryConsent(false);
+    setInstanceAnswerForTests(false);
 
-    setTelemetryConsent(true);
+    setInstanceAnswerForTests(true);
 
     expect(Sentry.init).toHaveBeenCalledTimes(2);
     expect(Sentry.close).toHaveBeenCalledTimes(1);
   });
 
-  it("does nothing extra when it is told no and was never running", () => {
+  it("does nothing extra when told no and was never running", () => {
     unsubscribe = initSentryIfConsented();
 
-    setTelemetryConsent(false);
+    setInstanceAnswerForTests(false);
 
     expect(Sentry.close).not.toHaveBeenCalled();
-  });
-
-  it("follows another tab that withdraws the answer", () => {
-    setTelemetryConsent(true);
-    unsubscribe = initSentryIfConsented();
-
-    window.localStorage.setItem("tday.telemetry.consent", "denied");
-    window.localStorage.removeItem("tday.telemetry.consentAt");
-    window.dispatchEvent(new StorageEvent("storage", { key: "tday.telemetry.consent" }));
-
-    expect(Sentry.close).toHaveBeenCalledTimes(1);
   });
 });

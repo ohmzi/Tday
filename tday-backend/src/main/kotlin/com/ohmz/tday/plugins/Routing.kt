@@ -53,6 +53,7 @@ fun Application.configureRouting() {
             timezoneRoutes()
             appSettingsRoutes()
             adminRoutes()
+            instanceTelemetryRoutes()
             notificationRoutes()
             mobileProbeRoutes(config)
             integrationRoutes()

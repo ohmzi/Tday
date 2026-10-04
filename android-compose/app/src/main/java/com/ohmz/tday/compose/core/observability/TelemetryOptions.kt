@@ -1,6 +1,5 @@
 package com.ohmz.tday.compose.core.observability
 
-import com.ohmz.tday.compose.core.testcrash.TestCrash // TEST-CRASH
 import android.content.Context
 import com.ohmz.tday.compose.BuildConfig
 import io.sentry.IConnectionStatusProvider.ConnectionStatus
@@ -171,9 +170,7 @@ object TelemetryOptions {
             when {
                 !gate.isOpen -> null
                 predatesConsent(event.timestamp.time, grantedAtMs) -> null
-                // TEST-CRASH: the harness gives each trigger a stable issue of its own. This line
-                // and the import above it go with the rest of the harness.
-                else -> TelemetryScrubber.scrub(event, eventTags())?.let(TestCrash::applyTestCrashFingerprint)
+                else -> TelemetryScrubber.scrub(event, eventTags())
             }
         }
         options.setBeforeBreadcrumb { breadcrumb, _ ->

@@ -48,17 +48,18 @@ class TelemetryConsentGateTest {
 /**
  * The wizard's own version of the same question. The workspace is absent from these cases on
  * purpose: whether the workspace opened without a gate in front of it is the caller's half of the
- * decision (`privacyStepDue` in `TdayApp`), and what is pinned here is the half about the device.
+ * decision (`privacyStepDue` in `TdayApp`), and what is pinned here is the half about the device and
+ * the flow it is in.
  */
 class TelemetryWizardPrivacyStepTest {
     private fun offers(
         available: Boolean = true,
-        state: TelemetryConsentState = TelemetryConsentState.UNANSWERED,
+        answeredInConnectFlow: Boolean = false,
         wizardWasOnScreen: Boolean = true,
-    ) = shouldPresentWizardPrivacyStep(available, state, wizardWasOnScreen)
+    ) = shouldPresentWizardPrivacyStep(available, answeredInConnectFlow, wizardWasOnScreen)
 
     @Test
-    fun `offers the step to a wizard that was on screen, on a device nobody has asked yet`() {
+    fun `offers the step to a wizard that was on screen for a flow nobody has answered`() {
         assertEquals(true, offers())
     }
 
@@ -68,9 +69,16 @@ class TelemetryWizardPrivacyStepTest {
     }
 
     @Test
-    fun `never offers it again once the question has been answered, either way`() {
-        assertEquals(false, offers(state = TelemetryConsentState.GRANTED))
-        assertEquals(false, offers(state = TelemetryConsentState.DENIED))
+    fun `stops offering it once this flow has been answered, either way`() {
+        assertEquals(false, offers(answeredInConnectFlow = true))
+    }
+
+    @Test
+    fun `offers it again on a new flow, because the stored answer is not an input here`() {
+        // Every connect flow starts with `answeredInConnectFlow` false, whatever the device answered
+        // before: that is what makes a sign-in owe the question again. The stored answer is not part
+        // of this decision at all — it is what the SDK obeys, and it stays untouched.
+        assertEquals(true, offers(answeredInConnectFlow = false))
     }
 
     @Test

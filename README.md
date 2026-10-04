@@ -26,7 +26,8 @@ T'Day is a personal planner that stays out of your way. It shows what's due toda
 with no date a place of their own, and doesn't try to turn your to-do list into a game.
 
 - **Private.** Your tasks live on your device or on a server you run. T'Day has no cloud service
-  of its own, and it collects no analytics. Crash reports are optional and off until you say yes.
+  of its own, and it collects no analytics. Crash reports are optional and off by default: the apps
+  ask you, and on the web and the server an admin decides once for the whole instance.
 - **Works offline.** Local Mode needs no server and no sign-up. In Server Mode, changes save on
   the device first and sync when you're back online.
 - **Native apps.** A Jetpack Compose app for Android, a SwiftUI app for iOS and Apple Watch, and

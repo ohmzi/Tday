@@ -49,7 +49,7 @@
   },
   "privacy": {
     "title": "Informativa sulla privacy",
-    "lastUpdated": "Ultimo aggiornamento: 2 ottobre 2026",
+    "lastUpdated": "Ultimo aggiornamento: 4 ottobre 2026",
     "intro": "T'Day (“noi”, “nostro” o “ci”) è un'app di produttività personale. Questa Informativa sulla privacy spiega quali dati raccogliamo e come li usiamo.",
     "sections": {
       "1": {
@@ -76,7 +76,7 @@
       },
       "4": {
         "title": "Condivisione dei dati",
-        "content": "Condividiamo i dati solo con i fornitori di servizi necessari per gestire T'Day e, solo se scegli di attivarlo, con Sentry per le segnalazioni di crash e problemi. Non vendiamo i tuoi dati personali."
+        "content": "Condividiamo i dati solo con i fornitori di servizi necessari per gestire T'Day e, solo con il consenso, con Sentry per le segnalazioni di crash e problemi. Non vendiamo i tuoi dati personali."
       },
       "5": {
         "title": "Cookie",
@@ -97,7 +97,7 @@
       "9": {
         "title": "Segnalazioni di crash e problemi",
         "content": [
-          "Facoltativo e disattivato per impostazione predefinita. Non viene inviato nulla finché non lo attivi, e anche allora solo nel momento in cui qualcosa non funziona",
+          "Disattivato per impostazione predefinita. Nell'app web decide un amministratore per tutto il server; sul dispositivo decidi tu. Le segnalazioni vengono inviate solo nel momento in cui qualcosa non funziona",
           "Una segnalazione contiene la versione dell'app, il modello del dispositivo, il sistema operativo, l'errore e il punto in cui si è verificato. Non contiene mai il tuo nome, l'account, l'indirizzo IP, la posizione, l'indirizzo del server né alcun contenuto di attività o elenchi",
           "Le segnalazioni arrivano a Sentry, vengono conservate per 30 giorni e sono usate solo per correggere i bug, mai per analisi d'uso o pubblicità. Sentry vede l'indirizzo di rete di qualsiasi connessione ma è impostato per non memorizzarlo"
         ]
@@ -646,31 +646,26 @@
     "privacy": {
       "title": "Privacy"
     },
-    "crashReports": {
-      "title": "Segnalazioni di crash e problemi",
-      "toggle": "Invia segnalazioni di crash e problemi quando qualcosa non funziona",
-      "helpLabel": "Informazioni sulle segnalazioni di crash e problemi"
-    },
     "serverTelemetry": {
-      "title": "Segnalazioni di errori del server",
-      "toggle": "Invia le segnalazioni di errore di questo server al Sentry del suo operatore",
-      "description": "Invia gli errori di questo stesso server, più i tempi di un piccolo campione di richieste, al progetto Sentry impostato in SENTRY_DSN. Non include mai attività, elenchi o dettagli dell'account.",
+      "title": "Segnalazioni di errore del server",
+      "toggle": "Invia segnalazioni di errore per questo server e per il web",
+      "description": "Invia gli errori di questo server, più i tempi di un piccolo campione di richieste, al progetto Sentry indicato in SENTRY_DSN. L'app web obbedisce allo stesso interruttore. Non include mai attività, elenchi o dati dell'account.",
+      "helpLabel": "Informazioni sulle segnalazioni di errore",
+      "stateOn": "Attivo",
+      "stateOff": "Disattivo",
+      "stateDetail": "Lo decide un amministratore per tutto il server.",
       "updateFailed": "Impossibile aggiornare l'impostazione del server. Riprova."
     }
   },
   "crashReports": {
     "card": {
-      "title": "Aiutaci a risolvere i crash?",
-      "intro": "T'Day può inviare una breve segnalazione tecnica solo quando qualcosa va storto, ad esempio un crash, un blocco o un errore imprevisto. Aiuta lo sviluppatore a riprodurre il problema su un dispositivo simile.",
-      "sentLabel": "Cosa è incluso",
-      "sent": "Versione dell'app, modello del dispositivo, versione del sistema operativo, cosa non ha funzionato e dove.",
-      "neverSentLabel": "Mai incluso",
-      "neverSent": "Il tuo nome o account, l'indirizzo IP, la posizione, l'indirizzo del server o qualsiasi contenuto di attività o elenchi.",
-      "footnote": "Disattivato per impostazione predefinita. Puoi cambiarlo in qualsiasi momento in Impostazioni → Privacy.",
-      "share": "Condividi segnalazioni",
-      "notNow": "Non ora",
-      "readFaq": "Leggi le FAQ complete",
-      "webNote": "Nell'app web vengono segnalati solo gli errori imprevisti e il tuo browser comunica inoltre a Sentry da quale sito web proviene una segnalazione."
+      "title": "Inviare segnalazioni di errore?",
+      "intro": "Se qualcosa si rompe, T'Day può inviare un breve rapporto tecnico per aiutare a risolverlo. Una sola risposta vale per tutto questo server e per chi lo usa.",
+      "neverSent": "Mai inviato: nomi, account o contenuti di attività ed elenchi.",
+      "share": "Invia segnalazioni",
+      "notNow": "Non inviare",
+      "saveFailed": "Impossibile salvare. Riprova.",
+      "readFaq": "Leggi tutte le FAQ"
     }
   },
   "summary": {
@@ -1078,17 +1073,17 @@
       },
       "crash-reports": {
         "title": "Segnalazioni di crash e problemi",
-        "summary": "Facoltative, disattivate per impostazione predefinita. Inviate solo quando qualcosa non funziona.",
+        "summary": "Disattivate per impostazione predefinita. Chi decide dipende dalla piattaforma.",
         "keywords": "crash, arresto anomalo, errore, errori, segnalazione, segnalazioni, report, problemi, bug, privacy, diagnostica, telemetria, blocco, memoria, statistiche, analisi, sentry, anr, error, diagnostics, telemetry, hang, memory, analytics",
-        "body": "Le segnalazioni di crash e problemi sono facoltative e disattivate per impostazione predefinita. Se le attivi, T'Day invia una breve segnalazione tecnica solo nel momento in cui qualcosa non funziona: un crash, un blocco, un errore imprevisto o la memoria esaurita. Funziona come Crashlytics: serve a correggere i bug, non a misurare come usi l'app. Non c'è alcuna analisi d'uso, nessun tracciamento delle sessioni e nessun monitoraggio delle prestazioni sul tuo dispositivo mentre tutto funziona normalmente.",
+        "body": "Le segnalazioni di crash e problemi sono facoltative e disattivate per impostazione predefinita. Chi decide cambia da piattaforma a piattaforma: nell'app web una sola risposta di un amministratore vale per tutto il server — il sito, gli errori del server stesso e chiunque lo usi — e nessun singolo utente viene interpellato. Su Android e iOS ogni persona viene interpellata nel flusso di accesso, quindi la risposta è per dispositivo e la domanda torna a ogni accesso. Funziona come Crashlytics: serve a correggere i bug, non a misurare come usi l'app. Mentre tutto funziona normalmente non c'è alcuna analisi d'uso, nessun tracciamento delle sessioni e nessun monitoraggio delle prestazioni sul tuo dispositivo.",
         "body2": "Una segnalazione contiene la versione dell'app, il modello del tuo dispositivo e la versione del sistema operativo (o il browser e la sua versione), l'errore e il punto del codice in cui si è verificato, alcuni passaggi etichettati che lo precedono, i nomi delle schermate o dei percorsi API senza alcun ID, i codici di stato e, su dispositivo mobile, le condizioni approssimative del dispositivo, come memoria libera, livello della batteria e se eri online. Include anche la differenza del tuo fuso orario (ad esempio UTC+2) e la lingua, perché le date sono centrali in un'app di pianificazione delle attività.",
         "body3": "Il report non contiene mai: il tuo nome, nome utente, email o qualsiasi dato dell'account; il tuo indirizzo IP o la tua posizione; l'indirizzo del tuo server; titoli e contenuti di attività, elenchi o note; il contenuto del tuo database; password, cookie o token; schermate o registrazioni. I messaggi di errore vengono ripuliti da indirizzi, identificativi e testo tra virgolette sul tuo dispositivo prima di essere inviati, nel miglior modo possibile. Le segnalazioni non contengono alcun ID utente, quindi non possono essere ricondotte a te né eliminate per singola persona.",
-        "body4": "Le segnalazioni vengono inviate solo dopo che hai scelto di attivarle e solo quando si verifica un errore. Se qualcosa non funziona mentre l'impostazione è disattivata, nulla viene salvato né messo in coda, e attivarla in seguito non invia gli errori precedenti. Cosa conta come errore dipende dalla piattaforma: Android segnala crash, blocchi e crash per memoria esaurita; iOS segnala crash, blocchi e il sistema che chiude l'app perché usa troppa memoria; l'app web segnala solo errori imprevisti. T'Day non rileva le perdite di memoria.",
-        "body5": "Le segnalazioni arrivano al manutentore di T'Day tramite Sentry, un servizio di segnalazione dei crash. Vengono conservate per 30 giorni e usate solo per correggere i bug, mai vendute né condivise a fini pubblicitari. Vengono inviate direttamente a Sentry, non tramite il tuo server. Sentry vede l'indirizzo di rete di qualsiasi connessione, come ogni servizio online, ma è impostato per non memorizzarlo, e l'app web comunica inoltre a Sentry da quale sito web proviene la segnalazione. Se gestisci un tuo server, questo può inviare separatamente le proprie segnalazioni di errore, più i tempi di un piccolo campione di richieste, al Sentry del suo operatore, quando l'operatore lo attiva. Questo non include mai le tue attività. Le build senza un endpoint di segnalazione, come quelle che compili tu stesso, non mostrano questa impostazione.",
+        "body4": "Le segnalazioni vengono inviate solo quando qualcosa non funziona, e solo se sono attive per quella piattaforma: nell'app web, dopo che un amministratore le attiva per il server; sul dispositivo, dopo che hai accettato tu. Se qualcosa non funziona mentre sono disattivate, nulla viene salvato né messo in coda, e attivarle in seguito non invia gli errori precedenti. Cosa conta come errore dipende dalla piattaforma: Android segnala crash, blocchi e crash per memoria esaurita; iOS segnala crash, blocchi e il sistema che chiude l'app perché usa troppa memoria; l'app web segnala solo errori imprevisti. T'Day non rileva le perdite di memoria.",
+        "body5": "Le segnalazioni arrivano al manutentore di T'Day tramite Sentry, un servizio di segnalazione dei crash. Vengono conservate per 30 giorni e usate solo per correggere i bug, mai vendute né condivise a fini pubblicitari. Vengono inviate direttamente a Sentry, non tramite il tuo server. Sentry vede l'indirizzo di rete di qualsiasi connessione, come ogni servizio online, ma è impostato per non memorizzarlo, e l'app web comunica inoltre a Sentry da quale sito web proviene la segnalazione. Se gestisci un tuo server, la stessa risposta dell'amministratore copre anche le sue segnalazioni di errore, più i tempi di un piccolo campione di richieste; le tue attività non sono mai incluse. Le build senza un endpoint di segnalazione, come quelle che compili tu stesso, non mostrano questa impostazione.",
         "step0": "Apri Impostazioni.",
-        "step1": "Apri Privacy e disattiva «Segnalazioni di crash e problemi».",
+        "step1": "Nell'app web un amministratore disattiva «Segnalazioni di errore del server» in Privacy; sul dispositivo disattivi tu «Segnalazioni di crash e problemi».",
         "step2": "Le segnalazioni si interrompono subito e tutto ciò che era in attesa di essere inviato viene eliminato.",
-        "tip": "Scegliere «Non ora» non costa nulla. Puoi attivare le segnalazioni in qualsiasi momento in Impostazioni → Privacy. Dettagli tecnici: docs/TELEMETRY.md nel repository di T'Day."
+        "tip": "Dire di no non costa nulla. La risposta si può cambiare in qualsiasi momento in Impostazioni → Privacy — dal web un amministratore, sul dispositivo tu. Dettagli tecnici: docs/TELEMETRY.md nel repository di T'Day."
       },
       "in-app-update": {
         "title": "Aggiornamenti nell'app",
