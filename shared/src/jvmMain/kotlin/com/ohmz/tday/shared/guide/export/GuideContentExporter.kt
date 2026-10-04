@@ -296,9 +296,9 @@ object GuideContentExporter {
         // Undated ("Anytime") vocabulary — deliberately shares nothing with the due/day keys
         // above, so a floater summary cannot reach a sentence that says "due".
         "floaterClear", "floaterPileOne", "floaterPileFew", "floaterPileSome", "floaterPileMany",
-        "floaterPinnedOne", "floaterPinnedMany", "floaterPriorityOne", "floaterPriorityMany",
-        "floaterMediumOne", "floaterMediumMany",
-        "floaterRestingOne", "floaterRestingMany", "floaterRestingAll",
+        "floaterStartWith", "floaterPinnedOne", "floaterPinnedMany", "floaterPriorityOne",
+        "floaterPriorityMany", "floaterMediumOne", "floaterMediumMany",
+        "floaterRestingOne", "floaterRestingMany", "floaterRestingAll", "floaterRestingAllOne",
     )
 
     private data class SummaryBundleData(

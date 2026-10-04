@@ -34,6 +34,16 @@ internal enum class FloaterNote {
     /** Weaker than [PRIORITY_ONE]/[PRIORITY_MANY]: named only when nothing High is present. */
     MEDIUM_ONE,
     MEDIUM_MANY,
+
+    /**
+     * Nothing else is worth saying, so point at the row the list itself puts first.
+     *
+     * The only note that is chosen for what is ABSENT: a pile with no pin, no High and no
+     * dormancy used to be described and never directed — "A handful of undated things are
+     * waiting here." and no sense of where to start. Falls to [NONE] for a single-row pile,
+     * where naming the only task is an echo rather than a summary.
+     */
+    START_WITH,
 }
 
 /**
@@ -106,11 +116,22 @@ internal object FloaterSummaryPlanner {
             else -> FloaterNote.NONE
         }
 
+        // Nothing stood out, so point at the row the list itself puts first — the same nudge
+        // the dated path opens with ("Start with X."). Only for a pile bigger than one row:
+        // naming the sole task back to the reader is an echo, not a summary. The claim is
+        // only "this is the first row", which the sort above makes true by construction —
+        // unlike a "waited longest" ranking, a rename cannot falsify it.
+        val chosen = if (note == FloaterNote.NONE && tasks.size > 1) {
+            FloaterNote.START_WITH
+        } else {
+            note
+        }
+
         // Naming the only row on screen is not a summary, it is an echo. A single-task pile
         // keeps the notes that COUNT something (dormancy) and drops the ones that point at a
         // task, because with one task there is nothing to point away from.
         val single = tasks.size == 1
-        val noteTitle = when (note) {
+        val noteTitle = when (chosen) {
             FloaterNote.PINNED_ONE, FloaterNote.PINNED_MANY ->
                 ranked.first { it.pinned }.title
 
@@ -119,6 +140,8 @@ internal object FloaterSummaryPlanner {
 
             FloaterNote.MEDIUM_ONE, FloaterNote.MEDIUM_MANY ->
                 ranked.first { priorityRankOf(it.priority) == MEDIUM_PRIORITY_RANK }.title
+
+            FloaterNote.START_WITH -> ranked.first().title
 
             // The resting notes deliberately name nobody: `updatedAtEpochMs` is a last-write
             // clock, so "this one has waited longest" would be a claim about creation time that
@@ -129,7 +152,7 @@ internal object FloaterSummaryPlanner {
         val naming = noteTitle != null
         return FloaterSummaryPlan(
             band = bandFor(tasks.size),
-            note = if (single && naming) FloaterNote.NONE else note,
+            note = if (single && naming) FloaterNote.NONE else chosen,
             noteTitle = if (single && naming) null else noteTitle,
         )
     }

@@ -252,11 +252,16 @@ object SummaryEngine {
         )
         val noteKey = when (plan.note) {
             FloaterNote.NONE -> null
+            FloaterNote.START_WITH -> "floaterStartWith"
             FloaterNote.PINNED_ONE -> "floaterPinnedOne"
             FloaterNote.PINNED_MANY -> "floaterPinnedMany"
             FloaterNote.RESTING_ONE -> "floaterRestingOne"
             FloaterNote.RESTING_MANY -> "floaterRestingMany"
-            FloaterNote.RESTING_ALL -> "floaterRestingAll"
+            // "Nothing here has been touched in months" is a sentence about a pile; said of
+            // the one row on screen it reads as "this screen is empty", which is the opposite
+            // of the line it follows. The singular says the same thing about the one task.
+            FloaterNote.RESTING_ALL ->
+                if (plan.band == FloaterPileBand.ONE) "floaterRestingAllOne" else "floaterRestingAll"
             FloaterNote.PRIORITY_ONE -> "floaterPriorityOne"
             FloaterNote.PRIORITY_MANY -> "floaterPriorityMany"
             FloaterNote.MEDIUM_ONE -> "floaterMediumOne"

@@ -37,7 +37,12 @@ export type FloaterNote =
   | "priorityOne"
   | "priorityMany"
   | "mediumOne"
-  | "mediumMany";
+  | "mediumMany"
+  /**
+   * Nothing else worth saying, so point at the row the list itself puts first. The only note
+   * chosen for what is ABSENT; falls to "none" for a single-row pile.
+   */
+  | "startWith";
 
 export type FloaterSummaryPlan = {
   band: FloaterPileBand;
@@ -110,15 +115,24 @@ export function planFloaterSummary(
   else if (medium === 1) note = "mediumOne";
   else if (medium > 1) note = "mediumMany";
 
+  // Nothing stood out, so point at the row the list itself puts first — the same nudge the
+  // dated path opens with. Only for a pile bigger than one row: naming the sole task back to
+  // the reader is an echo, not a summary. The claim is only "this is the first row", which the
+  // sort above makes true by construction.
+  const chosen: FloaterNote =
+    note === "none" && tasks.length > 1 ? "startWith" : note;
+
   // The resting notes name nobody: updatedAt is a last-write clock, so "this one has waited
   // longest" is a claim about creation time that a rename silently falsifies.
   let noteTitle: string | null = null;
-  if (note === "pinnedOne" || note === "pinnedMany") {
+  if (chosen === "pinnedOne" || chosen === "pinnedMany") {
     noteTitle = ranked.find((task) => task.pinned)?.title ?? null;
-  } else if (note === "priorityOne" || note === "priorityMany") {
+  } else if (chosen === "priorityOne" || chosen === "priorityMany") {
     noteTitle = ranked.find((task) => isHighPriorityFloater(task.priority))?.title ?? null;
-  } else if (note === "mediumOne" || note === "mediumMany") {
+  } else if (chosen === "mediumOne" || chosen === "mediumMany") {
     noteTitle = ranked.find((task) => isMediumPriorityFloater(task.priority))?.title ?? null;
+  } else if (chosen === "startWith") {
+    noteTitle = ranked[0]?.title ?? null;
   }
 
   // Naming the only row on screen is an echo, not a summary. A single-task pile keeps the notes
@@ -127,7 +141,7 @@ export function planFloaterSummary(
   const naming = noteTitle !== null;
   return {
     band: floaterPileBand(tasks.length),
-    note: single && naming ? "none" : note,
+    note: single && naming ? "none" : chosen,
     noteTitle: single && naming ? null : noteTitle,
   };
 }
@@ -140,6 +154,7 @@ const PILE_KEYS: Record<FloaterPileBand, string> = {
 };
 
 const NOTE_KEYS: Record<Exclude<FloaterNote, "none">, string> = {
+  startWith: "floaterStartWith",
   pinnedOne: "floaterPinnedOne",
   pinnedMany: "floaterPinnedMany",
   restingOne: "floaterRestingOne",
@@ -169,7 +184,13 @@ export function compactSummaryTitle(title: string, t: SummaryTranslate): string 
 export function renderFloaterSummary(plan: FloaterSummaryPlan, t: SummaryTranslate): string {
   const pile = t(PILE_KEYS[plan.band]);
   if (plan.note === "none") return pile;
-  const note = t(NOTE_KEYS[plan.note], {
+  // "Nothing here has been touched in months" is a sentence about a pile; said of the one row
+  // on screen it reads as "this screen is empty", the opposite of the line it follows.
+  const noteKey =
+    plan.note === "restingAll" && plan.band === "one"
+      ? "floaterRestingAllOne"
+      : NOTE_KEYS[plan.note];
+  const note = t(noteKey, {
     title: compactSummaryTitle(plan.noteTitle ?? "", t),
   });
   // Chinese and Japanese set their own full stop with the space built in; an ASCII one leaves a
