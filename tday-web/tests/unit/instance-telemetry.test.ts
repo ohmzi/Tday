@@ -26,9 +26,14 @@ import { setAppMode } from "@/lib/local/appMode";
 
 const ANSWERED_AT = "2026-10-01T12:00:00.000Z";
 
+/** The browser globals and events these tests fake more than once. */
+const FETCH = "fetch";
+const VISIBLE = "visible";
+const VISIBILITY_CHANGE = "visibilitychange";
+
 function stubFetch(response: unknown) {
   const fetchMock = vi.fn(() => Promise.resolve(response));
-  vi.stubGlobal("fetch", fetchMock);
+  vi.stubGlobal(FETCH, fetchMock);
   return fetchMock;
 }
 
@@ -163,7 +168,7 @@ describe("refreshInstanceTelemetry", () => {
     ["the body is not an answer", () => Promise.resolve({ ok: true, json: () => Promise.resolve({}) })],
   ])("leaves the answer off when %s", async (_label, response) => {
     window.localStorage.setItem("tday.telemetry.consent", "granted");
-    vi.stubGlobal("fetch", vi.fn(response));
+    vi.stubGlobal(FETCH, vi.fn(response));
 
     await refreshInstanceTelemetry();
 
@@ -173,7 +178,7 @@ describe("refreshInstanceTelemetry", () => {
 
   it("does not take an answer away when a later read fails", async () => {
     applyInstanceTelemetry(answerFrom(true, ANSWERED_AT));
-    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("offline"))));
+    vi.stubGlobal(FETCH, vi.fn(() => Promise.reject(new Error("offline"))));
 
     await refreshInstanceTelemetry();
 
@@ -195,7 +200,7 @@ describe("watchInstanceTelemetry", () => {
   afterEach(() => {
     unwatch?.();
     unwatch = undefined;
-    setVisibility("visible");
+    setVisibility(VISIBLE);
     setAppMode(null);
   });
 
@@ -204,28 +209,28 @@ describe("watchInstanceTelemetry", () => {
       .fn()
       .mockResolvedValueOnce(answer(true, ANSWERED_AT))
       .mockResolvedValueOnce(answer(false, "2026-10-02T09:00:00.000Z"));
-    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal(FETCH, fetchMock);
     unwatch = watchInstanceTelemetry();
 
     // A hidden page never asks.
     setVisibility("hidden");
-    document.dispatchEvent(new Event("visibilitychange"));
+    document.dispatchEvent(new Event(VISIBILITY_CHANGE));
     await Promise.resolve();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(isTelemetryGranted()).toBe(false);
 
     // Back in view: the admin turned reports on while this page was away.
-    setVisibility("visible");
-    document.dispatchEvent(new Event("visibilitychange"));
+    setVisibility(VISIBLE);
+    document.dispatchEvent(new Event(VISIBILITY_CHANGE));
     await vi.waitFor(() => expect(isTelemetryGranted()).toBe(true));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(getTelemetryConsentAt()).toBe(Date.parse(ANSWERED_AT));
 
     // Away and back again, with the answer now a no: the page stops reporting.
     setVisibility("hidden");
-    document.dispatchEvent(new Event("visibilitychange"));
-    setVisibility("visible");
-    document.dispatchEvent(new Event("visibilitychange"));
+    document.dispatchEvent(new Event(VISIBILITY_CHANGE));
+    setVisibility(VISIBLE);
+    document.dispatchEvent(new Event(VISIBILITY_CHANGE));
     await vi.waitFor(() => expect(isTelemetryGranted()).toBe(false));
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(getTelemetryConsentAt()).toBeNull();
@@ -233,9 +238,9 @@ describe("watchInstanceTelemetry", () => {
 
   it("also re-reads when the window is focused", async () => {
     const fetchMock = vi.fn().mockResolvedValue(answer(true, ANSWERED_AT));
-    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal(FETCH, fetchMock);
     unwatch = watchInstanceTelemetry();
-    setVisibility("visible");
+    setVisibility(VISIBLE);
 
     window.dispatchEvent(new Event("focus"));
 
@@ -245,13 +250,13 @@ describe("watchInstanceTelemetry", () => {
 
   it("never asks in Local Mode, where there is no server to obey", async () => {
     const fetchMock = vi.fn().mockResolvedValue(answer(true, ANSWERED_AT));
-    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal(FETCH, fetchMock);
     unwatch = watchInstanceTelemetry();
     setAppMode("local");
-    setVisibility("visible");
+    setVisibility(VISIBLE);
 
     window.dispatchEvent(new Event("focus"));
-    document.dispatchEvent(new Event("visibilitychange"));
+    document.dispatchEvent(new Event(VISIBILITY_CHANGE));
     await Promise.resolve();
 
     expect(fetchMock).not.toHaveBeenCalled();
@@ -259,9 +264,9 @@ describe("watchInstanceTelemetry", () => {
   });
 
   it("cannot start anything from a read that never answers", async () => {
-    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    vi.stubGlobal(FETCH, vi.fn(() => new Promise(() => {})));
     unwatch = watchInstanceTelemetry();
-    setVisibility("visible");
+    setVisibility(VISIBLE);
 
     window.dispatchEvent(new Event("focus"));
 

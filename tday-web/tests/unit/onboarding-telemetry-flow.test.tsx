@@ -41,6 +41,13 @@ vi.mock("@/lib/security/clientCredentialEnvelope", () => ({
 const DSN = "https://key@o1.ingest.example.invalid/2";
 const NEVER_ANSWERED = { dsnConfigured: true, enabled: false, updatedAt: null };
 
+/** The sign-in form, its labels and the account this file signs in with. */
+const BUTTON = "button";
+const USERNAME_LABEL = "Username";
+const PASSWORD_LABEL = "Password";
+const TEST_USERNAME = "taylor";
+const SIGN_IN = "Sign in";
+
 function renderWizard() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -78,14 +85,14 @@ describe("an admin signing in for the first time", () => {
     api.PATCH.mockResolvedValue({ ...NEVER_ANSWERED, updatedAt: "2026-10-01T12:00:00.000Z" });
     renderWizard();
 
-    fireEvent.change(screen.getByLabelText("Username"), { target: { value: "taylor" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "hunter2hunter2" } });
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    fireEvent.change(screen.getByLabelText(USERNAME_LABEL), { target: { value: TEST_USERNAME } });
+    fireEvent.change(screen.getByLabelText(PASSWORD_LABEL), { target: { value: "hunter2hunter2" } });
+    fireEvent.click(screen.getByRole(BUTTON, { name: SIGN_IN }));
 
-    expect(await screen.findByRole("button", { name: "Don't send" })).toBeTruthy();
+    expect(await screen.findByRole(BUTTON, { name: "Don't send" })).toBeTruthy();
     expect(isOnboardingTelemetryHeld()).toBe(true);
 
-    fireEvent.click(screen.getByRole("button", { name: "Don't send" }));
+    fireEvent.click(screen.getByRole(BUTTON, { name: "Don't send" }));
 
     await waitFor(() => expect(api.PATCH).toHaveBeenCalledWith(
       expect.objectContaining({ body: JSON.stringify({ enabled: false }) }),
@@ -97,22 +104,22 @@ describe("an admin signing in for the first time", () => {
     vi.stubEnv("VITE_SENTRY_DSN", "");
     renderWizard();
 
-    fireEvent.change(screen.getByLabelText("Username"), { target: { value: "taylor" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "hunter2hunter2" } });
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    fireEvent.change(screen.getByLabelText(USERNAME_LABEL), { target: { value: TEST_USERNAME } });
+    fireEvent.change(screen.getByLabelText(PASSWORD_LABEL), { target: { value: "hunter2hunter2" } });
+    fireEvent.click(screen.getByRole(BUTTON, { name: SIGN_IN }));
 
     expect(await screen.findByText("app")).toBeTruthy();
     expect(isOnboardingTelemetryHeld()).toBe(false);
-    expect(screen.queryByRole("button", { name: "Don't send" })).toBeNull();
+    expect(screen.queryByRole(BUTTON, { name: "Don't send" })).toBeNull();
   });
 
   it("releases the hold when the sign-in itself fails", async () => {
     login.mockResolvedValue({ ok: false, message: "Invalid credentials" });
     renderWizard();
 
-    fireEvent.change(screen.getByLabelText("Username"), { target: { value: "taylor" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "wrong-password" } });
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    fireEvent.change(screen.getByLabelText(USERNAME_LABEL), { target: { value: TEST_USERNAME } });
+    fireEvent.change(screen.getByLabelText(PASSWORD_LABEL), { target: { value: "wrong-password" } });
+    fireEvent.click(screen.getByRole(BUTTON, { name: SIGN_IN }));
 
     expect(await screen.findByText("Invalid credentials")).toBeTruthy();
     expect(isOnboardingTelemetryHeld()).toBe(false);
@@ -121,10 +128,10 @@ describe("an admin signing in for the first time", () => {
   it("releases the hold if the wizard goes away before the question is answered", async () => {
     const { unmount } = renderWizard();
 
-    fireEvent.change(screen.getByLabelText("Username"), { target: { value: "taylor" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "hunter2hunter2" } });
-    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(await screen.findByRole("button", { name: "Send reports" })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(USERNAME_LABEL), { target: { value: TEST_USERNAME } });
+    fireEvent.change(screen.getByLabelText(PASSWORD_LABEL), { target: { value: "hunter2hunter2" } });
+    fireEvent.click(screen.getByRole(BUTTON, { name: SIGN_IN }));
+    expect(await screen.findByRole(BUTTON, { name: "Send reports" })).toBeTruthy();
     expect(isOnboardingTelemetryHeld()).toBe(true);
 
     unmount();

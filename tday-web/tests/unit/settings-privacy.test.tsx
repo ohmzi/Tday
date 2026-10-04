@@ -43,6 +43,8 @@ vi.mock("@/hooks/use-toast", () => ({
 }));
 
 const OFFERED: ServerTelemetryResponse = { dsnConfigured: true, enabled: false, updatedAt: null };
+/** The role the one control in this card is queried by. */
+const SWITCH_ROLE = "switch";
 const INSTANCE_OFF = { enabled: false, updatedAt: "2026-09-01T00:00:00.000Z" };
 
 function wrapper() {
@@ -185,7 +187,7 @@ describe("ServerTelemetryRow", () => {
     ).toBeTruthy();
     expect(
       screen
-        .getByRole("switch", { name: "Send error reports for this server and the web app" })
+        .getByRole(SWITCH_ROLE, { name: "Send error reports for this server and the web app" })
         .getAttribute("aria-checked"),
     ).toBe("true");
   });
@@ -202,7 +204,7 @@ describe("ServerTelemetryRow", () => {
     api.GET.mockResolvedValue({ ...OFFERED, enabled: true });
     render(<ServerTelemetryRow telemetry={OFFERED} />, { wrapper: wrapper() });
 
-    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole(SWITCH_ROLE));
 
     await waitFor(() => expect(api.PATCH).toHaveBeenCalledTimes(1));
     expect(api.PATCH).toHaveBeenCalledWith({
@@ -218,10 +220,10 @@ describe("ServerTelemetryRow", () => {
     api.PATCH.mockReturnValue(new Promise<ServerTelemetryResponse>((r) => (resolve = r)));
     render(<ServerTelemetryRow telemetry={OFFERED} />, { wrapper: wrapper() });
 
-    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole(SWITCH_ROLE));
 
-    await waitFor(() => expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true"));
-    expect((screen.getByRole("switch") as HTMLButtonElement).disabled).toBe(true);
+    await waitFor(() => expect(screen.getByRole(SWITCH_ROLE).getAttribute("aria-checked")).toBe("true"));
+    expect((screen.getByRole(SWITCH_ROLE) as HTMLButtonElement).disabled).toBe(true);
     await act(async () => resolve({ ...OFFERED, enabled: true }));
   });
 
@@ -229,7 +231,7 @@ describe("ServerTelemetryRow", () => {
     api.PATCH.mockRejectedValue(new ApiError("Forbidden", 403));
     render(<ServerTelemetryRow telemetry={OFFERED} />, { wrapper: wrapper() });
 
-    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.click(screen.getByRole(SWITCH_ROLE));
 
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith({
@@ -237,7 +239,7 @@ describe("ServerTelemetryRow", () => {
         variant: "destructive",
       }),
     );
-    await waitFor(() => expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("false"));
+    await waitFor(() => expect(screen.getByRole(SWITCH_ROLE).getAttribute("aria-checked")).toBe("false"));
   });
 });
 
@@ -248,7 +250,7 @@ describe("ServerTelemetryStateRow", () => {
     expect(screen.getByText("Server error reports")).toBeTruthy();
     expect(screen.getByText("An admin decides this for the whole server.")).toBeTruthy();
     expect(screen.getByText("Off")).toBeTruthy();
-    expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.queryByRole(SWITCH_ROLE)).toBeNull();
   });
 
   it("shows a yes as plainly as a no", () => {
@@ -258,7 +260,7 @@ describe("ServerTelemetryStateRow", () => {
     );
 
     expect(screen.getByText("On")).toBeTruthy();
-    expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.queryByRole(SWITCH_ROLE)).toBeNull();
   });
 
   it("still links to the guide topic", () => {

@@ -21,12 +21,14 @@ vi.mock("@/providers/AuthProvider", () => ({
 }));
 
 const APPROVED_ADMIN = { role: "ADMIN", approvalStatus: "APPROVED" };
+/** The app-stub these tests look for, named because it is asserted on both ways. */
+const APP_TEXT = "app";
 
 function renderAuthLayout() {
   render(
     <MemoryRouter initialEntries={["/en/login"]}>
       <Routes>
-        <Route path="/:locale/app" element={<div>app</div>} />
+        <Route path="/:locale/app" element={<div>{APP_TEXT}</div>} />
         <Route path="/:locale" element={<AuthLayout />}>
           <Route path="login" element={<div>wizard</div>} />
         </Route>
@@ -39,7 +41,7 @@ function renderLanding() {
   render(
     <MemoryRouter initialEntries={["/en"]}>
       <Routes>
-        <Route path="/:locale/app" element={<div>app</div>} />
+        <Route path="/:locale/app" element={<div>{APP_TEXT}</div>} />
         <Route path="/:locale/login" element={<div>login route</div>} />
         <Route path="/:locale" element={<LandingPage />} />
       </Routes>
@@ -66,13 +68,13 @@ describe("the auth guards while the admin's error-report step is up", () => {
     renderAuthLayout();
 
     expect(screen.getByText("wizard")).toBeTruthy();
-    expect(screen.queryByText("app")).toBeNull();
+    expect(screen.queryByText(APP_TEXT)).toBeNull();
   });
 
   it("still hands an approved session to the app when no step is up", () => {
     renderAuthLayout();
 
-    expect(screen.getByText("app")).toBeTruthy();
+    expect(screen.getByText(APP_TEXT)).toBeTruthy();
     expect(screen.queryByText("wizard")).toBeNull();
   });
 
@@ -83,13 +85,13 @@ describe("the auth guards while the admin's error-report step is up", () => {
 
     // The wizard's own first step: LandingPage rendered it instead of navigating away.
     expect(screen.getByText("Choose your setup")).toBeTruthy();
-    expect(screen.queryByText("app")).toBeNull();
+    expect(screen.queryByText(APP_TEXT)).toBeNull();
     expect(screen.queryByText("login route")).toBeNull();
   });
 
   it("hands an approved landing visitor to the app when no step is up", () => {
     renderLanding();
 
-    expect(screen.getByText("app")).toBeTruthy();
+    expect(screen.getByText(APP_TEXT)).toBeTruthy();
   });
 });

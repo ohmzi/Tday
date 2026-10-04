@@ -20,6 +20,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTrans
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.upsert
 import org.slf4j.LoggerFactory
+import java.sql.SQLException
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -95,7 +96,7 @@ class InstanceSettingsServiceImpl(
         try {
             val stored = newSuspendedTransaction(Dispatchers.IO) { readTelemetry() }
             InstanceTelemetryResponse(enabled = stored.enabled, updatedAt = stored.updatedAt)
-        } catch (e: Exception) {
+        } catch (e: SQLException) {
             // Fail closed: a browser that cannot read the answer does not start its SDK.
             logger.warn("Browser error reports stay off: the setting could not be read ({})", e.javaClass.simpleName)
             InstanceTelemetryResponse(enabled = false, updatedAt = null)

@@ -30,6 +30,12 @@ const ALREADY_ANSWERED = { dsnConfigured: true, enabled: true, updatedAt: "2026-
 
 const onFinish = vi.fn();
 
+/** What the step asks with, where it goes, and how the two answers are labelled. */
+const BUTTON = "button";
+const APP_HOME = "/app";
+const SEND_REPORTS = "Send reports";
+const DONT_SEND = "Don't send";
+
 function renderStep() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -55,9 +61,9 @@ describe("the admin's onboarding error-report step", () => {
 
     renderStep();
 
-    expect(await screen.findByRole("button", { name: "Send reports" })).toBeTruthy();
+    expect(await screen.findByRole(BUTTON, { name: SEND_REPORTS })).toBeTruthy();
     expect(screen.getByText("Send error reports?")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Don't send" })).toBeTruthy();
+    expect(screen.getByRole(BUTTON, { name: DONT_SEND })).toBeTruthy();
     expect(screen.getByText(/Never sent: names, accounts/)).toBeTruthy();
     expect(api.GET).toHaveBeenCalledWith({ url: "/api/admin/telemetry" });
     expect(onFinish).not.toHaveBeenCalled();
@@ -68,9 +74,9 @@ describe("the admin's onboarding error-report step", () => {
     api.PATCH.mockResolvedValue({ ...NEVER_ANSWERED, enabled: true, updatedAt: "2026-10-01T12:00:00.000Z" });
 
     renderStep();
-    fireEvent.click(await screen.findByRole("button", { name: "Send reports" }));
+    fireEvent.click(await screen.findByRole(BUTTON, { name: SEND_REPORTS }));
 
-    await waitFor(() => expect(onFinish).toHaveBeenCalledWith("/app"));
+    await waitFor(() => expect(onFinish).toHaveBeenCalledWith(APP_HOME));
     expect(api.PATCH).toHaveBeenCalledWith({
       url: "/api/admin/telemetry",
       headers: { "Content-Type": "application/json" },
@@ -83,9 +89,9 @@ describe("the admin's onboarding error-report step", () => {
     api.PATCH.mockResolvedValue({ ...NEVER_ANSWERED, enabled: false, updatedAt: "2026-10-01T12:00:00.000Z" });
 
     renderStep();
-    fireEvent.click(await screen.findByRole("button", { name: "Don't send" }));
+    fireEvent.click(await screen.findByRole(BUTTON, { name: DONT_SEND }));
 
-    await waitFor(() => expect(onFinish).toHaveBeenCalledWith("/app"));
+    await waitFor(() => expect(onFinish).toHaveBeenCalledWith(APP_HOME));
     expect(api.PATCH).toHaveBeenCalledWith(
       expect.objectContaining({ body: JSON.stringify({ enabled: false }) }),
     );
@@ -96,8 +102,8 @@ describe("the admin's onboarding error-report step", () => {
 
     renderStep();
 
-    await waitFor(() => expect(onFinish).toHaveBeenCalledWith("/app"));
-    expect(screen.queryByRole("button", { name: "Send reports" })).toBeNull();
+    await waitFor(() => expect(onFinish).toHaveBeenCalledWith(APP_HOME));
+    expect(screen.queryByRole(BUTTON, { name: SEND_REPORTS })).toBeNull();
   });
 
   it("does not ask a viewer who is not an admin, and does not block them", async () => {
@@ -105,8 +111,8 @@ describe("the admin's onboarding error-report step", () => {
 
     renderStep();
 
-    await waitFor(() => expect(onFinish).toHaveBeenCalledWith("/app"));
-    expect(screen.queryByRole("button", { name: "Don't send" })).toBeNull();
+    await waitFor(() => expect(onFinish).toHaveBeenCalledWith(APP_HOME));
+    expect(screen.queryByRole(BUTTON, { name: DONT_SEND })).toBeNull();
   });
 
   it("does not ask a server that has no reporting endpoint of its own", async () => {
@@ -114,7 +120,7 @@ describe("the admin's onboarding error-report step", () => {
 
     renderStep();
 
-    await waitFor(() => expect(onFinish).toHaveBeenCalledWith("/app"));
+    await waitFor(() => expect(onFinish).toHaveBeenCalledWith(APP_HOME));
   });
 
   it("waits for the session rather than asking an endpoint that would refuse it", async () => {
@@ -131,7 +137,7 @@ describe("the admin's onboarding error-report step", () => {
     api.GET.mockResolvedValue(NEVER_ANSWERED);
 
     renderStep();
-    fireEvent.click(await screen.findByRole("button", { name: "Read the full FAQ" }));
+    fireEvent.click(await screen.findByRole(BUTTON, { name: "Read the full FAQ" }));
 
     expect(onFinish).toHaveBeenCalledWith("/app/guide/crash-reports");
     expect(api.PATCH).not.toHaveBeenCalled();
@@ -142,10 +148,10 @@ describe("the admin's onboarding error-report step", () => {
     api.PATCH.mockRejectedValue(new ApiError("Forbidden", 403));
 
     renderStep();
-    fireEvent.click(await screen.findByRole("button", { name: "Send reports" }));
+    fireEvent.click(await screen.findByRole(BUTTON, { name: SEND_REPORTS }));
 
     expect(await screen.findByText("Couldn't save that. Try again.")).toBeTruthy();
     expect(onFinish).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Don't send" })).toBeTruthy();
+    expect(screen.getByRole(BUTTON, { name: DONT_SEND })).toBeTruthy();
   });
 });
