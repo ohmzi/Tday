@@ -10,9 +10,14 @@ import org.junit.Test
 /**
  * The harness's own grouping, learned on a device: Sentry groups by exception type and stack, so a
  * trigger whose lambda index shifts between builds opened a second issue (`TC-NEW-TASK` had two).
- * Each trigger now carries the same `["test-crash", <ID>]` keys the other clients use.
+ * Each trigger now carries the same `[FINGERPRINT_KEY, <ID>]` keys the other clients use.
  */
 class TestCrashFingerprintTest {
+    private companion object {
+        /** The key every client's harness groups its triggers by. */
+        const val FINGERPRINT_KEY = "test-crash"
+    }
+
     private fun event(message: String? = null, vararg values: String?): SentryEvent =
         SentryEvent().apply {
             this.message = message?.let { text -> Message().apply { this.message = text } }
@@ -27,15 +32,15 @@ class TestCrashFingerprintTest {
     @Test
     fun `a trigger is fingerprinted by the id in its message`() {
         val scheduled = event(null, "TEST-CRASH TC-FEED-SCHED: scheduled home feed")
-        assertEquals(listOf("test-crash", "TC-FEED-SCHED"), fingerprint(scheduled))
+        assertEquals(listOf(FINGERPRINT_KEY, "TC-FEED-SCHED"), fingerprint(scheduled))
     }
 
     @Test
     fun `the id comes from the marker, not from the exception type`() {
         val done = event("TEST-CRASH TC-BUILTIN-DONE: built-in Completed list")
         val listAny = event(null, "TEST-CRASH TC-LIST-ANY: user anytime list")
-        assertEquals(listOf("test-crash", "TC-BUILTIN-DONE"), fingerprint(done))
-        assertEquals(listOf("test-crash", "TC-LIST-ANY"), fingerprint(listAny))
+        assertEquals(listOf(FINGERPRINT_KEY, "TC-BUILTIN-DONE"), fingerprint(done))
+        assertEquals(listOf(FINGERPRINT_KEY, "TC-LIST-ANY"), fingerprint(listAny))
     }
 
     @Test
@@ -43,7 +48,7 @@ class TestCrashFingerprintTest {
         val fingerprints = TestCrashId.entries.map { trigger -> fingerprint(event(trigger.message)) }
         assertEquals("two triggers share a fingerprint: $fingerprints", TestCrashId.entries.size, fingerprints.toSet().size)
         TestCrashId.entries.forEach { trigger ->
-            assertEquals(listOf("test-crash", trigger.id), fingerprint(event(trigger.message)))
+            assertEquals(listOf(FINGERPRINT_KEY, trigger.id), fingerprint(event(trigger.message)))
         }
     }
 
