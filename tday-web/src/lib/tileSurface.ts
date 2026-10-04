@@ -17,6 +17,6 @@ const TILE_SURFACE_FALLBACK_COLOR = "#68717A";
  * Shared by the scheduled-task and floater home tiles so the two grids read as the
  * same surface; they are siblings under `RootFeedDock` and must not drift.
  */
-export function tileSurface(color: string | undefined): string {
+export function tileSurface(color?: string): string {
   return `color-mix(in srgb, hsl(var(--card-muted)) 34%, ${color ?? TILE_SURFACE_FALLBACK_COLOR} 66%)`;
 }

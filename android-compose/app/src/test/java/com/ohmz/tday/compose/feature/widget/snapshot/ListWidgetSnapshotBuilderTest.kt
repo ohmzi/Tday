@@ -222,7 +222,7 @@ class ListWidgetSnapshotBuilderTest {
                     // Past due, so it belongs to the Overdue view, not this one. The app's own
                     // Scheduled screen excludes it (`isScheduledTodo` is `due >= now`), and a
                     // widget counting it would disagree with the screen it opens.
-                    todo(id = "s-late", title = "Scheduled late", listId = "list-7", dueEpochMs = now - 1L),
+                    todo(id = "s-late", title = "Scheduled late", listId = "list-late", dueEpochMs = now - 1L),
                 ),
             ),
             listId = WidgetListType.SCHEDULED.pseudoSelectionId,

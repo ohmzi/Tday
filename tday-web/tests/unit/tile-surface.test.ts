@@ -15,7 +15,7 @@ describe("tileSurface", () => {
   });
 
   it("falls back to the neutral accent when the tile has no colour", () => {
-    expect(tileSurface(undefined)).toBe(
+    expect(tileSurface()).toBe(
       "color-mix(in srgb, hsl(var(--card-muted)) 34%, #68717A 66%)",
     );
   });
