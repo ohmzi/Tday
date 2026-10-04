@@ -14,6 +14,9 @@
   build setting, or `VITE_SENTRY_DSN`).
 - Native crashes are stored and sent on the **next launch**, so reopen the app after a crash. Web errors are sent
   immediately. The iOS hang is sent while the app is still running.
+- Allow a minute before judging a device run: an Android crash is written at crash time and drained on the next launch,
+  and the event can take a little longer to appear in Sentry than the relaunch takes. A trigger that looks lost usually
+  arrives.
 
 ## What each button does
 
@@ -29,9 +32,11 @@ tag:client:android  (or ios, web)         # one platform
 Where a platform's runtime produces its own message (for example a Swift force-unwrap or an Android out-of-memory),
 the title is the runtime's and the ID is in the `test_crash` breadcrumb on the event instead.
 
-Every trigger is also **its own Sentry issue**: the harness fingerprints each one as `test-crash:<ID>`. Two screens that
-raise the same error kind, and two failures reported from the same route, stay separate issues instead of collapsing into
-one — which is what put `TC-BUILTIN-TODAY` inside `TC-CALENDAR`'s issue, and the two server triggers in one, before this.
+Every trigger is also **its own Sentry issue**: the harness fingerprints each one as `test-crash:<ID>` on all four
+surfaces. Two screens that raise the same error kind, and two failures reported from the same route, stay separate issues
+instead of collapsing into one — which is what put `TC-BUILTIN-TODAY` inside `TC-CALENDAR`'s issue, and the two server
+triggers in one, before this. On Android the fingerprint is what also keeps a trigger in *one* issue across rebuilds:
+its stack carries the lambda index, and a shift there opened a second issue for `TC-NEW-TASK` on the device.
 
 Two title traps are handled in each client's `beforeSend`, after the scrubber:
 
@@ -43,12 +48,29 @@ Two title traps are handled in each client's `beforeSend`, after the scrubber:
   fingerprint alone would have separated them; clearing the flag is what makes the title readable.
 
 The **first task of any list** (every feed, built-in list, user list, the calendar and Completed) crashes when you open it
-and crashes differently when you edit it. Android: tap the row / swipe it and tap Edit. iOS: tap the row / swipe left and
-tap Edit. Web: click the row body / open its Edit form.
+and crashes differently when you edit it. Android: tap the row, or swipe it left and tap the **Edit action tile** — the
+caption under the icon is not the target, and tapping it does nothing. iOS: tap the row / swipe left and tap Edit. Web:
+click the row body / open its Edit form.
+
+## Finding the screens
+
+Two of the Android entries are easy to miss, and both were found the hard way on a device:
+
+- **Today** is the card at the top of the Scheduled feed and it is titled with the **date** (`Sun, Oct 4`), not "Today";
+  the six tiles below it are Scheduled, Priority, Overdue, All, Completed and Calendar.
+- **An Anytime list** is a row at the **bottom** of the Anytime feed, under the tasks, next to its count — the floater
+  home shows tasks first, so the list rows are only visible after scrolling to the end.
 
 ## Cross-check
 
 Tick a row once the report shows up in Sentry from that app. Each screen uses a different crash kind on each platform.
+
+**The server's reports are filed as *handled*, so they are not under the Unhandled tab.** Both `tday-backend` triggers go
+through the error handler — `StatusPages` for the crash path, the route itself for the error path — which catches the
+failure and reports it, so the event ships with a handled mechanism and the `tday-backend` project's default Unhandled
+view shows nothing (its own empty state says as much: *"No unhandled issues"*). Click **All Issues**, or open the project
+without that filter, and both are there. Every client trigger, by contrast, is an uncaught error or a fatal crash, so the
+web, Android and iOS projects show theirs under Unhandled by default.
 
 | Done | ID | Where | Android | iOS | Web |
 |---|---|---|---|---|---|
@@ -69,7 +91,7 @@ Tick a row once the report shows up in Sentry from that app. Each screen uses a 
 | ☐ | `TC-CALENDAR` | Calendar | DateTimeException | `removeFirst()` on empty | ReferenceError (unhandled rejection) |
 | ☐ | `TC-SET-CRASH` | Settings, fatal | SecurityException | String index out of bounds | Error |
 | ☐ | `TC-SET-ERROR` | Settings, **handled** (app keeps running) | IOException via `TdayTelemetry.capture` | NSError via `TdayTelemetry.capture` | Error via `captureUiException` |
-| ☐ | `TC-SET-FREEZE` | Settings, main-thread freeze | ANR (13 s, **Stop** ends it early; reported next launch, Android 11+) | App Hanging (6 s, **Stop** ends it early; sent immediately) | busy loop 6 s, then a **Reload** notice (no hang detector on web) |
+| ☐ | `TC-SET-FREEZE` | Settings, main-thread freeze | ANR 13 s, **Stop** ends it early — **no report expected**, see below | 6 s freeze, **Stop** ends it early — **no report expected**, see below | busy loop 6 s, then a **Reload** notice (no hang detector on web) |
 
 Platform extras, all on Settings:
 
@@ -93,6 +115,23 @@ A blocked main thread cannot draw or take a tap, so every platform has a way bac
   then within a slice. Android also cancels when the tap lands on the *stale* frame the trigger occupied — a frozen thread
   cannot redraw, so the button the user actually hits may still be the trigger, and that path cancels too. After it ends
   the panel says how long the main thread was blocked, or that it was cancelled.
+
+**Android's freeze is not a report, and cannot be one.** The ANR really happens — `logcat` shows
+`ANR in com.ohmz.tday.compose` at the ~5 s input-dispatch timeout — but the app survives it: the freeze finishes and the
+system has no exit record to hand back, so there is nothing for the SDK to send on the next launch. On top of that the
+app deliberately keeps `isReportHistoricalAnrs` off, so an ANR found in the exit history is not reported either. Treat the
+Android freeze as a UI-and-ANR-dialog test.
+
+**Neither does iOS, for a different reason.** App-hang tracking is on
+(`enableAppHangTracking`, `appHangTimeoutInterval = 2`), but the detector reads the frames tracker, and that is started by
+the UIViewController swizzling this app deliberately turns off (`enableSwizzling = false`). A simulator run produced the
+ANR thread running and no hang event, and Sentry has none for the trigger. MetricKit — the replacement once app-hang
+tracking is gone in the SDK's next major — is off as well (`enableMetricKit = false`). So a freeze is a UI test on all
+three clients: the Stop control, the notice and the ANR dialog are the deliverable, not a report.
+
+One cosmetic tail to expect on iOS's *handled* trigger: the app reports only an error's domain and code (privacy), so
+`TC-SET-ERROR`'s title ends with `: Code: 1` after the screen. The trigger still names itself once, which is what the
+cross-check reads.
 
   Two device-verified details worth keeping if this is ever reworked: the slices need a short idle gap (~32 ms) between
   them, or the frame pipeline never gets a turn and the Stop control is never drawn; and the solid window must run inside

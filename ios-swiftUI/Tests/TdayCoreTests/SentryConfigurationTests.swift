@@ -171,13 +171,69 @@ final class SentryConfigurationTests: XCTestCase {
         event.applyTestCrashTitle()
 
         XCTAssertEqual(event.exceptions?.first?.value, "TEST-CRASH TC-FEED-ANY: anytime feed")
-        XCTAssertEqual(event.message?.formatted, "TEST-CRASH TC-FEED-ANY: anytime feed")
+        // The message stays out of it while there is an exception to title with: setting both made
+        // Sentry repeat the title (`…: TEST-CRASH TC-SET-ERROR`).
+        XCTAssertNil(event.message)
         // Sentry titles a synthetic exception after the crashing symbol instead of the value.
         XCTAssertEqual(event.exceptions?.first?.mechanism?.synthetic, NSNumber(value: false))
         XCTAssertEqual(event.tags?["test_crash"], "true")
         XCTAssertEqual(event.tags?["test_crash_id"], "TC-FEED-ANY")
         // Every trap shares a crashing frame, so the fingerprint is what keeps one issue per trigger.
         XCTAssertEqual(event.fingerprint, ["test-crash", "TC-FEED-ANY"])
+    }
+
+    /// A captured error already carries a value, and writing over it made Sentry append the two.
+    func testACapturedErrorsOwnValueIsLeftExactlyAsItIs() {
+        let event = Event()
+        let breadcrumb = Breadcrumb(level: .warning, category: "tday")
+        breadcrumb.message = "test_crash:TC-SET-ERROR: settings handled capture"
+        event.breadcrumbs = [breadcrumb]
+        let exception = Exception(value: "TEST-CRASH TC-SET-ERROR: settings handled capture", type: "NSError")
+        exception.mechanism = Mechanism(type: "NSError")
+        exception.mechanism?.handled = NSNumber(value: true)
+        event.exceptions = [exception]
+
+        event.applyTestCrashTitle()
+
+        XCTAssertEqual(
+            event.exceptions?.first?.value,
+            "TEST-CRASH TC-SET-ERROR: settings handled capture"
+        )
+        XCTAssertNil(event.message)
+        XCTAssertEqual(event.tags?["test_crash_id"], "TC-SET-ERROR")
+    }
+
+    /// A trap's exception already has a value — the runtime's own text, which names no screen. It is
+    /// the case the rewrite exists for, and a device sweep caught it being skipped: every trap issue
+    /// was titled `Fatal error: Index out of range` instead of the trigger.
+    func testARuntimeTrapTitleIsWrittenOver() {
+        let event = Event()
+        let breadcrumb = Breadcrumb(level: .warning, category: "tday")
+        breadcrumb.message = "test_crash:TC-CALENDAR: calendar"
+        event.breadcrumbs = [breadcrumb]
+        let exception = Exception(value: "Fatal error: Can't remove first element from an empty collection", type: "EXC_BREAKPOINT")
+        exception.mechanism = Mechanism(type: "mach")
+        exception.mechanism?.synthetic = NSNumber(value: true)
+        event.exceptions = [exception]
+
+        event.applyTestCrashTitle()
+
+        XCTAssertEqual(event.exceptions?.first?.value, "TEST-CRASH TC-CALENDAR: calendar")
+        XCTAssertNil(event.message)
+        XCTAssertEqual(event.tags?["test_crash_id"], "TC-CALENDAR")
+    }
+
+    /// An event with no exception at all still needs something to be titled with.
+    func testAnEventWithNoExceptionFallsBackToTheMessage() {
+        let event = Event()
+        let breadcrumb = Breadcrumb(level: .warning, category: "tday")
+        breadcrumb.message = "test_crash:TC-SET-ERROR: settings handled capture"
+        event.breadcrumbs = [breadcrumb]
+
+        event.applyTestCrashTitle()
+
+        XCTAssertEqual(event.message?.formatted, "TEST-CRASH TC-SET-ERROR: settings handled capture")
+        XCTAssertEqual(event.tags?["test_crash_id"], "TC-SET-ERROR")
     }
 
     /// The breadcrumb reaches `beforeSend` through the scrubber, which writes the spaces in a label

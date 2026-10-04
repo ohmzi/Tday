@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ohmz.tday.compose.R
+import io.sentry.SentryEvent
 import com.ohmz.tday.compose.core.model.TodoListMode
 import com.ohmz.tday.compose.core.observability.TdayTelemetry
 import com.ohmz.tday.compose.ui.theme.TdayDimens
@@ -168,6 +169,29 @@ object TestCrash {
         if (cancelFreeze()) return false
         freeze()
         return true
+    }
+
+    /**
+     * TEST-CRASH: gives a trigger an issue of its own that survives a rebuild.
+     *
+     * Sentry groups by exception type and stack, so a trigger whose lambda index shifts between
+     * builds lands in a fresh issue — `TC-NEW-TASK` already holds two on the device — and two screens
+     * raising the same type would share one. The keys are the same `["test-crash", <ID>]` the web,
+     * iOS and server harnesses use.
+     *
+     * The ID comes out of the message the trigger wrote, so it runs after the scrubber (which is
+     * what keeps the marker intact) and only ever shapes an event that is already scrubbed.
+     */
+    fun applyTestCrashFingerprint(event: SentryEvent): SentryEvent {
+        val text = buildString {
+            event.message?.message?.let(::append)
+            event.exceptions.orEmpty().forEach { exception ->
+                exception.value?.let { append('\n'); append(it) }
+            }
+        }
+        val trigger = TestCrashId.entries.firstOrNull { "TEST-CRASH ${it.id}" in text } ?: return event
+        event.fingerprints = listOf("test-crash", trigger.id)
+        return event
     }
 
     /**
