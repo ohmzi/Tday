@@ -428,9 +428,22 @@ extension Event {
         // string Android's exception and the web app's error carry.
         let title = "TEST-CRASH \(payload.replacingOccurrences(of: "_", with: " "))"
         // `exception.value` is what Sentry titles a report with, and `message` is the fallback the
-        // server uses when an exception has no value of its own.
-        exceptions?.first?.value = title
-        message = SentryMessage(formatted: title)
+        // server uses when there is no exception at all.
+        if let exception = exceptions?.first {
+            // A crash-derived exception carries the runtime's own trap text — `Fatal error: Index out
+            // of range`, `Can't remove first element from an empty collection` — which says nothing
+            // about the screen, so the title is written over it.
+            //
+            // A captured error is the exception: `capture(error:)` rebuilds its value from the NSError
+            // *after* `beforeSend`, so anything written here is appended rather than substituted and
+            // the title came out as `TEST-CRASH TC-SET-ERROR: settings handled capture: TEST-CRASH
+            // TC-SET-ERROR`. It already names the trigger, so it is left as the app wrote it.
+            if exception.mechanism?.type != "NSError" {
+                exception.value = title
+            }
+        } else {
+            message = SentryMessage(formatted: title)
+        }
         // A crash-derived exception is marked `synthetic`, and Sentry titles a synthetic one after the
         // crashing symbol instead — `closure in _assertionFailure`. Clearing the flag on a test event
         // is what puts the screen in the title: `EXC_BREAKPOINT: TEST-CRASH TC-FEED-ANY: anytime feed`.
