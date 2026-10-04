@@ -75,6 +75,31 @@ export function floaterPileBand(count: number): FloaterPileBand {
   return "many";
 }
 
+/**
+ * The single note the pile earns, by the documented precedence. Split out of
+ * [planFloaterSummary] so the plan reads as "count, choose, name" and the precedence chain stays
+ * one readable ladder.
+ */
+function noteFor(
+  counts: { total: number; pinned: number; resting: number; high: number; medium: number },
+): FloaterNote {
+  const { total, pinned, resting, high, medium } = counts;
+  // A wholly dormant pile outranks a pin: when nothing has been touched in months, "you pinned
+  // one of these" is not the story. Below that the pin wins — it is the one mark the person made.
+  if (resting === total) return "restingAll";
+  if (pinned === 1) return "pinnedOne";
+  if (pinned > 1) return "pinnedMany";
+  if (resting === 1) return "restingOne";
+  if (resting > 1) return "restingMany";
+  if (high === 1) return "priorityOne";
+  if (high > 1) return "priorityMany";
+  // Below High: Medium is still worth naming over saying nothing about priority at all, but
+  // it never outranks High — a pile with both gets the High note only.
+  if (medium === 1) return "mediumOne";
+  if (medium > 1) return "mediumMany";
+  return "none";
+}
+
 export function planFloaterSummary(
   tasks: FloaterSummaryTask[],
   nowEpochMs: number,
@@ -100,20 +125,13 @@ export function planFloaterSummary(
   const high = tasks.filter((task) => isHighPriorityFloater(task.priority)).length;
   const medium = tasks.filter((task) => isMediumPriorityFloater(task.priority)).length;
 
-  // A wholly dormant pile outranks a pin: when nothing has been touched in months, "you pinned
-  // one of these" is not the story. Below that the pin wins — it is the one mark the person made.
-  let note: FloaterNote = "none";
-  if (resting === tasks.length) note = "restingAll";
-  else if (pinned === 1) note = "pinnedOne";
-  else if (pinned > 1) note = "pinnedMany";
-  else if (resting === 1) note = "restingOne";
-  else if (resting > 1) note = "restingMany";
-  else if (high === 1) note = "priorityOne";
-  else if (high > 1) note = "priorityMany";
-  // Below High: Medium is still worth naming over saying nothing about priority at all, but
-  // it never outranks High — a pile with both gets the High note only.
-  else if (medium === 1) note = "mediumOne";
-  else if (medium > 1) note = "mediumMany";
+  const note = noteFor({
+    total: tasks.length,
+    pinned,
+    resting,
+    high,
+    medium,
+  });
 
   // Nothing stood out, so point at the row the list itself puts first — the same nudge the
   // dated path opens with. Only for a pile bigger than one row: naming the sole task back to

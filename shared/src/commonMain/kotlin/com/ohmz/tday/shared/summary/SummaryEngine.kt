@@ -242,32 +242,8 @@ object SummaryEngine {
      * task as "expiring at any moment" in half the locales — can be reached from here.
      */
     private fun renderFloaterSummary(plan: FloaterSummaryPlan, s: SummaryStrings): String {
-        val pile = s.t(
-            when (plan.band) {
-                FloaterPileBand.ONE -> "floaterPileOne"
-                FloaterPileBand.FEW -> "floaterPileFew"
-                FloaterPileBand.SOME -> "floaterPileSome"
-                FloaterPileBand.MANY -> "floaterPileMany"
-            },
-        )
-        val noteKey = when (plan.note) {
-            FloaterNote.NONE -> null
-            FloaterNote.START_WITH -> "floaterStartWith"
-            FloaterNote.PINNED_ONE -> "floaterPinnedOne"
-            FloaterNote.PINNED_MANY -> "floaterPinnedMany"
-            FloaterNote.RESTING_ONE -> "floaterRestingOne"
-            FloaterNote.RESTING_MANY -> "floaterRestingMany"
-            // "Nothing here has been touched in months" is a sentence about a pile; said of
-            // the one row on screen it reads as "this screen is empty", which is the opposite
-            // of the line it follows. The singular says the same thing about the one task.
-            FloaterNote.RESTING_ALL ->
-                if (plan.band == FloaterPileBand.ONE) "floaterRestingAllOne" else "floaterRestingAll"
-            FloaterNote.PRIORITY_ONE -> "floaterPriorityOne"
-            FloaterNote.PRIORITY_MANY -> "floaterPriorityMany"
-            FloaterNote.MEDIUM_ONE -> "floaterMediumOne"
-            FloaterNote.MEDIUM_MANY -> "floaterMediumMany"
-        }
-        val note = noteKey?.let { key ->
+        val pile = s.t(pileKeyFor(plan.band))
+        val note = noteKeyFor(plan)?.let { key ->
             s.t(key, mapOf("title" to compactTitle(plan.noteTitle, s)))
         } ?: return pile
         // Chinese and Japanese set their own full stop with the space built in; adding an ASCII
@@ -275,6 +251,36 @@ object SummaryEngine {
         // used rather than off a locale list, so a new bundle needs no change here.
         val gap = if (pile.endsWith('\u3002') || pile.endsWith('\uff01')) "" else " "
         return pile + gap + note
+    }
+
+    /** The pile sentence for a band. Kept apart from the note's own mapping so neither grows a `when` twice. */
+    private fun pileKeyFor(band: FloaterPileBand): String = when (band) {
+        FloaterPileBand.ONE -> "floaterPileOne"
+        FloaterPileBand.FEW -> "floaterPileFew"
+        FloaterPileBand.SOME -> "floaterPileSome"
+        FloaterPileBand.MANY -> "floaterPileMany"
+    }
+
+    /**
+     * The note sentence's key, or null when the pile earns none.
+     *
+     * The singular dormant line exists because "Nothing here has been touched in months" is a
+     * sentence about a pile: said of the one row on screen it reads as "this screen is empty",
+     * the opposite of the line it follows.
+     */
+    private fun noteKeyFor(plan: FloaterSummaryPlan): String? = when (plan.note) {
+        FloaterNote.NONE -> null
+        FloaterNote.START_WITH -> "floaterStartWith"
+        FloaterNote.PINNED_ONE -> "floaterPinnedOne"
+        FloaterNote.PINNED_MANY -> "floaterPinnedMany"
+        FloaterNote.RESTING_ONE -> "floaterRestingOne"
+        FloaterNote.RESTING_MANY -> "floaterRestingMany"
+        FloaterNote.RESTING_ALL ->
+            if (plan.band == FloaterPileBand.ONE) "floaterRestingAllOne" else "floaterRestingAll"
+        FloaterNote.PRIORITY_ONE -> "floaterPriorityOne"
+        FloaterNote.PRIORITY_MANY -> "floaterPriorityMany"
+        FloaterNote.MEDIUM_ONE -> "floaterMediumOne"
+        FloaterNote.MEDIUM_MANY -> "floaterMediumMany"
     }
 
     private fun taskPhrase(task: Candidate, s: SummaryStrings): String {

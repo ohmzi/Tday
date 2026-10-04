@@ -215,10 +215,10 @@ class ListWidgetSnapshotBuilderTest {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(
                 todos = listOf(
-                    todo(id = "in-list", title = "In list", listId = "list-1", dueEpochMs = now + 1L),
-                    todo(id = "no-list", title = "No list", listId = null, dueEpochMs = now + 2L),
-                    todo(id = "undated", title = "Undated", listId = "list-1", dueEpochMs = null),
-                    todo(id = "done", title = "Done", listId = "list-1", dueEpochMs = now + 3L, completed = true),
+                    todo(id = "s-open", title = "Scheduled open", listId = "list-7", dueEpochMs = now + 1L),
+                    todo(id = "s-unsorted", title = "Scheduled unsorted", listId = null, dueEpochMs = now + 2L),
+                    todo(id = "s-clear", title = "Scheduled clear", listId = "list-7", dueEpochMs = null),
+                    todo(id = "s-done", title = "Scheduled done", listId = "list-7", dueEpochMs = now + 3L, completed = true),
                 ),
             ),
             listId = WidgetListType.SCHEDULED.pseudoSelectionId,
@@ -229,7 +229,7 @@ class ListWidgetSnapshotBuilderTest {
 
         assertEquals(WidgetSnapshotStatus.TASKS, snapshot.status)
         assertEquals(2, snapshot.taskCount)
-        assertEquals(setOf("in-list", "no-list"), snapshot.rows.map { it.id }.toSet())
+        assertEquals(setOf("s-open", "s-unsorted"), snapshot.rows.map { it.id }.toSet())
         // Not a list, so there is nothing to look up and nothing that can go missing.
         assertFalse(snapshot.listMissing)
     }
@@ -239,9 +239,9 @@ class ListWidgetSnapshotBuilderTest {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(
                 todos = listOf(
-                    todo(id = "past", title = "Past", listId = "list-1", dueEpochMs = now - 1L),
-                    todo(id = "future", title = "Future", listId = "list-1", dueEpochMs = now + 1L),
-                    todo(id = "undated", title = "Undated", listId = "list-1", dueEpochMs = null),
+                    todo(id = "o-late", title = "Overdue late", listId = "list-8", dueEpochMs = now - 1L),
+                    todo(id = "o-soon", title = "Overdue soon", listId = "list-8", dueEpochMs = now + 1L),
+                    todo(id = "o-clear", title = "Overdue clear", listId = "list-8", dueEpochMs = null),
                 ),
             ),
             listId = WidgetListType.OVERDUE.pseudoSelectionId,
@@ -251,7 +251,7 @@ class ListWidgetSnapshotBuilderTest {
         )
 
         assertEquals(1, snapshot.taskCount)
-        assertEquals(listOf("past"), snapshot.rows.map { it.id })
+        assertEquals(listOf("o-late"), snapshot.rows.map { it.id })
         // Every row here is by definition past its due time, so the widget tints them all.
         assertTrue(snapshot.rows.single().overdue)
     }
@@ -260,17 +260,17 @@ class ListWidgetSnapshotBuilderTest {
     fun `a pseudo list ignores the stored list id and never reads as missing`() {
         val snapshot = buildListWidgetSnapshot(
             state = OfflineSyncState(
-                todos = listOf(todo(id = "orphan", title = "Orphan", listId = "gone", dueEpochMs = now + 1L)),
+                todos = listOf(todo(id = "p-orphan", title = "Pseudo orphan", listId = "list-9", dueEpochMs = now + 1L)),
                 lists = LISTS,
             ),
-            listId = "gone",
+            listId = "list-9",
             listType = WidgetListType.SCHEDULED,
             workspaceConfigured = true,
             nowEpochMs = now,
         )
 
         assertFalse(snapshot.listMissing)
-        assertEquals(listOf("orphan"), snapshot.rows.map { it.id })
+        assertEquals(listOf("p-orphan"), snapshot.rows.map { it.id })
     }
 
     private fun todo(
