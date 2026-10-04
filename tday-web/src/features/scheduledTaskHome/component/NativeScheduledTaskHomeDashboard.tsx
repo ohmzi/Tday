@@ -39,6 +39,20 @@ import { flattenNotesToPlainText } from "@/lib/richNotes";
 import RootFeedHeroHeader from "@/components/app/RootFeedHeroHeader";
 const todayTileColor = "#6EA8E1";
 
+/**
+ * A tile's background, leaning with the theme the way the list tiles already did:
+ * the accent mixed over the theme's muted card surface, so it is lighter in light
+ * mode and darker in dark mode while the accent still dominates (66%).
+ *
+ * That is what lets the text on a tile be the ordinary `text-foreground` — dark in
+ * light mode, light in dark mode — instead of a hardcoded white. A fixed mid-tone
+ * tile plus white text is unreadable in light mode (and on every light accent in
+ * dark mode too); a themed surface plus themed text reads in both.
+ */
+function tileSurface(color: string | undefined): string {
+  return `color-mix(in srgb, hsl(var(--card-muted)) 34%, ${color ?? "#68717A"} 66%)`;
+}
+
 // Tile color + the i18n key (in the `scheduledTaskHome` namespace) for its label. Several of
 // these reuse the same wording as elsewhere in the app, but the scheduled task home grid uses
 // shorter forms (e.g. "All" rather than "All Tasks"), so they get their own keys.
@@ -62,8 +76,7 @@ const scheduledTaskHomeTileOrder: NativeRouteId[] = [
   "calendar",
 ];
 
-const listColorCss: Record<ListColor, string> = {
-  RED: "hsl(var(--accent-red))",
+const listColorCss: Record<ListColor, string> = {  RED: "hsl(var(--accent-red))",
   ORANGE: "hsl(var(--accent-orange))",
   YELLOW: "hsl(var(--accent-yellow))",
   LIME: "hsl(var(--accent-lime))",
@@ -234,8 +247,8 @@ export default function NativeScheduledTaskHomeDashboard() {
 
         <Link
           href="/app/today"
-          className="relative flex h-[70px] items-center justify-between overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(50,90,130,0.62)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
-          style={{ backgroundColor: todayTileColor }}
+          className="relative flex h-[70px] items-center justify-between overflow-hidden rounded-[26px] px-5 text-foreground shadow-[0_14px_30px_-18px_rgba(50,90,130,0.62)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
+          style={{ background: tileSurface(todayTileColor) }}
         >
           {renderTileOverlay()}
           <span className="relative truncate text-[1.38rem] font-black leading-none tracking-tight">
@@ -287,18 +300,18 @@ export default function NativeScheduledTaskHomeDashboard() {
                 key={route.id}
                 href={route.path}
                 className={cn(
-                  "group relative min-h-[94px] overflow-hidden rounded-[26px] p-3 text-white",
+                  "group relative min-h-[94px] overflow-hidden rounded-[26px] p-3 text-foreground",
                   "shadow-[0_14px_30px_-18px_rgba(60,70,90,0.55)] transition-transform duration-enter",
                   "hover:-translate-y-0.5 active:translate-y-0.5",
-                  active && "ring-2 ring-white/50",
+                  active && "ring-2 ring-foreground/25",
                 )}
-                style={{ backgroundColor: tile?.color }}
+                style={{ background: tileSurface(tile?.color) }}
               >
                 {renderTileOverlay()}
-                <Icon className="pointer-events-none absolute -bottom-6 -right-5 h-24 w-24 text-white/18 stroke-[1.8]" />
+                <Icon className="pointer-events-none absolute -bottom-6 -right-5 h-24 w-24 text-foreground/15 stroke-[1.8]" />
                 <div className="relative flex h-full flex-col justify-between">
                   <div className="flex items-start justify-between gap-3">
-                    <Icon className="h-6 w-6 text-white stroke-[2.5]" />
+                    <Icon className="h-6 w-6 text-foreground stroke-[2.5]" />
                     {count != null && (
                       <span className="text-[1.72rem] font-black leading-none">
                         {count}
@@ -331,14 +344,14 @@ export default function NativeScheduledTaskHomeDashboard() {
                     key={list.id}
                     href={`/app/list/${list.id}`}
                     aria-label={scheduledTaskHomeDict("openList", { name: formatListName(list.name) })}
-                    className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-white shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
+                    className="relative flex h-[70px] items-center gap-3 overflow-hidden rounded-[26px] px-5 text-foreground shadow-[0_14px_30px_-18px_rgba(60,70,90,0.45)] transition-transform duration-enter hover:-translate-y-0.5 active:translate-y-0.5"
                     style={{
-                      background: `color-mix(in srgb, hsl(var(--card-muted)) 34%, ${accent} 66%)`,
+                      background: tileSurface(accent),
                     }}
                   >
                     {renderTileOverlay()}
-                    <ListIcon className="pointer-events-none absolute -bottom-9 -right-7 h-28 w-28 text-white/18 stroke-[1.75]" />
-                    <ListIcon className="relative h-6 w-6 shrink-0 text-white stroke-[2.5]" />
+                    <ListIcon className="pointer-events-none absolute -bottom-9 -right-7 h-28 w-28 text-foreground/15 stroke-[1.75]" />
+                    <ListIcon className="relative h-6 w-6 shrink-0 text-foreground stroke-[2.5]" />
                     <span className="relative min-w-0 flex-1 truncate text-[1.38rem] font-black leading-none tracking-tight">
                       {formatListName(list.name)}
                     </span>

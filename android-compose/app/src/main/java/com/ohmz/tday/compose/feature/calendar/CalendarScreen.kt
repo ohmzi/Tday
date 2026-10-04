@@ -144,8 +144,6 @@ import com.ohmz.tday.compose.core.ui.taskStrikethrough
 import com.ohmz.tday.compose.core.ui.tdayBarButtonContainerColor
 import com.ohmz.tday.compose.core.ui.tdayClosesSwipeRowOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayHeroTitleItem
-import com.ohmz.tday.compose.core.ui.TdayHeroTitleMetrics
-import com.ohmz.tday.compose.core.ui.tdayClosesSearchOnOutsideTap
 import com.ohmz.tday.compose.core.ui.tdayPressable
 import com.ohmz.tday.compose.ui.component.CreateTaskBottomSheet
 import com.ohmz.tday.compose.ui.component.rememberEditSheetTarget
@@ -468,12 +466,6 @@ fun CalendarScreen(
     // searching all time would answer with tasks months outside the grid, which
     // is a different screen's job. The visible range is the page.
     var searchExpanded by rememberSaveable { mutableStateOf(false) }
-    // TdayHeroToolbar's row height, for the outside-tap guard: the bar is an
-    // overlay on the same box as the content, so "below the bar" has to be
-    // measured rather than inferred from the hierarchy.
-    val pinnedToolbarHeightPx = with(LocalDensity.current) {
-        TdayHeroTitleMetrics.ToolbarHeight.toPx()
-    }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchNeedsFocus by remember { mutableStateOf(false) }
     val normalizedSearchQuery = remember(searchQuery) {
@@ -746,18 +738,17 @@ fun CalendarScreen(
                     // the scroller and to the toolbar overlay together, exactly
                     // as the timeline screen does, so the hero block's own
                     // reserve still lines the two up.
+                    // No `tdayClosesSearchOnOutsideTap` here, unlike the root
+                    // feeds. The calendar's own paging controls — the month
+                    // chevrons, the week strip, the day cells — all live below
+                    // the toolbar, so that guard treated a page forward as
+                    // "outside" and threw the query away: search, page, and the
+                    // results vanished. Picking a day still closes the field
+                    // from [selectDate], which is the one tap that means "show
+                    // me that day"; the Back handler closes it everywhere else.
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(padding)
-                        // Tap the grid and the field goes away, as on the root
-                        // feeds. The toolbar is an overlay on this same box, so
-                        // the guard is its row height rather than a reported
-                        // rect.
-                        .tdayClosesSearchOnOutsideTap(
-                            isSearchOpen = searchExpanded,
-                            barHeightPx = pinnedToolbarHeightPx,
-                            close = closeSearch,
-                        ),
+                        .padding(padding),
                     state = listState,
                     // No top padding: the hero item reserves the bar's height
                     // itself, so the scroll offset is a clean count from the top.

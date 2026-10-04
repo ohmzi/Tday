@@ -194,7 +194,7 @@ export function updateTodo(body: Record<string, unknown>) {
     todo.updatedAt = nowApiDateTime();
   });
 
-  return { message: "Todo updated" };
+  return { message: "Task updated" };
 }
 
 export function deleteTodo(body: Record<string, unknown>) {

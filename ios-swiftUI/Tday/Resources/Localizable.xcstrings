@@ -1666,13 +1666,13 @@
         }
       }
     },
-    "A to-do list with a memory" : {
+    "A task list with a memory" : {
       "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eine To-do-Liste mit Gedächtnis"
+            "value" : "Eine Aufgabenliste mit Gedächtnis"
           }
         },
         "es" : {
@@ -1696,7 +1696,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "記憶力のあるTODOリスト"
+            "value" : "記憶力のあるタスクリスト"
           }
         },
         "ms" : {
@@ -27304,13 +27304,13 @@
         }
       }
     },
-    "Your TODO list, but it shows up" : {
+    "Your task list, but it shows up" : {
       "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine TODO-Liste, aber sie taucht auf"
+            "value" : "Deine Aufgabenliste, aber sie taucht auf"
           }
         },
         "es" : {
@@ -27334,13 +27334,13 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "あなたのTODOリスト、でもちゃんと現れる"
+            "value" : "あなたのタスクリスト、でもちゃんと現れる"
           }
         },
         "ms" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Senarai TODO anda, tetapi ia muncul"
+            "value" : "Senarai tugasan anda, tetapi ia muncul"
           }
         },
         "pt" : {

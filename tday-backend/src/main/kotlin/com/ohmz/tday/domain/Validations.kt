@@ -144,7 +144,7 @@ val validateCreateTodo = Validation<TodoCreateRequest> {
 
 val validatePatchTodo = Validation<TodoPatchRequest> {
     TodoPatchRequest::id {
-        minLength(1) hint "Todo id is required"
+        minLength(1) hint "Task id is required"
     }
 }
 

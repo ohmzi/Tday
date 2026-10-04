@@ -12,6 +12,7 @@ import { usePrefetchRoutes } from "@/hooks/usePrefetchRoutes";
 import { useDuckPresence } from "@/hooks/useDuckPresence";
 import { useRootDockCollapsed } from "@/hooks/useRootDockCollapsed";
 import { useBulkSelectionActive } from "@/lib/bulk/bulk-selection-signal";
+import { useListScreenHandoverHaptic } from "@/hooks/useListScreenHandoverHaptic";
 
 export default function NativeAppShell({
   children,
@@ -22,6 +23,9 @@ export default function NativeAppShell({
   const counts = useNativeRouteCounts();
   const pathname = usePathname();
   usePrefetchRoutes();
+  // The list-screen handover buzz the native clients fire on both the way in and
+  // the way out; web had no equivalent, so backing out of a list was silent.
+  useListScreenHandoverHaptic();
   // A task list in selection mode puts its own action bar in this slot; the two
   // share the same fixed bottom metrics and must never come to REST on the
   // screen together. They do now overlap while the swap plays — the bar rises as

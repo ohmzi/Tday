@@ -6,7 +6,7 @@ import parseApiDateTime, { parseOptionalApiDateTime } from "@/lib/date/parseApiD
 
 const getTodo = async () => {
   const data = await api.GET({
-    url: `/api/todo?start=${startOfToday().getTime()}&end=${endOfToday().getTime()}`,
+    url: `/api/todo?start=${startOfToday().getTime()}&end=${endOfToday().getTime()}&expand=true`,
   });
   const { todos }: { todos: TodoApiItemType[] } = data;
   if (!todos) {
