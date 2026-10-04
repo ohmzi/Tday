@@ -223,7 +223,11 @@ internal class WidgetListPickerViewModel @Inject constructor(
                         name = "",
                         colorKey = "RED",
                         iconKey = null,
-                        openCount = openDated.count { task -> task.dueEpochMs!! < nowEpochMs },
+                        openCount = openDated.count { task ->
+                            // `openDated` already dropped the undated rows; the fallback keeps
+                            // this free of a force-unwrap the guardrail forbids.
+                            (task.dueEpochMs ?: Long.MAX_VALUE) < nowEpochMs
+                        },
                     ),
                 ),
                 todoLists = state.lists.map { list ->
