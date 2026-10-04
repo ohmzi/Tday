@@ -1,9 +1,11 @@
 {
-  "version": "0.8.4",
-  "publishedAt": "2026-10-04T06:03:36-04:00",
+  "version": "0.8.5",
+  "publishedAt": "2026-10-04T18:44:59-04:00",
   "notes": [
-    "Remove the test-crash harness; one admin answer governs web crash reports"
+    "Fix the app-issues backlog across web, Android and iOS",
+    "Split the widget's Scheduled and Overdue views the way the app does",
+    "Give a plain Anytime pile something to start with"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.4",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.3..v0.8.4"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.5",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.4..v0.8.5"
 }
