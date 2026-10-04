@@ -1,9 +1,9 @@
 {
-  "version": "0.8.3",
-  "publishedAt": "2026-10-04T03:31:34-04:00",
+  "version": "0.8.4",
+  "publishedAt": "2026-10-04T06:03:36-04:00",
   "notes": [
-    "Fix what the crash-check runs taught on Android and iOS"
+    "Remove the test-crash harness; one admin answer governs web crash reports"
   ],
-  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.3",
-  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.2..v0.8.3"
+  "releaseUrl": "https://github.com/ohmzi/Tday/releases/tag/v0.8.4",
+  "compareUrl": "https://github.com/ohmzi/Tday/compare/v0.8.3..v0.8.4"
 }
