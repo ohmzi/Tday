@@ -27,10 +27,12 @@ import { hapticScreenChange } from "@/lib/haptics";
 const LIST_SCREEN_ROUTE = /(?:^|\/)app\/(?:list|floater-list)\//;
 const IN_APP_ROUTE = /(?:^|\/)app\//;
 
+/** Whether the current route is one of the app's list screens (scheduled or floater). */
 function isListScreenRoute(pathname: string): boolean {
   return LIST_SCREEN_ROUTE.test(pathname);
 }
 
+/** Whether the current route is anywhere inside the signed-in app, `/app/...` included. */
 function isInAppRoute(pathname: string): boolean {
   return IN_APP_ROUTE.test(pathname);
 }

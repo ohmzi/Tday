@@ -8,12 +8,12 @@ import { buildTaskShareText } from "@/lib/listShareText";
  * marking rather than part of what the task says, so the line is gone on all
  * three platforms.
  */
-const t = ((key: string) => key) as unknown as TFunction;
+const translate = ((key: string) => key) as unknown as TFunction;
 
 describe("buildTaskShareText", () => {
   it("is the title alone for a bare task", () => {
     expect(
-      buildTaskShareText({ todo: { title: "Buy milk" }, lang: "en", t }),
+      buildTaskShareText({ todo: { title: "Buy milk" }, lang: "en", t: translate }),
     ).toBe("Buy milk");
   });
 
@@ -21,7 +21,7 @@ describe("buildTaskShareText", () => {
     const text = buildTaskShareText({
       todo: { title: "Buy milk", description: "Semi-skimmed\n2 litres" },
       lang: "en",
-      t,
+      t: translate,
     });
     expect(text.split("\n")).toEqual(["Buy milk", "Semi-skimmed", "2 litres"]);
   });
@@ -32,7 +32,7 @@ describe("buildTaskShareText", () => {
     const text = buildTaskShareText({
       todo: { title: "Pay rent" },
       lang: "en",
-      t,
+      t: translate,
     });
     expect(text.toLowerCase()).not.toContain("priority");
   });

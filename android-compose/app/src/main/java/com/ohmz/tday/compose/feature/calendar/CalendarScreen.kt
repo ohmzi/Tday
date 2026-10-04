@@ -420,7 +420,10 @@ private fun calendarTaskAlreadyDueOnDate(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun CalendarScreen(
+// One screen-sized composable: the metric counts every branch of the month, week and day
+// cards plus their paging inside this one body. Same shape, and the same deliberate
+// suppression, as `TdayApp`.
+fun CalendarScreen( // skipcq: KT-R1006
     uiState: CalendarUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
